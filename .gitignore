@@ -2,7 +2,7 @@
 /target
 
 # Cargo lock file for reproducibility (if you want to exclude it)
-/Cargo.lock
+Cargo.lock
 
 # Rust-specific configuration files
 /.cargo

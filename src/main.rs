@@ -100,61 +100,13 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
-// A system that manipulates tile colors.
-fn update_map(
-    time: Res<Time>,
-    mut tilemap_query: Query<(
-        &mut CurrentColor,
-        &mut LastUpdate,
-        &TileStorage,
-        &TilemapSize,
-    )>,
-    mut tile_query: Query<&mut TileTextureIndex>,
-) {
-    let current_time = time.elapsed_secs_f64();
-    for (mut current_color, mut last_update, tile_storage, map_size) in tilemap_query.iter_mut() {
-        if current_time - last_update.0 > 0.1 {
-            current_color.0 += 1;
-            if current_color.0 > 5 {
-                current_color.0 = 1;
-            }
-
-            let mut color = current_color.0;
-
-            for x in (2..128).step_by(4) {
-                for y in (2..128).step_by(4) {
-                    // Grab the neighboring tiles
-                    let neighboring_entities = Neighbors::get_square_neighboring_positions(
-                        &TilePos { x, y },
-                        map_size,
-                        true,
-                    )
-                    .entities(tile_storage);
-
-                    // Iterate over neighbors
-                    for neighbor_entity in neighboring_entities.iter() {
-                        // Query the tile entities to change the colors
-                        if let Ok(mut tile_texture) = tile_query.get_mut(*neighbor_entity) {
-                            tile_texture.0 = color as u32;
-                        }
-                    }
-                }
-                color += 1;
-                if color > 5 {
-                    color = 1;
-                }
-            }
-            last_update.0 = current_time;
-        }
-    }
-}
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin{
         primary_window: Some(Window {
             title: String::from(
-                   "Basic Example - Press Space to change Texture and H to show/hide tilemap.",
+                   "Basic Example 2 - Press Space to change Texture and H to show/hide tilemap.",
             ),
             ..Default::default()
         }),
@@ -164,6 +116,5 @@ fn main() {
         .add_plugins(PlayerPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, helpers::camera::movement)
-        .add_systems(Update, update_map)
         .run();
 }

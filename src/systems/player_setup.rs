@@ -2,8 +2,8 @@ use bevy::prelude::*;
 
 use crate::components::{Player, Position};
 
-pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2d);
+pub fn player_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2d); //This should not be here
     commands.spawn((
         Player {
             speed: 10.0,

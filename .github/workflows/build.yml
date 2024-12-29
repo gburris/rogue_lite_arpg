@@ -30,8 +30,8 @@ jobs:
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
-          ls -al
-          ls -al dist
+          ls -l
+          ls -l 
 
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
@@ -75,7 +75,7 @@ jobs:
       - name: Debug gh-pages Directory
         run: |
           echo "Debugging gh-pages directory:"
-          ls -al gh-pages
+          ls -l gh-pages
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

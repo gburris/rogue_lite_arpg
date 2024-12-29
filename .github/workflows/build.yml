@@ -8,26 +8,21 @@ on:
       - main
 
 env:
-  # Disable incremental compilation for faster from-scratch builds
   CARGO_INCREMENTAL: 0
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      # Check out the repository
       - uses: actions/checkout@v4
 
-      # Update Rust and install wasm-pack
       - run: rustup update
       - run: rustup target add wasm32-unknown-unknown
       - run: cargo install wasm-pack
 
-      # Build the Rust project for WebAssembly
       - name: Build WASM
         run: wasm-pack build --target web --out-dir dist
 
-      # Export to index.html
       - name: Create index.html
         run: |
           echo '<!DOCTYPE html>
@@ -43,26 +38,23 @@ jobs:
           </body>
           </html>' > index.html
 
-      # Upload release build artifact
       - uses: actions/upload-artifact@v4
         with:
-          path: target/release/mylibrary.dll
+          path: dist/*
+          name: wasm-artifacts
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      # Check out the repository
       - uses: actions/checkout@v4
 
-      # Copy built WASM files and index.html to the root
       - name: Setup GitHub Pages
         run: |
           mkdir -p gh-pages
           cp -r dist/* gh-pages/
           cp index.html gh-pages/
 
-      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

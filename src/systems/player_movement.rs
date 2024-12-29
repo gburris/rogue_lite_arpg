@@ -23,6 +23,6 @@ pub fn player_movement(
         }
         player.position.x += direction.x * player.speed;
         player.position.y += direction.y * player.speed;
-        transform.translation = Vec3::new(player.position.x, player.position.y, 0.0);
+        transform.translation = Vec3::new(player.position.x, player.position.y, 1.0);
     }
 }

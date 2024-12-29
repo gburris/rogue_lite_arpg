@@ -11,7 +11,8 @@ ldtk_rust = "0.6"
 thiserror = "1.0"
 serde_json = "1.0"
 rand = "0.8"
-log = "0.4"
+log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -19,6 +20,10 @@ rand = "0.8"
 serde_json = { version = "1.0" }
 tiled = { version = "0.11.0", default-features = false }
 thiserror = { version = "1.0" }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/main.rs"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

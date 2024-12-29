@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
+use rand::Rng;
+
+use crate::resources::MapBounds;
+use crate::resources::TileSize;
 
 #[derive(Component)]
 struct CurrentColor(u16);
@@ -8,11 +12,18 @@ struct CurrentColor(u16);
 #[derive(Component)]
 struct LastUpdate(f64);
 
-pub fn generate_tilemap(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn generate_tilemap(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mapbounds: ResMut<MapBounds>,
+    tilesize: ResMut<TileSize>,
+) {
     let texture_handle: Handle<Image> = asset_server.load("tiles.png");
-
     // Size of the tile map in tiles.
-    let map_size = TilemapSize { x: 128, y: 128 };
+    let map_size: TilemapSize = TilemapSize {
+        x: ((mapbounds.max_x - mapbounds.min_x) / tilesize.x) as u32, // 3200/16 = 200 tiles
+        y: ((mapbounds.max_y - mapbounds.min_y) / tilesize.y) as u32,
+    };
 
     // To create a map we use the TileStorage component.
     // This component is a grid of tile entities and is used to help keep track of individual
@@ -30,50 +41,27 @@ pub fn generate_tilemap(mut commands: Commands, asset_server: Res<AssetServer>) 
 
     // Spawn a 32 by 32 tilemap.
     // Alternatively, you can use helpers::fill_tilemap.
+    let mut rng = rand::thread_rng();
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
+            let color = rng.gen_range(0..5); // Assuming you have 5 colors in your tileset
             let tile_entity = commands
                 .spawn(TileBundle {
                     position: tile_pos,
                     tilemap_id: TilemapId(tilemap_entity),
+                    texture_index: TileTextureIndex(color),
                     ..Default::default()
                 })
                 .id();
-            // Here we let the tile storage component know what tiles we have.
             tile_storage.set(&tile_pos, tile_entity);
         }
     }
-
-    // We can grab a list of neighbors.
-    let neighbor_positions =
-        Neighbors::get_square_neighboring_positions(&TilePos { x: 0, y: 0 }, &map_size, true);
-    let neighbor_entities = neighbor_positions.entities(&tile_storage);
-
-    // We can access tiles using:
-    assert!(tile_storage.get(&TilePos { x: 0, y: 0 }).is_some());
-    assert_eq!(neighbor_entities.iter().count(), 3); // Only 3 neighbors since negative is outside of map.
-
-    // This changes some of our tiles by looking at neighbors.
-    let mut color = 0;
-    for x in (2..128).step_by(4) {
-        color += 1;
-        for y in (2..128).step_by(4) {
-            // Grabbing neighbors is easy.
-
-            let neighbors =
-                Neighbors::get_square_neighboring_positions(&TilePos { x, y }, &map_size, true);
-            for pos in neighbors.iter() {
-                // We can replace the tile texture component like so:
-                commands
-                    .entity(tile_storage.get(pos).unwrap())
-                    .insert(TileTextureIndex(color));
-            }
-        }
-    }
-
     // This is the size of each individual tiles in pixels.
-    let tile_size = TilemapTileSize { x: 16.0, y: 16.0 };
+    let tile_size = TilemapTileSize {
+        x: tilesize.x,
+        y: tilesize.y,
+    };
     let grid_size = tile_size.into();
 
     // Spawns a tilemap.

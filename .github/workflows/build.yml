@@ -16,29 +16,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - run: rustup update
-      - run: rustup target add wasm32-unknown-unknown
-      - run: cargo install wasm-pack
+      - name: Update Rust and Add Target
+        run: |
+          rustup update
+          rustup target add wasm32-unknown-unknown
+        shell: bash
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
 
       - name: Build WASM
         run: wasm-pack build --target web --out-dir dist
+        shell: bash
 
-      - name: Create index.html
+      - name: Debug Build Output
         run: |
-          echo '<!DOCTYPE html>
-          <html>
-          <head>
-            <title>WASM Demo</title>
-          </head>
-          <body>
-            <script type="module">
-              import init from "./dist/<your_crate_name>.js";
-              init();
-            </script>
-          </body>
-          </html>' > index.html
+          echo "Debugging build output:"
+          ls -al
+          ls -al dist
+        shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload WASM Artifacts
+        uses: actions/upload-artifact@v4
         with:
           path: dist/*
           name: wasm-artifacts
@@ -49,11 +48,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup GitHub Pages
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-artifacts
+
+      - name: Debug Download Output
+        run: |
+          echo "Debugging downloaded artifacts:"
+          ls -al
+          ls -al dist
+        shell: bash
+
+      - name: Create gh-pages Directory
         run: |
           mkdir -p gh-pages
           cp -r dist/* gh-pages/
-          cp index.html gh-pages/
+          echo '<!DOCTYPE html>
+          <html>
+          <head>
+            <title>WASM Demo</title>
+          </head>
+          <body>
+            <script type="module">
+              import init from "./<your_crate_name>.js";
+              init();
+            </script>
+          </body>
+          </html>' > gh-pages/index.html
+        shell: bash
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

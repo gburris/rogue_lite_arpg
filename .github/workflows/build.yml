@@ -20,21 +20,18 @@ jobs:
         run: |
           rustup update
           rustup target add wasm32-unknown-unknown
-        shell: bash
 
       - name: Install wasm-pack
         run: cargo install wasm-pack
 
       - name: Build WASM
         run: wasm-pack build --target web --out-dir dist
-        shell: bash
 
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
           ls -al
           ls -al dist
-        shell: bash
 
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
@@ -57,13 +54,11 @@ jobs:
         run: |
           echo "Debugging downloaded artifacts:"
           ls -al
-          ls -al dist
-        shell: bash
 
       - name: Create gh-pages Directory
         run: |
           mkdir -p gh-pages
-          cp -r dist/* gh-pages/
+          cp * gh-pages/
           echo '<!DOCTYPE html>
           <html>
           <head>
@@ -71,12 +66,16 @@ jobs:
           </head>
           <body>
             <script type="module">
-              import init from "./<your_crate_name>.js";
+              import init from "./game_dev_project.js";
               init();
             </script>
           </body>
           </html>' > gh-pages/index.html
-        shell: bash
+
+      - name: Debug gh-pages Directory
+        run: |
+          echo "Debugging gh-pages directory:"
+          ls -al gh-pages
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

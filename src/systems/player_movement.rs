@@ -1,6 +1,6 @@
 use crate::components::Player;
-use crate::MapBounds;
-use crate::PlayerSize;
+use crate::resources::MapBounds;
+use crate::resources::PlayerSize;
 use bevy::prelude::*; // Import the map bounds resource
 
 // System for player movement

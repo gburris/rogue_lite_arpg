@@ -1,5 +1,5 @@
 use crate::components::Player;
-use crate::MapBounds;
+use crate::resources::MapBounds;
 use bevy::prelude::*; // Make sure to import MapBounds
 
 pub fn camera_follow_system(

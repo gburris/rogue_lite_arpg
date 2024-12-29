@@ -3,6 +3,7 @@ use bevy_ecs_tilemap::prelude::*;
 use plugins::PlayerPlugin;
 use resources::MapBounds;
 use resources::TileSize;
+use resources::PlayerSize;
 
 mod components;
 mod helpers;
@@ -36,6 +37,10 @@ fn main() {
             min_y: -100.0 * tile_size_y,
             max_x: 100.0 * tile_size_x,
             max_y: 100.0 * tile_size_y,
+        })
+        .insert_resource(PlayerSize {
+            x: 256.0,
+            y: 256.0,
         })
         .run();
 }

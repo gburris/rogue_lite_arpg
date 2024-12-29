@@ -1,31 +1,30 @@
-use bevy::prelude::*;
 use bevy::color::palettes::basic::WHITE;
+use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 // Define the Player component
 #[derive(Component)]
 struct Player {
     speed: f32,
-    position: Position
+    position: Position,
 }
 
 #[derive(Component)]
-struct Position{
+struct Position {
     x: f32,
-    y: f32
+    y: f32,
 }
-
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2d);
     commands.spawn((
-        Player { speed: 10.0 , position : Position{x: 100.0, y: 100.0}},
-        Sprite::from_image(
-            asset_server.load("skeleton.png"),
-        ),
+        Player {
+            speed: 10.0,
+            position: Position { x: 100.0, y: 100.0 },
+        },
+        Sprite::from_image(asset_server.load("skeleton.png")),
         Transform::from_xyz(0., 0., 0.),
     ));
-
 }
 
 // Define the plugin to organize player-related functionality
@@ -33,11 +32,11 @@ struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, setup)
-            .add_systems(Update, (player_movement, face_cursor_system, camera_follow_system));
+        app.add_systems(Startup, setup).add_systems(
+            Update,
+            (player_movement, face_cursor_system, camera_follow_system, draw_cursor),
+        );
     }
-    
 }
 
 fn camera_follow_system(
@@ -73,13 +72,13 @@ fn player_movement(
         }
         player.position.x += direction.x * player.speed;
         player.position.y += direction.y * player.speed;
-        transform.translation = Vec3::new(player.position.x, player.position.y, 0.0);    }
+        transform.translation = Vec3::new(player.position.x, player.position.y, 0.0);
+    }
 }
 
 fn draw_cursor(
     camera_query: Single<(&Camera, &GlobalTransform)>,
     windows: Query<&Window>,
-    mut player_query: Query<(&mut Player, &mut Transform)>,
     mut gizmos: Gizmos,
 ) {
     let (camera, camera_transform) = *camera_query;
@@ -96,16 +95,6 @@ fn draw_cursor(
     let Ok(point) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
         return;
     };
-    
-    for (mut _player, mut transform) in player_query.iter_mut() {
-        if cursor_position.x < _player.position.x {
-            // Mouse is to the left: flip sprite to face left
-            transform.scale.x = -1.0;
-        } else {
-            // Mouse is to the right: face right
-            transform.scale.x = 1.0;
-        }
-    }
 
     gizmos.circle_2d(point, 10., WHITE);
 }

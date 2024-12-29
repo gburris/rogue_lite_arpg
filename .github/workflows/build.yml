@@ -10,49 +10,18 @@ on:
 
 jobs:
   build:
+    name: release ${{ matrix.target }}
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl]
     steps:
-    # Checkout the repository
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    # Set up Rust environment
-    - name: Set up Rust
-      uses: actions/setup-rust@v1
-      with:
-        rust-version: stable
-
-    # Install wasm32 target
-    - name: Install wasm32 target
-      run: rustup target add wasm32-unknown-unknown
-
-    # Build the Rust project to WASM
-    - name: Build project to WASM
-      run: cargo build --release --target wasm32-unknown-unknown
-
-    # Copy the WASM file into the index.html
-    - name: Update index.html with WASM
-      run: |
-        # Create an index.html if it does not exist
-        echo "<!DOCTYPE html>" > index.html
-        echo "<html lang='en'>" >> index.html
-        echo "<head><meta charset='UTF-8'><title>WASM Project</title></head>" >> index.html
-        echo "<body>" >> index.html
-        echo "<script type='module'>" >> index.html
-        echo "  import init from './project_name_bg.wasm';" >> index.html
-        echo "  init();" >> index.html
-        echo "</script>" >> index.html
-        echo "</body>" >> index.html
-        echo "</html>" >> index.html
-
-    # Upload the WASM file
-    - name: Add WASM file to git
-      run: |
-        # Find the generated WASM file
-        WASM_FILE=$(find target/wasm32-unknown-unknown/release -name "*.wasm" | head -n 1)
-        # Copy the WASM file to the repository root
-        cp $WASM_FILE ./
-        git add index.html $WASM_FILE
-        git commit -m "Update index.html with WASM file"
-        git push origin HEAD
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.4.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          EXTRA_FILES: "README.md LICENSE"

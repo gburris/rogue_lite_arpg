@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::plugins::PlayerPlugin;
+use game_dev_project::plugins::{PlayerPlugin, EnemyPlugin};
 use game_dev_project::resources::{MapBounds, TileSize, PlayerSize};
 
 fn main() {
@@ -18,6 +18,7 @@ fn main() {
         }).set(ImagePlugin::default_nearest()))
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
+        .add_plugins(EnemyPlugin)
         .add_systems(Startup, game_dev_project::systems::generate_tilemap)
         .insert_resource(TileSize{  
             x: 16.0,

@@ -2081,6 +2081,7 @@ dependencies = [
  "bevy",
  "bevy_ecs_tilemap",
  "ldtk_rust",
+ "log",
  "rand",
  "serde_json",
  "thiserror",

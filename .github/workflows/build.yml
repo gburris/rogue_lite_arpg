@@ -53,7 +53,7 @@ jobs:
       - name: Debug Download Output
         run: |
           echo "Debugging downloaded artifacts:"
-          ls -al
+          ls -l
 
       - name: Create gh-pages Directory
         run: |

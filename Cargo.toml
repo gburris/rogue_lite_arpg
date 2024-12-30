@@ -12,6 +12,8 @@ thiserror = "1.0"
 serde_json = "1.0"
 rand = "0.8"
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+bevy-inspector-egui = "0.28.0"
+
 
 
 [dev-dependencies]

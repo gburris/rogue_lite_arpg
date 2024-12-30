@@ -8,8 +8,8 @@ pub mod tilemap_generation;
 
 pub use camera::*;
 pub use cursor::*;
-pub use enemy_movement::move_enemies;
-pub use enemy_spawn::spawn_enemies;
+pub use enemy_movement::move_enemies_toward_player;
+pub use enemy_spawn::spawn_enemies_with_timer;
 pub use player_movement::*;
 pub use player_setup::*;
 pub use tilemap_generation::generate_tilemap;

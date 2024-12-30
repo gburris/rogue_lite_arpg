@@ -1,16 +1,9 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::helpers::square_grid::neighbors::Neighbors;
 use bevy_ecs_tilemap::prelude::*;
 use rand::Rng;
 
 use crate::resources::MapBounds;
 use crate::resources::TileSize;
-
-#[derive(Component)]
-struct CurrentColor(u16);
-
-#[derive(Component)]
-struct LastUpdate(f64);
 
 pub fn generate_tilemap(
     mut commands: Commands,
@@ -66,18 +59,14 @@ pub fn generate_tilemap(
 
     // Spawns a tilemap.
     // Once the tile storage is inserted onto the tilemap entity it can no longer be accessed.
-    commands.entity(tilemap_entity).insert((
-        TilemapBundle {
-            grid_size,
-            size: map_size,
-            storage: tile_storage,
-            map_type,
-            texture: TilemapTexture::Single(texture_handle),
-            tile_size,
-            transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
-            ..Default::default()
-        },
-        LastUpdate(0.0),
-        CurrentColor(1),
-    ));
+    commands.entity(tilemap_entity).insert((TilemapBundle {
+        grid_size,
+        size: map_size,
+        storage: tile_storage,
+        map_type,
+        texture: TilemapTexture::Single(texture_handle),
+        tile_size,
+        transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
+        ..Default::default()
+    },));
 }

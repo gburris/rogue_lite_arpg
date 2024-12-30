@@ -1,11 +1,11 @@
 use crate::components::Enemy;
-use crate::resources::MapBounds;
+// use crate::resources::MapBounds;
 use bevy::prelude::*; // Import the map bounds resource
 
 // System for player movement
 pub fn move_enemies(
     // Correct resource type for keyboard input
-    mapbounds: Res<MapBounds>, // Access the map bounds
+    // mapbounds: Res<MapBounds>, // Access the map bounds
     mut query: Query<(&mut Enemy, &mut Transform)>,
 ) {
     for (mut enemy, mut transform) in query.iter_mut() {

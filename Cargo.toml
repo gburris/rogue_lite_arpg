@@ -24,6 +24,9 @@ thiserror = { version = "1.0" }
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+atlas = []
+
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1

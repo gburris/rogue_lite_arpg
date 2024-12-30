@@ -8,7 +8,7 @@ pub fn camera_follow_system(
     mapbounds: Res<MapBounds>,
     windows: Query<&Window>,
 ) {
-    if let (Ok(player_transform), Ok((mut camera_transform, camera))) =
+    if let (Ok(player_transform), Ok((mut camera_transform, _camera))) =
         (player_query.get_single(), camera_query.get_single_mut())
     {
         let window = windows.single();

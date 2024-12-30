@@ -14,7 +14,7 @@ impl Plugin for PlayerPlugin {
                 player_movement,
                 face_cursor_system,
                 camera_follow_system,
-                draw_cursor,
+                draw_cursor
             ),
         );
     }

@@ -56,8 +56,15 @@ jobs:
 
       - name: Create gh-pages Directory
         run: |
-          mkdir -p gh-pages
-          cp -r * gh-pages/
+          mkdir gh-pages
+          cp -r assets gh-pages/
+          cp -r src gh-pages/
+          cp game_dev_project.js gh-pages/
+          cp game_dev_project_bg.wasm gh-pages/
+          cp game_dev_project_bg.wasm.d.ts gh-pages/  
+          cp Cargo.toml gh-pages/      
+          cp Cargo.lock gh-pages/     
+          cp package.json gh-pages/                                       
           echo '<!DOCTYPE html>
           <html>
           <head>

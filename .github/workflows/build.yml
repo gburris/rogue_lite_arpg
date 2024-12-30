@@ -57,7 +57,7 @@ jobs:
       - name: Create gh-pages Directory
         run: |
           mkdir -p gh-pages
-          cp * gh-pages/
+          cp -r * gh-pages/
           echo '<!DOCTYPE html>
           <html>
           <head>

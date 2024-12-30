@@ -30,8 +30,7 @@ jobs:
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
-          ls -l
-          ls -l 
+          ls
 
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
@@ -53,7 +52,9 @@ jobs:
       - name: Debug Download Output
         run: |
           echo "Debugging downloaded artifacts:"
-          ls -l
+          ls
+          cd dist
+          ls
 
       - name: Create gh-pages Directory
         run: |

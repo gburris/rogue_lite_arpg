@@ -1,19 +1,26 @@
-use crate::components::{Enemy, Player, Position};
-use crate::resources::MapBounds;
+use crate::components::{Enemy, Player};
 use bevy::prelude::*;
 
 // Import the map bounds resource
 pub fn move_enemies_toward_player(
-    player_query: Query<&Position, With<Player>>,
-    mut enemy_query: Query<(&mut Enemy, &mut Transform)>,
+    //Param set so I can query transform twice in one go
+    mut query: ParamSet<(
+        Query<&Transform, With<Player>>,
+        Query<(&mut Enemy, &mut Transform)>,
+    )>,
 ) {
-    println!("Moving enemy to player");
-    if let Ok(player_position) = player_query.get_single() {
-        for (mut enemy, mut transform) in enemy_query.iter_mut() {
+    
+    // First, get the player position
+    if let Ok(player_position) = query.p0().get_single() {
+        let player_transform = &player_position;
+        let player_pos = player_transform.translation;
+
+        // Then, update enemy positions
+        for (mut enemy, mut transform) in query.p1().iter_mut() {
             // Calculate direction toward the player
             let direction = Vec2::new(
-                player_position.x - enemy.position.x,
-                player_position.y - enemy.position.y,
+                player_pos.x - enemy.position.x,
+                player_pos.y - enemy.position.y,
             )
             .normalize_or_zero();
 

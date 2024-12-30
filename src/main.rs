@@ -2,8 +2,6 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::plugins::{PlayerPlugin, EnemySpawnerPlugin};
 use game_dev_project::resources::{MapBounds, TileSize, PlayerSize};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
 
 fn main() {
     let tile_size_x = 16.0;
@@ -21,7 +19,6 @@ fn main() {
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(EnemySpawnerPlugin)
-       // .add_plugins(WorldInspectorPlugin::new()) //Super laggy - uncomment to debug
         .add_systems(Startup, game_dev_project::systems::generate_tilemap)
         .insert_resource(TileSize{  
             x: 16.0,

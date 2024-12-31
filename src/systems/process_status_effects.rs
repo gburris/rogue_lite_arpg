@@ -6,6 +6,7 @@ pub fn process_burning(
     mut commands: Commands,
     time: Res<Time>,
     mut burning_effect_query: Query<(Entity, &mut BurningEffect, &mut Enemy)>,
+    asset_server: Res<AssetServer>,
 ) {
     for (entity, mut burning, mut enemy) in &mut burning_effect_query {
         // Tick the burning effect's timer
@@ -32,7 +33,10 @@ pub fn process_burning(
         // Check if the burning effect duration has ended
         if burning.duration.finished() {
             println!("Burning Effect expired on the enemy");
-            commands.entity(entity).remove::<BurningEffect>();
+            commands
+                .entity(entity)
+                .remove::<BurningEffect>()
+                .insert(Sprite::from_image(asset_server.load("merman.png")));
         }
     }
 }

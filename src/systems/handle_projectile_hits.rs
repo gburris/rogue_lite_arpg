@@ -34,7 +34,7 @@ pub fn handle_projectile_hits(
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                         duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
                     },
-                    Sprite::from_image(asset_server.load("fireball/FB001.png")),
+                    Sprite::from_image(asset_server.load("merman_on_fire.png")),
                 ));
                 println!("Handling ProjectileHitEvent event: Damage Effect of projectile is found");
                 enemy.health -= effects.0.base_damage;

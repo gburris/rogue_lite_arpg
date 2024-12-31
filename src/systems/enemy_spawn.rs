@@ -31,7 +31,7 @@ pub fn spawn_enemies_with_timer(
                     //TODO: Move to Enemy Factory
                     commands.spawn((
                         Enemy {
-                            health: 25.0,
+                            health: 30.0,
                             speed: 1.0,
                             position: spawn_position,
                         },
@@ -45,7 +45,7 @@ pub fn spawn_enemies_with_timer(
                 } else {
                     commands.spawn((
                         Enemy {
-                            health: 10.0,
+                            health: 30.0,
                             speed: 1.0,
                             position: spawn_position,
                         },
@@ -57,7 +57,7 @@ pub fn spawn_enemies_with_timer(
             } else {
                 commands.spawn((
                     Enemy {
-                        health: 10.0,
+                        health: 25.0,
                         speed: 1.0,
                         position: spawn_position,
                     },

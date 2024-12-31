@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::components::{BurningEffect, DamageEffect, Fireball, Player, Projectile};
+use crate::components::{BurningEffect, Collider, DamageEffect, Fireball, Player, Projectile};
 
 pub fn cast_fireball(
     mut commands: Commands,
@@ -56,8 +56,12 @@ pub fn cast_fireball(
             Fireball, //Marker Componenet
             target_transform,
             DamageEffect { base_damage: 10.0 },
+            Collider {
+                size: Vec2::new(10.0, 10.0), // Adjust size as needed
+            },
             BurningEffect {
                 duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
+                tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                 damage_per_second: 5.0,
             },
             Sprite::from_image(asset_server.load("fireball/FB001.png")),

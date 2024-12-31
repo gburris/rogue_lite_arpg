@@ -1,4 +1,3 @@
-pub mod apply_projectile_effects;
 pub mod camera;
 pub mod cast_fireball;
 pub mod check_projectile_collision;
@@ -9,10 +8,9 @@ pub mod handle_projectile_hits;
 pub mod move_projectiles;
 pub mod player_movement;
 pub mod player_setup;
-pub mod process_effects;
+pub mod process_status_effects;
 pub mod tilemap_generation;
 
-pub use apply_projectile_effects::apply_projectile_effects;
 pub use camera::*;
 pub use cast_fireball::*;
 pub use check_projectile_collision::*;
@@ -23,5 +21,5 @@ pub use handle_projectile_hits::handle_projectile_hits;
 pub use move_projectiles::*;
 pub use player_movement::*;
 pub use player_setup::*;
-pub use process_effects::process_burning;
+pub use process_status_effects::process_burning;
 pub use tilemap_generation::generate_tilemap;

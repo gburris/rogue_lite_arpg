@@ -12,6 +12,7 @@ pub fn handle_projectile_hits(
     mut enemies: Query<&mut Enemy>,
     projectiles: Query<(&DamageEffect, &BurningEffect)>,
     mut processed: ResMut<ProcessedProjectiles>,
+    asset_server: Res<AssetServer>,
 ) {
     for (event, id) in events.read_with_id() {
         if processed.set.contains(&id) {
@@ -27,11 +28,14 @@ pub fn handle_projectile_hits(
                     id
                 );
                 processed.set.insert(id);
-                commands.entity(event.enemy).insert(BurningEffect {
-                    damage_per_second: effects.1.damage_per_second,
-                    tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
-                    duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
-                });
+                commands.entity(event.enemy).insert((
+                    BurningEffect {
+                        damage_per_second: effects.1.damage_per_second,
+                        tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
+                        duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
+                    },
+                    Sprite::from_image(asset_server.load("fireball/FB001.png")),
+                ));
                 println!("Handling ProjectileHitEvent event: Damage Effect of projectile is found");
                 enemy.health -= effects.0.base_damage;
                 if enemy.health <= 0.0 {

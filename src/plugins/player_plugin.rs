@@ -1,6 +1,6 @@
 use crate::systems::{
-    camera_follow_system, cast_fireball, draw_cursor, face_cursor_system, move_fireball,
-    player_movement, player_setup,
+    camera_follow_system, cast_fireball, draw_cursor, face_cursor_system, player_movement,
+    player_setup,
 };
 use bevy::prelude::*;
 
@@ -17,7 +17,6 @@ impl Plugin for PlayerPlugin {
                 camera_follow_system,
                 draw_cursor,
                 cast_fireball,
-                move_fireball,
             ),
         );
     }

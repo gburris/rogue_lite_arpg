@@ -1,6 +1,8 @@
+use std::time::Duration;
+
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::components::{Fireball, Player};
+use crate::components::{BurningEffect, DamageEffect, Fireball, Player, Projectile};
 
 pub fn cast_fireball(
     mut commands: Commands,
@@ -10,6 +12,7 @@ pub fn cast_fireball(
     window: Query<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
 ) {
+    //TODO move all of this to only be calculated after the player has clicked, not every frame
     let mut player_transform: &Transform = &Transform::default();
 
     for transform in &player {
@@ -39,12 +42,25 @@ pub fn cast_fireball(
     let angle = player_dir.angle_to(cursor_dir);
 
     target_transform.rotate_z(angle);
-
     if buttons.just_pressed(MouseButton::Left) {
+        /*
+        No, this code doesn't make them separate entities! Let me explain
+         how this works in Bevy's ECS:
+        The .spawn(( ... )) syntax with a tuple of components
+        actually adds all those components to the same entity. When you write:
+        */
+        //We need a projectile factory - it shoudl take in the players "spell choice"
+        // and build the correct projectile
         commands.spawn((
-            Fireball { speed: 300. },
-            Sprite::from_image(asset_server.load("fireball/FB001.png")),
+            Projectile { speed: 100.0 },
+            Fireball, //Marker Componenet
             target_transform,
+            DamageEffect { base_damage: 10.0 },
+            BurningEffect {
+                duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
+                damage_per_second: 5.0,
+            },
+            Sprite::from_image(asset_server.load("fireball/FB001.png")),
         ));
     }
 }

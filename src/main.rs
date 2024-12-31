@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::plugins::{PlayerPlugin, EnemySpawnerPlugin};
+use game_dev_project::plugins::{ProjectilePlugin, PlayerPlugin, EnemySpawnerPlugin};
 use game_dev_project::resources::{MapBounds, TileSize, PlayerSize};
 
 fn main() {
@@ -19,6 +19,7 @@ fn main() {
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(EnemySpawnerPlugin)
+        .add_plugins(ProjectilePlugin)
         .add_systems(Startup, game_dev_project::systems::generate_tilemap)
         .insert_resource(TileSize{  
             x: 16.0,

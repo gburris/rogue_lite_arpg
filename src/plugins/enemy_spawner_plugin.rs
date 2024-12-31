@@ -12,7 +12,7 @@ impl Plugin for EnemySpawnerPlugin {
     fn build(&self, app: &mut App) {
         log::info!("Player Plugin! added!");
         app.insert_resource(EnemySpawnConfig {
-            timer: Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
             quantity: 1,
         });
         app.add_systems(Update, spawn_enemies_with_timer);

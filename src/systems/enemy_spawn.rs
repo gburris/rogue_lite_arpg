@@ -1,8 +1,5 @@
-use crate::components::Enemy;
-use crate::components::Player;
-use crate::components::Position;
-use crate::resources::EnemySpawnConfig;
-use crate::resources::MapBounds;
+use crate::components::{Collider, Enemy, Player, Position};
+use crate::resources::{EnemySpawnConfig, MapBounds};
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -31,11 +28,15 @@ pub fn spawn_enemies_with_timer(
                 if distance > 15.0 {
                     spawn_position.x -= 30.0;
                     spawn_position.y -= 30.0;
+                    //TODO: Move to Enemy Factory
                     commands.spawn((
                         Enemy {
-                            health: 10.0,
+                            health: 25.0,
                             speed: 1.0,
                             position: spawn_position,
+                        },
+                        Collider {
+                            size: Vec2::new(100.0, 100.0), // Adjust size as needed
                         },
                         Sprite::from_image(asset_server.load("merman.png")),
                         Transform::from_xyz(x, y, 0.5),

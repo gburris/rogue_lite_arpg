@@ -10,6 +10,7 @@ pub fn cast_spell_system(
     player: Query<&Transform, With<Player>>,
     window: Query<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     if let Some(target_transform) = calculate_cast_position_and_angle(player, window, camera_query)
     {
@@ -19,6 +20,7 @@ pub fn cast_spell_system(
                 SpellType::Fireball,
                 target_transform,
                 &asset_server,
+                &mut texture_atlas_layouts,
             );
         }
         if buttons.just_pressed(MouseButton::Right) {
@@ -27,6 +29,7 @@ pub fn cast_spell_system(
                 SpellType::Icebolt,
                 target_transform,
                 &asset_server,
+                &mut texture_atlas_layouts,
             );
         }
     }

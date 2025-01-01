@@ -1,3 +1,4 @@
+pub mod animate_sprite;
 pub mod camera;
 pub mod cast_spell;
 pub mod check_projectile_collision;
@@ -12,6 +13,7 @@ pub mod player_setup;
 pub mod process_status_effects;
 pub mod tilemap_generation;
 
+pub use animate_sprite::*;
 pub use camera::*;
 pub use cast_spell::*;
 pub use check_projectile_collision::*;

@@ -1,7 +1,7 @@
 use crate::{
     components::{
-        burning_effect::BurningEffect, damage_effect::DamageEffect,
-        freezing_effect::FreezingEffect, projectile::Projectile,
+        animation_indices::AnimationIndices, burning_effect::BurningEffect,
+        damage_effect::DamageEffect, projectile::Projectile, AnimationTimer,
     },
     helpers::labels::GameCollisionLayer,
 };
@@ -22,6 +22,7 @@ impl SpellFactory {
         spell_type: SpellType,
         caster_transform: Transform,
         asset_server: &Res<AssetServer>,
+        texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     ) {
         match spell_type {
             SpellType::Fireball => {
@@ -48,10 +49,14 @@ impl SpellFactory {
             }
             SpellType::Icebolt => {
                 println!("Casting Icebolt");
+                let animation_indices = AnimationIndices { first: 0, last: 4 };
+                let texture = asset_server.load("projectiles/IceBolt.png");
+                let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None);
+                let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
                 commands.spawn((
-                    Projectile::new(150.0),
+                    Projectile::new(300.0),
                     crate::components::Icebolt,
-                    caster_transform,
                     DamageEffect { base_damage: 8.0 },
                     RigidBody::Dynamic,
                     Collider::rectangle(10.0, 10.0),
@@ -65,7 +70,20 @@ impl SpellFactory {
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                         damage_per_second: 5.0,
                     },
-                    Sprite::from_image(asset_server.load("projectiles/frostball.png")),
+                    Sprite::from_atlas_image(
+                        texture,
+                        TextureAtlas {
+                            layout: texture_atlas_layout,
+                            index: animation_indices.first,
+                        },
+                    ),
+                    Transform {
+                        translation: caster_transform.translation,
+                        rotation: caster_transform.rotation,
+                        scale: Vec3::splat(2.0),
+                    },
+                    animation_indices,
+                    AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
                 ));
             }
         }

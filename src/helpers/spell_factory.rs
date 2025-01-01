@@ -23,7 +23,7 @@ impl SpellFactory {
             SpellType::Fireball => {
                 println!("Casting Fireball");
                 commands.spawn((
-                    Projectile { speed: 300.0 },
+                    Projectile::new(300.0),
                     crate::components::Fireball,
                     caster_transform,
                     DamageEffect { base_damage: 10.0 },
@@ -41,7 +41,7 @@ impl SpellFactory {
             SpellType::Icebolt => {
                 println!("Casting Icebolt");
                 commands.spawn((
-                    Projectile { speed: 150.0 },
+                    Projectile::new(150.0),
                     crate::components::Icebolt,
                     caster_transform,
                     DamageEffect { base_damage: 8.0 },

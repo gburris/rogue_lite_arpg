@@ -1,7 +1,11 @@
-use crate::components::{
-    burning_effect::BurningEffect, collider::Collider, damage_effect::DamageEffect,
-    freezing_effect::FreezingEffect, projectile::Projectile,
+use crate::{
+    components::{
+        burning_effect::BurningEffect, damage_effect::DamageEffect,
+        freezing_effect::FreezingEffect, projectile::Projectile,
+    },
+    helpers::labels::GameCollisionLayer,
 };
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use std::time::Duration;
 
@@ -27,9 +31,13 @@ impl SpellFactory {
                     crate::components::Fireball,
                     caster_transform,
                     DamageEffect { base_damage: 10.0 },
-                    Collider {
-                        size: Vec2::new(10.0, 10.0),
-                    },
+                    RigidBody::Dynamic,
+                    Collider::rectangle(10.0, 10.0),
+                    // Currently projectiles can only collide with enemies
+                    CollisionLayers::new(
+                        GameCollisionLayer::Projectile,
+                        [GameCollisionLayer::Enemy],
+                    ),
                     BurningEffect {
                         duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
@@ -45,9 +53,13 @@ impl SpellFactory {
                     crate::components::Icebolt,
                     caster_transform,
                     DamageEffect { base_damage: 8.0 },
-                    Collider {
-                        size: Vec2::new(10.0, 10.0),
-                    },
+                    RigidBody::Dynamic,
+                    Collider::rectangle(10.0, 10.0),
+                    // Currently projectiles can only collide with enemies
+                    CollisionLayers::new(
+                        GameCollisionLayer::Projectile,
+                        [GameCollisionLayer::Enemy],
+                    ),
                     BurningEffect {
                         duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),

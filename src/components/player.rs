@@ -1,8 +1,7 @@
-use crate::components::{Collider, Health, Speed};
+use crate::components::{Health, Speed};
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 #[derive(Component)]
-#[require(Health)]
-#[require(Collider)]
-#[require(Speed)]
+#[require(Health, Speed, Collider)]
 pub struct Player;

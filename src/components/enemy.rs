@@ -1,10 +1,9 @@
-use crate::components::{Collider, Health, Speed};
+use crate::components::{Health, Speed};
 
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(Health)]
-#[require(Collider)]
-#[require(Speed)]
+#[require(Health, Speed, Collider)]
 pub struct Enemy;

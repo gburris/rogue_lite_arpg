@@ -2,6 +2,7 @@ pub mod camera;
 pub mod cast_spell;
 pub mod check_projectile_collision;
 pub mod cursor;
+pub mod despawn;
 pub mod enemy_movement;
 pub mod enemy_spawn;
 pub mod handle_projectile_hits;

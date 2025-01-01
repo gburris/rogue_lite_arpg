@@ -1,0 +1,71 @@
+use crate::components::Player;
+use crate::helpers::spell_factory::{SpellFactory, SpellType};
+use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
+
+pub fn cast_spell_system(
+    mut commands: Commands,
+    buttons: Res<ButtonInput<MouseButton>>,
+    asset_server: Res<AssetServer>,
+    player: Query<&Transform, With<Player>>,
+    window: Query<&Window, With<PrimaryWindow>>,
+    camera_query: Single<(&Camera, &GlobalTransform)>,
+) {
+    if let Some(target_transform) = calculate_cast_position_and_angle(player, window, camera_query)
+    {
+        if buttons.just_pressed(MouseButton::Left) {
+            SpellFactory::spawn_spell(
+                &mut commands,
+                SpellType::Fireball,
+                target_transform,
+                &asset_server,
+            );
+        }
+        if buttons.just_pressed(MouseButton::Right) {
+            SpellFactory::spawn_spell(
+                &mut commands,
+                SpellType::Icebolt,
+                target_transform,
+                &asset_server,
+            );
+        }
+    }
+}
+
+fn calculate_cast_position_and_angle(
+    player: Query<&Transform, With<Player>>,
+    window: Query<&Window, With<PrimaryWindow>>,
+    camera_query: Single<(&Camera, &GlobalTransform)>,
+) -> Option<Transform> {
+    let mut player_transform: &Transform = &Transform::default();
+
+    for transform in &player {
+        player_transform = transform;
+    }
+    let player_pos = player_transform.translation;
+    let mut target_transform = Transform::from_xyz(player_pos.x, player_pos.y, 0.5);
+
+    target_transform.rotation = player_transform.rotation;
+    let (camera, camera_transform) = *camera_query;
+
+    let Ok(window) = window.get_single() else {
+        return None;
+    };
+
+    let Some(cursor_position) = window.cursor_position() else {
+        return None;
+    };
+
+    // Calculate a world position based on the cursor's position.
+    let Ok(point) = camera.viewport_to_world_2d(camera_transform, cursor_position) else {
+        return None;
+    };
+
+    let player_dir = player_transform.local_x().truncate();
+    let cursor_dir = point - player_transform.translation.truncate();
+    let angle = player_dir.angle_to(cursor_dir);
+
+    target_transform.rotate_z(angle);
+
+    Some(target_transform)
+}

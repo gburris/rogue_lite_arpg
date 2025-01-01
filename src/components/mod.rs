@@ -5,8 +5,10 @@ pub mod collider;
 pub mod damage_effect;
 pub mod enemy;
 pub mod fireball;
+pub mod freezing_effect;
+pub mod icebolt;
 pub mod player; // Declare the player module
-pub mod position; // Declare the enemy module
+pub mod position;
 
 pub mod health_bar;
 pub mod health_text;
@@ -21,5 +23,7 @@ pub use projectile::Projectile;
 // Re-export the components so they can be easily accessed
 pub use enemy::*;
 pub use fireball::*;
+pub use freezing_effect::*;
+pub use icebolt::*;
 pub use player::*;
 pub use position::*;

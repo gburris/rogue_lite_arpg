@@ -1,5 +1,5 @@
 pub mod camera;
-pub mod cast_fireball;
+pub mod cast_spell;
 pub mod check_projectile_collision;
 pub mod cursor;
 pub mod enemy_movement;
@@ -13,7 +13,7 @@ pub mod process_status_effects;
 pub mod tilemap_generation;
 
 pub use camera::*;
-pub use cast_fireball::*;
+pub use cast_spell::*;
 pub use check_projectile_collision::*;
 pub use cursor::*;
 pub use enemy_movement::move_enemies_toward_player;

@@ -6,9 +6,9 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-pub struct EnemySpawnerPlugin;
+pub struct EnemyPlugin;
 
-impl Plugin for EnemySpawnerPlugin {
+impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         log::info!("Player Plugin! added!");
         app.insert_resource(EnemySpawnConfig {

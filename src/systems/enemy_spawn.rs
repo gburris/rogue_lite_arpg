@@ -1,4 +1,4 @@
-use crate::components::{Collider, Enemy, Player, Position};
+use crate::components::{Collider, Enemy, Health, HealthBar, Player, Speed};
 use crate::resources::{EnemySpawnConfig, MapBounds};
 use bevy::prelude::*;
 use rand::Rng;
@@ -18,53 +18,34 @@ pub fn spawn_enemies_with_timer(
             let x = rng.gen_range(mapbounds.min_x..mapbounds.max_x);
             let y = rng.gen_range(mapbounds.min_y..mapbounds.max_y);
 
-            let mut spawn_position = Position { x, y };
+            let mut spawn_position = Vec2::new(x, y);
             if let Ok(player_position) = player_transform_query.get_single() {
                 let player_transform = &player_position;
                 let player_pos = player_transform.translation;
                 let distance = ((spawn_position.x - player_pos.x).powi(2)
                     + (spawn_position.y - player_pos.y).powi(2))
                 .sqrt();
-                if distance > 15.0 {
+                if distance <= 15.0 {
                     spawn_position.x -= 30.0;
                     spawn_position.y -= 30.0;
-                    //TODO: Move to Enemy Factory
-                    commands.spawn((
-                        Enemy {
-                            health: 30.0,
-                            speed: 1.0,
-                            position: spawn_position,
-                        },
-                        Collider {
-                            size: Vec2::new(100.0, 100.0), // Adjust size as needed
-                        },
-                        Sprite::from_image(asset_server.load("merman.png")),
-                        Transform::from_xyz(x, y, 0.5),
-                    ));
-                    return;
-                } else {
-                    commands.spawn((
-                        Enemy {
-                            health: 30.0,
-                            speed: 1.0,
-                            position: spawn_position,
-                        },
-                        Sprite::from_image(asset_server.load("merman.png")),
-                        Transform::from_xyz(x, y, 0.5),
-                    ));
-                    return;
                 }
-            } else {
                 commands.spawn((
-                    Enemy {
-                        health: 25.0,
-                        speed: 1.0,
-                        position: spawn_position,
+                    Enemy,
+                    //This sets all of the fields of speed to be default except velocity
+                    Speed {
+                        velocity: 3.0,
+                        ..Default::default()
+                    },
+                    Health::default(),
+                    HealthBar {
+                        health_percetange: 100.0,
+                    },
+                    Collider {
+                        size: Vec2::new(100.0, 100.0),
                     },
                     Sprite::from_image(asset_server.load("merman.png")),
-                    Transform::from_xyz(x, y, 0.5),
+                    Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
                 ));
-                return;
             }
         }
     }

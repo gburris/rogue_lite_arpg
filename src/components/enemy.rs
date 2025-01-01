@@ -1,9 +1,10 @@
-use crate::components::position::Position;
+use crate::components::{Collider, Health, Speed};
+
 use bevy::prelude::*;
 
+//favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-pub struct Enemy {
-    pub health: f32,
-    pub speed: f32,
-    pub position: Position,
-}
+#[require(Health)]
+#[require(Collider)]
+#[require(Speed)]
+pub struct Enemy;

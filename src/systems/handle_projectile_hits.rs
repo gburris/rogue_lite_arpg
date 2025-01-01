@@ -2,14 +2,14 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::components::{BurningEffect, DamageEffect, Enemy};
+use crate::components::{BurningEffect, DamageEffect, Enemy, Health};
 use crate::events::ProjectileHitEvent;
 use crate::resources::ProcessedProjectiles;
 
 pub fn handle_projectile_hits(
     mut commands: Commands,
     mut events: EventReader<ProjectileHitEvent>,
-    mut enemies: Query<&mut Enemy>,
+    mut enemies: Query<(&mut Enemy, &mut Health)>,
     projectiles: Query<(&DamageEffect, &BurningEffect)>,
     mut processed: ResMut<ProcessedProjectiles>,
     asset_server: Res<AssetServer>,
@@ -20,7 +20,7 @@ pub fn handle_projectile_hits(
             continue; // Skip already processed projectiles
         }
         //If the enemy is here, continue
-        if let Ok(mut enemy) = enemies.get_mut(event.enemy) {
+        if let Ok((mut enemy, mut health)) = enemies.get_mut(event.enemy) {
             //If the projectile is on the event, continue
             if let Ok(effects) = projectiles.get(event.projectile) {
                 println!(
@@ -29,6 +29,7 @@ pub fn handle_projectile_hits(
                 );
                 processed.set.insert(id);
                 commands.entity(event.enemy).insert((
+                    //TODO: The queries in this file suck and require access via .1. and .0. leading to unreadble code
                     BurningEffect {
                         damage_per_second: effects.1.damage_per_second,
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
@@ -37,14 +38,14 @@ pub fn handle_projectile_hits(
                     Sprite::from_image(asset_server.load("merman_on_fire.png")),
                 ));
                 println!("Handling ProjectileHitEvent event: Damage Effect of projectile is found");
-                enemy.health -= effects.0.base_damage;
-                if enemy.health <= 0.0 {
+                health.hp -= effects.0.base_damage;
+                if health.hp <= 0.0 {
                     println!("Handling ProjectileHitEvent event: Enemy is dead");
                     commands.entity(event.enemy).despawn();
                 }
                 println!(
                     "Handling ProjectileHitEvent event: enemy is not dead {} ",
-                    enemy.health
+                    health.hp
                 );
                 commands.entity(event.projectile).despawn();
             }

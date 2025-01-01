@@ -1,8 +1,8 @@
+use crate::components::{Collider, Health, Speed};
 use bevy::prelude::*;
-use crate::components::position::Position;
 
 #[derive(Component)]
-pub struct Player {
-    pub speed: f32,
-    pub position: Position,
-}
+#[require(Health)]
+#[require(Collider)]
+#[require(Speed)]
+pub struct Player;

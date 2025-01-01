@@ -35,7 +35,7 @@ impl SpellFactory {
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                         damage_per_second: 5.0,
                     },
-                    Sprite::from_image(asset_server.load("fireball/FB001.png")),
+                    Sprite::from_image(asset_server.load("projectiles/FB001.png")),
                 ));
             }
             SpellType::Icebolt => {
@@ -53,7 +53,7 @@ impl SpellFactory {
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                         damage_per_second: 5.0,
                     },
-                    Sprite::from_image(asset_server.load("fireball/FB001.png")),
+                    Sprite::from_image(asset_server.load("projectiles/frostball.png")),
                 ));
             }
         }

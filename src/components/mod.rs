@@ -1,5 +1,6 @@
 // src/components/mod.rs
 
+pub mod animation_indices;
 pub mod burning_effect;
 pub mod damage_effect;
 pub mod enemy;
@@ -19,6 +20,7 @@ pub use health_bar::HealthBar;
 pub use projectile::Projectile;
 pub use speed::Speed;
 // Re-export the components so they can be easily accessed
+pub use animation_indices::*;
 pub use enemy::*;
 pub use fireball::*;
 pub use freezing_effect::*;

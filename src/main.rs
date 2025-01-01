@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::utils::HashSet;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::plugins::{EnemySpawnerPlugin, PlayerPlugin, ProjectilePlugin, UIPlugin};
+use game_dev_project::plugins::{EnemyPlugin, PlayerPlugin, ProjectilePlugin};
 use game_dev_project::resources::{MapBounds, PlayerSize, ProcessedProjectiles, TileSize};
 
 fn main() {
@@ -23,9 +23,8 @@ fn main() {
         )
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
-        .add_plugins(EnemySpawnerPlugin)
+        .add_plugins(EnemyPlugin)
         .add_plugins(ProjectilePlugin)
-        .add_plugins(UIPlugin)
         .add_systems(Startup, game_dev_project::systems::generate_tilemap)
         .insert_resource(TileSize { x: 16.0, y: 16.0 })
         .insert_resource(MapBounds {

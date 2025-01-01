@@ -1,35 +1,25 @@
-use crate::components::{Enemy, Player};
+use crate::components::{Enemy, Player, Speed};
 use bevy::prelude::*;
 
-// Import the map bounds resource
+use bevy::prelude::*;
+
 pub fn move_enemies_toward_player(
-    //Param set so I can query transform twice in one go
-    mut query: ParamSet<(
+    mut param_set: ParamSet<(
         Query<&Transform, With<Player>>,
-        Query<(&mut Enemy, &mut Transform)>,
+        Query<(&Speed, &mut Transform), With<Enemy>>,
     )>,
 ) {
-    
-    // First, get the player position
-    if let Ok(player_position) = query.p0().get_single() {
-        let player_transform = &player_position;
+    // Get the player's transform (read-only)
+    if let Ok(player_transform) = param_set.p0().get_single() {
         let player_pos = player_transform.translation;
+        // Iterate through enemies and update their transforms
+        for (speed, mut enemy_transform) in param_set.p1().iter_mut() {
+            // Calculate direction towards the player
+            let direction = player_pos - enemy_transform.translation;
+            let direction = direction.normalize_or_zero();
 
-        // Then, update enemy positions
-        for (mut enemy, mut transform) in query.p1().iter_mut() {
-            // Calculate direction toward the player
-            let direction = Vec2::new(
-                player_pos.x - enemy.position.x,
-                player_pos.y - enemy.position.y,
-            )
-            .normalize_or_zero();
-
-            // Update enemy position
-            enemy.position.x += direction.x * enemy.speed;
-            enemy.position.y += direction.y * enemy.speed;
-
-            // Update the transform to reflect the new position
-            transform.translation = Vec3::new(enemy.position.x, enemy.position.y, 1.0);
+            // Update the enemy's position
+            enemy_transform.translation += direction * speed.velocity;
         }
     }
 }

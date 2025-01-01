@@ -1,5 +1,7 @@
-use crate::components::{Collider, Enemy, Health, HealthBar, Player, Speed};
+use crate::components::{Enemy, Health, HealthBar, Player, Speed};
+use crate::helpers::labels::GameCollisionLayer;
 use crate::resources::{EnemySpawnConfig, MapBounds};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -40,9 +42,13 @@ pub fn spawn_enemies_with_timer(
                     HealthBar {
                         health_percetange: 100.0,
                     },
-                    Collider {
-                        size: Vec2::new(100.0, 100.0),
-                    },
+                    RigidBody::Dynamic,
+                    Collider::rectangle(100.0, 100.0),
+                    // Currently enemies can only collide with projectiles
+                    CollisionLayers::new(
+                        GameCollisionLayer::Enemy,
+                        [GameCollisionLayer::Projectile],
+                    ),
                     Sprite::from_image(asset_server.load("merman.png")),
                     Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
                 ));

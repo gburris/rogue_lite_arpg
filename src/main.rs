@@ -1,3 +1,5 @@
+use avian2d::prelude::{Gravity, PhysicsDebugPlugin};
+use avian2d::PhysicsPlugins;
 use bevy::prelude::*;
 use bevy::utils::HashSet;
 use bevy_ecs_tilemap::prelude::*;
@@ -21,6 +23,8 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
+        .insert_resource(Gravity::ZERO)
         .add_plugins(TilemapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(EnemyPlugin)

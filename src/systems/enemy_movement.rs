@@ -1,8 +1,6 @@
 use crate::components::{Enemy, Player, Speed};
 use bevy::prelude::*;
 
-use bevy::prelude::*;
-
 pub fn move_enemies_toward_player(
     mut param_set: ParamSet<(
         Query<&Transform, With<Player>>,

@@ -8,7 +8,7 @@ pub fn process_burning(
     mut burning_effect_query: Query<(Entity, &mut BurningEffect, &mut Enemy, &mut Health)>,
     asset_server: Res<AssetServer>,
 ) {
-    for (entity, mut burning, mut enemy, mut health) in &mut burning_effect_query {
+    for (entity, mut burning, mut _enemy, mut health) in &mut burning_effect_query {
         // Tick the burning effect's timer
         burning.duration.tick(time.delta());
         burning.tick_timer.tick(time.delta());

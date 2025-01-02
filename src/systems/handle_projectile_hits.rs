@@ -2,44 +2,61 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::components::{BurningEffect, DamageEffect, Enemy, Health};
+use crate::components::{
+    BurningEffect, DamageEffect, Effect, EffectType, FreezingEffect, Health, StatusEffects,
+};
 use crate::events::ProjectileHitEvent;
 use crate::resources::ProcessedProjectiles;
 
-pub fn handle_projectile_hits(
+pub fn handle_projectile_collision(
     mut commands: Commands,
-    mut events: EventReader<ProjectileHitEvent>,
-    mut enemies: Query<(&mut Enemy, &mut Health)>,
-    projectiles: Query<(&DamageEffect, &BurningEffect)>,
+    mut collision_events: EventReader<ProjectileHitEvent>,
+    mut enemy_query: Query<(&mut Health, &mut StatusEffects)>,
+    projectile_query: Query<(
+        &DamageEffect,
+        Option<&BurningEffect>,
+        Option<&FreezingEffect>,
+    )>,
     mut processed: ResMut<ProcessedProjectiles>,
-    asset_server: Res<AssetServer>,
 ) {
-    for (event, id) in events.read_with_id() {
+    for (event, id) in collision_events.read_with_id() {
         if processed.set.contains(&id) {
-            println!("Skipping event, it's already been processed {}", id);
-            continue; // Skip already processed projectiles
+            continue;
         }
-        //If the enemy is here, continue
-        if let Ok((_enemy, mut health)) = enemies.get_mut(event.enemy) {
-            //If the projectile is on the event, continue
-            if let Ok(effects) = projectiles.get(event.projectile) {
+
+        if let Ok((mut health, mut status)) = enemy_query.get_mut(event.enemy) {
+            if let Ok((damage, burning_effect, freezing_effect)) =
+                projectile_query.get(event.projectile)
+            {
                 processed.set.insert(id);
-                commands.entity(event.enemy).insert((
-                    //TODO: The queries in this file suck and require access via .1. and .0. leading to unreadble code
-                    BurningEffect {
-                        damage_per_second: effects.1.damage_per_second,
-                        tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
+
+                // Apply base damage
+                health.hp -= damage.base_damage;
+
+                // Handle burning effect if present
+                if let Some(burning) = burning_effect {
+                    status.effects.push(Effect {
+                        effect_type: EffectType::Burning,
                         duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
-                    },
-                    Sprite::from_image(asset_server.load("merman_on_fire.png")),
-                ));
-                health.hp -= effects.0.base_damage;
+                        damage_per_second: burning.damage_per_second,
+                    });
+                }
+
+                // Handle freezing effect if present
+                if let Some(_freezing) = freezing_effect {
+                    status.effects.push(Effect {
+                        effect_type: EffectType::Slowed,
+                        duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
+                        damage_per_second: 0.0,
+                    });
+                }
+
                 if health.hp <= 0.0 {
                     commands.entity(event.enemy).despawn();
                 }
+
                 commands.entity(event.projectile).despawn();
             }
         }
-        //Despawn the projectile entity once we finish process it's collision event fully
     }
 }

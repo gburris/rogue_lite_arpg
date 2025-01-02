@@ -1,36 +1,61 @@
 use bevy::prelude::*;
 
-use crate::components::{BurningEffect, Enemy, Health};
+use crate::components::{EffectType, Enemy, Health, Speed, StatusEffects};
 
-pub fn process_burning(
-    mut commands: Commands,
+pub fn handle_status_effects(
     time: Res<Time>,
-    mut burning_effect_query: Query<(Entity, &mut BurningEffect, &mut Enemy, &mut Health)>,
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut Enemy,
+        &mut StatusEffects,
+        &mut Health,
+        &mut Speed,
+        Option<&Sprite>,
+    )>,
     asset_server: Res<AssetServer>,
 ) {
-    for (entity, mut burning, mut _enemy, mut health) in &mut burning_effect_query {
-        // Tick the burning effect's timer
-        burning.duration.tick(time.delta());
-        burning.tick_timer.tick(time.delta());
+    for (entity, _enemy, mut status, mut health, mut speed, sprite) in query.iter_mut() {
+        let mut has_effect = false;
 
-        // Apply damage if the tick_timer just finished (every second)
-        if burning.tick_timer.just_finished() {
-            health.hp -= burning.damage_per_second;
+        // Process each active status effect
+        status.effects.retain_mut(|effect| {
+            effect.duration.tick(time.delta());
+            match effect.effect_type {
+                EffectType::Burning => {
+                    health.hp -= effect.damage_per_second / 60.0;
+                    if health.hp <= 0.0 {
+                        commands.entity(entity).despawn();
+                        return false;
+                    }
 
-            // Check if the enemy is dead
-            if health.hp <= 0.0 {
-                println!("Burning Effect killed the enemy");
-                commands.entity(entity).despawn();
-                continue; // Skip further processing for this entity
+                    commands
+                        .entity(entity)
+                        .try_insert(Sprite::from_image(asset_server.load("merman_on_fire.png")));
+                }
+                EffectType::Slowed => {
+                    speed.velocity = speed.velocity * 0.5;
+                    commands
+                        .entity(entity)
+                        .try_insert(Sprite::from_image(asset_server.load("merman_freezing.png")));
+                }
+                EffectType::Stunned => {
+                    speed.velocity = 0.0;
+                    // Stunned effect - no movement
+                }
             }
-        }
+            has_effect = true; // Mark that the entity has an active effect
+            !effect.duration.finished()
+        });
 
-        // Check if the burning effect duration has ended
-        if burning.duration.finished() {
+        // If no effects are active, reset speed and sprite
+        if !has_effect {
+            // Reset speed
+            speed.velocity = speed.max_velocity;
+            // Reset sprite if it was set
             commands
                 .entity(entity)
-                .remove::<BurningEffect>()
-                .insert(Sprite::from_image(asset_server.load("merman.png")));
+                .try_insert(Sprite::from_image(asset_server.load("merman.png")));
         }
     }
 }

@@ -4,9 +4,9 @@ use crate::events::ProjectileHitEvent;
 use crate::systems::check_projectile_collision;
 use crate::systems::check_warpzone_collision;
 use crate::systems::despawn::despawn_projectiles;
-use crate::systems::handle_projectile_hits;
+use crate::systems::handle_projectile_collision;
+use crate::systems::handle_status_effects;
 use crate::systems::move_projectiles;
-use crate::systems::process_burning;
 
 pub struct ProjectilePlugin;
 
@@ -20,8 +20,8 @@ impl Plugin for ProjectilePlugin {
                     move_projectiles,
                     check_projectile_collision,
                     check_warpzone_collision,
-                    handle_projectile_hits,
-                    process_burning,
+                    handle_projectile_collision,
+                    handle_status_effects,
                     despawn_projectiles,
                 ),
             );

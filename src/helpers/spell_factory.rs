@@ -1,7 +1,7 @@
 use crate::{
     components::{
-        animation_indices::AnimationIndices, burning_effect::BurningEffect,
-        damage_effect::DamageEffect, projectile::Projectile, AnimationTimer,
+        animation_indices::AnimationIndices, damage_effect::DamageEffect, projectile::Projectile,
+        AnimationTimer, BurningEffect, FreezingEffect,
     },
     helpers::labels::GameCollisionLayer,
 };
@@ -63,10 +63,9 @@ impl SpellFactory {
                         GameCollisionLayer::Projectile,
                         [GameCollisionLayer::Enemy],
                     ),
-                    BurningEffect {
+                    FreezingEffect {
                         duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
-                        tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
-                        damage_per_second: 5.0,
+                        slow_percentage: 0.5,
                     },
                     Sprite::from_atlas_image(
                         texture,

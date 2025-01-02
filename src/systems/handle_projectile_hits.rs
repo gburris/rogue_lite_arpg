@@ -20,7 +20,7 @@ pub fn handle_projectile_hits(
             continue; // Skip already processed projectiles
         }
         //If the enemy is here, continue
-        if let Ok((mut enemy, mut health)) = enemies.get_mut(event.enemy) {
+        if let Ok((_enemy, mut health)) = enemies.get_mut(event.enemy) {
             //If the projectile is on the event, continue
             if let Ok(effects) = projectiles.get(event.projectile) {
                 println!(

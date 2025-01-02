@@ -13,7 +13,7 @@ pub fn check_warpzone_collision(
         for (e1, e2) in [(*e1, *e2), (*e2, *e1)] {
             // Checks if one of the entities is a projectile and one is an enemy
             if let Ok(warpzone_entity) = warpzone_query.get(e1) {
-                if let Ok(player_entity) = player_query.get(e2) {
+                if let Ok(_player_entity) = player_query.get(e2) {
                     warpzone_enter_event_writer.send(WarpZoneEnterEvent {
                         warp_zone: warpzone_entity,
                     });

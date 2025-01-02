@@ -15,7 +15,6 @@ pub fn check_projectile_collision(
             // Checks if one of the entities is a projectile and one is an enemy
             if let Ok(projectile_entity) = projectile_query.get(e1) {
                 if let Ok(enemy_entity) = enemy_query.get(e2) {
-                    println!("SENDING COLLISION EVENT");
                     projectile_hit_event.send(ProjectileHitEvent {
                         projectile: projectile_entity,
                         enemy: enemy_entity,

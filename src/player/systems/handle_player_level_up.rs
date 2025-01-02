@@ -1,7 +1,7 @@
 // Bevy class to handle player level up
-use bevy::{prelude::*, transform};
+use bevy::prelude::*;
 
-use crate::events::PlayerLevelUpEvent;
+use crate::player::events::PlayerLevelUpEvent;
 #[derive(Component)]
 pub struct LevelUpAnimation {
     timer: Timer,

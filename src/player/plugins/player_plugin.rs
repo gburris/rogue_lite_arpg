@@ -1,9 +1,8 @@
 use crate::{
     labels::{sets::GamePlaySet, states::GameState},
-    systems::{
-        animate_sprite, camera_follow_system, cast_spell_system, draw_cursor, face_cursor_system,
-        player_movement, player_setup,
-    },
+    player::systems::{draw_cursor, face_cursor_system, player_movement, player_setup},
+    spells::cast_spell_system,
+    systems::{animate_sprite, camera_follow_system},
 };
 use bevy::prelude::*;
 

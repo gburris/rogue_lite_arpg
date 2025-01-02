@@ -2,8 +2,9 @@ use avian2d::prelude::{Collider, RigidBody};
 use bevy::prelude::*;
 
 use crate::{
-    components::{Health, HealthBar, Player, Speed},
+    components::{Health, HealthBar, Speed},
     labels::states::GameState,
+    player::Player,
     resources::assets::SpriteAssets,
 };
 

@@ -1,9 +1,8 @@
-use bevy::prelude::*;
 use bevy::color::palettes::basic::WHITE;
+use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::components::Player;
-
+use crate::player::components::Player;
 
 pub fn draw_cursor(
     camera_query: Single<(&Camera, &GlobalTransform)>,

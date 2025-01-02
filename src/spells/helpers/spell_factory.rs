@@ -29,7 +29,7 @@ impl SpellFactory {
             SpellType::Fireball => {
                 commands.spawn((
                     Projectile::new(300.0),
-                    crate::components::Fireball,
+                    crate::spells::components::Fireball,
                     caster_transform,
                     DamageEffect { base_damage: 10.0 },
                     RigidBody::Dynamic,
@@ -55,7 +55,7 @@ impl SpellFactory {
 
                 commands.spawn((
                     Projectile::new(300.0),
-                    crate::components::Icebolt,
+                    crate::spells::components::Icebolt,
                     DamageEffect { base_damage: 8.0 },
                     RigidBody::Dynamic,
                     Collider::rectangle(10.0, 10.0),

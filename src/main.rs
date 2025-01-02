@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy::utils::HashSet;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::plugins::{
-    EnemyPlugin, ExperiencePlugin, LevelPlugin, PlayerPlugin, ProjectilePlugin,
-};
+use game_dev_project::enemy::plugins::EnemyPlugin;
+use game_dev_project::player::plugins::{ExperiencePlugin, PlayerPlugin};
+use game_dev_project::plugins::{LevelPlugin, ProjectilePlugin};
 use game_dev_project::resources::assets::AssetLoadingPlugin;
 use game_dev_project::resources::{PlayerSize, ProcessedProjectiles, ProcessedWarpZoneEvents};
 use game_dev_project::schedule::SchedulePlugin;

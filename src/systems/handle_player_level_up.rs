@@ -11,7 +11,6 @@ pub struct LevelUpAnimation {
 pub fn handle_player_level_up(
     mut commands: Commands,
     mut level_up_events: EventReader<PlayerLevelUpEvent>,
-    asset_server: Res<AssetServer>,
 ) {
     for event in level_up_events.read() {
         println!("Player leveled up to level {}", event.new_level);

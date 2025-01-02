@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::events::ProjectileHitEvent;
+use crate::labels::sets::GamePlaySet;
 use crate::systems::check_projectile_collision;
 use crate::systems::check_warpzone_collision;
 use crate::systems::despawn::despawn_projectiles;
@@ -21,7 +22,8 @@ impl Plugin for ProjectilePlugin {
                 handle_projectile_collision,
                 handle_status_effects,
                 despawn_projectiles,
-            ),
+            )
+                .in_set(GamePlaySet::Simulation),
         );
     }
 }

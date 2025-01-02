@@ -5,6 +5,8 @@ use bevy::{
     window::WindowResolution,
 };
 
+use crate::labels::states::GameState;
+
 pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
@@ -34,6 +36,8 @@ impl Plugin for SetupPlugin {
         // setup avian physics (used for forces, collision, etc...)
         .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
         .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
+        // initialize states
+        .init_state::<GameState>()
         .add_systems(Startup, setup_camera);
     }
 }

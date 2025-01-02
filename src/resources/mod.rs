@@ -1,3 +1,4 @@
+pub mod assets;
 pub mod enemy_spawn_config;
 pub mod map_bounds;
 pub mod player_size;

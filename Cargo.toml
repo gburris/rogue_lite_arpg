@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 bevy = "0.15.0"
 bevy_ecs_tilemap = "0.15.0"
+bevy_asset_loader = "0.22.0"
 avian2d = "0.2.0"
 tiled = "0.11.0"
 ldtk_rust = "0.6"

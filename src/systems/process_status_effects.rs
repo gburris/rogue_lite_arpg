@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     components::{EffectType, Enemy, Experience, Health, Speed, StatusEffects},
     events::EnemyDefeatedEvent,
+    resources::assets::SpriteAssets,
 };
 
 pub fn handle_status_effects(
@@ -18,7 +19,7 @@ pub fn handle_status_effects(
         &Experience,
     )>,
     mut enemy_defeated_events: EventWriter<EnemyDefeatedEvent>,
-    asset_server: Res<AssetServer>,
+    sprites: Res<SpriteAssets>,
 ) {
     for (entity, _enemy, mut status, mut health, mut speed, transform, experience) in
         query.iter_mut()
@@ -45,13 +46,13 @@ pub fn handle_status_effects(
 
                     commands
                         .entity(entity)
-                        .try_insert(Sprite::from_image(asset_server.load("merman_on_fire.png")));
+                        .try_insert(Sprite::from_image(sprites.merman_on_fire.clone()));
                 }
                 EffectType::Slowed => {
                     speed.velocity = speed.velocity * 0.5;
                     commands
                         .entity(entity)
-                        .try_insert(Sprite::from_image(asset_server.load("merman_freezing.png")));
+                        .try_insert(Sprite::from_image(sprites.merman_freezing.clone()));
                 }
                 EffectType::Stunned => {
                     speed.velocity = 0.0;
@@ -69,7 +70,7 @@ pub fn handle_status_effects(
             // Reset sprite if it was set
             commands
                 .entity(entity)
-                .try_insert(Sprite::from_image(asset_server.load("merman.png")));
+                .try_insert(Sprite::from_image(sprites.merman_enemy.clone()));
         }
     }
 }

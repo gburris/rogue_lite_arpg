@@ -4,8 +4,6 @@ use bevy::prelude::*;
 use crate::components::{Health, HealthBar, Player, Speed};
 
 pub fn player_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2d);
-    // commands.spawn(Camera2d); //This should not be here
     commands.spawn((
         Player,
         Speed::default(),

@@ -1,4 +1,4 @@
-use crate::components::Player;
+use crate::player::components::Player;
 use crate::resources::MapBounds;
 use bevy::prelude::*; // Make sure to import MapBounds
 

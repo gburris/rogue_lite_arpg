@@ -1,6 +1,6 @@
-use crate::components::Player;
-use crate::helpers::spell_factory::{SpellFactory, SpellType};
+use crate::player::components::Player;
 use crate::resources::assets::SpriteAssets;
+use crate::spells::{SpellFactory, SpellType};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 

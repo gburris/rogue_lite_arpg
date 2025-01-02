@@ -1,5 +1,6 @@
-use crate::components::{Player, WarpZone};
+use crate::components::WarpZone;
 use crate::events::WarpZoneEnterEvent;
+use crate::player::Player;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 

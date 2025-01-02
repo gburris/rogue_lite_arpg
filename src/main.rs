@@ -3,7 +3,9 @@ use avian2d::PhysicsPlugins;
 use bevy::prelude::*;
 use bevy::utils::HashSet;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::plugins::{EnemyPlugin, LevelPlugin, PlayerPlugin, ProjectilePlugin};
+use game_dev_project::plugins::{
+    EnemyPlugin, ExperiencePlugin, LevelPlugin, PlayerPlugin, ProjectilePlugin,
+};
 use game_dev_project::resources::{PlayerSize, ProcessedProjectiles, ProcessedWarpZoneEvents};
 
 fn main() {
@@ -28,6 +30,7 @@ fn main() {
         .add_plugins(EnemyPlugin)
         .add_plugins(ProjectilePlugin)
         .add_plugins(LevelPlugin)
+        .add_plugins(ExperiencePlugin)
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .insert_resource(ProcessedProjectiles {
             set: HashSet::new(),

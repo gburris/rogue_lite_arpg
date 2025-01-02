@@ -3,15 +3,18 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 use crate::components::{
-    BurningEffect, DamageEffect, Effect, EffectType, FreezingEffect, Health, StatusEffects,
+    BurningEffect, DamageEffect, Effect, EffectType, Experience, FreezingEffect, Health,
+    StatusEffects,
 };
-use crate::events::ProjectileHitEvent;
+use crate::events::{EnemyDefeatedEvent, ProjectileHitEvent};
+use crate::helpers::handle_enemy_death::handle_enemy_death;
 use crate::resources::ProcessedProjectiles;
 
 pub fn handle_projectile_collision(
     mut commands: Commands,
     mut collision_events: EventReader<ProjectileHitEvent>,
-    mut enemy_query: Query<(&mut Health, &mut StatusEffects)>,
+    mut enemy_defeated_events: EventWriter<EnemyDefeatedEvent>,
+    mut enemy_query: Query<(&mut Health, &mut StatusEffects, &Transform, &Experience)>,
     projectile_query: Query<(
         &DamageEffect,
         Option<&BurningEffect>,
@@ -24,7 +27,9 @@ pub fn handle_projectile_collision(
             continue;
         }
 
-        if let Ok((mut health, mut status)) = enemy_query.get_mut(event.enemy) {
+        if let Ok((mut health, mut status, transform, experience)) =
+            enemy_query.get_mut(event.enemy)
+        {
             if let Ok((damage, burning_effect, freezing_effect)) =
                 projectile_query.get(event.projectile)
             {
@@ -52,7 +57,14 @@ pub fn handle_projectile_collision(
                 }
 
                 if health.hp <= 0.0 {
-                    commands.entity(event.enemy).despawn();
+                    if let Some(entity_commands) = commands.get_entity(event.enemy) {
+                        commands.entity(event.enemy).despawn();
+                        enemy_defeated_events.send(EnemyDefeatedEvent {
+                            enemy_entity: event.enemy,
+                            enemy_position: transform.translation,
+                            exp_value: experience.base_exp,
+                        });
+                    }
                 }
 
                 commands.entity(event.projectile).despawn();

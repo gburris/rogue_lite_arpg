@@ -1,4 +1,4 @@
-use crate::components::{Enemy, Health, HealthBar, Player, Speed};
+use crate::components::{Enemy, Health, HealthBar, Player, Speed, StatusEffects};
 use crate::helpers::labels::GameCollisionLayer;
 use crate::resources::{EnemySpawnConfig, MapBounds};
 use avian2d::prelude::*;
@@ -36,12 +36,14 @@ pub fn spawn_enemies_with_timer(
                     //This sets all of the fields of speed to be default except velocity
                     Speed {
                         velocity: 3.0,
+                        max_velocity: 3.0,
                         ..Default::default()
                     },
                     Health::default(),
                     HealthBar {
                         health_percetange: 100.0,
                     },
+                    StatusEffects::default(),
                     RigidBody::Dynamic,
                     Collider::rectangle(100.0, 100.0),
                     // Currently enemies can only collide with projectiles

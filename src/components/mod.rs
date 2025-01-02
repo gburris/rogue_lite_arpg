@@ -3,6 +3,7 @@
 pub mod animation_indices;
 pub mod burning_effect;
 pub mod damage_effect;
+pub mod effects;
 pub mod enemy;
 pub mod fireball;
 pub mod freezing_effect;
@@ -16,6 +17,7 @@ pub mod warp_zone;
 
 pub use burning_effect::BurningEffect;
 pub use damage_effect::DamageEffect;
+pub use effects::*;
 pub use health::Health;
 pub use health_bar::HealthBar;
 pub use projectile::Projectile;

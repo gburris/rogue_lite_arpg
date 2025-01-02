@@ -1,5 +1,5 @@
-use crate::components::Player;
 use crate::components::Speed;
+use crate::player::Player;
 use crate::resources::MapBounds;
 use crate::resources::PlayerSize;
 use bevy::prelude::*; // Import the map bounds resource

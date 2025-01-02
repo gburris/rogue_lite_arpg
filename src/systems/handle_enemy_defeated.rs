@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
-use crate::components::{Player, PlayerExperience, PlayerLevel};
-use crate::events::{EnemyDefeatedEvent, PlayerLevelUpEvent};
+use crate::events::EnemyDefeatedEvent;
+use crate::player::components::Player;
+use crate::player::components::PlayerExperience;
+use crate::player::components::PlayerLevel;
+use crate::player::PlayerLevelUpEvent;
 
 pub fn handle_enemy_defeated(
     mut enemy_defeat_events: EventReader<EnemyDefeatedEvent>,

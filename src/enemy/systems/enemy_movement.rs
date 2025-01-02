@@ -1,4 +1,6 @@
-use crate::components::{Enemy, Health, Player, Speed};
+use crate::components::{Enemy, Health, Speed};
+use crate::player::components::Player;
+
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 

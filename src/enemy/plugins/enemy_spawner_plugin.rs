@@ -1,7 +1,7 @@
 use crate::{
+    enemy::systems::{move_enemies_toward_player, spawn_enemies_with_timer},
     labels::sets::GamePlaySet,
     resources::EnemySpawnConfig,
-    systems::{move_enemies_toward_player, spawn_enemies_with_timer},
 };
 use std::time::Duration;
 

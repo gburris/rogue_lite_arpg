@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::components::{EffectType, Enemy, Health, Speed, StatusEffects};
+use crate::{
+    components::{EffectType, Enemy, Experience, Health, Speed, StatusEffects},
+    events::EnemyDefeatedEvent,
+};
 
 pub fn handle_status_effects(
     time: Res<Time>,
@@ -11,11 +14,15 @@ pub fn handle_status_effects(
         &mut StatusEffects,
         &mut Health,
         &mut Speed,
-        Option<&Sprite>,
+        &Transform,
+        &Experience,
     )>,
+    mut enemy_defeated_events: EventWriter<EnemyDefeatedEvent>,
     asset_server: Res<AssetServer>,
 ) {
-    for (entity, _enemy, mut status, mut health, mut speed, sprite) in query.iter_mut() {
+    for (entity, _enemy, mut status, mut health, mut speed, transform, experience) in
+        query.iter_mut()
+    {
         let mut has_effect = false;
 
         // Process each active status effect
@@ -24,9 +31,16 @@ pub fn handle_status_effects(
             match effect.effect_type {
                 EffectType::Burning => {
                     health.hp -= effect.damage_per_second / 60.0;
-                    if health.hp <= 0.0 {
-                        commands.entity(entity).despawn();
-                        return false;
+                    if (health.hp <= 0.0) {
+                        if let Some(entity_commands) = commands.get_entity(entity) {
+                            commands.entity(entity).despawn();
+                            enemy_defeated_events.send(EnemyDefeatedEvent {
+                                enemy_entity: entity,
+                                enemy_position: transform.translation,
+                                exp_value: experience.base_exp,
+                            });
+                            return false;
+                        }
                     }
 
                     commands

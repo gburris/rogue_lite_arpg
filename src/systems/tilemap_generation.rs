@@ -2,16 +2,17 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::Rng;
 
+use crate::resources::assets::SpriteAssets;
 use crate::resources::MapBounds;
 use crate::resources::TileSize;
 
 pub fn generate_tilemap(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprites: Res<SpriteAssets>,
     mapbounds: ResMut<MapBounds>,
     tilesize: ResMut<TileSize>,
 ) {
-    let texture_handle: Handle<Image> = asset_server.load("tiles.png");
+    let texture_handle: Handle<Image> = sprites.tiles.clone();
     // Size of the tile map in tiles.
     let map_size: TilemapSize = TilemapSize {
         x: ((mapbounds.max_x - mapbounds.min_x) / tilesize.x) as u32, // 3200/16 = 200 tiles

@@ -4,6 +4,7 @@ use crate::{
         AnimationTimer, BurningEffect, FreezingEffect,
     },
     helpers::labels::GameCollisionLayer,
+    resources::assets::SpriteAssets,
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -21,7 +22,7 @@ impl SpellFactory {
         commands: &mut Commands,
         spell_type: SpellType,
         caster_transform: Transform,
-        asset_server: &Res<AssetServer>,
+        sprites: &Res<SpriteAssets>,
         texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     ) {
         match spell_type {
@@ -43,12 +44,12 @@ impl SpellFactory {
                         tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
                         damage_per_second: 5.0,
                     },
-                    Sprite::from_image(asset_server.load("projectiles/FB001.png")),
+                    Sprite::from_image(sprites.fire_bolt.clone()),
                 ));
             }
             SpellType::Icebolt => {
                 let animation_indices = AnimationIndices { first: 0, last: 4 };
-                let texture = asset_server.load("projectiles/IceBolt.png");
+                let texture = sprites.ice_bolt.clone();
                 let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None);
                 let texture_atlas_layout = texture_atlas_layouts.add(layout);
 

@@ -1,5 +1,6 @@
 use crate::components::{Enemy, Health, HealthBar, Player, Speed, StatusEffects};
 use crate::helpers::labels::GameCollisionLayer;
+use crate::resources::assets::SpriteAssets;
 use crate::resources::{EnemySpawnConfig, MapBounds};
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -7,7 +8,7 @@ use rand::Rng;
 
 pub fn spawn_enemies_with_timer(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    sprites: Res<SpriteAssets>,
     time: Res<Time>,
     mut spawn_config: ResMut<EnemySpawnConfig>,
     mapbounds: Res<MapBounds>,
@@ -51,7 +52,7 @@ pub fn spawn_enemies_with_timer(
                         GameCollisionLayer::Enemy,
                         [GameCollisionLayer::Projectile],
                     ),
-                    Sprite::from_image(asset_server.load("merman.png")),
+                    Sprite::from_image(sprites.merman_enemy.clone()),
                     Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
                 ));
             }

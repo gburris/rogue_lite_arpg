@@ -1,12 +1,13 @@
 use crate::components::Player;
 use crate::helpers::spell_factory::{SpellFactory, SpellType};
+use crate::resources::assets::SpriteAssets;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 pub fn cast_spell_system(
     mut commands: Commands,
     buttons: Res<ButtonInput<MouseButton>>,
-    asset_server: Res<AssetServer>,
+    sprites: Res<SpriteAssets>,
     player: Query<&Transform, With<Player>>,
     window: Query<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
@@ -19,7 +20,7 @@ pub fn cast_spell_system(
                 &mut commands,
                 SpellType::Fireball,
                 target_transform,
-                &asset_server,
+                &sprites,
                 &mut texture_atlas_layouts,
             );
         }
@@ -28,7 +29,7 @@ pub fn cast_spell_system(
                 &mut commands,
                 SpellType::Icebolt,
                 target_transform,
-                &asset_server,
+                &sprites,
                 &mut texture_atlas_layouts,
             );
         }

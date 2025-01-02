@@ -23,10 +23,6 @@ pub fn handle_projectile_hits(
         if let Ok((_enemy, mut health)) = enemies.get_mut(event.enemy) {
             //If the projectile is on the event, continue
             if let Ok(effects) = projectiles.get(event.projectile) {
-                println!(
-                    "PROCESS COLLISION EVENT: Adding eventId to my hashset {}",
-                    id
-                );
                 processed.set.insert(id);
                 commands.entity(event.enemy).insert((
                     //TODO: The queries in this file suck and require access via .1. and .0. leading to unreadble code
@@ -37,16 +33,10 @@ pub fn handle_projectile_hits(
                     },
                     Sprite::from_image(asset_server.load("merman_on_fire.png")),
                 ));
-                println!("Handling ProjectileHitEvent event: Damage Effect of projectile is found");
                 health.hp -= effects.0.base_damage;
                 if health.hp <= 0.0 {
-                    println!("Handling ProjectileHitEvent event: Enemy is dead");
                     commands.entity(event.enemy).despawn();
                 }
-                println!(
-                    "Handling ProjectileHitEvent event: enemy is not dead {} ",
-                    health.hp
-                );
                 commands.entity(event.projectile).despawn();
             }
         }

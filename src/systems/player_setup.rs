@@ -16,6 +16,6 @@ pub fn player_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         RigidBody::Dynamic,
         Collider::rectangle(100.0, 100.0),
         Sprite::from_image(asset_server.load("skeleton.png")),
-        Transform::from_xyz(0., 0., 0.),
+        Transform::from_xyz(0., 0., 1.0),
     ));
 }

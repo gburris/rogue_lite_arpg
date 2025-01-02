@@ -40,13 +40,8 @@ pub fn handle_projectile_hits(
                 println!("Handling ProjectileHitEvent event: Damage Effect of projectile is found");
                 health.hp -= effects.0.base_damage;
                 if health.hp <= 0.0 {
-                    println!("Handling ProjectileHitEvent event: Enemy is dead");
                     commands.entity(event.enemy).despawn();
                 }
-                println!(
-                    "Handling ProjectileHitEvent event: enemy is not dead {} ",
-                    health.hp
-                );
                 commands.entity(event.projectile).despawn();
             }
         }

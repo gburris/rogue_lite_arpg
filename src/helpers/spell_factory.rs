@@ -26,7 +26,6 @@ impl SpellFactory {
     ) {
         match spell_type {
             SpellType::Fireball => {
-                println!("Casting Fireball");
                 commands.spawn((
                     Projectile::new(300.0),
                     crate::components::Fireball,
@@ -48,7 +47,6 @@ impl SpellFactory {
                 ));
             }
             SpellType::Icebolt => {
-                println!("Casting Icebolt");
                 let animation_indices = AnimationIndices { first: 0, last: 4 };
                 let texture = asset_server.load("projectiles/IceBolt.png");
                 let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None);

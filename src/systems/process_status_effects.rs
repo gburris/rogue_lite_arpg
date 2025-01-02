@@ -17,11 +17,6 @@ pub fn process_burning(
         if burning.tick_timer.just_finished() {
             health.hp -= burning.damage_per_second;
 
-            println!(
-                "Burning Effect ticking on the enemy, dealing {:.2} damage to monster with health {:.2}",
-                burning.damage_per_second, health.hp
-            );
-
             // Check if the enemy is dead
             if health.hp <= 0.0 {
                 println!("Burning Effect killed the enemy");
@@ -32,7 +27,6 @@ pub fn process_burning(
 
         // Check if the burning effect duration has ended
         if burning.duration.finished() {
-            println!("Burning Effect expired on the enemy");
             commands
                 .entity(entity)
                 .remove::<BurningEffect>()

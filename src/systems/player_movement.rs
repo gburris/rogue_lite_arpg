@@ -11,7 +11,7 @@ pub fn player_movement(
     mut query: Query<(&mut Player, &mut Transform, &Speed)>,
     playersize: Res<PlayerSize>,
 ) {
-    for (mut player, mut transform, mut speed) in query.iter_mut() {
+    for (mut _player, mut transform, speed) in query.iter_mut() {
         let mut direction = Vec2::ZERO;
 
         // Check input for movement

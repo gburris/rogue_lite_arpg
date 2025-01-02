@@ -1,15 +1,12 @@
-use avian2d::prelude::Collider;
-use avian2d::prelude::RigidBody;
+
 use bevy::prelude::*;
-use bevy_ecs_tilemap::map::{TilemapId, TilemapSize};
-use bevy_ecs_tilemap::prelude::*;
-use bevy_ecs_tilemap::tiles::{TileBundle, TilePos, TileStorage, TileTextureIndex};
+use bevy_ecs_tilemap::map::TilemapSize;
+use bevy_ecs_tilemap::tiles::{TilePos, TileStorage, TileTextureIndex};
 use rand::Rng;
-use std::time::Duration;
 
 use crate::components::{Enemy, Level, Player, Projectile, WarpZone};
 use crate::events::WarpZoneEnterEvent;
-use crate::resources::{MapBounds, TileSize};
+use crate::resources::MapBounds;
 
 pub fn handle_warpzone_enter(
     mut commands: Commands,

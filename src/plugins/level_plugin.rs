@@ -2,7 +2,7 @@ use crate::{
     events::WarpZoneEnterEvent,
     labels::{sets::GamePlaySet, states::GameState},
     resources::{MapBounds, TileSize},
-    systems::{check_warpzone_collision, generate_tilemap, handle_warpzone_enter, warpzone_setup},
+    systems::{generate_tilemap, handle_warpzone_enter, warpzone_setup},
 };
 
 use bevy::prelude::*;
@@ -19,7 +19,7 @@ impl Plugin for LevelPlugin {
         )
         .add_systems(
             Update,
-            (check_warpzone_collision, handle_warpzone_enter).in_set(GamePlaySet::Simulation),
+            handle_warpzone_enter.in_set(GamePlaySet::Simulation),
         )
         .add_event::<WarpZoneEnterEvent>()
         .insert_resource(TileSize { x: 16.0, y: 16.0 })

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::events::EnemyDefeatedEvent;
+use crate::enemy::EnemyDefeatedEvent;
 use crate::player::components::Player;
 use crate::player::components::PlayerExperience;
 use crate::player::components::PlayerLevel;
@@ -14,7 +14,6 @@ pub fn handle_enemy_defeated(
     for event in enemy_defeat_events.read() {
         if let Ok((mut exp, mut level, transform)) = player_query.get_single_mut() {
             exp.current += event.exp_value;
-            println!("Player gained {} exp", event.exp_value);
             // Check for level up
             while exp.current >= exp.next_level_requirement {
                 level.current += 1;

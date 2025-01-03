@@ -1,3 +1,3 @@
-pub mod enemy_spawner_plugin;
+pub mod enemy_plugin;
 
-pub use enemy_spawner_plugin::*;
+pub use enemy_plugin::*;

@@ -26,7 +26,5 @@ pub fn player_setup(
         Transform::from_xyz(0., 0., 1.0),
     ));
 
-    // Once player is created, the game can begin!
-    println!("Begin PLAYING");
     game_state.set(GameState::Playing);
 }

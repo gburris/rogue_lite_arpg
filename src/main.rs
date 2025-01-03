@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use game_dev_project::collision::CollisionPlugin;
 use game_dev_project::enemy::plugins::EnemyPlugin;
 use game_dev_project::player::plugins::{ExperiencePlugin, PlayerPlugin};
 use game_dev_project::plugins::{LevelPlugin, ProjectilePlugin};
@@ -14,6 +15,7 @@ fn main() {
         .add_plugins((
             SetupPlugin,
             SchedulePlugin,
+            CollisionPlugin,
             AssetLoadingPlugin,
             TilemapPlugin,
             PlayerPlugin,

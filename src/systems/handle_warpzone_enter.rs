@@ -3,9 +3,11 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use bevy_ecs_tilemap::tiles::{TilePos, TileStorage, TileTextureIndex};
 use rand::Rng;
 
-use crate::components::{Enemy, Level, Projectile, WarpZone};
+use crate::components::{Level, WarpZone};
+use crate::enemy::Enemy;
 use crate::events::WarpZoneEnterEvent;
 use crate::player::components::Player;
+use crate::projectile::Projectile;
 use crate::resources::MapBounds;
 
 pub fn handle_warpzone_enter(

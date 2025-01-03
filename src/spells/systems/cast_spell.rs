@@ -1,6 +1,7 @@
 use crate::player::components::Player;
 use crate::resources::assets::SpriteAssets;
-use crate::spells::{SpellFactory, SpellType};
+use crate::spells::components::Spell;
+use crate::spells::spell_factory::SpellFactory;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
@@ -18,7 +19,7 @@ pub fn cast_spell_system(
         if buttons.just_pressed(MouseButton::Left) {
             SpellFactory::spawn_spell(
                 &mut commands,
-                SpellType::Fireball,
+                Spell::Fireball,
                 target_transform,
                 &sprites,
                 &mut texture_atlas_layouts,
@@ -27,7 +28,7 @@ pub fn cast_spell_system(
         if buttons.just_pressed(MouseButton::Right) {
             SpellFactory::spawn_spell(
                 &mut commands,
-                SpellType::Icebolt,
+                Spell::Icebolt,
                 target_transform,
                 &sprites,
                 &mut texture_atlas_layouts,

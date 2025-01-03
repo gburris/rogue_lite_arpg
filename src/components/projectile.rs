@@ -3,7 +3,7 @@
 //Projectile systems will move it and detect collision with the player and enimes
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Projectile {
     pub speed: f32,
     pub time_to_live: Timer,

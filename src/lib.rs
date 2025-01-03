@@ -1,3 +1,4 @@
+pub mod collision;
 pub mod components;
 pub mod enemy;
 pub mod events;
@@ -9,5 +10,5 @@ pub mod resources;
 pub mod schedule;
 pub mod setup;
 pub mod spells;
-pub mod systems;
 pub mod status_effects;
+pub mod systems;

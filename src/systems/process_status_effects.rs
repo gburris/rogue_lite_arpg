@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::{EffectType, Enemy, Experience, Health, Speed, StatusEffects},
-    events::EnemyDefeatedEvent,
+    enemy::EnemyDamageEvent,
     resources::assets::SpriteAssets,
 };
 
@@ -13,15 +13,12 @@ pub fn handle_status_effects(
         Entity,
         &mut Enemy,
         &mut StatusEffects,
-        &mut Health,
         &mut Speed,
-        &Transform,
-        &Experience,
     )>,
-    mut enemy_defeated_events: EventWriter<EnemyDefeatedEvent>,
+    mut enemy_damaged_events: EventWriter<EnemyDamageEvent>,
     sprites: Res<SpriteAssets>,
 ) {
-    for (entity, _enemy, mut status, mut health, mut speed, transform, experience) in
+    for (entity, _enemy, mut status, mut speed) in
         query.iter_mut()
     {
         let mut has_effect = false;
@@ -31,19 +28,11 @@ pub fn handle_status_effects(
             effect.duration.tick(time.delta());
             match effect.effect_type {
                 EffectType::Burning => {
-                    health.hp -= effect.damage_per_second / 60.0;
-                    if (health.hp <= 0.0) {
-                        if let Some(entity_commands) = commands.get_entity(entity) {
-                            commands.entity(entity).despawn();
-                            enemy_defeated_events.send(EnemyDefeatedEvent {
-                                enemy_entity: entity,
-                                enemy_position: transform.translation,
-                                exp_value: experience.base_exp,
-                            });
-                            return false;
-                        }
-                    }
-
+                    enemy_damaged_events.send(EnemyDamageEvent {
+                        enemy_entity: entity,
+                        damage_source: None,
+                        damage: effect.damage_per_second / 60.0, //This assumes 60 FPS and ticks too "quickly", make it tick every 1/2 second instead
+                    });
                     commands
                         .entity(entity)
                         .try_insert(Sprite::from_image(sprites.merman_on_fire.clone()));

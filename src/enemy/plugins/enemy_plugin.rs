@@ -1,5 +1,7 @@
 use crate::{
-    enemy::systems::{move_enemies_toward_player, spawn_enemies_with_timer},
+    enemy::{
+        handle_enemy_damage, systems::{move_enemies_toward_player, spawn_enemies_with_timer}, EnemyDamageEvent
+    },
     labels::sets::GamePlaySet,
     resources::EnemySpawnConfig,
 };
@@ -17,7 +19,13 @@ impl Plugin for EnemyPlugin {
         });
         app.add_systems(
             Update,
-            (spawn_enemies_with_timer, move_enemies_toward_player).in_set(GamePlaySet::Simulation),
-        );
+            (
+                spawn_enemies_with_timer,
+                move_enemies_toward_player,
+                handle_enemy_damage,
+            )
+                .in_set(GamePlaySet::Simulation),
+        )
+        .add_event::<EnemyDamageEvent>();
     }
 }

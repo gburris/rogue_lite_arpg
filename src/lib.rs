@@ -12,3 +12,4 @@ pub mod setup;
 pub mod spells;
 pub mod status_effects;
 pub mod systems;
+pub mod projectile;

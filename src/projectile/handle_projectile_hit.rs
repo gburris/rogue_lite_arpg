@@ -6,7 +6,7 @@ use crate::events::ProjectileHitEvent;
 use crate::status_effects::StatusEffectAppliedEvent;
 use crate::status_effects::StatusEffectType;
 
-pub fn handle_projectile_collision(
+pub fn handle_projectile_hit(
     mut commands: Commands,
     mut collision_events: EventReader<ProjectileHitEvent>,
     mut enemy_damaged_events: EventWriter<EnemyDamageEvent>,

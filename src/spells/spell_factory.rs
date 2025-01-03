@@ -1,9 +1,8 @@
 use crate::{
-    components::{
-        animation_indices::AnimationIndices, damage_effect::DamageEffect, AnimationTimer,
-        BurningEffect, FreezingEffect,
-    },
+    animation::{AnimationIndices, AnimationTimer},
+    components::damage_effect::DamageEffect,
     resources::assets::SpriteAssets,
+    status_effects::{BurningEffect, FreezingEffect},
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;

@@ -1,11 +1,11 @@
 use crate::{
-    events::WarpZoneEnterEvent,
     labels::{sets::GamePlaySet, states::GameState},
     resources::{MapBounds, TileSize},
-    systems::{generate_tilemap, handle_warpzone_enter, warpzone_setup},
 };
 
 use bevy::prelude::*;
+
+use super::{generate_tilemap, handle_warpzone_enter, warpzone_setup, WarpZoneEnterEvent};
 
 pub struct LevelPlugin;
 

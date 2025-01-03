@@ -1,8 +1,7 @@
-use crate::components::WarpZone;
 use crate::enemy::Enemy;
-use crate::events::{ProjectileHitEvent, WarpZoneEnterEvent};
+use crate::map::{WarpZone, WarpZoneEnterEvent};
 use crate::player::Player;
-use crate::projectile::Projectile;
+use crate::projectile::{Projectile, ProjectileHitEvent};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 

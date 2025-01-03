@@ -1,4 +1,5 @@
 use crate::{
+    animation::animate_sprite,
     labels::{sets::GamePlaySet, states::GameState},
     player::{
         camera_follow_system, player_input,
@@ -6,7 +7,6 @@ use crate::{
         PlayerMovementEvent,
     },
     spells::cast_spell_system,
-    systems::animate_sprite,
 };
 use bevy::prelude::*;
 

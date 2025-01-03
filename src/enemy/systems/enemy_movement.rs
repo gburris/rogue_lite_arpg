@@ -1,4 +1,5 @@
-use crate::components::{Enemy, Health, Speed};
+use crate::components::{Health, Speed};
+use crate::enemy::Enemy;
 use crate::player::components::Player;
 
 use bevy::prelude::*;

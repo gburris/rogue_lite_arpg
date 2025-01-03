@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::components::Projectile;
+use super::Projectile;
 
 /**
  * For each projectile in world space, we check if time to live has expired and then despawn it

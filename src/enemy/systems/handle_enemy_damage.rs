@@ -1,6 +1,6 @@
 use crate::{
-    components::{Experience, Health},
-    enemy::{EnemyDamageEvent, EnemyDefeatedEvent},
+    components::Health,
+    enemy::{EnemyDamageEvent, EnemyDefeatedEvent, Experience},
 };
 use bevy::prelude::*;
 

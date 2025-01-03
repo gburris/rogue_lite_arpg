@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 #[derive(Component)]
 pub struct StatusEffects {
-    pub effects: Vec<Effect>,
+    pub effects: Vec<StatusEffect>,
 }
 //Implement a default for status effects with an  empty effect vector
 impl Default for StatusEffects {
@@ -12,14 +12,14 @@ impl Default for StatusEffects {
     }
 }
 #[derive(Clone)]
-pub struct Effect {
-    pub effect_type: EffectType,
+pub struct StatusEffect {
+    pub effect_type: StatusEffectType,
     pub duration: Timer,
     pub damage_per_second: f32,
 }
 
 #[derive(Clone)]
-pub enum EffectType {
+pub enum StatusEffectType {
     Burning,
     Slowed,
     Stunned,

@@ -10,3 +10,4 @@ pub mod schedule;
 pub mod setup;
 pub mod spells;
 pub mod systems;
+pub mod status_effects;

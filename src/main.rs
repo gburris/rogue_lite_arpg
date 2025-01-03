@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::utils::HashSet;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::enemy::plugins::EnemyPlugin;
 use game_dev_project::player::plugins::{ExperiencePlugin, PlayerPlugin};
@@ -8,6 +7,7 @@ use game_dev_project::resources::assets::AssetLoadingPlugin;
 use game_dev_project::resources::PlayerSize;
 use game_dev_project::schedule::SchedulePlugin;
 use game_dev_project::setup::SetupPlugin;
+use game_dev_project::status_effects::StatusEffectPlugin;
 
 fn main() {
     App::new()
@@ -19,6 +19,7 @@ fn main() {
             PlayerPlugin,
             EnemyPlugin,
             ProjectilePlugin,
+            StatusEffectPlugin,
             LevelPlugin,
             ExperiencePlugin,
         ))

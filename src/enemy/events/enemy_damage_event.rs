@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use bevy::prelude::Event;
+use bevy::prelude::*;
 
 #[derive(Event)]
 pub struct EnemyDamageEvent {

@@ -1,7 +1,5 @@
 pub mod components;
-pub mod helpers;
+pub mod spell_factory;
 pub mod systems;
 
-pub use components::*;
-pub use helpers::*;
 pub use systems::*;

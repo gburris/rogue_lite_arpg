@@ -1,4 +1,5 @@
-use crate::components::{Enemy, Health, HealthBar, Speed};
+use crate::components::{Health, HealthBar, Speed};
+use crate::enemy::Enemy;
 use crate::player::components::Player;
 use crate::status_effects::StatusEffects;
 

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::events::ProjectileHitEvent;
 use crate::labels::sets::GamePlaySet;
+use crate::projectile::ProjectileHitEvent;
 use crate::status_effects::{handle_status_effect_applied, process_status_effects};
 
 use super::StatusEffectAppliedEvent;

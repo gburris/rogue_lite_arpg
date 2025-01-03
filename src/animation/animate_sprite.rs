@@ -1,5 +1,6 @@
-use crate::components::animation_indices::{AnimationIndices, AnimationTimer};
 use bevy::prelude::*;
+
+use super::{AnimationIndices, AnimationTimer};
 
 pub fn animate_sprite(
     time: Res<Time>,

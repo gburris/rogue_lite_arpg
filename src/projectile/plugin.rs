@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
-use crate::events::ProjectileHitEvent;
 use crate::labels::sets::GamePlaySet;
-use crate::projectile::handle_projectile_hit;
 use crate::projectile::despawn::despawn_projectiles;
+use crate::projectile::handle_projectile_hit;
+
+use super::ProjectileHitEvent;
 
 pub struct ProjectilePlugin;
 

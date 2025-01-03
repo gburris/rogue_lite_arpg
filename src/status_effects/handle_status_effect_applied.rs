@@ -1,12 +1,12 @@
 use crate::{
-    status_effects::StatusEffectAppliedEffect,
+    status_effects::StatusEffectAppliedEvent,
     status_effects::{StatusEffectType, StatusEffects},
 };
 use bevy::prelude::*;
 
 use super::StatusEffect;
 pub fn handle_status_effect_applied(
-    mut status_effect_applied_event: EventReader<StatusEffectAppliedEffect>,
+    mut status_effect_applied_event: EventReader<StatusEffectAppliedEvent>,
     mut query: Query<(Entity, &mut StatusEffects)>,
 ) {
     for event in status_effect_applied_event.read() {

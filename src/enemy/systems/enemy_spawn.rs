@@ -1,5 +1,6 @@
-use crate::components::{Enemy, Health, HealthBar, Speed, StatusEffects};
+use crate::components::{Enemy, Health, HealthBar, Speed};
 use crate::player::components::Player;
+use crate::status_effects::StatusEffects;
 
 use crate::helpers::labels::GameCollisionLayer;
 use crate::resources::assets::SpriteAssets;

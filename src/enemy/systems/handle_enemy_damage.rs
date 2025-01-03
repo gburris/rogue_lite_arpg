@@ -12,6 +12,11 @@ pub fn handle_enemy_damage(
 ) {
     for event in damage_events.read() {
         if let Ok((entity, mut health, transform, experience)) = query.get_mut(event.enemy_entity) {
+            if health.hp <= 0.0 {
+                //Skip this event, the enemy is already dead!
+                //Happens when an enemy takes damage from two sources on the same frame
+                continue;
+            }
             health.hp -= event.damage;
             if health.hp <= 0.0 {
                 commands.entity(entity).despawn();

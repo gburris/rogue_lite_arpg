@@ -25,6 +25,10 @@ impl SpellFactory {
         sprites: &Res<SpriteAssets>,
         texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     ) {
+        let spell_speed = 300.0;
+        let direction = Mat3::from_quat(caster_transform.rotation).x_axis;
+        let velocity = (direction * spell_speed).truncate();
+
         match spell_type {
             SpellType::Fireball => {
                 commands.spawn((
@@ -32,6 +36,7 @@ impl SpellFactory {
                     crate::spells::components::Fireball,
                     caster_transform,
                     DamageEffect { base_damage: 10.0 },
+                    LinearVelocity(velocity),
                     RigidBody::Dynamic,
                     Collider::rectangle(10.0, 10.0),
                     // Currently projectiles can only collide with enemies
@@ -57,6 +62,7 @@ impl SpellFactory {
                     Projectile::new(300.0),
                     crate::spells::components::Icebolt,
                     DamageEffect { base_damage: 8.0 },
+                    LinearVelocity(velocity),
                     RigidBody::Dynamic,
                     Collider::rectangle(10.0, 10.0),
                     // Currently projectiles can only collide with enemies

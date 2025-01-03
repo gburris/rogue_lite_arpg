@@ -7,7 +7,6 @@ use crate::components::{
     StatusEffects,
 };
 use crate::events::{EnemyDefeatedEvent, ProjectileHitEvent};
-use crate::helpers::handle_enemy_death::handle_enemy_death;
 use crate::resources::ProcessedProjectiles;
 
 pub fn handle_projectile_collision(

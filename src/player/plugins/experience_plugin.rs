@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    events::EnemyDefeatedEvent,
+    enemy::EnemyDefeatedEvent,
     labels::sets::GamePlaySet,
     player::{animate_level_up, handle_player_level_up, PlayerLevelUpEvent},
-    systems::handle_enemy_defeated,
+    enemy::handle_enemy_defeated,
 };
 
 pub struct ExperiencePlugin;

@@ -6,7 +6,13 @@
 <body>
   <script type="module">
     import init from "./game_dev_project.js";
-    init();
+    console.log("Starting WASM initialization...");
+    console.log("WASM URL:", new URL(game_dev_project_bg.wasm, import.meta.url));
+    init().then(() => {
+    console.log("WASM initialized successfully!");
+    }).catch(err => {
+    console.error("WASM initialization failed:", err);
+    });
   </script>
 </body>
 </html>

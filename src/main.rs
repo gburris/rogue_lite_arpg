@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::collision::CollisionPlugin;
 use game_dev_project::enemy::plugins::EnemyPlugin;
-use game_dev_project::map::LevelPlugin;
+use game_dev_project::map::MapPlugin;
 use game_dev_project::player::plugins::{ExperiencePlugin, PlayerPlugin};
 use game_dev_project::projectile::ProjectilePlugin;
 use game_dev_project::resources::assets::AssetLoadingPlugin;
@@ -24,7 +24,7 @@ fn main() {
             EnemyPlugin,
             ProjectilePlugin,
             StatusEffectPlugin,
-            LevelPlugin,
+            MapPlugin,
             ExperiencePlugin,
             UIPlugin,
         ))

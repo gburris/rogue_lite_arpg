@@ -75,14 +75,14 @@ pub fn handle_warpzone_enter(
 
         // Despawn all enemies
         for enemy in enemies.iter() {
-            commands.entity(enemy).try_despawn();
+            commands.entity(enemy).despawn();
         }
 
         // Despawn all projectiles
         for projectile in projectiles.iter() {
-            commands.entity(projectile).try_despawn();
+            commands.entity(projectile).despawn();
         }
 
-        println!("Progressing to level: {:?}", Level::to_int(&next_level));
+        debug!("Progressing to level: {:?}", Level::to_int(&next_level));
     }
 }

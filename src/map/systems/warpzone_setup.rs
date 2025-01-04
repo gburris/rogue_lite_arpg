@@ -5,8 +5,8 @@ use crate::{labels::states::GameState, map::WarpZone, resources::assets::SpriteA
 
 pub fn warpzone_setup(
     mut commands: Commands,
-    mut game_state: ResMut<NextState<GameState>>,
     sprites: Res<SpriteAssets>,
+    mut game_state: ResMut<NextState<GameState>>,
 ) {
     commands.spawn((
         WarpZone::default(), //Default is LevelTwo, Since we begin on LevelOne
@@ -15,5 +15,5 @@ pub fn warpzone_setup(
         Sprite::from_image(sprites.warp_zone.clone()),
         Transform::from_xyz(500.0, 500.0, 1.0),
     ));
-    game_state.set(GameState::SpawnPlayer);
+    game_state.set(GameState::PlayingInZone);
 }

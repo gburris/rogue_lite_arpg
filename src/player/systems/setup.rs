@@ -26,5 +26,5 @@ pub fn player_setup(
         Transform::from_xyz(0., 0., 1.0),
     ));
 
-    game_state.set(GameState::PlayingOnOverWorld);
+    game_state.set(GameState::Playing);
 }

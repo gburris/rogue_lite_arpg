@@ -1,9 +1,15 @@
-use crate::enemy::Enemy;
-use crate::map::{RunStartPortal, RunStartPortalEnterEvent, WarpZone, WarpZoneEnterEvent};
-use crate::player::Player;
-use crate::projectile::{Projectile, ProjectileHitEvent};
 use avian2d::prelude::*;
 use bevy::prelude::*;
+
+use crate::{
+    enemy::Enemy,
+    map::{
+        components::{StartingPortal, WarpZone},
+        events::{StartRunEvent, WarpZoneEnterEvent},
+    },
+    player::Player,
+    projectile::{Projectile, ProjectileHitEvent},
+};
 
 /**
  * Main collision loop in game, dispatches various collisions to other systems via events
@@ -12,11 +18,11 @@ pub fn handle_collisions(
     mut collision_events_started: EventReader<CollisionStarted>,
     mut projectile_hit_event: EventWriter<ProjectileHitEvent>,
     mut warpzone_enter_event_writer: EventWriter<WarpZoneEnterEvent>,
-    mut run_start_portal_event_writer: EventWriter<RunStartPortalEnterEvent>,
+    mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
     projectile_query: Query<Entity, With<Projectile>>,
     enemy_query: Query<Entity, With<Enemy>>,
     warpzone_query: Query<Entity, With<WarpZone>>,
-    run_start_portal_query: Query<Entity, With<RunStartPortal>>,
+    run_start_portal_query: Query<Entity, With<StartingPortal>>,
     player_query: Query<Entity, With<Player>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
@@ -37,7 +43,7 @@ pub fn handle_collisions(
             if let Ok(_run_start_portal_entity) = run_start_portal_query.get(e1) {
                 if let Ok(_player_entity) = player_query.get(e2) {
                     warn!("Found collision with run portal");
-                    run_start_portal_event_writer.send(RunStartPortalEnterEvent);
+                    run_start_portal_event_writer.send(StartRunEvent);
                     break;
                 }
             }

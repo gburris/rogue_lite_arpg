@@ -1,15 +1,13 @@
 use crate::{
     labels::{sets::GamePlaySet, states::GameState},
+    map::{
+        events::{StartRunEvent, WarpZoneEnterEvent},
+        systems::*,
+    },
     resources::{MapBounds, TileSize},
 };
 
 use bevy::prelude::*;
-
-use super::{
-    generate_tilemap, generate_tilemap_for_overworld, handle_run_start_portal_enter,
-    handle_warpzone_enter, run_start_portal_setup, warpzone_setup, RunStartPortalEnterEvent,
-    WarpZoneEnterEvent,
-};
 
 pub struct MapPlugin;
 
@@ -23,15 +21,14 @@ impl Plugin for MapPlugin {
         )
         .add_systems(
             OnEnter(GameState::CreateOverworld),
-            (generate_tilemap_for_overworld, run_start_portal_setup).chain(),
+            (generate_tilemap_for_overworld, starting_portal_setup).chain(),
         )
         .add_systems(
             Update,
-            (handle_warpzone_enter, handle_run_start_portal_enter)
-                .in_set(GamePlaySet::DespawnEntities),
+            (handle_warpzone_enter, enter_start_portal).in_set(GamePlaySet::DespawnEntities),
         )
         .add_event::<WarpZoneEnterEvent>()
-        .add_event::<RunStartPortalEnterEvent>()
+        .add_event::<StartRunEvent>()
         .insert_resource(TileSize { x: 16.0, y: 16.0 })
         .insert_resource(MapBounds {
             min_x: -100.0 * tile_size_x,

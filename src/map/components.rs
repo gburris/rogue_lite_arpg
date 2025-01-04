@@ -21,6 +21,10 @@ impl WarpZone {
     }
 }
 
+#[derive(Component)]
+#[require(Collider)]
+pub struct StartingPortal;
+
 #[derive(Clone)]
 //The levels in the game
 pub enum Level {

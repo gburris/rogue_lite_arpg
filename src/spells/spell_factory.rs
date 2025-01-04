@@ -8,7 +8,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use std::time::Duration;
 
-use super::components::Spell;
+use crate::spells::components::Spell;
 
 pub struct SpellFactory;
 

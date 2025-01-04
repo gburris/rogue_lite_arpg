@@ -5,23 +5,33 @@ use crate::{
 
 use bevy::prelude::*;
 
-use super::{generate_tilemap, handle_warpzone_enter, warpzone_setup, WarpZoneEnterEvent};
+use super::{
+    generate_tilemap, generate_tilemap_for_overworld, handle_run_start_portal_enter,
+    handle_warpzone_enter, run_start_portal_setup, warpzone_setup, RunStartPortalEnterEvent,
+    WarpZoneEnterEvent,
+};
 
-pub struct LevelPlugin;
+pub struct MapPlugin;
 
-impl Plugin for LevelPlugin {
+impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         let tile_size_x = 16.0;
         let tile_size_y = 16.0;
         app.add_systems(
-            OnEnter(GameState::CreateLevel),
+            OnEnter(GameState::CreateZone),
             (generate_tilemap, warpzone_setup).chain(),
         )
         .add_systems(
+            OnEnter(GameState::CreateOverworld),
+            (generate_tilemap_for_overworld, run_start_portal_setup).chain(),
+        )
+        .add_systems(
             Update,
-            handle_warpzone_enter.in_set(GamePlaySet::Simulation),
+            (handle_warpzone_enter, handle_run_start_portal_enter)
+                .in_set(GamePlaySet::DespawnEntities),
         )
         .add_event::<WarpZoneEnterEvent>()
+        .add_event::<RunStartPortalEnterEvent>()
         .insert_resource(TileSize { x: 16.0, y: 16.0 })
         .insert_resource(MapBounds {
             min_x: -100.0 * tile_size_x,

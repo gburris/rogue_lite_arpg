@@ -10,9 +10,9 @@ use crate::{
 
 pub fn warpzone_setup(
     mut commands: Commands,
-    sprites: Res<SpriteAssets>,
     mut game_state: ResMut<NextState<GameState>>,
     mut zone_level: ResMut<CurrentZoneLevel>,
+    sprites: Res<SpriteAssets>,
     map_bounds: Res<MapBounds>,
 ) {
     // Move warpzone to a random position on the right side of the map
@@ -24,7 +24,7 @@ pub fn warpzone_setup(
 
     zone_level.0 += 1;
 
-    warn!("Progressing to level: {:?}", zone_level.0);
+    info!("Progressing to level: {:?}", zone_level.0);
 
     commands.spawn((
         WarpZone::default(), //Default is LevelTwo, Since we begin on LevelOne

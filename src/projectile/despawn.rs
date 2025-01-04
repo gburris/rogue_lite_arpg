@@ -23,7 +23,7 @@ pub fn despawn_all_projectiles(
     mut commands: Commands,
     mut query: Query<Entity, With<Projectile>>,
 ) {
-    warn!("Depawning all projectiles");
+    debug!("Depawning all projectiles");
     for entity in query.iter_mut() {
         commands.entity(entity).despawn_recursive();
     }

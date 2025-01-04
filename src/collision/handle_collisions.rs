@@ -39,10 +39,9 @@ pub fn handle_collisions(
                     break;
                 }
             }
-            warn!("Checking collision with starting portal");
             if let Ok(_run_start_portal_entity) = run_start_portal_query.get(e1) {
                 if let Ok(_player_entity) = player_query.get(e2) {
-                    warn!("Found collision with starting portal");
+                    debug!("Found collision with starting portal");
                     run_start_portal_event_writer.send(StartRunEvent);
                     break;
                 }

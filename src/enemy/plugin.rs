@@ -1,13 +1,18 @@
+use std::time::Duration;
+
+use bevy::prelude::*;
+
 use crate::{
     enemy::{
-        handle_enemy_damage, systems::{move_enemies_toward_player, spawn_enemies_with_timer}, EnemyDamageEvent
+        events::EnemyDamageEvent,
+        systems::{
+            despawn_all_enemies, handle_enemy_damage, move_enemies_toward_player,
+            spawn_enemies_with_timer,
+        },
     },
     labels::sets::GamePlaySet,
     resources::EnemySpawnConfig,
 };
-use std::time::Duration;
-
-use bevy::prelude::*;
 
 pub struct EnemyPlugin;
 
@@ -26,6 +31,7 @@ impl Plugin for EnemyPlugin {
             )
                 .in_set(GamePlaySet::Simulation),
         )
+        .add_observer(despawn_all_enemies)
         .add_event::<EnemyDamageEvent>();
     }
 }

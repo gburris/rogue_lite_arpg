@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
-    enemy::plugins::EnemyPlugin,
+    enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
     player::plugins::{ExperiencePlugin, PlayerPlugin},
     projectile::ProjectilePlugin,

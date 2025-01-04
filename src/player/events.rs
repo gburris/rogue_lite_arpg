@@ -13,3 +13,6 @@ pub struct PlayerLevelUpEvent {
 pub struct PlayerMovementEvent {
     pub direction: Vec2,
 }
+
+#[derive(Event)]
+pub struct ResetPlayerPosition;

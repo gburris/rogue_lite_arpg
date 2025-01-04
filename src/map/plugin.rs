@@ -1,14 +1,13 @@
+use bevy::prelude::*;
+
 use crate::{
     labels::{sets::GamePlaySet, states::GameState},
     map::{
         events::{StartRunEvent, WarpZoneEnterEvent},
         systems::*,
     },
-    resources::{MapBounds, TileSize},
+    resources::{CurrentZoneLevel, MapBounds, TileSize},
 };
-
-use bevy::prelude::*;
-
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
@@ -25,8 +24,10 @@ impl Plugin for MapPlugin {
         )
         .add_systems(
             Update,
-            (handle_warpzone_enter, enter_start_portal).in_set(GamePlaySet::DespawnEntities),
+            (handle_warpzone_enter, enter_start_portal).in_set(GamePlaySet::Simulation),
         )
+        .add_observer(despawn_all_portals)
+        .add_observer(despawn_all_tiles)
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()
         .insert_resource(TileSize { x: 16.0, y: 16.0 })
@@ -35,6 +36,7 @@ impl Plugin for MapPlugin {
             min_y: -100.0 * tile_size_y,
             max_x: 100.0 * tile_size_x,
             max_y: 100.0 * tile_size_y,
-        });
+        })
+        .insert_resource(CurrentZoneLevel(0));
     }
 }

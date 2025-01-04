@@ -1,6 +1,9 @@
 use crate::{
     components::Health,
-    enemy::{EnemyDamageEvent, EnemyDefeatedEvent, Experience},
+    enemy::{
+        events::{DespawnAllEnemies, EnemyDamageEvent, EnemyDefeatedEvent},
+        Enemy, Experience,
+    },
 };
 use bevy::prelude::*;
 
@@ -27,5 +30,15 @@ pub fn handle_enemy_damage(
                 });
             }
         }
+    }
+}
+
+pub fn despawn_all_enemies(
+    _: Trigger<DespawnAllEnemies>,
+    mut commands: Commands,
+    mut query: Query<Entity, With<Enemy>>,
+) {
+    for entity in query.iter_mut() {
+        commands.entity(entity).despawn_recursive();
     }
 }

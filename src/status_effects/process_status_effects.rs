@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::Speed,
-    enemy::{Enemy, EnemyDamageEvent},
+    enemy::{events::EnemyDamageEvent, Enemy},
     resources::assets::SpriteAssets,
     status_effects::{StatusEffectType, StatusEffects},
 };

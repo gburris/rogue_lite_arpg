@@ -5,14 +5,17 @@
 </head>
 <body>
   <script type="module">
-    import init from "./game_dev_project.js";
-    console.log("Starting WASM initialization...");
-    console.log("WASM URL:", new URL(game_dev_project_bg.wasm, import.meta.url));
-    init().then(() => {
-    console.log("WASM initialized successfully!");
-    }).catch(err => {
-    console.error("WASM initialization failed:", err);
-    });
+  console.log("Script starting...");
+  try {
+    const importURL = new URL("./game_dev_project.js", window.location.href);
+    console.log("Attempting to import from:", importURL.href);
+    const module = await import(importURL.href);
+    console.log("Module loaded:", module);
+    await module.default();
+    console.log("WASM initialized!");
+  } catch (e) {
+    console.error("Error during initialization:", e);
+  }
   </script>
 </body>
 </html>

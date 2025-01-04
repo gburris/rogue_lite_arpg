@@ -2,9 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::Rng;
 
-use crate::resources::assets::SpriteAssets;
-use crate::resources::MapBounds;
-use crate::resources::TileSize;
+use crate::resources::{assets::SpriteAssets, MapBounds, TileSize};
 
 pub fn generate_tilemap(
     mut commands: Commands,

@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 
-use crate::components::DamageEffect;
-use crate::enemy::EnemyDamageEvent;
-use crate::status_effects::BurningEffect;
-use crate::status_effects::FreezingEffect;
-use crate::status_effects::StatusEffectAppliedEvent;
-use crate::status_effects::StatusEffectType;
-
-use super::ProjectileHitEvent;
+use crate::{
+    components::DamageEffect,
+    enemy::events::EnemyDamageEvent,
+    projectile::events::ProjectileHitEvent,
+    status_effects::{BurningEffect, FreezingEffect, StatusEffectAppliedEvent, StatusEffectType},
+};
 
 pub fn handle_projectile_hit(
     mut commands: Commands,

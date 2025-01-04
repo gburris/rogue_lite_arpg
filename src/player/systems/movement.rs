@@ -1,9 +1,10 @@
-use crate::components::Speed;
-use crate::player::Player;
-use crate::player::PlayerMovementEvent;
-use crate::resources::MapBounds;
-use crate::resources::PlayerSize;
 use bevy::prelude::*;
+
+use crate::{
+    components::Speed,
+    player::{Player, PlayerMovementEvent, ResetPlayerPosition},
+    resources::{MapBounds, PlayerSize},
+};
 
 // System to handle player movement based on movement events
 pub fn player_movement(
@@ -32,5 +33,15 @@ pub fn player_movement(
             // Update the transform to reflect the clamped position
             transform.translation = Vec3::new(clamp_x, clamp_y, 1.0);
         }
+    }
+}
+
+pub fn reset_player_position(
+    _: Trigger<ResetPlayerPosition>,
+    mut player_query: Query<&mut Transform, With<Player>>,
+) {
+    if let Ok(mut transform) = player_query.get_single_mut() {
+        transform.translation.x = 0.0;
+        transform.translation.y = 0.0;
     }
 }

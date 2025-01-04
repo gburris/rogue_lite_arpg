@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 
-use crate::labels::sets::GamePlaySet;
-use crate::projectile::ProjectileHitEvent;
-use crate::status_effects::{handle_status_effect_applied, process_status_effects};
-
-use super::StatusEffectAppliedEvent;
+use crate::{
+    labels::sets::GamePlaySet,
+    projectile::events::ProjectileHitEvent,
+    status_effects::{
+        events::StatusEffectAppliedEvent,
+        {handle_status_effect_applied, process_status_effects},
+    },
+};
 
 pub struct StatusEffectPlugin;
 

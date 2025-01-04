@@ -1,13 +1,23 @@
 use crate::player::components::Player;
 use crate::resources::MapBounds;
-use bevy::prelude::*; // Make sure to import MapBounds
+use bevy::app::AppExit;
+use bevy::prelude::*;
+use bevy::window::WindowCloseRequested;
 
 pub fn camera_follow_system(
     player_query: Query<&Transform, (With<Player>, Without<Camera>)>,
     mut camera_query: Query<(&mut Transform, &Camera), With<Camera>>,
     mapbounds: Res<MapBounds>,
     windows: Query<&Window>,
+    mut app_exit_events: EventWriter<AppExit>,
+    close_requested_events: Res<Events<WindowCloseRequested>>,
 ) {
+    if !close_requested_events.is_empty() {
+        app_exit_events.send(AppExit::Success);
+        println!("Window close requested, exiting the application...");
+        return; // Exit early from the system if close event detected
+    }
+
     if let (Ok(player_transform), Ok((mut camera_transform, _camera))) =
         (player_query.get_single(), camera_query.get_single_mut())
     {

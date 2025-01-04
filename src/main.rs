@@ -1,16 +1,17 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use game_dev_project::collision::CollisionPlugin;
-use game_dev_project::enemy::plugins::EnemyPlugin;
-use game_dev_project::map::MapPlugin;
-use game_dev_project::player::plugins::{ExperiencePlugin, PlayerPlugin};
-use game_dev_project::projectile::ProjectilePlugin;
-use game_dev_project::resources::assets::AssetLoadingPlugin;
-use game_dev_project::resources::PlayerSize;
-use game_dev_project::schedule::SchedulePlugin;
-use game_dev_project::setup::SetupPlugin;
-use game_dev_project::status_effects::StatusEffectPlugin;
-use game_dev_project::ui::UIPlugin;
+use game_dev_project::{
+    collision::CollisionPlugin,
+    enemy::plugins::EnemyPlugin,
+    map::plugin::MapPlugin,
+    player::plugins::{ExperiencePlugin, PlayerPlugin},
+    projectile::ProjectilePlugin,
+    resources::{assets::AssetLoadingPlugin, PlayerSize},
+    schedule::SchedulePlugin,
+    setup::SetupPlugin,
+    status_effects::StatusEffectPlugin,
+    ui::UIPlugin,
+};
 
 fn main() {
     App::new()

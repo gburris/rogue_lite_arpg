@@ -12,9 +12,7 @@ impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
             Update,
-            MainSet::GamePlay.run_if(
-                in_state(GameState::PlayingInZone).or(in_state(GameState::PlayingOnOverWorld)),
-            ),
+            MainSet::GamePlay.run_if(in_state(GameState::Playing)),
         )
         // Configuring the ordering of our gameplay loop using these main sets:
         // Despawn Entitites -> Handle Input -> Simulation -> Physics -> Collision

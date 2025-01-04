@@ -1,7 +1,9 @@
 use avian2d::prelude::{Collider, RigidBody};
 use bevy::prelude::*;
 
-use crate::{labels::states::GameState, map::WarpZone, resources::assets::SpriteAssets};
+use crate::{
+    labels::states::GameState, map::components::WarpZone, resources::assets::SpriteAssets,
+};
 
 pub fn warpzone_setup(
     mut commands: Commands,
@@ -15,5 +17,5 @@ pub fn warpzone_setup(
         Sprite::from_image(sprites.warp_zone.clone()),
         Transform::from_xyz(500.0, 500.0, 1.0),
     ));
-    game_state.set(GameState::PlayingInZone);
+    game_state.set(GameState::Playing);
 }

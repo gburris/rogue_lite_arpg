@@ -4,11 +4,14 @@ use bevy::prelude::*;
 pub enum GameState {
     #[default]
     AssetLoading,
-    SpawnPlayer,
     CreateOverworld,
+    SpawnPlayer, // Also creates UI
     CreateZone,
-    PlayingOnOverWorld, //I also create UI here, I wonder if I should split this into two states
-    PlayingInZone,
+    // Represents time in game where all game-play systems are actually running
+    // If you want to distinguish between different phases within "Playing" make a new state!
+    // Ex. MapRegionState
+    Playing,
+    Cleanup,
     Paused,
     GameOver,
 }

@@ -1,16 +1,17 @@
 use bevy::prelude::*;
-use bevy::state::commands;
 use bevy_ecs_tilemap::map::TilemapId;
 
-use crate::labels::states::GameState;
-use crate::map::{RunStartPortal, RunStartPortalEnterEvent};
+use crate::{
+    labels::states::GameState,
+    map::{components::StartingPortal, events::StartRunEvent},
+};
 
-pub fn handle_run_start_portal_enter(
+pub fn enter_start_portal(
     mut commands: Commands,
-    mut events: EventReader<RunStartPortalEnterEvent>,
+    mut events: EventReader<StartRunEvent>,
     mut game_state: ResMut<NextState<GameState>>,
     mut tilemap_query: Query<Entity, With<TilemapId>>,
-    mut portal_query: Query<Entity, With<RunStartPortal>>,
+    mut portal_query: Query<Entity, With<StartingPortal>>,
 ) {
     for _event in events.read() {
         warn!("Collision with run portal event processing!");

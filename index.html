@@ -1,21 +1,30 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>WASM Demo</title>
-</head>
-<body>
-  <script type="module">
-  console.log("Script starting...");
-  try {
-    const importURL = new URL("./game_dev_project.js", window.location.href);
-    console.log("Attempting to import from:", importURL.href);
-    const module = await import(importURL.href);
-    console.log("Module loaded:", module);
-    await module.default();
-    console.log("WASM initialized!");
-  } catch (e) {
-    console.error("Error during initialization:", e);
-  }
-  </script>
-</body>
-</html>
+      <html>
+      <head>
+          <meta charset="utf-8"/>
+          <title>Bevy game</title>
+          <style>
+              body {
+                  margin: 0;
+                  height: 100vh;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  background: #333;
+              }
+              canvas {
+                  background-color: white;
+              }
+          </style>
+      </head>
+      <body>
+          <script type="module">
+              console.log("Starting import...");
+              import init from ./game_dev_project.js;
+              console.log("Import completed, initializing...");
+              init().catch((error) => {
+                  console.error("Error during initialization:", error);
+              });
+          </script>
+      </body>
+      </html>

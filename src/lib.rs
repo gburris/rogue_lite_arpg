@@ -12,3 +12,4 @@ pub mod schedule;
 pub mod setup;
 pub mod spells;
 pub mod status_effects;
+pub mod ui;

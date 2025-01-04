@@ -78,29 +78,35 @@ jobs:
           cp Cargo.lock gh-pages/     
           cp package.json gh-pages/                                       
           echo '<!DOCTYPE html>
-          <html>
-          <head>
-            <title>WASM Demo</title>
-          </head>
-          <body>
-            <script type="module">
-            // Ensure we're in the correct path context
-            window.WASM_BINARY_PATH = "./game_dev_project_bg.wasm";
-          </script>
-          <script src="./game_dev_project.js"></script>
-          <script>
-            window.addEventListener('load', async () => {
-              try {
-                console.log("Starting initialization...");
-                const wasm = await init();
-                console.log("WASM initialized successfully:", wasm);
-              } catch (e) {
-                console.error("Failed to initialize:", e);
-              }
-            });
-            </script>
-          </body>
-          </html>' > gh-pages/index.html
+                <html>
+                <head>
+                    <meta charset="utf-8"/>
+                    <title>Bevy game</title>
+                    <style>
+                        body {
+                            margin: 0;
+                            height: 100vh;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            background: #333;
+                        }
+                        canvas {
+                            background-color: white;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <script type="module">
+                        console.log("Starting import...");
+                        import init from './game_dev_project.js';
+                        console.log("Import completed, initializing...");
+                        init().catch((error) => {
+                            console.error("Error during initialization:", error);
+                        });
+                    </script>
+                </body>
+                </html>' > gh-pages/index.html
 
       - name: Debug gh-pages Directory
         run: |

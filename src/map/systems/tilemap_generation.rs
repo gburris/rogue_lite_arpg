@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use rand::Rng;
 
-use crate::resources::{assets::SpriteAssets, MapBounds, TileSize};
+use crate::resources::{assets::SpriteAssets, CurrentZoneLevel, MapBounds, TileSize};
 
 pub fn generate_tilemap(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    mapbounds: ResMut<MapBounds>,
-    tilesize: ResMut<TileSize>,
+    mapbounds: Res<MapBounds>,
+    tilesize: Res<TileSize>,
+    zone_level: Res<CurrentZoneLevel>,
 ) {
     let texture_handle: Handle<Image> = sprites.tiles.clone();
     // Size of the tile map in tiles.
@@ -33,11 +33,12 @@ pub fn generate_tilemap(
 
     // Spawn a 32 by 32 tilemap.
     // Alternatively, you can use helpers::fill_tilemap.
-    let mut rng = rand::thread_rng();
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
-            let color = rng.gen_range(0..5); // Assuming you have 5 colors in your tileset
+
+            // Currently have 6 colors in tiles.png, alternating through them as we go down levels
+            let color = zone_level.0 % 6;
             let tile_entity = commands
                 .spawn(TileBundle {
                     position: tile_pos,

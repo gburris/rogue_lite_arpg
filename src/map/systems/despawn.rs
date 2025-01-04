@@ -12,7 +12,7 @@ pub fn despawn_all_portals(
     mut portal_query: Query<Entity, With<StartingPortal>>,
     mut warpzone_query: Query<Entity, With<WarpZone>>,
 ) {
-    warn!("Depawning all portals");
+    debug!("Depawning all portals");
     for entity in portal_query.iter_mut() {
         commands.entity(entity).despawn_recursive();
     }
@@ -27,7 +27,7 @@ pub fn despawn_all_tiles(
     mut commands: Commands,
     mut tile_query: Query<Entity, With<TilemapId>>,
 ) {
-    warn!("Depawning all tiles");
+    debug!("Depawning all tiles");
     for entity in tile_query.iter_mut() {
         commands.entity(entity).despawn_recursive();
     }

@@ -16,9 +16,11 @@ pub fn warpzone_setup(
     map_bounds: Res<MapBounds>,
 ) {
     // Move warpzone to a random position on the right side of the map
+    let mut rng = rand::thread_rng();
+    let y_radius = map_bounds.max_y - 200.0;
     let warpzone_position = Vec3::new(
-        map_bounds.max_x - 100.0,
-        rand::thread_rng().gen_range(-200.0..200.0),
+        map_bounds.max_x - rng.gen_range(100.0..300.0),
+        rng.gen_range(-y_radius..y_radius),
         1.0,
     );
 

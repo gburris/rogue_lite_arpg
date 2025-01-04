@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     map::{
-        components::{StartingPortal, WarpZone},
+        components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
     },
     player::Player,
@@ -21,8 +21,7 @@ pub fn handle_collisions(
     mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
     projectile_query: Query<Entity, With<Projectile>>,
     enemy_query: Query<Entity, With<Enemy>>,
-    warpzone_query: Query<Entity, With<WarpZone>>,
-    run_start_portal_query: Query<Entity, With<StartingPortal>>,
+    portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
@@ -39,19 +38,18 @@ pub fn handle_collisions(
                     break;
                 }
             }
-            if let Ok(_run_start_portal_entity) = run_start_portal_query.get(e1) {
+            if let Ok(portal) = portal_query.get(e1) {
                 if let Ok(_player_entity) = player_query.get(e2) {
-                    debug!("Found collision with starting portal");
-                    run_start_portal_event_writer.send(StartRunEvent);
-                    break;
-                }
-            }
-            // Checks if one of the entities is a warpzone and one is a player
-            if let Ok(warpzone_entity) = warpzone_query.get(e1) {
-                if let Ok(_player_entity) = player_query.get(e2) {
-                    warpzone_enter_event_writer.send(WarpZoneEnterEvent {
-                        warp_zone: warpzone_entity,
-                    });
+                    match portal {
+                        Portal::StartingPortal => {
+                            debug!("Found collision with starting portal");
+                            run_start_portal_event_writer.send(StartRunEvent);
+                        }
+                        Portal::WarpZone => {
+                            debug!("Found collision with warpzone");
+                            warpzone_enter_event_writer.send(WarpZoneEnterEvent);
+                        }
+                    }
                     break;
                 }
             }

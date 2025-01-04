@@ -1,9 +1,7 @@
 use avian2d::prelude::{Collider, RigidBody};
 use bevy::prelude::*;
 
-use crate::{
-    labels::states::GameState, map::components::StartingPortal, resources::assets::SpriteAssets,
-};
+use crate::{labels::states::GameState, map::components::Portal, resources::assets::SpriteAssets};
 
 pub fn starting_portal_setup(
     mut commands: Commands,
@@ -11,7 +9,7 @@ pub fn starting_portal_setup(
     sprites: Res<SpriteAssets>,
 ) {
     commands.spawn((
-        StartingPortal,
+        Portal::StartingPortal,
         RigidBody::Static,
         Collider::rectangle(100.0, 100.0),
         Sprite::from_image(sprites.run_start_portal.clone()),

@@ -84,17 +84,20 @@ jobs:
           </head>
           <body>
             <script type="module">
-            console.log("Script starting...");
-            try {
-              const importURL = new URL("./game_dev_project.js", window.location.href);
-              console.log("Attempting to import from:", importURL.href);
-              const module = await import(importURL.href);
-              console.log("Module loaded:", module);
-              await module.default();
-              console.log("WASM initialized!");
-            } catch (e) {
-              console.error("Error during initialization:", e);
-            }
+            // Ensure we're in the correct path context
+            window.WASM_BINARY_PATH = "./game_dev_project_bg.wasm";
+          </script>
+          <script src="./game_dev_project.js"></script>
+          <script>
+            window.addEventListener('load', async () => {
+              try {
+                console.log("Starting initialization...");
+                const wasm = await init();
+                console.log("WASM initialized successfully:", wasm);
+              } catch (e) {
+                console.error("Failed to initialize:", e);
+              }
+            });
             </script>
           </body>
           </html>' > gh-pages/index.html

@@ -5,7 +5,7 @@ pub enum GameState {
     #[default]
     AssetLoading,
     SpawnPlayer,
-    CreateLevel,
+    CreateLevel, //I also create UI here, I wonder if I should split this into two states
     Playing,
     Paused,
     GameOver,

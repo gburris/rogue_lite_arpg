@@ -10,6 +10,7 @@ use game_dev_project::resources::PlayerSize;
 use game_dev_project::schedule::SchedulePlugin;
 use game_dev_project::setup::SetupPlugin;
 use game_dev_project::status_effects::StatusEffectPlugin;
+use game_dev_project::ui::UIPlugin;
 
 fn main() {
     App::new()
@@ -25,6 +26,7 @@ fn main() {
             StatusEffectPlugin,
             LevelPlugin,
             ExperiencePlugin,
+            UIPlugin,
         ))
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();

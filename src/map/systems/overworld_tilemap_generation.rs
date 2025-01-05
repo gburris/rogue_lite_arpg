@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::Rng;
 
-use crate::resources::{assets::SpriteAssets, MapBounds, TileSize};
+use crate::{
+    map::resources::{MapBounds, TileSize},
+    resources::assets::SpriteAssets,
+};
 
 pub fn generate_tilemap_for_overworld(
     mut commands: Commands,

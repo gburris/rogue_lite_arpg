@@ -1,8 +1,6 @@
-use crate::player::components::Player;
-use crate::resources::MapBounds;
-use bevy::app::AppExit;
-use bevy::prelude::*;
-use bevy::window::WindowCloseRequested;
+use bevy::{app::AppExit, prelude::*, window::WindowCloseRequested};
+
+use crate::{map::resources::MapBounds, player::components::Player};
 
 pub fn camera_follow_system(
     player_query: Query<&Transform, (With<Player>, Without<Camera>)>,

@@ -4,9 +4,9 @@ use crate::{
     labels::{sets::GamePlaySet, states::GameState},
     map::{
         events::{StartRunEvent, WarpZoneEnterEvent},
+        resources::{CurrentZoneLevel, MapBounds, TileSize},
         systems::*,
     },
-    resources::{CurrentZoneLevel, MapBounds, TileSize},
 };
 pub struct MapPlugin;
 

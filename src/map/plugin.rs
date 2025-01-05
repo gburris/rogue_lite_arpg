@@ -30,7 +30,10 @@ impl Plugin for MapPlugin {
         .add_observer(despawn_all_tiles)
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()
-        .insert_resource(TileSize { x: 16.0, y: 16.0 })
+        .insert_resource(TileSize {
+            x: tile_size_x,
+            y: tile_size_y,
+        })
         .insert_resource(MapBounds {
             min_x: -100.0 * tile_size_x,
             min_y: -100.0 * tile_size_y,

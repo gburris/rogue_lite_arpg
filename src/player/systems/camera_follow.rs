@@ -14,7 +14,7 @@ pub fn camera_follow_system(
 ) {
     if !close_requested_events.is_empty() {
         app_exit_events.send(AppExit::Success);
-        println!("Window close requested, exiting the application...");
+        info!("Window close requested, exiting the application...");
         return; // Exit early from the system if close event detected
     }
 

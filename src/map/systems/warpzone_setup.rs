@@ -3,8 +3,11 @@ use rand::Rng;
 
 use crate::{
     labels::states::GameState,
-    map::components::Portal,
-    resources::{assets::SpriteAssets, CurrentZoneLevel, MapBounds},
+    map::{
+        components::Portal,
+        resources::{CurrentZoneLevel, MapBounds},
+    },
+    resources::assets::SpriteAssets,
 };
 
 pub fn warpzone_setup(

@@ -1,14 +1,16 @@
-use crate::components::{Health, HealthBar, Speed};
-use crate::enemy::Enemy;
-use crate::player::components::Player;
-use crate::status_effects::StatusEffects;
-
-use crate::helpers::labels::GameCollisionLayer;
-use crate::resources::assets::SpriteAssets;
-use crate::resources::{EnemySpawnConfig, MapBounds};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
+
+use crate::{
+    components::{Health, HealthBar, Speed},
+    enemy::Enemy,
+    helpers::labels::GameCollisionLayer,
+    map::resources::MapBounds,
+    player::components::Player,
+    resources::{assets::SpriteAssets, EnemySpawnConfig},
+    status_effects::StatusEffects,
+};
 
 pub fn spawn_enemies_with_timer(
     mut commands: Commands,

@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::resources::{assets::SpriteAssets, CurrentZoneLevel, MapBounds, TileSize};
+use crate::{
+    map::resources::{CurrentZoneLevel, MapBounds, TileSize},
+    resources::assets::SpriteAssets,
+};
 
 pub fn generate_tilemap(
     mut commands: Commands,

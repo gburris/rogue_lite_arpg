@@ -5,5 +5,5 @@ use bevy::prelude::Timer;
 pub struct EnemySpawnConfig {
     /// How often to spawn a new enemy? (repeating timer)
     pub timer: Timer,
-    pub quantity: u32
+    pub quantity: u32,
 }

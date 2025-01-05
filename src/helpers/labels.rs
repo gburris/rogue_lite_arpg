@@ -8,4 +8,5 @@ pub enum GameCollisionLayer {
     Player,
     Enemy,
     Projectile,
+    Portal,
 }

@@ -1,4 +1,3 @@
-use avian2d::prelude::{Collider, RigidBody};
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -30,8 +29,6 @@ pub fn warpzone_setup(
 
     commands.spawn((
         Portal::WarpZone,
-        RigidBody::Static,
-        Collider::rectangle(100.0, 100.0),
         Sprite::from_image(sprites.warp_zone.clone()),
         Transform::from_translation(warpzone_position),
     ));

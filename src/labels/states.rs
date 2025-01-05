@@ -11,7 +11,6 @@ pub enum GameState {
     // If you want to distinguish between different phases within "Playing" make a new state!
     // Ex. MapRegionState
     Playing,
-    CleanupZone,
     Paused,
     GameOver,
 }

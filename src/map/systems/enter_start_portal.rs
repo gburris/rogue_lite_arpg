@@ -13,13 +13,11 @@ pub fn enter_start_portal(
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     for _event in events.read() {
-        warn!("Collision with run portal event processing!");
-
+        info!("Starting portal entered, beginning run!");
         commands.trigger(DespawnAllPortals);
         commands.trigger(DespawnAllTiles);
         commands.trigger(DespawnAllEnemies);
         commands.trigger(DespawnAllProjectiles);
         game_state.set(GameState::CreateZone);
-        debug!("Starting the rouge-like run!");
     }
 }

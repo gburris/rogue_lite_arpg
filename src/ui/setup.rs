@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
-use crate::resources::assets::SpriteAssets;
-
-pub fn setup_ui(mut commands: Commands, sprites: Res<SpriteAssets>) {
-    warn!("Setting up UI");
+pub fn setup_ui(mut commands: Commands) {
+    debug!("Setting up UI");
     commands.spawn((
         Transform::from_xyz(20.0, 20.0, 1.0),
         Text::new("(0.0, 0.0)"),

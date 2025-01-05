@@ -25,6 +25,8 @@ pub fn handle_collisions(
     player_query: Query<Entity, With<Player>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
+        let mut found_match = false;
+
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
         for (e1, e2) in [(*e1, *e2), (*e2, *e1)] {
             // Checks if one of the entities is a projectile and one is an enemy
@@ -34,6 +36,7 @@ pub fn handle_collisions(
                         projectile: projectile_entity,
                         enemy: enemy_entity,
                     });
+                    found_match = true;
                     // Once we find a match we go to the next collision
                     break;
                 }
@@ -50,9 +53,14 @@ pub fn handle_collisions(
                             warpzone_enter_event_writer.send(WarpZoneEnterEvent);
                         }
                     }
+                    found_match = true;
                     break;
                 }
             }
+        }
+
+        if !found_match {
+            error!("Unexpected collision was not handled")
         }
     }
 }

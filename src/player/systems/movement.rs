@@ -2,15 +2,16 @@ use bevy::prelude::*;
 
 use crate::{
     components::Speed,
+    map::resources::MapBounds,
     player::{Player, PlayerMovementEvent, ResetPlayerPosition},
-    resources::{MapBounds, PlayerSize},
+    resources::PlayerSize,
 };
 
 // System to handle player movement based on movement events
 pub fn player_movement(
     mut query: Query<(&mut Player, &mut Transform, &Speed)>,
     playersize: Res<PlayerSize>, // Player size to adjust clamping
-    mapbounds: Res<MapBounds>,   // Map bounds for clamping
+    map_bounds: Res<MapBounds>,  // Map bounds for clamping
     mut event_reader: EventReader<PlayerMovementEvent>, // Listen for movement events
 ) {
     for event in event_reader.read() {
@@ -22,12 +23,12 @@ pub fn player_movement(
 
             // Clamp the player position within the map bounds
             let clamp_x = transform.translation.x.clamp(
-                mapbounds.min_x + playersize.x / 2.0,
-                mapbounds.max_x - playersize.x / 2.0,
+                map_bounds.min_x + playersize.x / 2.0,
+                map_bounds.max_x - playersize.x / 2.0,
             );
             let clamp_y = transform.translation.y.clamp(
-                mapbounds.min_y + playersize.y / 2.0,
-                mapbounds.max_y - playersize.y / 2.0,
+                map_bounds.min_y + playersize.y / 2.0,
+                map_bounds.max_y - playersize.y / 2.0,
             );
 
             // Update the transform to reflect the clamped position

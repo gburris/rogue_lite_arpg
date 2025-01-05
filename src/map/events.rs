@@ -4,9 +4,7 @@ use bevy::prelude::*;
 pub struct StartRunEvent;
 
 #[derive(Event)]
-pub struct WarpZoneEnterEvent {
-    pub warp_zone: Entity,
-}
+pub struct WarpZoneEnterEvent;
 
 #[derive(Event)]
 pub struct DespawnAllPortals;

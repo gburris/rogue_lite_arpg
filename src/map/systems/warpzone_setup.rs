@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     labels::states::GameState,
-    map::components::WarpZone,
+    map::components::Portal,
     resources::{assets::SpriteAssets, CurrentZoneLevel, MapBounds},
 };
 
@@ -29,7 +29,7 @@ pub fn warpzone_setup(
     info!("Progressing to level: {:?}", zone_level.0);
 
     commands.spawn((
-        WarpZone::default(), //Default is LevelTwo, Since we begin on LevelOne
+        Portal::WarpZone,
         RigidBody::Static,
         Collider::rectangle(100.0, 100.0),
         Sprite::from_image(sprites.warp_zone.clone()),

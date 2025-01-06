@@ -1,14 +1,21 @@
 use bevy::prelude::*;
 
+use crate::npc::events::AttemptDialogueInput;
 use crate::{labels::states::GameState, player::PlayerMovementEvent};
 
 pub fn player_input(
+    mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         game_state.set(GameState::Paused);
+        return;
+    }
+
+    if keyboard_input.clear_just_pressed(KeyCode::Space) {
+        commands.trigger(AttemptDialogueInput);
         return;
     }
 

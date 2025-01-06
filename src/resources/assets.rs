@@ -37,4 +37,6 @@ pub struct SpriteAssets {
     pub grass_tiles: Handle<Image>,
     #[asset(path = "run_start_portal.png")]
     pub run_start_portal: Handle<Image>,
+    #[asset(path = "npc.png")]
+    pub npc: Handle<Image>,
 }

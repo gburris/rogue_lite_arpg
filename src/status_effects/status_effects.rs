@@ -3,6 +3,7 @@ use bevy::prelude::*;
 pub struct StatusEffects {
     pub effects: Vec<StatusEffect>,
 }
+
 //Implement a default for status effects with an  empty effect vector
 impl Default for StatusEffects {
     fn default() -> Self {
@@ -11,6 +12,7 @@ impl Default for StatusEffects {
         }
     }
 }
+
 #[derive(Clone)]
 pub struct StatusEffect {
     pub effect_type: StatusEffectType,

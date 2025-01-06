@@ -5,6 +5,7 @@ pub mod enemy;
 pub mod helpers;
 pub mod labels;
 pub mod map;
+pub mod npc;
 pub mod player;
 pub mod projectile;
 pub mod resources;

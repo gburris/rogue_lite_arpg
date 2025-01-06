@@ -4,6 +4,7 @@ use game_dev_project::{
     collision::CollisionPlugin,
     enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
+    npc::NPCPlugin,
     player::plugins::{ExperiencePlugin, PlayerPlugin},
     projectile::ProjectilePlugin,
     resources::{assets::AssetLoadingPlugin, PlayerSize},
@@ -28,6 +29,7 @@ fn main() {
             MapPlugin,
             ExperiencePlugin,
             UIPlugin,
+            NPCPlugin,
         ))
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();

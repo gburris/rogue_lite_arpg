@@ -21,6 +21,7 @@ impl Default for PlayerExperience {
         }
     }
 }
+
 #[derive(Component)]
 pub struct PlayerLevel {
     pub current: u32,

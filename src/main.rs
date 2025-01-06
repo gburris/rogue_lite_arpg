@@ -10,7 +10,7 @@ use game_dev_project::{
     schedule::SchedulePlugin,
     setup::SetupPlugin,
     status_effects::StatusEffectPlugin,
-    ui::UIPlugin,
+    ui::plugin::UIPlugin,
 };
 
 fn main() {

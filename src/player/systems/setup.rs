@@ -1,4 +1,4 @@
-use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
+use avian2d::prelude::{Collider, CollisionLayers, Friction, RigidBody};
 use bevy::prelude::*;
 
 use crate::{
@@ -23,7 +23,14 @@ pub fn player_setup(
         },
         RigidBody::Dynamic,
         Collider::rectangle(100.0, 100.0),
-        CollisionLayers::new(GameCollisionLayer::Player, [GameCollisionLayer::Portal]),
+        CollisionLayers::new(
+            GameCollisionLayer::Player,
+            [
+                GameCollisionLayer::Npc,
+                GameCollisionLayer::Interaction,
+                GameCollisionLayer::Portal,
+            ],
+        ),
         Sprite::from_image(sprites.skeleton_player.clone()),
         Transform::from_xyz(0., 0., 1.0),
     ));

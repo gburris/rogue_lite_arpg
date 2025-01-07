@@ -4,46 +4,31 @@ use crate::{
     components::DamageEffect,
     enemy::events::EnemyDamageEvent,
     projectile::events::ProjectileHitEvent,
-    status_effects::{BurningEffect, FreezingEffect, StatusEffectAppliedEvent, StatusEffectType},
+    status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
 pub fn handle_projectile_hit(
     mut commands: Commands,
     mut collision_events: EventReader<ProjectileHitEvent>,
     mut enemy_damaged_events: EventWriter<EnemyDamageEvent>,
-    mut status_applied_events: EventWriter<StatusEffectAppliedEvent>,
-    projectile_query: Query<(
-        &DamageEffect,
-        Option<&BurningEffect>,
-        Option<&FreezingEffect>,
-    )>,
+    projectile_query: Query<(&DamageEffect, &EffectsList)>,
 ) {
     for event in collision_events.read() {
-        if let Ok((damage, burning_effect, freezing_effect)) =
-            projectile_query.get(event.projectile)
-        {
+        if let Ok((damage, effects_list)) = projectile_query.get(event.projectile) {
             enemy_damaged_events.send(EnemyDamageEvent {
                 enemy_entity: event.enemy,
                 damage_source: Some(event.projectile),
                 damage: damage.base_damage,
             });
 
-            // Handle burning effect if present
-            if let Some(_burning) = burning_effect {
-                status_applied_events.send(StatusEffectAppliedEvent {
-                    entity: event.enemy,
-                    effect: StatusEffectType::Burning,
-                });
-            }
+            commands.trigger_targets(
+                ApplyEffect {
+                    effect: effects_list.effects.clone(),
+                },
+                event.enemy,
+            );
 
-            // Handle freezing effect if present
-            if let Some(_freezing) = freezing_effect {
-                status_applied_events.send(StatusEffectAppliedEvent {
-                    entity: event.enemy,
-                    effect: StatusEffectType::Slowed,
-                });
-            }
-            commands.entity(event.projectile).try_despawn();
+            commands.entity(event.projectile).despawn_recursive();
         }
     }
 }

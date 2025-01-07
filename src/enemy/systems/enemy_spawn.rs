@@ -9,7 +9,6 @@ use crate::{
     map::resources::MapBounds,
     player::components::Player,
     resources::{assets::SpriteAssets, EnemySpawnConfig},
-    status_effects::StatusEffects,
 };
 
 pub fn spawn_enemies_with_timer(
@@ -50,7 +49,6 @@ pub fn spawn_enemies_with_timer(
                     HealthBar {
                         health_percetange: 100.0,
                     },
-                    StatusEffects::default(),
                     RigidBody::Dynamic,
                     Collider::rectangle(100.0, 100.0),
                     // Currently enemies can only collide with projectiles

@@ -1,6 +1,7 @@
 pub mod animation;
 pub mod collision;
 pub mod components;
+pub mod despawn;
 pub mod enemy;
 pub mod helpers;
 pub mod labels;

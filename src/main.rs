@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
+    despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
     npc::NPCPlugin,
@@ -10,7 +11,7 @@ use game_dev_project::{
     resources::{assets::AssetLoadingPlugin, PlayerSize},
     schedule::SchedulePlugin,
     setup::SetupPlugin,
-    status_effects::StatusEffectPlugin,
+    status_effects::plugin::StatusEffectPlugin,
     ui::plugin::UIPlugin,
 };
 
@@ -20,6 +21,7 @@ fn main() {
             SetupPlugin,
             SchedulePlugin,
             CollisionPlugin,
+            DespawnPlugin,
             AssetLoadingPlugin,
             TilemapPlugin,
             PlayerPlugin,

@@ -22,7 +22,7 @@ pub fn handle_enemy_damage(
             }
             health.hp -= event.damage;
             if health.hp <= 0.0 {
-                commands.entity(entity).despawn();
+                commands.entity(entity).despawn_recursive();
                 enemy_defeated_events.send(EnemyDefeatedEvent {
                     enemy_entity: entity,
                     enemy_position: transform.translation,

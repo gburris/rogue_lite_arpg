@@ -1,10 +1,14 @@
-use bevy::prelude::Event;
 use bevy::prelude::*;
 
-use crate::status_effects::StatusEffectType;
+use super::components::StatusType;
 
 #[derive(Event)]
-pub struct StatusEffectAppliedEvent {
-    pub entity: Entity,
-    pub effect: StatusEffectType,
+pub struct ApplyEffect {
+    pub effect: Vec<ApplyStatus>,
+}
+
+#[derive(Event, Clone)]
+pub struct ApplyStatus {
+    pub status: StatusType,
+    pub duration: f32,
 }

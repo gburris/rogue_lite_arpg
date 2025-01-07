@@ -1,14 +1,16 @@
+use avian2d::prelude::*;
+use bevy::prelude::*;
+
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     components::damage_effect::DamageEffect,
     resources::assets::SpriteAssets,
-    status_effects::{BurningEffect, FreezingEffect},
+    spells::components::Spell,
+    status_effects::{
+        components::{BurningStatus, EffectsList, StatusType},
+        events::ApplyStatus,
+    },
 };
-use avian2d::prelude::*;
-use bevy::prelude::*;
-use std::time::Duration;
-
-use crate::spells::components::Spell;
 
 pub struct SpellFactory;
 
@@ -31,10 +33,11 @@ impl SpellFactory {
                     caster_transform,
                     DamageEffect { base_damage: 10.0 },
                     LinearVelocity(velocity),
-                    BurningEffect {
-                        duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
-                        tick_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
-                        damage_per_second: 5.0,
+                    EffectsList {
+                        effects: vec![ApplyStatus {
+                            status: StatusType::Burning(BurningStatus::default()),
+                            duration: 2.0,
+                        }],
                     },
                     Sprite::from_image(sprites.fire_bolt.clone()),
                 ));
@@ -49,9 +52,11 @@ impl SpellFactory {
                     spell,
                     DamageEffect { base_damage: 8.0 },
                     LinearVelocity(velocity),
-                    FreezingEffect {
-                        duration: Timer::new(Duration::from_secs(3), TimerMode::Once),
-                        slow_percentage: 0.5,
+                    EffectsList {
+                        effects: vec![ApplyStatus {
+                            status: StatusType::Frozen,
+                            duration: 2.0,
+                        }],
                     },
                     Sprite::from_atlas_image(
                         texture,

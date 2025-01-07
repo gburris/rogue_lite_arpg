@@ -9,4 +9,6 @@ pub enum GameCollisionLayer {
     Enemy,
     Projectile,
     Portal,
+    Npc,
+    Interaction, //Used for the player being in an interaction radius
 }

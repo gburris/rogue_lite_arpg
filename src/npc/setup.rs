@@ -1,4 +1,4 @@
-use avian2d::prelude::{Collider, CollidingEntities};
+use avian2d::prelude::{Collider, CollidingEntities, Friction, Restitution, RigidBody};
 use bevy::prelude::*;
 
 use crate::{npc::components::NPC, resources::assets::SpriteAssets};
@@ -16,6 +16,7 @@ pub fn npc_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             NPC,
             NPCMovement::default(),
             Sprite::from_image(sprites.npc.clone()),
+            RigidBody::Static,
             Collider::rectangle(100.0, 100.0),
             Transform {
                 translation: Vec3::new(-100., -100., 1.0),
@@ -23,11 +24,5 @@ pub fn npc_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
                 scale: Vec3::splat(0.2),
             },
         ))
-        .with_children(|parent| {
-            parent.spawn((
-                NPCInteractionRadius,
-                Collider::circle(10.),
-                CollidingEntities::default(),
-            ));
-        });
+        .with_child((NPCInteractionRadius, CollidingEntities::default()));
 }

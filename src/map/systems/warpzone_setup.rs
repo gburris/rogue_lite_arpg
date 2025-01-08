@@ -28,8 +28,6 @@ pub fn warpzone_setup(
 
     zone_level.0 += 1;
 
-    info!("Progressing to level: {:?}", zone_level.0);
-
     commands.spawn((
         Portal::WarpZone,
         Sprite::from_image(sprites.warp_zone.clone()),

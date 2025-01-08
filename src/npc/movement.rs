@@ -39,7 +39,6 @@ pub fn move_npcs(
                 movement.is_standing = false;
                 movement.direction *= -1.0; // Reverse direction
                 movement.stand_timer.reset();
-                warn!("NPC started walking");
                 // You might want to add sprite flipping logic here
             }
             continue; // Skip movement while standing
@@ -53,7 +52,7 @@ pub fn move_npcs(
         if distance_from_start >= 500.0 {
             movement.is_standing = true;
             transform.translation.x = movement.start_pos.x + (500.0 * movement.direction.signum());
-            warn!("NPC reached boundary and stopped");
+
         } else {
             transform.translation.x = new_pos;
         }

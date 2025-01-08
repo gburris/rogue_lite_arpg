@@ -117,15 +117,12 @@ pub fn process_loaded_tile_maps(
     for event in map_events.read() {
         match event {
             AssetEvent::Added { id } => {
-                log::info!("Map added!");
                 changed_maps.push(*id);
             }
             AssetEvent::Modified { id } => {
-                log::info!("Map changed!");
                 changed_maps.push(*id);
             }
             AssetEvent::Removed { id } => {
-                log::info!("Map removed!");
                 // if mesh was modified and removed in the same update, ignore the modification
                 // events are ordered so future modification events are ok
                 changed_maps.retain(|changed_handle| changed_handle == id);

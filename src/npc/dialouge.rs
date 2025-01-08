@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use avian2d::prelude::CollidingEntities;
 
-use bevy::{prelude::*, state::commands};
+use bevy::prelude::*;
 
 use crate::{
     npc::events::{AttemptDialogueInput, DialogueBegin},
@@ -59,7 +59,7 @@ pub fn begin_dialogue(
     // Get the camera and its transform
     if let Ok((camera, camera_transform)) = camera_query.get_single() {
         // Get the first colliding entity
-        if let Some(npc_entity) = dialogue_begin_trigger.colliding_entities.iter().next() {
+        if let Some(_npc_entity) = dialogue_begin_trigger.colliding_entities.iter().next() {
             // Get the transform component for that entity
             if let Ok(npc_transform) = query.get(dialogue_begin_trigger.entity) {
                 // Calculate position above NPC's head in world space

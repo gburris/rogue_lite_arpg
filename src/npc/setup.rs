@@ -17,12 +17,11 @@ pub fn npc_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             NPCMovement::default(),
             Sprite::from_image(sprites.npc.clone()),
             RigidBody::Static,
-            Collider::rectangle(100.0, 100.0),
             Transform {
                 translation: Vec3::new(-100., -100., 1.0),
                 rotation: Quat::IDENTITY,
                 scale: Vec3::splat(0.2),
             },
         ))
-        .with_child((NPCInteractionRadius, CollidingEntities::default()));
+        .with_child(NPCInteractionRadius);
 }

@@ -25,21 +25,19 @@ pub fn handle_collisions(
     sensor_query: Query<Entity, With<Sensor>>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
-    npc_query: Query<Entity, With<NPC>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
         let mut found_match = false;
 
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
         for (e1, e2) in [(*e1, *e2), (*e2, *e1)] {
-            if let (Ok(_), Ok(_)) = (npc_query.get(e1), player_query.get(e2)) {
-                found_match = true;
-                break;
-            }
-
             // Checks if one of the entities is a projectile and one is an enemy
             if let Ok(projectile_entity) = projectile_query.get(e1) {
                 if let Ok(enemy_entity) = enemy_query.get(e2) {
+                    debug!(
+                        "Enemy {} collided with projectile {}",
+                        enemy_entity, projectile_entity
+                    );
                     projectile_hit_event.send(ProjectileHitEvent {
                         projectile: projectile_entity,
                         enemy: enemy_entity,

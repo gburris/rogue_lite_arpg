@@ -16,13 +16,13 @@ use super::NPC;
 pub fn handle_dialogue_input(
     _: Trigger<AttemptDialogueInput>,
     mut commands: Commands,
-    query: Query<(Entity, &CollidingEntities)>,
+    query: Query<(Entity, &Parent, &CollidingEntities)>,
     player_query: Query<Entity, With<Player>>,
     npc_query: Query<Entity, With<NPC>>,
 ) {
     let player_entity = player_query.single();
 
-    for (entity, colliding_entities) in &query {
+    for (entity, parent, colliding_entities) in &query {
         // Skip if this entity is an NPC
         if npc_query.contains(entity) {
             continue;
@@ -31,7 +31,7 @@ pub fn handle_dialogue_input(
         // Check if any of the colliding entities is the player
         if colliding_entities.contains(&player_entity) {
             commands.trigger(DialogueBegin {
-                entity,
+                entity: parent.get(),
                 colliding_entities: colliding_entities.clone(),
             });
         }
@@ -61,9 +61,9 @@ pub fn begin_dialogue(
         // Get the first colliding entity
         if let Some(npc_entity) = dialogue_begin_trigger.colliding_entities.iter().next() {
             // Get the transform component for that entity
-            if let Ok(npc_transform) = query.get(*npc_entity) {
+            if let Ok(npc_transform) = query.get(dialogue_begin_trigger.entity) {
                 // Calculate position above NPC's head in world space
-                let y_offset = 50.0;
+                let y_offset = 110.0;
                 let world_pos = npc_transform.translation + Vec3::new(0.0, y_offset, 0.1);
 
                 // Convert world position to screen space
@@ -92,7 +92,7 @@ pub fn begin_dialogue(
                         .insert(DialogueBubble {
                             timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
                             initial_alpha: 0.9,
-                            owning_entity: *npc_entity,
+                            owning_entity: dialogue_begin_trigger.entity,
                         });
                 }
             }
@@ -117,7 +117,7 @@ pub fn update_dialogue_bubbles(
             let alpha = bubble.initial_alpha * (1.0 - progress);
 
             if let Ok(npc_transform) = npc_query.get(bubble.owning_entity) {
-                let y_offset = 50.0;
+                let y_offset = 110.0;
                 let world_pos = npc_transform.translation + Vec3::new(0.0, y_offset, 0.1);
                 if let Ok(screen_pos) = camera.world_to_viewport(camera_transform, world_pos) {
                     node.left = Val::Px(screen_pos.x);

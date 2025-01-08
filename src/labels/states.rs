@@ -14,3 +14,12 @@ pub enum GameState {
     Paused,
     GameOver,
 }
+
+//A sub state for when we are in playing.
+// This is useful for when we want to distinguish between different phases within "Playing"
+#[derive(States, Eq, Default, Hash, Clone, Debug, PartialEq)]
+pub enum PlayingState {
+    #[default]
+    BeforeRun, //Overworld State
+    Run, //Post entering the start portal state
+}

@@ -9,3 +9,6 @@ pub struct DialogueBegin {
     pub entity: Entity,
     pub colliding_entities: CollidingEntities,
 }
+
+#[derive(Event)]
+pub struct DespawnAllNPCs;

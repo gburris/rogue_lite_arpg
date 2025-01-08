@@ -13,7 +13,6 @@ pub fn handle_player_level_up(
     mut level_up_events: EventReader<PlayerLevelUpEvent>,
 ) {
     for event in level_up_events.read() {
-        info!("Player leveled up to level {}", event.new_level);
         commands.spawn((
             Transform::from_translation(event.position + Vec3::new(0.0, 50.0, 10.0)),
             Sprite {

@@ -22,6 +22,7 @@ pub fn handle_collisions(
     mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
     projectile_query: Query<Entity, With<Projectile>>,
     enemy_query: Query<Entity, With<Enemy>>,
+    sensor_query: Query<Entity, With<Sensor>>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
     npc_query: Query<Entity, With<NPC>>,
@@ -63,6 +64,11 @@ pub fn handle_collisions(
                     found_match = true;
                     break;
                 }
+            }
+            if let (Ok(_), Ok(_)) = (sensor_query.get(e1), player_query.get(e2)) {
+                debug!("Found collision with sensor, no-op");
+                found_match = true;
+                break;
             }
         }
 

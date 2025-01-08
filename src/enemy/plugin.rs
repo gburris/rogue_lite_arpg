@@ -11,6 +11,7 @@ use crate::{
         },
     },
     labels::sets::GamePlaySet,
+    labels::states::PlayingState,
     resources::EnemySpawnConfig,
 };
 
@@ -29,7 +30,8 @@ impl Plugin for EnemyPlugin {
                 move_enemies_toward_player,
                 handle_enemy_damage,
             )
-                .in_set(GamePlaySet::Simulation),
+                .in_set(GamePlaySet::Simulation)
+                .run_if(in_state(PlayingState::Run)),
         )
         .add_observer(despawn_all_enemies)
         .add_event::<EnemyDamageEvent>();

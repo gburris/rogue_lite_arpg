@@ -1,6 +1,7 @@
-use crate::components::{Health, Speed};
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
+
+use crate::components::{Health, Speed};
 
 #[derive(Component)]
 #[require(Health, Speed, Collider, PlayerExperience, PlayerLevel)]

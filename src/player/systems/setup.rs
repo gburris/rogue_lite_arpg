@@ -5,7 +5,7 @@ use crate::{
     components::{Health, HealthBar, Speed},
     helpers::labels::GameCollisionLayer,
     labels::states::{GameState, PlayingState},
-    player::Player,
+    player::{Inventory, Item, Player, StatType},
     resources::assets::SpriteAssets,
 };
 
@@ -15,6 +15,19 @@ pub fn player_setup(
     mut playing_state: ResMut<NextState<PlayingState>>,
     sprites: Res<SpriteAssets>,
 ) {
+    let mut staff = Item::new("Staff of Casting");
+    staff.add_stat(StatType::SpellPower, 10);
+    staff.add_stat(StatType::CastSpeed, 10);
+
+    // Create a new player inventory and add the staff to it
+    let mut inventory = Inventory::default_inventory();
+
+    // Add the staff to the inventory
+    match inventory.add_item(staff) {
+        Ok(_) => println!("Staff added to inventory!"),
+        Err(err) => println!("Error: {}", err),
+    };
+
     commands.spawn((
         Player,
         Speed::default(),
@@ -22,6 +35,7 @@ pub fn player_setup(
         HealthBar {
             health_percetange: 100.0,
         },
+        inventory,
         RigidBody::Dynamic,
         Collider::rectangle(100.0, 100.0),
         CollisionLayers::new(

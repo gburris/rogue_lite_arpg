@@ -20,7 +20,6 @@ pub fn while_burning(
     for (burn, parent) in status_query.iter() {
         if let Ok(entity) = parent_query.get_mut(parent.get()) {
             if burn.damage_frequency.just_finished() {
-                info!("Burn applying damage: {}", burn.damage);
                 enemy_damaged_events.send(EnemyDamageEvent {
                     enemy_entity: entity,
                     damage_source: None,

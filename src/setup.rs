@@ -5,7 +5,7 @@ use bevy::{
     window::WindowResolution,
 };
 
-use crate::labels::states::GameState;
+use crate::labels::states::{GameState, PlayingState};
 
 pub struct SetupPlugin;
 
@@ -38,6 +38,7 @@ impl Plugin for SetupPlugin {
         .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
         // initialize states
         .init_state::<GameState>()
+        .init_state::<PlayingState>()
         .add_systems(Startup, setup_camera);
     }
 }

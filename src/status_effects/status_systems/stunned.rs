@@ -19,7 +19,6 @@ pub fn on_stun_applied(
     };
 
     if let Ok(mut speed) = parent_speed_query.get_mut(parent.get()) {
-        info!("Enemy Stunned: {}", trigger.entity());
         speed.velocity = 0.0;
     }
 }
@@ -38,7 +37,6 @@ pub fn on_stun_removed(
         speed.velocity = speed.max_velocity;
     }
 
-    info!("Enemy stun being removed, applying slow");
     commands.trigger_targets(
         ApplyStatus {
             status: StatusType::Slowed(SlowedStatus::default()),

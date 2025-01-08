@@ -25,12 +25,6 @@ pub fn on_status_apply(trigger: Trigger<ApplyStatus>, mut commands: Commands) {
     // Attach status to parent
     commands.entity(trigger.entity()).add_child(child);
 
-    info!(
-        "Attaching status ({}) to entity {}",
-        child,
-        trigger.entity()
-    );
-
     let mut child_commands = commands.entity(child);
 
     // Every status must have a duration

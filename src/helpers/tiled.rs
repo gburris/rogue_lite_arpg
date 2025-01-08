@@ -133,7 +133,6 @@ impl AssetLoader for TiledLoader {
                 None => {
                     #[cfg(feature = "atlas")]
                     {
-                        log::info!("Skipping image collection tileset '{}' which is incompatible with atlas feature", tileset.name);
                         continue;
                     }
 
@@ -150,7 +149,6 @@ impl AssetLoader for TiledLoader {
                                     .expect("The asset load context was empty.");
                                 let tile_path = tmx_dir.join(&img.source);
                                 let asset_path = AssetPath::from(tile_path);
-                                log::info!("Loading tile image from {asset_path:?} as image ({tileset_index}, {tile_id})");
                                 let texture: Handle<Image> = load_context.load(asset_path.clone());
                                 tile_image_offsets
                                     .insert((tileset_index, tile_id), tile_images.len() as u32);
@@ -186,7 +184,6 @@ impl AssetLoader for TiledLoader {
             tile_image_offsets,
         };
 
-        log::info!("Loaded map: {}", load_context.path().display());
         Ok(asset_map)
     }
 
@@ -212,15 +209,12 @@ pub fn process_loaded_maps(
     for event in map_events.read() {
         match event {
             AssetEvent::Added { id } => {
-                log::info!("Map added!");
                 changed_maps.push(*id);
             }
             AssetEvent::Modified { id } => {
-                log::info!("Map changed!");
                 changed_maps.push(*id);
             }
             AssetEvent::Removed { id } => {
-                log::info!("Map removed!");
                 // if mesh was modified and removed in the same update, ignore the modification
                 // events are ordered so future modification events are ok
                 changed_maps.retain(|changed_handle| changed_handle == id);
@@ -279,18 +273,11 @@ pub fn process_loaded_maps(
                         let offset_y = layer.offset_y;
 
                         let tiled::LayerType::Tiles(tile_layer) = layer.layer_type() else {
-                            log::info!(
-                                "Skipping layer {} because only tile layers are supported.",
-                                layer.id()
-                            );
                             continue;
                         };
 
                         let tiled::TileLayer::Finite(layer_data) = tile_layer else {
-                            log::info!(
-                                "Skipping layer {} because only finite layers are supported.",
-                                layer.id()
-                            );
+
                             continue;
                         };
 

@@ -1,10 +1,10 @@
-use avian2d::prelude::{Collider, CollisionLayers, Friction, RigidBody};
+use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 
 use crate::{
     components::{Health, HealthBar, Speed},
     helpers::labels::GameCollisionLayer,
-    labels::states::GameState,
+    labels::states::{GameState, PlayingState},
     player::Player,
     resources::assets::SpriteAssets,
 };
@@ -12,6 +12,7 @@ use crate::{
 pub fn player_setup(
     mut commands: Commands,
     mut game_state: ResMut<NextState<GameState>>,
+    mut playing_state: ResMut<NextState<PlayingState>>,
     sprites: Res<SpriteAssets>,
 ) {
     commands.spawn((
@@ -34,6 +35,6 @@ pub fn player_setup(
         Sprite::from_image(sprites.skeleton_player.clone()),
         Transform::from_xyz(0., 0., 1.0),
     ));
-
+    playing_state.set(PlayingState::BeforeRun);
     game_state.set(GameState::Playing);
 }

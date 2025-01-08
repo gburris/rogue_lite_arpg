@@ -12,7 +12,6 @@ pub fn on_slow_applied(
     };
 
     if let Ok(mut speed) = parent_speed_query.get_mut(parent.get()) {
-        info!("Enemy Slowed!");
         speed.velocity = speed.velocity * slowed.slow_percentage;
     }
 }
@@ -27,7 +26,6 @@ pub fn on_slow_removed(
     };
 
     if let Ok(mut speed) = parent_speed_query.get_mut(parent.get()) {
-        info!("Enemy slow being removed, reset speed");
         speed.velocity = speed.max_velocity;
     }
 }

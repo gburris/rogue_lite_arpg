@@ -11,7 +11,6 @@ pub fn remove_expired_entities(
         duration.0.tick(time.delta());
 
         if duration.0.finished() {
-            info!("Despawning entity due to duration: {}", entity);
             commands.entity(entity).despawn_recursive();
         }
     }

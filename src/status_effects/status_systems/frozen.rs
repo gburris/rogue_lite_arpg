@@ -19,7 +19,6 @@ pub fn on_frozen_applied(
         return;
     };
 
-    info!("Enemy frozen, applying stun");
     commands.trigger_targets(
         ApplyStatus {
             status: StatusType::Stunned,

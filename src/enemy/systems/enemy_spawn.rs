@@ -45,7 +45,7 @@ pub fn spawn_enemies_with_timer(
                         max_velocity: 3.0,
                         ..Default::default()
                     },
-                    Health::default(),
+                    Health::new(30.),
                     HealthBar {
                         health_percetange: 100.0,
                     },

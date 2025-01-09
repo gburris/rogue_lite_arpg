@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     components::DamageEffect,
-    enemy::events::EnemyDamageEvent,
+    enemy::events::DamageEvent,
     projectile::events::ProjectileHitEvent,
     status_effects::{components::EffectsList, events::ApplyEffect},
 };
@@ -10,7 +10,7 @@ use crate::{
 pub fn handle_projectile_hit(
     mut commands: Commands,
     mut collision_events: EventReader<ProjectileHitEvent>,
-    mut enemy_damaged_events: EventWriter<EnemyDamageEvent>,
+    mut enemy_damaged_events: EventWriter<DamageEvent>,
     projectile_query: Query<(&DamageEffect, &EffectsList)>,
 ) {
     for event in collision_events.read() {
@@ -24,7 +24,7 @@ pub fn handle_projectile_hit(
                 event.enemy,
             );
 
-            enemy_damaged_events.send(EnemyDamageEvent {
+            enemy_damaged_events.send(DamageEvent {
                 enemy_entity: event.enemy,
                 damage_source: Some(event.projectile),
                 damage: damage.base_damage,

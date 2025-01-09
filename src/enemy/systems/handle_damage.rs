@@ -1,15 +1,14 @@
 use crate::{
     components::Health,
     enemy::{
-        events::{DespawnAllEnemies, EnemyDamageEvent, EnemyDefeatedEvent},
+        events::{DamageEvent, DespawnAllEnemies, EnemyDefeatedEvent},
         Enemy, Experience,
     },
 };
 use bevy::prelude::*;
 
-pub fn handle_enemy_damage(
-    mut commands: Commands,
-    mut damage_events: EventReader<EnemyDamageEvent>,
+pub fn handle_damage(
+    mut damage_events: EventReader<DamageEvent>,
     mut query: Query<(Entity, &mut Health, &Transform, &Experience)>,
     mut enemy_defeated_events: EventWriter<EnemyDefeatedEvent>,
 ) {
@@ -20,9 +19,8 @@ pub fn handle_enemy_damage(
                 //Happens when an enemy takes damage from two sources on the same frame
                 continue;
             }
-            health.hp -= event.damage;
-            if health.hp <= 0.0 {
-                commands.entity(entity).despawn_recursive();
+            health.take_damage(event.damage);
+            if health.hp == 0.0 {
                 enemy_defeated_events.send(EnemyDefeatedEvent {
                     enemy_entity: entity,
                     enemy_position: transform.translation,

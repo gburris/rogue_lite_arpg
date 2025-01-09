@@ -5,14 +5,14 @@ use bevy::prelude::*;
 
 #[derive(Component, Default)]
 pub struct Projectile {
-    pub speed: f32,
+    pub motion: f32,
     pub time_to_live: Timer,
 }
 
 impl Projectile {
-    pub fn new(speed: f32) -> Self {
+    pub fn new(motion: f32) -> Self {
         Projectile {
-            speed,
+            motion,
             time_to_live: Timer::from_seconds(2.0, TimerMode::Once),
         }
     }

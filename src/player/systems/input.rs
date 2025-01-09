@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
+use crate::movement::components::IsMoving;
 use crate::npc::events::AttemptDialogueInput;
-use crate::player::Inventory;
+use crate::player::{Inventory, Player};
 use crate::{labels::states::GameState, player::PlayerMovementEvent};
 
 use super::print_inventory;
@@ -11,6 +12,7 @@ pub fn player_input(
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
     mut game_state: ResMut<NextState<GameState>>,
+    mut is_moving_query: Query<&mut IsMoving, With<Player>>,
     query_inventory: Query<&Inventory>,
 ) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
@@ -46,5 +48,7 @@ pub fn player_input(
     // If there is movement input, dispatch the movement event
     if direction.length() > 0.0 {
         event_writer.send(PlayerMovementEvent { direction });
+    } else {
+        is_moving_query.single_mut().0 = false;
     }
 }

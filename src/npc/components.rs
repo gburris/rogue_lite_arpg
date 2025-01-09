@@ -1,16 +1,19 @@
-use crate::{
-    components::{Health, Speed},
-    helpers::labels::GameCollisionLayer,
-};
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, RigidBody, Sensor};
+use avian2d::prelude::*;
 use bevy::prelude::*;
+
+use crate::{
+    components::Health,
+    helpers::labels::GameCollisionLayer,
+    movement::components::SimpleMotion
+};
+
 
 #[derive(Component)]
 #[require(
     Health,
-    Speed,
+    SimpleMotion,
     Collider(|| Collider::rectangle(300.0, 300.0)),
-    RigidBody(|| RigidBody::Static),
+    RigidBody(|| RigidBody::Kinematic),
     CollisionLayers(|| CollisionLayers::new(
                        GameCollisionLayer::Npc, 
                        [GameCollisionLayer::Player]))
@@ -22,7 +25,6 @@ pub struct NPC;
     Health,
     CollidingEntities,
     Sensor,
-    Speed,
     Collider(||  Collider::circle(500.0)),
     CollisionLayers(||  CollisionLayers::new(
                         GameCollisionLayer::Interaction,

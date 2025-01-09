@@ -19,7 +19,7 @@ impl fmt::Display for StatType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let stat_name = match self {
             StatType::SpellPower => "Spell Power",
-            StatType::CastSpeed => "Cast Speed",
+            StatType::CastSpeed => "Cast SimpleMotion",
             StatType::AttackDamage => "Attack Damage",
             StatType::Durability => "Durability",
         };

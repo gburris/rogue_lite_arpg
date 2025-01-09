@@ -1,13 +1,14 @@
 use avian2d::prelude::{
     AngularDamping, AngularVelocity, Collider, CollisionLayers, LinearDamping, LinearVelocity,
-    RigidBody,
+    LockedAxes, RigidBody,
 };
 use bevy::prelude::*;
 
 use crate::{
-    components::{Health, HealthBar, Speed},
+    components::{Health, HealthBar},
     helpers::labels::GameCollisionLayer,
     labels::states::{GameState, PlayingState},
+    movement::components::SimpleMotion,
     player::{Inventory, Item, Player, StatType},
     resources::assets::SpriteAssets,
 };
@@ -33,18 +34,12 @@ pub fn player_setup(
 
     commands.spawn((
         Player,
-        Speed {
-            velocity: 10000.,
-            ..Default::default()
-        },
+        SimpleMotion::new(600.0),
+        LockedAxes::new().lock_rotation(),
         Health::default(),
         HealthBar {
             health_percetange: 100.0,
         },
-        LinearDamping(1000.), //Stop the player from sliding on the ground
-        AngularDamping(1000.),
-        AngularVelocity(0.0), //Stop the player from ever "Spinning"
-        LinearVelocity::default(),
         inventory,
         RigidBody::Dynamic,
         Collider::rectangle(100.0, 100.0),

@@ -1,6 +1,6 @@
-use crate::components::{Health, Speed};
 use crate::enemy::Enemy;
 use crate::player::components::Player;
+use crate::{components::Health, movement::components::SimpleMotion};
 
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
@@ -29,9 +29,9 @@ pub fn move_enemies_toward_player(
         Query<
             (
                 Entity,
-                &Speed,
                 &Health,
-                &mut Transform,
+                &Transform,
+                &mut SimpleMotion,
                 Option<&mut WanderDirection>,
             ),
             With<Enemy>,
@@ -45,7 +45,7 @@ pub fn move_enemies_toward_player(
         let player_pos = player_transform.translation;
 
         // Iterate through enemies and update their transforms
-        for (entity, speed, healh, mut enemy_transform, wander) in param_set.p1().iter_mut() {
+        for (entity, healh, enemy_transform, mut motion, wander) in param_set.p1().iter_mut() {
             let distance_to_player = player_pos.distance(enemy_transform.translation);
 
             if distance_to_player <= CHASE_DISTANCE || healh.hp < healh.max_hp {
@@ -56,8 +56,7 @@ pub fn move_enemies_toward_player(
 
                 // Chase behavior
                 let direction = (player_pos - enemy_transform.translation).normalize_or_zero();
-                enemy_transform.translation.x += direction.x * speed.velocity;
-                enemy_transform.translation.y += direction.y * speed.velocity;
+                motion.direction = direction.truncate();
             } else {
                 // Wandering behavior
                 match wander {
@@ -66,8 +65,7 @@ pub fn move_enemies_toward_player(
                         if wander.timer.tick(time.delta()).just_finished() {
                             wander.direction = random_direction();
                         }
-                        enemy_transform.translation.x += wander.direction.x * speed.velocity * 0.5;
-                        enemy_transform.translation.y += wander.direction.y * speed.velocity * 0.5;
+                        motion.direction = wander.direction.truncate();
                     }
                     None => {
                         // Initialize wandering for enemies that don't have it

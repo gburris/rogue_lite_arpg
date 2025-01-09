@@ -1,11 +1,13 @@
-use crate::components::Speed;
-use crate::npc::NPC;
 use bevy::prelude::*;
+
+use crate::{
+    movement::components::{IsMoving, SimpleMotion},
+    npc::NPC,
+};
 
 #[derive(Component)]
 pub struct NPCMovement {
     start_pos: Vec3,
-    direction: f32,
     stand_timer: Timer,
     is_standing: bool,
 }
@@ -14,7 +16,6 @@ impl Default for NPCMovement {
     fn default() -> Self {
         Self {
             start_pos: Vec3::ZERO,
-            direction: 1.0, // Start moving right
             stand_timer: Timer::from_seconds(10.0, TimerMode::Once),
             is_standing: false,
         }
@@ -23,38 +24,47 @@ impl Default for NPCMovement {
 
 pub fn move_npcs(
     time: Res<Time>,
-    mut query: Query<(&Speed, &mut Transform, &mut NPCMovement), With<NPC>>,
+    mut query: Query<
+        (
+            &Transform,
+            &mut IsMoving,
+            &mut SimpleMotion,
+            &mut NPCMovement,
+        ),
+        With<NPC>,
+    >,
 ) {
-    for (speed, mut transform, mut movement) in query.iter_mut() {
+    for (transform, mut is_moving, mut simple_motion, mut npc_movement) in query.iter_mut() {
         // Initialize start position if it's zero
-        if movement.start_pos == Vec3::ZERO {
-            movement.start_pos = transform.translation;
+        if npc_movement.start_pos == Vec3::ZERO {
+            npc_movement.start_pos = transform.translation;
         }
 
         // If standing, update timer and check if we should start moving again
-        if movement.is_standing {
-            movement.stand_timer.tick(time.delta());
+        if npc_movement.is_standing {
+            npc_movement.stand_timer.tick(time.delta());
 
-            if movement.stand_timer.finished() {
-                movement.is_standing = false;
-                movement.direction *= -1.0; // Reverse direction
-                movement.stand_timer.reset();
+            if npc_movement.stand_timer.finished() {
+                npc_movement.is_standing = false;
+                simple_motion.direction = Vec2::new(simple_motion.direction.x * -1.0, 0.0); // Reverse direction
+                npc_movement.stand_timer.reset();
+                npc_movement.start_pos = transform.translation;
+                is_moving.0 = true;
                 // You might want to add sprite flipping logic here
             }
-            continue; // Skip movement while standing
-        }
-
-        // Calculate movement when not standing
-        let new_pos = transform.translation.x + (movement.direction * speed.velocity);
-        let distance_from_start = (new_pos - movement.start_pos.x).abs();
-
-        // Check if we've reached the movement boundary (50 units)
-        if distance_from_start >= 500.0 {
-            movement.is_standing = true;
-            transform.translation.x = movement.start_pos.x + (500.0 * movement.direction.signum());
-
         } else {
-            transform.translation.x = new_pos;
+            let distance_from_start = (transform.translation.x - npc_movement.start_pos.x).abs();
+
+            debug!(
+                "NPC is moving, distance from start: {}, speed: {}, direction: {}",
+                distance_from_start, simple_motion.current_speed, simple_motion.direction
+            );
+
+            // Check if we've reached the movement boundary (50 units)
+            if distance_from_start >= 500.0 {
+                npc_movement.is_standing = true;
+                is_moving.0 = false;
+            }
         }
     }
 }

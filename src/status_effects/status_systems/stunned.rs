@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    components::Speed,
     enemy::Enemy,
+    movement::components::IsMoving,
     status_effects::{
         components::{SlowedStatus, StatusType, StunnedStatus},
         events::ApplyStatus,
@@ -12,29 +12,29 @@ use crate::{
 pub fn on_stun_applied(
     trigger: Trigger<OnInsert, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut parent_speed_query: Query<&mut Speed, With<Enemy>>,
+    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut speed) = parent_speed_query.get_mut(parent.get()) {
-        speed.velocity = 0.0;
+    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
+        is_moving.0 = false;
     }
 }
 
 pub fn on_stun_removed(
     trigger: Trigger<OnRemove, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut speed_query: Query<&mut Speed, With<Enemy>>,
+    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
     mut commands: Commands,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut speed) = speed_query.get_mut(parent.get()) {
-        speed.velocity = speed.max_velocity;
+    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
+        is_moving.0 = true;
     }
 
     commands.trigger_targets(

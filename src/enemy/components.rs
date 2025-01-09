@@ -1,11 +1,11 @@
-use crate::components::{Health, Speed};
-
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
+use crate::{components::Health, movement::components::SimpleMotion};
+
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(Health, Speed, Collider, Experience)]
+#[require(Health, SimpleMotion, Collider, Experience)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it

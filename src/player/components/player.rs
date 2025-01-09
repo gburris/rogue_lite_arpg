@@ -1,10 +1,10 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::components::{Health, Speed};
+use crate::{components::Health, movement::components::SimpleMotion};
 
 #[derive(Component)]
-#[require(Health, Speed, Collider, PlayerExperience, PlayerLevel)]
+#[require(Health, SimpleMotion, Collider, PlayerExperience, PlayerLevel)]
 pub struct Player;
 
 //Components for experience and leveling

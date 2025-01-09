@@ -3,10 +3,11 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    components::{Health, HealthBar, Speed},
+    components::{Health, HealthBar},
     enemy::Enemy,
     helpers::labels::GameCollisionLayer,
     map::resources::MapBounds,
+    movement::components::{IsMoving, SimpleMotion},
     player::components::Player,
     resources::{assets::SpriteAssets, EnemySpawnConfig},
 };
@@ -39,12 +40,8 @@ pub fn spawn_enemies_with_timer(
                 }
                 commands.spawn((
                     Enemy,
-                    //This sets all of the fields of speed to be default except velocity
-                    Speed {
-                        velocity: 3.0,
-                        max_velocity: 3.0,
-                        ..Default::default()
-                    },
+                    SimpleMotion::new(350.0),
+                    IsMoving(true),
                     Health::new(30.),
                     HealthBar {
                         health_percetange: 100.0,

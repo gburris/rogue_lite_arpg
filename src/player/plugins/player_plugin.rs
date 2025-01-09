@@ -4,7 +4,8 @@ use crate::{
     animation::animate_sprite,
     labels::{sets::GamePlaySet, states::GameState},
     player::{
-        camera_follow_system, player_input, reset_player_position,
+        camera_follow_system, enforce_map_bounds, lock_player_rotation, player_input,
+        reset_player_position,
         systems::{draw_cursor, face_cursor_system, player_movement, player_setup},
         PlayerMovementEvent,
     },
@@ -26,6 +27,8 @@ impl Plugin for PlayerPlugin {
                     player_movement,
                     face_cursor_system,
                     draw_cursor,
+                    lock_player_rotation,
+                    enforce_map_bounds,
                     cast_spell_system,
                     animate_sprite,
                 )

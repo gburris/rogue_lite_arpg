@@ -9,7 +9,7 @@ use bevy::prelude::*;
 #[require(
     Health,
     Speed,
-    Collider(|| Collider::rectangle(100.0, 100.0)),
+    Collider(|| Collider::rectangle(300.0, 300.0)),
     RigidBody(|| RigidBody::Static),
     CollisionLayers(|| CollisionLayers::new(
                        GameCollisionLayer::Npc, 

@@ -1,7 +1,4 @@
-use avian2d::prelude::{
-    AngularDamping, AngularVelocity, Collider, CollisionLayers, LinearDamping, LinearVelocity,
-    LockedAxes, RigidBody,
-};
+use avian2d::prelude::{Collider, CollisionLayers, LockedAxes, RigidBody};
 use bevy::prelude::*;
 
 use crate::{
@@ -49,6 +46,7 @@ pub fn player_setup(
                 GameCollisionLayer::Npc,
                 GameCollisionLayer::Interaction,
                 GameCollisionLayer::Portal,
+                GameCollisionLayer::Enemy,
             ],
         ),
         Sprite::from_image(sprites.skeleton_player.clone()),

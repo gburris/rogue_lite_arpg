@@ -5,7 +5,9 @@ pub mod input;
 pub mod movement;
 pub mod print_inventory;
 pub mod setup;
+pub mod handle_enemy_collision;
 
+pub use handle_enemy_collision::*;
 pub use camera_follow::*;
 pub use cursor::*;
 pub use handle_level_up::*;

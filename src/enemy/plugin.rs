@@ -4,9 +4,9 @@ use bevy::prelude::*;
 
 use crate::{
     enemy::{
-        events::EnemyDamageEvent,
+        events::DamageEvent,
         systems::{
-            despawn_all_enemies, handle_enemy_damage, move_enemies_toward_player,
+            despawn_all_enemies, handle_damage, move_enemies_toward_player,
             spawn_enemies_with_timer,
         },
     },
@@ -14,6 +14,8 @@ use crate::{
     labels::states::PlayingState,
     resources::EnemySpawnConfig,
 };
+
+use super::despawn_on_zero_health;
 
 pub struct EnemyPlugin;
 
@@ -28,12 +30,13 @@ impl Plugin for EnemyPlugin {
             (
                 spawn_enemies_with_timer,
                 move_enemies_toward_player,
-                handle_enemy_damage,
+                handle_damage,
+                despawn_on_zero_health.after(handle_damage),
             )
                 .in_set(GamePlaySet::Simulation)
                 .run_if(in_state(PlayingState::Run)),
         )
         .add_observer(despawn_all_enemies)
-        .add_event::<EnemyDamageEvent>();
+        .add_event::<DamageEvent>();
     }
 }

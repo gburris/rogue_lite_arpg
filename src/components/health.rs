@@ -6,6 +6,19 @@ pub struct Health {
     pub max_hp: f32,
 }
 
+impl Health {
+    pub fn new(max_hp: f32) -> Self {
+        Self { hp: max_hp, max_hp }
+    }
+
+    pub fn take_damage(&mut self, amount: f32) {
+        self.hp -= amount;
+        if self.hp < 0.0 {
+            self.hp = 0.0;
+        }
+    }
+}
+
 impl Default for Health {
     fn default() -> Self {
         Health {

@@ -7,7 +7,6 @@ use crate::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
     },
-    npc::NPC,
     player::Player,
     projectile::{events::ProjectileHitEvent, Projectile},
 };

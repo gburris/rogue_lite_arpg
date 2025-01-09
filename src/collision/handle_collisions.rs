@@ -21,13 +21,10 @@ pub fn handle_collisions(
     mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
     projectile_query: Query<Entity, With<Projectile>>,
     enemy_query: Query<Entity, With<Enemy>>,
-    sensor_query: Query<Entity, With<Sensor>>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
-        let mut found_match = false;
-
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
         for (e1, e2) in [(*e1, *e2), (*e2, *e1)] {
             // Checks if one of the entities is a projectile and one is an enemy
@@ -41,7 +38,6 @@ pub fn handle_collisions(
                         projectile: projectile_entity,
                         enemy: enemy_entity,
                     });
-                    found_match = true;
                     // Once we find a match we go to the next collision
                     break;
                 }
@@ -58,19 +54,9 @@ pub fn handle_collisions(
                             warpzone_enter_event_writer.send(WarpZoneEnterEvent);
                         }
                     }
-                    found_match = true;
                     break;
                 }
             }
-            if let (Ok(_), Ok(_)) = (sensor_query.get(e1), player_query.get(e2)) {
-                debug!("Found collision with sensor, no-op");
-                found_match = true;
-                break;
-            }
-        }
-
-        if !found_match {
-            error!("Unexpected collision was not handled")
         }
     }
 }

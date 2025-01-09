@@ -51,7 +51,7 @@ pub fn spawn_enemies_with_timer(
                     // Currently enemies can only collide with projectiles
                     CollisionLayers::new(
                         GameCollisionLayer::Enemy,
-                        [GameCollisionLayer::Projectile],
+                        [GameCollisionLayer::Projectile, GameCollisionLayer::Player],
                     ),
                     Sprite::from_image(sprites.merman_enemy.clone()),
                     Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),

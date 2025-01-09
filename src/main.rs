@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
+    damage::DamagePlugin,
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
@@ -19,21 +20,25 @@ use game_dev_project::{
 fn main() {
     App::new()
         .add_plugins((
-            SetupPlugin,
-            SchedulePlugin,
-            CollisionPlugin,
-            DespawnPlugin,
-            AssetLoadingPlugin,
-            TilemapPlugin,
-            PlayerPlugin,
-            EnemyPlugin,
-            ProjectilePlugin,
-            StatusEffectPlugin,
-            MapPlugin,
-            MovementPlugin,
-            ExperiencePlugin,
-            UIPlugin,
-            NPCPlugin,
+            // Core plugins group
+            (
+                SetupPlugin,
+                SchedulePlugin,
+                CollisionPlugin,
+                DespawnPlugin,
+                AssetLoadingPlugin,
+            ),
+            // Gameplay plugins group
+            (TilemapPlugin, PlayerPlugin, EnemyPlugin, ProjectilePlugin),
+            // Systems plugins group
+            (
+                StatusEffectPlugin,
+                MapPlugin,
+                MovementPlugin,
+                ExperiencePlugin,
+            ),
+            // Additional plugins group
+            (UIPlugin, NPCPlugin, DamagePlugin),
         ))
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();

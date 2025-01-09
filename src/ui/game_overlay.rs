@@ -1,4 +1,7 @@
-use crate::player::{components::Player, PlayerExperience, PlayerLevel};
+use crate::{
+    components::Health,
+    player::{components::Player, PlayerExperience, PlayerLevel},
+};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -23,14 +26,14 @@ pub fn create(mut commands: Commands) {
 }
 
 pub fn update(
-    player_query: Query<(&Player, &PlayerExperience, &PlayerLevel)>,
+    player_query: Query<(&Player, &PlayerExperience, &PlayerLevel, &Health)>,
     mut text_query: Query<(&mut Text, &mut Transform), With<GameOverlay>>,
 ) {
-    for (_player, exp, level) in player_query.iter() {
+    for (_player, exp, level, health) in player_query.iter() {
         for (mut text, mut transform) in text_query.iter_mut() {
             *text = Text::new(format!(
-                "Level: {:.1} Exp: {:.1} / {:.1}",
-                level.current, exp.current, exp.next_level_requirement
+                "Level: {:.1} Exp: {:.1} / {:.1} ||| Health: {:.1} / {:.1}",
+                level.current, exp.current, exp.next_level_requirement, health.hp, health.max_hp
             ));
 
             transform.translation = Vec3::new(20.0, 20.0, 1.0);

@@ -25,7 +25,7 @@ pub fn handle_projectile_hit(
             );
 
             enemy_damaged_events.send(DamageEvent {
-                enemy_entity: event.enemy,
+                entity: event.enemy,
                 damage_source: Some(event.projectile),
                 damage: damage.base_damage,
             });

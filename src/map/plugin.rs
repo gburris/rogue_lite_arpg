@@ -26,8 +26,6 @@ impl Plugin for MapPlugin {
             Update,
             (handle_warpzone_enter, enter_start_portal).in_set(GamePlaySet::Simulation),
         )
-        .add_observer(despawn_all_portals)
-        .add_observer(despawn_all_tiles)
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()
         .insert_resource(TileSize {

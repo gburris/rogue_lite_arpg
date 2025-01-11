@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::components::Duration,
+    despawn::components::LiveDuration,
     resources::assets::SpriteAssets,
     status_effects::{
         components::{FrozenStatus, StatusType},
@@ -12,7 +12,7 @@ use crate::{
 pub fn on_frozen_applied(
     trigger: Trigger<OnInsert, FrozenStatus>,
     mut commands: Commands,
-    status_query: Query<(&Parent, &Duration), With<FrozenStatus>>,
+    status_query: Query<(&Parent, &LiveDuration), With<FrozenStatus>>,
     sprites: Res<SpriteAssets>,
 ) {
     let Ok((parent, duration)) = status_query.get(trigger.entity()) else {

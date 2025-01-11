@@ -1,9 +1,6 @@
-use bevy::prelude::{Changed, Commands, DespawnRecursiveExt, Entity, Query, Trigger, With};
+use bevy::prelude::*;
 
-use crate::{
-    components::Health,
-    enemy::{events::DespawnAllEnemies, Enemy},
-};
+use crate::components::Health;
 
 //TODO: This should be moved into the "Despawn Domain"
 pub fn despawn_on_zero_health(
@@ -14,15 +11,5 @@ pub fn despawn_on_zero_health(
         if health.hp == 0.0 && commands.get_entity(entity).is_some() {
             commands.entity(entity).despawn_recursive();
         }
-    }
-}
-
-pub fn despawn_all_enemies(
-    _: Trigger<DespawnAllEnemies>,
-    mut commands: Commands,
-    mut query: Query<Entity, With<Enemy>>,
-) {
-    for entity in query.iter_mut() {
-        commands.entity(entity).despawn_recursive();
     }
 }

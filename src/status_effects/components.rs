@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::despawn::components::Duration;
+use crate::despawn::components::LiveDuration;
 
 use super::events::ApplyStatus;
 
@@ -62,5 +62,5 @@ pub struct StunnedStatus;
  * Simple marker component we can use to f
  */
 #[derive(Component, Default)]
-#[require(Duration)]
+#[require(LiveDuration)]
 pub struct Status;

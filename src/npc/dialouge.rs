@@ -1,10 +1,9 @@
-use std::time::Duration;
-
 use avian2d::prelude::CollidingEntities;
 
 use bevy::prelude::*;
 
 use crate::{
+    despawn::components::LiveDuration,
     npc::events::{AttemptDialogueInput, DialogueBegin},
     player::Player,
 };
@@ -41,8 +40,8 @@ pub fn handle_dialogue_input(
 //TODO: Replace all of this with a proper dialogue system
 //Temp stuff to test this feature
 #[derive(Component)]
+#[require(LiveDuration)]
 pub struct DialogueBubble {
-    timer: Timer,
     initial_alpha: f32,
     owning_entity: Entity,
 }
@@ -90,7 +89,6 @@ pub fn begin_dialogue(
                             ));
                         })
                         .insert(DialogueBubble {
-                            timer: Timer::new(Duration::from_secs(2), TimerMode::Once),
                             initial_alpha: 0.9,
                             owning_entity: dialogue_begin_trigger.entity,
                         });
@@ -102,18 +100,19 @@ pub fn begin_dialogue(
 
 // Update the dialogue bubbles system to handle screen space positioning
 pub fn update_dialogue_bubbles(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut DialogueBubble, &mut BackgroundColor, &mut Node)>,
+    mut query: Query<(
+        &LiveDuration,
+        &DialogueBubble,
+        &mut BackgroundColor,
+        &mut Node,
+    )>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     npc_query: Query<&Transform>, // Query to get NPC positions
 ) {
     if let Ok((camera, camera_transform)) = camera_query.get_single() {
-        for (entity, mut bubble, mut background, mut node) in query.iter_mut() {
-            bubble.timer.tick(time.delta());
-
+        for (time_alive, bubble, mut background, mut node) in query.iter_mut() {
             // Calculate fade based on remaining time
-            let progress = bubble.timer.fraction();
+            let progress = time_alive.0.fraction();
             let alpha = bubble.initial_alpha * (1.0 - progress);
 
             if let Ok(npc_transform) = npc_query.get(bubble.owning_entity) {
@@ -126,11 +125,6 @@ pub fn update_dialogue_bubbles(
             }
             // Update background transparency
             background.0.set_alpha(alpha);
-
-            // Remove the bubble when timer is finished
-            if bubble.timer.finished() {
-                commands.entity(entity).despawn_recursive();
-            }
         }
     }
 }

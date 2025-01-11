@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::events::DespawnAllEnemies,
-    labels::states::GameState,
-    map::events::{DespawnAllPortals, DespawnAllTiles, WarpZoneEnterEvent},
-    player::ResetPlayerPosition,
-    projectile::events::DespawnAllProjectiles,
+    despawn::events::CleanupCurrentWorldSpace, labels::states::GameState,
+    map::events::WarpZoneEnterEvent,
 };
 
 pub fn handle_warpzone_enter(
@@ -14,11 +11,7 @@ pub fn handle_warpzone_enter(
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     for _event in events.read() {
-        commands.trigger(DespawnAllPortals);
-        commands.trigger(DespawnAllTiles);
-        commands.trigger(DespawnAllEnemies);
-        commands.trigger(DespawnAllProjectiles);
-        commands.trigger(ResetPlayerPosition);
+        commands.trigger(CleanupCurrentWorldSpace);
         game_state.set(GameState::CreateZone);
     }
 }

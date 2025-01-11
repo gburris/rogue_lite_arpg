@@ -19,27 +19,26 @@ use game_dev_project::{
 
 fn main() {
     App::new()
+        .add_plugins((SetupPlugin, SchedulePlugin))
+        .add_plugins((AssetLoadingPlugin, TilemapPlugin)) // 3rd party crates
+        // Core plugins
         .add_plugins((
-            // Core plugins group
-            (
-                SetupPlugin,
-                SchedulePlugin,
-                CollisionPlugin,
-                DespawnPlugin,
-                AssetLoadingPlugin,
-            ),
-            // Gameplay plugins group
-            (TilemapPlugin, PlayerPlugin, EnemyPlugin, ProjectilePlugin),
-            // Systems plugins group
-            (
-                StatusEffectPlugin,
-                MapPlugin,
-                MovementPlugin,
-                ExperiencePlugin,
-            ),
-            // Additional plugins group
-            (UIPlugin, NPCPlugin, DamagePlugin),
+            CollisionPlugin,
+            DespawnPlugin,
+            MovementPlugin,
+            DamagePlugin,
+            StatusEffectPlugin,
         ))
+        // Entity-domain plugins (map, player, enemy, npc, etc..)
+        .add_plugins((
+            MapPlugin,
+            PlayerPlugin,
+            EnemyPlugin,
+            ProjectilePlugin,
+            NPCPlugin,
+        ))
+        // Additional plugins group
+        .add_plugins((UIPlugin, ExperiencePlugin))
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();
 }

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::{
         events::DamageEvent,
-        systems::{despawn_all_enemies, move_enemies_toward_player, spawn_enemies_with_timer},
+        systems::{move_enemies_toward_player, spawn_enemies_with_timer},
     },
     labels::sets::GamePlaySet,
     labels::states::PlayingState,
@@ -32,7 +32,6 @@ impl Plugin for EnemyPlugin {
                 .in_set(GamePlaySet::Simulation)
                 .run_if(in_state(PlayingState::Run)),
         )
-        .add_observer(despawn_all_enemies)
         .add_event::<DamageEvent>();
     }
 }

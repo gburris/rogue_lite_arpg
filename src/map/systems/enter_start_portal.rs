@@ -1,11 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::events::DespawnAllEnemies,
+    despawn::events::CleanupCurrentWorldSpace,
     labels::states::{GameState, PlayingState},
-    npc::events::DespawnAllNPCs,
-    map::events::{DespawnAllPortals, DespawnAllTiles, StartRunEvent},
-    projectile::events::DespawnAllProjectiles,
+    map::events::StartRunEvent,
 };
 
 pub fn enter_start_portal(
@@ -15,11 +13,7 @@ pub fn enter_start_portal(
     mut playing_state: ResMut<NextState<PlayingState>>,
 ) {
     for _event in events.read() {
-        commands.trigger(DespawnAllPortals);
-        commands.trigger(DespawnAllTiles);
-        commands.trigger(DespawnAllEnemies);
-        commands.trigger(DespawnAllProjectiles);
-        commands.trigger(DespawnAllNPCs);
+        commands.trigger(CleanupCurrentWorldSpace);
         game_state.set(GameState::CreateZone);
         playing_state.set(PlayingState::Run);
     }

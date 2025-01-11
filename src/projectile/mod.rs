@@ -1,5 +1,4 @@
 pub mod components;
-pub mod despawn;
 pub mod events;
 pub mod handle_projectile_hit;
 pub mod plugin;

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::components::Duration,
+    despawn::components::LiveDuration,
     status_effects::components::{FrozenStatus, StatusType},
 };
 
@@ -28,7 +28,7 @@ pub fn on_status_apply(trigger: Trigger<ApplyStatus>, mut commands: Commands) {
     let mut child_commands = commands.entity(child);
 
     // Every status must have a duration
-    child_commands.insert(Duration::new(trigger.event().duration));
+    child_commands.insert(LiveDuration::new(trigger.event().duration));
 
     let _ = match &trigger.event().status {
         StatusType::Burning(component) => child_commands.insert(component.clone()),

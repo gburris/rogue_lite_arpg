@@ -3,17 +3,16 @@
 //Projectile systems will move it and detect collision with the player and enimes
 use bevy::prelude::*;
 
+use crate::despawn::components::LiveDuration;
+
 #[derive(Component, Default)]
+#[require(LiveDuration)]
 pub struct Projectile {
-    pub motion: f32,
-    pub time_to_live: Timer,
+    pub speed: f32,
 }
 
 impl Projectile {
-    pub fn new(motion: f32) -> Self {
-        Projectile {
-            motion,
-            time_to_live: Timer::from_seconds(2.0, TimerMode::Once),
-        }
+    pub fn new(speed: f32) -> Self {
+        Projectile { speed }
     }
 }

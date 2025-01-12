@@ -8,7 +8,7 @@ use game_dev_project::{
     map::plugin::MapPlugin,
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,
-    player::plugins::{ExperiencePlugin, PlayerPlugin},
+    player::plugin::PlayerPlugin,
     projectile::ProjectilePlugin,
     resources::{assets::AssetLoadingPlugin, PlayerSize},
     schedule::SchedulePlugin,
@@ -38,7 +38,7 @@ fn main() {
             NPCPlugin,
         ))
         // Additional plugins group
-        .add_plugins((UIPlugin, ExperiencePlugin))
+        .add_plugins(UIPlugin)
         .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();
 }

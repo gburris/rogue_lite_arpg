@@ -1,12 +1,8 @@
-use bevy::{
-    math::{Vec2, Vec3},
-    prelude::Event,
-};
+use bevy::prelude::*;
 
 #[derive(Event)]
 pub struct PlayerLevelUpEvent {
     pub new_level: u32,
-    pub position: Vec3, // For spawning the level-up effect
 }
 
 #[derive(Event)]

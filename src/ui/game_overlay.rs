@@ -1,8 +1,9 @@
+use bevy::prelude::*;
+
 use crate::{
-    components::Health,
+    damage::components::Health,
     player::{components::Player, PlayerExperience, PlayerLevel},
 };
-use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct GameOverlay;

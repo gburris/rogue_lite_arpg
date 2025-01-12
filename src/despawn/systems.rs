@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::despawn::components::LiveDuration;
+use crate::{damage::components::Health, despawn::components::LiveDuration};
 
 pub fn remove_expired_entities(
     mut commands: Commands,
@@ -11,6 +11,17 @@ pub fn remove_expired_entities(
         duration.0.tick(time.delta());
 
         if duration.0.finished() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+}
+
+pub fn despawn_on_zero_health(
+    mut commands: Commands,
+    query: Query<(Entity, &Health), Changed<Health>>,
+) {
+    for (entity, health) in query.iter() {
+        if health.hp == 0.0 && commands.get_entity(entity).is_some() {
             commands.entity(entity).despawn_recursive();
         }
     }

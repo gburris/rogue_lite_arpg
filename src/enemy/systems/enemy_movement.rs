@@ -1,9 +1,10 @@
-use crate::enemy::Enemy;
-use crate::player::components::Player;
-use crate::{components::Health, movement::components::SimpleMotion};
-
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
+
+use crate::{
+    damage::components::Health, enemy::Enemy, movement::components::SimpleMotion,
+    player::components::Player,
+};
 
 // Add this to your components module
 #[derive(Component)]

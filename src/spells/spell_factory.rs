@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    components::damage_effect::DamageEffect,
+    damage::components::DamageEffect,
     resources::assets::SpriteAssets,
     spells::components::Spell,
     status_effects::{

@@ -1,8 +1,8 @@
-use avian2d::prelude::{Collider, CollisionLayers, LockedAxes, RigidBody};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    components::{Health, HealthBar},
+    damage::components::Health,
     helpers::labels::GameCollisionLayer,
     labels::states::{GameState, PlayingState},
     movement::components::SimpleMotion,
@@ -34,9 +34,6 @@ pub fn player_setup(
         SimpleMotion::new(600.0),
         LockedAxes::new().lock_rotation(),
         Health::default(),
-        HealthBar {
-            health_percetange: 100.0,
-        },
         inventory,
         RigidBody::Dynamic,
         Collider::rectangle(100.0, 100.0),

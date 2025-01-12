@@ -1,32 +1,22 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::events::EnemyDefeatedEvent,
-    player::{
-        components::{Player, PlayerExperience, PlayerLevel},
-        PlayerLevelUpEvent,
-    },
+    damage::events::DefeatedEvent,
+    enemy::{Enemy, Experience},
+    player::components::{Player, PlayerExperience},
 };
 
-pub fn handle_enemy_defeated(
-    mut enemy_defeat_events: EventReader<EnemyDefeatedEvent>,
-    mut player_query: Query<(&mut PlayerExperience, &mut PlayerLevel, &Transform), With<Player>>,
-    mut level_up_events: EventWriter<PlayerLevelUpEvent>,
+pub fn on_enemy_defeated(
+    trigger: Trigger<DefeatedEvent>,
+    defeated_enemy_query: Query<&Experience, With<Enemy>>,
+    mut player_query: Query<&mut PlayerExperience, With<Player>>,
 ) {
-    for event in enemy_defeat_events.read() {
-        if let Ok((mut exp, mut level, transform)) = player_query.get_single_mut() {
-            exp.current += event.exp_value;
-            // Check for level up
-            while exp.current >= exp.next_level_requirement {
-                level.current += 1;
-                exp.current -= exp.next_level_requirement;
-                exp.next_level_requirement *= 2; // Double exp requirement
-
-                level_up_events.send(PlayerLevelUpEvent {
-                    new_level: level.current,
-                    position: transform.translation,
-                });
-            }
+    if let Ok(experience_to_gain) = defeated_enemy_query.get(trigger.entity()) {
+        if let Ok(mut experience) = player_query.get_single_mut() {
+            // Increase player experience on enemy defeat
+            experience.current += experience_to_gain.base_exp;
         }
     }
+
+    // TODO: add enemy defeated animation
 }

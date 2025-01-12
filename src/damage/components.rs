@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
+pub struct DamageEffect {
+    pub base_damage: f32,
+}
+
+#[derive(Component)]
 pub struct Health {
     pub hp: f32,
     pub max_hp: f32,

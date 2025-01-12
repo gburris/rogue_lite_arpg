@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::{events::DamageEvent, Enemy},
-    resources::assets::SpriteAssets,
+    damage::events::DamageEvent, enemy::Enemy, resources::assets::SpriteAssets,
     status_effects::components::BurningStatus,
 };
 
@@ -14,17 +13,19 @@ pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {
 
 pub fn while_burning(
     status_query: Query<(&BurningStatus, &Parent)>,
+    mut commands: Commands,
     mut parent_query: Query<Entity, With<Enemy>>,
-    mut enemy_damaged_events: EventWriter<DamageEvent>,
 ) {
     for (burn, parent) in status_query.iter() {
         if let Ok(entity) = parent_query.get_mut(parent.get()) {
             if burn.damage_frequency.just_finished() {
-                enemy_damaged_events.send(DamageEvent {
-                    entity: entity,
-                    damage_source: None,
-                    damage: burn.damage,
-                });
+                commands.trigger_targets(
+                    DamageEvent {
+                        damage_source: None,
+                        damage: burn.damage,
+                    },
+                    entity,
+                );
             }
         }
     }

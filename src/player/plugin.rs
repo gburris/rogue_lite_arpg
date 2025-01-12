@@ -3,12 +3,7 @@ use bevy::prelude::*;
 use crate::{
     animation::animate_sprite,
     labels::{sets::GamePlaySet, states::GameState},
-    player::{
-        camera_follow_system, enforce_map_bounds, handle_enemy_collision, handle_invulnerability,
-        player_input, reset_player_position,
-        systems::{draw_cursor, face_cursor_system, player_movement, player_setup},
-        PlayerMovementEvent,
-    },
+    player::{systems::*, PlayerMovementEvent},
     spells::cast_spell_system,
 };
 
@@ -32,9 +27,12 @@ impl Plugin for PlayerPlugin {
                     cast_spell_system,
                     animate_sprite,
                     handle_invulnerability,
+                    on_player_experience_change,
+                    animate_level_up,
                 )
                     .in_set(GamePlaySet::Simulation),
             )
-            .add_observer(reset_player_position);
+            .add_observer(reset_player_position)
+            .add_observer(on_level_up);
     }
 }

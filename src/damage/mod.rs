@@ -1,5 +1,7 @@
-pub mod handle_damage;
+pub mod components;
+pub mod events;
 pub mod plugin;
+pub mod systems;
 
-pub use handle_damage::handle_damage;
 pub use plugin::DamagePlugin;
+pub use systems::handle_damage;

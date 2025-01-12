@@ -1,6 +1,6 @@
 pub mod animation;
 pub mod collision;
-pub mod components;
+pub mod damage;
 pub mod despawn;
 pub mod enemy;
 pub mod helpers;
@@ -15,5 +15,4 @@ pub mod schedule;
 pub mod setup;
 pub mod spells;
 pub mod status_effects;
-pub mod damage;
 pub mod ui;

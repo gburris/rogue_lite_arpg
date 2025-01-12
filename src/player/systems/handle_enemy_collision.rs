@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::time::Duration;
 
-use crate::{collision::EnemyCollidesWithPlayer, components::Health, player::Player};
+use crate::{collision::EnemyCollidesWithPlayer, damage::components::Health, player::Player};
 
 // Component to track invulnerability state and timer
 #[derive(Component)]

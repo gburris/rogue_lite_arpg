@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    components::{Health, HealthBar},
-    enemy::Enemy,
+    damage::components::Health,
+    enemy::{systems::on_enemy_defeated, Enemy},
     helpers::labels::GameCollisionLayer,
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
@@ -38,24 +38,23 @@ pub fn spawn_enemies_with_timer(
                     spawn_position.x -= 30.0;
                     spawn_position.y -= 30.0;
                 }
-                commands.spawn((
-                    Enemy,
-                    SimpleMotion::new(350.0),
-                    IsMoving(true),
-                    Health::new(30.),
-                    HealthBar {
-                        health_percetange: 100.0,
-                    },
-                    RigidBody::Dynamic,
-                    Collider::rectangle(100.0, 100.0),
-                    // Currently enemies can only collide with projectiles
-                    CollisionLayers::new(
-                        GameCollisionLayer::Enemy,
-                        [GameCollisionLayer::Projectile, GameCollisionLayer::Player],
-                    ),
-                    Sprite::from_image(sprites.merman_enemy.clone()),
-                    Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
-                ));
+                commands
+                    .spawn((
+                        Enemy,
+                        SimpleMotion::new(350.0),
+                        IsMoving(true),
+                        Health::new(30.),
+                        RigidBody::Dynamic,
+                        Collider::rectangle(100.0, 100.0),
+                        // Currently enemies can only collide with projectiles
+                        CollisionLayers::new(
+                            GameCollisionLayer::Enemy,
+                            [GameCollisionLayer::Projectile, GameCollisionLayer::Player],
+                        ),
+                        Sprite::from_image(sprites.merman_enemy.clone()),
+                        Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
+                    ))
+                    .observe(on_enemy_defeated);
             }
         }
     }

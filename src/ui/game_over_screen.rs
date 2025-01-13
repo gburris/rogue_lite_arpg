@@ -67,6 +67,7 @@ pub fn handle_restart_button_pressed(
 ) {
     for interaction in &mut restart_query {
         if *interaction == Interaction::Pressed {
+            // despawn game over screen
             commands
                 .entity(game_over_screen.get_single().unwrap())
                 .despawn_recursive();

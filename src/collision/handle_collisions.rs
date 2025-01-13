@@ -47,11 +47,14 @@ pub fn handle_collisions(
 
             if let Ok(_player_entity) = player_query.get(e1) {
                 warn!("Player collision start");
-                if let Ok((_enemy_entity, collision_damage)) = enemy_query.get(e2) {
+                if let Ok((enemy_entity, collision_damage)) = enemy_query.get(e2) {
                     warn!("Enemy Collided With Player");
-                    commands.trigger(EnemyCollidesWithPlayer {
-                        collision_damage: collision_damage.clone(),
-                    });
+                    commands.trigger_targets(
+                        EnemyCollidesWithPlayer {
+                            collision_damage: collision_damage.clone(),
+                        },
+                        enemy_entity,
+                    );
                     // Once we find a match we go to the next collision
                     break;
                 }

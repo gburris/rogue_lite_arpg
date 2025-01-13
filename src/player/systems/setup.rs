@@ -34,7 +34,7 @@ pub fn player_setup(
             Player,
             SimpleMotion::new(600.0),
             LockedAxes::new().lock_rotation(),
-            Health::new(5.0),
+            Health::new(100.0),
             inventory,
             RigidBody::Dynamic,
             Collider::rectangle(100.0, 100.0),

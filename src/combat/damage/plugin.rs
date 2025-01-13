@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{damage::systems::*, labels::sets::GamePlaySet};
+use crate::{combat::damage::systems::*, labels::sets::GamePlaySet};
 
 pub struct DamagePlugin;
 

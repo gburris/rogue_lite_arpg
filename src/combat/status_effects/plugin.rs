@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
+    combat::projectile::events::ProjectileHitEvent,
+    combat::status_effects::{handle_statuses::*, status_systems::*},
     labels::sets::GamePlaySet,
-    projectile::events::ProjectileHitEvent,
-    status_effects::{handle_statuses::*, status_systems::*},
 };
 
 pub struct StatusEffectPlugin;

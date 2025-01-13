@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::Enemy, movement::components::SimpleMotion, status_effects::components::SlowedStatus,
+    enemy::Enemy, movement::components::SimpleMotion, combat::status_effects::components::SlowedStatus,
 };
 
 pub fn on_slow_applied(

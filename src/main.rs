@@ -2,18 +2,18 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
-    damage::DamagePlugin,
+    combat::damage::DamagePlugin,
+    combat::projectile::ProjectilePlugin,
+    combat::status_effects::plugin::StatusEffectPlugin,
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
-    projectile::ProjectilePlugin,
     resources::{assets::AssetLoadingPlugin, PlayerSize},
     schedule::SchedulePlugin,
     setup::SetupPlugin,
-    status_effects::plugin::StatusEffectPlugin,
     ui::plugin::UIPlugin,
 };
 

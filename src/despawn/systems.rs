@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{damage::components::Health, despawn::components::LiveDuration};
+use crate::{combat::damage::components::Health, despawn::components::LiveDuration};
 
 pub fn remove_expired_entities(
     mut commands: Commands,

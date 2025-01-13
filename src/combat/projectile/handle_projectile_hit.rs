@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    damage::{components::DamageEffect, events::DamageEvent},
-    projectile::{components::Projectile, events::ProjectileHitEvent},
+    combat::damage::{components::DamageEffect, events::DamageEvent},
+    combat::projectile::{components::Projectile, events::ProjectileHitEvent},
 };
 
 pub fn handle_projectile_hit(

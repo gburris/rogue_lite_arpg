@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
+    combat::status_effects::components::{FrozenStatus, StatusType},
     despawn::components::LiveDuration,
-    status_effects::components::{FrozenStatus, StatusType},
 };
 
 use super::{

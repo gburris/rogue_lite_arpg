@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{helpers::labels::GameCollisionLayer, projectile::Projectile};
+use crate::{combat::projectile::Projectile, helpers::labels::GameCollisionLayer};
 
 #[derive(Component)]
 #[require(

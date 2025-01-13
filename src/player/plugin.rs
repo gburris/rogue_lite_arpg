@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     animation::animate_sprite,
+    combat::spells::cast_spell_system,
     labels::{sets::GamePlaySet, states::GameState},
     player::{systems::*, PlayerMovementEvent},
-    spells::cast_spell_system,
 };
 
 pub struct PlayerPlugin;

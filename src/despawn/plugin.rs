@@ -7,7 +7,7 @@ use crate::{
     labels::sets::GamePlaySet,
     map::components::Portal,
     npc::NPC,
-    projectile::Projectile,
+    combat::projectile::Projectile,
 };
 
 pub struct DespawnPlugin;

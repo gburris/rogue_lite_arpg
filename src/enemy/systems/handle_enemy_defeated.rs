@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    damage::events::DefeatedEvent,
+    combat::damage::events::DefeatedEvent,
     enemy::{Enemy, Experience},
     player::components::{Player, PlayerExperience},
 };

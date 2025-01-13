@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::components::LiveDuration,
-    resources::assets::SpriteAssets,
-    status_effects::{
+    combat::status_effects::{
         components::{FrozenStatus, StatusType},
         events::ApplyStatus,
     },
+    despawn::components::LiveDuration,
+    resources::assets::SpriteAssets,
 };
 
 pub fn on_frozen_applied(

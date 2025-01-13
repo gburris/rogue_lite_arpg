@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{collision::EnemyCollidesWithPlayer, damage::events::DamageEvent, player::Player};
+use crate::{
+    collision::EnemyCollidesWithPlayer, combat::damage::events::DamageEvent, player::Player,
+};
 
 // System to handle enemy collision and damage
 pub fn handle_enemy_collision(

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     movement::components::IsMoving,
-    status_effects::{
+    combat::status_effects::{
         components::{SlowedStatus, StatusType, StunnedStatus},
         events::ApplyStatus,
     },

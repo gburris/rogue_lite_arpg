@@ -3,13 +3,13 @@ use bevy::prelude::*;
 
 use crate::{
     collision::EnemyCollidesWithPlayer,
+    combat::projectile::{events::ProjectileHitEvent, Projectile},
     enemy::{CollisionDamage, Enemy},
     map::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
     },
     player::Player,
-    projectile::{events::ProjectileHitEvent, Projectile},
 };
 
 /**

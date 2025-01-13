@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    damage::{
+    combat::damage::{
         components::{Health, InvulnerableFromDamage},
         events::{DamageEvent, DefeatedEvent},
     },
-    status_effects::{components::EffectsList, events::ApplyEffect},
+    combat::status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
 pub fn on_damage_event(

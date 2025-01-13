@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
+    combat::projectile::{handle_projectile_hit, projectile_hit_event::ProjectileHitEvent},
     labels::sets::GamePlaySet,
-    projectile::{handle_projectile_hit, projectile_hit_event::ProjectileHitEvent},
 };
 
 pub struct ProjectilePlugin;

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    damage::events::DefeatedEvent, despawn::events::CleanupCurrentWorldSpace,
+    combat::damage::events::DefeatedEvent, despawn::events::CleanupCurrentWorldSpace,
     labels::states::GameState,
 };
 

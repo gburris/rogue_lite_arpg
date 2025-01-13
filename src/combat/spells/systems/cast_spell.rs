@@ -1,7 +1,7 @@
+use crate::combat::spells::components::Spell;
+use crate::combat::spells::spell_factory::SpellFactory;
 use crate::player::components::Player;
 use crate::resources::assets::SpriteAssets;
-use crate::spells::components::Spell;
-use crate::spells::spell_factory::SpellFactory;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 

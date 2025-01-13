@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    damage::components::Health,
+    combat::damage::components::Health,
     enemy::{systems::on_enemy_defeated, Enemy},
     helpers::labels::GameCollisionLayer,
     map::resources::MapBounds,

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    damage::components::Health,
+    combat::damage::components::Health,
     player::{components::Player, PlayerExperience, PlayerLevel},
 };
 

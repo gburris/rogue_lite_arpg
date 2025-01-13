@@ -26,7 +26,6 @@ impl Plugin for PlayerPlugin {
                     enforce_map_bounds,
                     cast_spell_system,
                     animate_sprite,
-                    handle_invulnerability,
                     on_player_experience_change,
                     animate_level_up,
                 )

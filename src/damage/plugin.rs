@@ -1,11 +1,15 @@
 use bevy::prelude::*;
 
-use crate::damage::systems::handle_damage;
+use crate::{damage::systems::*, labels::sets::GamePlaySet};
 
 pub struct DamagePlugin;
 
 impl Plugin for DamagePlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(handle_damage);
+        app.add_systems(
+            Update,
+            handle_invulnerability.in_set(GamePlaySet::Simulation),
+        )
+        .add_observer(on_damage_event);
     }
 }

@@ -16,6 +16,7 @@ pub fn handle_projectile_hit(
                 DamageEvent {
                     damage_source: Some(event.projectile),
                     damage: damage.base_damage,
+                    makes_invulnerable: false,
                 },
                 event.enemy,
             );

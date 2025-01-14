@@ -2,10 +2,9 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{
-    enemy::systems::*, labels::sets::GamePlaySet, labels::states::PlayingState,
-    resources::EnemySpawnConfig,
-};
+use crate::{enemy::systems::*, labels::sets::GamePlaySet, labels::states::PlayingState};
+
+use super::resources::EnemySpawnConfig;
 
 pub struct EnemyPlugin;
 

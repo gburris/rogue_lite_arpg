@@ -5,8 +5,8 @@ use crate::{
         components::{FrozenStatus, StatusType},
         events::ApplyStatus,
     },
+    configuration::assets::SpriteAssets,
     despawn::components::LiveDuration,
-    resources::assets::SpriteAssets,
 };
 
 pub fn on_frozen_applied(

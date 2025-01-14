@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::GameState, map::components::Portal, resources::assets::SpriteAssets};
+use crate::{
+    configuration::assets::SpriteAssets, labels::states::GameState, map::components::Portal,
+};
 
 pub fn starting_portal_setup(
     mut commands: Commands,

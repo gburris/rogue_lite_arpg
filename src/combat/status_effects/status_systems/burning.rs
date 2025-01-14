@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::events::DamageEvent, combat::status_effects::components::BurningStatus,
-    enemy::Enemy, resources::assets::SpriteAssets,
+    combat::{damage::events::DamageEvent, status_effects::components::BurningStatus},
+    configuration::assets::SpriteAssets,
+    enemy::Enemy,
 };
 
 pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {

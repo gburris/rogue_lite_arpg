@@ -4,12 +4,12 @@ use rand::Rng;
 
 use crate::{
     combat::damage::components::Health,
-    enemy::{systems::on_enemy_defeated, Enemy},
+    configuration::assets::SpriteAssets,
+    enemy::{resources::EnemySpawnConfig, systems::on_enemy_defeated, Enemy},
     helpers::labels::GameCollisionLayer,
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
     player::components::Player,
-    resources::{assets::SpriteAssets, EnemySpawnConfig},
 };
 
 pub fn spawn_enemies_with_timer(

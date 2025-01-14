@@ -4,8 +4,7 @@ use bevy::prelude::*;
 use crate::{
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
-    player::{Player, PlayerMovementEvent, ResetPlayerPosition},
-    resources::PlayerSize,
+    player::{resources::PlayerSize, Player, PlayerMovementEvent, ResetPlayerPosition},
 };
 
 // System to handle player movement based on movement events

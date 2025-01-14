@@ -3,13 +3,15 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::damage::components::DamageEffect,
-    combat::spells::components::Spell,
-    combat::status_effects::{
-        components::{BurningStatus, EffectsList, StatusType},
-        events::ApplyStatus,
+    combat::{
+        damage::components::DamageEffect,
+        spells::components::Spell,
+        status_effects::{
+            components::{BurningStatus, EffectsList, StatusType},
+            events::ApplyStatus,
+        },
     },
-    resources::assets::SpriteAssets,
+    configuration::assets::SpriteAssets,
 };
 
 pub struct SpellFactory;

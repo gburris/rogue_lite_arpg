@@ -2,12 +2,12 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
+    configuration::assets::SpriteAssets,
     labels::states::GameState,
     map::{
         components::Portal,
         resources::{CurrentZoneLevel, MapBounds},
     },
-    resources::assets::SpriteAssets,
 };
 
 pub fn warpzone_setup(

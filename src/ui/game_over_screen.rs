@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::labels::states::GameState;
+use crate::labels::states::AppState;
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -70,11 +70,11 @@ pub fn despawn_game_over_screen(
 }
 pub fn handle_restart_button(
     mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<AppState>>,
 ) {
     for interaction in &mut restart_query {
         if *interaction == Interaction::Pressed {
-            game_state.set(GameState::CreateOverworld);
+            game_state.set(AppState::CreateOverworld);
         }
     }
 }

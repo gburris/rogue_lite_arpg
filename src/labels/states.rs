@@ -1,36 +1,34 @@
 use bevy::prelude::*;
 
 #[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
-pub enum GameState {
+pub enum AppState {
     #[default]
     AssetLoading,
     CreateOverworld,
-    SpawnPlayer, // Also creates UI
+    SpawnPlayer, // Also creates player overlay UI
     CreateZone,
     // Represents time in game where all game-play systems are actually running
     // If you want to distinguish between different phases within "Playing" make a new state!
     // Ex. MapRegionState
     Playing,
-    Paused(PausedState),
+    Paused,
     GameOver,
 }
 
-// A sub state for when we are in playing.
-// This is useful for when we want to distinguish between different phases within "Playing"
+// A state to to distinguish between different phases within "Playing"
+// Don't make a "SubState" so that we can keep a record of our in game state even when pausing
 #[derive(States, Eq, Default, Hash, Clone, Debug, PartialEq)]
-pub enum PlayingState {
+pub enum InGameState {
     #[default]
     BeforeRun, // Overworld State
     Run, // Post entering the start portal state
 }
 
-#[derive(States, Eq, Default, Hash, Clone, Debug, PartialEq)]
+#[derive(SubStates, Eq, Default, Hash, Clone, Debug, PartialEq)]
+#[source(AppState = AppState::Paused)]
 pub enum PausedState {
     #[default]
-    None,
-    Enter,
     MainMenu,
     Inventory,
     Equipment,
-    Exit,
 }

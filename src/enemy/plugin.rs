@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{enemy::systems::*, labels::sets::GamePlaySet, labels::states::PlayingState};
+use crate::{enemy::systems::*, labels::sets::InGameSet, labels::states::InGameState};
 
 use super::resources::EnemySpawnConfig;
 
@@ -17,8 +17,8 @@ impl Plugin for EnemyPlugin {
         .add_systems(
             Update,
             (spawn_enemies_with_timer, move_enemies_toward_player)
-                .in_set(GamePlaySet::Simulation)
-                .run_if(in_state(PlayingState::Run)),
+                .in_set(InGameSet::Simulation)
+                .run_if(in_state(InGameState::Run)),
         );
     }
 }

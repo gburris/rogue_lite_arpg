@@ -2,9 +2,9 @@ use avian2d::prelude::LockedAxes;
 use bevy::prelude::*;
 
 use crate::{
+    configuration::assets::SpriteAssets,
     movement::components::{IsMoving, SimpleMotion},
     npc::components::NPC,
-    resources::assets::SpriteAssets,
 };
 
 use super::{components::NPCInteractionRadius, NPCMovement};

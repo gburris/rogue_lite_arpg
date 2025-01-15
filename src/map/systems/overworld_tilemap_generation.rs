@@ -3,8 +3,8 @@ use bevy_ecs_tilemap::prelude::*;
 use rand::Rng;
 
 use crate::{
+    configuration::assets::SpriteAssets,
     map::resources::{MapBounds, TileSize},
-    resources::assets::SpriteAssets,
 };
 
 pub fn generate_tilemap_for_overworld(

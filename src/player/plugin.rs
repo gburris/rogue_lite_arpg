@@ -4,7 +4,7 @@ use crate::{
     animation::animate_sprite,
     combat::spells::cast_spell_system,
     labels::{sets::GamePlaySet, states::GameState},
-    player::{systems::*, PlayerMovementEvent},
+    player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
 pub struct PlayerPlugin;
@@ -32,6 +32,7 @@ impl Plugin for PlayerPlugin {
                     .in_set(GamePlaySet::Simulation),
             )
             .add_observer(reset_player_position)
-            .add_observer(on_level_up);
+            .add_observer(on_level_up)
+            .insert_resource(PlayerSize { x: 256.0, y: 256.0 });
     }
 }

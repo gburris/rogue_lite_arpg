@@ -5,7 +5,7 @@ use bevy::{
     window::WindowResolution,
 };
 
-use crate::labels::states::{GameState, PlayingState};
+use crate::labels::states::{GameState, PausedState, PlayingState};
 
 pub struct SetupPlugin;
 
@@ -39,6 +39,7 @@ impl Plugin for SetupPlugin {
         // initialize states
         .init_state::<GameState>()
         .init_state::<PlayingState>()
+        .init_state::<PausedState>()
         .add_systems(Startup, setup_camera);
     }
 }

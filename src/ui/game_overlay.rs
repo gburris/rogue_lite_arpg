@@ -8,7 +8,7 @@ use crate::{
 #[derive(Component)]
 pub struct GameOverlay;
 
-pub fn create(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     debug!("Setting up game overlay UI");
     commands.spawn((
         GameOverlay,

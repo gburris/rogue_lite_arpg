@@ -15,7 +15,7 @@ impl Plugin for SchedulePlugin {
             MainSet::GamePlay.run_if(in_state(GameState::Playing)),
         )
         // Configuring the ordering of our gameplay loop using these main sets:
-        // Despawn Entitites -> Handle Input -> Simulation -> Physics -> Collision
+        // Despawn Entitites -> Handle Input -> Simulation -> Physics -> Collision -> Update HUD / overlay UI
         .configure_sets(
             Update,
             (
@@ -25,6 +25,7 @@ impl Plugin for SchedulePlugin {
                 GamePlaySet::PlayerInput,
                 GamePlaySet::Simulation,
                 GamePlaySet::Collision,
+                GamePlaySet::UI,
             )
                 .chain()
                 .in_set(MainSet::GamePlay),

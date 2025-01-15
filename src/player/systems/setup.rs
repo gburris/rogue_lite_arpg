@@ -3,12 +3,12 @@ use bevy::prelude::*;
 
 use crate::{
     combat::damage::components::Health,
+    configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
     items::get_default_staff,
     labels::states::{GameState, PlayingState},
     movement::components::SimpleMotion,
     player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots},
-    resources::assets::SpriteAssets,
 };
 
 pub fn player_setup(

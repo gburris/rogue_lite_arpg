@@ -1,9 +1,11 @@
-use crate::combat::spells::components::Spell;
-use crate::combat::spells::spell_factory::SpellFactory;
-use crate::player::components::Player;
-use crate::resources::assets::SpriteAssets;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+
+use crate::{
+    combat::spells::{components::Spell, spell_factory::SpellFactory},
+    configuration::assets::SpriteAssets,
+    player::components::Player,
+};
 
 pub fn cast_spell_system(
     mut commands: Commands,

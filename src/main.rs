@@ -2,18 +2,17 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
-    combat::damage::DamagePlugin,
-    combat::projectile::ProjectilePlugin,
-    combat::status_effects::plugin::StatusEffectPlugin,
+    combat::{
+        damage::DamagePlugin, projectile::ProjectilePlugin,
+        status_effects::plugin::StatusEffectPlugin,
+    },
+    configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
     map::plugin::MapPlugin,
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
-    resources::{assets::AssetLoadingPlugin, PlayerSize},
-    schedule::SchedulePlugin,
-    setup::SetupPlugin,
     ui::plugin::UIPlugin,
 };
 
@@ -39,6 +38,5 @@ fn main() {
         ))
         // Additional plugins group
         .add_plugins(UIPlugin)
-        .insert_resource(PlayerSize { x: 256.0, y: 256.0 })
         .run();
 }

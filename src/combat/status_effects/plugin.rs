@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     combat::projectile::events::ProjectileHitEvent,
     combat::status_effects::{handle_statuses::*, status_systems::*},
-    labels::sets::GamePlaySet,
+    labels::sets::InGameSet,
 };
 
 pub struct StatusEffectPlugin;
@@ -17,7 +17,7 @@ impl Plugin for StatusEffectPlugin {
                 Update,
                 (burning::tick_burn, burning::while_burning)
                     .chain()
-                    .in_set(GamePlaySet::Simulation),
+                    .in_set(InGameSet::Simulation),
             )
             .add_observer(burning::on_burn_applied)
             .add_observer(burning::on_burn_removed)

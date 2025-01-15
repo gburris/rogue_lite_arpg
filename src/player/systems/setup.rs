@@ -7,7 +7,7 @@ use crate::{
     items::get_default_staff,
     labels::states::{GameState, PlayingState},
     movement::components::SimpleMotion,
-    player::{systems::death::on_player_defeated, Inventory, Player},
+    player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots},
     resources::assets::SpriteAssets,
 };
 
@@ -27,6 +27,7 @@ pub fn player_setup(
             LockedAxes::new().lock_rotation(),
             Health::new(100.0),
             inventory,
+            PlayerEquipmentSlots::default(),
             RigidBody::Dynamic,
             Collider::rectangle(100.0, 100.0),
             CollisionLayers::new(

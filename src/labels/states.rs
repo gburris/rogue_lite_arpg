@@ -11,7 +11,7 @@ pub enum GameState {
     // If you want to distinguish between different phases within "Playing" make a new state!
     // Ex. MapRegionState
     Playing,
-    Paused,
+    Paused(PausedState),
     GameOver,
 }
 
@@ -22,4 +22,15 @@ pub enum PlayingState {
     #[default]
     BeforeRun, // Overworld State
     Run, // Post entering the start portal state
+}
+
+#[derive(States, Eq, Default, Hash, Clone, Debug, PartialEq)]
+pub enum PausedState {
+    #[default]
+    None,
+    Enter,
+    MainMenu,
+    Inventory,
+    Equipment,
+    Exit,
 }

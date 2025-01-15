@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-use super::Item;
+use crate::items::Item;
 
 #[derive(Component, Default, Debug)]
 pub struct Inventory {

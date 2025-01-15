@@ -2,15 +2,16 @@ use bevy::prelude::*;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum MainSet {
-    GamePlay,
+    InGame,
+    Menu,
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum GamePlaySet {
+pub enum InGameSet {
     DespawnEntities, // Despawn entities only! MUST happen before simulation of this new frame we are in!
     PlayerInput,
-    UI,
     Simulation, // Most game logic (queries modifying components)
-    Physics,    // Apply forces using rapier based on simulation
+    HudOverlay, // Render UI overlay based on simulation
+    Physics,    // Apply forces/velocity using avian based on simulation
     Collision,  // Finally detect collisions using avian based on velocity changed
 }

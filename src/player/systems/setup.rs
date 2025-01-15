@@ -6,19 +6,18 @@ use crate::{
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
     items::get_default_staff,
-    labels::states::{GameState, PlayingState},
+    labels::states::AppState,
     movement::components::SimpleMotion,
     player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots},
 };
 
 pub fn player_setup(
     mut commands: Commands,
-    mut game_state: ResMut<NextState<GameState>>,
-    mut playing_state: ResMut<NextState<PlayingState>>,
+    mut game_state: ResMut<NextState<AppState>>,
     sprites: Res<SpriteAssets>,
 ) {
     let mut inventory = Inventory::default_inventory();
-    inventory.add_item(get_default_staff());
+    let _ = inventory.add_item(get_default_staff());
 
     commands
         .spawn((
@@ -43,6 +42,5 @@ pub fn player_setup(
             Transform::from_xyz(0., 0., 1.0),
         ))
         .observe(on_player_defeated);
-    playing_state.set(PlayingState::BeforeRun);
-    game_state.set(GameState::Playing);
+    game_state.set(AppState::Playing);
 }

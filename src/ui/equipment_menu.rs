@@ -1,6 +1,4 @@
-use super::{game_overlay::GameOverlay, pause_menu::PauseScreen};
-use crate::items::{Item, StatType};
-use crate::labels::states::{GameState, PausedState};
+use crate::items::Item;
 use crate::player::PlayerEquipmentSlots;
 use bevy::prelude::*;
 

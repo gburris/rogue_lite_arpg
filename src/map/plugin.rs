@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::GamePlaySet, states::GameState},
+    labels::{
+        sets::InGameSet,
+        states::{AppState, InGameState},
+    },
     map::{
         events::{StartRunEvent, WarpZoneEnterEvent},
         resources::{CurrentZoneLevel, MapBounds, TileSize},
@@ -15,16 +18,20 @@ impl Plugin for MapPlugin {
         let tile_size_x = 16.0;
         let tile_size_y = 16.0;
         app.add_systems(
-            OnEnter(GameState::CreateZone),
+            OnEnter(AppState::CreateZone),
             (generate_tilemap, warpzone_setup).chain(),
         )
         .add_systems(
-            OnEnter(GameState::CreateOverworld),
+            OnEnter(AppState::CreateOverworld),
             (generate_tilemap_for_overworld, starting_portal_setup).chain(),
         )
         .add_systems(
             Update,
-            (handle_warpzone_enter, enter_start_portal).in_set(GamePlaySet::Simulation),
+            (
+                handle_warpzone_enter.run_if(in_state(InGameState::Run)),
+                enter_start_portal.run_if(in_state(InGameState::BeforeRun)),
+            )
+                .in_set(InGameSet::Simulation),
         )
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()

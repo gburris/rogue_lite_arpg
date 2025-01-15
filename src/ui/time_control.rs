@@ -1,11 +1,11 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::labels::states::GameState;
+use crate::labels::states::AppState;
 
 // Make pause menu visible when we enter the state
-pub fn resume_game(mut time: ResMut<Time<Physics>>, mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::Playing);
+pub fn resume_game(mut time: ResMut<Time<Physics>>, mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::Playing);
     warn!("resume_game");
     time.unpause();
 }

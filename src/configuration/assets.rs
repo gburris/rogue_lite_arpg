@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
-use crate::labels::states::GameState;
+use crate::labels::states::AppState;
 
 pub struct AssetLoadingPlugin;
 
 impl Plugin for AssetLoadingPlugin {
     fn build(&self, app: &mut App) {
         app.add_loading_state(
-            LoadingState::new(GameState::AssetLoading)
-                .continue_to_state(GameState::CreateOverworld)
+            LoadingState::new(AppState::AssetLoading)
+                .continue_to_state(AppState::CreateOverworld)
                 .load_collection::<SpriteAssets>(),
         );
     }

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::labels::states::PausedState;
-use crate::movement::components::IsMoving;
-use crate::npc::events::AttemptDialogueInput;
-use crate::player::{Inventory, Player};
-use crate::{labels::states::GameState, player::PlayerMovementEvent};
+use crate::{
+    movement::components::IsMoving,
+    npc::events::AttemptDialogueInput,
+    player::{Inventory, Player, PlayerMovementEvent},
+};
 
 use super::print_inventory;
 

@@ -1,8 +1,7 @@
-use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    labels::states::{GameState, PausedState},
+    labels::states::{AppState, PausedState},
     player::systems::PauseInputEvent,
 };
 
@@ -202,56 +201,37 @@ pub fn despawn_main_menu(
 
 pub fn handle_equipment_button_pressed(
     mut equipment_button_query: Query<(&Interaction, &mut EquipmentMenuButton)>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut pause_state: ResMut<NextState<PausedState>>,
 ) {
     for (interaction, _) in &mut equipment_button_query {
         //warn!("handle_equipment_button_pressed interaction");
         if *interaction == Interaction::Pressed {
             warn!("handle_equipment_button_pressed");
-            game_state.set(GameState::Paused(PausedState::Equipment));
+            pause_state.set(PausedState::Equipment);
         }
     }
 }
 
-// Watcher system to determine when to go back to the game
-pub fn return_to_game(
-    mut game_state: ResMut<NextState<GameState>>,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
-) {
-    if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        warn!("return_to_game triggered");
-        game_state.set(GameState::Playing);
-    }
-}
-
-pub fn set_default_menu_state(mut next_state: ResMut<NextState<GameState>>) {
-    next_state.set(GameState::Paused(PausedState::MainMenu));
-}
-
-pub fn ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<ButtonInput<KeyCode>>) {
+pub fn handle_ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<ButtonInput<KeyCode>>) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         warn!("ui_inputs, enter");
         commands.trigger(PauseInputEvent);
-        return;
     }
 }
 
 pub fn on_pause_input(
     _: Trigger<PauseInputEvent>, // Access keyboard input
-    state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
+    state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>,
 ) {
-    // Check if we're currently in any paused state
     match state.get() {
-        // If we're in any paused state, transition to exit
-        GameState::Paused(_) => {
-            warn!("Currently paused, transitioning to exit state");
-            next_state.set(GameState::Paused(PausedState::Exit));
+        AppState::Paused => {
+            warn!("Currently paused, transitioning to playing");
+            next_state.set(AppState::Playing)
         }
-        // If we're not paused, begin pause sequence
         _ => {
-            warn!("Not currently paused, transitioning to enter state");
-            next_state.set(GameState::Paused(PausedState::Enter));
+            warn!("Not currently paused, transitioning to paused");
+            next_state.set(AppState::Paused);
         }
     }
 }

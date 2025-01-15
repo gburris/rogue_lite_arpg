@@ -5,7 +5,7 @@ use bevy::{
     window::WindowResolution,
 };
 
-use crate::labels::states::{GameState, PausedState, PlayingState};
+use crate::labels::states::{AppState, InGameState, PausedState};
 
 pub struct SetupPlugin;
 
@@ -37,9 +37,9 @@ impl Plugin for SetupPlugin {
         .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
         .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
         // initialize states
-        .init_state::<GameState>()
-        .init_state::<PlayingState>()
-        .init_state::<PausedState>()
+        .init_state::<AppState>()
+        .init_state::<InGameState>()
+        .add_sub_state::<PausedState>()
         .add_systems(Startup, setup_camera);
     }
 }

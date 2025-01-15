@@ -3,7 +3,7 @@ use rand::Rng;
 
 use crate::{
     configuration::assets::SpriteAssets,
-    labels::states::GameState,
+    labels::states::AppState,
     map::{
         components::Portal,
         resources::{CurrentZoneLevel, MapBounds},
@@ -12,7 +12,7 @@ use crate::{
 
 pub fn warpzone_setup(
     mut commands: Commands,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<AppState>>,
     mut zone_level: ResMut<CurrentZoneLevel>,
     sprites: Res<SpriteAssets>,
     map_bounds: Res<MapBounds>,
@@ -33,5 +33,5 @@ pub fn warpzone_setup(
         Sprite::from_image(sprites.warp_zone.clone()),
         Transform::from_translation(warpzone_position),
     ));
-    game_state.set(GameState::Playing);
+    game_state.set(AppState::Playing);
 }

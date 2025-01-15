@@ -15,8 +15,7 @@ pub struct PlayerEquipmentSlots {
     pub hands: Option<Item>,
     pub shoulders: Option<Item>,
     pub neck: Option<Item>,
-    pub ring1: Option<Item>,
-    pub ring2: Option<Item>,
+    pub ring: Option<Item>,
     pub trinket: Option<Item>,
 }
 
@@ -32,8 +31,7 @@ impl Default for PlayerEquipmentSlots {
             hands: None,
             shoulders: None,
             neck: None,
-            ring1: None,
-            ring2: None,
+            ring: None,
             trinket: None,
         }
     }

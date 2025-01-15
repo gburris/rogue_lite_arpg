@@ -59,18 +59,21 @@ pub fn create(mut commands: Commands) {
         });
 }
 
-pub fn handle_restart_button_pressed(
-    mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
-    game_over_screen: Query<Entity, With<GameOverScreen>>,
+pub fn despawn_game_over_screen(
     mut commands: Commands,
+    game_over_screen: Query<Entity, With<GameOverScreen>>,
+) {
+    // Despawn game over screen
+    if let Ok(entity) = game_over_screen.get_single() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+pub fn handle_restart_button(
+    mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<GameState>>,
 ) {
     for interaction in &mut restart_query {
         if *interaction == Interaction::Pressed {
-            // despawn game over screen
-            commands
-                .entity(game_over_screen.get_single().unwrap())
-                .despawn_recursive();
             game_state.set(GameState::CreateOverworld);
         }
     }

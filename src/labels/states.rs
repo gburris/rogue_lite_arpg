@@ -24,11 +24,12 @@ pub enum InGameState {
     Run, // Post entering the start portal state
 }
 
-#[derive(SubStates, Eq, Default, Hash, Clone, Debug, PartialEq)]
+#[derive(SubStates, Eq, Default, Hash, Clone, Copy, Debug, PartialEq)]
 #[source(AppState = AppState::Paused)]
 pub enum PausedState {
     #[default]
     MainMenu,
     Inventory,
     Equipment,
+    Stats,
 }

@@ -1,21 +1,42 @@
-use bevy::prelude::*;
-
 use crate::{
-    labels::states::{AppState, PausedState},
-    player::systems::PauseInputEvent,
+    combat::damage::components::Health,
+    labels::states::PausedState,
+    player::{Player, PlayerLevel},
 };
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct MainMenu;
 
 #[derive(Component)]
-pub struct PauseScreen;
+pub struct MenuButton(PausedState);
 
-#[derive(Component)]
-pub struct EquipmentMenuButton;
+#[derive(Clone, Copy)]
+enum MenuButtonConfig {
+    Equipment,
+    Inventory,
+    Stats,
+}
 
-pub fn spawn_main_menu(mut commands: Commands) {
+impl MenuButtonConfig {
+    fn to_component(&self) -> (MenuButton, &'static str) {
+        match self {
+            MenuButtonConfig::Equipment => (MenuButton(PausedState::Equipment), "EQUIPMENT"),
+            MenuButtonConfig::Inventory => (MenuButton(PausedState::Inventory), "INVENTORY"),
+            MenuButtonConfig::Stats => (MenuButton(PausedState::Stats), "STATS"),
+        }
+    }
+}
+
+pub fn spawn_main_menu(
+    mut commands: Commands,
+    player_level: Query<&PlayerLevel>,
+    player_health: Query<&Health, With<Player>>,
+) {
     warn!("spawn_main_menu called");
+    // Get the current values
+    let level = player_level.single();
+    let health = player_health.single();
     commands
         .spawn((
             MainMenu,
@@ -69,11 +90,16 @@ pub fn spawn_main_menu(mut commands: Commands) {
                     BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.7)),
                 ))
                 .with_children(|body| {
-                    // Equipment Button
-                    spawn_menu_button(body, "EQUIPMENT", true);
-                    // Additional menu buttons (placeholders)
-                    spawn_menu_button(body, "INVENTORY", true);
-                    spawn_menu_button(body, "SKILLS", true);
+                    // Spawn all menu buttons
+                    let buttons = [
+                        MenuButtonConfig::Equipment,
+                        MenuButtonConfig::Inventory,
+                        MenuButtonConfig::Stats,
+                    ];
+
+                    for button_config in buttons {
+                        spawn_menu_button(body, button_config);
+                    }
                 });
 
             // Footer Section
@@ -100,7 +126,7 @@ pub fn spawn_main_menu(mut commands: Commands) {
                         },))
                         .with_children(|stats| {
                             stats.spawn((
-                                Text::new("Level: 1"),
+                                Text::new(format!("Level: {}", level.current)),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
@@ -108,7 +134,10 @@ pub fn spawn_main_menu(mut commands: Commands) {
                                 Node::default(),
                             ));
                             stats.spawn((
-                                Text::new("Health: 100.0 / 100.0"),
+                                Text::new(format!(
+                                    "Health: {:.1} / {:.1}",
+                                    health.hp, health.max_hp
+                                )),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
@@ -130,65 +159,36 @@ pub fn spawn_main_menu(mut commands: Commands) {
         });
 }
 
-fn spawn_menu_button(parent: &mut ChildBuilder, text: &str, is_equipment: bool) {
-    let mut button = parent.spawn((
-        Button,
-        Node {
-            width: Val::Px(300.0),
-            height: Val::Px(60.0),
-            border: UiRect::all(Val::Px(2.0)),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BorderColor(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
-    ));
+fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
+    let (button_component, button_text) = config.to_component();
 
-    if is_equipment {
-        button.insert(EquipmentMenuButton);
-    }
-
-    button.with_children(|button| {
-        button.spawn((
-            Text::new(text),
-            TextFont {
-                font_size: 32.0,
+    parent
+        .spawn((
+            button_component,
+            Button,
+            Node {
+                width: Val::Px(300.0),
+                height: Val::Px(60.0),
+                border: UiRect::all(Val::Px(2.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
                 ..default()
             },
-            Node::default(),
-        ));
-    });
+            BorderColor(Color::srgb(0.8, 0.8, 0.8)),
+            BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+        ))
+        .with_children(|button| {
+            button.spawn((
+                Text::new(button_text),
+                TextFont {
+                    font_size: 32.0,
+                    ..default()
+                },
+                Node::default(),
+            ));
+        });
 }
 
-pub fn spawn_pause_screen(mut commands: Commands) {
-    warn!("spawn_pause_screen called");
-    commands.spawn((
-        PauseScreen,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-        Visibility::Visible,
-        GlobalZIndex(1),
-    ));
-}
-
-pub fn despawn_pause_screen(
-    mut commands: Commands,
-    pause_menu_background_query: Query<Entity, With<PauseScreen>>,
-) {
-    warn!("despawn_pause_screen called");
-    for entity in pause_menu_background_query.iter() {
-        commands.entity(entity).despawn();
-    }
-}
-
-// Despawn entities with the MainMenu component
 pub fn despawn_main_menu(
     mut commands: Commands,
     pause_menu_background_query: Query<Entity, With<MainMenu>>,
@@ -199,39 +199,14 @@ pub fn despawn_main_menu(
     }
 }
 
-pub fn handle_equipment_button_pressed(
-    mut equipment_button_query: Query<(&Interaction, &mut EquipmentMenuButton)>,
+pub fn handle_menu_button_pressed(
+    mut button_query: Query<(&Interaction, &MenuButton)>,
     mut pause_state: ResMut<NextState<PausedState>>,
 ) {
-    for (interaction, _) in &mut equipment_button_query {
-        //warn!("handle_equipment_button_pressed interaction");
+    for (interaction, menu_button) in &mut button_query {
         if *interaction == Interaction::Pressed {
-            warn!("handle_equipment_button_pressed");
-            pause_state.set(PausedState::Equipment);
-        }
-    }
-}
-
-pub fn handle_ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<ButtonInput<KeyCode>>) {
-    if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        warn!("ui_inputs, enter");
-        commands.trigger(PauseInputEvent);
-    }
-}
-
-pub fn on_pause_input(
-    _: Trigger<PauseInputEvent>, // Access keyboard input
-    state: Res<State<AppState>>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    match state.get() {
-        AppState::Paused => {
-            warn!("Currently paused, transitioning to playing");
-            next_state.set(AppState::Playing)
-        }
-        _ => {
-            warn!("Not currently paused, transitioning to paused");
-            next_state.set(AppState::Paused);
+            warn!("handle_menu_button_pressed");
+            pause_state.set(menu_button.0);
         }
     }
 }

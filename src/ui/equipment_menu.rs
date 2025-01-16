@@ -15,7 +15,7 @@ pub fn spawn_equipment_menu(
     mut commands: Commands,
     player_equipment: Query<&PlayerEquipmentSlots>,
 ) {
-    warn!("spawn_equipment_menu called");
+    debug!("spawn_equipment_menu called");
 
     if let Ok(equipment) = player_equipment.get_single() {
         commands
@@ -142,7 +142,7 @@ pub fn despawn_equipment_menu(
     mut commands: Commands,
     equipment_menu_query: Query<Entity, With<EquipmentMenu>>,
 ) {
-    warn!("despawn_equipment_menu called");
+    debug!("despawn_equipment_menu called");
     for entity in equipment_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }

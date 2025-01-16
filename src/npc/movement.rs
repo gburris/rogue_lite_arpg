@@ -55,9 +55,11 @@ pub fn move_npcs(
         } else {
             let distance_from_start = (transform.translation.x - npc_movement.start_pos.x).abs();
 
-            debug!(
+            trace!(
                 "NPC is moving, distance from start: {}, speed: {}, direction: {}",
-                distance_from_start, simple_motion.current_speed, simple_motion.direction
+                distance_from_start,
+                simple_motion.current_speed,
+                simple_motion.direction
             );
 
             // Check if we've reached the movement boundary (50 units)

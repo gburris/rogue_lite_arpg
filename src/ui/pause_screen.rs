@@ -4,7 +4,7 @@ use bevy::prelude::*;
 pub struct PauseScreen;
 
 pub fn spawn_pause_screen(mut commands: Commands) {
-    warn!("spawn_pause_screen called");
+    debug!("spawn_pause_screen called");
     commands.spawn((
         PauseScreen,
         Node {
@@ -24,7 +24,7 @@ pub fn despawn_pause_screen(
     mut commands: Commands,
     pause_menu_background_query: Query<Entity, With<PauseScreen>>,
 ) {
-    warn!("despawn_pause_screen called");
+    debug!("despawn_pause_screen called");
     for entity in pause_menu_background_query.iter() {
         commands.entity(entity).despawn();
     }

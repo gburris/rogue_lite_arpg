@@ -46,9 +46,9 @@ pub fn handle_collisions(
             }
 
             if let Ok(_player_entity) = player_query.get(e1) {
-                warn!("Player collision start");
+                debug!("Player collision start");
                 if let Ok((enemy_entity, collision_damage)) = enemy_query.get(e2) {
-                    warn!("Enemy Collided With Player");
+                    debug!("Enemy Collided With Player");
                     commands.trigger_targets(
                         EnemyCollidesWithPlayer {
                             collision_damage: collision_damage.clone(),

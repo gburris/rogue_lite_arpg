@@ -12,7 +12,7 @@ pub struct InventoryMenuButton;
 pub struct InventoryDisplay;
 
 pub fn spawn_inventory_menu(mut commands: Commands, player_inventory: Query<&Inventory>) {
-    warn!("spawn_inventory_menu called");
+    debug!("spawn_inventory_menu called");
 
     if let Ok(inventory) = player_inventory.get_single() {
         commands
@@ -173,7 +173,7 @@ pub fn despawn_inventory_menu(
     mut commands: Commands,
     inventory_menu_query: Query<Entity, With<InventoryMenu>>,
 ) {
-    warn!("despawn_inventory_menu called");
+    debug!("despawn_inventory_menu called");
     for entity in inventory_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }

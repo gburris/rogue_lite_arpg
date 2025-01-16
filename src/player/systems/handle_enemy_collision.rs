@@ -10,9 +10,9 @@ pub fn handle_enemy_collision(
     mut commands: Commands,
     mut player_query: Query<Entity, With<Player>>,
 ) {
-    warn!("EnemyCollidesWithPlayer Observer triggered");
+    debug!("EnemyCollidesWithPlayer Observer triggered");
     if let Ok(player_entity) = player_query.get_single_mut() {
-        warn!("Player damage system start");
+        debug!("Player damage system start");
 
         commands.trigger_targets(
             DamageEvent {

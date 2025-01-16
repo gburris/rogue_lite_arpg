@@ -12,7 +12,7 @@ pub struct StatsMenuButton;
 pub struct StatsDisplay;
 
 pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
-    warn!("spawn_stats_menu called");
+    debug!("spawn_stats_menu called");
 
     if let Ok(stats) = player_stats.get_single() {
         commands
@@ -148,7 +148,7 @@ pub fn despawn_stats_menu(
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatsMenu>>,
 ) {
-    warn!("despawn_stats_menu called");
+    debug!("despawn_stats_menu called");
     for entity in stats_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }

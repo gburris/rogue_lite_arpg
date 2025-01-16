@@ -33,7 +33,7 @@ pub fn spawn_main_menu(
     player_level: Query<&PlayerLevel>,
     player_health: Query<&Health, With<Player>>,
 ) {
-    warn!("spawn_main_menu called");
+    debug!("spawn_main_menu called");
     // Get the current values
     let level = player_level.single();
     let health = player_health.single();
@@ -193,7 +193,7 @@ pub fn despawn_main_menu(
     mut commands: Commands,
     pause_menu_background_query: Query<Entity, With<MainMenu>>,
 ) {
-    warn!("despawn_main_menu called");
+    debug!("despawn_main_menu called");
     for entity in pause_menu_background_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
@@ -205,7 +205,7 @@ pub fn handle_menu_button_pressed(
 ) {
     for (interaction, menu_button) in &mut button_query {
         if *interaction == Interaction::Pressed {
-            warn!("handle_menu_button_pressed");
+            debug!("handle_menu_button_pressed");
             pause_state.set(menu_button.0);
         }
     }

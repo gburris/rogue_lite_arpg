@@ -8,7 +8,7 @@ use crate::{
     items::get_default_staff,
     labels::states::AppState,
     movement::components::SimpleMotion,
-    player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots},
+    player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
 };
 
 pub fn player_setup(
@@ -22,6 +22,7 @@ pub fn player_setup(
     commands
         .spawn((
             Player,
+            PlayerStats::default(),
             SimpleMotion::new(600.0),
             LockedAxes::new().lock_rotation(),
             Health::new(100.0),

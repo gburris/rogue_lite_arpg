@@ -1,6 +1,10 @@
 pub mod equipment_menu;
 pub mod game_over_screen;
 pub mod game_overlay;
-pub mod pause_menu;
+pub mod input;
+pub mod inventory_menu;
+pub mod main_menu;
+pub mod pause_screen;
 pub mod plugin;
+pub mod stats_menu;
 pub mod time_control;

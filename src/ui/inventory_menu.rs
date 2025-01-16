@@ -1,0 +1,180 @@
+use crate::items::Item;
+use crate::player::Inventory;
+use bevy::prelude::*;
+
+#[derive(Component)]
+pub struct InventoryMenu;
+
+#[derive(Component)]
+pub struct InventoryMenuButton;
+
+#[derive(Component)]
+pub struct InventoryDisplay;
+
+pub fn spawn_inventory_menu(mut commands: Commands, player_inventory: Query<&Inventory>) {
+    warn!("spawn_inventory_menu called");
+
+    if let Ok(inventory) = player_inventory.get_single() {
+        commands
+            .spawn((
+                InventoryMenu,
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    ..default()
+                },
+                BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
+                Visibility::Visible,
+                GlobalZIndex(1),
+            ))
+            .with_children(|parent| {
+                // Title
+                parent.spawn((
+                    Text::new("Inventory"),
+                    TextFont {
+                        font_size: 70.0,
+                        ..default()
+                    },
+                    Node {
+                        margin: UiRect::bottom(Val::Px(20.0)),
+                        ..default()
+                    },
+                ));
+
+                // Inventory capacity display
+                parent.spawn((
+                    Text::new(format!(
+                        "Capacity: {}/{}",
+                        inventory.items.len(),
+                        inventory.max_capacity
+                    )),
+                    TextFont {
+                        font_size: 24.0,
+                        ..default()
+                    },
+                    Node {
+                        margin: UiRect::bottom(Val::Px(20.0)),
+                        ..default()
+                    },
+                ));
+
+                // Inventory items container with scrolling
+                parent
+                    .spawn((
+                        InventoryDisplay,
+                        Node {
+                            width: Val::Px(600.0),
+                            height: Val::Percent(80.0),
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect::all(Val::Px(20.0)),
+                            overflow: Overflow::scroll_y(),
+                            ..default()
+                        },
+                        BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                    ))
+                    .with_children(|slot_parent| {
+                        // Display all inventory items
+                        for item in inventory.items.values() {
+                            spawn_inventory_item(slot_parent, item);
+                        }
+
+                        // Display empty slots
+                        let empty_slots = inventory.max_capacity - inventory.items.len();
+                        for _ in 0..empty_slots {
+                            spawn_empty_slot(slot_parent);
+                        }
+                    });
+            });
+    }
+}
+
+fn spawn_inventory_item(builder: &mut ChildBuilder, item: &Item) {
+    builder
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Px(60.0),
+                padding: UiRect::all(Val::Px(10.0)),
+                margin: UiRect::bottom(Val::Px(5.0)),
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
+        ))
+        .with_children(|parent| {
+            // Item name
+            parent.spawn((
+                Text::new(&item.name),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                Node::default(),
+            ));
+
+            // Item stats
+            let mut stats_text = String::new();
+            for (stat_type, value) in &item.stats {
+                if !stats_text.is_empty() {
+                    stats_text.push_str(" | ");
+                }
+                stats_text.push_str(&format!("{}: {}", stat_type, value));
+            }
+
+            parent.spawn((
+                Text::new(stats_text),
+                TextFont {
+                    font_size: 20.0,
+                    ..default()
+                },
+                Node {
+                    margin: UiRect::left(Val::Px(10.0)),
+                    ..default()
+                },
+            ));
+        });
+}
+
+fn spawn_empty_slot(builder: &mut ChildBuilder) {
+    builder
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Px(60.0),
+                padding: UiRect::all(Val::Px(10.0)),
+                margin: UiRect::bottom(Val::Px(5.0)),
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("Empty Slot"),
+                TextFont {
+                    font_size: 20.0,
+                    ..default()
+                },
+                Node {
+                    margin: UiRect::left(Val::Px(10.0)),
+                    ..default()
+                },
+            ));
+        });
+}
+
+pub fn despawn_inventory_menu(
+    mut commands: Commands,
+    inventory_menu_query: Query<Entity, With<InventoryMenu>>,
+) {
+    warn!("despawn_inventory_menu called");
+    for entity in inventory_menu_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}

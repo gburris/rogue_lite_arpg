@@ -9,8 +9,10 @@ use super::{
     equipment_menu,
     game_over_screen::{self, handle_restart_button},
     game_overlay,
-    pause_menu::{self, handle_equipment_button_pressed, handle_ui_inputs, on_pause_input},
-    time_control,
+    input::{handle_ui_inputs, on_pause_input},
+    inventory_menu,
+    main_menu::{self, handle_menu_button_pressed},
+    pause_screen, stats_menu, time_control,
 };
 
 /// Plugin responsible for managing all UI-related systems and state transitions
@@ -28,21 +30,24 @@ impl Plugin for UIPlugin {
             .add_systems(Update, handle_ui_inputs.in_set(MainSet::Menu))
             .add_systems(
                 OnEnter(AppState::Paused),
-                (time_control::pause_game, pause_menu::spawn_pause_screen),
+                (time_control::pause_game, pause_screen::spawn_pause_screen),
             )
             .add_systems(
                 OnExit(AppState::Paused),
-                (time_control::resume_game, pause_menu::despawn_pause_screen),
+                (
+                    time_control::resume_game,
+                    pause_screen::despawn_pause_screen,
+                ),
             )
             // Main menu UI cisystems
-            .add_systems(OnEnter(PausedState::MainMenu), pause_menu::spawn_main_menu)
+            .add_systems(OnEnter(PausedState::MainMenu), main_menu::spawn_main_menu)
             .add_systems(
                 Update,
-                handle_equipment_button_pressed
+                handle_menu_button_pressed
                     .run_if(in_state(PausedState::MainMenu))
                     .in_set(MainSet::Menu),
             )
-            .add_systems(OnExit(PausedState::MainMenu), pause_menu::despawn_main_menu)
+            .add_systems(OnExit(PausedState::MainMenu), main_menu::despawn_main_menu)
             // Equipment menu systems
             .add_systems(
                 OnEnter(PausedState::Equipment),
@@ -52,6 +57,18 @@ impl Plugin for UIPlugin {
                 OnExit(PausedState::Equipment),
                 equipment_menu::despawn_equipment_menu,
             )
+            // Inventory menu systems
+            .add_systems(
+                OnEnter(PausedState::Inventory),
+                inventory_menu::spawn_inventory_menu,
+            )
+            .add_systems(
+                OnExit(PausedState::Inventory),
+                inventory_menu::despawn_inventory_menu,
+            )
+            // Stats menu systems
+            .add_systems(OnEnter(PausedState::Stats), stats_menu::spawn_stats_menu)
+            .add_systems(OnExit(PausedState::Stats), stats_menu::despawn_stats_menu)
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(

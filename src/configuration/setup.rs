@@ -1,17 +1,19 @@
 use avian2d::prelude::*;
-use bevy::{
-    ecs::schedule::{LogLevel, ScheduleBuildSettings},
-    prelude::*,
-    window::WindowResolution,
-};
+use bevy::prelude::*;
 
-use crate::labels::states::{AppState, InGameState, PausedState};
+use crate::{
+    configuration::debug::DebugPlugin,
+    labels::states::{AppState, InGameState, PausedState},
+};
 
 pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        // Configure main window
+        #[cfg(debug_assertions)] // only in dev mode
+        app.add_plugins(DebugPlugin);
+
+        #[cfg(not(debug_assertions))] // only in release mode
         app.add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -25,22 +27,17 @@ impl Plugin for SetupPlugin {
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest()),
-        )
-        // Enable system ambiguity detection
-        .edit_schedule(Update, |schedule| {
-            schedule.set_build_settings(ScheduleBuildSettings {
-                ambiguity_detection: LogLevel::Warn,
-                ..default()
-            });
-        })
-        // setup avian physics (used for forces, collision, etc...)
-        .add_plugins((PhysicsPlugins::default(), PhysicsDebugPlugin::default()))
-        .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
-        // initialize states
-        .init_state::<AppState>()
-        .init_state::<InGameState>()
-        .add_sub_state::<PausedState>()
-        .add_systems(Startup, setup_camera);
+        );
+
+        app
+            // setup avian physics (used for forces, collision, etc...)
+            .add_plugins(PhysicsPlugins::default())
+            .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
+            // initialize states
+            .init_state::<AppState>()
+            .init_state::<InGameState>()
+            .add_sub_state::<PausedState>()
+            .add_systems(Startup, setup_camera);
     }
 }
 

@@ -38,11 +38,6 @@ pub fn player_input(
         return;
     }
 
-    if keyboard_input.just_pressed(KeyCode::Abort) {
-        warn!("try to swing a weapon");
-        return;
-    }
-
     let mut direction = Vec2::ZERO;
 
     // Check input for movement and update direction

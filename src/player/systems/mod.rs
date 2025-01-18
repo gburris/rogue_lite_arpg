@@ -1,6 +1,8 @@
 pub mod camera_follow;
+pub mod consume;
 pub mod cursor;
 pub mod death;
+pub mod equip;
 pub mod handle_enemy_collision;
 pub mod handle_level_up;
 pub mod input;
@@ -9,7 +11,9 @@ pub mod print_inventory;
 pub mod setup;
 
 pub use camera_follow::*;
+pub use consume::*;
 pub use cursor::*;
+pub use equip::*;
 pub use handle_enemy_collision::*;
 pub use handle_level_up::*;
 pub use input::*;

@@ -5,10 +5,12 @@ use crate::{
     combat::damage::components::Health,
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
-    items::get_default_staff,
+    items::{spawn_health_potion, spawn_sword},
     labels::states::AppState,
     movement::components::SimpleMotion,
-    player::{systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
+    player::{
+        systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots, PlayerStats,
+    },
 };
 
 pub fn player_setup(
@@ -17,7 +19,8 @@ pub fn player_setup(
     sprites: Res<SpriteAssets>,
 ) {
     let mut inventory = Inventory::default_inventory();
-    let _ = inventory.add_item(get_default_staff());
+    let _ = inventory.add_item(spawn_health_potion(&mut commands));
+    let _ = inventory.add_item(spawn_sword(&mut commands));
 
     commands
         .spawn((

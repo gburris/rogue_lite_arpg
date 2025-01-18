@@ -1,6 +1,6 @@
-use crate::items::Item;
-use crate::player::Inventory;
+use crate::{items::ItemName, player::Inventory};
 use bevy::prelude::*;
+use rand::Rng;
 
 #[derive(Component)]
 pub struct InventoryMenu;
@@ -11,7 +11,11 @@ pub struct InventoryMenuButton;
 #[derive(Component)]
 pub struct InventoryDisplay;
 
-pub fn spawn_inventory_menu(mut commands: Commands, player_inventory: Query<&Inventory>) {
+pub fn spawn_inventory_menu(
+    mut commands: Commands,
+    item_query: Query<&ItemName>,
+    player_inventory: Query<&Inventory>,
+) {
     debug!("spawn_inventory_menu called");
 
     if let Ok(inventory) = player_inventory.get_single() {
@@ -78,8 +82,9 @@ pub fn spawn_inventory_menu(mut commands: Commands, player_inventory: Query<&Inv
                     ))
                     .with_children(|slot_parent| {
                         // Display all inventory items
-                        for item in inventory.items.values() {
-                            spawn_inventory_item(slot_parent, item);
+                        for item_entity in inventory.items.values() {
+                            let item_name = item_query.get(*item_entity).unwrap();
+                            spawn_inventory_item(slot_parent, item_name.0.clone(), *item_entity);
                         }
 
                         // Display empty slots
@@ -92,9 +97,21 @@ pub fn spawn_inventory_menu(mut commands: Commands, player_inventory: Query<&Inv
     }
 }
 
-fn spawn_inventory_item(builder: &mut ChildBuilder, item: &Item) {
+// Add these new components
+#[derive(Component)]
+pub struct InventoryItemButton {
+    pub item_entity: Option<Entity>, // None for empty slots
+}
+
+// Modified spawn_inventory_item function
+fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_entity: Entity) {
     builder
         .spawn((
+            InventoryItemButton {
+                item_entity: Some(item_entity),
+            },
+            Button,
+            Interaction::default(),
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(60.0),
@@ -105,44 +122,29 @@ fn spawn_inventory_item(builder: &mut ChildBuilder, item: &Item) {
                 ..default()
             },
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
+            // Add border
+            BorderColor::from(Color::NONE),
+            //Border::all(Val::Px(2.0)),
         ))
         .with_children(|parent| {
-            // Item name
             parent.spawn((
-                Text::new(&item.name),
+                Text::new(item_name),
                 TextFont {
                     font_size: 24.0,
                     ..default()
                 },
                 Node::default(),
             ));
-
-            // Item stats
-            let mut stats_text = String::new();
-            for (stat_type, value) in &item.stats {
-                if !stats_text.is_empty() {
-                    stats_text.push_str(" | ");
-                }
-                stats_text.push_str(&format!("{}: {}", stat_type, value));
-            }
-
-            parent.spawn((
-                Text::new(stats_text),
-                TextFont {
-                    font_size: 20.0,
-                    ..default()
-                },
-                Node {
-                    margin: UiRect::left(Val::Px(10.0)),
-                    ..default()
-                },
-            ));
         });
 }
 
+// Modified spawn_empty_slot function
 fn spawn_empty_slot(builder: &mut ChildBuilder) {
     builder
         .spawn((
+            InventoryItemButton { item_entity: None },
+            Button,
+            Interaction::default(),
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(60.0),
@@ -150,6 +152,7 @@ fn spawn_empty_slot(builder: &mut ChildBuilder) {
                 margin: UiRect::bottom(Val::Px(5.0)),
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
+                border: UiRect::all(Val::Px(2.0)),
                 ..default()
             },
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),

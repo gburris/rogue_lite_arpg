@@ -198,15 +198,3 @@ pub fn despawn_main_menu(
         commands.entity(entity).despawn_recursive();
     }
 }
-
-pub fn handle_menu_button_pressed(
-    mut button_query: Query<(&Interaction, &MenuButton)>,
-    mut pause_state: ResMut<NextState<PausedState>>,
-) {
-    for (interaction, menu_button) in &mut button_query {
-        if *interaction == Interaction::Pressed {
-            debug!("handle_menu_button_pressed");
-            pause_state.set(menu_button.0);
-        }
-    }
-}

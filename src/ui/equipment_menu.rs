@@ -65,18 +65,19 @@ pub fn spawn_equipment_menu(
                     ))
                     .with_children(|slot_parent| {
                         spawn_equipment_slot(
-                            item_query,
+                            &item_query,
                             slot_parent,
                             "Mainhand",
                             &equipment.mainhand,
                         );
+                        spawn_equipment_slot(&item_query, slot_parent, "Helmet", &equipment.head);
                     });
             });
     }
 }
 
 fn spawn_equipment_slot(
-    item_query: Query<&ItemName>,
+    item_query: &Query<&ItemName>,
     builder: &mut ChildBuilder,
     slot_name: &str,
     slot_entity: &Option<Entity>,

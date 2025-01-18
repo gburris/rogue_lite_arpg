@@ -5,7 +5,7 @@ use crate::{
     combat::damage::components::Health,
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
-    items::{spawn_health_potion, spawn_sword},
+    items::{spawn_health_potion, spawn_helmet, spawn_sword},
     labels::states::AppState,
     movement::components::SimpleMotion,
     player::{
@@ -20,7 +20,8 @@ pub fn player_setup(
 ) {
     let mut inventory = Inventory::default_inventory();
     let _ = inventory.add_item(spawn_health_potion(&mut commands));
-    let _ = inventory.add_item(spawn_sword(&mut commands));
+    let _ = inventory.add_item(spawn_sword(&mut commands, &sprites));
+    let _ = inventory.add_item(spawn_helmet(&mut commands, &sprites));
 
     commands
         .spawn((

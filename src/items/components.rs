@@ -19,8 +19,20 @@ pub struct Consumable;
 pub struct ItemName(pub String);
 
 #[derive(Component, Clone, Debug)]
+pub struct EquipmentSprite {
+    pub sprite: Sprite,
+    pub offset: Vec3, // Offset from the player's position
+    pub scale: Vec3,
+    pub rotation: Quat, // Scale of the sprite
+}
+
+#[derive(Component, Clone, Debug)]
 #[require(ItemName, ItemId)]
 pub struct Sword;
+
+#[derive(Component, Clone, Debug)]
+#[require(ItemName, ItemId)]
+pub struct Helmet;
 
 #[derive(Component, Clone, Debug)]
 #[require(ItemName, ItemId)]

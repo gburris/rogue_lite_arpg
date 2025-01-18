@@ -9,6 +9,7 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
             ConsumableEffect {
                 effect_type: ConsumableType::Heal(50.0), // Heals 50 HP
             },
+            HealthPotion,
             ItemId(3),
             Consumable,
         ))

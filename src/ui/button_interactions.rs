@@ -67,23 +67,20 @@ pub fn handle_inventory_click(
     equipable_query: Query<&Equipable>,
     consumable_query: Query<&Consumable>,
     item_name_query: Query<&ItemName>,
-    mut pause_state: ResMut<NextState<PausedState>>,
 ) {
     if let Some(item_entity) = trigger.item_entity {
         // Check if item is equipable
         if let Ok(item_name) = item_name_query.get(item_entity) {
-            warn!("User clicked on {:?}", item_name);
+            debug!("User clicked on {:?}", item_name);
         }
 
         if equipable_query.contains(item_entity) {
-            warn!("Clciked Equipable");
             commands.trigger(EquipEvent {
                 item_entity: item_entity,
             });
         }
         // Check if item is consumable
         else if consumable_query.contains(item_entity) {
-            warn!("Clicked Consumable");
             commands.trigger(ConsumeEvent {
                 item_entity: item_entity,
             });

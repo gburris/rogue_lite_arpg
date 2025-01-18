@@ -3,19 +3,14 @@ use bevy::prelude::*;
 use crate::{
     movement::components::IsMoving,
     npc::events::AttemptDialogueInput,
-    player::{Inventory, Player, PlayerMovementEvent},
+    player::{Player, PlayerMovementEvent},
 };
-
-use super::print_inventory;
 
 //Component with an event tag called
 //Pause Input evemt
 //and bevy macros for component and event
 #[derive(Event)]
 pub struct PauseInputEvent;
-
-#[derive(Event)]
-pub struct PrintInventoryEvent;
 
 pub fn player_input(
     mut commands: Commands,
@@ -30,11 +25,6 @@ pub fn player_input(
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
         commands.trigger(AttemptDialogueInput);
-        return;
-    }
-
-    if keyboard_input.just_pressed(KeyCode::KeyI) {
-        commands.trigger(PrintInventoryEvent);
         return;
     }
 

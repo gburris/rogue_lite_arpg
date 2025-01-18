@@ -1,6 +1,5 @@
 use crate::{items::ItemName, player::Inventory};
 use bevy::prelude::*;
-use rand::Rng;
 
 use super::button_interactions::InventoryUpdatedEvent;
 

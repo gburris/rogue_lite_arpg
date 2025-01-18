@@ -5,6 +5,21 @@ use crate::despawn::components::LiveDuration;
 use super::events::ApplyStatus;
 
 /**
+ * TODO
+ */
+#[derive(Component, Default)]
+#[require(LiveDuration)]
+pub struct AppliedStatus;
+
+/**
+ * TODO
+ */
+#[derive(Component, Default)]
+pub struct StatusEffect {
+    pub duration: f32,
+}
+
+/**
  * "Effects" are currently just a list of statuses to apply
  */
 #[derive(Component, Default)]
@@ -21,7 +36,6 @@ pub enum StatusType {
 }
 
 #[derive(Component, Clone)]
-#[require(Status)]
 pub struct BurningStatus {
     pub damage: f32,
     pub damage_frequency: Timer,
@@ -37,11 +51,9 @@ impl Default for BurningStatus {
 }
 
 #[derive(Component, Default)]
-#[require(Status)]
 pub struct FrozenStatus;
 
 #[derive(Component, Clone)]
-#[require(Status)]
 pub struct SlowedStatus {
     pub slow_percentage: f32,
 }
@@ -55,12 +67,4 @@ impl Default for SlowedStatus {
 }
 
 #[derive(Component, Default)]
-#[require(Status)]
 pub struct StunnedStatus;
-
-/**
- * Simple marker component we can use to f
- */
-#[derive(Component, Default)]
-#[require(LiveDuration)]
-pub struct Status;

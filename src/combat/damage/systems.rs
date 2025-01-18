@@ -5,14 +5,13 @@ use crate::{
         components::{Health, InvulnerableFromDamage},
         events::{DamageEvent, DefeatedEvent},
     },
-    combat::status_effects::{components::EffectsList, events::ApplyEffect},
+    combat::status_effects::events::ApplyEffects,
 };
 
 pub fn on_damage_event(
     damage_trigger: Trigger<DamageEvent>,
     mut commands: Commands,
     mut damaged_query: Query<(&mut Health, Option<&InvulnerableFromDamage>)>,
-    source_query: Query<&EffectsList>,
 ) {
     if let Ok((mut health, invulnerable)) = damaged_query.get_mut(damage_trigger.entity()) {
         if invulnerable.is_some() {
@@ -30,16 +29,14 @@ pub fn on_damage_event(
 
         if health.hp == 0.0 {
             commands.trigger_targets(DefeatedEvent, damage_trigger.entity());
-        } else if let Some(source_entity) = damage_trigger.damage_source {
-            // If entity is still alive and damage source exists and has effects list, we apply status effects
-            if let Ok(effects_list) = source_query.get(source_entity) {
-                commands.trigger_targets(
-                    ApplyEffect {
-                        effect: effects_list.effects.clone(),
-                    },
-                    damage_trigger.entity(),
-                );
-            }
+        } else if let Some(damage_source) = damage_trigger.damage_source {
+            // If entity is still alive and damage source exists, we attempt to apply effects
+            commands.trigger_targets(
+                ApplyEffects {
+                    effect_source: damage_source,
+                },
+                damage_trigger.entity(),
+            );
         }
     }
 }

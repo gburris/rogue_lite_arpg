@@ -6,10 +6,7 @@ use crate::{
     combat::{
         damage::components::DamageEffect,
         spells::components::Spell,
-        status_effects::{
-            components::{BurningStatus, EffectsList, StatusType},
-            events::ApplyStatus,
-        },
+        status_effects::components::{BurningStatus, FrozenStatus, StatusEffect},
     },
     configuration::assets::SpriteAssets,
 };
@@ -30,19 +27,15 @@ impl SpellFactory {
 
         match spell {
             Spell::Fireball => {
-                commands.spawn((
-                    spell,
-                    caster_transform,
-                    DamageEffect { base_damage: 10.0 },
-                    LinearVelocity(velocity),
-                    EffectsList {
-                        effects: vec![ApplyStatus {
-                            status: StatusType::Burning(BurningStatus::default()),
-                            duration: 2.0,
-                        }],
-                    },
-                    Sprite::from_image(sprites.fire_bolt.clone()),
-                ));
+                commands
+                    .spawn((
+                        spell,
+                        caster_transform,
+                        DamageEffect { base_damage: 10.0 },
+                        LinearVelocity(velocity),
+                        Sprite::from_image(sprites.fire_bolt.clone()),
+                    ))
+                    .with_child((StatusEffect { duration: 2.0 }, BurningStatus::default()));
             }
             Spell::Icebolt => {
                 let animation_indices = AnimationIndices { first: 0, last: 4 };
@@ -50,31 +43,27 @@ impl SpellFactory {
                 let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None);
                 let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
-                commands.spawn((
-                    spell,
-                    DamageEffect { base_damage: 8.0 },
-                    LinearVelocity(velocity),
-                    EffectsList {
-                        effects: vec![ApplyStatus {
-                            status: StatusType::Frozen,
-                            duration: 2.0,
-                        }],
-                    },
-                    Sprite::from_atlas_image(
-                        texture,
-                        TextureAtlas {
-                            layout: texture_atlas_layout,
-                            index: animation_indices.first,
+                commands
+                    .spawn((
+                        spell,
+                        DamageEffect { base_damage: 8.0 },
+                        LinearVelocity(velocity),
+                        Sprite::from_atlas_image(
+                            texture,
+                            TextureAtlas {
+                                layout: texture_atlas_layout,
+                                index: animation_indices.first,
+                            },
+                        ),
+                        Transform {
+                            translation: caster_transform.translation,
+                            rotation: caster_transform.rotation,
+                            scale: Vec3::splat(2.0),
                         },
-                    ),
-                    Transform {
-                        translation: caster_transform.translation,
-                        rotation: caster_transform.rotation,
-                        scale: Vec3::splat(2.0),
-                    },
-                    animation_indices,
-                    AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-                ));
+                        animation_indices,
+                        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+                    ))
+                    .with_child((StatusEffect { duration: 1.0 }, FrozenStatus::default()));
             }
         }
     }

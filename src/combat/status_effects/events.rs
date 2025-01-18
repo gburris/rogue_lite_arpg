@@ -3,9 +3,11 @@ use bevy::prelude::*;
 use super::components::StatusType;
 
 #[derive(Event)]
-pub struct ApplyEffect {
-    pub effect: Vec<ApplyStatus>,
+pub struct ApplyEffects {
+    pub effect_source: Entity,
 }
+
+impl ApplyEffects {}
 
 #[derive(Event, Clone)]
 pub struct ApplyStatus {

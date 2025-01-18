@@ -14,12 +14,14 @@ use super::print_inventory;
 #[derive(Event)]
 pub struct PauseInputEvent;
 
+#[derive(Event)]
+pub struct PrintInventoryEvent;
+
 pub fn player_input(
     mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
     mut is_moving_query: Query<&mut IsMoving, With<Player>>,
-    query_inventory: Query<&Inventory>,
 ) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         commands.trigger(PauseInputEvent);
@@ -32,7 +34,13 @@ pub fn player_input(
     }
 
     if keyboard_input.just_pressed(KeyCode::KeyI) {
-        print_inventory(query_inventory);
+        commands.trigger(PrintInventoryEvent);
+        return;
+    }
+
+    if keyboard_input.just_pressed(KeyCode::Abort) {
+        warn!("try to swing a weapon");
+        return;
     }
 
     let mut direction = Vec2::ZERO;

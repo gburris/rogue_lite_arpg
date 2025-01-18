@@ -13,6 +13,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PlayerMovementEvent>()
             .add_observer(handle_enemy_collision)
+            .add_observer(print_inventory)
             .add_systems(OnEnter(AppState::SpawnPlayer), player_setup)
             .add_systems(Update, player_input.in_set(InGameSet::PlayerInput))
             .add_systems(

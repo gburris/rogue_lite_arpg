@@ -1,4 +1,4 @@
-use crate::items::Item;
+use crate::items::ItemName;
 use crate::player::PlayerEquipmentSlots;
 use bevy::prelude::*;
 
@@ -13,6 +13,7 @@ pub struct EquipmentSlotDisplay;
 
 pub fn spawn_equipment_menu(
     mut commands: Commands,
+    item_query: Query<&ItemName>,
     player_equipment: Query<&PlayerEquipmentSlots>,
 ) {
     debug!("spawn_equipment_menu called");
@@ -63,23 +64,23 @@ pub fn spawn_equipment_menu(
                         BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
                     ))
                     .with_children(|slot_parent| {
-                        spawn_equipment_slot(slot_parent, "Mainhand", &equipment.mainhand);
-                        spawn_equipment_slot(slot_parent, "Offhand", &equipment.offhand);
-                        spawn_equipment_slot(slot_parent, "Head", &equipment.head);
-                        spawn_equipment_slot(slot_parent, "Chest", &equipment.chest);
-                        spawn_equipment_slot(slot_parent, "Legs", &equipment.legs);
-                        spawn_equipment_slot(slot_parent, "Feet", &equipment.feet);
-                        spawn_equipment_slot(slot_parent, "Hands", &equipment.hands);
-                        spawn_equipment_slot(slot_parent, "Shoulders", &equipment.shoulders);
-                        spawn_equipment_slot(slot_parent, "Neck", &equipment.neck);
-                        spawn_equipment_slot(slot_parent, "Ring 1", &equipment.ring);
-                        spawn_equipment_slot(slot_parent, "Trinket", &equipment.trinket);
+                        spawn_equipment_slot(
+                            item_query,
+                            slot_parent,
+                            "Mainhand",
+                            &equipment.mainhand,
+                        );
                     });
             });
     }
 }
 
-fn spawn_equipment_slot(builder: &mut ChildBuilder, slot_name: &str, item: &Option<Item>) {
+fn spawn_equipment_slot(
+    item_query: Query<&ItemName>,
+    builder: &mut ChildBuilder,
+    slot_name: &str,
+    slot_entity: &Option<Entity>,
+) {
     builder
         .spawn((
             Node {
@@ -103,25 +104,24 @@ fn spawn_equipment_slot(builder: &mut ChildBuilder, slot_name: &str, item: &Opti
                 },
                 Node::default(),
             ));
-
-            // Item details
-            if let Some(item) = item {
-                let mut stats_text = format!("{}", item.name);
-                for (stat_type, value) in &item.stats {
-                    stats_text.push_str(&format!(" | {}: {}", stat_type, value));
+            if let Some(slot_entity) = slot_entity {
+                // Get equipment name here.
+                // Can do this by passing in item query, and finding that item in the slot
+                // resolve text from slot entity
+                // Display all inventory items
+                if let Ok(item_name) = item_query.get(*slot_entity) {
+                    parent.spawn((
+                        Text::new(item_name.0.clone()),
+                        TextFont {
+                            font_size: 20.0,
+                            ..default()
+                        },
+                        Node {
+                            margin: UiRect::left(Val::Px(10.0)),
+                            ..default()
+                        },
+                    ));
                 }
-
-                parent.spawn((
-                    Text::new(stats_text),
-                    TextFont {
-                        font_size: 20.0,
-                        ..default()
-                    },
-                    Node {
-                        margin: UiRect::left(Val::Px(10.0)),
-                        ..default()
-                    },
-                ));
             } else {
                 parent.spawn((
                     Text::new("Empty"),

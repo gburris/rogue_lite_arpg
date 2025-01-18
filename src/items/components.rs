@@ -1,51 +1,42 @@
 use bevy::prelude::*;
-use std::{collections::HashMap, fmt};
+
+#[derive(Component, Clone, Debug, Default)]
+pub struct ItemId(u32);
 
 #[derive(Component, Clone, Debug)]
-pub struct Item {
-    pub name: String,
-    pub stats: HashMap<StatType, i32>,
+pub enum EquipmentSlot {
+    Mainhand,
+    Helmet,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum StatType {
-    SpellPower,
-    CastSpeed,
-    AttackDamage,
-    Durability,
+#[derive(Component, Clone, Debug, Default)]
+pub struct ItemName(pub String);
+
+#[derive(Component, Clone, Debug)]
+#[require(ItemName, ItemId)]
+pub struct Sword;
+
+#[derive(Component, Clone, Debug)]
+#[require(ItemName, ItemId)]
+pub struct HealthPotion;
+
+pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
+    commands
+        .spawn((
+            ItemName("Health Potion".to_string()),
+            HealthPotion,
+            ItemId(3),
+        ))
+        .id()
 }
 
-impl fmt::Display for StatType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let stat_name = match self {
-            StatType::SpellPower => "Spell Power",
-            StatType::CastSpeed => "Cast SimpleMotion",
-            StatType::AttackDamage => "Attack Damage",
-            StatType::Durability => "Durability",
-        };
-        write!(f, "{}", stat_name)
-    }
-}
-
-impl Item {
-    pub fn new(name: &str) -> Self {
-        Item {
-            name: name.to_string(),
-            stats: HashMap::new(),
-        }
-    }
-
-    pub fn add_stat(&mut self, stat_type: StatType, value: i32) {
-        self.stats.insert(stat_type, value);
-    }
-
-    pub fn modify_stat(&mut self, stat_type: StatType, value: i32) {
-        if let Some(stat) = self.stats.get_mut(&stat_type) {
-            *stat = value;
-        }
-    }
-
-    pub fn get_stat(&self, stat_type: &StatType) -> Option<i32> {
-        self.stats.get(stat_type).copied()
-    }
+pub fn spawn_sword(commands: &mut Commands) -> Entity {
+    commands
+        .spawn((
+            ItemName("Sword".to_string()),
+            EquipmentSlot::Mainhand,
+            Sword,
+            ItemId(3),
+        ))
+        .id()
 }

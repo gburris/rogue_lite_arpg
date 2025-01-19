@@ -7,6 +7,7 @@ pub struct DamagePlugin;
 impl Plugin for DamagePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, handle_invulnerability.in_set(InGameSet::Simulation))
-            .add_observer(on_damage_event);
+            .add_observer(on_damage_event)
+            .add_observer(on_remove_invulnerable);
     }
 }

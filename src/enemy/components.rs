@@ -1,7 +1,10 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::{combat::damage::components::Health, movement::components::SimpleMotion};
+use crate::{
+    combat::damage::components::{CollisionDamage, Health},
+    movement::components::SimpleMotion,
+};
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
@@ -17,17 +20,5 @@ pub struct Experience {
 impl Default for Experience {
     fn default() -> Self {
         Experience { base_exp: 10 }
-    }
-}
-
-//How much damage an enemy does when it collides with you
-#[derive(Component, Clone)]
-pub struct CollisionDamage {
-    pub damage: f32,
-}
-
-impl Default for CollisionDamage {
-    fn default() -> Self {
-        CollisionDamage { damage: 10.1 }
     }
 }

@@ -1,11 +1,8 @@
-use bevy::prelude::*;
-
-use crate::labels::sets::InGameSet;
-pub mod events;
 mod handle_collisions;
 
-pub use events::EnemyCollidesWithPlayer;
-pub use handle_collisions::handle_collisions;
+use bevy::prelude::*;
+
+use crate::{collision::handle_collisions::handle_collisions, labels::sets::InGameSet};
 
 pub struct CollisionPlugin;
 

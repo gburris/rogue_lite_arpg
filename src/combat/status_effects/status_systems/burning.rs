@@ -24,7 +24,6 @@ pub fn while_burning(
                     DamageEvent {
                         damage_source: None,
                         damage: burn.damage,
-                        makes_invulnerable: false,
                     },
                     entity,
                 );

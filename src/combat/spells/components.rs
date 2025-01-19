@@ -1,11 +1,11 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{combat::projectile::Projectile, helpers::labels::GameCollisionLayer};
+use crate::{combat::projectile::components::Projectile, helpers::labels::GameCollisionLayer};
 
 #[derive(Component)]
 #[require(
-    Projectile(default_spell_projectile),
+    Projectile,
     RigidBody(default_spell_rigid_body),
     Collider(default_spell_collider),
     CollisionLayers(default_spell_collision_layers)
@@ -21,10 +21,6 @@ fn default_spell_collider() -> Collider {
 
 fn default_spell_rigid_body() -> RigidBody {
     RigidBody::Dynamic
-}
-
-fn default_spell_projectile() -> Projectile {
-    Projectile::new(300.0)
 }
 
 fn default_spell_collision_layers() -> CollisionLayers {

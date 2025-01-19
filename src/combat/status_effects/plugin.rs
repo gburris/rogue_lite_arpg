@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::projectile::events::ProjectileHitEvent,
     combat::status_effects::{handle_statuses::*, status_systems::*},
     labels::sets::InGameSet,
 };
@@ -10,8 +9,7 @@ pub struct StatusEffectPlugin;
 
 impl Plugin for StatusEffectPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ProjectileHitEvent>()
-            .add_observer(on_effect_apply)
+        app.add_observer(on_effect_apply)
             .add_observer(on_status_apply)
             .add_systems(
                 Update,

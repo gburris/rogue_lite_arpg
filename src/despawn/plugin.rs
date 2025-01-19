@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
-    combat::projectile::Projectile,
+    combat::projectile::components::Projectile,
     despawn::{events::CleanupCurrentWorldSpace, systems::*},
     enemy::Enemy,
     labels::sets::InGameSet,

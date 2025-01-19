@@ -10,11 +10,28 @@ pub struct Inventory {
 impl Inventory {
     pub fn add_item(&mut self, item: Entity) -> Result<(), String> {
         if self.items.len() < self.max_capacity {
-            let slot = self.items.len() as u8;
+            // Find the first available slot
+            let slot = (0..self.max_capacity as u8)
+                .find(|i| !self.items.contains_key(i))
+                .ok_or_else(|| "No available slots".to_string())?;
+
             self.items.insert(slot, item);
             Ok(())
         } else {
             Err("Inventory is full".to_string())
+        }
+    }
+
+    pub fn remove_item(&mut self, item: Entity) -> Result<(), String> {
+        if let Some(slot) = self
+            .items
+            .iter()
+            .find_map(|(&k, &v)| if v == item { Some(k) } else { None })
+        {
+            self.items.remove(&slot);
+            Ok(())
+        } else {
+            Err("Item not found in inventory".to_string())
         }
     }
 

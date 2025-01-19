@@ -1,85 +1,76 @@
 use crate::{
-    items::{EquipmentSlot, EquipmentSprite},
-    player::{components::PlayerEquipmentSlots, Inventory, Player},
-    ui::button_interactions::EquipEvent,
+    items::{EquipmentSlot, ItemName},
+    player::{components::PlayerEquipmentSlots, equip_item, Inventory, Player},
+    ui::button_interactions::TryEquipEvent,
 };
 use bevy::prelude::*;
 
-pub fn handle_equip_event(
-    trigger: Trigger<EquipEvent>,
+#[derive(Event)]
+pub struct EquipSuccessEvent {
+    pub item_entity: Entity,
+    pub previous_item: Option<Entity>,
+}
+
+pub fn handle_try_equip_event(
+    try_equip_trigger: Trigger<TryEquipEvent>,
     mut commands: Commands,
     mut equipment_query: Query<&mut PlayerEquipmentSlots>,
-    mut source_query: Query<(Entity, &mut Inventory)>, // Ensure this is mutable
-    equipment_slot_query: Query<&EquipmentSlot>,
-    player_query: Query<Entity, With<Player>>,
-    mut equipment_sprite_query: Query<&mut EquipmentSprite>, // Make it mutable to modify it
+    mut inventory_query: Query<&mut Inventory>,
+    slot_query: Query<&EquipmentSlot>,
 ) {
-    let Ok(mut player_equipment) = equipment_query.get_single_mut() else {
-        warn!("No player equipment found");
-        return;
-    };
+    if let Ok(mut equipment_slots) = equipment_query.get_single_mut() {
+        if let Some(previous_item) = equip_item(
+            &mut commands,
+            &mut equipment_slots,
+            try_equip_trigger.item_entity,
+            &slot_query,
+        ) {
+            //Case where there was already something in the slot
+            if let Ok(mut inventory) = inventory_query.get_single_mut() {
+                inventory.remove_item(try_equip_trigger.item_entity);
+                inventory.add_item(previous_item);
+            }
+            commands.trigger(EquipSuccessEvent {
+                item_entity: try_equip_trigger.item_entity,
+                previous_item: Some(previous_item),
+            });
+        } else {
+            if let Ok(mut inventory) = inventory_query.get_single_mut() {
+                inventory.remove_item(try_equip_trigger.item_entity);
+            }
+            commands.trigger(EquipSuccessEvent {
+                item_entity: try_equip_trigger.item_entity,
+                previous_item: None,
+            });
+        }
+    }
+}
 
+pub fn handle_equip_success_event(
+    equip_success_trigger: Trigger<EquipSuccessEvent>,
+    player_query: Query<Entity, With<Player>>,
+    mut commands: Commands,
+    mut visibility_query: Query<&mut Visibility>,
+) {
     let Ok(player_entity) = player_query.get_single() else {
-        warn!("Player entity not found");
         return;
     };
 
-    let Ok((_player_entity, mut inventory)) = source_query.get_single_mut() else {
-        // Use get_single_mut
-        warn!("No player inventory found");
-        return;
-    };
-
-    // Use item_entity instead of trigger.entity()
-    let Ok(slot_type) = equipment_slot_query.get(trigger.item_entity) else {
-        warn!("No equipment slot type found for entity");
-        return;
-    };
-
-    let Ok(equipment_sprite) = equipment_sprite_query.get_mut(trigger.item_entity) else {
-        warn!("No equipment sprite found for entity");
-        return;
-    };
-
-    // Apply the equipment sprite's offset and scale to the sprite
-    if let Some(slot) = inventory
-        .items
-        .iter()
-        .find(|(_, &entity)| entity == trigger.item_entity)
-        .map(|(&slot, _)| slot)
-    {
-        // Perform the removal separately to avoid borrow conflicts
-        inventory.items.remove(&slot);
-
-        // Equip the new item
-        if *slot_type == EquipmentSlot::Mainhand {
-            player_equipment.mainhand = Some(trigger.item_entity);
-            commands
-                .entity(player_entity)
-                .add_child(trigger.item_entity);
-
-            // Apply the equipment sprite offset and scale to the sprite
-            commands.entity(trigger.item_entity).insert(Transform {
-                translation: equipment_sprite.offset,
-                scale: equipment_sprite.scale,
-                rotation: equipment_sprite.rotation,
-                ..Default::default()
-            });
+    // If there was a previous item, remove it from the player
+    if let Some(previous_item) = equip_success_trigger.previous_item {
+        commands
+            .entity(player_entity)
+            .remove_children(&[previous_item]);
+        if let Ok(mut visibility) = visibility_query.get_mut(previous_item) {
+            *visibility = Visibility::Hidden;
         }
+    }
 
-        if *slot_type == EquipmentSlot::Helmet {
-            player_equipment.head = Some(trigger.item_entity);
-            commands
-                .entity(player_entity)
-                .add_child(trigger.item_entity);
-
-            // Apply the equipment sprite offset and scale to the sprite
-            commands.entity(trigger.item_entity).insert(Transform {
-                translation: equipment_sprite.offset,
-                scale: equipment_sprite.scale,
-                rotation: equipment_sprite.rotation,
-                ..Default::default()
-            });
-        }
+    // Add the new item as a child of the player
+    commands
+        .entity(player_entity)
+        .add_child(equip_success_trigger.item_entity);
+    if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
+        *visibility = Visibility::Visible;
     }
 }

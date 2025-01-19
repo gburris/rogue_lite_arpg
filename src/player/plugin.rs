@@ -34,7 +34,8 @@ impl Plugin for PlayerPlugin {
                     .in_set(InGameSet::Simulation),
             )
             .add_observer(reset_player_position)
-            .add_observer(handle_equip_event)
+            .add_observer(handle_try_equip_event)
+            .add_observer(handle_equip_success_event)
             .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .insert_resource(PlayerSize { x: 256.0, y: 256.0 });

@@ -16,7 +16,7 @@ pub struct InventoryItemClicked {
 }
 
 #[derive(Event)]
-pub struct EquipEvent {
+pub struct TryEquipEvent {
     pub item_entity: Entity,
 }
 
@@ -75,7 +75,7 @@ pub fn handle_inventory_click(
         }
 
         if equipable_query.contains(item_entity) {
-            commands.trigger(EquipEvent {
+            commands.trigger(TryEquipEvent {
                 item_entity: item_entity,
             });
         }

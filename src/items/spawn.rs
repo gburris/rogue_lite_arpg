@@ -1,6 +1,4 @@
-use super::{
-    Consumable, ConsumableEffect, ConsumableType, Equipable, EquipmentSprite, Helmet, ItemName,
-};
+use super::{Consumable, ConsumableEffect, ConsumableType, Equipable, Helmet, ItemName, Shovel};
 use crate::{
     configuration::assets::SpriteAssets,
     items::{EquipmentSlot, HealthPotion, ItemId, Sword},
@@ -29,13 +27,28 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             Sword,
             Equipable,
             ItemId(3),
+            Visibility::Hidden,
             Sprite::from_image(sprites.sword_equipment_sripte.clone()),
-            EquipmentSprite {
-                sprite: Sprite::from_image(sprites.sword_equipment_sripte.clone()),
-                offset: Vec3::new(-65.0, -20.0, 0.1),
-                scale: Vec3::new(0.2, 0.3, 0.2),
-                rotation: Quat::from_rotation_z(90.0_f32.to_radians()),
-            },
+            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
+                .with_scale(Vec3::new(0.2, 0.3, 0.2))
+                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
+        ))
+        .id()
+}
+
+pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+    commands
+        .spawn((
+            ItemName("Shovel".to_string()),
+            EquipmentSlot::Mainhand,
+            Shovel,
+            Equipable,
+            ItemId(3),
+            Visibility::Hidden,
+            Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
+            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
+                .with_scale(Vec3::new(0.2, 0.3, 0.2))
+                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
         .id()
 }
@@ -48,13 +61,10 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             Helmet,
             Equipable,
             ItemId(3),
+            Visibility::Hidden,
             Sprite::from_image(sprites.helmet_equipment_sripte.clone()),
-            EquipmentSprite {
-                sprite: Sprite::from_image(sprites.helmet_equipment_sripte.clone()),
-                offset: Vec3::new(-30.0, 40.0, 0.1),
-                scale: Vec3::new(0.2, 0.3, 0.2),
-                rotation: Quat::default(),
-            },
+            Transform::from_translation(Vec3::new(-30.0, 40.0, 0.1))
+                .with_scale(Vec3::new(0.2, 0.3, 0.2)),
         ))
         .id()
 }

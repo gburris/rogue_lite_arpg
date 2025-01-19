@@ -1,14 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    labels::states::{AppState, PausedState},
-    player::{systems::PauseInputEvent, PlayerEquipmentSlots},
-};
-
-use super::{
-    inventory_menu::{InventoryItemButton, InventoryItemClicked},
-    main_menu::MenuButton,
-};
+use crate::{labels::states::AppState, player::systems::PauseInputEvent};
 
 pub fn handle_ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<ButtonInput<KeyCode>>) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {

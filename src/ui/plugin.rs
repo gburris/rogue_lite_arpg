@@ -8,7 +8,7 @@ use crate::labels::{
 use super::{
     button_interactions, equipment_menu,
     game_over_screen::{self, handle_restart_button},
-    game_overlay, input, main_menu, pause_screen, stats_menu, time_control,
+    game_overlay, input, inventory_menu, main_menu, pause_screen, stats_menu, time_control,
 };
 
 /// Plugin responsible for managing all UI-related systems and state transitions
@@ -22,7 +22,6 @@ impl Plugin for UIPlugin {
             .add_systems(OnEnter(AppState::SpawnPlayer), game_overlay::spawn)
             .add_systems(Update, game_overlay::update.in_set(InGameSet::HudOverlay))
             // Pause Related Systems
-            .add_observer(button_interactions::handle_inventory_click)
             .add_observer(input::on_pause_input)
             .add_systems(Update, input::handle_ui_inputs.in_set(MainSet::Menu))
             .add_systems(
@@ -55,13 +54,16 @@ impl Plugin for UIPlugin {
                 equipment_menu::despawn_equipment_menu,
             )
             // Inventory menu systems
+            .add_observer(button_interactions::handle_inventory_click)
+            .add_observer(inventory_menu::handle_inventory_update)
             .add_systems(
                 OnEnter(PausedState::Inventory),
                 inventory_menu::spawn_inventory_menu,
             )
             .add_systems(
                 Update,
-                handle_inventory_interactions.run_if(in_state(PausedState::Inventory)),
+                button_interactions::handle_inventory_interactions
+                    .run_if(in_state(PausedState::Inventory)),
             )
             .add_systems(
                 OnExit(PausedState::Inventory),

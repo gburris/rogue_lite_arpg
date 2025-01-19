@@ -9,7 +9,7 @@ use bevy::prelude::*;
 pub struct MainMenu;
 
 #[derive(Component)]
-pub struct MenuButton(PausedState);
+pub struct MenuButton(pub PausedState);
 
 #[derive(Clone, Copy)]
 enum MenuButtonConfig {

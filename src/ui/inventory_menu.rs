@@ -1,6 +1,7 @@
 use crate::{items::ItemName, player::Inventory};
 use bevy::prelude::*;
-use rand::Rng;
+
+use super::button_interactions::InventoryUpdatedEvent;
 
 #[derive(Component)]
 pub struct InventoryMenu;
@@ -103,6 +104,10 @@ pub struct InventoryItemButton {
     pub item_entity: Option<Entity>, // None for empty slots
 }
 
+// Add these new components
+#[derive(Component)]
+pub struct InventoryItemName;
+
 // Modified spawn_inventory_item function
 fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_entity: Entity) {
     builder
@@ -129,6 +134,8 @@ fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_enti
         .with_children(|parent| {
             parent.spawn((
                 Text::new(item_name),
+                TextColor::default(),
+                InventoryItemName,
                 TextFont {
                     font_size: 24.0,
                     ..default()
@@ -180,4 +187,20 @@ pub fn despawn_inventory_menu(
     for entity in inventory_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+//Called after dispatching a click event
+pub fn handle_inventory_update(
+    _: Trigger<InventoryUpdatedEvent>,
+    mut commands: Commands,
+    inventory_menu_query: Query<Entity, With<InventoryMenu>>,
+    item_query: Query<&ItemName>,
+    player_inventory: Query<&Inventory>,
+) {
+    // Despawn the existing inventory menu
+    for entity in inventory_menu_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    // Respawn the inventory menu
+    spawn_inventory_menu(commands, item_query, player_inventory);
 }

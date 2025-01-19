@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use game_dev_project::{
     collision::CollisionPlugin,
-    combat::{
-        damage::DamagePlugin, projectile::ProjectilePlugin,
-        status_effects::plugin::StatusEffectPlugin,
-    },
+    combat::{damage::DamagePlugin, status_effects::plugin::StatusEffectPlugin},
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
@@ -29,13 +26,7 @@ fn main() {
             StatusEffectPlugin,
         ))
         // Entity-domain plugins (map, player, enemy, npc, etc..)
-        .add_plugins((
-            MapPlugin,
-            PlayerPlugin,
-            EnemyPlugin,
-            ProjectilePlugin,
-            NPCPlugin,
-        ))
+        .add_plugins((MapPlugin, PlayerPlugin, EnemyPlugin, NPCPlugin))
         // Additional plugins group
         .add_plugins(UIPlugin)
         .run();

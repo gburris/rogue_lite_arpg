@@ -1,8 +1,10 @@
+use std::time::Duration;
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::components::Health,
+    combat::damage::components::{HasIFrames, Health},
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
     items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
@@ -32,6 +34,9 @@ pub fn player_setup(
             LockedAxes::new().lock_rotation(),
             Health::new(100.0),
             inventory,
+            HasIFrames {
+                duration: Duration::from_secs(1),
+            },
             PlayerEquipmentSlots::default(),
             RigidBody::Dynamic,
             Collider::rectangle(100.0, 100.0),

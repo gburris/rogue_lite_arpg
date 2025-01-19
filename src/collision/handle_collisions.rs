@@ -2,9 +2,10 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    collision::EnemyCollidesWithPlayer,
-    combat::projectile::{events::ProjectileHitEvent, Projectile},
-    enemy::{CollisionDamage, Enemy},
+    combat::damage::{
+        components::CollisionDamage,
+        events::{DamageEvent, DealtDamageEvent},
+    },
     map::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
@@ -18,46 +19,29 @@ use crate::{
 pub fn handle_collisions(
     mut commands: Commands,
     mut collision_events_started: EventReader<CollisionStarted>,
-    mut projectile_hit_event: EventWriter<ProjectileHitEvent>,
     mut warpzone_enter_event_writer: EventWriter<WarpZoneEnterEvent>,
     mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
-    projectile_query: Query<Entity, With<Projectile>>,
-    enemy_query: Query<(Entity, &CollisionDamage), With<Enemy>>,
+    damager_query: Query<(Entity, &CollisionDamage)>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
         for (e1, e2) in [(*e1, *e2), (*e2, *e1)] {
-            // Checks if one of the entities is a projectile and one is an enemy
-            if let Ok(projectile_entity) = projectile_query.get(e1) {
-                if let Ok((enemy_entity, _)) = enemy_query.get(e2) {
-                    debug!(
-                        "Enemy {} collided with projectile {}",
-                        enemy_entity, projectile_entity
-                    );
-                    projectile_hit_event.send(ProjectileHitEvent {
-                        projectile: projectile_entity,
-                        enemy: enemy_entity,
-                    });
-                    // Once we find a match we go to the next collision
-                    break;
-                }
-            }
+            //
+            if let Ok((damager_entity, collision_damage)) = damager_query.get(e1) {
+                commands.trigger_targets(
+                    DamageEvent {
+                        damage: collision_damage.damage,
+                        damage_source: Some(damager_entity),
+                    },
+                    e2,
+                );
 
-            if let Ok(_player_entity) = player_query.get(e1) {
-                debug!("Player collision start");
-                if let Ok((enemy_entity, collision_damage)) = enemy_query.get(e2) {
-                    debug!("Enemy Collided With Player");
-                    commands.trigger_targets(
-                        EnemyCollidesWithPlayer {
-                            collision_damage: collision_damage.clone(),
-                        },
-                        enemy_entity,
-                    );
-                    // Once we find a match we go to the next collision
-                    break;
-                }
+                commands.trigger_targets(DealtDamageEvent, damager_entity);
+
+                // Even if e1 -> e2 does damage, we need to check if e2 -> e1 does damage too
+                continue;
             }
 
             if let Ok(portal) = portal_query.get(e1) {
@@ -72,6 +56,7 @@ pub fn handle_collisions(
                             warpzone_enter_event_writer.send(WarpZoneEnterEvent);
                         }
                     }
+                    // Once we find a match we go to the next collision
                     break;
                 }
             }

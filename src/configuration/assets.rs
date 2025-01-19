@@ -19,6 +19,12 @@ impl Plugin for AssetLoadingPlugin {
 pub struct SpriteAssets {
     #[asset(path = "skeleton.png")]
     pub skeleton_player: Handle<Image>,
+    #[asset(path = "sword.png")]
+    pub sword_equipment_sripte: Handle<Image>,
+    #[asset(path = "helmet.png")]
+    pub helmet_equipment_sripte: Handle<Image>,
+    #[asset(path = "shovel.png")]
+    pub shovel_equipment_sprite: Handle<Image>,
     #[asset(path = "merman.png")]
     pub merman_enemy: Handle<Image>,
     #[asset(path = "merman_on_fire.png")]

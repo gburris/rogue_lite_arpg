@@ -47,6 +47,7 @@ pub fn player_setup(
                     GameCollisionLayer::Interaction,
                     GameCollisionLayer::Portal,
                     GameCollisionLayer::Enemy,
+                    GameCollisionLayer::Wall,
                 ],
             ),
             Sprite::from_image(sprites.skeleton_player.clone()),

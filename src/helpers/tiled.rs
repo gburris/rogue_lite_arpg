@@ -277,7 +277,6 @@ pub fn process_loaded_maps(
                         };
 
                         let tiled::TileLayer::Finite(layer_data) = tile_layer else {
-
                             continue;
                         };
 

@@ -276,6 +276,7 @@ pub fn generate_tilemap(
                     GameCollisionLayer::Player,
                     GameCollisionLayer::Npc,
                     GameCollisionLayer::Enemy,
+                    GameCollisionLayer::Projectile,
                 ],
             ),
             Transform::from_xyz(collider_pos.x, collider_pos.y, 1.0),

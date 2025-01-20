@@ -25,6 +25,7 @@ impl Plugin for MapPlugin {
             OnEnter(AppState::CreateOverworld),
             (generate_tilemap_for_overworld, starting_portal_setup).chain(),
         )
+        //.add_systems(OnExit(InGameState::Run), (despawn_walls).chain())
         .add_systems(
             Update,
             (

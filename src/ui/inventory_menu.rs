@@ -106,7 +106,7 @@ pub struct InventoryItemButton {
 
 // Add these new components
 #[derive(Component)]
-pub struct InventoryItemName;
+pub struct InventoryItemNameText;
 
 // Modified spawn_inventory_item function
 fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_entity: Entity) {
@@ -135,7 +135,7 @@ fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_enti
             parent.spawn((
                 Text::new(item_name),
                 TextColor::default(),
-                InventoryItemName,
+                InventoryItemNameText,
                 TextFont {
                     font_size: 24.0,
                     ..default()

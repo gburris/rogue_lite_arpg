@@ -6,11 +6,12 @@ use bevy::prelude::*;
 pub struct EquipmentMenu;
 
 #[derive(Component)]
-pub struct EquipmentMenuButton;
+pub struct EquipmentItemText;
 
 #[derive(Component)]
-pub struct EquipmentSlotDisplay;
-
+pub struct EquipmentButton {
+    pub item_entity: Option<Entity>,
+}
 pub fn spawn_equipment_menu(
     mut commands: Commands,
     item_query: Query<&ItemName>,
@@ -52,7 +53,6 @@ pub fn spawn_equipment_menu(
                 // Equipment slots container with scrolling
                 parent
                     .spawn((
-                        EquipmentSlotDisplay,
                         Node {
                             width: Val::Px(600.0),
                             height: Val::Percent(80.0), // Limit height to percentage of screen
@@ -93,12 +93,19 @@ fn spawn_equipment_slot(
                 align_items: AlignItems::Center,
                 ..default()
             },
+            EquipmentButton {
+                item_entity: *slot_entity,
+            },
+            Interaction::default(),
+            Button,
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         ))
         .with_children(|parent| {
             // Slot name
             parent.spawn((
                 Text::new(slot_name),
+                EquipmentItemText,
+                TextColor::default(), // Add this line
                 TextFont {
                     font_size: 24.0,
                     ..default()
@@ -113,6 +120,13 @@ fn spawn_equipment_slot(
                 if let Ok(item_name) = item_query.get(*slot_entity) {
                     parent.spawn((
                         Text::new(item_name.0.clone()),
+                        TextColor::default(), // Add this line
+                        EquipmentItemText,
+                        EquipmentButton {
+                            item_entity: Some(*slot_entity),
+                        },
+                        Interaction::default(),
+                        Button,
                         TextFont {
                             font_size: 20.0,
                             ..default()
@@ -147,4 +161,22 @@ pub fn despawn_equipment_menu(
     for entity in equipment_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+#[derive(Event)]
+pub struct EquipmentUIUpdatedEvent;
+
+pub fn handle_equipment_update(
+    _: Trigger<EquipmentUIUpdatedEvent>,
+    mut commands: Commands,
+    eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
+    item_query: Query<&ItemName>,
+    player_equipment_slots: Query<&PlayerEquipmentSlots>,
+) {
+    // Despawn the existing inventory menu
+    for entity in eqipment_menu_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    // Respawn the inventory menu
+    spawn_equipment_menu(commands, item_query, player_equipment_slots);
 }

@@ -1,5 +1,5 @@
 use crate::{
-    items::{EquipmentSlot, ItemName},
+    items::EquipmentSlot,
     player::{components::PlayerEquipmentSlots, equip_item, Inventory, Player},
     ui::button_interactions::TryEquipEvent,
 };
@@ -20,15 +20,14 @@ pub fn handle_try_equip_event(
 ) {
     if let Ok(mut equipment_slots) = equipment_query.get_single_mut() {
         if let Some(previous_item) = equip_item(
-            &mut commands,
             &mut equipment_slots,
             try_equip_trigger.item_entity,
             &slot_query,
         ) {
             //Case where there was already something in the slot
             if let Ok(mut inventory) = inventory_query.get_single_mut() {
-                inventory.remove_item(try_equip_trigger.item_entity);
-                inventory.add_item(previous_item);
+                let _ = inventory.remove_item(try_equip_trigger.item_entity);
+                let _ = inventory.add_item(previous_item);
             }
             commands.trigger(EquipSuccessEvent {
                 item_entity: try_equip_trigger.item_entity,
@@ -36,7 +35,7 @@ pub fn handle_try_equip_event(
             });
         } else {
             if let Ok(mut inventory) = inventory_query.get_single_mut() {
-                inventory.remove_item(try_equip_trigger.item_entity);
+                let _ = inventory.remove_item(try_equip_trigger.item_entity);
             }
             commands.trigger(EquipSuccessEvent {
                 item_entity: try_equip_trigger.item_entity,

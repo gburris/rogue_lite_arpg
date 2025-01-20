@@ -45,9 +45,16 @@ impl Plugin for UIPlugin {
             )
             .add_systems(OnExit(PausedState::MainMenu), main_menu::despawn_main_menu)
             // Equipment menu systems
+            .add_observer(button_interactions::handle_equipment_click)
+            .add_observer(equipment_menu::handle_equipment_update)
             .add_systems(
                 OnEnter(PausedState::Equipment),
                 equipment_menu::spawn_equipment_menu,
+            )
+            .add_systems(
+                Update,
+                button_interactions::handle_equipment_interactions
+                    .run_if(in_state(PausedState::Equipment)),
             )
             .add_systems(
                 OnExit(PausedState::Equipment),

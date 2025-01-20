@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use crate::{
     animation::animate_sprite,
-    combat::spells::cast_spell_system,
     labels::{sets::InGameSet, states::AppState},
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
@@ -19,10 +18,10 @@ impl Plugin for PlayerPlugin {
                 (
                     (
                         player_movement,
+                        update_player_aim_position,
                         face_cursor_system,
                         draw_cursor,
                         enforce_map_bounds,
-                        cast_spell_system,
                         animate_sprite,
                         on_player_experience_change,
                         animate_level_up,

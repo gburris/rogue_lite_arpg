@@ -1,5 +1,6 @@
 use super::{Consumable, ConsumableEffect, ConsumableType, Equipable, Helmet, ItemName, Shovel};
 use crate::{
+    combat::weapon::{projectile_weapon::ProjectileWeapon, weapon::Weapon},
     configuration::assets::SpriteAssets,
     items::{EquipmentSlot, HealthPotion, ItemId, Sword},
 };
@@ -65,6 +66,21 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             Sprite::from_image(sprites.helmet_equipment_sripte.clone()),
             Transform::from_translation(Vec3::new(-30.0, 40.0, 0.1))
                 .with_scale(Vec3::new(0.2, 0.3, 0.2)),
+        ))
+        .id()
+}
+
+pub fn spawn_fire_staff(commands: &mut Commands) -> Entity {
+    commands
+        .spawn((
+            ItemName("Staff of flames".to_string()),
+            ItemId(6),
+            EquipmentSlot::Mainhand,
+            Equipable,
+            Weapon::default(),
+            ProjectileWeapon::default(),
+            Visibility::Hidden,
+            Transform::default(),
         ))
         .id()
 }

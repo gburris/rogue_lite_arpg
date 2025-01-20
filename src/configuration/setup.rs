@@ -7,6 +7,9 @@ use crate::{
     progression::components::GameProgress,
 };
 
+#[derive(Component)]
+pub struct CursorCoordinates;
+
 pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {

@@ -1,5 +1,7 @@
+use std::thread::spawn;
+
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemId, prelude::*, utils::HashMap};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
@@ -11,9 +13,34 @@ use crate::{
             components::{BurningStatus, EffectsList, StatusType},
             events::ApplyStatus,
         },
+        weapon::projectile_weapon::ProjectileWeapon,
     },
     configuration::assets::SpriteAssets,
+    player::systems::AimPosition,
 };
+
+/// For this simple example, we will just organize our systems
+/// using string keys in a hash map.
+#[derive(Resource)]
+pub struct ProjectileSpawners(pub HashMap<String, SystemId>);
+
+pub fn spawn_fire_projectile(
+    In(image): In<&Handle<Image>>,
+    In(caster_pos): In<Vec2>,
+    In(caster_aim_pos): In<Vec2>,
+    mut commands: Commands,
+    mut weapon_query: Query<(&mut ProjectileWeapon, &Parent)>,
+    holder_query: Query<(&Transform, &AimPosition)>,
+) {
+    SpellFactory::spawn_spell(
+        &mut commands,
+        Spell::Fireball,
+        image,
+        caster_pos,
+        caster_aim_pos,
+        todo!(),
+    );
+}
 
 pub struct SpellFactory;
 
@@ -21,20 +48,29 @@ impl SpellFactory {
     pub fn spawn_spell(
         commands: &mut Commands,
         spell: Spell,
-        caster_transform: Transform,
-        sprites: &Res<SpriteAssets>,
+        caster_position: Vec2,
+        caster_aim_position: Vec2,
+        spell_image: &Handle<Image>,
         texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
     ) {
         let spell_speed = 300.0;
-        let direction = Mat3::from_quat(caster_transform.rotation).x_axis;
-        let velocity = (direction * spell_speed).truncate();
+        let angle = caster_position.angle_to(caster_aim_position);
+
+        let mut transform = Transform {
+            translation: caster_position.extend(0.0),
+            ..default()
+        };
+
+        transform.rotate_z(angle);
+        let direction = Vec3::from(transform.rotation.to_euler(EulerRot::XYZ)).truncate();
+        let velocity = direction * spell_speed;
 
         match spell {
             Spell::Fireball => {
                 commands
                     .spawn((
                         spell,
-                        caster_transform,
+                        transform,
                         CollisionDamage::default(),
                         LinearVelocity(velocity),
                         EffectsList {
@@ -43,13 +79,13 @@ impl SpellFactory {
                                 duration: 2.0,
                             }],
                         },
-                        Sprite::from_image(sprites.fire_bolt.clone()),
+                        Sprite::from_image(spell_image.clone()),
                     ))
                     .observe(on_damage_dealt_despawn);
             }
             Spell::Icebolt => {
                 let animation_indices = AnimationIndices { first: 0, last: 4 };
-                let texture = sprites.ice_bolt.clone();
+                let texture = spell_image.clone();
                 let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 5, 1, None, None);
                 let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
@@ -71,11 +107,7 @@ impl SpellFactory {
                                 index: animation_indices.first,
                             },
                         ),
-                        Transform {
-                            translation: caster_transform.translation,
-                            rotation: caster_transform.rotation,
-                            scale: Vec3::splat(2.0),
-                        },
+                        transform,
                         animation_indices,
                         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
                     ))

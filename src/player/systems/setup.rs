@@ -15,6 +15,11 @@ use crate::{
     },
 };
 
+#[derive(Component, Default)]
+pub struct AimPosition {
+    pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
+}
+
 pub fn player_setup(
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
@@ -30,6 +35,7 @@ pub fn player_setup(
         .spawn((
             Player,
             PlayerStats::default(),
+            AimPosition::default(),
             SimpleMotion::new(600.0),
             LockedAxes::new().lock_rotation(),
             Health::new(100.0),

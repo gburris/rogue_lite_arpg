@@ -14,6 +14,7 @@ impl Plugin for EnemyPlugin {
             timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
             quantity: 1,
         })
+        .add_systems(Startup, setup_enemy_assets)
         .add_systems(
             Update,
             (spawn_enemies_with_timer, move_enemies_toward_player)

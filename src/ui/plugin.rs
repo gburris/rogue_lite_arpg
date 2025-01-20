@@ -1,13 +1,10 @@
 use bevy::prelude::*;
 
-use crate::labels::{
-    sets::{InGameSet, MainSet},
-    states::AppState,
-};
+use crate::labels::{sets::InGameSet, states::AppState};
 
 use super::{
     game_over_screen::{self, handle_restart_button},
-    game_overlay,
+    game_overlay, start_screen,
 };
 
 /// Plugin responsible for managing all UI-related systems and state transitions
@@ -17,6 +14,20 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         // Game UI systems
         app
+            //Start screen
+            .add_systems(
+                OnEnter(AppState::StartScreen),
+                start_screen::spawn_start_screen,
+            )
+            .add_systems(
+                OnExit(AppState::StartScreen),
+                start_screen::despawn_start_screen,
+            )
+            .add_systems(
+                Update,
+                (start_screen::button_system, start_screen::animate_text)
+                    .run_if(in_state(AppState::StartScreen)),
+            )
             // Core game overlay (HUD)
             .add_systems(OnEnter(AppState::SpawnPlayer), game_overlay::spawn)
             .add_systems(Update, game_overlay::update.in_set(InGameSet::HudOverlay))
@@ -28,9 +39,7 @@ impl Plugin for UIPlugin {
             )
             .add_systems(
                 Update,
-                handle_restart_button
-                    .run_if(in_state(AppState::GameOver))
-                    .in_set(MainSet::Menu),
+                handle_restart_button.run_if(in_state(AppState::GameOver)),
             );
     }
 }

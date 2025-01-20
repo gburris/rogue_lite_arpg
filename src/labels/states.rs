@@ -3,6 +3,7 @@ use bevy::prelude::*;
 #[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
 pub enum AppState {
     #[default]
+    StartScreen,
     AssetLoading,
     CreateOverworld,
     SpawnPlayer, // Also creates player overlay UI

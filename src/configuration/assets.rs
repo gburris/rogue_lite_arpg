@@ -16,7 +16,15 @@ impl Plugin for AssetLoadingPlugin {
 }
 
 #[derive(AssetCollection, Resource)]
+pub struct FontAssets {
+    #[asset(path = "font.otf")]
+    pub game_font: Handle<Font>,
+}
+
+#[derive(AssetCollection, Resource)]
 pub struct SpriteAssets {
+    #[asset(path = "font.otf")]
+    pub game_font: Handle<Font>,
     #[asset(path = "skeleton.png")]
     pub skeleton_player: Handle<Image>,
     #[asset(path = "sword.png")]

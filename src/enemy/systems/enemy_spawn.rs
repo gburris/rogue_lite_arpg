@@ -4,8 +4,7 @@ use rand::Rng;
 
 use crate::{
     combat::damage::components::Health,
-    configuration::assets::SpriteAssets,
-    enemy::{resources::EnemySpawnConfig, systems::on_enemy_defeated, Enemy},
+    enemy::{resources::EnemySpawnConfig, systems::on_enemy_defeated, Enemy, EnemyAssets},
     helpers::labels::GameCollisionLayer,
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
@@ -14,11 +13,12 @@ use crate::{
 
 pub fn spawn_enemies_with_timer(
     mut commands: Commands,
-    sprites: Res<SpriteAssets>,
     time: Res<Time>,
+    enemy_assets: Res<EnemyAssets>,
     mut spawn_config: ResMut<EnemySpawnConfig>,
     mapbounds: Res<MapBounds>,
     player_transform_query: Query<&Transform, With<Player>>,
+    asset_server: Res<AssetServer>,
 ) {
     spawn_config.timer.tick(time.delta());
     if spawn_config.timer.just_finished() {
@@ -38,28 +38,47 @@ pub fn spawn_enemies_with_timer(
                     spawn_position.x -= 30.0;
                     spawn_position.y -= 30.0;
                 }
-                commands
-                    .spawn((
-                        Enemy,
-                        SimpleMotion::new(350.0),
-                        IsMoving(true),
-                        Health::new(30.),
-                        RigidBody::Dynamic,
-                        Collider::rectangle(100.0, 100.0),
-                        // Currently enemies can only collide with projectiles
-                        CollisionLayers::new(
-                            GameCollisionLayer::Enemy,
-                            [
-                                GameCollisionLayer::Projectile,
-                                GameCollisionLayer::Wall,
-                                GameCollisionLayer::Player,
-                            ],
-                        ),
-                        Sprite::from_image(sprites.merman_enemy.clone()),
-                        Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
-                    ))
-                    .observe(on_enemy_defeated);
+                spawn_enemy(
+                    &mut commands,
+                    "Merman",
+                    &enemy_assets,
+                    &asset_server,
+                    spawn_position,
+                );
             }
         }
+    }
+}
+
+fn spawn_enemy(
+    commands: &mut Commands,
+    enemy_name: &str,
+    enemy_assets: &Res<EnemyAssets>,
+    asset_server: &Res<AssetServer>,
+    spawn_position: Vec2,
+) {
+    if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
+        commands
+            .spawn((
+                Enemy,
+                SimpleMotion::new(enemy.simple_motion_speed),
+                IsMoving(true),
+                Health::new(enemy.health),
+                RigidBody::Dynamic,
+                Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
+                CollisionLayers::new(
+                    GameCollisionLayer::Enemy,
+                    [
+                        GameCollisionLayer::Projectile,
+                        GameCollisionLayer::Player,
+                        GameCollisionLayer::Wall,
+                    ],
+                ),
+                Sprite::from_image(asset_server.load(&enemy.sprite_path)),
+                Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
+            ))
+            .observe(on_enemy_defeated);
+    } else {
+        eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }
 }

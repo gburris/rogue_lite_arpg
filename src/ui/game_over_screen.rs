@@ -68,6 +68,7 @@ pub fn despawn_game_over_screen(
         commands.entity(entity).despawn_recursive();
     }
 }
+
 pub fn handle_restart_button(
     mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<AppState>>,

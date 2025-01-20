@@ -1,7 +1,7 @@
 use crate::{
     items::EquipmentSlot,
     player::{components::PlayerEquipmentSlots, unequip_item, Inventory, Player},
-    ui::button_interactions::TryUnequipEvent,
+    ui::pause_menu::button_interactions::TryUnequipEvent,
 };
 use bevy::prelude::*;
 

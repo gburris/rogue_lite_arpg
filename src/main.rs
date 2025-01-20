@@ -10,7 +10,7 @@ use game_dev_project::{
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
-    ui::plugin::UIPlugin,
+    ui::{plugin::UIPlugin, PauseMenuPlugin},
 };
 
 fn main() {
@@ -27,7 +27,7 @@ fn main() {
         ))
         // Entity-domain plugins (map, player, enemy, npc, etc..)
         .add_plugins((MapPlugin, PlayerPlugin, EnemyPlugin, NPCPlugin))
-        // Additional plugins group
-        .add_plugins(UIPlugin)
+        // UI plugins group
+        .add_plugins((UIPlugin, PauseMenuPlugin))
         .run();
 }

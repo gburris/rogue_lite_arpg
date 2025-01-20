@@ -2,7 +2,7 @@ use crate::{
     combat::damage::components::Health,
     items::{ConsumableEffect, ConsumableType},
     player::Inventory,
-    ui::button_interactions::ConsumeEvent,
+    ui::pause_menu::button_interactions::ConsumeEvent,
 };
 use bevy::prelude::*;
 

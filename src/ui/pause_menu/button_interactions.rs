@@ -43,64 +43,27 @@ pub fn handle_equipment_interactions(
     mut menu_item_text: Query<(&mut TextColor, &Parent), With<EquipmentItemText>>,
     mut commands: Commands,
 ) {
-    // debug!("handle_equipment_interactions called");
-
     for (interaction, button, entity) in interaction_query.iter_mut() {
-        debug!(
-            "Processing entity: {:?}, interaction: {:?}, button item_entity: {:?}",
-            entity, interaction, button.item_entity
-        );
-
         // Find the text color component for this button's text
         let text_color = menu_item_text
             .iter_mut()
             .find(|(_, parent)| parent.get() == entity);
 
-        if text_color.is_none() {
-            warn!(
-                "No text color found for button with entity: {:?}, skipping interaction handling",
-                entity
-            );
-        }
-
-        if button.item_entity.is_none() {
-            warn!("Button has no associated item_entity. Skipping this button.");
-            continue;
-        }
-
         match *interaction {
             Interaction::Hovered => {
-                debug!("Interaction::Hovered detected for entity: {:?}", entity);
                 if let Some((mut color, _)) = text_color {
                     *color = TextColor::from(Color::srgb(0.0, 1.0, 1.0));
                     debug!("Updated text color to bright cyan for entity: {:?}", entity);
-                } else {
-                    warn!(
-                        "No associated text color found for Hovered interaction on entity: {:?}",
-                        entity
-                    );
                 }
             }
             Interaction::Pressed => {
-                debug!("Interaction::Pressed detected for entity: {:?}", entity);
                 commands.trigger(EquipmentItemClicked {
                     item_entity: button.item_entity,
                 });
-                debug!(
-                    "Triggered EquipmentItemClicked event for entity: {:?}",
-                    entity
-                );
             }
             Interaction::None => {
-                debug!("Interaction::None detected for entity: {:?}", entity);
                 if let Some((mut color, _)) = text_color {
                     *color = TextColor::default();
-                    debug!("Reset text color to default for entity: {:?}", entity);
-                } else {
-                    warn!(
-                        "No associated text color found for None interaction on entity: {:?}",
-                        entity
-                    );
                 }
             }
         }
@@ -112,7 +75,7 @@ pub fn handle_equipment_click(trigger: Trigger<EquipmentItemClicked>, mut comman
         commands.trigger(TryUnequipEvent {
             item_entity: item_entity,
         });
-        //Redraw inventory
+        //Redraw equipment
         commands.trigger(EquipmentUIUpdatedEvent);
     }
 }

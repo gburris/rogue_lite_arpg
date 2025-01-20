@@ -18,6 +18,35 @@ pub enum TileType {
     Wall,
 }
 
+#[derive(Debug)]
+struct WallSection {
+    start: (u32, u32),
+    end: (u32, u32),
+    is_horizontal: bool,
+}
+
+impl WallSection {
+    fn new(start: (u32, u32), is_horizontal: bool) -> Self {
+        WallSection {
+            start,
+            end: start,
+            is_horizontal,
+        }
+    }
+
+    fn extend(&mut self, pos: (u32, u32)) {
+        self.end = pos;
+    }
+
+    fn length(&self) -> u32 {
+        if self.is_horizontal {
+            self.end.0 - self.start.0 + 1
+        } else {
+            self.end.1 - self.start.1 + 1
+        }
+    }
+}
+
 // Rest of generate_map_layout remains the same...
 // [Previous generate_map_layout implementation]
 
@@ -89,6 +118,65 @@ pub fn generate_map_layout(map_size: TilemapSize) -> Vec<Vec<TileType>> {
     map
 }
 
+fn find_wall_sections(map_layout: &[Vec<TileType>], map_size: TilemapSize) -> Vec<WallSection> {
+    let mut visited = vec![vec![false; map_size.y as usize]; map_size.x as usize];
+    let mut wall_sections = Vec::new();
+
+    for x in 0..map_size.x {
+        for y in 0..map_size.y {
+            if visited[x as usize][y as usize]
+                || map_layout[x as usize][y as usize] != TileType::Wall
+            {
+                continue;
+            }
+
+            // Check horizontal wall
+            if x + 1 < map_size.x && map_layout[(x + 1) as usize][y as usize] == TileType::Wall {
+                let mut section = WallSection::new((x, y), true);
+                let mut current_x = x + 1;
+
+                visited[x as usize][y as usize] = true;
+
+                while current_x < map_size.x
+                    && map_layout[current_x as usize][y as usize] == TileType::Wall
+                {
+                    visited[current_x as usize][y as usize] = true;
+                    section.extend((current_x, y));
+                    current_x += 1;
+                }
+
+                wall_sections.push(section);
+            }
+            // Check vertical wall
+            else if y + 1 < map_size.y
+                && map_layout[x as usize][(y + 1) as usize] == TileType::Wall
+            {
+                let mut section = WallSection::new((x, y), false);
+                let mut current_y = y + 1;
+
+                visited[x as usize][y as usize] = true;
+
+                while current_y < map_size.y
+                    && map_layout[x as usize][current_y as usize] == TileType::Wall
+                {
+                    visited[x as usize][current_y as usize] = true;
+                    section.extend((x, current_y));
+                    current_y += 1;
+                }
+
+                wall_sections.push(section);
+            }
+            // Single wall tile
+            else {
+                visited[x as usize][y as usize] = true;
+                wall_sections.push(WallSection::new((x, y), true));
+            }
+        }
+    }
+
+    wall_sections
+}
+
 pub fn generate_tilemap(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -105,12 +193,12 @@ pub fn generate_tilemap(
     };
 
     let map_layout = generate_map_layout(map_size);
+    let wall_sections = find_wall_sections(&map_layout, map_size);
 
     let mut ground_storage = TileStorage::empty(map_size);
     let mut wall_storage = TileStorage::empty(map_size);
 
     let map_type = TilemapType::Square;
-
     let ground_tilemap_entity = commands.spawn_empty().id();
     let wall_tilemap_entity = commands.spawn_empty().id();
 
@@ -120,24 +208,16 @@ pub fn generate_tilemap(
         y: tilesize.y,
     };
     let grid_size = tile_size.into();
-
-    // Get the centered transform that the tilemap will use
-    let tilemap_transform = get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0);
     let offset = Vec2::new(
         -((map_size.x as f32 * tilesize.x) / 2.0),
         -((map_size.y as f32 * tilesize.y) / 2.0),
     );
 
+    // Spawn tiles without colliders
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
             let color = zone_level.0 % 6;
-
-            // Calculate world position for the tile, accounting for the centered tilemap
-            let world_pos = Vec2::new(
-                x as f32 * tilesize.x + tilesize.x / 2.0,
-                y as f32 * tilesize.y + tilesize.y / 2.0,
-            ) + offset;
 
             match map_layout[x as usize][y as usize] {
                 TileType::Ground => {
@@ -153,28 +233,12 @@ pub fn generate_tilemap(
                 }
                 TileType::Wall => {
                     let wall_entity = commands
-                        .spawn((
-                            TileBundle {
-                                position: tile_pos,
-                                tilemap_id: TilemapId(wall_tilemap_entity),
-                                texture_index: TileTextureIndex(0),
-                                ..Default::default()
-                            },
-                            Wall,
-                            Collider::rectangle(tilesize.x, tilesize.y),
-                            RigidBody::Static,
-                            CollisionLayers::new(
-                                GameCollisionLayer::Wall,
-                                [
-                                    GameCollisionLayer::Player,
-                                    GameCollisionLayer::Npc,
-                                    GameCollisionLayer::Enemy,
-                                    GameCollisionLayer::Projectile,
-                                ],
-                            ),
-                            Transform::from_xyz(world_pos.x, world_pos.y, 1.0),
-                            GlobalTransform::default(),
-                        ))
+                        .spawn(TileBundle {
+                            position: tile_pos,
+                            tilemap_id: TilemapId(wall_tilemap_entity),
+                            texture_index: TileTextureIndex(0),
+                            ..Default::default()
+                        })
                         .id();
                     wall_storage.set(&tile_pos, wall_entity);
                 }
@@ -182,6 +246,44 @@ pub fn generate_tilemap(
         }
     }
 
+    // Spawn colliders for wall sections
+    for section in wall_sections {
+        let start_pos = Vec2::new(
+            section.start.0 as f32 * tilesize.x,
+            section.start.1 as f32 * tilesize.y,
+        ) + offset;
+
+        let length = section.length() as f32;
+        let (width, height) = if section.is_horizontal {
+            (length * tilesize.x, tilesize.y)
+        } else {
+            (tilesize.x, length * tilesize.y)
+        };
+
+        let collider_pos = if section.is_horizontal {
+            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
+        } else {
+            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
+        };
+
+        commands.spawn((
+            Wall,
+            Collider::rectangle(width, height),
+            RigidBody::Static,
+            CollisionLayers::new(
+                GameCollisionLayer::Wall,
+                [
+                    GameCollisionLayer::Player,
+                    GameCollisionLayer::Npc,
+                    GameCollisionLayer::Enemy,
+                ],
+            ),
+            Transform::from_xyz(collider_pos.x, collider_pos.y, 1.0),
+            GlobalTransform::default(),
+        ));
+    }
+
+    // Spawn tilemaps
     commands
         .entity(ground_tilemap_entity)
         .insert(TilemapBundle {
@@ -191,7 +293,7 @@ pub fn generate_tilemap(
             map_type,
             texture: TilemapTexture::Single(ground_texture_handle),
             tile_size,
-            transform: tilemap_transform,
+            transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
             ..Default::default()
         });
 

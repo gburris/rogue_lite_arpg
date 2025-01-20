@@ -2,9 +2,9 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::components::Health, helpers::labels::GameCollisionLayer, movement::components::SimpleMotion
+    combat::damage::components::Health, helpers::labels::GameCollisionLayer,
+    movement::components::SimpleMotion,
 };
-
 
 #[derive(Component)]
 #[require(
@@ -13,7 +13,7 @@ use crate::{
     Collider(|| Collider::rectangle(300.0, 300.0)),
     RigidBody(|| RigidBody::Kinematic),
     CollisionLayers(|| CollisionLayers::new(
-                       GameCollisionLayer::Npc, 
+                       GameCollisionLayer::Npc,
                        [GameCollisionLayer::Player]))
 )]
 pub struct NPC;

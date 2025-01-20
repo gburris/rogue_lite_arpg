@@ -1,12 +1,16 @@
 use bevy::prelude::*;
 
-use crate::{labels::{
-    sets::MainSet,
-    states::{AppState, PausedState},
-}, ui::input, ui::time_control};
+use crate::{
+    labels::{
+        sets::MainSet,
+        states::{AppState, PausedState},
+    },
+    ui::input,
+    ui::time_control,
+};
 
 use super::{
-    button_interactions, equipment_menu,inventory_menu, main_menu, pause_screen, stats_menu,
+    button_interactions, equipment_menu, inventory_menu, main_menu, pause_screen, stats_menu,
 };
 pub struct PauseMenuPlugin;
 

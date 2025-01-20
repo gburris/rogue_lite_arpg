@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::debug::DebugPlugin,
     labels::states::{AppState, InGameState, PausedState},
+    progression::components::GameProgress,
 };
 
 pub struct SetupPlugin;
@@ -32,6 +33,7 @@ impl Plugin for SetupPlugin {
         app
             // setup avian physics (used for forces, collision, etc...)
             .add_plugins(PhysicsPlugins::default())
+            .insert_resource(GameProgress::default())
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // initialize states
             .init_state::<AppState>()

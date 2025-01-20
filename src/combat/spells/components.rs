@@ -25,5 +25,8 @@ fn default_spell_rigid_body() -> RigidBody {
 
 fn default_spell_collision_layers() -> CollisionLayers {
     // Currently projectiles can only collide with enemies
-    CollisionLayers::new(GameCollisionLayer::Projectile, [GameCollisionLayer::Enemy])
+    CollisionLayers::new(
+        GameCollisionLayer::Projectile,
+        [GameCollisionLayer::Enemy, GameCollisionLayer::Wall],
+    )
 }

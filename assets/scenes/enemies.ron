@@ -1,0 +1,18 @@
+EnemiesConfig(
+    enemies: [
+        EnemyType(
+            name: "Merman",
+            health: 30.0,
+            simple_motion_speed: 350.0,
+            sprite_path: "merman.png",
+            collider_size: (100.0, 100.0)
+        ),
+        EnemyType(
+            name: "Goblin",
+            health: 25.0,
+            simple_motion_speed: 400.0,
+            sprite_path: "goblin.png",
+            collider_size: (80.0, 80.0)
+        )
+    ]
+)

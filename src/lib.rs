@@ -11,4 +11,5 @@ pub mod map;
 pub mod movement;
 pub mod npc;
 pub mod player;
+pub mod progression;
 pub mod ui;

@@ -2,6 +2,7 @@ use crate::{
     combat::damage::components::Health,
     labels::states::PausedState,
     player::{Player, PlayerLevel},
+    progression::GameProgress,
 };
 use bevy::prelude::*;
 
@@ -32,6 +33,7 @@ pub fn spawn_main_menu(
     mut commands: Commands,
     player_level: Query<&PlayerLevel>,
     player_health: Query<&Health, With<Player>>,
+    game_progress: Res<GameProgress>,
 ) {
     debug!("spawn_main_menu called");
     // Get the current values
@@ -133,6 +135,29 @@ pub fn spawn_main_menu(
                                 },
                                 Node::default(),
                             ));
+                            stats.spawn((
+                                Text::new(format!(
+                                    "Progress Points: {}",
+                                    game_progress.progress_points,
+                                )),
+                                TextFont {
+                                    font_size: 24.0,
+                                    ..default()
+                                },
+                                Node::default(),
+                            ));
+                            stats.spawn((
+                                Text::new(format!(
+                                    "Death Coutner: {}",
+                                    game_progress.death_counter,
+                                )),
+                                TextFont {
+                                    font_size: 24.0,
+                                    ..default()
+                                },
+                                Node::default(),
+                            ));
+
                             stats.spawn((
                                 Text::new(format!(
                                     "Health: {:.1} / {:.1}",

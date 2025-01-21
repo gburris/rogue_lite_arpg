@@ -1,28 +1,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::spells::{components::Spell, spell_factory::SpellFactory},
-    configuration::assets::SpriteAssets,
+    combat::{projectile::components::ProjectileBundle, spells::spell_factory::SpellFactory},
     player::systems::AimPosition,
 };
 
-use super::weapon::Weapon;
+use super::{events::WeaponAttackTrigger, weapon::Weapon};
 
-#[derive(Event)]
-pub struct MainHandActivated;
-
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct ProjectileWeapon {
+    pub projectile: ProjectileBundle,
     pub spread: f32,
 }
 
-pub fn on_main_hand_activated(
-    trigger: Trigger<MainHandActivated>,
+pub fn on_weapon_attack(
+    trigger: Trigger<WeaponAttackTrigger>,
     mut commands: Commands,
     mut weapon_query: Query<(&Parent, &mut Weapon, Option<&ProjectileWeapon>)>,
     holder_query: Query<(&Transform, &AimPosition)>,
-    sprites: &Res<SpriteAssets>,
-    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
 ) {
     if let Ok((attacker, mut weapon, shooter)) = weapon_query.get_mut(trigger.entity()) {
         // Parent needs to have an aim position
@@ -31,11 +26,9 @@ pub fn on_main_hand_activated(
             if shooter.is_some() && weapon.attack_rate.finished() {
                 SpellFactory::spawn_spell(
                     &mut commands,
-                    Spell::Fireball,
                     caster_transform.translation.truncate(),
                     caster_aim_pos.position,
-                    &sprites,
-                    texture_atlas_layouts,
+                    &shooter.unwrap().projectile,
                 );
             } // else swing melee weapon here
 

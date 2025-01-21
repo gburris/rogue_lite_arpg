@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{combat::projectile::components::Projectile, helpers::labels::GameCollisionLayer};
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(
     Projectile,
     RigidBody(default_spell_rigid_body),

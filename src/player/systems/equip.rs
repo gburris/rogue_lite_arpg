@@ -1,9 +1,11 @@
+use bevy::prelude::*;
+
 use crate::{
-    items::EquipmentSlot,
-    player::{components::PlayerEquipmentSlots, equip_item, Inventory, Player},
+    combat::weapon::{events::WeaponAttackTrigger, weapon::Weapon},
+    items::{Equipable, EquipmentSlot},
+    player::{components::PlayerEquipmentSlots, equip_item, Inventory, MainHandActivated, Player},
     ui::pause_menu::button_interactions::TryEquipEvent,
 };
-use bevy::prelude::*;
 
 #[derive(Event)]
 pub struct EquipSuccessEvent {
@@ -71,5 +73,21 @@ pub fn handle_equip_success_event(
         .add_child(equip_success_trigger.item_entity);
     if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
         *visibility = Visibility::Visible;
+    }
+}
+
+pub fn on_main_hand_activated(
+    _: Trigger<MainHandActivated>,
+    mut commands: Commands,
+    // there are scenarios where no children have been added to player, so needs to be option type
+    player_children: Single<Option<&Children>, With<Player>>,
+    main_hand_query: Query<Option<&Weapon>, With<Equipable>>,
+) {
+    if let Some(children) = player_children.into_inner() {
+        for &child in children.iter() {
+            if let Ok(Some(_weapon)) = main_hand_query.get(child) {
+                commands.trigger_targets(WeaponAttackTrigger, child);
+            }
+        }
     }
 }

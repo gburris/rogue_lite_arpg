@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::weapon::{events::WeaponAttackTrigger, weapon::Weapon},
-    items::{Equipable, EquipmentSlot},
+    combat::{spells::spell_factory::SpellFactory, weapon::weapon::ProjectileWeapon},
+    items::{EquipmentSlot, Equippable},
     player::{components::PlayerEquipmentSlots, equip_item, Inventory, MainHandActivated, Player},
     ui::pause_menu::button_interactions::TryEquipEvent,
 };
+
+use super::AimPosition;
 
 #[derive(Event)]
 pub struct EquipSuccessEvent {
@@ -80,14 +82,25 @@ pub fn on_main_hand_activated(
     _: Trigger<MainHandActivated>,
     mut commands: Commands,
     // there are scenarios where no children have been added to player, so needs to be option type
-    player_children: Single<Option<&Children>, With<Player>>,
-    main_hand_query: Query<Option<&Weapon>, With<Equipable>>,
+    holder_query: Single<(Option<&Children>, &Transform, &AimPosition), With<Player>>,
+    mut main_hand_query: Query<(&mut Equippable, Option<&ProjectileWeapon>), With<Equippable>>,
 ) {
-    if let Some(children) = player_children.into_inner() {
+    // Parent needs to have an aim position for equipped item
+    if let (Some(children), holder_transform, holder_aim) = holder_query.into_inner() {
         for &child in children.iter() {
-            if let Ok(Some(_weapon)) = main_hand_query.get(child) {
-                commands.trigger_targets(WeaponAttackTrigger, child);
-            }
+            // if child is an equippable projectile weapon
+            if let Ok((mut equippable, Some(projectile_weapon))) = main_hand_query.get_mut(child) {
+                // Fire projectile weapon
+                if equippable.use_rate.finished() {
+                    SpellFactory::spawn_spell(
+                        &mut commands,
+                        holder_transform,
+                        holder_aim.position,
+                        &projectile_weapon.projectile,
+                    );
+                    equippable.use_rate.reset();
+                }
+            } // else swing melee weapon here or other equippable action
         }
     }
 }

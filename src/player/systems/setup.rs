@@ -4,10 +4,13 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::components::{HasIFrames, Health},
+    combat::{
+        damage::components::{HasIFrames, Health},
+        weapon::staffs::spawn_fire_staff,
+    },
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
-    items::{spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
+    items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
     labels::states::AppState,
     movement::components::SimpleMotion,
     player::{systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats},

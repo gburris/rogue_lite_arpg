@@ -1,6 +1,15 @@
 use super::{Consumable, ConsumableEffect, ConsumableType, Equipable, Helmet, ItemName, Shovel};
 use crate::{
-    combat::weapon::{projectile_weapon::ProjectileWeapon, weapon::Weapon},
+    combat::{
+        damage::components::CollisionDamage,
+        projectile::components::ProjectileBundle,
+        spells::components::Spell,
+        status_effects::{
+            components::{BurningStatus, EffectsList, StatusType},
+            events::ApplyStatus,
+        },
+        weapon::{projectile_weapon::ProjectileWeapon, weapon::Weapon},
+    },
     configuration::assets::SpriteAssets,
     items::{EquipmentSlot, HealthPotion, ItemId, Sword},
 };
@@ -70,17 +79,32 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
         .id()
 }
 
-pub fn spawn_fire_staff(commands: &mut Commands) -> Entity {
+pub fn spawn_fire_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
     commands
         .spawn((
+            ProjectileWeapon {
+                projectile: ProjectileBundle {
+                    spell: Spell::Fireball,
+                    effects_list: EffectsList {
+                        effects: vec![ApplyStatus {
+                            status: StatusType::Burning(BurningStatus::default()),
+                            duration: 2.0,
+                        }],
+                    },
+                    sprite: Sprite::from(sprites.fire_bolt.clone()),
+                    damage: CollisionDamage { damage: 6.0 },
+                },
+                spread: 0.0,
+            },
+            Weapon::default(),
             ItemName("Staff of flames".to_string()),
             ItemId(6),
             EquipmentSlot::Mainhand,
             Equipable,
-            Weapon::default(),
-            ProjectileWeapon::default(),
-            Visibility::Hidden,
-            Transform::default(),
+            Sprite::from_image(sprites.sword_equipment_sripte.clone()),
+            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
+                .with_scale(Vec3::new(0.2, 0.3, 0.2))
+                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
         .id()
 }

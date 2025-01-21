@@ -11,4 +11,7 @@ pub struct PlayerMovementEvent {
 }
 
 #[derive(Event)]
+pub struct MainHandActivated;
+
+#[derive(Event)]
 pub struct ResetPlayerPosition;

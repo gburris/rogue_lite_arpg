@@ -7,7 +7,7 @@ use super::events::ApplyStatus;
 /**
  * "Effects" are currently just a list of statuses to apply
  */
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct EffectsList {
     pub effects: Vec<ApplyStatus>,
 }

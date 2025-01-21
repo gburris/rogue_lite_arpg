@@ -7,12 +7,10 @@ use crate::{
     combat::damage::components::{HasIFrames, Health},
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
-    items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
+    items::{spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
     labels::states::AppState,
     movement::components::SimpleMotion,
-    player::{
-        systems::death::on_player_defeated, Inventory, Player, PlayerEquipmentSlots, PlayerStats,
-    },
+    player::{systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
 };
 
 #[derive(Component, Default)]
@@ -30,6 +28,10 @@ pub fn player_setup(
     let _ = inventory.add_item(spawn_sword(&mut commands, &sprites));
     let _ = inventory.add_item(spawn_helmet(&mut commands, &sprites));
     let _ = inventory.add_item(spawn_shovel(&mut commands, &sprites));
+
+    inventory
+        .add_item(spawn_fire_staff(&mut commands, &sprites))
+        .ok();
 
     commands
         .spawn((
@@ -59,6 +61,7 @@ pub fn player_setup(
             Sprite::from_image(sprites.skeleton_player.clone()),
             Transform::from_xyz(0., 0., 1.0),
         ))
-        .observe(on_player_defeated);
+        .observe(death::on_player_defeated)
+        .observe(equip::on_main_hand_activated);
     game_state.set(AppState::Playing);
 }

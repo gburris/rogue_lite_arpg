@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::{Consumable, Equipable, ItemName},
+    items::{Consumable, Equippable, ItemName},
     labels::states::PausedState,
 };
 
@@ -116,7 +116,7 @@ pub fn handle_inventory_interactions(
 pub fn handle_inventory_click(
     trigger: Trigger<InventoryItemClicked>,
     mut commands: Commands,
-    equipable_query: Query<&Equipable>,
+    equipable_query: Query<&Equippable>,
     consumable_query: Query<&Consumable>,
     item_name_query: Query<&ItemName>,
 ) {

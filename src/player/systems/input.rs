@@ -6,9 +6,6 @@ use crate::{
     player::{MainHandActivated, Player, PlayerMovementEvent},
 };
 
-//Component with an event tag called
-//Pause Input evemt
-//and bevy macros for component and event
 #[derive(Event)]
 pub struct PauseInputEvent;
 
@@ -31,7 +28,7 @@ pub fn player_input(
         return;
     }
 
-    if buttons.just_pressed(MouseButton::Left) {
+    if buttons.pressed(MouseButton::Left) {
         commands.trigger_targets(MainHandActivated, player_entity);
     }
 

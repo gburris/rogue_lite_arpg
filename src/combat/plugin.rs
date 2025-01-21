@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{combat::weapon::projectile_weapon::*, labels::sets::InGameSet};
+use crate::labels::sets::InGameSet;
 
 use super::{
     damage::DamagePlugin, status_effects::plugin::StatusEffectPlugin,
-    weapon::weapon::tick_weapon_attack_rate,
+    weapon::weapon::tick_equippable_use_rate,
 };
 
 pub struct CombatPlugin;
@@ -14,8 +14,7 @@ impl Plugin for CombatPlugin {
         app.add_plugins((DamagePlugin, StatusEffectPlugin))
             .add_systems(
                 Update,
-                tick_weapon_attack_rate.in_set(InGameSet::Simulation),
-            )
-            .add_observer(on_weapon_attack);
+                tick_equippable_use_rate.in_set(InGameSet::Simulation),
+            );
     }
 }

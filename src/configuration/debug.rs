@@ -15,7 +15,7 @@ impl Plugin for DebugPlugin {
                 .set(LogPlugin {
                     level: Level::INFO,
                     // update game dev project to info or another when you get tired of debug
-                    filter: "wgpu=error,game_dev_project=debug".to_string(),
+                    filter: "wgpu=error,baba_yaga=debug".to_string(),
                     ..default()
                 })
                 .set(WindowPlugin {

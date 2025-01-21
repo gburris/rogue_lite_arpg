@@ -6,7 +6,7 @@ use crate::{
     despawn::{events::CleanupCurrentWorldSpace, systems::*},
     enemy::Enemy,
     labels::sets::InGameSet,
-    map::{components::Portal, systems::tilemap_generation::Wall},
+    map::{components::Portal, components::Wall},
     npc::NPC,
 };
 

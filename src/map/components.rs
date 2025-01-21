@@ -30,3 +30,46 @@ fn default_collision_layers() -> CollisionLayers {
     // Portals only collide with the player, and are sensors since we don't actually want collisions
     CollisionLayers::new(GameCollisionLayer::Portal, [GameCollisionLayer::Player])
 }
+
+#[derive(Component)]
+pub struct Wall;
+
+#[derive(Component)]
+pub struct SpawnTile;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum TileType {
+    Ground,
+    Wall,
+    SpawnTile,
+    ExitTile,
+}
+
+#[derive(Debug)]
+pub struct WallSection {
+    pub start: (u32, u32),
+    pub end: (u32, u32),
+    pub is_horizontal: bool,
+}
+
+impl WallSection {
+    pub fn new(start: (u32, u32), is_horizontal: bool) -> Self {
+        WallSection {
+            start,
+            end: start,
+            is_horizontal,
+        }
+    }
+
+    pub fn extend(&mut self, pos: (u32, u32)) {
+        self.end = pos;
+    }
+
+    pub fn length(&self) -> u32 {
+        if self.is_horizontal {
+            self.end.0 - self.start.0 + 1
+        } else {
+            self.end.1 - self.start.1 + 1
+        }
+    }
+}

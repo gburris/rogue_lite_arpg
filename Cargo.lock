@@ -334,6 +334,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "baba_yaga"
+version = "0.1.0"
+dependencies = [
+ "avian2d",
+ "bevy",
+ "bevy_asset_loader",
+ "bevy_ecs_tilemap",
+ "ldtk_rust",
+ "log",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tiled",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2171,23 +2188,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "game_dev_project"
-version = "0.1.0"
-dependencies = [
- "avian2d",
- "bevy",
- "bevy_asset_loader",
- "bevy_ecs_tilemap",
- "ldtk_rust",
- "log",
- "rand",
- "serde",
- "serde_json",
- "thiserror",
- "tiled",
 ]
 
 [[package]]

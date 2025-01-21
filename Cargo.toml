@@ -1,5 +1,5 @@
 [package]
-name = "game_dev_project"
+name = "baba_yaga"
 version = "0.1.0"
 edition = "2021"
 
@@ -24,7 +24,12 @@ tiled = { version = "0.11.0", default-features = false }
 thiserror = { version = "1.0" }
 
 [lib]
+name = "baba_yaga" # for wasm stuff
 crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "baba_yaga_bin"  # for local build stuff
+path = "src/main.rs"
 
 [features]
 atlas = []

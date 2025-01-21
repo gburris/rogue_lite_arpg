@@ -71,9 +71,9 @@ jobs:
           mkdir gh-pages
           cp -r assets gh-pages/
           cp -r src gh-pages/
-          cp game_dev_project.js gh-pages/
-          cp game_dev_project_bg.wasm gh-pages/
-          cp game_dev_project_bg.wasm.d.ts gh-pages/  
+          cp baba_yaga.js gh-pages/
+          cp baba_yaga_bg.wasm gh-pages/
+          cp baba_yaga_bg.wasm.d.ts gh-pages/  
           cp Cargo.toml gh-pages/      
           cp Cargo.lock gh-pages/     
           cp package.json gh-pages/                                       
@@ -99,7 +99,7 @@ jobs:
                 <body>
                     <script type="module">
                         console.log("Starting import...");
-                        import init from './game_dev_project.js';
+                        import init from './baba_yaga.js';
                         console.log("Import completed, initializing...");
                         init().catch((error) => {
                             console.error("Error during initialization:", error);

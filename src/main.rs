@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use game_dev_project::{
+use baba_yaga::{
     collision::CollisionPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},

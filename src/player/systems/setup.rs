@@ -44,7 +44,7 @@ pub fn player_setup(
             AimPosition::default(),
             SimpleMotion::new(450.0),
             Health::new(100.0),
-            Mana::new(100.0),
+            Mana::new(100.0, 10.0),
             inventory,
             PlayerEquipmentSlots::default(),
             HasIFrames {

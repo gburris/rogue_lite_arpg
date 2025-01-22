@@ -1,9 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use crate::combat::damage::events::DealtDamageEvent;
-
-use super::components::ProjectileBundle;
+use crate::combat::{damage::events::DealtDamageEvent, projectile::components::*};
 
 // For certain entities, like projectiles, they have no concept of "health" but instead despawn after "X" hits
 pub fn on_damage_dealt_despawn(trigger: Trigger<DealtDamageEvent>, mut commands: Commands) {
@@ -16,7 +14,7 @@ pub fn spawn_projectile(
     caster_aim_position: Vec2,
     projectile_bundle: &ProjectileBundle,
 ) {
-    let spell_speed = 600.0;
+    let spell_speed = 700.0;
 
     let mut transform = Transform {
         translation: caster_transform.translation,
@@ -38,6 +36,7 @@ pub fn spawn_projectile(
 
     commands
         .spawn((
+            Projectile,
             projectile_bundle.clone(),
             transform,
             LinearVelocity(velocity),

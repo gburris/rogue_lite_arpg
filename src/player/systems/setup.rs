@@ -42,7 +42,7 @@ pub fn player_setup(
             Player,
             PlayerStats::default(),
             AimPosition::default(),
-            SimpleMotion::new(600.0),
+            SimpleMotion::new(450.0),
             Health::new(100.0),
             Mana::new(100.0),
             inventory,

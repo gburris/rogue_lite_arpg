@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::components::Health, helpers::labels::GameCollisionLayer,
+    combat::attributes::Health, helpers::labels::GameCollisionLayer,
     movement::components::SimpleMotion,
 };
 

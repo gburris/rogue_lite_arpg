@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    combat::damage::components::Health,
+    combat::attributes::Health,
     enemy::{resources::EnemySpawnConfig, systems::on_enemy_defeated, Enemy, EnemyAssets},
     helpers::labels::GameCollisionLayer,
     labels::layer::ZLayer,

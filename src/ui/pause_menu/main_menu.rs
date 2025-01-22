@@ -1,5 +1,5 @@
 use crate::{
-    combat::damage::components::Health,
+    combat::attributes::Health,
     labels::states::PausedState,
     player::{Player, PlayerLevel},
     progression::GameProgress,

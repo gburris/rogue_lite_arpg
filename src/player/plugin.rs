@@ -25,6 +25,7 @@ impl Plugin for PlayerPlugin {
                         animate_sprite,
                         on_player_experience_change,
                         animate_level_up,
+                        tick_equippable_use_rate,
                     )
                         .before(camera_follow_system),
                     camera_follow_system.before(TransformSystem::TransformPropagate), // avian recommended ordering for camera following logic

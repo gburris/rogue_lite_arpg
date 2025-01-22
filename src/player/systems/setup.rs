@@ -5,7 +5,8 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{
-        damage::components::{HasIFrames, Health},
+        attributes::{mana::Mana, Health},
+        damage::components::HasIFrames,
         weapon::staffs::spawn_fire_staff,
     },
     configuration::assets::SpriteAssets,
@@ -41,14 +42,14 @@ pub fn player_setup(
             Player,
             PlayerStats::default(),
             AimPosition::default(),
-            SimpleMotion::new(600.0),
-            LockedAxes::new().lock_rotation(),
+            SimpleMotion::new(450.0),
             Health::new(100.0),
+            Mana::new(100.0),
             inventory,
+            PlayerEquipmentSlots::default(),
             HasIFrames {
                 duration: Duration::from_secs(1),
             },
-            PlayerEquipmentSlots::default(),
             RigidBody::Dynamic,
             Collider::rectangle(100.0, 100.0),
             CollisionLayers::new(
@@ -62,6 +63,7 @@ pub fn player_setup(
                     GameCollisionLayer::Water,
                 ],
             ),
+            LockedAxes::new().lock_rotation(),
             Sprite::from_image(sprites.skeleton_player.clone()),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

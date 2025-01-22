@@ -2,6 +2,7 @@ use super::{Consumable, ConsumableEffect, ConsumableType, Equippable, Helmet, It
 use crate::{
     configuration::assets::SpriteAssets,
     items::{EquipmentSlot, HealthPotion, ItemId, Sword},
+    labels::layer::ZLayer,
 };
 use bevy::{math::Vec3, prelude::*, sprite::Sprite};
 
@@ -29,7 +30,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword_equipment_sripte.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
+            Transform::from_translation(Vec3::new(-65.0, -20.0, ZLayer::Weapon.z()))
                 .with_scale(Vec3::new(0.2, 0.3, 0.2))
                 .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
@@ -46,7 +47,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
+            Transform::from_translation(Vec3::new(-65.0, -20.0, ZLayer::Weapon.z()))
                 .with_scale(Vec3::new(0.2, 0.3, 0.2))
                 .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
@@ -63,7 +64,7 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.helmet_equipment_sripte.clone()),
-            Transform::from_translation(Vec3::new(-30.0, 40.0, 0.1))
+            Transform::from_translation(Vec3::new(-30.0, 40.0, ZLayer::Weapon.z()))
                 .with_scale(Vec3::new(0.2, 0.3, 0.2)),
         ))
         .id()

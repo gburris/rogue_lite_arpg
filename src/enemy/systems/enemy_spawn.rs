@@ -6,6 +6,7 @@ use crate::{
     combat::damage::components::Health,
     enemy::{resources::EnemySpawnConfig, systems::on_enemy_defeated, Enemy, EnemyAssets},
     helpers::labels::GameCollisionLayer,
+    labels::layer::ZLayer,
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
     player::components::Player,
@@ -72,10 +73,11 @@ fn spawn_enemy(
                         GameCollisionLayer::Projectile,
                         GameCollisionLayer::Player,
                         GameCollisionLayer::Wall,
+                        GameCollisionLayer::Water,
                     ],
                 ),
                 Sprite::from_image(asset_server.load(&enemy.sprite_path)),
-                Transform::from_xyz(spawn_position.x, spawn_position.y, 0.5),
+                Transform::from_xyz(spawn_position.x, spawn_position.y, ZLayer::Enemy.z()),
             ))
             .observe(on_enemy_defeated);
     } else {

@@ -11,7 +11,7 @@ use crate::{
     configuration::assets::SpriteAssets,
     helpers::labels::GameCollisionLayer,
     items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
-    labels::states::AppState,
+    labels::{layer::ZLayer, states::AppState},
     movement::components::SimpleMotion,
     player::{systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
 };
@@ -59,10 +59,11 @@ pub fn player_setup(
                     GameCollisionLayer::Portal,
                     GameCollisionLayer::Enemy,
                     GameCollisionLayer::Wall,
+                    GameCollisionLayer::Water,
                 ],
             ),
             Sprite::from_image(sprites.skeleton_player.clone()),
-            Transform::from_xyz(0., 0., 1.0),
+            Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)
         .observe(equip::on_main_hand_activated);

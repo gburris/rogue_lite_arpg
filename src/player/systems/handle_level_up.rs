@@ -1,7 +1,7 @@
 // Bevy class to handle player level up
 use bevy::prelude::*;
 
-use crate::player::{events::PlayerLevelUpEvent, Player, PlayerExperience, PlayerLevel};
+use crate::{labels::layer::ZLayer, player::{events::PlayerLevelUpEvent, Player, PlayerExperience, PlayerLevel}};
 #[derive(Component)]
 pub struct LevelUpAnimation {
     timer: Timer,
@@ -37,7 +37,9 @@ pub fn on_level_up(
         player_level.current = trigger.new_level;
 
         commands.spawn((
-            Transform::from_translation(transform.translation + Vec3::new(0.0, 50.0, 10.0)),
+            Transform::from_translation(
+                transform.translation + Vec3::new(0.0, 50.0, ZLayer::VisualEffect.z()),
+            ),
             Sprite {
                 color: Color::srgb(1.0, 0.9, 0.0), // Gold color
                 custom_size: Some(Vec2::new(32.0, 32.0)),

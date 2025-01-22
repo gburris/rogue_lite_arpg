@@ -6,6 +6,7 @@ pub mod equip;
 pub mod handle_level_up;
 pub mod input;
 pub mod movement;
+pub mod regenerate_mana;
 pub mod setup;
 pub mod unequip;
 
@@ -16,5 +17,6 @@ pub use equip::*;
 pub use handle_level_up::*;
 pub use input::*;
 pub use movement::*;
+pub use regenerate_mana::*;
 pub use setup::*;
 pub use unequip::*;

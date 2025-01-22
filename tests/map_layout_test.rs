@@ -8,7 +8,7 @@ mod tests {
 
     #[test]
     fn test_generate_map_layout() {
-        let map_size = TilemapSize { x: 50, y: 50 };
+        let map_size = TilemapSize { x: 200, y: 200 };
         let map_layout = generate_map_layout(map_size);
 
         // Check if the map layout has the correct dimensions

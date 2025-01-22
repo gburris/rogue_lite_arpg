@@ -6,7 +6,10 @@ use crate::{
     despawn::{events::CleanupCurrentWorldSpace, systems::*},
     enemy::Enemy,
     labels::sets::InGameSet,
-    map::{components::Portal, components::Wall},
+    map::{
+        components::{Portal, Wall},
+        Water,
+    },
     npc::NPC,
 };
 
@@ -21,6 +24,7 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, Portal>)
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, TilemapId>)
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, Wall>)
+        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Water>)
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, Enemy>)
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, Projectile>)
         .add_observer(despawn_all::<CleanupCurrentWorldSpace, NPC>);

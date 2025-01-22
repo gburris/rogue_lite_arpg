@@ -16,6 +16,9 @@ cmds.txt
 # Windows-specific files
 Thumbs.db
 
+# Not commit worthy code for generating assets
+sprite_code_do_not_open_its_not_worth_it/
+
 # JetBrains IDE files
 .idea/
 

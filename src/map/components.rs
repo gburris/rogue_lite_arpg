@@ -35,29 +35,48 @@ fn default_collision_layers() -> CollisionLayers {
 pub struct Wall;
 
 #[derive(Component)]
-pub struct SpawnTile;
+pub struct Water;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum TileType {
     Ground,
     Wall,
-    SpawnTile,
-    ExitTile,
+    Water,
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
+pub enum MapMarker {
+    PlayerSpawn(Vec2), // Could even include spawn direction
+    LevelExit(Vec2),
+    EnemySpawns(Vec<Vec2>),
+    BossSpawns(Vec<Vec2>),
+    ChestSpawns(Vec<Vec2>),
+}
+
+#[derive(Clone)]
+pub struct MapMarkers {
+    pub markers: Vec<MapMarker>,
+}
+
+#[derive(Resource, Clone)]
+pub struct MapLayout {
+    pub tiles: Vec<Vec<TileType>>, // Your physical tile grid
+    pub markers: Vec<MapMarker>,   // Collection of all logical positions
+}
+
+#[derive(Default)]
 pub struct WallSection {
     pub start: (u32, u32),
-    pub end: (u32, u32),
     pub is_horizontal: bool,
+    end: (u32, u32),
 }
 
 impl WallSection {
     pub fn new(start: (u32, u32), is_horizontal: bool) -> Self {
         WallSection {
             start,
-            end: start,
             is_horizontal,
+            end: start,
         }
     }
 

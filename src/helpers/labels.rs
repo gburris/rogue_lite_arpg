@@ -5,6 +5,7 @@ pub enum GameCollisionLayer {
     #[default]
     Default, // Layer 0 - the default layer that objects are assigned to
     Wall,
+    Water, //Water is honestly a bit diff than wall
     Player,
     Enemy,
     Projectile,

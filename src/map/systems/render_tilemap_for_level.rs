@@ -1,13 +1,12 @@
-use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
     configuration::assets::SpriteAssets,
-    helpers::labels::GameCollisionLayer,
+    labels::layer::ZLayer,
     map::{
-        components::{TileType, Wall},
-        helpers::map_layout::{find_wall_sections, generate_map_layout},
+        components::{MapLayout, TileType},
+        helpers::map_layout::generate_map_layout,
         resources::{CurrentZoneLevel, MapBounds, TileSize},
     },
 };
@@ -19,6 +18,7 @@ pub fn generate_tilemap(
     tilesize: Res<TileSize>,
     zone_level: Res<CurrentZoneLevel>,
 ) {
+    let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
     let ground_texture_handle: Handle<Image> = sprites.tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
 
@@ -27,35 +27,37 @@ pub fn generate_tilemap(
         y: ((mapbounds.max_y - mapbounds.min_y) / tilesize.y) as u32,
     };
 
-    let map_layout = generate_map_layout(map_size);
-    let wall_sections = find_wall_sections(&map_layout, map_size);
+    // Generate the map layout which now includes both tiles and markers
+    let map_layout: MapLayout = generate_map_layout(map_size);
 
+    // this is sodding stupid but maybe i'll consider not doing this later if it lags
+    let map_layout_clone = map_layout.clone();
+
+    // Set up storage for each tile type
     let mut ground_storage = TileStorage::empty(map_size);
     let mut wall_storage = TileStorage::empty(map_size);
+    let mut water_storage = TileStorage::empty(map_size);
 
+    // Create empty entities for each tilemap layer
     let map_type = TilemapType::Square;
     let ground_tilemap_entity = commands.spawn_empty().id();
     let wall_tilemap_entity = commands.spawn_empty().id();
-    let spawn_tilemap_entity = commands.spawn_empty().id();
+    let water_tilemap_entity = commands.spawn_empty().id();
 
-    // Calculate tilemap offset for centered position
+    // Set up tile size and grid
     let tile_size = TilemapTileSize {
         x: tilesize.x,
         y: tilesize.y,
     };
     let grid_size = tile_size.into();
-    let offset = Vec2::new(
-        -((map_size.x as f32 * tilesize.x) / 2.0),
-        -((map_size.y as f32 * tilesize.y) / 2.0),
-    );
 
-    // Spawn tiles without colliders
+    // Spawn tiles
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
             let color = zone_level.0 % 6;
 
-            match map_layout[x as usize][y as usize] {
+            match map_layout.tiles[x as usize][y as usize] {
                 TileType::Ground => {
                     let ground_entity = commands
                         .spawn(TileBundle {
@@ -78,61 +80,22 @@ pub fn generate_tilemap(
                         .id();
                     wall_storage.set(&tile_pos, wall_entity);
                 }
-                TileType::SpawnTile => {
-                    let spawn_tile = commands
+                TileType::Water => {
+                    let water_entity = commands
                         .spawn(TileBundle {
                             position: tile_pos,
-                            tilemap_id: TilemapId(spawn_tilemap_entity),
+                            tilemap_id: TilemapId(water_tilemap_entity),
                             texture_index: TileTextureIndex(0),
                             ..Default::default()
                         })
                         .id();
-                    wall_storage.set(&tile_pos, spawn_tile);
+                    water_storage.set(&tile_pos, water_entity);
                 }
-                TileType::ExitTile => todo!(),
             }
         }
     }
 
-    // Spawn colliders for wall sections
-    for section in wall_sections {
-        let start_pos = Vec2::new(
-            section.start.0 as f32 * tilesize.x,
-            section.start.1 as f32 * tilesize.y,
-        ) + offset;
-
-        let length = section.length() as f32;
-        let (width, height) = if section.is_horizontal {
-            (length * tilesize.x, tilesize.y)
-        } else {
-            (tilesize.x, length * tilesize.y)
-        };
-
-        let collider_pos = if section.is_horizontal {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
-        } else {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
-        };
-
-        commands.spawn((
-            Wall,
-            Collider::rectangle(width, height),
-            RigidBody::Static,
-            CollisionLayers::new(
-                GameCollisionLayer::Wall,
-                [
-                    GameCollisionLayer::Player,
-                    GameCollisionLayer::Npc,
-                    GameCollisionLayer::Enemy,
-                    GameCollisionLayer::Projectile,
-                ],
-            ),
-            Transform::from_xyz(collider_pos.x, collider_pos.y, 1.0),
-            GlobalTransform::default(),
-        ));
-    }
-
-    // Spawn tilemaps
+    // Insert the ground tilemap
     commands
         .entity(ground_tilemap_entity)
         .insert(TilemapBundle {
@@ -142,10 +105,16 @@ pub fn generate_tilemap(
             map_type,
             texture: TilemapTexture::Single(ground_texture_handle),
             tile_size,
-            transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 0.0),
+            transform: get_tilemap_center_transform(
+                &map_size,
+                &grid_size,
+                &map_type,
+                ZLayer::Ground.z(),
+            ),
             ..Default::default()
         });
 
+    // Insert the wall tilemap
     commands.entity(wall_tilemap_entity).insert(TilemapBundle {
         grid_size,
         size: map_size,
@@ -153,7 +122,32 @@ pub fn generate_tilemap(
         map_type,
         texture: TilemapTexture::Single(wall_texture_handle),
         tile_size,
-        transform: get_tilemap_center_transform(&map_size, &grid_size, &map_type, 1.0),
+        transform: get_tilemap_center_transform(
+            &map_size,
+            &grid_size,
+            &map_type,
+            ZLayer::Ground.z(),
+        ),
         ..Default::default()
     });
+
+    // Insert the water tilemap
+    commands.entity(water_tilemap_entity).insert(TilemapBundle {
+        grid_size,
+        size: map_size,
+        storage: water_storage,
+        map_type,
+        texture: TilemapTexture::Single(water_texture_handle),
+        tile_size,
+        transform: get_tilemap_center_transform(
+            &map_size,
+            &grid_size,
+            &map_type,
+            ZLayer::Ground.z(),
+        ),
+        ..Default::default()
+    });
+
+    // Store the whole ass map so we can add colliders and stuff as well
+    commands.insert_resource(map_layout_clone);
 }

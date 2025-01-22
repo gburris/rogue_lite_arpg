@@ -19,7 +19,12 @@ impl Plugin for MapPlugin {
         let tile_size_y = 16.0;
         app.add_systems(
             OnEnter(AppState::CreateZone),
-            (generate_tilemap, warpzone_setup).chain(),
+            (
+                generate_tilemap,
+                process_map_collisions_zones,
+                warpzone_setup,
+            )
+                .chain(),
         )
         .add_systems(
             OnEnter(AppState::CreateOverworld),

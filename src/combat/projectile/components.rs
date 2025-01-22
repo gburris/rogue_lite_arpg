@@ -1,21 +1,41 @@
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{
-        damage::components::CollisionDamage, spells::components::Spell,
-        status_effects::components::EffectsList,
-    },
+    combat::{damage::components::CollisionDamage, status_effects::components::EffectsList},
     despawn::components::LiveDuration,
+    helpers::labels::GameCollisionLayer,
 };
-
-#[derive(Component, Clone, Default)]
-#[require(LiveDuration)]
-pub struct Projectile;
 
 #[derive(Bundle, Clone)]
 pub struct ProjectileBundle {
     pub sprite: Sprite,
     pub damage: CollisionDamage,
     pub effects_list: EffectsList,
-    pub spell: Spell, // maybe just make this a part of projectile
+}
+
+#[derive(Component, Clone)]
+#[require(
+    LiveDuration,
+    Sensor,
+    RigidBody(default_rigid_body),
+    Collider(default_collider),
+    CollisionLayers(default_collision_layers)
+)]
+pub struct Projectile;
+
+fn default_collider() -> Collider {
+    Collider::rectangle(10.0, 10.0)
+}
+
+fn default_rigid_body() -> RigidBody {
+    RigidBody::Dynamic
+}
+
+fn default_collision_layers() -> CollisionLayers {
+    // Currently projectiles can only collide with enemies
+    CollisionLayers::new(
+        GameCollisionLayer::Projectile,
+        [GameCollisionLayer::Enemy, GameCollisionLayer::Wall],
+    )
 }

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 use crate::{
-    combat::damage::components::{CollisionDamage, Health},
+    combat::{attributes::health::Health, damage::components::CollisionDamage},
     movement::components::SimpleMotion,
 };
 

@@ -1,5 +1,5 @@
 use crate::{
-    combat::damage::components::Health,
+    combat::attributes::Health,
     items::{ConsumableEffect, ConsumableType},
     player::Inventory,
     ui::pause_menu::button_interactions::ConsumeEvent,

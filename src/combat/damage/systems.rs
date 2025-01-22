@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 
-use crate::{
-    combat::damage::{
-        components::{Health, Invulnerable},
+use crate::combat::{
+    attributes::health::Health,
+    damage::{
+        components::Invulnerable,
         events::{DamageEvent, DefeatedEvent},
     },
-    combat::status_effects::{components::EffectsList, events::ApplyEffect},
+    status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
 use super::components::HasIFrames;

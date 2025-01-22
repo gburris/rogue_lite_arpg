@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::{spells::spell_factory::SpellFactory, weapon::weapon::ProjectileWeapon},
+    combat::{
+        attributes::{mana::ManaCost, Mana},
+        weapon::weapon::UseEquipmentEvent,
+    },
     items::{EquipmentSlot, Equippable},
     player::{components::PlayerEquipmentSlots, equip_item, Inventory, MainHandActivated, Player},
     ui::pause_menu::button_interactions::TryEquipEvent,
 };
-
-use super::AimPosition;
 
 #[derive(Event)]
 pub struct EquipSuccessEvent {
@@ -79,28 +80,48 @@ pub fn handle_equip_success_event(
 }
 
 pub fn on_main_hand_activated(
-    _: Trigger<MainHandActivated>,
+    main_hand_trigger: Trigger<MainHandActivated>,
     mut commands: Commands,
-    // there are scenarios where no children have been added to player, so needs to be option type
-    holder_query: Single<(Option<&Children>, &Transform, &AimPosition), With<Player>>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ProjectileWeapon>), With<Equippable>>,
+    mut holder_query: Query<(&Children, Option<&mut Mana>)>,
+    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
 ) {
     // Parent needs to have an aim position for equipped item
-    if let (Some(children), holder_transform, holder_aim) = holder_query.into_inner() {
-        for &child in children.iter() {
-            // if child is an equippable projectile weapon
-            if let Ok((mut equippable, Some(projectile_weapon))) = main_hand_query.get_mut(child) {
-                // Fire projectile weapon
-                if equippable.use_rate.finished() {
-                    SpellFactory::spawn_spell(
-                        &mut commands,
-                        holder_transform,
-                        holder_aim.position,
-                        &projectile_weapon.projectile,
+    let Ok((children, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
+        debug!(
+            "Entity: {} tried to use main hand with nothing equipped",
+            main_hand_trigger.entity()
+        );
+        return;
+    };
+
+    for &child in children.iter() {
+        // if child is equippable
+        if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(child) {
+            if equippable.use_rate.finished() {
+                let has_enough_mana = if let (Some(mana), Some(&ManaCost(mana_cost))) =
+                    (holder_mana.as_mut(), mana_cost)
+                {
+                    mana.use_mana(mana_cost)
+                } else {
+                    true
+                };
+
+                if has_enough_mana {
+                    commands.trigger_targets(
+                        UseEquipmentEvent {
+                            holder: main_hand_trigger.entity(),
+                        },
+                        child,
                     );
                     equippable.use_rate.reset();
                 }
-            } // else swing melee weapon here or other equippable action
+            }
         }
+    }
+}
+
+pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
+    for mut equippable in equippable_query.iter_mut() {
+        equippable.use_rate.tick(time.delta());
     }
 }

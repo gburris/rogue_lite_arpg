@@ -1,7 +1,7 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::{combat::damage::components::Health, movement::components::SimpleMotion};
+use crate::{combat::attributes::Health, movement::components::SimpleMotion};
 
 #[derive(Component)]
 #[require(Health, SimpleMotion, Collider, PlayerExperience, PlayerLevel)]

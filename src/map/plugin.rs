@@ -1,7 +1,12 @@
 use bevy::prelude::*;
+use hub::{
+    enter_start_portal::enter_start_portal, generate_hub_layout::generate_hub_layout,
+    render_hub_tiles::render_hub_tiles, spawn_hub_collisions_zones,
+    starting_portal_setup::starting_portal_setup,
+};
 use instance::{
-    finish_create_instance, generate_instance_layout, render_instance_tilemap,
-    spawn_instance_collisions_zones, spawn_instance_entities,
+    finish_create_instance, generate_instance_layout, handle_instance_portal_enter,
+    render_instance_tilemap, spawn_instance_collisions_zones, spawn_instance_entities,
 };
 
 use crate::{
@@ -35,24 +40,18 @@ impl Plugin for MapPlugin {
         )
         .add_systems(
             OnEnter(AppState::CreateOverworld),
-            (generate_tilemap_for_overworld, starting_portal_setup).chain(),
+            (
+                generate_hub_layout,
+                render_hub_tiles,
+                spawn_hub_collisions_zones,
+                starting_portal_setup,
+            )
+                .chain(),
         )
-        // .add_systems(
-        //     OnEnter(AppState::CreateOverworld),
-        //     (
-        //         generate_overworld_layout,
-        //         render_overworld_tilemap,
-        //         spawn_overworld_collisions_zones,
-        //         spawn_overworld_entities,
-        //         finish_create_overworld,
-        //     )
-        //         .chain(),
-        // )
-        //.add_systems(OnExit(InGameState::Run), (despawn_walls).chain())
         .add_systems(
             Update,
             (
-                handle_warpzone_enter.run_if(in_state(InGameState::Run)),
+                handle_instance_portal_enter.run_if(in_state(InGameState::Run)),
                 enter_start_portal.run_if(in_state(InGameState::BeforeRun)),
             )
                 .in_set(InGameSet::Simulation),

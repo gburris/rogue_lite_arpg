@@ -4,7 +4,7 @@ use crate::{
     despawn::events::CleanupZone, labels::states::AppState, map::events::WarpZoneEnterEvent,
 };
 
-pub fn handle_warpzone_enter(
+pub fn handle_instance_portal_enter(
     mut commands: Commands,
     mut events: EventReader<WarpZoneEnterEvent>,
     mut game_state: ResMut<NextState<AppState>>,

@@ -4,14 +4,10 @@ use bevy_ecs_tilemap::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{
-        components::{MapLayout, TileType},
-        resources::CurrentZoneLevel,
-        WorldSpaceConfig,
-    },
+    map::{resources::CurrentZoneLevel, MapLayout, TileType, WorldSpaceConfig},
 };
 
-pub fn render_instance_tilemap(
+pub fn render_hub_tiles(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,
@@ -19,23 +15,26 @@ pub fn render_instance_tilemap(
     zone_level: Res<CurrentZoneLevel>,
 ) {
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
-    let ground_texture_handle: Handle<Image> = sprites.tiles.clone();
+    let ground_texture_handle: Handle<Image> = sprites.grass_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
     let map_size = world_config.map_size;
     let tile_size = world_config.tile_size;
+
+    let grid_size: TilemapGridSize = tile_size.into();
 
     // Set up storage for each tile type
     let mut ground_storage = TileStorage::empty(map_size);
     let mut wall_storage = TileStorage::empty(map_size);
     let mut water_storage = TileStorage::empty(map_size);
 
-    // Create empty entities for each tilemap layer
-    let map_type = TilemapType::Square;
     let ground_tilemap_entity = commands.spawn_empty().id();
     let wall_tilemap_entity = commands.spawn_empty().id();
     let water_tilemap_entity = commands.spawn_empty().id();
 
-    let grid_size = tile_size.into();
+    let map_size = world_config.map_size;
+    let tile_size = world_config.tile_size;
+
+    let map_type = TilemapType::Square;
 
     // Spawn tiles
     for x in 0..map_size.x {

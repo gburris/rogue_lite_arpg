@@ -10,6 +10,11 @@ use crate::{
 #[derive(Debug, Event)]
 pub struct EnemySpawnEvent(pub Vec<Vec3>);
 
+#[derive(Event)]
+pub struct NPCSpawnEvent {
+    pub position: Vec3,
+}
+
 pub fn spawn_hub_entities(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -34,6 +39,25 @@ pub fn spawn_hub_entities(
         Sprite::from_image(sprites.run_start_portal.clone()),
         Transform::from_translation(warp_position),
     ));
+
+    if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::NPCSpawn) {
+        let spawn_position_in_world =
+            world_config.tile_to_world(spawn_position_in_tiles.as_ivec2());
+        let npc_spawn_position: Vec3 = Vec3::new(
+            spawn_position_in_world.x,
+            spawn_position_in_world.y,
+            ZLayer::Player.z(),
+        );
+
+        //Trigger this spawn position
+        commands.trigger(NPCSpawnEvent {
+            position: npc_spawn_position,
+        });
+    } else {
+        warn!("Player spawn marker not found in map layout.");
+    }
+
+    //Send a trigger to spawn the NPC
 
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {

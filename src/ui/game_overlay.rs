@@ -56,17 +56,19 @@ pub fn spawn(mut commands: Commands) {
                     footer
                         .spawn((
                             Node {
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::Center,
-                                width: Val::Px(200.0),
-                                height: Val::Px(10.0),
+                                width: Val::Px(400.0),
+                                height: Val::Px(15.0),
                                 ..default()
                             },
                             BackgroundColor::from(Color::srgb(0.21, 0.21, 0.21)),
                         ))
                         .with_child((
                             ManaBar,
-                            Node::default(),
+                            Node {
+                                width: Val::Px(400.0),
+                                height: Val::Px(15.0),
+                                ..default()
+                            },
                             BackgroundColor::from(Color::srgb(0.0, 0.173, 0.878)),
                         ));
                 });
@@ -74,10 +76,10 @@ pub fn spawn(mut commands: Commands) {
 }
 
 pub fn update(
-    player_query: Single<(&PlayerExperience, &PlayerLevel, &Health, &Mana), With<Player>>,
+    player: Single<(&PlayerExperience, &PlayerLevel, &Health, &Mana), With<Player>>,
     overlay_stat_text: Single<&mut Text, With<PlayerOverlayStatsText>>,
 ) {
-    let (exp, level, health, mana) = player_query.into_inner();
+    let (exp, level, health, mana) = player.into_inner();
 
     let mut overlay_stat_text = overlay_stat_text.into_inner();
     *overlay_stat_text = Text::new(format!(
@@ -92,4 +94,15 @@ pub fn update(
     ));
 }
 
-pub fn update_mana_bar() {}
+pub fn update_mana_bar(
+    player_mana: Single<&Mana, (With<Player>, Changed<Mana>)>,
+    mana_bar: Single<&mut Node, With<ManaBar>>,
+) {
+    let mana = player_mana.into_inner();
+    let mut mana_bar = mana_bar.into_inner();
+
+    // Mana bar gets longer as player gets higher max mana
+    let max_mana_bar_length = mana.max_mana * 4.0;
+
+    mana_bar.width = Val::Px((mana.current_mana / mana.max_mana) * max_mana_bar_length);
+}

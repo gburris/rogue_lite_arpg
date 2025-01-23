@@ -102,6 +102,12 @@ fn generate_hub_markers(bounds: Rect) -> MapMarkers {
     );
     single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
 
+    let npc_spawn = Vec2::new(
+        (bounds.min.x + bounds.max.x) as f32 / 2.0,
+        bounds.min.y as f32 + 35.0,
+    );
+    single_markers.insert(MarkerType::NPCSpawn, npc_spawn);
+
     MapMarkers {
         single_markers,
         multi_markers: HashMap::new(),

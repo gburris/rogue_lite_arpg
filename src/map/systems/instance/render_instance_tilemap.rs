@@ -77,6 +77,7 @@ pub fn render_instance_tilemap(
                         .id();
                     water_storage.set(&tile_pos, water_entity);
                 }
+                _ => {}
             }
         }
     }

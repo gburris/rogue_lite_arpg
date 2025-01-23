@@ -6,32 +6,24 @@ use crate::{
     labels::layer::ZLayer,
     map::{
         components::{MapLayout, TileType},
-        helpers::map_layout::generate_map_layout,
-        resources::{CurrentZoneLevel, MapBounds, TileSize},
+        resources::{CurrentZoneLevel, TileSize},
+        WorldSpaceConfig,
     },
 };
 
-pub fn generate_tilemap(
+pub fn render_instance_tilemap(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    mapbounds: Res<MapBounds>,
+    map_layout: Res<MapLayout>,
+    world_config: Res<WorldSpaceConfig>,
     tilesize: Res<TileSize>,
     zone_level: Res<CurrentZoneLevel>,
 ) {
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
     let ground_texture_handle: Handle<Image> = sprites.tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
-
-    let map_size: TilemapSize = TilemapSize {
-        x: ((mapbounds.max_x - mapbounds.min_x) / tilesize.x) as u32,
-        y: ((mapbounds.max_y - mapbounds.min_y) / tilesize.y) as u32,
-    };
-
-    // Generate the map layout which now includes both tiles and markers
-    let map_layout: MapLayout = generate_map_layout(map_size);
-
-    // this is sodding stupid but maybe i'll consider not doing this later if it lags
-    let map_layout_clone = map_layout.clone();
+    let map_size = world_config.map_size;
+    let tile_size = world_config.tile_size;
 
     // Set up storage for each tile type
     let mut ground_storage = TileStorage::empty(map_size);
@@ -44,11 +36,6 @@ pub fn generate_tilemap(
     let wall_tilemap_entity = commands.spawn_empty().id();
     let water_tilemap_entity = commands.spawn_empty().id();
 
-    // Set up tile size and grid
-    let tile_size = TilemapTileSize {
-        x: tilesize.x,
-        y: tilesize.y,
-    };
     let grid_size = tile_size.into();
 
     // Spawn tiles
@@ -147,7 +134,4 @@ pub fn generate_tilemap(
         ),
         ..Default::default()
     });
-
-    // Store the whole ass map so we can add colliders and stuff as well
-    commands.insert_resource(map_layout_clone);
 }

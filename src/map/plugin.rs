@@ -11,18 +11,21 @@ use crate::{
         systems::*,
     },
 };
+
+use super::WorldSpaceConfig;
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        let tile_size_x = 16.0;
-        let tile_size_y = 16.0;
+        let tile_size: Vec2 = Vec2::new(16.0, 16.0);
         app.add_systems(
-            OnEnter(AppState::CreateZone),
+            OnEnter(AppState::CreateInstance),
             (
-                generate_tilemap,
-                process_map_collisions_zones,
-                warpzone_setup,
+                generate_instance_layout,
+                render_instance_tilemap,
+                spawn_instance_collisions_zones,
+                spawn_instance_entities,
+                finish_create_instance,
             )
                 .chain(),
         )
@@ -41,16 +44,17 @@ impl Plugin for MapPlugin {
         )
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()
+        .insert_resource(WorldSpaceConfig::default())
+        .insert_resource(CurrentZoneLevel(0))
         .insert_resource(TileSize {
-            x: tile_size_x,
-            y: tile_size_y,
+            x: tile_size.x,
+            y: tile_size.y,
         })
         .insert_resource(MapBounds {
-            min_x: -100.0 * tile_size_x,
-            min_y: -100.0 * tile_size_y,
-            max_x: 100.0 * tile_size_x,
-            max_y: 100.0 * tile_size_y,
-        })
-        .insert_resource(CurrentZoneLevel(0));
+            min_x: -100.0 * tile_size.x,
+            min_y: -100.0 * tile_size.y,
+            max_x: 100.0 * tile_size.x,
+            max_y: 100.0 * tile_size.y,
+        });
     }
 }

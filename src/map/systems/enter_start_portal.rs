@@ -14,7 +14,8 @@ pub fn enter_start_portal(
 ) {
     for _event in events.read() {
         commands.trigger(CleanupZone);
-        game_state.set(AppState::CreateZone);
+        commands.trigger(CleanupCurrentWorldSpace);
+        game_state.set(AppState::CreateInstance);
         playing_state.set(InGameState::Run);
     }
 }

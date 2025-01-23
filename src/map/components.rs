@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
+use bevy_ecs_tilemap::{map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType}, tiles::TilePos};
 
 use crate::helpers::labels::GameCollisionLayer;
 
@@ -44,24 +45,44 @@ pub enum TileType {
     Water,
 }
 
-#[derive(Clone)]
-pub enum MapMarker {
-    PlayerSpawn(Vec2), // Could even include spawn direction
-    LevelExit(Vec2),
-    EnemySpawns(Vec<Vec2>),
-    BossSpawns(Vec<Vec2>),
-    ChestSpawns(Vec<Vec2>),
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum MarkerType {
+    PlayerSpawn,
+    LevelExit,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum MultiMarkerType {
+    EnemySpawns,
+    BossSpawns,
+    ChestSpawns,
+}
+
+#[derive(Clone, Debug)]
 pub struct MapMarkers {
-    pub markers: Vec<MapMarker>,
+    pub single_markers: HashMap<MarkerType, Vec2>, // Single-instance markers
+    pub multi_markers: HashMap<MultiMarkerType, Vec<Vec2>>, // Multi-instance markers
+}
+
+//Code to actually get the marker
+impl MapMarkers {
+    pub fn get_single(&self, marker_type: MarkerType) -> Option<&Vec2> {
+        self.single_markers.get(&marker_type)
+    }
+
+    pub fn get_multi(&self, marker_type: MultiMarkerType) -> Option<&Vec<Vec2>> {
+        self.multi_markers.get(&marker_type)
+    }
 }
 
 #[derive(Resource, Clone)]
 pub struct MapLayout {
-    pub tiles: Vec<Vec<TileType>>, // Your physical tile grid
-    pub markers: Vec<MapMarker>,   // Collection of all logical positions
+    // used to prevent having to find the length of the vecs below
+    pub size: TilemapSize,
+    // Your physical tile grid
+    pub tiles: Vec<Vec<TileType>>,
+    // Logical positions, stored in terms of tiles, but then converted to world posiitons
+    pub markers: MapMarkers,
 }
 
 #[derive(Default)]
@@ -90,5 +111,49 @@ impl WallSection {
         } else {
             self.end.1 - self.start.1 + 1
         }
+    }
+}
+
+//This holds the concept of "Tiles are this big relative to world cordinaties"
+#[derive(Resource)]
+pub struct WorldSpaceConfig {
+    pub map_size: TilemapSize,
+    pub tile_size: TilemapTileSize, // Size of each tile in world units
+    pub world_origin: Vec2,         // Where (0,0) in tile coordinates maps to in world space
+}
+
+//If we want to f with the scale of our tiles:world (e.g. have way more tiles in our world)
+//We can edit that here
+impl Default for WorldSpaceConfig {
+    fn default() -> Self {
+        WorldSpaceConfig {
+            map_size: TilemapSize::new(200, 200),
+            tile_size: TilemapTileSize::new(16.0, 16.0),
+            world_origin: Vec2::ZERO,
+        }
+    }
+}
+
+//Helper impl -> Pass in a tile, and it tells you the world co-ords it maps to
+//This seems jank, but it's because the rendering of the tiles has this offset in it's 
+//Library and in rendering code it's used to "Center" the tiles onto the bevy map
+impl WorldSpaceConfig {
+    pub fn tile_to_world(&self, tile_pos: IVec2) -> Vec2 {
+        // Calculate the offset to center the tilemap
+        let grid_size = TilemapGridSize::new(self.tile_size.x, self.tile_size.y);
+        let map_type = TilemapType::Square;
+        let low = TilePos::new(0, 0).center_in_world(&grid_size, &map_type);
+        let high =
+            TilePos::new(self.map_size.x, self.map_size.y).center_in_world(&grid_size, &map_type);
+        let diff = high - low;
+        let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
+
+        // Compute world position with offset applied
+        self.world_origin
+            + Vec2::new(
+                tile_pos.x as f32 * self.tile_size.x,
+                tile_pos.y as f32 * self.tile_size.y,
+            )
+            + offset
     }
 }

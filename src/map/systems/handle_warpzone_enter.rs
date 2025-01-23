@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::events::CleanupZone, labels::states::AppState,
-    map::events::WarpZoneEnterEvent,
+    despawn::events::CleanupZone, labels::states::AppState, map::events::WarpZoneEnterEvent,
 };
 
 pub fn handle_warpzone_enter(
@@ -12,6 +11,6 @@ pub fn handle_warpzone_enter(
 ) {
     for _event in events.read() {
         commands.trigger(CleanupZone);
-        game_state.set(AppState::CreateZone);
+        game_state.set(AppState::CreateInstance);
     }
 }

@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{combat::attributes::Health, despawn::components::LiveDuration};
+use crate::{
+    combat::attributes::Health,
+    despawn::{components::LiveDuration, events::CleanupZone},
+    ui::game_over_screen::RestartEvent,
+};
 
 pub fn remove_expired_entities(
     mut commands: Commands,
@@ -38,4 +42,8 @@ pub fn despawn_all<T: Event, C: Component>(
     for e in query.iter() {
         commands.entity(e).despawn_recursive();
     }
+}
+
+pub fn on_restart_event_cleanup_zone(_: Trigger<RestartEvent>, mut commands: Commands) {
+    commands.trigger(CleanupZone);
 }

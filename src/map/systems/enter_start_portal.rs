@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::events::CleanupCurrentWorldSpace,
+    despawn::events::CleanupZone,
     labels::states::{AppState, InGameState},
     map::events::StartRunEvent,
 };
@@ -13,7 +13,7 @@ pub fn enter_start_portal(
     mut playing_state: ResMut<NextState<InGameState>>,
 ) {
     for _event in events.read() {
-        commands.trigger(CleanupCurrentWorldSpace);
+        commands.trigger(CleanupZone);
         game_state.set(AppState::CreateZone);
         playing_state.set(InGameState::Run);
     }

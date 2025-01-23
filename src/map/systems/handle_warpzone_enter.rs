@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::events::CleanupCurrentWorldSpace, labels::states::AppState,
+    despawn::events::CleanupZone, labels::states::AppState,
     map::events::WarpZoneEnterEvent,
 };
 
@@ -11,7 +11,7 @@ pub fn handle_warpzone_enter(
     mut game_state: ResMut<NextState<AppState>>,
 ) {
     for _event in events.read() {
-        commands.trigger(CleanupCurrentWorldSpace);
+        commands.trigger(CleanupZone);
         game_state.set(AppState::CreateZone);
     }
 }

@@ -69,5 +69,5 @@ pub fn player_setup(
         ))
         .observe(death::on_player_defeated)
         .observe(equip::on_main_hand_activated);
-    game_state.set(AppState::Playing);
+    game_state.set(AppState::CreateOverworld);
 }

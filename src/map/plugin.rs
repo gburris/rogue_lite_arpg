@@ -39,7 +39,7 @@ impl Plugin for MapPlugin {
                 .chain(),
         )
         .add_systems(
-            OnEnter(AppState::CreateOverworld),
+            OnEnter(AppState::CreateHub),
             (
                 generate_hub_layout,
                 render_hub_tiles,

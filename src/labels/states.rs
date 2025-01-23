@@ -5,7 +5,7 @@ pub enum AppState {
     #[default]
     StartScreen,
     AssetLoading,
-    CreateOverworld,
+    CreateHub,
     SpawnPlayer, // Also creates player overlay UI
     CreateInstance,
     // Represents time in game where all game-play systems are actually running
@@ -21,7 +21,7 @@ pub enum AppState {
 #[derive(States, Eq, Default, Hash, Clone, Debug, PartialEq)]
 pub enum InGameState {
     #[default]
-    BeforeRun, // Overworld State
+    BeforeRun, // Hub State
     Run, // Post entering the start portal state
 }
 

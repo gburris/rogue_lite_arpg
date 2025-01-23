@@ -1,6 +1,9 @@
 use avian2d::prelude::*;
 use bevy::{prelude::*, utils::HashMap};
-use bevy_ecs_tilemap::{map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType}, tiles::TilePos};
+use bevy_ecs_tilemap::{
+    map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
+    tiles::TilePos,
+};
 
 use crate::helpers::labels::GameCollisionLayer;
 
@@ -40,6 +43,7 @@ pub struct Water;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum TileType {
+    Wood,
     Ground,
     Wall,
     Water,
@@ -49,6 +53,7 @@ pub enum TileType {
 pub enum MarkerType {
     PlayerSpawn,
     LevelExit,
+    NPCSpawn, //Move this to multi marker once we have more than one NPC in the hub
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -135,7 +140,7 @@ impl Default for WorldSpaceConfig {
 }
 
 //Helper impl -> Pass in a tile, and it tells you the world co-ords it maps to
-//This seems jank, but it's because the rendering of the tiles has this offset in it's 
+//This seems jank, but it's because the rendering of the tiles has this offset in it's
 //Library and in rendering code it's used to "Center" the tiles onto the bevy map
 impl WorldSpaceConfig {
     pub fn tile_to_world(&self, tile_pos: IVec2) -> Vec2 {

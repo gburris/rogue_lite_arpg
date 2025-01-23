@@ -16,6 +16,7 @@ pub fn render_hub_tiles(
 ) {
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
     let ground_texture_handle: Handle<Image> = sprites.grass_tiles.clone();
+    let wood_texture_handle: Handle<Image> = sprites.wood_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
     let map_size = world_config.map_size;
     let tile_size = world_config.tile_size;
@@ -24,10 +25,12 @@ pub fn render_hub_tiles(
 
     // Set up storage for each tile type
     let mut ground_storage = TileStorage::empty(map_size);
+    let mut wood_storage = TileStorage::empty(map_size);
     let mut wall_storage = TileStorage::empty(map_size);
     let mut water_storage = TileStorage::empty(map_size);
 
     let ground_tilemap_entity = commands.spawn_empty().id();
+    let wood_tilemap_entity = commands.spawn_empty().id();
     let wall_tilemap_entity = commands.spawn_empty().id();
     let water_tilemap_entity = commands.spawn_empty().id();
 
@@ -76,6 +79,17 @@ pub fn render_hub_tiles(
                         .id();
                     water_storage.set(&tile_pos, water_entity);
                 }
+                TileType::Wood => {
+                    let wood_entity = commands
+                        .spawn(TileBundle {
+                            position: tile_pos,
+                            tilemap_id: TilemapId(wood_tilemap_entity),
+                            texture_index: TileTextureIndex(color),
+                            ..Default::default()
+                        })
+                        .id();
+                    wood_storage.set(&tile_pos, wood_entity);
+                }
             }
         }
     }
@@ -123,6 +137,22 @@ pub fn render_hub_tiles(
         storage: water_storage,
         map_type,
         texture: TilemapTexture::Single(water_texture_handle),
+        tile_size,
+        transform: get_tilemap_center_transform(
+            &map_size,
+            &grid_size,
+            &map_type,
+            ZLayer::Ground.z(),
+        ),
+        ..Default::default()
+    });
+    // Insert the wood tilemap
+    commands.entity(wood_tilemap_entity).insert(TilemapBundle {
+        grid_size,
+        size: map_size,
+        storage: wood_storage,
+        map_type,
+        texture: TilemapTexture::Single(wood_texture_handle),
         tile_size,
         transform: get_tilemap_center_transform(
             &map_size,

@@ -7,22 +7,24 @@ use crate::{
     map::{
         components::{MapLayout, TileType, Wall, Water},
         resources::TileSize,
-        WallSection,
+        WallSection, WorldSpaceConfig,
     },
 };
 
-pub fn process_map_collisions_zones(
+pub fn spawn_instance_collisions_zones(
     mut commands: Commands,
     map_layout: Res<MapLayout>,
-    tile_size: Res<TileSize>,
+    world_config: Res<WorldSpaceConfig>,
 ) {
-    let map_size = TilemapSize {
-        x: map_layout.tiles.len() as u32,
-        y: map_layout.tiles[0].len() as u32,
+    let map_size = world_config.map_size;
+    //This should be casted to vec2 so we don't pass around the tilemap helper wrapper thing
+    let tile_size = TileSize {
+        x: world_config.tile_size.x,
+        y: world_config.tile_size.y,
     };
 
     // Calculate center offset based on tilemap centering logic
-    let grid_size = TilemapGridSize::new(tile_size.x, tile_size.x);
+    let grid_size = TilemapGridSize::new(world_config.tile_size.x, world_config.tile_size.y);
     let map_type = TilemapType::Square;
 
     let low = TilePos::new(0, 0).center_in_world(&grid_size, &map_type);

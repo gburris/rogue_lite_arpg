@@ -1,21 +1,28 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashMap};
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-use crate::map::components::{MapLayout, MapMarker, TileType};
+use crate::map::{
+    components::{MapLayout, TileType},
+    MapMarkers, MarkerType, MultiMarkerType,
+};
 
-pub fn generate_map_layout(map_size: TilemapSize) -> MapLayout {
+pub fn generate_map_layout(size: TilemapSize) -> MapLayout {
     // First generate the base physical map
-    let mut tiles = create_empty_map(map_size);
+    let mut tiles = create_empty_map(size);
 
     // Add walls and obstacles
-    generate_walls(&mut tiles, map_size);
-    generate_water_bodies(&mut tiles, map_size);
+    generate_walls(&mut tiles, size);
+    generate_water_bodies(&mut tiles, size);
 
     // Generate markers after physical layout is done
-    let markers = generate_markers(&tiles, map_size);
+    let markers = generate_markers(&tiles, size);
 
-    MapLayout { tiles, markers }
+    MapLayout {
+        size,
+        tiles,
+        markers,
+    }
 }
 
 fn create_empty_map(map_size: TilemapSize) -> Vec<Vec<TileType>> {
@@ -23,7 +30,7 @@ fn create_empty_map(map_size: TilemapSize) -> Vec<Vec<TileType>> {
 }
 
 fn generate_walls(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize) {
-    let num_walls = (map_size.x as f32 * map_size.y as f32 * 0.002) as i32;
+    let num_walls = (map_size.x as f32 * map_size.y as f32 * 0.001) as i32;
 
     for _ in 0..num_walls {
         if let Some((start_x, start_y, is_horizontal, length)) = generate_wall_parameters(map_size)
@@ -37,7 +44,7 @@ fn generate_walls(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize) {
 
 fn generate_water_bodies(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize) {
     let mut rng = rand::thread_rng();
-    let num_water_bodies = (map_size.x as f32 * map_size.y as f32 * 0.001) as i32;
+    let num_water_bodies = (map_size.x as f32 * map_size.y as f32 * 0.0005) as i32;
 
     for _ in 0..num_water_bodies {
         let x = rng.gen_range(5..(map_size.x - 5) as i32);
@@ -69,39 +76,44 @@ fn place_water_body(
     }
 }
 
-fn generate_markers(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> Vec<MapMarker> {
-    let mut markers = Vec::new();
+fn generate_markers(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> MapMarkers {
+    let mut single_markers = HashMap::new();
+    let mut multi_markers = HashMap::new();
 
     // Generate player spawn in the left third of the map
     if let Some(spawn_pos) = find_valid_position(map, map_size, 0.0..0.3) {
-        markers.push(MapMarker::PlayerSpawn(spawn_pos));
+        single_markers.insert(MarkerType::PlayerSpawn, spawn_pos);
     }
 
     // Generate exit in the right third of the map
     if let Some(exit_pos) = find_valid_position(map, map_size, 0.7..1.0) {
-        markers.push(MapMarker::LevelExit(exit_pos));
+        warn!("Generating exit position {}", exit_pos);
+        single_markers.insert(MarkerType::LevelExit, exit_pos);
     }
 
     // Generate enemy spawns in the middle section
     let enemy_positions = find_multiple_positions(map, map_size, 0.3..0.7, 5);
     if !enemy_positions.is_empty() {
-        markers.push(MapMarker::EnemySpawns(enemy_positions));
+        multi_markers.insert(MultiMarkerType::EnemySpawns, enemy_positions);
     }
 
     // Generate chest spawns throughout the map
     let chest_positions = find_multiple_positions(map, map_size, 0.2..0.8, 3);
     if !chest_positions.is_empty() {
-        markers.push(MapMarker::ChestSpawns(chest_positions));
+        multi_markers.insert(MultiMarkerType::ChestSpawns, chest_positions);
     }
 
     // Generate boss spawn in the far right if map is large enough
     if map_size.x >= 50 {
         if let Some(boss_pos) = find_valid_position(map, map_size, 0.8..0.9) {
-            markers.push(MapMarker::BossSpawns(vec![boss_pos]));
+            multi_markers.insert(MultiMarkerType::BossSpawns, vec![boss_pos]);
         }
     }
 
-    markers
+    MapMarkers {
+        single_markers,
+        multi_markers,
+    }
 }
 
 fn find_valid_position(

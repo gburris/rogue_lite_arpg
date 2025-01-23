@@ -1,4 +1,8 @@
 use bevy::prelude::*;
+use instance::{
+    finish_create_instance, generate_instance_layout, render_instance_tilemap,
+    spawn_instance_collisions_zones, spawn_instance_entities,
+};
 
 use crate::{
     labels::{
@@ -33,6 +37,17 @@ impl Plugin for MapPlugin {
             OnEnter(AppState::CreateOverworld),
             (generate_tilemap_for_overworld, starting_portal_setup).chain(),
         )
+        // .add_systems(
+        //     OnEnter(AppState::CreateOverworld),
+        //     (
+        //         generate_overworld_layout,
+        //         render_overworld_tilemap,
+        //         spawn_overworld_collisions_zones,
+        //         spawn_overworld_entities,
+        //         finish_create_overworld,
+        //     )
+        //         .chain(),
+        // )
         //.add_systems(OnExit(InGameState::Run), (despawn_walls).chain())
         .add_systems(
             Update,

@@ -1,19 +1,10 @@
 pub mod enter_start_portal;
-pub mod finish_create_instance;
-pub mod generate_instance_layout;
 pub mod handle_warpzone_enter;
+pub mod instance;
 pub mod overworld_tilemap_generation;
-pub mod render_instance_tilemap;
-pub mod spawn_instance_collisions_zones;
-pub mod spawn_instance_entities;
 pub mod starting_portal_setup;
 
 pub use enter_start_portal::enter_start_portal;
-pub use finish_create_instance::finish_create_instance;
-pub use generate_instance_layout::generate_instance_layout;
 pub use handle_warpzone_enter::handle_warpzone_enter;
 pub use overworld_tilemap_generation::generate_tilemap_for_overworld;
-pub use render_instance_tilemap::render_instance_tilemap;
-pub use spawn_instance_collisions_zones::spawn_instance_collisions_zones;
-pub use spawn_instance_entities::spawn_instance_entities;
 pub use starting_portal_setup::starting_portal_setup;

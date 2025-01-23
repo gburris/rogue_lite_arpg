@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use hub::{
-    enter_start_portal::enter_start_portal, generate_hub_layout::generate_hub_layout,
-    render_hub_tiles::render_hub_tiles, spawn_hub_collisions_zones,
-    starting_portal_setup::starting_portal_setup,
+    enter_start_portal::enter_start_portal, finish_create_hub::finish_create_hub,
+    generate_hub_layout::generate_hub_layout, render_hub_tiles::render_hub_tiles,
+    spawn_hub_colliders, spawn_hub_entities,
 };
 use instance::{
     finish_create_instance, generate_instance_layout, handle_instance_portal_enter,
@@ -43,8 +43,9 @@ impl Plugin for MapPlugin {
             (
                 generate_hub_layout,
                 render_hub_tiles,
-                spawn_hub_collisions_zones,
-                starting_portal_setup,
+                spawn_hub_colliders,
+                spawn_hub_entities,
+                finish_create_hub,
             )
                 .chain(),
         )

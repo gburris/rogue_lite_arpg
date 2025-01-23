@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::events::CleanupZone,
     labels::states::{AppState, InGameState},
     player::PlayerLevel,
 };

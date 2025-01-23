@@ -30,7 +30,10 @@ impl Plugin for UIPlugin {
             )
             // Core game overlay (HUD)
             .add_systems(OnEnter(AppState::SpawnPlayer), game_overlay::spawn)
-            .add_systems(Update, game_overlay::update.in_set(InGameSet::HudOverlay))
+            .add_systems(
+                Update,
+                (game_overlay::update, game_overlay::update_mana_bar).in_set(InGameSet::HudOverlay),
+            )
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(

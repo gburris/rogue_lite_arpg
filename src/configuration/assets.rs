@@ -9,7 +9,7 @@ impl Plugin for AssetLoadingPlugin {
     fn build(&self, app: &mut App) {
         app.add_loading_state(
             LoadingState::new(AppState::AssetLoading)
-                .continue_to_state(AppState::CreateOverworld)
+                .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>(),
         );
     }

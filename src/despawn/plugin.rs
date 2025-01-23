@@ -3,7 +3,7 @@ use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
     combat::projectile::components::Projectile,
-    despawn::{events::CleanupCurrentWorldSpace, systems::*},
+    despawn::{events::*, systems::*},
     enemy::Enemy,
     labels::sets::InGameSet,
     map::{
@@ -11,6 +11,8 @@ use crate::{
         Water,
     },
     npc::NPC,
+    player::Player,
+    ui::{game_over_screen::RestartEvent, game_overlay::GameOverlay},
 };
 
 pub struct DespawnPlugin;
@@ -21,12 +23,15 @@ impl Plugin for DespawnPlugin {
             Update,
             (remove_expired_entities, despawn_on_zero_health).in_set(InGameSet::DespawnEntities),
         )
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Portal>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, TilemapId>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Wall>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Water>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Enemy>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, Projectile>)
-        .add_observer(despawn_all::<CleanupCurrentWorldSpace, NPC>);
+        .add_observer(despawn_all::<CleanupZone, Portal>)
+        .add_observer(despawn_all::<CleanupZone, TilemapId>)
+        .add_observer(despawn_all::<CleanupZone, Wall>)
+        .add_observer(despawn_all::<CleanupZone, Water>)
+        .add_observer(despawn_all::<CleanupZone, Enemy>)
+        .add_observer(despawn_all::<CleanupZone, Projectile>)
+        .add_observer(despawn_all::<CleanupZone, NPC>)
+        .add_observer(despawn_all::<RestartEvent, Player>)
+        .add_observer(despawn_all::<RestartEvent, GameOverlay>)
+        .add_observer(on_restart_event_cleanup_zone);
     }
 }

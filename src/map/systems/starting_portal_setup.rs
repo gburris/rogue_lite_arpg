@@ -14,5 +14,5 @@ pub fn starting_portal_setup(
         Sprite::from_image(sprites.run_start_portal.clone()),
         Transform::from_xyz(500.0, 500.0, 1.0),
     ));
-    game_state.set(AppState::SpawnPlayer);
+    game_state.set(AppState::Playing);
 }

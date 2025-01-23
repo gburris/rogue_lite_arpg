@@ -48,20 +48,28 @@ pub fn spawn(mut commands: Commands) {
             // Footer
             parent
                 .spawn((Node {
-                    height: Val::Px(80.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Start,
                     ..default()
                 },))
-                .with_child((
-                    ManaBar,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(20.0),
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgb(0.0, 0.173, 0.878)),
-                ));
+                .with_children(|footer| {
+                    footer
+                        .spawn((
+                            Node {
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                width: Val::Px(200.0),
+                                height: Val::Px(10.0),
+                                ..default()
+                            },
+                            BackgroundColor::from(Color::srgb(0.21, 0.21, 0.21)),
+                        ))
+                        .with_child((
+                            ManaBar,
+                            Node::default(),
+                            BackgroundColor::from(Color::srgb(0.0, 0.173, 0.878)),
+                        ));
+                });
         });
 }
 
@@ -83,3 +91,5 @@ pub fn update(
         mana.max_mana
     ));
 }
+
+pub fn update_mana_bar() {}

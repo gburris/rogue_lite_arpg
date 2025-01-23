@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::events::CleanupCurrentWorldSpace,
+    despawn::events::CleanupZone,
     labels::states::{AppState, InGameState},
     player::PlayerLevel,
 };
@@ -91,8 +91,7 @@ pub fn handle_restart_button(
             commands.trigger(RestartEvent {
                 player_level: player_level.current,
             });
-            commands.trigger(CleanupCurrentWorldSpace);
-            game_state.set(AppState::CreateOverworld);
+            game_state.set(AppState::SpawnPlayer);
             in_game_state.set(InGameState::BeforeRun);
         }
     }

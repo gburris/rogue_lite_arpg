@@ -30,6 +30,7 @@ impl Plugin for SchedulePlugin {
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
                 InGameSet::HudOverlay,
+                InGameSet::Physics,
                 InGameSet::Collision,
             )
                 .chain()

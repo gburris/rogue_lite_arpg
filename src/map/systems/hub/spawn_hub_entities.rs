@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{resources::CurrentZoneLevel, MapLayout, MarkerType, Portal, WorldSpaceConfig},
+    map::{MapLayout, MarkerType, Portal, WorldSpaceConfig},
     player::Player,
 };
 
@@ -57,7 +57,6 @@ pub fn spawn_hub_entities(
         warn!("Player spawn marker not found in map layout.");
     }
 
-    //Send a trigger to spawn the NPC
 
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {

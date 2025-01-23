@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSet, states::AppState},
+    labels::sets::InGameSet,
     npc::{begin_dialogue, handle_dialogue_input, move_npcs, npc_setup, update_dialogue_bubbles},
 };
 

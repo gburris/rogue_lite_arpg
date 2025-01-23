@@ -16,7 +16,6 @@ pub fn render_instance_tilemap(
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
-    tilesize: Res<TileSize>,
     zone_level: Res<CurrentZoneLevel>,
 ) {
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();

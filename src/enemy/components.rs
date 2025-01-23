@@ -28,11 +28,10 @@ impl Default for Experience {
 
 #[derive(Deserialize, Debug)]
 pub struct EnemiesConfig {
-    pub enemies: Vec<EnemyType>,
+    pub enemies: HashMap<String, EnemyType>,
 }
 #[derive(Deserialize, Debug)]
 pub struct EnemyType {
-    pub name: String,
     pub simple_motion_speed: f32,
     pub health: f32,
     pub sprite_path: String,

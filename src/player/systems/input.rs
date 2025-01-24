@@ -2,8 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     movement::components::IsMoving,
-    npc::events::AttemptDialogueInput,
-    player::{MainHandActivated, Player, PlayerMovementEvent},
+    player::{AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent},
 };
 
 #[derive(Event)]
@@ -24,7 +23,7 @@ pub fn player_input(
     }
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(AttemptDialogueInput);
+        commands.trigger(AttemptInteractionInput);
         return;
     }
 

@@ -20,7 +20,6 @@ pub struct NPC;
 
 #[derive(Component)]
 #[require(
-    Health,
     CollidingEntities,
     Sensor,
     Collider(||  Collider::circle(500.0)),

@@ -61,6 +61,7 @@ pub fn player_setup(
                     GameCollisionLayer::Enemy,
                     GameCollisionLayer::Wall,
                     GameCollisionLayer::Water,
+                    GameCollisionLayer::Chest,
                 ],
             ),
             LockedAxes::new().lock_rotation(),

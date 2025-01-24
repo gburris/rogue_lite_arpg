@@ -61,4 +61,8 @@ pub struct SpriteAssets {
     pub run_start_portal: Handle<Image>,
     #[asset(path = "npc.png")]
     pub npc: Handle<Image>,
+    #[asset(path = "open_chest.png")]
+    pub open_chest: Handle<Image>,
+    #[asset(path = "closed_chest.png")]
+    pub closed_chest: Handle<Image>,
 }

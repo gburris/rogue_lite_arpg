@@ -13,6 +13,9 @@ use crate::{
 #[derive(Debug, Event)]
 pub struct EnemySpawnEvent(pub Vec<Vec3>);
 
+#[derive(Debug, Event)]
+pub struct ChestSpawnEvent(pub Vec<Vec3>);
+
 pub fn spawn_instance_entities(
     mut commands: Commands,
     mut zone_level: ResMut<CurrentZoneLevel>,
@@ -49,11 +52,26 @@ pub fn spawn_instance_entities(
                 Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
             })
             .collect();
-        //Help copilot
         commands.trigger(EnemySpawnEvent(enemy_spawn_positions));
     } else {
         warn!("No enemy spawn markers found in map layout.");
     }
+
+    if let Some(chest_spawn_pos_in_tiles) =
+        map_layout.markers.get_multi(MultiMarkerType::ChestSpawns)
+    {
+        let chest_spawn_positions: Vec<Vec3> = chest_spawn_pos_in_tiles
+            .iter()
+            .map(|tile_position| {
+                let world_position = world_config.tile_to_world(tile_position.as_ivec2());
+                Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
+            })
+            .collect();
+        commands.trigger(ChestSpawnEvent(chest_spawn_positions));
+    } else {
+        warn!("No chest spawn markers found in map layout.");
+    }
+
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {
         let spawn_position_in_world =

@@ -15,3 +15,6 @@ pub struct MainHandActivated;
 
 #[derive(Event)]
 pub struct ResetPlayerPosition;
+
+#[derive(Event)]
+pub struct AttemptInteractionInput;

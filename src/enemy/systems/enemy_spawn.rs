@@ -48,6 +48,7 @@ fn spawn_enemy(
                     [
                         GameCollisionLayer::Projectile,
                         GameCollisionLayer::Player,
+                        GameCollisionLayer::Chest,
                         GameCollisionLayer::Wall,
                         GameCollisionLayer::Water,
                     ],

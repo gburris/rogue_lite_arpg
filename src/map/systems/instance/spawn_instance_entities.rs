@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{resources::CurrentZoneLevel, MapLayout, MarkerType, Portal, WorldSpaceConfig},
+    map::{
+        resources::CurrentZoneLevel, MapLayout, MarkerType, MultiMarkerType, Portal,
+        WorldSpaceConfig,
+    },
     player::Player,
 };
 
@@ -36,6 +39,23 @@ pub fn spawn_instance_entities(
         Transform::from_translation(warpzone_position),
     ));
 
+    if let Some(enemy_spawn_positions_in_tiles) =
+        map_layout.markers.get_multi(MultiMarkerType::EnemySpawns)
+    {
+        let enemy_spawn_positions: Vec<Vec3> = enemy_spawn_positions_in_tiles
+            .iter()
+            .map(|tile_position| {
+                let world_position = world_config.tile_to_world(tile_position.as_ivec2());
+                Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
+            })
+            .collect();
+        warn!("spawn_enemies 0");
+        //Help copilot
+        warn!("Enemy spawn positions: {:?}", enemy_spawn_positions);
+        commands.trigger(EnemySpawnEvent(enemy_spawn_positions));
+    } else {
+        warn!("No enemy spawn markers found in map layout.");
+    }
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {
         let spawn_position_in_world =

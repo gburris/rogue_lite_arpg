@@ -90,22 +90,13 @@ fn generate_hub_markers(bounds: Rect) -> MapMarkers {
     let mut single_markers = HashMap::new();
 
     // Spawn player near the entrance
-    let player_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 5.0,
-    );
+    let player_spawn = Vec2::new((bounds.min.x + bounds.max.x) / 2.0, bounds.min.y + 5.0);
     single_markers.insert(MarkerType::PlayerSpawn, player_spawn);
 
-    let level_exit_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 55.0,
-    );
+    let level_exit_spawn = Vec2::new((bounds.min.x + bounds.max.x) / 2.0, bounds.min.y + 55.0);
     single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
 
-    let npc_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 35.0,
-    );
+    let npc_spawn = Vec2::new((bounds.min.x + bounds.max.x) / 2.0, bounds.min.y + 35.0);
     single_markers.insert(MarkerType::NPCSpawn, npc_spawn);
 
     MapMarkers {

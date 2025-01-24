@@ -118,11 +118,7 @@ fn spawn_wall_colliders(
             (tile_size.x, length * tile_size.y)
         };
 
-        let collider_pos = if section.is_horizontal {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
-        } else {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0))
-        };
+        let collider_pos = Vec2::new(start_pos.x + (width / 2.0), start_pos.y + (height / 2.0));
 
         // Apply the offset to center the collider
         let adjusted_pos = collider_pos + offset;

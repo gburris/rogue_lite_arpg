@@ -49,9 +49,7 @@ pub fn spawn_instance_entities(
                 Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
             })
             .collect();
-        warn!("spawn_enemies 0");
         //Help copilot
-        warn!("Enemy spawn positions: {:?}", enemy_spawn_positions);
         commands.trigger(EnemySpawnEvent(enemy_spawn_positions));
     } else {
         warn!("No enemy spawn markers found in map layout.");

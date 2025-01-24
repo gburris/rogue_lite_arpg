@@ -7,9 +7,6 @@ use crate::{
     player::Player,
 };
 
-#[derive(Debug, Event)]
-pub struct EnemySpawnEvent(pub Vec<Vec3>);
-
 #[derive(Event)]
 pub struct NPCSpawnEvent {
     pub position: Vec3,
@@ -56,7 +53,6 @@ pub fn spawn_hub_entities(
     } else {
         warn!("Player spawn marker not found in map layout.");
     }
-
 
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {

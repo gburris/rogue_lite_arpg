@@ -20,7 +20,7 @@ enum MenuButtonConfig {
 }
 
 impl MenuButtonConfig {
-    fn to_component(&self) -> (MenuButton, &'static str) {
+    fn to_component(self) -> (MenuButton, &'static str) {
         match self {
             MenuButtonConfig::Equipment => (MenuButton(PausedState::Equipment), "EQUIPMENT"),
             MenuButtonConfig::Inventory => (MenuButton(PausedState::Inventory), "INVENTORY"),

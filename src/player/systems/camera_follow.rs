@@ -25,14 +25,14 @@ pub fn camera_follow_system(
         let half_height = window.height() * 0.5;
 
         // Clamp the camera position
-        let x = player_transform.translation.x.clamp(
-            mapbounds.min_x as f32 + half_width,
-            mapbounds.max_x as f32 - half_width,
-        );
-        let y = player_transform.translation.y.clamp(
-            mapbounds.min_y as f32 + half_height,
-            mapbounds.max_y as f32 - half_height,
-        );
+        let x = player_transform
+            .translation
+            .x
+            .clamp(mapbounds.min_x + half_width, mapbounds.max_x - half_width);
+        let y = player_transform
+            .translation
+            .y
+            .clamp(mapbounds.min_y + half_height, mapbounds.max_y - half_height);
 
         camera_transform.translation.x = x;
         camera_transform.translation.y = y;

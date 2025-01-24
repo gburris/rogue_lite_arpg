@@ -7,6 +7,7 @@ pub enum GameCollisionLayer {
     Wall,
     Water, //Water is honestly a bit diff than wall
     Player,
+    Chest,
     Enemy,
     Projectile,
     Portal,

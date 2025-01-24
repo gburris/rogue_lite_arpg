@@ -4,34 +4,26 @@ use bevy::prelude::*;
 
 use crate::{
     despawn::components::LiveDuration,
-    npc::events::{AttemptDialogueInput, DialogueBegin},
-    player::Player,
+    npc::events::DialogueBegin,
+    player::{AttemptInteractionInput, Player},
 };
 
-use super::NPC;
+use super::components::NPCInteractionRadius;
 
 // Only query colliding entities with the NPCInteractionRadius component
 // When it finds that they are in range, kick off a start dialogue trigger
 pub fn handle_dialogue_input(
-    _: Trigger<AttemptDialogueInput>,
+    _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
-    query: Query<(Entity, &Parent, &CollidingEntities)>,
+    query: Query<(&Parent, &CollidingEntities), With<NPCInteractionRadius>>,
     player_query: Query<Entity, With<Player>>,
-    npc_query: Query<Entity, With<NPC>>,
 ) {
     let player_entity = player_query.single();
-
-    for (entity, parent, colliding_entities) in &query {
-        // Skip if this entity is an NPC
-        if npc_query.contains(entity) {
-            continue;
-        }
-
+    for (parent, colliding_entities) in &query {
         // Check if any of the colliding entities is the player
         if colliding_entities.contains(&player_entity) {
             commands.trigger(DialogueBegin {
                 entity: parent.get(),
-                colliding_entities: colliding_entities.clone(),
             });
         }
     }
@@ -57,42 +49,39 @@ pub fn begin_dialogue(
 ) {
     // Get the camera and its transform
     if let Ok((camera, camera_transform)) = camera_query.get_single() {
-        // Get the first colliding entity
-        if let Some(_npc_entity) = dialogue_begin_trigger.colliding_entities.iter().next() {
-            // Get the transform component for that entity
-            if let Ok(npc_transform) = query.get(dialogue_begin_trigger.entity) {
-                // Calculate position above NPC's head in world space
-                let y_offset = 110.0;
-                let world_pos = npc_transform.translation + Vec3::new(0.0, y_offset, 0.1);
+        // Get the transform component for that entity
+        if let Ok(npc_transform) = query.get(dialogue_begin_trigger.entity) {
+            // Calculate position above NPC's head in world space
+            let y_offset = 110.0;
+            let world_pos = npc_transform.translation + Vec3::new(0.0, y_offset, 0.1);
 
-                // Convert world position to screen space
-                if let Ok(screen_pos) = camera.world_to_viewport(camera_transform, world_pos) {
-                    // Spawn the dialogue bubble as a UI element
-                    commands
-                        .spawn((
-                            BackgroundColor::from(Color::WHITE),
-                            BorderColor::from(Color::BLACK),
-                            Node {
-                                position_type: PositionType::Absolute,
-                                left: Val::Px(screen_pos.x),
-                                top: Val::Px(screen_pos.y),
-                                padding: UiRect::all(Val::Px(10.0)),
-                                border: UiRect::all(Val::Px(2.0)),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|parent| {
-                            parent.spawn((
-                                Text::new("You wanted something?"),
-                                TextFont::default(),
-                                TextColor::from(Color::BLACK),
-                            ));
-                        })
-                        .insert(DialogueBubble {
-                            initial_alpha: 0.9,
-                            owning_entity: dialogue_begin_trigger.entity,
-                        });
-                }
+            // Convert world position to screen space
+            if let Ok(screen_pos) = camera.world_to_viewport(camera_transform, world_pos) {
+                // Spawn the dialogue bubble as a UI element
+                commands
+                    .spawn((
+                        BackgroundColor::from(Color::WHITE),
+                        BorderColor::from(Color::BLACK),
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(screen_pos.x),
+                            top: Val::Px(screen_pos.y),
+                            padding: UiRect::all(Val::Px(10.0)),
+                            border: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn((
+                            Text::new("You wanted something?"),
+                            TextFont::default(),
+                            TextColor::from(Color::BLACK),
+                        ));
+                    })
+                    .insert(DialogueBubble {
+                        initial_alpha: 0.9,
+                        owning_entity: dialogue_begin_trigger.entity,
+                    });
             }
         }
     }

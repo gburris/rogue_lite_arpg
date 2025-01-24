@@ -87,7 +87,6 @@ fn generate_markers(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> MapMarke
 
     // Generate exit in the right third of the map
     if let Some(exit_pos) = find_valid_position(map, map_size, 0.7..1.0) {
-        warn!("Generating exit position {}", exit_pos);
         single_markers.insert(MarkerType::LevelExit, exit_pos);
     }
 

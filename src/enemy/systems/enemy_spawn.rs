@@ -15,10 +15,8 @@ pub fn spawn_enemies(
     enemy_assets: Res<EnemyAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    warn!("spawn_enemies");
     let enemy_spawn_positions = enemy_trigger.0.clone();
     for spawn_position in enemy_spawn_positions {
-        warn!("spawn_enemies1");
         spawn_enemy(
             &mut commands,
             "Merman",
@@ -37,7 +35,6 @@ fn spawn_enemy(
     spawn_position: Vec3,
 ) {
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
-        warn!("spawn_enemies2");
         commands
             .spawn((
                 Enemy,
@@ -51,6 +48,7 @@ fn spawn_enemy(
                     [
                         GameCollisionLayer::Projectile,
                         GameCollisionLayer::Player,
+                        GameCollisionLayer::Chest,
                         GameCollisionLayer::Wall,
                         GameCollisionLayer::Water,
                     ],

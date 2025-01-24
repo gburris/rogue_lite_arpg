@@ -6,7 +6,8 @@ use hub::{
 };
 use instance::{
     finish_create_instance, generate_instance_layout, handle_instance_portal_enter,
-    render_instance_tilemap, spawn_instance_collisions_zones, spawn_instance_entities,
+    render_instance_tilemap, setup_instance_data, spawn_instance_collisions_zones,
+    spawn_instance_entities,
 };
 
 use crate::{
@@ -57,6 +58,7 @@ impl Plugin for MapPlugin {
             )
                 .in_set(InGameSet::Simulation),
         )
+        .add_systems(Startup, setup_instance_data)
         .add_event::<WarpZoneEnterEvent>()
         .add_event::<StartRunEvent>()
         .insert_resource(WorldSpaceConfig::default())

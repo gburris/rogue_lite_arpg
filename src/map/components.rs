@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use avian2d::prelude::*;
-use bevy::{prelude::*, utils::HashMap};
+use bevy::prelude::*;
 use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
+use serde::Deserialize;
 
 use crate::helpers::labels::GameCollisionLayer;
 
@@ -161,4 +164,19 @@ impl WorldSpaceConfig {
             )
             + offset
     }
+}
+#[derive(Deserialize, Debug)]
+pub struct InstanceConfig {
+    pub instances: HashMap<String, InstanceType>,
+}
+#[derive(Deserialize, Debug)]
+pub struct InstanceType {
+    pub number_of_enemies: u32,
+    pub wall_density: f32,
+    pub pond_density: f32,
+}
+
+#[derive(Resource)]
+pub struct InstanceAssets {
+    pub instance_config: HashMap<String, InstanceType>,
 }

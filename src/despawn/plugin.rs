@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
+    chests::components::Chest,
     combat::projectile::components::Projectile,
     despawn::{events::*, systems::*},
     enemy::Enemy,
@@ -27,6 +28,7 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, TilemapId>)
         .add_observer(despawn_all::<CleanupZone, Wall>)
         .add_observer(despawn_all::<CleanupZone, Water>)
+        .add_observer(despawn_all::<CleanupZone, Chest>)
         .add_observer(despawn_all::<CleanupZone, Enemy>)
         .add_observer(despawn_all::<CleanupZone, Projectile>)
         .add_observer(despawn_all::<CleanupZone, NPC>)

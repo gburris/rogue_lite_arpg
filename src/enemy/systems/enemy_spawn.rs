@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::Health,
+    configuration::GameCollisionLayer,
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
-    helpers::labels::GameCollisionLayer,
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::{IsMoving, SimpleMotion},
 };
@@ -41,16 +41,17 @@ fn spawn_enemy(
                 SimpleMotion::new(enemy.simple_motion_speed),
                 IsMoving(true),
                 Health::new(enemy.health),
+                LockedAxes::new().lock_rotation(),
                 RigidBody::Dynamic,
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
-                    GameCollisionLayer::Enemy,
+                    [GameCollisionLayer::Enemy],
                     [
-                        GameCollisionLayer::Projectile,
                         GameCollisionLayer::Player,
-                        GameCollisionLayer::Chest,
-                        GameCollisionLayer::Wall,
-                        GameCollisionLayer::Water,
+                        GameCollisionLayer::InAir,
+                        GameCollisionLayer::Grounded,
+                        GameCollisionLayer::HighObstacle,
+                        GameCollisionLayer::LowObstacle,
                     ],
                 ),
                 Sprite::from_image(asset_server.load(&enemy.sprite_path)),

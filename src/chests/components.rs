@@ -1,15 +1,13 @@
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, RigidBody, Sensor};
 use bevy::prelude::*;
 
-use crate::helpers::labels::GameCollisionLayer;
+use crate::configuration::GameCollisionLayer;
 
 #[derive(Component)]
 #[require(
     Collider(|| Collider::rectangle(180.0, 50.0)),
     RigidBody(|| RigidBody::Static),
-    CollisionLayers(|| CollisionLayers::new(
-                       GameCollisionLayer::Chest,
-                       [GameCollisionLayer::Player, GameCollisionLayer::Enemy]))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::LowObstacle, [GameCollisionLayer::Enemy, GameCollisionLayer::Grounded]))
 )]
 pub struct Chest;
 

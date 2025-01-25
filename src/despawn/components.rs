@@ -15,3 +15,9 @@ impl Default for LiveDuration {
         LiveDuration(Timer::from_seconds(2.0, TimerMode::Once))
     }
 }
+
+/**
+ * Represents an entity that will be despawn after any collision
+ */
+#[derive(Component, Default)]
+pub struct DespawnOnCollision;

@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{damage::components::CollisionDamage, status_effects::components::EffectsList},
-    despawn::components::LiveDuration,
-    helpers::labels::GameCollisionLayer,
+    configuration::GameCollisionLayer,
+    despawn::components::{DespawnOnCollision, LiveDuration},
 };
 
 #[derive(Bundle, Clone)]
@@ -16,7 +16,8 @@ pub struct ProjectileBundle {
 
 #[derive(Component, Clone)]
 #[require(
-    LiveDuration,
+    LiveDuration(|| LiveDuration::new(1.0)),
+    DespawnOnCollision,
     Sensor,
     RigidBody(default_rigid_body),
     Collider(default_collider),
@@ -35,7 +36,7 @@ fn default_rigid_body() -> RigidBody {
 fn default_collision_layers() -> CollisionLayers {
     // Currently projectiles can only collide with enemies
     CollisionLayers::new(
-        GameCollisionLayer::Projectile,
-        [GameCollisionLayer::Enemy, GameCollisionLayer::Wall],
+        GameCollisionLayer::InAir,
+        [GameCollisionLayer::Enemy, GameCollisionLayer::HighObstacle],
     )
 }

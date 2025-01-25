@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::attributes::Health, helpers::labels::GameCollisionLayer,
+    combat::attributes::Health, configuration::GameCollisionLayer,
     movement::components::SimpleMotion,
 };
 
@@ -12,9 +12,7 @@ use crate::{
     SimpleMotion,
     Collider(|| Collider::rectangle(300.0, 300.0)),
     RigidBody(|| RigidBody::Kinematic),
-    CollisionLayers(|| CollisionLayers::new(
-                       GameCollisionLayer::Npc,
-                       [GameCollisionLayer::Player]))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded, GameCollisionLayer::InAir]))
 )]
 pub struct NPC;
 
@@ -23,9 +21,7 @@ pub struct NPC;
     CollidingEntities,
     Sensor,
     Collider(||  Collider::circle(500.0)),
-    CollisionLayers(||  CollisionLayers::new(
-                        GameCollisionLayer::Interaction,
-                        [GameCollisionLayer::Player],))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, [GameCollisionLayer::Player]))
 
 )]
 pub struct NPCInteractionRadius;

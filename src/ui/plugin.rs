@@ -4,7 +4,8 @@ use crate::labels::{sets::InGameSet, states::AppState};
 
 use super::{
     game_over_screen::{self, handle_restart_button},
-    game_overlay, start_screen,
+    game_overlay::{self, on_damage_overlay_amount},
+    start_screen,
 };
 
 /// Plugin responsible for managing all UI-related systems and state transitions
@@ -34,6 +35,7 @@ impl Plugin for UIPlugin {
                 Update,
                 (game_overlay::update, game_overlay::update_mana_bar).in_set(InGameSet::HudOverlay),
             )
+            .add_observer(on_damage_overlay_amount)
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(

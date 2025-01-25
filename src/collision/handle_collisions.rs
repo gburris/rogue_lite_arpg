@@ -2,10 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::{
-        components::CollisionDamage,
-        events::{DamageEvent, DealtDamageEvent},
-    },
+    combat::damage::{components::CollisionDamage, events::AttemptDamageEvent},
+    despawn::components::DespawnOnCollision,
     map::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
@@ -24,6 +22,7 @@ pub fn handle_collisions(
     damager_query: Query<(Entity, &CollisionDamage)>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
+    despawn_on_collision_query: Query<&DespawnOnCollision>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
@@ -31,17 +30,16 @@ pub fn handle_collisions(
             //
             if let Ok((damager_entity, collision_damage)) = damager_query.get(e1) {
                 commands.trigger_targets(
-                    DamageEvent {
+                    AttemptDamageEvent {
                         damage: collision_damage.damage,
                         damage_source: Some(damager_entity),
                     },
                     e2,
                 );
+            }
 
-                commands.trigger_targets(DealtDamageEvent, damager_entity);
-
-                // Even if e1 -> e2 does damage, we need to check if e2 -> e1 does damage too
-                continue;
+            if let Ok(_) = despawn_on_collision_query.get(e1) {
+                commands.entity(e1).despawn_recursive();
             }
 
             if let Ok(portal) = portal_query.get(e1) {

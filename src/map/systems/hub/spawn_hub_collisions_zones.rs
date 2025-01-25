@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
-    helpers::labels::GameCollisionLayer,
+    configuration::GameCollisionLayer,
     map::{
         components::{MapLayout, TileType, Wall, Water},
         resources::TileSize,
@@ -128,13 +128,8 @@ fn spawn_wall_colliders(
             Collider::rectangle(width, height),
             RigidBody::Static,
             CollisionLayers::new(
-                GameCollisionLayer::Wall,
-                [
-                    GameCollisionLayer::Player,
-                    GameCollisionLayer::Npc,
-                    GameCollisionLayer::Enemy,
-                    GameCollisionLayer::Projectile,
-                ],
+                GameCollisionLayer::HighObstacle,
+                GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
             ),
             Transform::from_xyz(adjusted_pos.x, adjusted_pos.y, 1.0),
             GlobalTransform::default(),
@@ -272,12 +267,8 @@ fn spawn_water_pond_colliders(
             Collider::capsule(radius, length),
             RigidBody::Static,
             CollisionLayers::new(
-                GameCollisionLayer::Water,
-                [
-                    GameCollisionLayer::Player,
-                    GameCollisionLayer::Npc,
-                    GameCollisionLayer::Enemy,
-                ],
+                GameCollisionLayer::LowObstacle,
+                GameCollisionLayer::LOW_OBSTACLE_FILTERS,
             ),
             transform,
             GlobalTransform::default(),

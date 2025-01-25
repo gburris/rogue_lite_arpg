@@ -3,6 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     combat::damage::{components::CollisionDamage, events::AttemptDamageEvent},
+    despawn::components::DespawnOnCollision,
     map::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
@@ -21,6 +22,7 @@ pub fn handle_collisions(
     damager_query: Query<(Entity, &CollisionDamage)>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
+    despawn_on_collision_query: Query<&DespawnOnCollision>,
 ) {
     for CollisionStarted(e1, e2) in collision_events_started.read() {
         // Perform collision from e1 -> e2 and e2 -> e1 so both have the others damage applied
@@ -34,9 +36,10 @@ pub fn handle_collisions(
                     },
                     e2,
                 );
+            }
 
-                // Even if e1 -> e2 does damage, we need to check if e2 -> e1 does damage too
-                continue;
+            if let Ok(_) = despawn_on_collision_query.get(e1) {
+                commands.entity(e1).despawn_recursive();
             }
 
             if let Ok(portal) = portal_query.get(e1) {

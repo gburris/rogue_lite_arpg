@@ -3,18 +3,6 @@ use bevy::prelude::*;
 
 use crate::combat::projectile::components::*;
 
-// For certain entities, like projectiles, they have no concept of "health" but instead despawn after "X" hits
-pub fn on_collision_despawn(
-    mut commands: Commands,
-    projectile_query: Query<(Entity, &CollidingEntities), With<Projectile>>,
-) {
-    for (projectile_entity, colliding) in projectile_query.iter() {
-        if !colliding.is_empty() {
-            commands.entity(projectile_entity).despawn_recursive();
-        }
-    }
-}
-
 pub fn spawn_projectile(
     commands: &mut Commands,
     caster_transform: &Transform,

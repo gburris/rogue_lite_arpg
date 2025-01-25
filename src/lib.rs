@@ -5,7 +5,6 @@ pub mod combat;
 pub mod configuration;
 pub mod despawn;
 pub mod enemy;
-pub mod helpers;
 pub mod items;
 pub mod labels;
 pub mod map;

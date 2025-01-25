@@ -13,7 +13,10 @@ pub struct DamageEvent {
  * Ex. Projectiles instantly despawn once they deal damage rather than using the concept of "Health"
  */
 #[derive(Event)]
-pub struct DealtDamageEvent;
+pub struct DealtDamageEvent {
+    pub damage: f32,
+    pub damaged_entity: Entity,
+}
 
 #[derive(Event)]
 pub struct DefeatedEvent;

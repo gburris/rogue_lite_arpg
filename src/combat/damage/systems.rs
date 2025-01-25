@@ -9,7 +9,7 @@ use crate::combat::{
     status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
-use super::components::HasIFrames;
+use super::{components::HasIFrames, events::DealtDamageEvent};
 
 pub fn on_damage_event(
     damage_trigger: Trigger<DamageEvent>,
@@ -25,6 +25,16 @@ pub fn on_damage_event(
         }
 
         health.take_damage(damage_trigger.damage);
+
+        if let Some(source) = damage_trigger.damage_source {
+            commands.trigger_targets(
+                DealtDamageEvent {
+                    damage: damage_trigger.damage,
+                    damaged_entity: damage_trigger.entity(),
+                },
+                source,
+            );
+        }
 
         // Damage event decides whether the entity becomes invulernable afterwards
         if let Some(iframes) = has_iframes {

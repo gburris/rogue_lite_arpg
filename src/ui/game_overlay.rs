@@ -1,7 +1,17 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
+use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::attributes::{Health, Mana},
+    combat::{
+        attributes::{Health, Mana},
+        damage::{
+            components::Invulnerable,
+            events::{DamageEvent, DealtDamageEvent},
+        },
+    },
+    despawn::components::LiveDuration,
     player::{components::Player, PlayerExperience, PlayerLevel},
 };
 
@@ -105,4 +115,43 @@ pub fn update_mana_bar(
     let max_mana_bar_length = mana.max_mana * 4.0;
 
     mana_bar.width = Val::Px((mana.current_mana / mana.max_mana) * max_mana_bar_length);
+}
+
+pub fn on_damage_overlay_amount(
+    damage_trigger: Trigger<DealtDamageEvent>,
+    mut commands: Commands,
+    damaged_query: Query<(&Transform, Option<&Invulnerable>)>,
+) {
+    if let Ok((transform, invulnerable)) = damaged_query.get(damage_trigger.damaged_entity) {
+        if invulnerable.is_some() {
+            return;
+        }
+
+        let red_color = Color::srgb(1.0, 0.0, 0.0);
+
+        let offset = (20.0 * random_direction()).extend(0.5);
+
+        let text_location = offset + transform.translation;
+
+        info!(
+            "Spawning damage text in dir: {}, from position: {}, with location: {}",
+            offset, transform.translation, text_location
+        );
+
+        commands.spawn((
+            Text2d::new(damage_trigger.damage.to_string()),
+            TextColor::from(red_color),
+            LiveDuration(Timer::from_seconds(1.0, TimerMode::Once)),
+            Transform::from_translation(text_location),
+        ));
+    }
+}
+
+fn random_direction() -> Vec2 {
+    let mut rng = rand::thread_rng();
+    let angle = rng.gen_range(0.0..2.0 * PI); // Random angle between 0 and 2π
+    let x = angle.cos();
+    let y = angle.sin();
+
+    Vec2::new(x, y).normalize()
 }

@@ -38,8 +38,6 @@ pub fn handle_collisions(
                     e2,
                 );
 
-                commands.trigger_targets(DealtDamageEvent, damager_entity);
-
                 // Even if e1 -> e2 does damage, we need to check if e2 -> e1 does damage too
                 continue;
             }

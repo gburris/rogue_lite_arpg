@@ -2,10 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::{
-        components::CollisionDamage,
-        events::{DamageEvent, DealtDamageEvent},
-    },
+    combat::damage::{components::CollisionDamage, events::AttemptDamageEvent},
     map::{
         components::Portal,
         events::{StartRunEvent, WarpZoneEnterEvent},
@@ -31,7 +28,7 @@ pub fn handle_collisions(
             //
             if let Ok((damager_entity, collision_damage)) = damager_query.get(e1) {
                 commands.trigger_targets(
-                    DamageEvent {
+                    AttemptDamageEvent {
                         damage: collision_damage.damage,
                         damage_source: Some(damager_entity),
                     },

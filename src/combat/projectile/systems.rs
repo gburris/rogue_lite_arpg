@@ -1,11 +1,18 @@
-use avian2d::prelude::LinearVelocity;
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::combat::{damage::events::DealtDamageEvent, projectile::components::*};
+use crate::combat::projectile::components::*;
 
 // For certain entities, like projectiles, they have no concept of "health" but instead despawn after "X" hits
-pub fn on_damage_dealt_despawn(trigger: Trigger<DealtDamageEvent>, mut commands: Commands) {
-    commands.entity(trigger.entity()).despawn_recursive();
+pub fn on_collision_despawn(
+    mut commands: Commands,
+    projectile_query: Query<(Entity, &CollidingEntities), With<Projectile>>,
+) {
+    for (projectile_entity, colliding) in projectile_query.iter() {
+        if !colliding.is_empty() {
+            commands.entity(projectile_entity).despawn_recursive();
+        }
+    }
 }
 
 pub fn spawn_projectile(
@@ -34,12 +41,10 @@ pub fn spawn_projectile(
         aim_direction, velocity
     );
 
-    commands
-        .spawn((
-            Projectile,
-            projectile_bundle.clone(),
-            transform,
-            LinearVelocity(velocity),
-        ))
-        .observe(on_damage_dealt_despawn);
+    commands.spawn((
+        Projectile,
+        projectile_bundle.clone(),
+        transform,
+        LinearVelocity(velocity),
+    ));
 }

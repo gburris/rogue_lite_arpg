@@ -4,15 +4,15 @@ use crate::combat::{
     attributes::health::Health,
     damage::{
         components::Invulnerable,
-        events::{DamageEvent, DefeatedEvent},
+        events::{AttemptDamageEvent, DefeatedEvent},
     },
     status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
-use super::{components::HasIFrames, events::DealtDamageEvent};
+use super::{components::HasIFrames, events::DamageDealtEvent};
 
 pub fn on_damage_event(
-    damage_trigger: Trigger<DamageEvent>,
+    damage_trigger: Trigger<AttemptDamageEvent>,
     mut commands: Commands,
     mut damaged_query: Query<(&mut Health, Option<&HasIFrames>, Option<&Invulnerable>)>,
     source_query: Query<&EffectsList>,
@@ -26,15 +26,12 @@ pub fn on_damage_event(
 
         health.take_damage(damage_trigger.damage);
 
-        if let Some(source) = damage_trigger.damage_source {
-            commands.trigger_targets(
-                DealtDamageEvent {
-                    damage: damage_trigger.damage,
-                    damaged_entity: damage_trigger.entity(),
-                },
-                source,
-            );
-        }
+        commands.trigger_targets(
+            DamageDealtEvent {
+                damage: damage_trigger.damage,
+            },
+            damage_trigger.entity(),
+        );
 
         // Damage event decides whether the entity becomes invulernable afterwards
         if let Some(iframes) = has_iframes {

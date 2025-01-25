@@ -1,17 +1,15 @@
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, transform};
 use rand::{thread_rng, Rng};
 
 use crate::{
     combat::{
         attributes::{Health, Mana},
-        damage::{
-            components::Invulnerable,
-            events::{DamageEvent, DealtDamageEvent},
-        },
+        damage::events::DamageDealtEvent,
     },
     despawn::components::LiveDuration,
+    labels::layer::ZLayer,
     player::{components::Player, PlayerExperience, PlayerLevel},
 };
 
@@ -23,6 +21,8 @@ pub struct PlayerOverlayStatsText;
 
 #[derive(Component)]
 pub struct ManaBar;
+
+const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
 
 pub fn spawn(mut commands: Commands) {
     commands
@@ -118,40 +118,40 @@ pub fn update_mana_bar(
 }
 
 pub fn on_damage_overlay_amount(
-    damage_trigger: Trigger<DealtDamageEvent>,
+    damage_trigger: Trigger<DamageDealtEvent>,
     mut commands: Commands,
-    damaged_query: Query<(&Transform, Option<&Invulnerable>)>,
+    damaged_query: Query<&Transform>,
 ) {
-    if let Ok((transform, invulnerable)) = damaged_query.get(damage_trigger.damaged_entity) {
-        if invulnerable.is_some() {
-            return;
-        }
+    if let Ok(transform) = damaged_query.get(damage_trigger.entity()) {
+        // Create a quaternion for the random rotation
+        let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
 
-        let red_color = Color::srgb(1.0, 0.0, 0.0);
+        // Combine the original rotation with the random offset
+        let new_rotation = random_rotation * transform.rotation;
 
-        let offset = (20.0 * random_direction()).extend(0.5);
+        // Get rotation assuming sprite is facing "UP" (y axis)
+        let rotated_vector = (new_rotation * Vec3::Y).truncate();
 
-        let text_location = offset + transform.translation;
+        // Scale the direction vector by a static offset value
+        let static_offset = 80.0; // Example offset value
+        let scaled_offset = rotated_vector.normalize() * static_offset;
 
-        info!(
-            "Spawning damage text in dir: {}, from position: {}, with location: {}",
-            offset, transform.translation, text_location
-        );
-
-        commands.spawn((
+        commands.entity(damage_trigger.entity()).with_child((
             Text2d::new(damage_trigger.damage.to_string()),
-            TextColor::from(red_color),
-            LiveDuration(Timer::from_seconds(1.0, TimerMode::Once)),
-            Transform::from_translation(text_location),
+            TextColor::from(RED_COLOR),
+            LiveDuration(Timer::from_seconds(0.6, TimerMode::Once)),
+            Transform::from_translation(scaled_offset.extend(ZLayer::VisualEffect.z())),
         ));
     }
 }
 
-fn random_direction() -> Vec2 {
+// Generate a random angle between -angle_range and angle_range degrees (convert to radians)
+fn random_angle(angle_range: f32) -> f32 {
     let mut rng = rand::thread_rng();
-    let angle = rng.gen_range(0.0..2.0 * PI); // Random angle between 0 and 2π
-    let x = angle.cos();
-    let y = angle.sin();
-
-    Vec2::new(x, y).normalize()
+    rng.gen_range(-angle_range..angle_range).to_radians()
 }
+
+// trace!(
+//     "Spawning damage text with random rotation: {}, enemy rotation: {}, new rotation: {}, scaled offset: {}",
+//     random_rotation, new_rotation, rotated_vector, scaled_offset
+// );

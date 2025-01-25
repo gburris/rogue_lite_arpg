@@ -1,7 +1,13 @@
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{
-    combat::attributes::{Health, Mana},
+    combat::{
+        attributes::{Health, Mana},
+        damage::events::DamageDealtEvent,
+    },
+    despawn::components::LiveDuration,
+    labels::layer::ZLayer,
     player::{components::Player, PlayerExperience, PlayerLevel},
 };
 
@@ -13,6 +19,8 @@ pub struct PlayerOverlayStatsText;
 
 #[derive(Component)]
 pub struct ManaBar;
+
+const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
 
 pub fn spawn(mut commands: Commands) {
     commands
@@ -105,4 +113,29 @@ pub fn update_mana_bar(
     let max_mana_bar_length = mana.max_mana * 4.0;
 
     mana_bar.width = Val::Px((mana.current_mana / mana.max_mana) * max_mana_bar_length);
+}
+
+pub fn on_damage_overlay_amount(damage_trigger: Trigger<DamageDealtEvent>, mut commands: Commands) {
+    // Create a quaternion for the random rotation
+    let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
+
+    // Get rotation assuming sprite is facing "UP" (y axis)
+    let rotated_vector = (random_rotation * Vec3::Y).truncate();
+
+    // Scale the direction vector by a static offset value
+    let static_offset = 80.0; // Example offset value
+    let scaled_offset = rotated_vector.normalize() * static_offset;
+
+    commands.entity(damage_trigger.entity()).with_child((
+        Text2d::new(damage_trigger.damage.to_string()),
+        TextColor::from(RED_COLOR),
+        LiveDuration::new(0.6),
+        Transform::from_translation(scaled_offset.extend(ZLayer::VisualEffect.z())),
+    ));
+}
+
+// Generate a random angle between -angle_range and angle_range degrees (convert to radians)
+fn random_angle(angle_range: f32) -> f32 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(-angle_range..angle_range).to_radians()
 }

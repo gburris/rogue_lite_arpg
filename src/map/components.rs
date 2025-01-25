@@ -8,7 +8,7 @@ use bevy_ecs_tilemap::{
 };
 use serde::Deserialize;
 
-use crate::helpers::labels::GameCollisionLayer;
+use crate::configuration::GameCollisionLayer;
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -17,8 +17,7 @@ use crate::helpers::labels::GameCollisionLayer;
 #[require(
     RigidBody(default_rigid_body),
     Collider(default_collider),
-    CollisionLayers(default_collision_layers),
-    Sensor
+    CollisionLayers(default_collision_layers)
 )]
 pub enum Portal {
     StartingPortal,
@@ -34,8 +33,11 @@ fn default_rigid_body() -> RigidBody {
 }
 
 fn default_collision_layers() -> CollisionLayers {
-    // Portals only collide with the player, and are sensors since we don't actually want collisions
-    CollisionLayers::new(GameCollisionLayer::Portal, [GameCollisionLayer::Player])
+    // Portals are sensors since we don't actually want collisions
+    CollisionLayers::new(
+        GameCollisionLayer::HighObstacle,
+        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
+    )
 }
 
 #[derive(Component)]

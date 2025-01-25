@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::{damage::events::DamageEvent, status_effects::components::BurningStatus},
-    configuration::assets::SpriteAssets,
+    combat::{damage::events::AttemptDamageEvent, status_effects::components::BurningStatus},
     enemy::Enemy,
 };
+
+const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
 
 pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {
     for mut burn_status in burn_query.iter_mut() {
@@ -21,7 +22,7 @@ pub fn while_burning(
         if let Ok(entity) = parent_query.get_mut(parent.get()) {
             if burn.damage_frequency.just_finished() {
                 commands.trigger_targets(
-                    DamageEvent {
+                    AttemptDamageEvent {
                         damage_source: None,
                         damage: burn.damage,
                     },
@@ -34,30 +35,28 @@ pub fn while_burning(
 
 pub fn on_burn_applied(
     trigger: Trigger<OnInsert, BurningStatus>,
-    mut commands: Commands,
     status_query: Query<&Parent, With<BurningStatus>>,
-    sprites: Res<SpriteAssets>,
+    mut parent_sprite: Query<&mut Sprite>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    commands
-        .entity(parent.get())
-        .insert(Sprite::from_image(sprites.merman_on_fire.clone()));
+    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
+        parent_sprite.color = RED_COLOR;
+    }
 }
 
 pub fn on_burn_removed(
     trigger: Trigger<OnRemove, BurningStatus>,
-    mut commands: Commands,
     status_query: Query<&Parent, With<BurningStatus>>,
-    sprites: Res<SpriteAssets>,
+    mut parent_sprite: Query<&mut Sprite>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    commands
-        .entity(parent.get())
-        .insert(Sprite::from_image(sprites.merman_enemy.clone()));
+    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
+        parent_sprite.color = Color::default();
+    }
 }

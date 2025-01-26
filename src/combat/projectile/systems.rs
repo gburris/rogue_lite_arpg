@@ -24,10 +24,7 @@ pub fn spawn_projectile(
 
     let velocity = aim_direction.normalize() * spell_speed;
 
-    info!(
-        "Spawning projectile w/ direction: {} and velocity: {}",
-        aim_direction, velocity
-    );
+    trace!("Spawning projectile w/ velocity: {}", velocity);
 
     commands.spawn((
         Projectile,

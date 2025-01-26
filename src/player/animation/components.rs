@@ -73,7 +73,7 @@ impl Default for PlayerAnimationConfig {
             PlayerAnimations::WalkRight,
             AnimationData {
                 row: 11,
-                frame_count: 11,
+                frame_count: 9,
                 frame_duration: 0.1,
             },
         );

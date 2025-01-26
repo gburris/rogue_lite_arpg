@@ -4,7 +4,6 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationIndices, AnimationTimer},
     combat::{
         attributes::{mana::Mana, Health},
         damage::components::HasIFrames,
@@ -15,8 +14,7 @@ use crate::{
     labels::{layer::ZLayer, states::AppState},
     movement::components::SimpleMotion,
     player::{
-        animation::components::PlayerAnimations, systems::*, Inventory, Player,
-        PlayerEquipmentSlots, PlayerStats,
+        animation::components::PlayerAnimations, movement::MovementDirection, systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats
     },
 };
 
@@ -29,7 +27,6 @@ pub fn player_setup(
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     sprites: Res<SpriteAssets>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
@@ -41,19 +38,6 @@ pub fn player_setup(
     inventory
         .add_item(spawn_fire_staff(&mut commands, &sprites))
         .ok();
-
-    //Player Sprite Sheet Setup
-    //TODO: Add all atlas indecies values to a config/map
-    // Move all this somewhere else
-    let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 13, 21, None, None);
-    let texture_atlas_layout = texture_atlas_layouts.add(layout);
-
-    //Idle is on row 8
-    //Facing up has 4 sprites in it's row
-    let idle_down_animation_indices = AnimationIndices {
-        first: 20 * 13,        // 260
-        last: 20 * 13 + 6 - 1, // 263
-    };
 
     commands
         .spawn((
@@ -82,19 +66,7 @@ pub fn player_setup(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
-            (
-                AnimationTimer(Timer::from_seconds(5.0, TimerMode::Repeating)), // IDLE ANIM SPEED <-- And this
-                Sprite::from_atlas_image(
-                    sprites.player_sprite_sheet.clone(),
-                    TextureAtlas {
-                        layout: texture_atlas_layout,
-                        index: idle_down_animation_indices.first,
-                    },
-                ),
-                idle_down_animation_indices,
-                MovementDirection::None,
-                PlayerAnimations::IdleDown,
-            ),
+            (MovementDirection::None, PlayerAnimations::IdleDown),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)

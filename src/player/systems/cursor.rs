@@ -28,13 +28,3 @@ pub fn update_player_aim_position(
 pub fn draw_cursor(player_aim_pos: Single<&AimPosition, With<Player>>, mut gizmos: Gizmos) {
     gizmos.circle_2d(player_aim_pos.position, 10., WHITE);
 }
-
-pub fn face_cursor_system(player: Single<(&AimPosition, &mut Transform), With<Player>>) {
-    let (player_aim_pos, mut player_transform) = player.into_inner();
-
-    // if player_aim_pos.position.x < player_transform.translation.x {
-    //     player_transform.scale.x = 1.0; // Flip sprite to face left
-    // } else {
-    //     player_transform.scale.x = -1.0; // Face right
-    // }
-}

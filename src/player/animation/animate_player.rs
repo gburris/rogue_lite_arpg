@@ -1,6 +1,6 @@
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    player::{systems::MovementDirection, Player},
+    player::{movement::MovementDirection, Player},
 };
 
 use super::components::{PlayerAnimationConfig, PlayerAnimations};

@@ -2,36 +2,12 @@ use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationIndices, AnimationTimer},
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
     player::{
-        resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
+        movement::MovementDirection, resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition
     },
 };
-
-//TODO MOVE TO COMPONENTS ?
-//Clone is way wrong here
-#[derive(Component, PartialEq, Clone, Copy, Debug)]
-pub enum MovementDirection {
-    Up,
-    Down,
-    Left,
-    Right,
-    None,
-}
-
-impl MovementDirection {
-    pub fn from_vec2(vec: Vec2) -> Self {
-        match vec.normalize() {
-            v if v.y > 0.5 => Self::Up,
-            v if v.y < -0.5 => Self::Down,
-            v if v.x > 0.5 => Self::Right,
-            v if v.x < -0.5 => Self::Left,
-            _ => Self::None,
-        }
-    }
-}
 
 // System to handle player movement based on movement events
 pub fn player_movement(
@@ -52,35 +28,13 @@ pub fn player_movement(
 
 pub fn on_player_stopped(
     _: Trigger<PlayerStoppedEvent>,
-    mut animation_query: Query<
-        (
-            &mut MovementDirection,
-            &mut AnimationTimer,
-            &mut AnimationIndices,
-            &mut Sprite,
-        ),
-        With<Player>,
-    >,
+    mut animation_query: Query<(&mut MovementDirection, &mut IsMoving), With<Player>>,
 ) {
-    let (mut current_player_movement, mut timer, mut anim_indices, mut sprite) =
-        animation_query.single_mut();
-    if *current_player_movement == MovementDirection::None {
-        //We are already idle this way, no need to change the animation
-        warn!("Player stopped fired while player is stopped");
-        return;
-    }
-    //Slow Timer for idle
-    timer.pause();
+    let (mut current_player_movement, mut is_moving) = animation_query.single_mut();
+    is_moving.0 = false;
     *current_player_movement = MovementDirection::None;
-    let first_frame = anim_indices.first;
-    *anim_indices = AnimationIndices {
-        first: first_frame, // 260
-        last: first_frame,  // 263
-    };
-    if let Some(atlas) = &mut sprite.texture_atlas {
-        atlas.index = anim_indices.first;
-    }
 }
+
 // System to keep player within map bounds
 pub fn enforce_map_bounds(
     mut query: Query<&mut Transform, With<Player>>,

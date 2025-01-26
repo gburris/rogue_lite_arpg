@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::events::DefeatedEvent, despawn::events::CleanupZone, labels::states::AppState,
+    combat::damage::events::DefeatedEvent, labels::states::AppState, map::events::CleanupZone,
 };
 
 pub fn on_player_defeated(

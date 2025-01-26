@@ -4,13 +4,10 @@ use bevy_ecs_tilemap::map::TilemapId;
 use crate::{
     chests::components::Chest,
     combat::projectile::components::Projectile,
-    despawn::{events::*, systems::*},
+    despawn::systems::*,
     enemy::Enemy,
     labels::sets::InGameSet,
-    map::{
-        components::{Portal, Wall},
-        Water,
-    },
+    map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,
     ui::{game_over_screen::RestartEvent, game_overlay::GameOverlay},
@@ -22,7 +19,7 @@ impl Plugin for DespawnPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (remove_expired_entities, despawn_on_zero_health).in_set(InGameSet::DespawnEntities),
+            (despawn_expired_entities, despawn_on_zero_health).in_set(InGameSet::DespawnEntities),
         )
         .add_observer(despawn_all::<CleanupZone, Portal>)
         .add_observer(despawn_all::<CleanupZone, TilemapId>)
@@ -33,7 +30,6 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, Projectile>)
         .add_observer(despawn_all::<CleanupZone, NPC>)
         .add_observer(despawn_all::<RestartEvent, Player>)
-        .add_observer(despawn_all::<RestartEvent, GameOverlay>)
-        .add_observer(on_restart_event_cleanup_zone);
+        .add_observer(despawn_all::<RestartEvent, GameOverlay>);
     }
 }

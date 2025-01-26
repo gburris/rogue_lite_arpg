@@ -1,6 +1,5 @@
 pub mod animation;
 pub mod chests;
-pub mod collision;
 pub mod combat;
 pub mod configuration;
 pub mod despawn;

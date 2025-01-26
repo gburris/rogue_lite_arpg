@@ -11,6 +11,7 @@ impl Plugin for EnemyPlugin {
             .add_systems(
                 Update,
                 (move_enemies_toward_player).in_set(InGameSet::Simulation),
-            );
+            )
+            .add_systems(Update, handle_enemy_collisions.in_set(InGameSet::Collision));
     }
 }

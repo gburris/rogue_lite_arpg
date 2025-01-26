@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     combat::{damage::components::CollisionDamage, status_effects::components::EffectsList},
     configuration::GameCollisionLayer,
-    despawn::components::{DespawnOnCollision, LiveDuration},
+    despawn::components::LiveDuration,
 };
 
 #[derive(Bundle, Clone)]
@@ -17,10 +17,10 @@ pub struct ProjectileBundle {
 #[derive(Component, Clone)]
 #[require(
     LiveDuration(|| LiveDuration::new(1.0)),
-    DespawnOnCollision,
     Sensor,
     RigidBody(default_rigid_body),
     Collider(default_collider),
+    CollidingEntities,
     CollisionLayers(default_collision_layers)
 )]
 pub struct Projectile;

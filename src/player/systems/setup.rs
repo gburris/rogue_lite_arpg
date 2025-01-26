@@ -14,7 +14,8 @@ use crate::{
     labels::{layer::ZLayer, states::AppState},
     movement::components::SimpleMotion,
     player::{
-        animation::components::PlayerAnimations, movement::MovementDirection, systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats
+        animation::components::PlayerAnimations, movement::MovementDirection, systems::*,
+        Inventory, Player, PlayerEquipmentSlots, PlayerStats,
     },
 };
 
@@ -71,5 +72,9 @@ pub fn player_setup(
         ))
         .observe(death::on_player_defeated)
         .observe(equip::on_main_hand_activated);
+    game_state.set(AppState::CreateHub);
+}
+
+pub fn finish_player_setup(mut game_state: ResMut<NextState<AppState>>) {
     game_state.set(AppState::CreateHub);
 }

@@ -5,7 +5,9 @@ use crate::{
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
-use super::animation::{animation_setup::set_starting_player_animation_and_sprite_sheet, plugin::PlayerAnimationPlugin};
+use super::animation::{
+    animation_setup::set_starting_player_animation_and_sprite_sheet, plugin::PlayerAnimationPlugin,
+};
 
 pub struct PlayerPlugin;
 
@@ -15,7 +17,12 @@ impl Plugin for PlayerPlugin {
             .add_plugins(PlayerAnimationPlugin)
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
-                (player_setup, set_starting_player_animation_and_sprite_sheet).chain(),
+                (
+                    player_setup,
+                    set_starting_player_animation_and_sprite_sheet,
+                    finish_player_setup,
+                )
+                    .chain(),
             )
             .add_systems(Update, player_input.in_set(InGameSet::PlayerInput))
             .add_systems(

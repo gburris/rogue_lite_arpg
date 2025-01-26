@@ -4,6 +4,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
+    animation::{AnimationIndices, AnimationTimer},
     combat::{
         attributes::{mana::Mana, Health},
         damage::components::HasIFrames,
@@ -25,7 +26,9 @@ pub fn player_setup(
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     sprites: Res<SpriteAssets>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
+    //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
     let _ = inventory.add_item(spawn_health_potion(&mut commands));
     let _ = inventory.add_item(spawn_sword(&mut commands, &sprites));
@@ -35,6 +38,19 @@ pub fn player_setup(
     inventory
         .add_item(spawn_fire_staff(&mut commands, &sprites))
         .ok();
+
+    //Player Sprite Sheet Setup
+    //TODO: Add all atlas indecies values to a config/map
+    // Move all this somewhere else
+    let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 13, 21, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+    //Idle is on row 8
+    //Facing up has 4 sprites in it's row
+    let idle_down_animation_indices = AnimationIndices {
+        first: 20 * 13,        // 260
+        last: 20 * 13 + 2 - 1, // 263
+    };
 
     commands
         .spawn((
@@ -63,7 +79,18 @@ pub fn player_setup(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
-            Sprite::from_image(sprites.skeleton_player.clone()),
+            (
+                AnimationTimer(Timer::from_seconds(2.0, TimerMode::Repeating)), // <-- And this
+                Sprite::from_atlas_image(
+                    sprites.player_sprite_sheet.clone(),
+                    TextureAtlas {
+                        layout: texture_atlas_layout,
+                        index: idle_down_animation_indices.first,
+                    },
+                ),
+                idle_down_animation_indices,
+                MovementDirection::None,
+            ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)

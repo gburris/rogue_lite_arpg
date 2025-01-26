@@ -2,7 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     movement::components::IsMoving,
-    player::{AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent},
+    player::{
+        AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
+    },
 };
 
 #[derive(Event)]
@@ -51,6 +53,7 @@ pub fn player_input(
     if direction.length() > 0.0 {
         event_writer.send(PlayerMovementEvent { direction });
     } else {
+        commands.trigger(PlayerStoppedEvent);
         is_moving.0 = false;
     }
 }

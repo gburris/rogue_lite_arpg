@@ -23,8 +23,6 @@ pub struct FontAssets {
 
 #[derive(AssetCollection, Resource)]
 pub struct SpriteAssets {
-    #[asset(path = "font.otf")]
-    pub game_font: Handle<Font>,
     #[asset(path = "skeleton.png")]
     pub skeleton_player: Handle<Image>,
     #[asset(path = "sword.png")]
@@ -65,4 +63,6 @@ pub struct SpriteAssets {
     pub open_chest: Handle<Image>,
     #[asset(path = "closed_chest.png")]
     pub closed_chest: Handle<Image>,
+    #[asset(path = "player_sprite_sheet.png")]
+    pub player_sprite_sheet: Handle<Image>,
 }

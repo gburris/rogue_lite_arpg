@@ -42,6 +42,7 @@ impl Plugin for UIPlugin {
                 OnExit(AppState::GameOver),
                 game_over_screen::despawn_game_over_screen,
             )
+            .add_observer(game_over_screen::on_restart_event_cleanup_zone)
             .add_systems(
                 Update,
                 handle_restart_button.run_if(in_state(AppState::GameOver)),

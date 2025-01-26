@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::AppState, player::PlayerLevel};
+use crate::{labels::states::AppState, map::events::CleanupZone, player::PlayerLevel};
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -89,4 +89,8 @@ pub fn handle_restart_button(
             game_state.set(AppState::SpawnPlayer);
         }
     }
+}
+
+pub fn on_restart_event_cleanup_zone(_: Trigger<RestartEvent>, mut commands: Commands) {
+    commands.trigger(CleanupZone);
 }

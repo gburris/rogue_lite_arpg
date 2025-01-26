@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::states::AppState,
+    labels::{sets::InGameSet, states::AppState},
     map::{
+        portal,
         resources::{CurrentZoneLevel, MapBounds, TileSize},
         systems::*,
     },
@@ -37,6 +38,10 @@ impl Plugin for MapPlugin {
                     hub::finish_create_hub,
                 )
                     .chain(),
+            )
+            .add_systems(
+                Update,
+                portal::handle_portal_collisions.in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
             .insert_resource(CurrentZoneLevel(0))

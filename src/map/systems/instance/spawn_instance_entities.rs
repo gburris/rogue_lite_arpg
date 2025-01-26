@@ -4,7 +4,7 @@ use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
     map::{
-        resources::CurrentZoneLevel, MapLayout, MarkerType, MultiMarkerType, Portal,
+        portal::Portal, resources::CurrentZoneLevel, MapLayout, MarkerType, MultiMarkerType,
         WorldSpaceConfig,
     },
     player::Player,

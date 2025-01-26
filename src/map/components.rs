@@ -1,44 +1,11 @@
 use std::collections::HashMap;
 
-use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
 use serde::Deserialize;
-
-use crate::configuration::GameCollisionLayer;
-
-/**
- * Portals represent any "warping device" in the game, currently spawning a new zone when entered
- */
-#[derive(Component)]
-#[require(
-    RigidBody(default_rigid_body),
-    Collider(default_collider),
-    CollisionLayers(default_collision_layers)
-)]
-pub enum Portal {
-    StartingPortal,
-    WarpZone,
-}
-
-fn default_collider() -> Collider {
-    Collider::rectangle(100.0, 100.0)
-}
-
-fn default_rigid_body() -> RigidBody {
-    RigidBody::Static
-}
-
-fn default_collision_layers() -> CollisionLayers {
-    // Portals are sensors since we don't actually want collisions
-    CollisionLayers::new(
-        GameCollisionLayer::HighObstacle,
-        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
-    )
-}
 
 #[derive(Component)]
 pub struct Wall;

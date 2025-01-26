@@ -2,7 +2,17 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use baba_yaga::{
-    chests::plugin::ChestPlugin, collision::CollisionPlugin, combat::plugin::CombatPlugin, configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin}, despawn::plugin::DespawnPlugin, enemy::plugin::EnemyPlugin, map::plugin::MapPlugin, movement::plugin::MovementPlugin, npc::NPCPlugin, player::plugin::PlayerPlugin, progression::plugin::ProgressionPlugin, ui::{plugin::UIPlugin, PauseMenuPlugin}
+    chests::plugin::ChestPlugin,
+    combat::plugin::CombatPlugin,
+    configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+    despawn::plugin::DespawnPlugin,
+    enemy::plugin::EnemyPlugin,
+    map::plugin::MapPlugin,
+    movement::plugin::MovementPlugin,
+    npc::NPCPlugin,
+    player::plugin::PlayerPlugin,
+    progression::plugin::ProgressionPlugin,
+    ui::{plugin::UIPlugin, PauseMenuPlugin},
 };
 
 fn main() {
@@ -11,7 +21,6 @@ fn main() {
         .add_plugins((AssetLoadingPlugin, TilemapPlugin)) // 3rd party crates
         // Core plugins
         .add_plugins((
-            CollisionPlugin,
             DespawnPlugin,
             MovementPlugin,
             CombatPlugin,

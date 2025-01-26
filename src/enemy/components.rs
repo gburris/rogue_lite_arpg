@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use avian2d::prelude::Collider;
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use serde::Deserialize;
 
@@ -11,7 +11,14 @@ use crate::{
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(Health, SimpleMotion, CollisionDamage, Collider, Experience)]
+#[require(
+    Health,
+    SimpleMotion,
+    CollisionDamage,
+    Collider,
+    CollidingEntities,
+    Experience
+)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it

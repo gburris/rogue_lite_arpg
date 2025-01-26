@@ -41,6 +41,7 @@ pub fn update_player_animation(
         };
 
         if *player_animations == player_animation_from_current_direction {
+            //Currently this is firing / warning when we first load the app idk why
             warn!("We tried to process an animation / direction we already had");
             return;
         }

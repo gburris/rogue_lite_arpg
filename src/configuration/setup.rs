@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::debug::DebugPlugin,
-    labels::states::{AppState, InGameState, PausedState},
+    labels::states::{AppState, PausedState},
     progression::components::GameProgress,
 };
 
@@ -40,7 +40,6 @@ impl Plugin for SetupPlugin {
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // initialize states
             .init_state::<AppState>()
-            .init_state::<InGameState>()
             .add_sub_state::<PausedState>()
             .add_systems(Startup, setup_camera);
     }

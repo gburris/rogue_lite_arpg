@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    labels::states::{AppState, InGameState},
-    player::PlayerLevel,
-};
+use crate::{labels::states::AppState, player::PlayerLevel};
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -81,7 +78,6 @@ pub fn despawn_game_over_screen(
 pub fn handle_restart_button(
     mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<AppState>>,
-    mut in_game_state: ResMut<NextState<InGameState>>,
     player_level: Single<&PlayerLevel>,
     mut commands: Commands,
 ) {
@@ -91,7 +87,6 @@ pub fn handle_restart_button(
                 player_level: player_level.current,
             });
             game_state.set(AppState::SpawnPlayer);
-            in_game_state.set(InGameState::BeforeRun);
         }
     }
 }

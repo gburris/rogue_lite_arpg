@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use crate::{
     combat::damage::{components::CollisionDamage, events::AttemptDamageEvent},
     despawn::components::DespawnOnCollision,
-    map::{
-        components::Portal,
-        events::{StartRunEvent, WarpZoneEnterEvent},
-    },
+    map::{components::Portal, events::CreateInstanceEvent},
     player::Player,
 };
 
@@ -17,8 +14,6 @@ use crate::{
 pub fn handle_collisions(
     mut commands: Commands,
     mut collision_events_started: EventReader<CollisionStarted>,
-    mut warpzone_enter_event_writer: EventWriter<WarpZoneEnterEvent>,
-    mut run_start_portal_event_writer: EventWriter<StartRunEvent>,
     damager_query: Query<(Entity, &CollisionDamage)>,
     portal_query: Query<&Portal>,
     player_query: Query<Entity, With<Player>>,
@@ -42,19 +37,9 @@ pub fn handle_collisions(
                 commands.entity(e1).despawn_recursive();
             }
 
-            if let Ok(portal) = portal_query.get(e1) {
+            if let Ok(_portal) = portal_query.get(e1) {
                 if let Ok(_player_entity) = player_query.get(e2) {
-                    match portal {
-                        Portal::StartingPortal => {
-                            debug!("Found collision with starting portal");
-                            run_start_portal_event_writer.send(StartRunEvent);
-                        }
-                        Portal::WarpZone => {
-                            debug!("Found collision with warpzone");
-                            warpzone_enter_event_writer.send(WarpZoneEnterEvent);
-                        }
-                    }
-                    // Once we find a match we go to the next collision
+                    commands.trigger(CreateInstanceEvent);
                     break;
                 }
             }

@@ -21,73 +21,31 @@ pub enum MovementDirection {
     None,
 }
 
+impl MovementDirection {
+    pub fn from_vec2(vec: Vec2) -> Self {
+        match vec.normalize() {
+            v if v.y > 0.5 => Self::Up,
+            v if v.y < -0.5 => Self::Down,
+            v if v.x > 0.5 => Self::Right,
+            v if v.x < -0.5 => Self::Left,
+            _ => Self::None,
+        }
+    }
+}
+
 // System to handle player movement based on movement events
 pub fn player_movement(
-    mut commands: Commands,
-    mut player_motion_query: Query<(&mut IsMoving, &mut SimpleMotion), With<Player>>,
-    mut animation_query: Query<
-        (
-            &mut MovementDirection,
-            &mut AnimationTimer,
-            &mut AnimationIndices,
-            &mut Sprite,
-        ),
+    mut player_motion_query: Query<
+        (&mut MovementDirection, &mut IsMoving, &mut SimpleMotion),
         With<Player>,
     >,
     mut event_reader: EventReader<PlayerMovementEvent>,
 ) {
     for event in event_reader.read() {
-        let mut movement_direction = MovementDirection::None;
-        for (mut is_moving, mut motion) in player_motion_query.iter_mut() {
+        for (mut movement_direction, mut is_moving, mut motion) in player_motion_query.iter_mut() {
             motion.direction = event.direction;
-            if motion.direction == Vec2::Y {
-                movement_direction = MovementDirection::Up;
-            } else if motion.direction == -Vec2::Y {
-                movement_direction = MovementDirection::Down;
-            } else if motion.direction == Vec2::X {
-                movement_direction = MovementDirection::Right;
-            } else if motion.direction == -Vec2::X {
-                movement_direction = MovementDirection::Left;
-            }
+            *movement_direction = MovementDirection::from_vec2(event.direction);
             is_moving.0 = true;
-        }
-
-        let (mut current_player_movement, mut timer, mut anim_indices, mut sprite) =
-            animation_query.single_mut();
-        if *current_player_movement == movement_direction {
-            //We are already going this way, no need to change the animation
-            break;
-        } else {
-            *current_player_movement = movement_direction;
-        }
-
-        let animation_indices = match movement_direction {
-            MovementDirection::Up => AnimationIndices {
-                first: 8 * 13,        //Row Of Sprite * Numbers of Sprites per row
-                last: 8 * 13 + 9 - 1, //Length of this sprits animation
-            },
-            MovementDirection::Down => AnimationIndices {
-                first: 10 * 13,        //Row Of Sprite * Numbers of Sprites per row
-                last: 10 * 13 + 9 - 1, //Length of this sprits animation
-            },
-            MovementDirection::Left => AnimationIndices {
-                first: 9 * 13,        //Row Of Sprite * Numbers of Sprites per row
-                last: 9 * 13 + 9 - 1, //Length of this sprits animation
-            },
-            MovementDirection::Right => AnimationIndices {
-                first: 11 * 13,        //Row Of Sprite * Numbers of Sprites per row
-                last: 11 * 13 + 9 - 1, //Length of this sprits animation
-            },
-            MovementDirection::None => AnimationIndices {
-                first: anim_indices.first,    // 260
-                last: anim_indices.first + 9, // 263
-            },
-        };
-        warn!("Insert direction animation {:?}", movement_direction);
-        *anim_indices = animation_indices;
-        *timer = AnimationTimer(Timer::from_seconds(0.3, TimerMode::Repeating));
-        if let Some(atlas) = &mut sprite.texture_atlas {
-            atlas.index = anim_indices.first;
         }
     }
 }
@@ -106,13 +64,18 @@ pub fn on_player_stopped(
 ) {
     let (mut current_player_movement, mut timer, mut anim_indices, mut sprite) =
         animation_query.single_mut();
-    warn!("Insert idle animation");
+    if *current_player_movement == MovementDirection::None {
+        //We are already idle this way, no need to change the animation
+        warn!("Player stopped fired while player is stopped");
+        return;
+    }
     //Slow Timer for idle
-    *timer = AnimationTimer(Timer::from_seconds(1.0, TimerMode::Repeating));
+    timer.pause();
     *current_player_movement = MovementDirection::None;
+    let first_frame = anim_indices.first;
     *anim_indices = AnimationIndices {
-        first: 20 * 13,        // 260
-        last: 20 * 13 + 2 - 1, // 263
+        first: first_frame, // 260
+        last: first_frame,  // 263
     };
     if let Some(atlas) = &mut sprite.texture_atlas {
         atlas.index = anim_indices.first;

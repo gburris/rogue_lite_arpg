@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 
-use crate::animation::{AnimationIndices, AnimationTimer};
+use crate::{
+    animation::{AnimationIndices, AnimationTimer},
+    player::Player,
+};
 
-pub fn animate_player_walking(
+pub fn run_player_animation(
     time: Res<Time>,
-    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut Sprite)>,
+    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut Sprite), With<Player>>,
 ) {
     for (indices, mut timer, mut sprite) in &mut query {
         timer.tick(time.delta());

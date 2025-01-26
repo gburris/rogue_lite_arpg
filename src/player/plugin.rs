@@ -6,7 +6,10 @@ use crate::{
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
-use super::animation::walking_animation::animate_player_walking;
+use super::animation::{
+    animate_player::update_player_animation, components::PlayerAnimationConfig,
+    run_player_animation::run_player_animation,
+};
 
 pub struct PlayerPlugin;
 
@@ -29,7 +32,8 @@ impl Plugin for PlayerPlugin {
                         animate_level_up,
                         tick_equippable_use_rate,
                         regenerate_mana,
-                        animate_player_walking,
+                        update_player_animation, //Change animation if animation component changes
+                        run_player_animation,    //Process the frames of the animation
                     )
                         .before(camera_follow_system),
                     camera_follow_system.before(TransformSystem::TransformPropagate), // avian recommended ordering for camera following logic
@@ -43,6 +47,7 @@ impl Plugin for PlayerPlugin {
             .add_observer(handle_unequip_success_event)
             .add_observer(handle_consume_event)
             .add_observer(on_player_stopped)
+            .insert_resource(PlayerAnimationConfig::default())
             .add_observer(on_level_up)
             .insert_resource(PlayerSize { x: 256.0, y: 256.0 });
     }

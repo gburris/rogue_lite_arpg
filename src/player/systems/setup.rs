@@ -14,7 +14,10 @@ use crate::{
     items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
     labels::{layer::ZLayer, states::AppState},
     movement::components::SimpleMotion,
-    player::{systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
+    player::{
+        animation::components::PlayerAnimations, systems::*, Inventory, Player,
+        PlayerEquipmentSlots, PlayerStats,
+    },
 };
 
 #[derive(Component, Default)]
@@ -49,7 +52,7 @@ pub fn player_setup(
     //Facing up has 4 sprites in it's row
     let idle_down_animation_indices = AnimationIndices {
         first: 20 * 13,        // 260
-        last: 20 * 13 + 2 - 1, // 263
+        last: 20 * 13 + 6 - 1, // 263
     };
 
     commands
@@ -80,7 +83,7 @@ pub fn player_setup(
             ),
             LockedAxes::new().lock_rotation(),
             (
-                AnimationTimer(Timer::from_seconds(2.0, TimerMode::Repeating)), // <-- And this
+                AnimationTimer(Timer::from_seconds(5.0, TimerMode::Repeating)), // IDLE ANIM SPEED <-- And this
                 Sprite::from_atlas_image(
                     sprites.player_sprite_sheet.clone(),
                     TextureAtlas {
@@ -90,6 +93,7 @@ pub fn player_setup(
                 ),
                 idle_down_animation_indices,
                 MovementDirection::None,
+                PlayerAnimations::IdleDown,
             ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

@@ -10,9 +10,6 @@ pub fn set_starting_player_animation_and_sprite_sheet(
     sprites: Res<SpriteAssets>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    //Player Sprite Sheet Setup
-    //TODO: Add all atlas indecies values to a config/map
-    // Move all this somewhere else
     let layout = TextureAtlasLayout::from_grid(UVec2::splat(64), 13, 21, None, None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
 

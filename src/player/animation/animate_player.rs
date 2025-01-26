@@ -6,6 +6,7 @@ use crate::{
 use super::components::{PlayerAnimationConfig, PlayerAnimations};
 use bevy::prelude::*;
 
+//This funct
 pub fn update_player_animation(
     animation_config: Res<PlayerAnimationConfig>,
     mut query: Query<
@@ -26,12 +27,22 @@ pub fn update_player_animation(
         MovementDirection::Down => PlayerAnimations::WalkDown,
         MovementDirection::Left => PlayerAnimations::WalkLeft,
         MovementDirection::Right => PlayerAnimations::WalkRight,
-        MovementDirection::None => PlayerAnimations::IdleDown,
+        MovementDirection::None => {
+            // If the player is not moving, map the current walking animation to the corresponding idle animation
+            match *player_animations {
+                PlayerAnimations::WalkUp => PlayerAnimations::IdleUp,
+                PlayerAnimations::WalkDown => PlayerAnimations::IdleDown,
+                PlayerAnimations::WalkLeft => PlayerAnimations::IdleLeft,
+                PlayerAnimations::WalkRight => PlayerAnimations::IdleRight,
+                _ => *player_animations, // If already idle, keep the current animation
+            }
+        }
     };
 
     if *player_animations == player_animation_from_current_direction {
         return;
     }
+
     *player_animations = player_animation_from_current_direction;
     warn!(
         "Starting a new animation for player {:?}",

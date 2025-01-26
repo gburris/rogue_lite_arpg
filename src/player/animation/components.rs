@@ -14,7 +14,8 @@ pub struct PlayerAnimationConfig {
 pub enum PlayerAnimations {
     IdleDown,
     IdleUp,
-    IdleSide,
+    IdleRight,
+    IdleLeft,
     WalkDown,
     WalkUp,
     WalkRight,
@@ -36,9 +37,33 @@ impl Default for PlayerAnimationConfig {
         animations.insert(
             PlayerAnimations::IdleDown,
             AnimationData {
-                row: 20,
-                frame_count: 6,
-                frame_duration: 0.15,
+                row: 14,
+                frame_count: 3,
+                frame_duration: 0.5,
+            },
+        );
+        animations.insert(
+            PlayerAnimations::IdleUp,
+            AnimationData {
+                row: 12,
+                frame_count: 3,
+                frame_duration: 0.5,
+            },
+        );
+        animations.insert(
+            PlayerAnimations::IdleLeft,
+            AnimationData {
+                row: 13,
+                frame_count: 3,
+                frame_duration: 0.5,
+            },
+        );
+        animations.insert(
+            PlayerAnimations::IdleRight,
+            AnimationData {
+                row: 15,
+                frame_count: 3,
+                frame_duration: 0.5,
             },
         );
 

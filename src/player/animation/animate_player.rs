@@ -8,8 +8,6 @@ use bevy::prelude::*;
 
 pub fn update_player_animation(
     animation_config: Res<PlayerAnimationConfig>,
-    //Option cuz single will E X P L O D E when there is no change in movement dir
-    //there is no change in movement dir  &  single query resturns 0 results
     update_animation_query: Option<
         Single<
             (

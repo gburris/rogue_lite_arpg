@@ -1,5 +1,4 @@
-use crate::items::ItemName;
-use crate::player::PlayerEquipmentSlots;
+use crate::items::{equipment::equipment::EquipmentSlots, ItemName};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -15,7 +14,7 @@ pub struct EquipmentButton {
 pub fn spawn_equipment_menu(
     mut commands: Commands,
     item_query: Query<&ItemName>,
-    player_equipment: Query<&PlayerEquipmentSlots>,
+    player_equipment: Query<&EquipmentSlots>,
 ) {
     debug!("spawn_equipment_menu called");
 
@@ -171,7 +170,7 @@ pub fn handle_equipment_update(
     mut commands: Commands,
     eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
     item_query: Query<&ItemName>,
-    player_equipment_slots: Query<&PlayerEquipmentSlots>,
+    player_equipment_slots: Query<&EquipmentSlots>,
 ) {
     // Despawn the existing inventory menu
     for entity in eqipment_menu_query.iter() {

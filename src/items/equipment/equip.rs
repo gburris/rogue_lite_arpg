@@ -4,7 +4,11 @@ use crate::{
     combat::{
         attributes::{mana::ManaCost, Mana},
         weapon::weapon::UseEquipmentEvent,
-    }, items::{inventory::inventory::Inventory, EquipmentSlot, Equippable}, labels::layer::ZLayer, player::{MainHandActivated, Player}, ui::pause_menu::button_interactions::TryEquipEvent
+    },
+    items::{inventory::inventory::Inventory, EquipmentSlot, Equippable},
+    labels::layer::ZLayer,
+    player::{MainHandActivated, Player},
+    ui::pause_menu::button_interactions::TryEquipEvent,
 };
 
 use super::equipment::{equip_item, EquipmentSlots};
@@ -15,8 +19,6 @@ pub struct EquipSuccessEvent {
     pub previous_item: Option<Entity>,
 }
 
-//TODO: EquipmentSlots should be generic to work with enenmies and equipment
-//Then this file will be generic
 pub fn handle_try_equip_event(
     try_equip_trigger: Trigger<TryEquipEvent>,
     mut commands: Commands,
@@ -75,12 +77,7 @@ pub fn handle_equip_success_event(
     commands
         .entity(player_entity)
         .add_child(equip_success_trigger.item_entity);
-    // transform it (EQUIPMENT ON BACK FACING FORWARD TRANSFORM)
-    commands.entity(equip_success_trigger.item_entity).insert(
-        Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z()) //Use Z < 1 to go "behind the player" and z > 1 to go "infront of the player"
-            .with_rotation(Quat::from_rotation_z(30.0f32.to_radians())) // Rotate 30 degrees right
-            .with_scale(Vec3::new(0.17, 0.17, 0.17)), // Shrink in half
-    );
+
     if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
         *visibility = Visibility::Visible;
     }

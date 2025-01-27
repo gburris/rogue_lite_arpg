@@ -13,8 +13,6 @@ use super::equipment::{unequip_item, EquipmentSlots};
 pub struct UnequipSuccessEvent {
     pub item_entity: Entity,
 }
-//TODO: EquipmentSlots should be generic to work with enenmies and equipment
-//Then this file will be generic
 
 pub fn handle_try_unequip_event(
     try_equip_trigger: Trigger<TryUnequipEvent>,

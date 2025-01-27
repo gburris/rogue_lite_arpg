@@ -6,9 +6,9 @@ use bevy::prelude::*;
 pub struct EquipmentTransform;
 
 #[derive(Clone, Copy)]
-struct DirectionTransforms {
-    mainhand: Transform,
-    head: Transform,
+pub struct DirectionTransforms {
+    pub mainhand: Transform,
+    pub head: Transform,
 }
 
 impl From<MovementDirection> for DirectionTransforms {

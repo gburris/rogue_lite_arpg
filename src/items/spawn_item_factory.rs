@@ -1,4 +1,7 @@
-use super::{Consumable, ConsumableEffect, ConsumableType, Equippable, Helmet, ItemName, Shovel};
+use super::{
+    equipment::equipment_transform::DirectionTransforms, Consumable, ConsumableEffect,
+    ConsumableType, Equippable, Helmet, ItemName, Shovel,
+};
 use crate::{
     combat::{
         attributes::mana::ManaCost,
@@ -12,9 +15,9 @@ use crate::{
     },
     configuration::assets::SpriteAssets,
     items::{EquipmentSlot, HealthPotion, ItemId, Sword},
-    labels::layer::ZLayer,
+    player::movement::MovementDirection,
 };
-use bevy::{math::Vec3, prelude::*, sprite::Sprite};
+use bevy::prelude::*;
 
 pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
     commands
@@ -26,6 +29,7 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
             HealthPotion,
             ItemId(3),
             Consumable,
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -40,9 +44,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword_equipment_sprite.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, ZLayer::WeaponAboveSprite.z()))
-                .with_scale(Vec3::new(0.2, 0.3, 0.2))
-                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -57,9 +59,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, ZLayer::WeaponAboveSprite.z()))
-                .with_scale(Vec3::new(0.2, 0.3, 0.2))
-                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -74,8 +74,7 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.helmet_equipment_sprite.clone()),
-            Transform::from_translation(Vec3::new(-30.0, 40.0, ZLayer::WeaponAboveSprite.z()))
-                .with_scale(Vec3::new(0.2, 0.3, 0.2)),
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -104,9 +103,6 @@ pub fn spawn_fire_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) ->
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, 0.1))
-                .with_scale(Vec3::new(0.2, 0.3, 0.2))
-                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
         .observe(on_weapon_fired)
         .id()
@@ -135,9 +131,6 @@ pub fn spawn_ice_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> 
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
-            Transform::from_translation(Vec3::new(-65.0, -20.0, ZLayer::WeaponAboveSprite.z()))
-                .with_scale(Vec3::new(0.2, 0.3, 0.2))
-                .with_rotation(Quat::from_rotation_z(90.0_f32.to_radians())),
         ))
         .id()
 }

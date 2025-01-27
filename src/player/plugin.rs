@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
+    map::systems::state::transition_to_create_hub,
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
@@ -20,7 +21,7 @@ impl Plugin for PlayerPlugin {
                 (
                     player_setup,
                     set_starting_player_animation_and_sprite_sheet,
-                    finish_player_setup,
+                    transition_to_create_hub,
                 )
                     .chain(),
             )

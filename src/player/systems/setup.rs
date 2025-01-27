@@ -11,7 +11,7 @@ use crate::{
     },
     configuration::{assets::SpriteAssets, GameCollisionLayer},
     items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
-    labels::{layer::ZLayer, states::AppState},
+    labels::layer::ZLayer,
     movement::components::SimpleMotion,
     player::{
         animation::components::PlayerAnimations, movement::MovementDirection, systems::*,
@@ -24,11 +24,7 @@ pub struct AimPosition {
     pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
 }
 
-pub fn player_setup(
-    mut commands: Commands,
-    mut game_state: ResMut<NextState<AppState>>,
-    sprites: Res<SpriteAssets>,
-) {
+pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
     //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
     let _ = inventory.add_item(spawn_health_potion(&mut commands));
@@ -72,9 +68,4 @@ pub fn player_setup(
         ))
         .observe(death::on_player_defeated)
         .observe(equip::on_main_hand_activated);
-    game_state.set(AppState::CreateHub);
-}
-
-pub fn finish_player_setup(mut game_state: ResMut<NextState<AppState>>) {
-    game_state.set(AppState::CreateHub);
 }

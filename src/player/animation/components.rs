@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::animation::AnimationIndices;
+use crate::{animation::AnimationIndices, player::movement::MovementDirection};
 
 #[derive(Resource)]
 pub struct PlayerAnimationConfig {
@@ -20,6 +20,31 @@ pub enum PlayerAnimations {
     WalkUp,
     WalkRight,
     WalkLeft,
+}
+
+impl PlayerAnimations {
+    pub fn from(
+        direction: MovementDirection,
+        player_animations: PlayerAnimations,
+    ) -> PlayerAnimations {
+        let player_animation_from_current_direction = match direction {
+            MovementDirection::Up => PlayerAnimations::WalkUp,
+            MovementDirection::Down => PlayerAnimations::WalkDown,
+            MovementDirection::Left => PlayerAnimations::WalkLeft,
+            MovementDirection::Right => PlayerAnimations::WalkRight,
+            MovementDirection::None => {
+                // If the player is not moving, map the current walking animation to the corresponding idle animation
+                match player_animations {
+                    PlayerAnimations::WalkUp => PlayerAnimations::IdleUp,
+                    PlayerAnimations::WalkDown => PlayerAnimations::IdleDown,
+                    PlayerAnimations::WalkLeft => PlayerAnimations::IdleLeft,
+                    PlayerAnimations::WalkRight => PlayerAnimations::IdleRight,
+                    _ => player_animations, // If already idle, keep the current animation
+                }
+            }
+        };
+        player_animation_from_current_direction
+    }
 }
 
 #[derive(Debug, Clone)]

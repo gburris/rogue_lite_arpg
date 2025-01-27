@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSet, states::AppState},
+    labels::sets::InGameSet,
     player::animation::{
         animate_player::update_player_animation, components::PlayerAnimationConfig,
-        run_player_animation::run_player_animation,
     },
 };
 
@@ -16,10 +15,8 @@ impl Plugin for PlayerAnimationPlugin {
             Update,
             ((
                 update_player_animation, //Change animation if animation component changes
-                run_player_animation,    //Process the frames of the animation
             ))
-                .in_set(InGameSet::Simulation)
-                .run_if(in_state(AppState::Playing)),
+                .in_set(InGameSet::Simulation),
         )
         .insert_resource(PlayerAnimationConfig::default());
     }

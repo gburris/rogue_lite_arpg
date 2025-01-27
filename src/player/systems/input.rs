@@ -48,13 +48,9 @@ pub fn player_input(
         direction.x += 1.0;
     }
 
-    // If there is movement input, dispatch the movement event
-    // If we just stopped, dispatch stopped event
     if direction.length() > 0.0 {
         event_writer.send(PlayerMovementEvent { direction });
-    } else {
-        if *movement_direction != MovementDirection::None {
-            commands.trigger(PlayerStoppedEvent);
-        }
+    } else if *movement_direction != MovementDirection::None {
+        commands.trigger(PlayerStoppedEvent);
     }
 }

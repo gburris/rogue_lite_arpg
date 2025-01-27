@@ -12,19 +12,17 @@ use crate::{
 
 // System to handle player movement based on movement events
 pub fn player_movement(
-    mut player_motion_query: Query<
+    player_motion_query: Single<
         (&mut MovementDirection, &mut IsMoving, &mut SimpleMotion),
         With<Player>,
     >,
     mut event_reader: EventReader<PlayerMovementEvent>,
 ) {
+    let (mut movement_direction, mut is_moving, mut motion) = player_motion_query.into_inner();
     for event in event_reader.read() {
-        for (mut movement_direction, mut is_moving, mut motion) in player_motion_query.iter_mut() {
-            motion.direction = event.direction;
-            //Only update the players movement direction value if it's different from the current one
-            movement_direction.set_if_neq(MovementDirection::from_vec2(event.direction));
-            is_moving.0 = true;
-        }
+        motion.direction = event.direction;
+        movement_direction.set_if_neq(MovementDirection::from_vec2(event.direction));
+        is_moving.0 = true;
     }
 }
 

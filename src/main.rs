@@ -4,12 +4,11 @@ use bevy_ecs_tilemap::prelude::*;
 use baba_yaga::{
     animation::AnimationPlugin,
     chests::plugin::ChestPlugin,
-    collision::CollisionPlugin,
-    chests::plugin::ChestPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
+    items::equipment::plugin::EquipmentPlugin,
     map::plugin::MapPlugin,
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,
@@ -30,7 +29,14 @@ fn main() {
             ProgressionPlugin,
         ))
         // Entity-domain plugins (map, player, enemy, npc, etc..)
-        .add_plugins((MapPlugin, PlayerPlugin, EnemyPlugin, NPCPlugin, ChestPlugin))
+        .add_plugins((
+            MapPlugin,
+            EquipmentPlugin,
+            PlayerPlugin,
+            EnemyPlugin,
+            NPCPlugin,
+            ChestPlugin,
+        ))
         // UI plugins group
         .add_plugins((UIPlugin, PauseMenuPlugin))
         .run();

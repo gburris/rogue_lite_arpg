@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use crate::{configuration::assets::SpriteAssets, items::spawn_health_potion, player::Inventory};
+use crate::{configuration::assets::SpriteAssets, items::{inventory::inventory::Inventory, spawn_health_potion}};
 
 use super::components::OpenChest;
 

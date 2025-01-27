@@ -1,7 +1,6 @@
 use crate::{
     combat::attributes::Health,
-    items::{ConsumableEffect, ConsumableType},
-    player::Inventory,
+    items::{inventory::inventory::Inventory, ConsumableEffect, ConsumableType},
     ui::pause_menu::button_interactions::ConsumeEvent,
 };
 use bevy::prelude::*;

@@ -7,15 +7,14 @@ use crate::{
     combat::{
         attributes::{mana::Mana, Health},
         damage::components::HasIFrames,
-        weapon::staffs::spawn_fire_staff,
     },
     configuration::{assets::SpriteAssets, GameCollisionLayer},
-    items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
+    items::{equipment::{equip, equipment::EquipmentSlots}, inventory::inventory::Inventory, spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
     labels::layer::ZLayer,
     movement::components::SimpleMotion,
     player::{
         animation::components::PlayerAnimations, movement::MovementDirection, systems::*,
-        Inventory, Player, PlayerEquipmentSlots, PlayerStats,
+         Player, PlayerStats,
     },
 };
 
@@ -45,7 +44,7 @@ pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             Health::new(100.0),
             Mana::new(100.0, 10.0),
             inventory,
-            PlayerEquipmentSlots::default(),
+            EquipmentSlots::default(),
             HasIFrames {
                 duration: Duration::from_secs(1),
             },

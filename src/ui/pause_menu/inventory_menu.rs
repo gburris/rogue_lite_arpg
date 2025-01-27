@@ -1,4 +1,4 @@
-use crate::{items::ItemName, player::Inventory};
+use crate::items::{inventory::inventory::Inventory, ItemName};
 use bevy::prelude::*;
 
 use super::button_interactions::InventoryUpdatedEvent;

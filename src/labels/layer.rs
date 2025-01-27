@@ -1,7 +1,8 @@
 pub enum ZLayer {
     Ground,
     Player,
-    Weapon,
+    WeaponBehindSprite,
+    WeaponAboveSprite,
     Enemy,
     Projectiles,
     Warpzone,
@@ -14,7 +15,10 @@ impl ZLayer {
             ZLayer::Ground => 0.0,
             ZLayer::Projectiles => 0.4,
             ZLayer::Enemy => 0.5,
-            ZLayer::Weapon => 0.6,
+            //Z layer is additive in parent:child hieracrchies
+            //Parent 1 + child entity weapon of 0.1 = 1.1
+            ZLayer::WeaponBehindSprite => -0.4,
+            ZLayer::WeaponAboveSprite => 0.1,
             ZLayer::Player => 1.0,
             ZLayer::Warpzone => 1.0,
             ZLayer::VisualEffect => 2.0,

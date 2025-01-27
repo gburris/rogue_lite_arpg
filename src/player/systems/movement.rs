@@ -4,20 +4,35 @@ use bevy::prelude::*;
 use crate::{
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
-    player::{resources::PlayerSize, Player, PlayerMovementEvent, ResetPlayerPosition},
+    player::{
+        movement::MovementDirection, resources::PlayerSize, Player, PlayerMovementEvent,
+        PlayerStoppedEvent, ResetPlayerPosition,
+    },
 };
 
 // System to handle player movement based on movement events
 pub fn player_movement(
-    mut query: Query<(&mut IsMoving, &mut SimpleMotion), With<Player>>,
+    player_motion_query: Single<
+        (&mut MovementDirection, &mut IsMoving, &mut SimpleMotion),
+        With<Player>,
+    >,
     mut event_reader: EventReader<PlayerMovementEvent>,
 ) {
+    let (mut movement_direction, mut is_moving, mut motion) = player_motion_query.into_inner();
     for event in event_reader.read() {
-        for (mut is_moving, mut motion) in query.iter_mut() {
-            motion.direction = event.direction;
-            is_moving.0 = true;
-        }
+        motion.direction = event.direction;
+        movement_direction.set_if_neq(MovementDirection::from_vec2(event.direction));
+        is_moving.0 = true;
     }
+}
+
+pub fn on_player_stopped(
+    _: Trigger<PlayerStoppedEvent>,
+    mut animation_query: Query<(&mut MovementDirection, &mut IsMoving), With<Player>>,
+) {
+    let (mut current_player_movement, mut is_moving) = animation_query.single_mut();
+    is_moving.0 = false;
+    *current_player_movement = MovementDirection::None;
 }
 
 // System to keep player within map bounds

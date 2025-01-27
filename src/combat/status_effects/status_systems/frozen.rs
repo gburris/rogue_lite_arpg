@@ -29,7 +29,7 @@ pub fn on_frozen_applied(
 
     commands
         .entity(parent.get())
-        .insert(Sprite::from_image(sprites.merman_freezing.clone()));
+        .insert(Sprite::from_image(sprites.merman_enemy.clone()));
 }
 
 pub fn on_frozen_removed(

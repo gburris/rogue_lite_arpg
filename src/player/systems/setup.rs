@@ -11,9 +11,12 @@ use crate::{
     },
     configuration::{assets::SpriteAssets, GameCollisionLayer},
     items::{spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
-    labels::{layer::ZLayer, states::AppState},
+    labels::layer::ZLayer,
     movement::components::SimpleMotion,
-    player::{systems::*, Inventory, Player, PlayerEquipmentSlots, PlayerStats},
+    player::{
+        animation::components::PlayerAnimations, movement::MovementDirection, systems::*,
+        Inventory, Player, PlayerEquipmentSlots, PlayerStats,
+    },
 };
 
 #[derive(Component, Default)]
@@ -21,11 +24,8 @@ pub struct AimPosition {
     pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
 }
 
-pub fn player_setup(
-    mut commands: Commands,
-    mut game_state: ResMut<NextState<AppState>>,
-    sprites: Res<SpriteAssets>,
-) {
+pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
+    //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
     let _ = inventory.add_item(spawn_health_potion(&mut commands));
     let _ = inventory.add_item(spawn_sword(&mut commands, &sprites));
@@ -63,10 +63,9 @@ pub fn player_setup(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
-            Sprite::from_image(sprites.skeleton_player.clone()),
+            (MovementDirection::None, PlayerAnimations::IdleDown),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)
         .observe(equip::on_main_hand_activated);
-    game_state.set(AppState::CreateHub);
 }

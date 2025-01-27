@@ -29,7 +29,7 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
             HealthPotion,
             ItemId(3),
             Consumable,
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -44,7 +44,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword_equipment_sprite.clone()),
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -59,7 +59,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .id()
 }
@@ -74,7 +74,7 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.helmet_equipment_sprite.clone()),
-            DirectionTransforms::from(MovementDirection::Down).head,
+            DirectionTransforms::get(MovementDirection::Down).head,
         ))
         .id()
 }
@@ -103,7 +103,7 @@ pub fn spawn_fire_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) ->
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .observe(on_weapon_fired)
         .id()
@@ -132,7 +132,7 @@ pub fn spawn_ice_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> 
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .id()
 }

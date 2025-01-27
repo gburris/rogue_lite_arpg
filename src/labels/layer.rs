@@ -15,12 +15,10 @@ impl ZLayer {
             ZLayer::Ground => 0.0,
             ZLayer::Projectiles => 0.4,
             ZLayer::Enemy => 0.5,
-            ZLayer::WeaponBehindSprite => -0.4, //Thisis relative to the parent LMAO
-            //So if the parent is 1.0, and this is attached, it was 1.6, always above player
-            //-0.4 makes it "0.6 when on the screen"
-            ZLayer::WeaponAboveSprite => 0.1, //Thisis relative to the parent LMAO
-            //So if the parent is 1.0, and this is attached, it was 1.6, always above player
-            //-0.4 makes it "0.6 when on the screen"
+            //Z layer is additive in parent:child hieracrchies
+            //Parent 1 + child entity weapon of 0.1 = 1.1
+            ZLayer::WeaponBehindSprite => -0.4,
+            ZLayer::WeaponAboveSprite => 0.1,
             ZLayer::Player => 1.0,
             ZLayer::Warpzone => 1.0,
             ZLayer::VisualEffect => 2.0,

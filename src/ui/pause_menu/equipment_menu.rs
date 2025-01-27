@@ -1,4 +1,7 @@
-use crate::items::{equipment::equipment::EquipmentSlots, ItemName};
+use crate::{
+    items::{equipment::equipment::EquipmentSlots, ItemName},
+    player::Player,
+};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -14,65 +17,58 @@ pub struct EquipmentButton {
 pub fn spawn_equipment_menu(
     mut commands: Commands,
     item_query: Query<&ItemName>,
-    player_equipment: Query<&EquipmentSlots>,
+    player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
 ) {
     debug!("spawn_equipment_menu called");
-
-    if let Ok(equipment) = player_equipment.get_single() {
-        commands
-            .spawn((
-                EquipmentMenu,
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)), // Add padding to prevent edge touching
+    let equipment = player_equipment_slots.into_inner();
+    commands
+        .spawn((
+            EquipmentMenu,
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)), // Add padding to prevent edge touching
+                ..default()
+            },
+            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
+            Visibility::Visible,
+            GlobalZIndex(1),
+        ))
+        .with_children(|parent| {
+            // Title
+            parent.spawn((
+                Text::new("Equipment"),
+                TextFont {
+                    font_size: 70.0,
                     ..default()
                 },
-                BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-                Visibility::Visible,
-                GlobalZIndex(1),
-            ))
-            .with_children(|parent| {
-                // Title
-                parent.spawn((
-                    Text::new("Equipment"),
-                    TextFont {
-                        font_size: 70.0,
-                        ..default()
-                    },
-                    Node {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
-                ));
+                Node {
+                    margin: UiRect::bottom(Val::Px(20.0)),
+                    ..default()
+                },
+            ));
 
-                // Equipment slots container with scrolling
-                parent
-                    .spawn((
-                        Node {
-                            width: Val::Px(600.0),
-                            height: Val::Percent(80.0), // Limit height to percentage of screen
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect::all(Val::Px(20.0)),
-                            overflow: Overflow::scroll_y(), // Enable vertical scrolling
-                            ..default()
-                        },
-                        BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
-                    ))
-                    .with_children(|slot_parent| {
-                        spawn_equipment_slot(
-                            &item_query,
-                            slot_parent,
-                            "Mainhand",
-                            &equipment.mainhand,
-                        );
-                        spawn_equipment_slot(&item_query, slot_parent, "Helmet", &equipment.head);
-                    });
-            });
-    }
+            // Equipment slots container with scrolling
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Px(600.0),
+                        height: Val::Percent(80.0), // Limit height to percentage of screen
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(20.0)),
+                        overflow: Overflow::scroll_y(), // Enable vertical scrolling
+                        ..default()
+                    },
+                    BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                ))
+                .with_children(|slot_parent| {
+                    spawn_equipment_slot(&item_query, slot_parent, "Mainhand", &equipment.mainhand);
+                    spawn_equipment_slot(&item_query, slot_parent, "Helmet", &equipment.head);
+                });
+        });
 }
 
 fn spawn_equipment_slot(
@@ -170,12 +166,12 @@ pub fn handle_equipment_update(
     mut commands: Commands,
     eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
     item_query: Query<&ItemName>,
-    player_equipment_slots: Query<&EquipmentSlots>,
+    player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
 ) {
     // Despawn the existing inventory menu
     for entity in eqipment_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
-    // Respawn the inventory menu
+    // Respawn the equipment menu
     spawn_equipment_menu(commands, item_query, player_equipment_slots);
 }

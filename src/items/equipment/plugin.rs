@@ -16,7 +16,6 @@ impl Plugin for EquipmentPlugin {
             Update,
             ((update_equipment_transforms, tick_equippable_use_rate)).in_set(InGameSet::Simulation),
         )
-        //TODO: Move to equipment plugin
         .add_observer(handle_try_equip_event)
         .add_observer(handle_equip_success_event)
         .add_observer(handle_try_unequip_event)

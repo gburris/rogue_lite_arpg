@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{enemy::systems::*, labels::sets::InGameSet, labels::states::InGameState};
+use crate::{enemy::systems::*, labels::sets::InGameSet};
 
 pub struct EnemyPlugin;
 
@@ -10,9 +10,8 @@ impl Plugin for EnemyPlugin {
             .add_observer(spawn_enemies)
             .add_systems(
                 Update,
-                (move_enemies_toward_player)
-                    .in_set(InGameSet::Simulation)
-                    .run_if(in_state(InGameState::Run)),
-            );
+                (move_enemies_toward_player).in_set(InGameSet::Simulation),
+            )
+            .add_systems(Update, handle_enemy_collisions.in_set(InGameSet::Collision));
     }
 }

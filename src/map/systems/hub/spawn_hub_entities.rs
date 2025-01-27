@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{MapLayout, MarkerType, Portal, WorldSpaceConfig},
+    map::{portal::Portal, MapLayout, MarkerType, WorldSpaceConfig},
     player::Player,
 };
 

@@ -5,6 +5,7 @@ use baba_yaga::{
     animation::AnimationPlugin,
     chests::plugin::ChestPlugin,
     collision::CollisionPlugin,
+    chests::plugin::ChestPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
@@ -23,7 +24,6 @@ fn main() {
         .add_plugins((AssetLoadingPlugin, TilemapPlugin)) // 3rd party crates
         // Core plugins
         .add_plugins((
-            CollisionPlugin,
             DespawnPlugin,
             MovementPlugin,
             CombatPlugin,

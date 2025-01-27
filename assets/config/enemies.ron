@@ -3,13 +3,13 @@ EnemiesConfig(
         "Merman": EnemyType(
             health: 30.0,
             simple_motion_speed: 350.0,
-            sprite_path: "merman.png",
+            sprite_path: "enemies/merman.png",
             collider_size: (100.0, 100.0)
         ),
         "Goblin": EnemyType(
             health: 25.0,
             simple_motion_speed: 400.0,
-            sprite_path: "goblin.png",
+            sprite_path: "enemies/goblin.png",
             collider_size: (80.0, 80.0)
         )
     }

@@ -6,7 +6,6 @@ use crate::{
         weapon::weapon::UseEquipmentEvent,
     },
     items::{inventory::inventory::Inventory, EquipmentSlot, Equippable},
-    labels::layer::ZLayer,
     player::{MainHandActivated, Player},
     ui::pause_menu::button_interactions::TryEquipEvent,
 };

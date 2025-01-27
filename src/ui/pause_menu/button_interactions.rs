@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::{Consumable, Equippable, ItemName},
+    items::{equipment::Equippable, Consumable, ItemName},
     labels::states::PausedState,
 };
 

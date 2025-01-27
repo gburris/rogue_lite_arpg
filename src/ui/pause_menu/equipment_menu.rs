@@ -1,5 +1,5 @@
 use crate::{
-    items::{equipment::equipment::EquipmentSlots, ItemName},
+    items::{equipment::EquipmentSlots, ItemName},
     player::Player,
 };
 use bevy::prelude::*;

@@ -5,7 +5,6 @@ pub mod death;
 pub mod handle_level_up;
 pub mod input;
 pub mod movement;
-pub mod regenerate_mana;
 pub mod setup;
 
 pub use camera_follow::*;
@@ -14,5 +13,4 @@ pub use cursor::*;
 pub use handle_level_up::*;
 pub use input::*;
 pub use movement::*;
-pub use regenerate_mana::*;
 pub use setup::*;

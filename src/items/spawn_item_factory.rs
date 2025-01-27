@@ -1,6 +1,10 @@
+use bevy::prelude::*;
+
 use super::{
-    equipment::equipment_transform::DirectionTransforms, Consumable, ConsumableEffect,
-    ConsumableType, Equippable, Helmet, ItemName, Shovel,
+    equipment::{
+        equipment_transform::DirectionTransforms, use_equipped::on_weapon_fired, Equippable,
+    },
+    Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel,
 };
 use crate::{
     combat::{
@@ -11,13 +15,12 @@ use crate::{
             components::{BurningStatus, EffectsList, StatusType},
             events::ApplyStatus,
         },
-        weapon::weapon::{on_weapon_fired, ProjectileWeapon, Weapon},
+        weapon::weapon::{ProjectileWeapon, Weapon},
     },
     configuration::assets::SpriteAssets,
-    items::{EquipmentSlot, HealthPotion, ItemId, Sword},
+    items::{equipment::EquipmentSlot, HealthPotion, ItemId, Sword},
     player::movement::MovementDirection,
 };
-use bevy::prelude::*;
 
 pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
     commands

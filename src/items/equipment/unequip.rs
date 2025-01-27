@@ -1,9 +1,12 @@
+use bevy::prelude::*;
+
 use crate::{
-    items::EquipmentSlot,
-    player::{components::PlayerEquipmentSlots, unequip_item, Inventory, Player},
+    items::{inventory::inventory::Inventory, EquipmentSlot},
+    player::Player,
     ui::pause_menu::button_interactions::TryUnequipEvent,
 };
-use bevy::prelude::*;
+
+use super::equipment::{unequip_item, EquipmentSlots};
 
 #[derive(Event)]
 
@@ -14,7 +17,7 @@ pub struct UnequipSuccessEvent {
 pub fn handle_try_unequip_event(
     try_equip_trigger: Trigger<TryUnequipEvent>,
     mut commands: Commands,
-    mut equipment_query: Query<&mut PlayerEquipmentSlots>,
+    mut equipment_query: Query<&mut EquipmentSlots>,
     mut inventory_query: Query<&mut Inventory>,
     slot_query: Query<&EquipmentSlot>,
 ) {

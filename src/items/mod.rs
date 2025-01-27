@@ -1,5 +1,7 @@
 pub mod components;
-pub mod spawn;
+pub mod equipment;
+pub mod inventory;
+pub mod spawn_item_factory;
 
 pub use components::*;
-pub use spawn::*;
+pub use spawn_item_factory::*;

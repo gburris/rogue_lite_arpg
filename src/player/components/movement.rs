@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component, PartialEq, Clone, Copy, Debug)]
+#[derive(Component, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MovementDirection {
     Up,
     Down,

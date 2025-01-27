@@ -2,12 +2,12 @@ use crate::items::EquipmentSlot; //Move this here
 use bevy::prelude::*;
 
 #[derive(Component, Default)]
-pub struct PlayerEquipmentSlots {
+pub struct EquipmentSlots {
     pub mainhand: Option<Entity>,
     pub head: Option<Entity>,
 }
 
-impl PlayerEquipmentSlots {
+impl EquipmentSlots {
     fn add_equipment(&mut self, slot: EquipmentSlot, new_item: Entity) -> Option<Entity> {
         let slot_ref = match slot {
             EquipmentSlot::Mainhand => &mut self.mainhand,
@@ -33,7 +33,7 @@ impl PlayerEquipmentSlots {
 
 //Public API below, just equip or remove
 pub fn equip_item(
-    equipment_slots: &mut PlayerEquipmentSlots,
+    equipment_slots: &mut EquipmentSlots,
     new_item: Entity,
     slot_query: &Query<&EquipmentSlot>,
 ) -> Option<Entity> {
@@ -47,7 +47,7 @@ pub fn equip_item(
 }
 
 pub fn unequip_item(
-    equipment_slots: &mut PlayerEquipmentSlots,
+    equipment_slots: &mut EquipmentSlots,
     new_item: Entity,
     slot_query: &Query<&EquipmentSlot>,
 ) {

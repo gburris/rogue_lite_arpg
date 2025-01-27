@@ -36,7 +36,6 @@ impl Plugin for PlayerPlugin {
                         enforce_map_bounds,
                         on_player_experience_change,
                         animate_level_up,
-                        tick_equippable_use_rate,
                         regenerate_mana,
                     )
                         .before(camera_follow_system),
@@ -45,10 +44,6 @@ impl Plugin for PlayerPlugin {
                     .in_set(InGameSet::Simulation),
             )
             .add_observer(reset_player_position)
-            .add_observer(handle_try_equip_event)
-            .add_observer(handle_equip_success_event)
-            .add_observer(handle_try_unequip_event)
-            .add_observer(handle_unequip_success_event)
             .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)

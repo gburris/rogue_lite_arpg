@@ -5,10 +5,12 @@ use crate::{
         attributes::{mana::ManaCost, Mana},
         weapon::weapon::UseEquipmentEvent,
     },
-    items::{EquipmentSlot, Equippable},
-    player::{components::PlayerEquipmentSlots, equip_item, Inventory, MainHandActivated, Player},
+    items::{inventory::inventory::Inventory, EquipmentSlot, Equippable},
+    player::{MainHandActivated, Player},
     ui::pause_menu::button_interactions::TryEquipEvent,
 };
+
+use super::equipment::{equip_item, EquipmentSlots};
 
 #[derive(Event)]
 pub struct EquipSuccessEvent {
@@ -19,7 +21,7 @@ pub struct EquipSuccessEvent {
 pub fn handle_try_equip_event(
     try_equip_trigger: Trigger<TryEquipEvent>,
     mut commands: Commands,
-    mut equipment_query: Query<&mut PlayerEquipmentSlots>,
+    mut equipment_query: Query<&mut EquipmentSlots>,
     mut inventory_query: Query<&mut Inventory>,
     slot_query: Query<&EquipmentSlot>,
 ) {
@@ -74,6 +76,7 @@ pub fn handle_equip_success_event(
     commands
         .entity(player_entity)
         .add_child(equip_success_trigger.item_entity);
+
     if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
         *visibility = Visibility::Visible;
     }

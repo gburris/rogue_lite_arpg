@@ -74,7 +74,7 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.helmet_equipment_sprite.clone()),
-            DirectionTransforms::from(MovementDirection::Down).mainhand,
+            DirectionTransforms::from(MovementDirection::Down).head,
         ))
         .id()
 }
@@ -103,6 +103,7 @@ pub fn spawn_fire_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) ->
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .observe(on_weapon_fired)
         .id()
@@ -131,6 +132,7 @@ pub fn spawn_ice_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> 
             Equippable::default(),
             Visibility::Hidden,
             Sprite::from_image(sprites.staff_of_fire.clone()),
+            DirectionTransforms::from(MovementDirection::Down).mainhand,
         ))
         .id()
 }

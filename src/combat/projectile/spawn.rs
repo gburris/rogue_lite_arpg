@@ -1,16 +1,17 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::combat::projectile::components::*;
+use crate::{
+    animation::{AnimationIndices, AnimationTimer},
+    combat::{projectile::components::*, weapon::weapon::ProjectileWeapon},
+};
 
 pub fn spawn_projectile(
     commands: &mut Commands,
     caster_transform: &Transform,
     caster_aim_position: Vec2,
-    projectile_bundle: &ProjectileBundle,
+    weapon: &ProjectileWeapon,
 ) {
-    let spell_speed = 700.0;
-
     let mut transform = Transform {
         translation: caster_transform.translation,
         ..default()
@@ -22,14 +23,16 @@ pub fn spawn_projectile(
 
     transform.rotate_z(angle);
 
-    let velocity = aim_direction.normalize() * spell_speed;
+    let velocity = aim_direction.normalize() * weapon.projectile_speed;
 
     trace!("Spawning projectile w/ velocity: {}", velocity);
 
     commands.spawn((
         Projectile,
-        projectile_bundle.clone(),
+        weapon.projectile.clone(),
         transform,
         LinearVelocity(velocity),
+        AnimationIndices { first: 0, last: 4 },
+        AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
     ));
 }

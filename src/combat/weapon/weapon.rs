@@ -9,5 +9,6 @@ pub struct Weapon;
 #[require(Weapon)]
 pub struct ProjectileWeapon {
     pub projectile: ProjectileBundle,
+    pub projectile_speed: f32,
     pub spread: f32,
 }

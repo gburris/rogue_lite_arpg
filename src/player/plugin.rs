@@ -19,7 +19,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (
-                    player_setup,
+                    spawn_player,
                     set_starting_player_animation_and_sprite_sheet,
                     transition_to_create_hub,
                 )

@@ -30,7 +30,7 @@ pub struct BurningStatus {
 impl Default for BurningStatus {
     fn default() -> Self {
         BurningStatus {
-            damage: 10.0,
+            damage: 2.0,
             damage_frequency: Timer::from_seconds(0.5, TimerMode::Repeating),
         }
     }

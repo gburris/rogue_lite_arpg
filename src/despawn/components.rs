@@ -5,8 +5,8 @@ use bevy::prelude::*;
 pub struct LiveDuration(pub Timer);
 
 impl LiveDuration {
-    pub fn new(duration: f32) -> Self {
-        LiveDuration(Timer::from_seconds(duration, TimerMode::Once))
+    pub fn new(duration_secs: f32) -> Self {
+        LiveDuration(Timer::from_seconds(duration_secs, TimerMode::Once))
     }
 }
 

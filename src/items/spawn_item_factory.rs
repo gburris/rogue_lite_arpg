@@ -2,7 +2,9 @@ use bevy::prelude::*;
 
 use super::{
     equipment::{
-        equipment_transform::DirectionTransforms, use_equipped::on_weapon_fired, Equippable,
+        equipment_transform::DirectionTransforms,
+        use_equipped::{on_weapon_fired, on_weapon_melee},
+        Equippable,
     },
     Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel,
 };
@@ -10,6 +12,7 @@ use crate::{
     combat::{
         attributes::mana::ManaCost,
         damage::components::CollisionDamage,
+        melee::components::{MeleeHitbox, MeleeSwingPropertiesBundle, MeleeSwingType, MeleeWeapon},
         projectile::components::ProjectileBundle,
         status_effects::{
             components::{BurningStatus, EffectsList, StatusType},
@@ -43,12 +46,23 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             ItemName("Sword".to_string()),
             EquipmentSlot::Mainhand,
             Sword,
+            Weapon,
+            MeleeWeapon {
+                melee_attack: MeleeSwingPropertiesBundle {
+                    damage: CollisionDamage { damage: 6.0 },
+                    effects_list: EffectsList { effects: vec![] },
+                    hitbox: MeleeHitbox::default(),
+                    sprite: Sprite::from_image(sprites.sword_equipment_sprite.clone()),
+                    swing_type: MeleeSwingType::stab(),
+                },
+            },
             Equippable::default(),
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword_equipment_sprite.clone()),
             DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
+        .observe(on_weapon_melee)
         .id()
 }
 

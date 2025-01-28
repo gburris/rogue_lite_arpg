@@ -3,9 +3,11 @@ use bevy::prelude::*;
 use crate::{
     combat::{
         attributes::{mana::ManaCost, Mana},
+        melee::{components::MeleeWeapon, spawn::spawn_melee_attack},
         projectile::spawn::spawn_projectile,
         weapon::weapon::ProjectileWeapon,
     },
+    configuration::assets::SpriteAssets,
     items::equipment::Equippable,
     player::{systems::AimPosition, MainHandActivated},
 };
@@ -20,13 +22,14 @@ pub struct UseEquipmentEvent {
 }
 
 // TODO: All of the "warns" in this function should be shown to the player through UI so they know why using main hand failed
+// TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
+// Their weapon is on cooldown
 pub fn on_main_hand_activated(
     main_hand_trigger: Trigger<MainHandActivated>,
     mut commands: Commands,
     mut holder_query: Query<(&EquipmentSlots, Option<&mut Mana>)>,
     mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
 ) {
-    // Parent needs to have an aim position for equipped item
     let Ok((equipment_slots, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity())
     else {
         error!(
@@ -87,5 +90,30 @@ pub fn on_weapon_fired(
         holder_transform,
         holder_aim.position,
         &projectile_weapon.projectile,
+    );
+}
+
+pub fn on_weapon_melee(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    weapon_query: Query<&MeleeWeapon>,
+    holder_query: Query<(&Transform, &AimPosition)>,
+) {
+    let Ok(melee_weapon) = weapon_query.get(fired_trigger.entity()) else {
+        warn!("Tried to melee swing a weapon that is not a melee weapon");
+        return;
+    };
+
+    let Ok((holder_transform, holder_aim)) = holder_query.get(fired_trigger.holder) else {
+        warn!("Tried to fire weapon with holder missing aim position or transform");
+        return;
+    };
+
+    spawn_melee_attack(
+        &mut commands,
+        fired_trigger.entity(),
+        holder_transform,
+        holder_aim.position,
+        &melee_weapon.melee_attack,
     );
 }

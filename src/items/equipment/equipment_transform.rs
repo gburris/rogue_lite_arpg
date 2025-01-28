@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 // Constants for transform values
-const MAINHAND_SCALE: Vec3 = Vec3::new(0.17, 0.17, 0.17);
-const HEAD_SCALE: Vec3 = Vec3::new(0.15, 0.15, 0.15);
+const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
+const HEAD_SCALE: Vec3 = Vec3::new(0.15, 0.15, 1.0);
 
 #[derive(Clone, Copy)]
 pub struct DirectionTransforms {
@@ -75,14 +75,14 @@ fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransf
 
 impl DirectionTransforms {
     pub fn get(direction: MovementDirection) -> Self {
-        direction_transforms()
-            .get(&if direction == MovementDirection::None {
-                MovementDirection::Down
-            } else {
-                direction
-            })
-            .copied()
-            .unwrap_or_else(|| direction_transforms()[&MovementDirection::Down])
+        // We default to down equipment position if entity is not moving
+        let direction = if direction == MovementDirection::None {
+            MovementDirection::Down
+        } else {
+            direction
+        };
+
+        direction_transforms().get(&direction).copied().unwrap()
     }
 }
 

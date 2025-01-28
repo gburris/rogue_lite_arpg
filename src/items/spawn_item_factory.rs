@@ -17,7 +17,7 @@ use crate::{
         },
         weapon::weapon::{ProjectileWeapon, Weapon},
     },
-    configuration::assets::SpriteAssets,
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{equipment::EquipmentSlot, HealthPotion, ItemId, Sword},
     player::movement::MovementDirection,
 };
@@ -82,60 +82,95 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
         .id()
 }
 
-pub fn spawn_fire_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_fire_staff(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    texture_layouts: &Res<SpriteSheetLayouts>,
+) -> Entity {
+    let fireball = ProjectileBundle {
+        effects_list: EffectsList {
+            effects: vec![ApplyStatus {
+                status: StatusType::Burning(BurningStatus::default()),
+                duration: 2.0,
+            }],
+        },
+        sprite: Sprite::from_atlas_image(
+            sprites.fire_ball.clone(),
+            TextureAtlas {
+                layout: texture_layouts.fireball_layout.clone(),
+                index: 0,
+            },
+        ),
+        damage: CollisionDamage { damage: 6.0 },
+    };
+
+    let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
+
     commands
         .spawn((
             ProjectileWeapon {
-                projectile: ProjectileBundle {
-                    effects_list: EffectsList {
-                        effects: vec![ApplyStatus {
-                            status: StatusType::Burning(BurningStatus::default()),
-                            duration: 2.0,
-                        }],
-                    },
-                    sprite: Sprite::from(sprites.fire_bolt.clone()),
-                    damage: CollisionDamage { damage: 6.0 },
-                },
+                projectile: fireball,
+                projectile_speed: 700.0,
                 spread: 0.0,
             },
-            ManaCost(10.0),
+            ManaCost(6.0),
             Weapon,
-            ItemName("Staff of flames".to_string()),
+            ItemName("Staff of Flames".to_string()),
             ItemId(6),
             EquipmentSlot::Mainhand,
             Equippable::default(),
             Visibility::Hidden,
-            Sprite::from_image(sprites.staff_of_fire.clone()),
-            DirectionTransforms::get(MovementDirection::Down).mainhand,
+            Sprite::from_image(sprites.fire_staff.clone()),
+            weapon_transform,
         ))
         .observe(on_weapon_fired)
         .id()
 }
 
-pub fn spawn_ice_staff(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_ice_staff(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    texture_layouts: &Res<SpriteSheetLayouts>,
+) -> Entity {
+    let icicle_projectile = ProjectileBundle {
+        effects_list: EffectsList {
+            effects: vec![ApplyStatus {
+                status: StatusType::Frozen,
+                duration: 2.0,
+            }],
+        },
+        sprite: Sprite::from_atlas_image(
+            sprites.ice_bolt.clone(),
+            TextureAtlas {
+                layout: texture_layouts.ice_bolt_layout.clone(),
+                index: 0,
+            },
+        ),
+        damage: CollisionDamage { damage: 25.0 }, // big damage
+    };
+
+    let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
+
     commands
         .spawn((
             ProjectileWeapon {
-                projectile: ProjectileBundle {
-                    effects_list: EffectsList {
-                        effects: vec![ApplyStatus {
-                            status: StatusType::Burning(BurningStatus::default()),
-                            duration: 2.0,
-                        }],
-                    },
-                    sprite: Sprite::from(sprites.fire_bolt.clone()),
-                    damage: CollisionDamage { damage: 6.0 },
-                },
+                projectile: icicle_projectile,
+                projectile_speed: 500.0,
                 spread: 0.0,
             },
             Weapon,
-            ItemName("Staff of flames".to_string()),
+            ItemName("Staff of Ice".to_string()),
             ItemId(6),
+            ManaCost(20.0), // big mana cost
             EquipmentSlot::Mainhand,
-            Equippable::default(),
+            Equippable {
+                use_rate: Timer::from_seconds(0.7, TimerMode::Once),
+                ..default()
+            },
             Visibility::Hidden,
-            Sprite::from_image(sprites.staff_of_fire.clone()),
-            DirectionTransforms::get(MovementDirection::Down).mainhand,
+            Sprite::from_image(sprites.ice_staff.clone()),
+            weapon_transform,
         ))
+        .observe(on_weapon_fired)
         .id()
 }

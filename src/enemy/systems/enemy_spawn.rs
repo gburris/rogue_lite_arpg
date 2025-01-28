@@ -45,7 +45,7 @@ fn spawn_enemy(
                 RigidBody::Dynamic,
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
-                    [GameCollisionLayer::Enemy],
+                    [GameCollisionLayer::Enemy, GameCollisionLayer::Grounded],
                     [
                         GameCollisionLayer::Player,
                         GameCollisionLayer::InAir,

@@ -7,7 +7,7 @@ use crate::configuration::GameCollisionLayer;
 #[require(
     Collider(|| Collider::rectangle(180.0, 50.0)),
     RigidBody(|| RigidBody::Static),
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::LowObstacle, [GameCollisionLayer::Enemy, GameCollisionLayer::Grounded]))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::LowObstacle, GameCollisionLayer::LOW_OBSTACLE_FILTERS))
 )]
 pub struct Chest;
 

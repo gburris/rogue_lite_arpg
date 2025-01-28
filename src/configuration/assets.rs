@@ -11,7 +11,7 @@ impl Plugin for AssetLoadingPlugin {
             LoadingState::new(AppState::AssetLoading)
                 .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>()
-                .load_collection::<AtlasAssets>()
+                .load_collection::<SpriteSheetLayouts>()
                 .load_collection::<FontAssets>(),
         );
     }
@@ -24,9 +24,13 @@ pub struct FontAssets {
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct AtlasAssets {
+pub struct SpriteSheetLayouts {
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
     pub player_atlas_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 32, columns = 5, rows = 1))]
+    pub fireball_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 5, rows = 1))]
+    pub ice_bolt_layout: Handle<TextureAtlasLayout>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -35,8 +39,10 @@ pub struct SpriteAssets {
     pub skeleton_player: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword_equipment_sprite: Handle<Image>,
-    #[asset(path = "items/staff_of_fire.png")]
-    pub staff_of_fire: Handle<Image>,
+    #[asset(path = "items/fire_staff.png")]
+    pub fire_staff: Handle<Image>,
+    #[asset(path = "items/ice_staff.png")]
+    pub ice_staff: Handle<Image>,
     #[asset(path = "items/helmet.png")]
     pub helmet_equipment_sprite: Handle<Image>,
     #[asset(path = "items/shovel.png")]
@@ -45,8 +51,8 @@ pub struct SpriteAssets {
     pub merman_enemy: Handle<Image>,
     #[asset(path = "projectiles/IceBolt.png")]
     pub ice_bolt: Handle<Image>,
-    #[asset(path = "projectiles/FB001.png")]
-    pub fire_bolt: Handle<Image>,
+    #[asset(path = "projectiles/fireball.png")]
+    pub fire_ball: Handle<Image>,
     #[asset(path = "warpzone.png")]
     pub warp_zone: Handle<Image>,
     #[asset(path = "tilesets/tiles.png")]

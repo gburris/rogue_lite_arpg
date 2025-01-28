@@ -129,7 +129,7 @@ pub fn on_damage_overlay_amount(damage_trigger: Trigger<DamageDealtEvent>, mut c
     commands.entity(damage_trigger.entity()).with_child((
         Text2d::new(damage_trigger.damage.to_string()),
         TextColor::from(RED_COLOR),
-        LiveDuration::new(0.6),
+        LiveDuration::new(0.4),
         Transform::from_translation(scaled_offset.extend(ZLayer::VisualEffect.z())),
     ));
 }

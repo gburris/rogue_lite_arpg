@@ -8,11 +8,15 @@ use crate::{
         attributes::{mana::Mana, Health},
         damage::components::HasIFrames,
     },
-    configuration::{assets::SpriteAssets, GameCollisionLayer},
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        GameCollisionLayer,
+    },
     items::{
         equipment::{equipment_slots::EquipmentSlots, use_equipped},
         inventory::inventory::Inventory,
-        spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword,
+        spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_ice_staff, spawn_shovel,
+        spawn_sword,
     },
     labels::layer::ZLayer,
     movement::components::SimpleMotion,
@@ -27,17 +31,31 @@ pub struct AimPosition {
     pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
 }
 
-pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
+pub fn spawn_player(
+    mut commands: Commands,
+    sprites: Res<SpriteAssets>,
+    texture_layouts: Res<SpriteSheetLayouts>,
+) {
     //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
-    let _ = inventory.add_item(spawn_health_potion(&mut commands));
-    let _ = inventory.add_item(spawn_sword(&mut commands, &sprites));
-    let _ = inventory.add_item(spawn_helmet(&mut commands, &sprites));
-    let _ = inventory.add_item(spawn_shovel(&mut commands, &sprites));
-
+    inventory.add_item(spawn_health_potion(&mut commands)).ok();
     inventory
-        .add_item(spawn_fire_staff(&mut commands, &sprites))
+        .add_item(spawn_sword(&mut commands, &sprites))
         .ok();
+    inventory
+        .add_item(spawn_helmet(&mut commands, &sprites))
+        .ok();
+    inventory
+        .add_item(spawn_shovel(&mut commands, &sprites))
+        .ok();
+    inventory
+        .add_item(spawn_ice_staff(&mut commands, &sprites, &texture_layouts))
+        .ok();
+
+    let fire_staff = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
+
+    // TODO: Fix it such that any equipped weapon is made visible
+    commands.entity(fire_staff).insert(Visibility::Visible);
 
     commands
         .spawn((
@@ -48,7 +66,10 @@ pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             Health::new(100.0),
             Mana::new(100.0, 10.0),
             inventory,
-            EquipmentSlots::default(),
+            EquipmentSlots {
+                mainhand: Some(fire_staff), // start with fire staff equipped
+                head: None,
+            },
             HasIFrames {
                 duration: Duration::from_secs(1),
             },
@@ -70,5 +91,6 @@ pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)
-        .observe(use_equipped::on_main_hand_activated);
+        .observe(use_equipped::on_main_hand_activated)
+        .add_child(fire_staff);
 }

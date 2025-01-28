@@ -14,8 +14,7 @@ pub enum GameCollisionLayer {
 }
 
 impl GameCollisionLayer {
-    pub const LOW_OBSTACLE_FILTERS: [GameCollisionLayer; 2] = [Self::Enemy, Self::Grounded];
+    pub const LOW_OBSTACLE_FILTERS: [GameCollisionLayer; 1] = [Self::Grounded];
 
-    pub const HIGH_OBSTACLE_FILTERS: [GameCollisionLayer; 3] =
-        [Self::Enemy, Self::Grounded, Self::InAir];
+    pub const HIGH_OBSTACLE_FILTERS: [GameCollisionLayer; 2] = [Self::Grounded, Self::InAir];
 }

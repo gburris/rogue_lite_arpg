@@ -36,14 +36,21 @@ pub fn spawn_melee_attack(
     transform = transform.with_scale(Vec3::new(0.2, 0.2, 0.2));
     warn!("Spawning melee swing with transform {:?}", transform);
     // Spawn the melee attack with the adjusted transform
-    commands.spawn((
-        MeleeAttack {
-            caster_entity: caster,
-        },
-        MeleeSwingMarker,
-        LiveDuration::new(melee_bundle.swing_type.get_total_duration()),
-        melee_bundle.clone(),
-        Collider::rectangle(melee_bundle.hitbox.width, melee_bundle.hitbox.length),
-        transform,
-    ));
+    //How should we melee attack this direction?
+    // Take the players mainahand equipment
+    // - Toggle on the collider
+    // - Begin updating its transform 
+    let melee_attack_entity_id = commands
+        .spawn((
+            MeleeAttack {
+                caster_entity: caster,
+            },
+            MeleeSwingMarker,
+            LiveDuration::new(melee_bundle.swing_type.get_total_duration()),
+            melee_bundle.clone(),
+            Collider::rectangle(melee_bundle.hitbox.width, melee_bundle.hitbox.length),
+            transform,
+        ))
+        .id();
+    commands.entity(caster).add_child(melee_attack_entity_id);
 }

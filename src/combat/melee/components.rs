@@ -35,10 +35,7 @@ impl Default for MeleeHitbox {
 pub enum MeleeSwingType {
     Stab {
         speed: f32,
-        forward_duration: f32,
-        return_duration: f32,
-        elapsed_time: f32,
-        max_distance: f32,
+        duration: f32,
     },
     Slash {
         angular_speed: f32,
@@ -65,10 +62,7 @@ impl MeleeSwingType {
     pub fn stab() -> Self {
         MeleeSwingType::Stab { 
             speed: 10.0,             // Not used anymore but kept for compatibility
-            forward_duration: 0.15,  // Quick thrust forward
-            return_duration: 0.15,   // Quick return
-            elapsed_time: 0.0,
-            max_distance: 50.0,     // Maximum reach of the stab
+            duration: 0.15,  // Quick thrust forward
         }
     }
 
@@ -93,9 +87,7 @@ impl MeleeSwingType {
 
     pub fn get_total_duration(&self) -> f32 {
         match self {
-            MeleeSwingType::Stab { forward_duration, return_duration, .. } => {
-                forward_duration + return_duration
-            }
+            MeleeSwingType::Stab { duration, .. } => *duration,
             MeleeSwingType::Slash { duration, .. } => *duration,
             MeleeSwingType::Circle { duration, .. } => *duration,
         }

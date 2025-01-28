@@ -22,13 +22,7 @@ pub fn update_melee_attacks(
     {
         if let Ok(current_caster_transform) = caster_query.get(melee_attack.caster_entity) {
             match *swing_type {
-                MeleeSwingType::Stab {
-                    speed,
-                    forward_duration,
-                    return_duration,
-                    mut elapsed_time,
-                    max_distance,
-                } => {
+                MeleeSwingType::Stab { speed, duration } => {
                     let direction = weapon_hitbox_transform.local_x().truncate();
                     let delta = direction * speed * time.delta_secs();
 

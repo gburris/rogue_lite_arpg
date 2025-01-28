@@ -1,6 +1,6 @@
 use crate::{
     animation::AnimationTimer,
-    configuration::assets::{AtlasAssets, SpriteAssets},
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     player::Player,
 };
 
@@ -12,7 +12,7 @@ pub fn set_starting_player_animation_and_sprite_sheet(
     animation_config: Res<PlayerAnimationConfig>,
     mut query: Query<Entity, With<Player>>,
     sprites: Res<SpriteAssets>,
-    atlases: Res<AtlasAssets>,
+    atlases: Res<SpriteSheetLayouts>,
 ) {
     let sprite = Sprite::from_atlas_image(
         sprites.player_sprite_sheet.clone(),

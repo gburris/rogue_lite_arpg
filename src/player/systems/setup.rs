@@ -9,12 +9,16 @@ use crate::{
         damage::components::HasIFrames,
     },
     configuration::{assets::SpriteAssets, GameCollisionLayer},
-    items::{equipment::{equip, equipment::EquipmentSlots}, inventory::inventory::Inventory, spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword},
+    items::{
+        equipment::{equipment_slots::EquipmentSlots, use_equipped},
+        inventory::inventory::Inventory,
+        spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_shovel, spawn_sword,
+    },
     labels::layer::ZLayer,
     movement::components::SimpleMotion,
     player::{
-        animation::components::PlayerAnimations, movement::MovementDirection, systems::*,
-         Player, PlayerStats,
+        animation::components::PlayerAnimations, movement::MovementDirection, systems::*, Player,
+        PlayerStats,
     },
 };
 
@@ -66,5 +70,5 @@ pub fn player_setup(mut commands: Commands, sprites: Res<SpriteAssets>) {
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)
-        .observe(equip::on_main_hand_activated);
+        .observe(use_equipped::on_main_hand_activated);
 }

@@ -1,6 +1,17 @@
-use crate::items::EquipmentSlot; //Move this here
 use bevy::prelude::*;
 
+/**
+ * Goes on the equipment marking where it should be equipped
+ */
+#[derive(Component, Clone, PartialEq, Debug)]
+pub enum EquipmentSlot {
+    Mainhand,
+    Helmet,
+}
+
+/**
+ * Goes on the holder marking what is has equipped
+ */
 #[derive(Component, Default)]
 pub struct EquipmentSlots {
     pub mainhand: Option<Entity>,

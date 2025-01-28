@@ -36,7 +36,6 @@ impl Plugin for PlayerPlugin {
                         enforce_map_bounds,
                         on_player_experience_change,
                         animate_level_up,
-                        regenerate_mana,
                     )
                         .before(camera_follow_system),
                     camera_follow_system.before(TransformSystem::TransformPropagate), // avian recommended ordering for camera following logic

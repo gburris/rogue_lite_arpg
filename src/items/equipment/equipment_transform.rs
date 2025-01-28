@@ -1,4 +1,4 @@
-use super::equipment::EquipmentSlots;
+use super::equipment_slots::EquipmentSlots;
 use crate::{labels::layer::ZLayer, player::movement::MovementDirection};
 use bevy::prelude::*;
 use std::collections::HashMap;

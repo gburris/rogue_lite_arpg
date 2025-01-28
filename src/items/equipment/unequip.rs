@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::{inventory::inventory::Inventory, EquipmentSlot},
+    items::{
+        equipment::{equipment_slots::unequip_item, EquipmentSlot, EquipmentSlots},
+        inventory::inventory::Inventory,
+    },
     player::Player,
     ui::pause_menu::button_interactions::TryUnequipEvent,
 };
 
-use super::equipment::{unequip_item, EquipmentSlots};
-
 #[derive(Event)]
-
 pub struct UnequipSuccessEvent {
     pub item_entity: Entity,
 }

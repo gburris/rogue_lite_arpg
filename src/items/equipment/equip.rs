@@ -1,16 +1,26 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::{
-        attributes::{mana::ManaCost, Mana},
-        weapon::weapon::UseEquipmentEvent,
+    items::{
+        equipment::{equipment_slots::equip_item, EquipmentSlot, EquipmentSlots},
+        inventory::inventory::Inventory,
     },
-    items::{inventory::inventory::Inventory, EquipmentSlot, Equippable},
-    player::{MainHandActivated, Player},
+    player::Player,
     ui::pause_menu::button_interactions::TryEquipEvent,
 };
 
-use super::equipment::{equip_item, EquipmentSlots};
+#[derive(Component, Clone, Debug)]
+pub struct Equippable {
+    pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
+}
+
+impl Default for Equippable {
+    fn default() -> Self {
+        Self {
+            use_rate: Timer::from_seconds(0.4, TimerMode::Once),
+        }
+    }
+}
 
 #[derive(Event)]
 pub struct EquipSuccessEvent {
@@ -79,47 +89,6 @@ pub fn handle_equip_success_event(
 
     if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
         *visibility = Visibility::Visible;
-    }
-}
-
-pub fn on_main_hand_activated(
-    main_hand_trigger: Trigger<MainHandActivated>,
-    mut commands: Commands,
-    mut holder_query: Query<(&Children, Option<&mut Mana>)>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
-) {
-    // Parent needs to have an aim position for equipped item
-    let Ok((children, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
-        debug!(
-            "Entity: {} tried to use main hand with nothing equipped",
-            main_hand_trigger.entity()
-        );
-        return;
-    };
-
-    for &child in children.iter() {
-        // if child is equippable
-        if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(child) {
-            if equippable.use_rate.finished() {
-                let has_enough_mana = if let (Some(mana), Some(&ManaCost(mana_cost))) =
-                    (holder_mana.as_mut(), mana_cost)
-                {
-                    mana.use_mana(mana_cost)
-                } else {
-                    true
-                };
-
-                if has_enough_mana {
-                    commands.trigger_targets(
-                        UseEquipmentEvent {
-                            holder: main_hand_trigger.entity(),
-                        },
-                        child,
-                    );
-                    equippable.use_rate.reset();
-                }
-            }
-        }
     }
 }
 

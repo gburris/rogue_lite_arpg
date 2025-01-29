@@ -10,18 +10,10 @@ use super::components::{ActiveMeleeAttack, MeleeWeapon};
 
 pub fn handle_melee_collisions(
     mut commands: Commands,
-    melee_query: Query<
-        (
-            &CollisionDamage,
-            &ActiveMeleeAttack,
-            &CollidingEntities,
-            Entity,
-        ),
-        With<MeleeWeapon>, //Only find active melee attacs
-    >,
+    melee_query: Query<(&ActiveMeleeAttack, &CollisionDamage, &CollidingEntities)>,
     enemy_query: Query<&Enemy>,
 ) {
-    for (collision_damage, attack, colliding_entities, melee_swing_entity) in melee_query.iter() {
+    for (attack, damage, colliding_entities) in melee_query.iter() {
         //Try to hit everyone colliding with us. Note, this will probably trigger for everyone we collide with
         //So swinging and hitting two enemies at the same time would trigger four executions of the loop
         warn!("trying to do melee damage");
@@ -29,8 +21,8 @@ pub fn handle_melee_collisions(
             if enemy_query.contains(colliding_entity) {
                 commands.trigger_targets(
                     AttemptDamageEvent {
-                        damage: collision_damage.damage,
-                        damage_source: Some(melee_swing_entity),
+                        damage: damage.damage,
+                        damage_source: None,
                     },
                     colliding_entity,
                 );

@@ -85,13 +85,17 @@ pub struct MeleeSwingPropertiesBundle {
 }
 
 #[derive(Component)]
-#[require(CollidingEntities, Sensor, CollisionLayers(default_collision_layers))]
+#[require(
+    CollidingEntities,
+    CollisionDamage,
+    Sensor,
+    CollisionLayers(default_collision_layers)
+)]
 pub struct ActiveMeleeAttack {
     pub timer: Timer,
     pub initial_angle: f32,
     pub attack_type: MeleeSwingType,
     pub starting_transform: Transform,
-    pub damage: CollisionDamage,
 }
 
 fn default_collision_layers() -> CollisionLayers {

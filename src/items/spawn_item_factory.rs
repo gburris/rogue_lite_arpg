@@ -1,4 +1,3 @@
-use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use super::{

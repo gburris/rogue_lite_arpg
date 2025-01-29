@@ -129,9 +129,6 @@ pub fn on_weapon_melee(
                 melee_weapon.melee_attack.swing_type.get_total_duration(),
                 TimerMode::Once,
             ),
-            damage: CollisionDamage {
-                damage: melee_weapon.melee_attack.damage.damage,
-            },
             initial_angle: attack_angle,
             attack_type: melee_weapon.melee_attack.swing_type.clone(),
             starting_transform: *weapon_transform,
@@ -139,7 +136,10 @@ pub fn on_weapon_melee(
         .insert(Collider::rectangle(
             melee_weapon.melee_attack.hitbox.width,
             melee_weapon.melee_attack.hitbox.length,
-        ));
+        ))
+        .insert(CollisionDamage {
+            damage: melee_weapon.melee_attack.damage.damage,
+        });
 
     // Update holder's action state
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {

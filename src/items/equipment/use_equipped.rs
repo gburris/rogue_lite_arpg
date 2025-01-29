@@ -1,11 +1,9 @@
-use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use crate::{
     combat::{
         attributes::{mana::ManaCost, Mana},
-        damage::components::CollisionDamage,
-        melee::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon},
+        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
         projectile::spawn::spawn_projectile,
         weapon::weapon::{ProjectileWeapon, Weapon},
     },
@@ -116,31 +114,19 @@ pub fn on_weapon_melee(
         return;
     };
 
-    // Calculate aim direction in world space
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction = (aim_pos.position - holder_pos).normalize();
     let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
     // Convert from "right-facing" (atan2) to "up-facing" (weapons sprites's default)
     attack_angle -= std::f32::consts::FRAC_PI_2; // Subtract 90 degrees
-    commands
-        .entity(weapon_entity)
-        .insert(ActiveMeleeAttack {
-            timer: Timer::from_seconds(
-                melee_weapon.melee_attack.swing_type.get_total_duration(),
-                TimerMode::Once,
-            ),
-            initial_angle: attack_angle,
-            attack_type: melee_weapon.melee_attack.swing_type.clone(),
-            starting_transform: *weapon_transform,
-        })
-        .insert(Collider::rectangle(
-            melee_weapon.melee_attack.hitbox.width,
-            melee_weapon.melee_attack.hitbox.length,
-        ))
-        .insert(CollisionDamage {
-            damage: melee_weapon.melee_attack.damage.damage,
-        });
 
+    start_melee_attack(
+        &mut commands,
+        weapon_entity,
+        &melee_weapon,
+        attack_angle,
+        *weapon_transform,
+    );
     // Update holder's action state
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = CurrentActionState::Attacking;

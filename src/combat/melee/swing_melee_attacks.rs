@@ -1,8 +1,35 @@
-use crate::player::systems::CurrentActionState;
+use crate::{combat::damage::components::CollisionDamage, player::systems::CurrentActionState};
 
-use super::components::{ActiveMeleeAttack, MeleeSwingType};
+use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
+
+pub fn start_melee_attack(
+    commands: &mut Commands,
+    weapon_entity: Entity,
+    melee_weapon: &MeleeWeapon,
+    attack_angle: f32,
+    equipped_item_transform: Transform,
+) {
+    commands
+        .entity(weapon_entity)
+        .insert(ActiveMeleeAttack {
+            timer: Timer::from_seconds(
+                melee_weapon.melee_attack.swing_type.get_total_duration(),
+                TimerMode::Once,
+            ),
+            initial_angle: attack_angle,
+            attack_type: melee_weapon.melee_attack.swing_type.clone(),
+            starting_transform: equipped_item_transform,
+        })
+        .insert(Collider::rectangle(
+            melee_weapon.melee_attack.hitbox.width,
+            melee_weapon.melee_attack.hitbox.length,
+        ))
+        .insert(CollisionDamage {
+            damage: melee_weapon.melee_attack.damage.damage,
+        });
+}
 
 pub fn process_melee_attacks(
     time: Res<Time>,
@@ -42,27 +69,32 @@ pub fn process_melee_attacks(
                 radius, duration, ..
             } => {
                 let progress = active_attack.timer.elapsed_secs() / duration;
+                let adjusted_angle = active_attack.initial_angle + std::f32::consts::FRAC_PI_2; // Rotate by -90°
 
-                // Slash moves from 30° right to 30° left (total 60° arc)
-                let start_angle = active_attack.initial_angle - 30f32.to_radians();
-                let end_angle = active_attack.initial_angle + 30f32.to_radians();
+                let start_angle = adjusted_angle - 60f32.to_radians();
+                let end_angle = adjusted_angle + 60f32.to_radians();
 
+                // Compute current swing angle based on progress
                 let current_angle = start_angle + (end_angle - start_angle) * progress;
 
-                // Position: Move along the arc
-                let forward = Vec2::new(current_angle.cos(), current_angle.sin());
-                let offset_position = active_attack.starting_transform.translation
-                    + Vec3::new(forward.x * radius, forward.y * radius, 0.0);
+                // Player position (assumed to be the swing origin)
+                let player_position = active_attack.starting_transform.translation;
 
-                // Rotation: Always face the player (handle inward)
-                let to_player = (active_attack.starting_transform.translation - offset_position)
-                    .truncate()
-                    .normalize();
-                let angle_to_player = to_player.y.atan2(to_player.x) + std::f32::consts::PI; // Flip 180° to point handle inward
+                // Compute the axe head's position along the arc
+                let axe_head_position = player_position
+                    + Vec3::new(
+                        current_angle.cos() * radius,
+                        current_angle.sin() * radius,
+                        0.0,
+                    );
 
-                // Apply transform updates
-                transform.translation = offset_position;
-                transform.rotation = Quat::from_rotation_z(angle_to_player);
+                // **New Fix**: Make sure the axe rotates properly
+                // The axe head should be perpendicular to the swing motion
+                let blade_angle = current_angle - std::f32::consts::FRAC_PI_2; // Flip the angle
+
+                // Apply position and rotation updates
+                transform.translation = axe_head_position;
+                transform.rotation = Quat::from_rotation_z(blade_angle);
             }
         }
         if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {

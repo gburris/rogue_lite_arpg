@@ -8,7 +8,9 @@ use crate::{
     labels::sets::InGameSet,
 };
 
-use super::melee::swing_melee_attacks::update_melee_attacks;
+use super::melee::{
+    handle_collisions::handle_melee_collisions, swing_melee_attacks::process_melee_attacks,
+};
 
 pub struct CombatPlugin;
 
@@ -19,8 +21,9 @@ impl Plugin for CombatPlugin {
                 Update,
                 (
                     regenerate_mana.in_set(InGameSet::Simulation),
-                    update_melee_attacks.in_set(InGameSet::Simulation),
+                    process_melee_attacks.in_set(InGameSet::Simulation),
                     handle_projectile_collisions.in_set(InGameSet::Collision),
+                    handle_melee_collisions.in_set(InGameSet::Collision),
                 ),
             );
     }

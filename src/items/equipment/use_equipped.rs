@@ -1,15 +1,19 @@
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use crate::{
     combat::{
         attributes::{mana::ManaCost, Mana},
-        melee::{components::MeleeWeapon, spawn::spawn_melee_attack},
+        damage::components::CollisionDamage,
+        melee::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon},
         projectile::spawn::spawn_projectile,
-        weapon::weapon::ProjectileWeapon,
+        weapon::weapon::{ProjectileWeapon, Weapon},
     },
-    configuration::assets::SpriteAssets,
     items::equipment::Equippable,
-    player::{systems::AimPosition, MainHandActivated},
+    player::{
+        systems::{AimPosition, CurrentActionState},
+        MainHandActivated,
+    },
 };
 
 use super::equipment_slots::EquipmentSlots;
@@ -96,24 +100,49 @@ pub fn on_weapon_fired(
 pub fn on_weapon_melee(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    weapon_query: Query<&MeleeWeapon>,
-    holder_query: Query<(&Transform, &AimPosition)>,
+    weapon_query: Query<(Entity, &Transform, &MeleeWeapon), With<Weapon>>,
+    mut action_state_query: Query<&mut CurrentActionState>,
+    holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
 ) {
-    let Ok(melee_weapon) = weapon_query.get(fired_trigger.entity()) else {
-        warn!("Tried to melee swing a weapon that is not a melee weapon");
+    let Ok((weapon_entity, weapon_transform, melee_weapon)) =
+        weapon_query.get(fired_trigger.entity())
+    else {
+        warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok((holder_transform, holder_aim)) = holder_query.get(fired_trigger.holder) else {
-        warn!("Tried to fire weapon with holder missing aim position or transform");
+    let Ok((holder_transform, aim_pos)) = holder_query.get(fired_trigger.holder) else {
+        warn!("Holder missing required components");
         return;
     };
 
-    spawn_melee_attack(
-        &mut commands,
-        fired_trigger.entity(),
-        holder_transform,
-        holder_aim.position,
-        &melee_weapon.melee_attack,
-    );
+    // Calculate aim direction in world space
+    let holder_pos = holder_transform.translation.truncate();
+    let aim_direction = (aim_pos.position - holder_pos).normalize();
+    let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
+    // Convert from "right-facing" (atan2) to "up-facing" (weapons sprites's default)
+    attack_angle -= std::f32::consts::FRAC_PI_2; // Subtract 90 degrees
+    commands
+        .entity(weapon_entity)
+        .insert(ActiveMeleeAttack {
+            timer: Timer::from_seconds(
+                melee_weapon.melee_attack.swing_type.get_total_duration(),
+                TimerMode::Once,
+            ),
+            damage: CollisionDamage {
+                damage: melee_weapon.melee_attack.damage.damage,
+            },
+            initial_angle: attack_angle,
+            attack_type: melee_weapon.melee_attack.swing_type.clone(),
+            starting_transform: *weapon_transform,
+        })
+        .insert(Collider::rectangle(
+            melee_weapon.melee_attack.hitbox.width,
+            melee_weapon.melee_attack.hitbox.length,
+        ));
+
+    // Update holder's action state
+    if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
+        *action_state = CurrentActionState::Attacking;
+    }
 }

@@ -1,3 +1,4 @@
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use super::{
@@ -5,8 +6,7 @@ use super::{
         equipment_transform::DirectionTransforms,
         use_equipped::{on_weapon_fired, on_weapon_melee},
         Equippable,
-    },
-    Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel,
+    }, Axe, Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel
 };
 use crate::{
     combat::{
@@ -52,14 +52,38 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
                     damage: CollisionDamage { damage: 6.0 },
                     effects_list: EffectsList { effects: vec![] },
                     hitbox: MeleeHitbox::default(),
-                    sprite: Sprite::from_image(sprites.sword_equipment_sprite.clone()),
                     swing_type: MeleeSwingType::stab(),
                 },
             },
             Equippable::default(),
             ItemId(3),
             Visibility::Hidden,
-            Sprite::from_image(sprites.sword_equipment_sprite.clone()),
+            Sprite::from_image(sprites.sword.clone()),
+            DirectionTransforms::get(MovementDirection::Down).mainhand,
+        ))
+        .observe(on_weapon_melee)
+        .id()
+}
+
+pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+    commands
+        .spawn((
+            ItemName("Axe".to_string()),
+            EquipmentSlot::Mainhand,
+            Axe,
+            Weapon,
+            MeleeWeapon {
+                melee_attack: MeleeSwingPropertiesBundle {
+                    damage: CollisionDamage { damage: 6.0 },
+                    effects_list: EffectsList { effects: vec![] },
+                    hitbox: MeleeHitbox::default(),
+                    swing_type: MeleeSwingType::slash(),
+                },
+            },
+            Equippable::default(),
+            ItemId(3),
+            Visibility::Hidden,
+            Sprite::from_image(sprites.axe.clone()),
             DirectionTransforms::get(MovementDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)

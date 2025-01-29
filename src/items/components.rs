@@ -15,6 +15,10 @@ pub struct Sword;
 
 #[derive(Component, Clone, Debug)]
 #[require(ItemName, ItemId)]
+pub struct Axe;
+
+#[derive(Component, Clone, Debug)]
+#[require(ItemName, ItemId)]
 pub struct Shovel;
 
 #[derive(Component, Clone, Debug)]

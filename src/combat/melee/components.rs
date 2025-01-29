@@ -2,12 +2,12 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{damage::components::CollisionDamage, status_effects::components::EffectsList, weapon::weapon::Weapon},
+    combat::{
+        damage::components::CollisionDamage, status_effects::components::EffectsList,
+        weapon::weapon::Weapon,
+    },
     configuration::GameCollisionLayer,
-    despawn::components::LiveDuration,
 };
-
-
 
 #[derive(Component, Clone)]
 #[require(Weapon)]
@@ -15,19 +15,18 @@ pub struct MeleeWeapon {
     pub melee_attack: MeleeSwingPropertiesBundle,
 }
 
-
 #[derive(Component, Clone)]
 
-pub struct MeleeHitbox{
-    pub length: f32, 
-    pub width: f32, 
+pub struct MeleeHitbox {
+    pub length: f32,
+    pub width: f32,
 }
 
 impl Default for MeleeHitbox {
     fn default() -> Self {
         MeleeHitbox {
-            length: 500.0,
-            width: 50.0,
+            length: 40.0,
+            width: 10.0,
         }
     }
 }
@@ -44,12 +43,6 @@ pub enum MeleeSwingType {
         duration: f32,
         elapsed_time: f32,
     },
-    Circle {
-        expansion_speed: f32,
-        current_radius: f32,
-        duration: f32,
-        elapsed_time: f32,
-    },
 }
 
 impl Default for MeleeSwingType {
@@ -60,27 +53,18 @@ impl Default for MeleeSwingType {
 
 impl MeleeSwingType {
     pub fn stab() -> Self {
-        MeleeSwingType::Stab { 
-            speed: 10.0,             // Not used anymore but kept for compatibility
-            duration: 0.15,  // Quick thrust forward
+        MeleeSwingType::Stab {
+            speed: 10.0,
+            duration: 0.4,
         }
     }
 
     pub fn slash() -> Self {
         MeleeSwingType::Slash {
-            angular_speed: 12.0,     // Faster rotation (~2 full rotations/sec)
-            radius: 50.0,
+            angular_speed: std::f32::consts::PI / 0.4, // 180° over 0.4s
+            radius: 25.0,                              // Increase offset from the player
             current_angle: 0.0,
-            duration: 0.4,           // Complete slash duration
-            elapsed_time: 0.0,
-        }
-    }
-
-    pub fn circle() -> Self {
-        MeleeSwingType::Circle {
-            expansion_speed: 100.0,
-            current_radius: 0.0,
-            duration: 0.5,
+            duration: 0.4, // Complete in 0.4s
             elapsed_time: 0.0,
         }
     }
@@ -89,7 +73,6 @@ impl MeleeSwingType {
         match self {
             MeleeSwingType::Stab { duration, .. } => *duration,
             MeleeSwingType::Slash { duration, .. } => *duration,
-            MeleeSwingType::Circle { duration, .. } => *duration,
         }
     }
 }
@@ -99,33 +82,18 @@ pub struct MeleeSwingPropertiesBundle {
     pub hitbox: MeleeHitbox,
     pub swing_type: MeleeSwingType,
     pub effects_list: EffectsList,
-    pub sprite: Sprite,
 }
 
 #[derive(Component)]
-pub struct MeleeSwingMarker;
-
-#[derive(Component, Clone)]
-#[require(
-    LiveDuration, //Swing Time
-    Sensor, 
-    RigidBody(default_rigid_body),
-    Collider,
-    CollidingEntities,
-    CollisionLayers(default_collision_layers)
-)]
-pub struct MeleeAttack{
-    pub caster_entity: Entity,
-}
-
-fn default_rigid_body() -> RigidBody {
-    RigidBody::Dynamic
+#[require(CollidingEntities, Sensor, CollisionLayers(default_collision_layers))]
+pub struct ActiveMeleeAttack {
+    pub timer: Timer,
+    pub initial_angle: f32,
+    pub attack_type: MeleeSwingType,
+    pub starting_transform: Transform,
+    pub damage: CollisionDamage,
 }
 
 fn default_collision_layers() -> CollisionLayers {
-    // Currently projectiles can only collide with enemies
-    CollisionLayers::new(
-        GameCollisionLayer::InAir,
-        [GameCollisionLayer::Enemy, GameCollisionLayer::HighObstacle],
-    )
+    CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Enemy])
 }

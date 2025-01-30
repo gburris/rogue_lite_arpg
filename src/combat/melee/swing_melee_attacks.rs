@@ -1,4 +1,8 @@
-use crate::{combat::damage::components::CollisionDamage, player::systems::CurrentActionState};
+use crate::{
+    combat::damage::components::CollisionDamage,
+    items::equipment::equipment_transform::DirectionTransforms,
+    player::{movement::MovementDirection, systems::CurrentActionState},
+};
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
 use avian2d::prelude::Collider;
@@ -20,7 +24,6 @@ pub fn start_melee_attack(
             ),
             initial_angle: attack_angle,
             attack_type: melee_weapon.melee_attack.swing_type.clone(),
-            starting_transform: equipped_item_transform,
         })
         .insert(Collider::rectangle(
             melee_weapon.melee_attack.hitbox.width,
@@ -56,9 +59,8 @@ pub fn process_melee_attacks(
                     (active_attack.initial_angle + std::f32::consts::FRAC_PI_2).sin(),
                 );
 
-                // Adjust starting position at the beginning of the stab
-                let stab_start_position = active_attack.starting_transform.translation
-                    + Vec3::new(forward.x * attack_offset, forward.y * attack_offset, 0.0);
+                let stab_start_position =
+                    Vec3::new(forward.x * attack_offset, forward.y * attack_offset, 0.0);
 
                 // Apply position update
                 transform.translation = stab_start_position
@@ -78,16 +80,12 @@ pub fn process_melee_attacks(
                 // Compute current swing angle based on progress
                 let current_angle = start_angle + (end_angle - start_angle) * progress;
 
-                // Player position (assumed to be the swing origin)
-                let player_position = active_attack.starting_transform.translation;
-
                 // Compute the axe head's position along the arc
-                let axe_head_position = player_position
-                    + Vec3::new(
-                        current_angle.cos() * radius,
-                        current_angle.sin() * radius,
-                        0.0,
-                    );
+                let axe_head_position = Vec3::new(
+                    current_angle.cos() * radius,
+                    current_angle.sin() * radius,
+                    0.0,
+                );
 
                 // **New Fix**: Make sure the axe rotates properly
                 // The axe head should be perpendicular to the swing motion
@@ -108,7 +106,9 @@ pub fn process_melee_attacks(
                     .remove::<CollisionDamage>();
                 *action_state = CurrentActionState::None;
                 // Reset transform to starting position
-                *transform = active_attack.starting_transform;
+                //TODO: Call some system here to set the position of the sword to the current player direction
+                //For now, we can default to "on the back" since it's the least visually jarring
+                *transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
             }
         }
     }

@@ -6,13 +6,13 @@ use super::{
         use_equipped::{on_weapon_fired, on_weapon_melee},
         Equippable,
     },
-    Axe, Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel,
+    Consumable, ConsumableEffect, ConsumableType, ItemName,
 };
 use crate::{
     combat::{
         attributes::mana::ManaCost,
         damage::components::CollisionDamage,
-        melee::components::{MeleeHitbox, MeleeSwingPropertiesBundle, MeleeSwingType, MeleeWeapon},
+        melee::components::{MeleeHitbox, MeleeSwingType, MeleeWeapon},
         projectile::components::ProjectileBundle,
         status_effects::{
             components::{BurningStatus, EffectsList, StatusType},
@@ -21,7 +21,7 @@ use crate::{
         weapon::weapon::{ProjectileWeapon, Weapon},
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::{equipment::EquipmentSlot, HealthPotion, ItemId, Sword},
+    items::{equipment::EquipmentSlot, HealthPotion, ItemId},
     player::movement::MovementDirection,
 };
 
@@ -45,15 +45,12 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
         .spawn((
             ItemName("Sword".to_string()),
             EquipmentSlot::Mainhand,
-            Sword,
             Weapon,
             MeleeWeapon {
-                melee_attack: MeleeSwingPropertiesBundle {
-                    damage: CollisionDamage { damage: 6.0 },
-                    effects_list: EffectsList { effects: vec![] },
-                    hitbox: MeleeHitbox::default(),
-                    swing_type: MeleeSwingType::stab(),
-                },
+                damage: CollisionDamage { damage: 6.0 },
+                effects_list: EffectsList { effects: vec![] },
+                hitbox: MeleeHitbox::default(),
+                swing_type: MeleeSwingType::stab(),
                 swing_duration: 0.4,
             },
             Equippable::default(),
@@ -71,16 +68,13 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
         .spawn((
             ItemName("Axe".to_string()),
             EquipmentSlot::Mainhand,
-            Axe,
             Weapon,
             MeleeWeapon {
-                melee_attack: MeleeSwingPropertiesBundle {
-                    damage: CollisionDamage { damage: 6.0 },
-                    effects_list: EffectsList { effects: vec![] },
-                    hitbox: MeleeHitbox::default(),
-                    swing_type: MeleeSwingType::slash(),
-                },
                 swing_duration: 0.4,
+                damage: CollisionDamage { damage: 6.0 },
+                effects_list: EffectsList { effects: vec![] },
+                hitbox: MeleeHitbox::default(),
+                swing_type: MeleeSwingType::slash(),
             },
             Equippable::default(),
             ItemId(3),
@@ -97,7 +91,6 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
         .spawn((
             ItemName("Shovel".to_string()),
             EquipmentSlot::Mainhand,
-            Shovel,
             Equippable::default(),
             ItemId(3),
             Visibility::Hidden,
@@ -112,7 +105,6 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
         .spawn((
             ItemName("Helmet".to_string()),
             EquipmentSlot::Helmet,
-            Helmet,
             Equippable::default(),
             ItemId(3),
             Visibility::Hidden,

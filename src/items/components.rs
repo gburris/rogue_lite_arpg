@@ -11,22 +11,6 @@ pub struct ItemName(pub String);
 
 #[derive(Component, Clone, Debug)]
 #[require(ItemName, ItemId)]
-pub struct Sword;
-
-#[derive(Component, Clone, Debug)]
-#[require(ItemName, ItemId)]
-pub struct Axe;
-
-#[derive(Component, Clone, Debug)]
-#[require(ItemName, ItemId)]
-pub struct Shovel;
-
-#[derive(Component, Clone, Debug)]
-#[require(ItemName, ItemId)]
-pub struct Helmet;
-
-#[derive(Component, Clone, Debug)]
-#[require(ItemName, ItemId)]
 pub struct HealthPotion;
 
 #[derive(Component)]

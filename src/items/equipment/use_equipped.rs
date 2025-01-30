@@ -123,13 +123,7 @@ pub fn on_weapon_melee(
     // Considering in slash we just undo it right away
     attack_angle -= std::f32::consts::FRAC_PI_2; // Subtract 90 degrees
 
-    start_melee_attack(
-        &mut commands,
-        weapon_entity,
-        &melee_weapon,
-        attack_angle,
-        *weapon_transform,
-    );
+    start_melee_attack(&mut commands, weapon_entity, &melee_weapon, attack_angle);
     // Update holder's action state
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = CurrentActionState::Attacking;

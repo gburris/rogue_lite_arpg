@@ -13,21 +13,20 @@ pub fn start_melee_attack(
     weapon_entity: Entity,
     melee_weapon: &MeleeWeapon,
     attack_angle: f32,
-    equipped_item_transform: Transform,
 ) {
     commands
         .entity(weapon_entity)
         .insert(ActiveMeleeAttack {
             timer: Timer::from_seconds(melee_weapon.swing_duration, TimerMode::Once),
             initial_angle: attack_angle,
-            attack_type: melee_weapon.melee_attack.swing_type.clone(),
+            attack_type: melee_weapon.swing_type.clone(),
         })
         .insert(Collider::rectangle(
-            melee_weapon.melee_attack.hitbox.width,
-            melee_weapon.melee_attack.hitbox.length,
+            melee_weapon.hitbox.width,
+            melee_weapon.hitbox.length,
         ))
         .insert(CollisionDamage {
-            damage: melee_weapon.melee_attack.damage.damage,
+            damage: melee_weapon.damage.damage,
         });
 }
 

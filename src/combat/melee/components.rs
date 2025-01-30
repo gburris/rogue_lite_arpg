@@ -14,8 +14,11 @@ use crate::{
 #[derive(Component, Clone)]
 #[require(Weapon)]
 pub struct MeleeWeapon {
-    pub melee_attack: MeleeSwingPropertiesBundle,
     pub swing_duration: f32,
+    pub damage: CollisionDamage,
+    pub hitbox: MeleeHitbox,
+    pub swing_type: MeleeSwingType,
+    pub effects_list: EffectsList,
 }
 
 #[derive(Component, Clone)]
@@ -39,12 +42,6 @@ pub enum MeleeSwingType {
     Slash { radius: f32 },
 }
 
-impl Default for MeleeSwingType {
-    fn default() -> Self {
-        MeleeSwingType::stab()
-    }
-}
-
 impl MeleeSwingType {
     pub fn stab() -> Self {
         MeleeSwingType::Stab { speed: 10.0 }
@@ -53,13 +50,6 @@ impl MeleeSwingType {
     pub fn slash() -> Self {
         MeleeSwingType::Slash { radius: 25.0 }
     }
-}
-#[derive(Bundle, Clone)]
-pub struct MeleeSwingPropertiesBundle {
-    pub damage: CollisionDamage,
-    pub hitbox: MeleeHitbox,
-    pub swing_type: MeleeSwingType,
-    pub effects_list: EffectsList,
 }
 
 #[derive(Component)]

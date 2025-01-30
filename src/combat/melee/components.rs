@@ -9,10 +9,13 @@ use crate::{
     configuration::GameCollisionLayer,
 };
 
+//Big TODO: Move basically everything in this into this component so there is just one component to
+//Repesent a melee weapon
 #[derive(Component, Clone)]
 #[require(Weapon)]
 pub struct MeleeWeapon {
     pub melee_attack: MeleeSwingPropertiesBundle,
+    pub swing_duration: f32,
 }
 
 #[derive(Component, Clone)]
@@ -32,8 +35,8 @@ impl Default for MeleeHitbox {
 }
 #[derive(Component, Debug, Clone)]
 pub enum MeleeSwingType {
-    Stab { speed: f32, duration: f32 },
-    Slash { radius: f32, duration: f32 },
+    Stab { speed: f32 },
+    Slash { radius: f32 },
 }
 
 impl Default for MeleeSwingType {
@@ -44,24 +47,11 @@ impl Default for MeleeSwingType {
 
 impl MeleeSwingType {
     pub fn stab() -> Self {
-        MeleeSwingType::Stab {
-            speed: 10.0,
-            duration: 0.4,
-        }
+        MeleeSwingType::Stab { speed: 10.0 }
     }
 
     pub fn slash() -> Self {
-        MeleeSwingType::Slash {
-            radius: 25.0,
-            duration: 0.4, // Complete in 0.4s
-        }
-    }
-
-    pub fn get_total_duration(&self) -> f32 {
-        match self {
-            MeleeSwingType::Stab { duration, .. } => *duration,
-            MeleeSwingType::Slash { duration, .. } => *duration,
-        }
+        MeleeSwingType::Slash { radius: 25.0 }
     }
 }
 #[derive(Bundle, Clone)]

@@ -5,7 +5,8 @@ use super::{
         equipment_transform::DirectionTransforms,
         use_equipped::{on_weapon_fired, on_weapon_melee},
         Equippable,
-    }, Axe, Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel
+    },
+    Axe, Consumable, ConsumableEffect, ConsumableType, Helmet, ItemName, Shovel,
 };
 use crate::{
     combat::{
@@ -53,6 +54,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
                     hitbox: MeleeHitbox::default(),
                     swing_type: MeleeSwingType::stab(),
                 },
+                swing_duration: 0.4,
             },
             Equippable::default(),
             ItemId(3),
@@ -78,6 +80,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
                     hitbox: MeleeHitbox::default(),
                     swing_type: MeleeSwingType::slash(),
                 },
+                swing_duration: 0.4,
             },
             Equippable::default(),
             ItemId(3),

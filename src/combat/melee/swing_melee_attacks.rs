@@ -18,10 +18,7 @@ pub fn start_melee_attack(
     commands
         .entity(weapon_entity)
         .insert(ActiveMeleeAttack {
-            timer: Timer::from_seconds(
-                melee_weapon.melee_attack.swing_type.get_total_duration(),
-                TimerMode::Once,
-            ),
+            timer: Timer::from_seconds(melee_weapon.swing_duration, TimerMode::Once),
             initial_angle: attack_angle,
             attack_type: melee_weapon.melee_attack.swing_type.clone(),
         })
@@ -68,10 +65,10 @@ pub fn process_melee_attacks(
 
                 transform.rotation = Quat::from_rotation_z(active_attack.initial_angle);
             }
-            MeleeSwingType::Slash {
-                radius, duration, ..
-            } => {
-                let progress = active_attack.timer.elapsed_secs() / duration;
+            MeleeSwingType::Slash { radius, .. } => {
+                let progress = active_attack.timer.elapsed_secs()
+                    / active_attack.timer.duration().as_secs_f32();
+
                 let adjusted_angle = active_attack.initial_angle + std::f32::consts::FRAC_PI_2; // Rotate by -90°
 
                 let start_angle = adjusted_angle - 60f32.to_radians();

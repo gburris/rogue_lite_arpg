@@ -117,7 +117,10 @@ pub fn on_weapon_melee(
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction = (aim_pos.position - holder_pos).normalize();
     let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
+
     // Convert from "right-facing" (atan2) to "up-facing" (weapons sprites's default)
+    // I really think this is a "stab related piece of code" that can be moved
+    // Considering in slash we just undo it right away
     attack_angle -= std::f32::consts::FRAC_PI_2; // Subtract 90 degrees
 
     start_melee_attack(

@@ -42,6 +42,7 @@ pub fn process_melee_attacks(
 
         match active_attack.attack_type {
             MeleeSwingType::Stab { speed, .. } => {
+                //active_attack.initial_angle -= std::f32::consts::FRAC_PI_2;
                 let progress = active_attack.timer.elapsed_secs()
                     / active_attack.timer.duration().as_secs_f32();
 

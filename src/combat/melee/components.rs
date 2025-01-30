@@ -32,17 +32,8 @@ impl Default for MeleeHitbox {
 }
 #[derive(Component, Debug, Clone)]
 pub enum MeleeSwingType {
-    Stab {
-        speed: f32,
-        duration: f32,
-    },
-    Slash {
-        angular_speed: f32,
-        radius: f32,
-        current_angle: f32,
-        duration: f32,
-        elapsed_time: f32,
-    },
+    Stab { speed: f32, duration: f32 },
+    Slash { radius: f32, duration: f32 },
 }
 
 impl Default for MeleeSwingType {
@@ -61,11 +52,8 @@ impl MeleeSwingType {
 
     pub fn slash() -> Self {
         MeleeSwingType::Slash {
-            angular_speed: std::f32::consts::PI / 0.4, // 180° over 0.4s
-            radius: 25.0,                              // Increase offset from the player
-            current_angle: 0.0,
+            radius: 25.0,
             duration: 0.4, // Complete in 0.4s
-            elapsed_time: 0.0,
         }
     }
 

@@ -1,3 +1,4 @@
+use avian2d::prelude::ColliderDisabled;
 use bevy::prelude::*;
 
 use crate::{
@@ -80,6 +81,7 @@ pub fn handle_equip_success_event(
         if let Ok(mut visibility) = visibility_query.get_mut(previous_item) {
             *visibility = Visibility::Hidden;
         }
+        commands.entity(previous_item).insert(ColliderDisabled);
     }
 
     // Add the new item as a child of the player
@@ -90,6 +92,9 @@ pub fn handle_equip_success_event(
     if let Ok(mut visibility) = visibility_query.get_mut(equip_success_trigger.item_entity) {
         *visibility = Visibility::Visible;
     }
+    commands
+        .entity(equip_success_trigger.item_entity)
+        .remove::<ColliderDisabled>();
 }
 
 pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {

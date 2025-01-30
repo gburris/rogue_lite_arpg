@@ -63,6 +63,7 @@ pub struct ActiveMeleeAttack {
     pub timer: Timer,
     pub initial_angle: f32,
     pub attack_type: MeleeSwingType,
+    pub damage: CollisionDamage,
 }
 
 fn default_collision_layers() -> CollisionLayers {

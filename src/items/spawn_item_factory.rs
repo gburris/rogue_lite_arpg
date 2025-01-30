@@ -1,3 +1,4 @@
+use avian2d::prelude::{Collider, ColliderDisabled};
 use bevy::prelude::*;
 
 use super::{
@@ -54,7 +55,9 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
                 swing_duration: 0.4,
             },
             Equippable::default(),
+            Collider::rectangle(MeleeHitbox::default().width, MeleeHitbox::default().length),
             ItemId(3),
+            ColliderDisabled,
             Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
             DirectionTransforms::get(MovementDirection::Down).mainhand,
@@ -76,7 +79,9 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
                 hitbox: MeleeHitbox::default(),
                 swing_type: MeleeSwingType::slash(),
             },
+            Collider::rectangle(MeleeHitbox::default().width, MeleeHitbox::default().length),
             Equippable::default(),
+            ColliderDisabled,
             ItemId(3),
             Visibility::Hidden,
             Sprite::from_image(sprites.axe.clone()),

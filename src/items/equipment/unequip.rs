@@ -1,3 +1,4 @@
+use avian2d::prelude::{Collider, ColliderDisabled};
 use bevy::prelude::*;
 
 use crate::{
@@ -56,4 +57,6 @@ pub fn handle_unequip_success_event(
     if let Ok(mut visibility) = visibility_query.get_mut(previous_item) {
         *visibility = Visibility::Hidden;
     }
+
+    commands.entity(previous_item).insert(ColliderDisabled);
 }

@@ -14,20 +14,14 @@ pub fn start_melee_attack(
     melee_weapon: &MeleeWeapon,
     attack_angle: f32,
 ) {
-    commands
-        .entity(weapon_entity)
-        .insert(ActiveMeleeAttack {
-            timer: Timer::from_seconds(melee_weapon.swing_duration, TimerMode::Once),
-            initial_angle: attack_angle,
-            attack_type: melee_weapon.swing_type.clone(),
-        })
-        .insert(Collider::rectangle(
-            melee_weapon.hitbox.width,
-            melee_weapon.hitbox.length,
-        ))
-        .insert(CollisionDamage {
+    commands.entity(weapon_entity).insert(ActiveMeleeAttack {
+        timer: Timer::from_seconds(melee_weapon.swing_duration, TimerMode::Once),
+        initial_angle: attack_angle,
+        attack_type: melee_weapon.swing_type.clone(),
+        damage: CollisionDamage {
             damage: melee_weapon.damage.damage,
-        });
+        },
+    });
 }
 
 pub fn process_melee_attacks(
@@ -95,15 +89,8 @@ pub fn process_melee_attacks(
         if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
             // Check if attack is finished
             if active_attack.timer.just_finished() {
-                commands
-                    .entity(entity)
-                    .remove::<ActiveMeleeAttack>()
-                    .remove::<Collider>()
-                    .remove::<CollisionDamage>();
+                commands.entity(entity).remove::<ActiveMeleeAttack>();
                 *action_state = CurrentActionState::None;
-                // Reset transform to starting position
-                //TODO: Call some system here to set the position of the sword to the current player direction
-                //For now, we can default to "on the back" since it's the least visually jarring
                 *transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
             }
         }

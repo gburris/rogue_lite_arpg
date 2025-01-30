@@ -104,7 +104,8 @@ pub fn process_melee_attacks(
                 commands
                     .entity(entity)
                     .remove::<ActiveMeleeAttack>()
-                    .remove::<Collider>();
+                    .remove::<Collider>()
+                    .remove::<CollisionDamage>();
                 *action_state = CurrentActionState::None;
                 // Reset transform to starting position
                 *transform = active_attack.starting_transform;

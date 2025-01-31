@@ -1,6 +1,6 @@
 use crate::{
-    items::equipment::equipment_transform::DirectionTransforms,
-    player::{movement::MovementDirection, systems::CurrentActionState},
+    animation::MovementDirection, items::equipment::equipment_transform::DirectionTransforms,
+    player::systems::CurrentActionState,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};

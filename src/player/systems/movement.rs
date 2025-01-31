@@ -2,11 +2,11 @@ use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::{
+    animation::MovementDirection,
     map::resources::MapBounds,
     movement::components::{IsMoving, SimpleMotion},
     player::{
-        movement::MovementDirection, resources::PlayerSize, Player, PlayerMovementEvent,
-        PlayerStoppedEvent, ResetPlayerPosition,
+        resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
     },
 };
 

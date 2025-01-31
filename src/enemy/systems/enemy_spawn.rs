@@ -2,8 +2,12 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
+    animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
     combat::attributes::Health,
-    configuration::GameCollisionLayer,
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        GameCollisionLayer,
+    },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::{IsMoving, SimpleMotion},
@@ -13,7 +17,9 @@ pub fn spawn_enemies(
     enemy_trigger: Trigger<EnemySpawnEvent>,
     mut commands: Commands,
     enemy_assets: Res<EnemyAssets>,
-    asset_server: Res<AssetServer>,
+    animation_config: Res<DefaultAnimationConfig>,
+    sprites: Res<SpriteAssets>,
+    atlases: Res<SpriteSheetLayouts>,
 ) {
     let enemy_spawn_positions = enemy_trigger.0.clone();
     for spawn_position in enemy_spawn_positions {
@@ -21,8 +27,10 @@ pub fn spawn_enemies(
             &mut commands,
             "Merman",
             &enemy_assets,
-            &asset_server,
             spawn_position,
+            &animation_config,
+            &sprites,
+            &atlases,
         );
     }
 }
@@ -31,11 +39,13 @@ fn spawn_enemy(
     commands: &mut Commands,
     enemy_name: &str,
     enemy_assets: &Res<EnemyAssets>,
-    asset_server: &Res<AssetServer>,
     spawn_position: Vec3,
+    animation_config: &Res<DefaultAnimationConfig>,
+    sprites: &Res<SpriteAssets>,
+    atlases: &Res<SpriteSheetLayouts>,
 ) {
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
-        commands
+        let new_enemy = commands
             .spawn((
                 Enemy,
                 SimpleMotion::new(enemy.simple_motion_speed),
@@ -54,10 +64,28 @@ fn spawn_enemy(
                         GameCollisionLayer::LowObstacle,
                     ],
                 ),
-                Sprite::from_image(asset_server.load(&enemy.sprite_path)),
                 Transform::from_translation(spawn_position),
             ))
-            .observe(on_enemy_defeated);
+            .observe(on_enemy_defeated)
+            .id();
+        let sprite = Sprite::from_atlas_image(
+            sprites.enemy_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: atlases.enemy_atlas_layout.clone(),
+                index: animation_config
+                    .get_indices(DefaultAnimations::IdleDown)
+                    .first,
+            },
+        );
+
+        //Todo move to setup file / trigger / something besides bloating this
+        commands.entity(new_enemy).insert((
+            animation_config.get_indices(DefaultAnimations::IdleDown),
+            AnimationTimer(animation_config.get_timer(DefaultAnimations::IdleDown)),
+            sprite,
+            DefaultAnimations::IdleDown,
+            MovementDirection::None,
+        ));
     } else {
         eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }

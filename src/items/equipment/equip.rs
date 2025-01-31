@@ -8,7 +8,7 @@ use crate::{
         inventory::inventory::Inventory,
     },
     player::Player,
-    ui::pause_menu::button_interactions::{TryEquipEvent, TryUnequipEvent},
+    ui::pause_menu::button_interactions::{TryEquipFromUIEvent, TryUnequipFromUIEvent},
 };
 
 #[derive(Component, Clone, Debug)]
@@ -60,9 +60,11 @@ fn update_item_visibility(
 }
 
 pub fn handle_try_equip_event(
-    try_equip_trigger: Trigger<TryEquipEvent>,
+    try_equip_trigger: Trigger<TryEquipFromUIEvent>,
     mut commands: Commands,
-    mut equipment_query: Query<&mut EquipmentSlots>,
+    mut equipment_query: Query<&mut EquipmentSlots>, //Loops over all equipment in the game....
+    //Needs to work for enemies OR players who both have equipment slots
+    //We can add the entity trying to hold the item to try equip event
     mut inventory_query: Query<&mut Inventory>,
     slot_query: Query<&EquipmentSlot>,
 ) {
@@ -93,7 +95,7 @@ pub fn handle_try_equip_event(
 }
 
 pub fn handle_try_unequip_event(
-    try_equip_trigger: Trigger<TryUnequipEvent>,
+    try_equip_trigger: Trigger<TryUnequipFromUIEvent>,
     mut commands: Commands,
     mut equipment_query: Query<&mut EquipmentSlots>,
     mut inventory_query: Query<&mut Inventory>,

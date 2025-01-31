@@ -42,6 +42,7 @@ impl EquipmentSlots {
     }
 }
 
+//TODO move this into the actual equipment class as self
 //Public API below, just equip or remove
 pub fn equip_item(
     equipment_slots: &mut EquipmentSlots,

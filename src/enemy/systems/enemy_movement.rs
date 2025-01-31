@@ -2,11 +2,9 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::attributes::Health, enemy::Enemy, movement::components::SimpleMotion,
-    player::components::Player,
+    animation::MovementDirection, combat::attributes::Health, enemy::Enemy, movement::components::{IsMoving, SimpleMotion}, player::Player
 };
 
-// Add this to your components module
 #[derive(Component)]
 pub struct WanderDirection {
     direction: Vec3,
@@ -33,6 +31,8 @@ pub fn move_enemies_toward_player(
                 &Health,
                 &Transform,
                 &mut SimpleMotion,
+                &mut MovementDirection,
+                &mut IsMoving,
                 Option<&mut WanderDirection>,
             ),
             With<Enemy>,
@@ -41,23 +41,30 @@ pub fn move_enemies_toward_player(
 ) {
     const CHASE_DISTANCE: f32 = 400.0;
 
-    // Get the player's transform (read-only)
     if let Ok(player_transform) = param_set.p0().get_single() {
         let player_pos = player_transform.translation;
 
-        // Iterate through enemies and update their transforms
-        for (entity, healh, enemy_transform, mut motion, wander) in param_set.p1().iter_mut() {
+        for (
+            entity,
+            health,
+            enemy_transform,
+            mut motion,
+            mut movement_direction,
+            mut is_moving,
+            wander,
+        ) in param_set.p1().iter_mut()
+        {
             let distance_to_player = player_pos.distance(enemy_transform.translation);
 
-            if distance_to_player <= CHASE_DISTANCE || healh.hp < healh.max_hp {
+            let new_direction = if distance_to_player <= CHASE_DISTANCE || health.hp < health.max_hp
+            {
                 // Remove wandering component if it exists when in chase mode
                 if wander.is_some() {
                     commands.entity(entity).remove::<WanderDirection>();
                 }
 
                 // Chase behavior
-                let direction = (player_pos - enemy_transform.translation).normalize_or_zero();
-                motion.direction = direction.truncate();
+                (player_pos - enemy_transform.translation).normalize_or_zero()
             } else {
                 // Wandering behavior
                 match wander {
@@ -66,16 +73,30 @@ pub fn move_enemies_toward_player(
                         if wander.timer.tick(time.delta()).just_finished() {
                             wander.direction = random_direction();
                         }
-                        motion.direction = wander.direction.truncate();
+                        wander.direction
                     }
                     None => {
                         // Initialize wandering for enemies that don't have it
+                        let direction = random_direction();
                         commands.entity(entity).insert(WanderDirection {
-                            direction: random_direction(),
+                            direction,
                             timer: Timer::from_seconds(2.0, TimerMode::Repeating),
                         });
+                        direction
                     }
                 }
+            };
+
+            motion.direction = new_direction.truncate();
+
+            // Update movement direction for animations
+            if new_direction != Vec3::ZERO {
+                movement_direction
+                    .set_if_neq(MovementDirection::from_vec2(new_direction.truncate()));
+                is_moving.0 = true;
+            } else {
+                *movement_direction = MovementDirection::None;
+                is_moving.0 = false;
             }
         }
     }
@@ -84,5 +105,5 @@ pub fn move_enemies_toward_player(
 fn random_direction() -> Vec3 {
     let mut rng = thread_rng();
     let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-    Vec3::new(angle.cos(), 0.0, 0.5)
+    Vec3::new(angle.cos(), angle.sin(), 0.0)
 }

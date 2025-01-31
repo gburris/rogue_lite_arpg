@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
-use crate::player::{
-    AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
+use crate::{
+    animation::MovementDirection,
+    player::{
+        AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
+    },
 };
-
-use crate::player::movement::MovementDirection;
 
 #[derive(Event)]
 pub struct PauseInputEvent;

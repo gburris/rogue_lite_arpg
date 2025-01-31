@@ -27,6 +27,8 @@ pub struct FontAssets {
 pub struct SpriteSheetLayouts {
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
     pub player_atlas_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
+    pub enemy_atlas_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 32, columns = 5, rows = 1))]
     pub fireball_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 5, rows = 1))]
@@ -77,4 +79,6 @@ pub struct SpriteAssets {
     pub closed_chest: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/alien_zombie_sprite_sheet.png")]
+    pub enemy_sprite_sheet: Handle<Image>,
 }

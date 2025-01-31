@@ -2,7 +2,6 @@ pub mod equip;
 pub mod equipment_slots;
 pub mod equipment_transform;
 pub mod plugin;
-pub mod unequip;
 pub mod use_equipped;
 
 pub use equip::Equippable;

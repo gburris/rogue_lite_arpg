@@ -14,11 +14,11 @@ use crate::{
 #[derive(Component, Clone)]
 #[require(Weapon)]
 pub struct MeleeWeapon {
-    pub swing_duration: f32,
-    pub damage: CollisionDamage,
+    pub attack_duration: Timer,
+    pub damage: f32,
     pub hitbox: MeleeHitbox,
-    pub swing_type: MeleeSwingType,
     pub effects_list: EffectsList,
+    pub attack_type: MeleeSwingType,
 }
 
 #[derive(Component, Clone)]
@@ -60,10 +60,7 @@ impl MeleeSwingType {
     CollisionLayers(default_collision_layers)
 )]
 pub struct ActiveMeleeAttack {
-    pub timer: Timer,
     pub initial_angle: f32,
-    pub attack_type: MeleeSwingType,
-    pub damage: CollisionDamage,
 }
 
 fn default_collision_layers() -> CollisionLayers {

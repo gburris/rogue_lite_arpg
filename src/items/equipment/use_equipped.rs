@@ -98,13 +98,11 @@ pub fn on_weapon_fired(
 pub fn on_weapon_melee(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    weapon_query: Query<(Entity, &Transform, &MeleeWeapon), With<Weapon>>,
+    mut weapon_query: Query<(Entity, &mut MeleeWeapon), With<Weapon>>,
     mut action_state_query: Query<&mut CurrentActionState>,
     holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
 ) {
-    let Ok((weapon_entity, weapon_transform, melee_weapon)) =
-        weapon_query.get(fired_trigger.entity())
-    else {
+    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
@@ -115,16 +113,18 @@ pub fn on_weapon_melee(
     };
 
     let holder_pos = holder_transform.translation.truncate();
-    let aim_direction = (aim_pos.position - holder_pos).normalize();
+    let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
     let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
+    attack_angle -= std::f32::consts::FRAC_PI_2;
 
-    // Convert from "right-facing" (atan2) to "up-facing" (weapons sprites's default)
-    // I really think this is a "stab related piece of code" that can be moved
-    // Considering in slash we just undo it right away
-    attack_angle -= std::f32::consts::FRAC_PI_2; // Subtract 90 degrees
+    start_melee_attack(
+        &mut commands,
+        weapon_entity,
+        &mut melee_weapon,
+        attack_angle,
+    );
 
-    start_melee_attack(&mut commands, weapon_entity, &melee_weapon, attack_angle);
-    // Update holder's action state
+    //TODO: Refactor action state stuff
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = CurrentActionState::Attacking;
     }

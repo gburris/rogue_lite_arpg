@@ -4,8 +4,8 @@ use crate::labels::sets::InGameSet;
 
 use super::{
     equip::{handle_equip_success_event, handle_try_equip_event, tick_equippable_use_rate},
+    equip::{handle_try_unequip_event, handle_unequip_success_event},
     equipment_transform::update_equipment_transforms,
-    unequip::{handle_try_unequip_event, handle_unequip_success_event},
 };
 
 pub struct EquipmentPlugin;

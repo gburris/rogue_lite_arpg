@@ -15,8 +15,8 @@ use crate::{
     items::{
         equipment::{equipment_slots::EquipmentSlots, use_equipped},
         inventory::inventory::Inventory,
-        spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_ice_staff, spawn_shovel,
-        spawn_sword,
+        spawn_axe, spawn_fire_staff, spawn_health_potion, spawn_helmet, spawn_ice_staff,
+        spawn_shovel, spawn_sword,
     },
     labels::layer::ZLayer,
     movement::components::SimpleMotion,
@@ -31,6 +31,14 @@ pub struct AimPosition {
     pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
 }
 
+//This is used to decide if we should update the item transform to keep up with the player moving
+//Or leave it alone during an attack animation
+#[derive(Component, Debug, Hash, Eq, PartialEq, Clone)]
+pub enum CurrentActionState {
+    Attacking, //Sword is swinging
+    None,      //Moving
+}
+
 pub fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -42,6 +50,7 @@ pub fn spawn_player(
     inventory
         .add_item(spawn_sword(&mut commands, &sprites))
         .ok();
+    inventory.add_item(spawn_axe(&mut commands, &sprites)).ok();
     inventory
         .add_item(spawn_helmet(&mut commands, &sprites))
         .ok();
@@ -74,7 +83,7 @@ pub fn spawn_player(
                 duration: Duration::from_secs(1),
             },
             RigidBody::Dynamic,
-            Collider::rectangle(100.0, 100.0),
+            Collider::rectangle(40.0, 50.0),
             CollisionLayers::new(
                 [GameCollisionLayer::Player, GameCollisionLayer::Grounded],
                 [
@@ -87,7 +96,11 @@ pub fn spawn_player(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
-            (MovementDirection::None, PlayerAnimations::IdleDown),
+            (
+                MovementDirection::None,
+                CurrentActionState::None,
+                PlayerAnimations::IdleDown,
+            ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)

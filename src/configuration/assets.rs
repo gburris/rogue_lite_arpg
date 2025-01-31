@@ -38,7 +38,9 @@ pub struct SpriteAssets {
     #[asset(path = "player/skeleton.png")]
     pub skeleton_player: Handle<Image>,
     #[asset(path = "items/sword.png")]
-    pub sword_equipment_sprite: Handle<Image>,
+    pub sword: Handle<Image>,
+    #[asset(path = "items/axe.png")]
+    pub axe: Handle<Image>,
     #[asset(path = "items/fire_staff.png")]
     pub fire_staff: Handle<Image>,
     #[asset(path = "items/ice_staff.png")]

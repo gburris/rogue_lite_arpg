@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
-    map::resources::MapBounds,
+    map::WorldSpaceConfig,
     movement::components::{IsMoving, SimpleMotion},
     player::{
         resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
@@ -36,20 +36,29 @@ pub fn on_player_stopped(
 }
 
 // System to keep player within map bounds
+// System to keep player within map bounds
 pub fn enforce_map_bounds(
     mut query: Query<&mut Transform, With<Player>>,
-    map_bounds: Res<MapBounds>,
+    world_config: Res<WorldSpaceConfig>,
     playersize: Res<PlayerSize>,
 ) {
+    let world_min_x = world_config.world_origin.x
+        - (world_config.map_size.x as f32 * world_config.tile_size.x) / 2.0;
+    let world_max_x = world_config.world_origin.x
+        + (world_config.map_size.x as f32 * world_config.tile_size.x) / 2.0;
+    let world_min_y = world_config.world_origin.y
+        - (world_config.map_size.y as f32 * world_config.tile_size.y) / 2.0;
+    let world_max_y = world_config.world_origin.y
+        + (world_config.map_size.y as f32 * world_config.tile_size.y) / 2.0;
+
     for mut transform in query.iter_mut() {
-        // Clamp the player position within the map bounds
         transform.translation.x = transform.translation.x.clamp(
-            map_bounds.min_x + playersize.x / 2.0,
-            map_bounds.max_x - playersize.x / 2.0,
+            world_min_x + playersize.x / 2.0,
+            world_max_x - playersize.x / 2.0,
         );
         transform.translation.y = transform.translation.y.clamp(
-            map_bounds.min_y + playersize.y / 2.0,
-            map_bounds.max_y - playersize.y / 2.0,
+            world_min_y + playersize.y / 2.0,
+            world_max_y - playersize.y / 2.0,
         );
     }
 }

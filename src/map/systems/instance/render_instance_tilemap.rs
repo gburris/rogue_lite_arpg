@@ -19,7 +19,7 @@ pub fn render_instance_tilemap(
     zone_level: Res<CurrentZoneLevel>,
 ) {
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
-    let ground_texture_handle: Handle<Image> = sprites.tiles.clone();
+    let ground_texture_handle: Handle<Image> = sprites.ground_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
     let map_size = world_config.map_size;
     let tile_size = world_config.tile_size;
@@ -41,7 +41,7 @@ pub fn render_instance_tilemap(
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
-            let color = zone_level.0 % 6;
+            let color = zone_level.0 % 9;
 
             match map_layout.tiles[x as usize][y as usize] {
                 TileType::Ground => {

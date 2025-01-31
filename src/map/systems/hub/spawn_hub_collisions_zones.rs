@@ -6,7 +6,6 @@ use crate::{
     configuration::GameCollisionLayer,
     map::{
         components::{MapLayout, TileType, Wall, Water},
-        resources::TileSize,
         WallSection, WorldSpaceConfig,
     },
 };
@@ -17,11 +16,7 @@ pub fn spawn_hub_colliders(
     world_config: Res<WorldSpaceConfig>,
 ) {
     let map_size = world_config.map_size;
-    //This should be casted to vec2 so we don't pass around the tilemap helper wrapper thing
-    let tile_size = TileSize {
-        x: world_config.tile_size.x,
-        y: world_config.tile_size.y,
-    };
+    let tile_size = world_config.tile_size;
 
     // Calculate center offset based on tilemap centering logic
     let grid_size = TilemapGridSize::new(world_config.tile_size.x, world_config.tile_size.y);
@@ -102,7 +97,7 @@ fn extract_wall_section(
 fn spawn_wall_colliders(
     commands: &mut Commands,
     wall_sections: &[WallSection],
-    tile_size: &TileSize,
+    tile_size: &TilemapTileSize,
     offset: Vec2,
 ) {
     for section in wall_sections {
@@ -230,7 +225,7 @@ fn flood_fill_water(
 fn spawn_water_pond_colliders(
     commands: &mut Commands,
     ponds: &[WaterPond],
-    tile_size: &TileSize,
+    tile_size: &TilemapTileSize,
     offset: Vec2,
 ) {
     for pond in ponds {

@@ -59,15 +59,15 @@ pub struct SpriteAssets {
     pub fire_ball: Handle<Image>,
     #[asset(path = "warpzone.png")]
     pub warp_zone: Handle<Image>,
-    #[asset(path = "tilesets/tiles.png")]
-    pub tiles: Handle<Image>,
-    #[asset(path = "tilesets/grass_tileset.png")]
+    #[asset(path = "tilesets/ground_tiles.png")]
+    pub ground_tiles: Handle<Image>,
+    #[asset(path = "tilesets/grass_tiles.png")]
     pub grass_tiles: Handle<Image>,
-    #[asset(path = "tilesets/water_tileset.png")]
+    #[asset(path = "tilesets/water_tiles.png")]
     pub water_tiles: Handle<Image>,
-    #[asset(path = "tilesets/wall_tileset.png")]
+    #[asset(path = "tilesets/wall_tiles.png")]
     pub wall_tiles: Handle<Image>,
-    #[asset(path = "tilesets/wood_tileset.png")]
+    #[asset(path = "tilesets/wood_tiles.png")]
     pub wood_tiles: Handle<Image>,
     #[asset(path = "run_start_portal.png")]
     pub run_start_portal: Handle<Image>,

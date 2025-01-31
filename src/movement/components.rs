@@ -1,18 +1,15 @@
 use bevy::prelude::*;
 
-#[derive(Component, Default)]
-pub struct IsMoving(pub bool);
-
 /**
  * Simple motion has no acceleration and assumes all entities move at max speed unless
  * it is modified by an outside system (such as status effects)
  */
 #[derive(Component)]
-#[require(IsMoving)]
 pub struct SimpleMotion {
     pub direction: Vec2,
     pub max_speed: f32,
     pub current_speed: f32,
+    pub can_move: bool, //used for root, stun, anything that stops a moveable entity from moving
 }
 
 impl SimpleMotion {
@@ -21,6 +18,7 @@ impl SimpleMotion {
             direction: Vec2::ZERO,
             current_speed: max_speed,
             max_speed,
+            can_move: true,
         }
     }
 

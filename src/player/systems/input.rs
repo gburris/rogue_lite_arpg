@@ -15,9 +15,9 @@ pub fn player_input(
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     buttons: Res<ButtonInput<MouseButton>>,
     mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
-    is_moving_query: Single<(&MovementDirection, Entity), With<Player>>,
+    player_movement_query: Single<(&MovementDirection, Entity), With<Player>>,
 ) {
-    let (movement_direction, player_entity) = is_moving_query.into_inner();
+    let (movement_direction, player_entity) = player_movement_query.into_inner();
 
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         commands.trigger(PauseInputEvent);

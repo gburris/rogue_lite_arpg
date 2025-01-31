@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    animation::MovementDirection, combat::attributes::Health, enemy::Enemy, movement::components::{IsMoving, SimpleMotion}, player::Player
+    animation::MovementDirection, combat::attributes::Health, enemy::Enemy,
+    movement::components::SimpleMotion, player::Player,
 };
 
 #[derive(Component)]
@@ -32,7 +33,6 @@ pub fn move_enemies_toward_player(
                 &Transform,
                 &mut SimpleMotion,
                 &mut MovementDirection,
-                &mut IsMoving,
                 Option<&mut WanderDirection>,
             ),
             With<Enemy>,
@@ -44,15 +44,8 @@ pub fn move_enemies_toward_player(
     if let Ok(player_transform) = param_set.p0().get_single() {
         let player_pos = player_transform.translation;
 
-        for (
-            entity,
-            health,
-            enemy_transform,
-            mut motion,
-            mut movement_direction,
-            mut is_moving,
-            wander,
-        ) in param_set.p1().iter_mut()
+        for (entity, health, enemy_transform, mut motion, mut movement_direction, wander) in
+            param_set.p1().iter_mut()
         {
             let distance_to_player = player_pos.distance(enemy_transform.translation);
 
@@ -93,10 +86,9 @@ pub fn move_enemies_toward_player(
             if new_direction != Vec3::ZERO {
                 movement_direction
                     .set_if_neq(MovementDirection::from_vec2(new_direction.truncate()));
-                is_moving.0 = true;
             } else {
                 *movement_direction = MovementDirection::None;
-                is_moving.0 = false;
+                motion.can_move = false;
             }
         }
     }

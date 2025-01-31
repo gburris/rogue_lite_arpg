@@ -10,7 +10,7 @@ use crate::{
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
-    movement::components::{IsMoving, SimpleMotion},
+    movement::components::SimpleMotion,
 };
 
 pub fn spawn_enemies(
@@ -49,7 +49,6 @@ fn spawn_enemy(
             .spawn((
                 Enemy,
                 SimpleMotion::new(enemy.simple_motion_speed),
-                IsMoving(true),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),
                 RigidBody::Dynamic,

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     animation::MovementDirection,
     map::WorldSpaceConfig,
-    movement::components::{IsMoving, SimpleMotion},
+    movement::components::SimpleMotion,
     player::{
         resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
     },
@@ -12,26 +12,23 @@ use crate::{
 
 // System to handle player movement based on movement events
 pub fn player_movement(
-    player_motion_query: Single<
-        (&mut MovementDirection, &mut IsMoving, &mut SimpleMotion),
-        With<Player>,
-    >,
+    player_motion_query: Single<(&mut MovementDirection, &mut SimpleMotion), With<Player>>,
     mut event_reader: EventReader<PlayerMovementEvent>,
 ) {
-    let (mut movement_direction, mut is_moving, mut motion) = player_motion_query.into_inner();
+    let (mut movement_direction, mut motion) = player_motion_query.into_inner();
     for event in event_reader.read() {
         motion.direction = event.direction;
+        motion.can_move = true;
         movement_direction.set_if_neq(MovementDirection::from_vec2(event.direction));
-        is_moving.0 = true;
     }
 }
 
 pub fn on_player_stopped(
     _: Trigger<PlayerStoppedEvent>,
-    mut animation_query: Query<(&mut MovementDirection, &mut IsMoving), With<Player>>,
+    mut animation_query: Query<(&mut MovementDirection, &mut SimpleMotion), With<Player>>,
 ) {
-    let (mut current_player_movement, mut is_moving) = animation_query.single_mut();
-    is_moving.0 = false;
+    let (mut current_player_movement, mut motion) = animation_query.single_mut();
+    motion.can_move = false;
     *current_player_movement = MovementDirection::None;
 }
 

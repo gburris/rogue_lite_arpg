@@ -6,35 +6,35 @@ use crate::{
         events::ApplyStatus,
     },
     enemy::Enemy,
-    movement::components::IsMoving,
+    movement::components::SimpleMotion,
 };
 
 pub fn on_stun_applied(
     trigger: Trigger<OnInsert, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion, With<Enemy>>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
-        is_moving.0 = false;
+    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+        motion.can_move = false;
     }
 }
 
 pub fn on_stun_removed(
     trigger: Trigger<OnRemove, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion, With<Enemy>>,
     mut commands: Commands,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
-        is_moving.0 = true;
+    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+        motion.can_move = true;
     }
 
     commands.trigger_targets(

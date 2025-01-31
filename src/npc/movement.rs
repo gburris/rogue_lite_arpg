@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    movement::components::{IsMoving, SimpleMotion},
-    npc::NPC,
-};
+use crate::{movement::components::SimpleMotion, npc::NPC};
 
 #[derive(Component)]
 pub struct NPCMovement {
@@ -16,7 +13,7 @@ impl Default for NPCMovement {
     fn default() -> Self {
         Self {
             start_pos: Vec3::ZERO,
-            stand_timer: Timer::from_seconds(10.0, TimerMode::Once),
+            stand_timer: Timer::from_seconds(1.0, TimerMode::Once),
             is_standing: false,
         }
     }
@@ -24,17 +21,9 @@ impl Default for NPCMovement {
 
 pub fn move_npcs(
     time: Res<Time>,
-    mut query: Query<
-        (
-            &Transform,
-            &mut IsMoving,
-            &mut SimpleMotion,
-            &mut NPCMovement,
-        ),
-        With<NPC>,
-    >,
+    mut query: Query<(&Transform, &mut SimpleMotion, &mut NPCMovement), With<NPC>>,
 ) {
-    for (transform, mut is_moving, mut simple_motion, mut npc_movement) in query.iter_mut() {
+    for (transform, mut simple_motion, mut npc_movement) in query.iter_mut() {
         // Initialize start position if it's zero
         if npc_movement.start_pos == Vec3::ZERO {
             npc_movement.start_pos = transform.translation;
@@ -49,8 +38,7 @@ pub fn move_npcs(
                 simple_motion.direction = Vec2::new(simple_motion.direction.x * -1.0, 0.0); // Reverse direction
                 npc_movement.stand_timer.reset();
                 npc_movement.start_pos = transform.translation;
-                is_moving.0 = true;
-                // You might want to add sprite flipping logic here
+                simple_motion.can_move = true;
             }
         } else {
             let distance_from_start = (transform.translation.x - npc_movement.start_pos.x).abs();
@@ -65,7 +53,7 @@ pub fn move_npcs(
             // Check if we've reached the movement boundary (50 units)
             if distance_from_start >= 500.0 {
                 npc_movement.is_standing = true;
-                is_moving.0 = false;
+                simple_motion.can_move = false;
             }
         }
     }

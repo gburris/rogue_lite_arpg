@@ -21,12 +21,12 @@ pub struct EquipmentItemClicked {
     pub item_entity: Option<Entity>,
 }
 #[derive(Event)]
-pub struct TryEquipEvent {
+pub struct TryEquipFromUIEvent {
     pub item_entity: Entity,
 }
 
 #[derive(Event)]
-pub struct TryUnequipEvent {
+pub struct TryUnequipFromUIEvent {
     pub item_entity: Entity,
 }
 
@@ -72,7 +72,7 @@ pub fn handle_equipment_interactions(
 
 pub fn handle_equipment_click(trigger: Trigger<EquipmentItemClicked>, mut commands: Commands) {
     if let Some(item_entity) = trigger.item_entity {
-        commands.trigger(TryUnequipEvent {
+        commands.trigger(TryUnequipFromUIEvent {
             item_entity: item_entity,
         });
         //Redraw equipment
@@ -127,7 +127,7 @@ pub fn handle_inventory_click(
         }
 
         if equipable_query.contains(item_entity) {
-            commands.trigger(TryEquipEvent {
+            commands.trigger(TryEquipFromUIEvent {
                 item_entity: item_entity,
             });
         }

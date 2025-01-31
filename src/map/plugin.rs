@@ -2,11 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    map::{
-        portal,
-        resources::{CurrentZoneLevel, MapBounds, TileSize},
-        systems::*,
-    },
+    map::{portal, resources::CurrentZoneLevel, systems::*},
 };
 
 use super::WorldSpaceConfig;
@@ -14,8 +10,6 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        let tile_size: Vec2 = Vec2::new(16.0, 16.0);
-
         app.add_systems(Startup, instance::setup_instance_data)
             .add_systems(
                 OnEnter(AppState::CreateInstance),
@@ -45,16 +39,6 @@ impl Plugin for MapPlugin {
             )
             .insert_resource(WorldSpaceConfig::default())
             .insert_resource(CurrentZoneLevel(0))
-            .insert_resource(TileSize {
-                x: tile_size.x,
-                y: tile_size.y,
-            })
-            .insert_resource(MapBounds {
-                min_x: -100.0 * tile_size.x,
-                min_y: -100.0 * tile_size.y,
-                max_x: 100.0 * tile_size.x,
-                max_y: 100.0 * tile_size.y,
-            })
             .add_observer(portal::on_portal_entered);
     }
 }

@@ -105,7 +105,7 @@ impl Default for WorldSpaceConfig {
     fn default() -> Self {
         WorldSpaceConfig {
             map_size: TilemapSize::new(200, 200),
-            tile_size: TilemapTileSize::new(16.0, 16.0),
+            tile_size: TilemapTileSize::new(32.0, 32.0),
             world_origin: Vec2::ZERO,
         }
     }

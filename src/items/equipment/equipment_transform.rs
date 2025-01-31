@@ -1,6 +1,7 @@
 use super::equipment_slots::EquipmentSlots;
+use crate::animation::MovementDirection;
+use crate::labels::layer::ZLayer;
 use crate::player::systems::CurrentActionState;
-use crate::{labels::layer::ZLayer, player::movement::MovementDirection};
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::sync::OnceLock;

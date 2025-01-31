@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rand::{thread_rng, Rng};
 
 use super::{
     equipment::{
@@ -9,6 +10,7 @@ use super::{
     Consumable, ConsumableEffect, ConsumableType, ItemName,
 };
 use crate::{
+    animation::MovementDirection,
     combat::{
         attributes::mana::ManaCost,
         damage::components::CollisionDamage,
@@ -22,7 +24,6 @@ use crate::{
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{equipment::EquipmentSlot, HealthPotion, ItemId},
-    player::movement::MovementDirection,
 };
 
 pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
@@ -214,4 +215,22 @@ pub fn spawn_ice_staff(
         ))
         .observe(on_weapon_fired)
         .id()
+}
+
+pub fn spawn_random_mainhand_weapon(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    texture_layouts: &Res<SpriteSheetLayouts>,
+) -> Entity {
+    let mut rng = thread_rng();
+    let choice = rng.gen_range(0..5); // Adjust range based on number of weapons
+
+    match choice {
+        0 => spawn_sword(commands, sprites),
+        1 => spawn_axe(commands, sprites),
+        2 => spawn_shovel(commands, sprites),
+        3 => spawn_fire_staff(commands, sprites, texture_layouts),
+        4 => spawn_ice_staff(commands, sprites, texture_layouts),
+        _ => unreachable!(), // Should never happen
+    }
 }

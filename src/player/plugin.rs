@@ -6,16 +6,13 @@ use crate::{
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
-use super::animation::{
-    animation_setup::set_starting_player_animation_and_sprite_sheet, plugin::PlayerAnimationPlugin,
-};
+use super::animation::animation_setup::set_starting_player_animation_and_sprite_sheet;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PlayerMovementEvent>()
-            .add_plugins(PlayerAnimationPlugin)
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (

@@ -4,6 +4,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
+    animation::{DefaultAnimations, MovementDirection},
     combat::{
         attributes::{mana::Mana, Health},
         damage::components::HasIFrames,
@@ -20,10 +21,7 @@ use crate::{
     },
     labels::layer::ZLayer,
     movement::components::SimpleMotion,
-    player::{
-        animation::components::PlayerAnimations, movement::MovementDirection, systems::*, Player,
-        PlayerStats,
-    },
+    player::{systems::*, Player, PlayerStats},
 };
 
 #[derive(Component, Default)]
@@ -76,7 +74,7 @@ pub fn spawn_player(
             Mana::new(100.0, 10.0),
             inventory,
             EquipmentSlots {
-                mainhand: Some(fire_staff), // start with fire staff equipped
+                mainhand: Some(fire_staff),
                 head: None,
             },
             HasIFrames {
@@ -99,7 +97,7 @@ pub fn spawn_player(
             (
                 MovementDirection::None,
                 CurrentActionState::None,
-                PlayerAnimations::IdleDown,
+                DefaultAnimations::IdleDown,
             ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

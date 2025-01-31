@@ -3,11 +3,15 @@ use bevy::prelude::*;
 use crate::{
     combat::{
         attributes::{mana::ManaCost, Mana},
+        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
         projectile::spawn::spawn_projectile,
-        weapon::weapon::ProjectileWeapon,
+        weapon::weapon::{ProjectileWeapon, Weapon},
     },
     items::equipment::Equippable,
-    player::{systems::AimPosition, MainHandActivated},
+    player::{
+        systems::{AimPosition, CurrentActionState},
+        MainHandActivated,
+    },
 };
 
 use super::equipment_slots::EquipmentSlots;
@@ -20,13 +24,14 @@ pub struct UseEquipmentEvent {
 }
 
 // TODO: All of the "warns" in this function should be shown to the player through UI so they know why using main hand failed
+// TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
+// Their weapon is on cooldown
 pub fn on_main_hand_activated(
     main_hand_trigger: Trigger<MainHandActivated>,
     mut commands: Commands,
     mut holder_query: Query<(&EquipmentSlots, Option<&mut Mana>)>,
     mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
 ) {
-    // Parent needs to have an aim position for equipped item
     let Ok((equipment_slots, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity())
     else {
         error!(
@@ -88,4 +93,39 @@ pub fn on_weapon_fired(
         holder_aim.position,
         &projectile_weapon,
     );
+}
+
+pub fn on_weapon_melee(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    mut weapon_query: Query<(Entity, &mut MeleeWeapon), With<Weapon>>,
+    mut action_state_query: Query<&mut CurrentActionState>,
+    holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
+) {
+    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
+        warn!("Tried to melee attack with invalid weapon");
+        return;
+    };
+
+    let Ok((holder_transform, aim_pos)) = holder_query.get(fired_trigger.holder) else {
+        warn!("Holder missing required components");
+        return;
+    };
+
+    let holder_pos = holder_transform.translation.truncate();
+    let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
+    let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
+    attack_angle -= std::f32::consts::FRAC_PI_2;
+
+    start_melee_attack(
+        &mut commands,
+        weapon_entity,
+        &mut melee_weapon,
+        attack_angle,
+    );
+
+    //TODO: Refactor action state stuff
+    if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
+        *action_state = CurrentActionState::Attacking;
+    }
 }

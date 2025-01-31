@@ -1,4 +1,5 @@
 use super::equipment_slots::EquipmentSlots;
+use crate::player::systems::CurrentActionState;
 use crate::{labels::layer::ZLayer, player::movement::MovementDirection};
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -88,13 +89,13 @@ impl DirectionTransforms {
 
 pub fn update_equipment_transforms(
     all_worn_equipment_in_game: Query<
-        (&EquipmentSlots, &MovementDirection),
+        (&EquipmentSlots, &CurrentActionState, &MovementDirection),
         Changed<MovementDirection>,
     >,
     mut transforms: Query<&mut Transform>,
 ) {
-    for (equipment_slots, direction) in &all_worn_equipment_in_game {
-        if *direction == MovementDirection::None {
+    for (equipment_slots, action_state, direction) in &all_worn_equipment_in_game {
+        if *direction == MovementDirection::None || *action_state == CurrentActionState::Attacking {
             return;
         }
 

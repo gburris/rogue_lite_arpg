@@ -18,15 +18,15 @@ pub fn set_starting_player_animation_and_sprite_sheet(
         TextureAtlas {
             layout: atlases.player_atlas_layout.clone(),
             index: animation_config
-                .get_indices(DefaultAnimations::IdleDown)
+                .get_indices(&DefaultAnimations::IdleDown)
                 .first,
         },
     );
 
     if let Ok(player) = query.get_single_mut() {
         commands.entity(player).insert((
-            animation_config.get_indices(DefaultAnimations::IdleDown),
-            AnimationTimer(animation_config.get_timer(DefaultAnimations::IdleDown)),
+            animation_config.get_indices(&DefaultAnimations::IdleDown),
+            AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
             sprite,
         ));
     }

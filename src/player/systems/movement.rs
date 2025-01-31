@@ -2,7 +2,6 @@ use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::{
-    animation::MovementDirection,
     map::WorldSpaceConfig,
     movement::components::SimpleMotion,
     player::{
@@ -10,29 +9,27 @@ use crate::{
     },
 };
 
-// System to handle player movement based on movement events
+// fires when the player moves
 pub fn player_movement(
-    player_motion_query: Single<(&mut MovementDirection, &mut SimpleMotion), With<Player>>,
+    player_motion_query: Single<&mut SimpleMotion, With<Player>>,
     mut event_reader: EventReader<PlayerMovementEvent>,
 ) {
-    let (mut movement_direction, mut motion) = player_motion_query.into_inner();
+    let mut motion = player_motion_query.into_inner();
     for event in event_reader.read() {
         motion.direction = event.direction;
         motion.can_move = true;
-        movement_direction.set_if_neq(MovementDirection::from_vec2(event.direction));
     }
 }
 
+//Fires once the player has stopped moving
 pub fn on_player_stopped(
     _: Trigger<PlayerStoppedEvent>,
-    mut animation_query: Query<(&mut MovementDirection, &mut SimpleMotion), With<Player>>,
+    mut motion_query: Query<&mut SimpleMotion, With<Player>>,
 ) {
-    let (mut current_player_movement, mut motion) = animation_query.single_mut();
+    let mut motion = motion_query.single_mut();
     motion.can_move = false;
-    *current_player_movement = MovementDirection::None;
 }
 
-// System to keep player within map bounds
 // System to keep player within map bounds
 pub fn enforce_map_bounds(
     mut query: Query<&mut Transform, With<Player>>,

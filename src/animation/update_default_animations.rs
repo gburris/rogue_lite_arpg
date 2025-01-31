@@ -17,7 +17,6 @@ pub fn update_animation_on_movement_direction_change(
         (With<DefaultAnimations>, Changed<MovementDirection>),
     >,
 ) {
-    // Using if let to handle the case where we might not have any entities matching the query
     if let Ok((mut indices, movement_direction, mut animations, mut timer, mut sprite)) =
         query.get_single_mut()
     {
@@ -25,7 +24,7 @@ pub fn update_animation_on_movement_direction_change(
             DefaultAnimations::from(*movement_direction, *animations);
 
         if *animations == animation_from_current_direction {
-            warn!("We tried to process an animation / direction we already had");
+            warn!("Skipping redundant animation update");
             return;
         }
 
@@ -33,9 +32,7 @@ pub fn update_animation_on_movement_direction_change(
         *indices = animation_config.get_indices(animation_from_current_direction);
         *timer = AnimationTimer(animation_config.get_timer(animation_from_current_direction));
         if let Some(atlas) = &mut sprite.texture_atlas {
-            atlas.index = animation_config
-                .get_indices(animation_from_current_direction)
-                .first;
+            atlas.index = indices.first;
         }
     }
 }

@@ -169,12 +169,13 @@ impl DefaultAnimationConfig {
     }
 }
 
-#[derive(Component, Hash, PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(Component, Default, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum MovementDirection {
     Up,
     Down,
     Left,
     Right,
+    #[default]
     None,
 }
 

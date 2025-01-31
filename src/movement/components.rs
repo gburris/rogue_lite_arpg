@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 
+use crate::animation::MovementDirection;
+
 /**
  * Simple motion has no acceleration and assumes all entities move at max speed unless
  * it is modified by an outside system (such as status effects)
  */
 #[derive(Component)]
+#[require(MovementDirection)]
 pub struct SimpleMotion {
     pub direction: Vec2,
     pub max_speed: f32,

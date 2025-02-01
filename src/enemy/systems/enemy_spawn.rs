@@ -72,15 +72,15 @@ fn spawn_enemy(
             TextureAtlas {
                 layout: atlases.enemy_atlas_layout.clone(),
                 index: animation_config
-                    .get_indices(DefaultAnimations::IdleDown)
+                    .get_indices(&DefaultAnimations::IdleDown)
                     .first,
             },
         );
 
         //Todo move to setup file / trigger / something besides bloating this
         commands.entity(new_enemy).insert((
-            animation_config.get_indices(DefaultAnimations::IdleDown),
-            AnimationTimer(animation_config.get_timer(DefaultAnimations::IdleDown)),
+            animation_config.get_indices(&DefaultAnimations::IdleDown),
+            AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
             sprite,
             DefaultAnimations::IdleDown,
             MovementDirection::None,

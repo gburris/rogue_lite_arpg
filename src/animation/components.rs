@@ -30,27 +30,27 @@ pub enum DefaultAnimations {
 }
 
 impl DefaultAnimations {
-    pub fn from(
-        direction: MovementDirection,
-        player_animations: DefaultAnimations,
-    ) -> DefaultAnimations {
-        let player_animation_from_current_direction = match direction {
+    /** Updates animation direction when movement direction changes */
+    pub fn update_based_on_movement(&mut self, direction: &MovementDirection) {
+        let new_animation = match direction {
             MovementDirection::Up => DefaultAnimations::WalkUp,
             MovementDirection::Down => DefaultAnimations::WalkDown,
             MovementDirection::Left => DefaultAnimations::WalkLeft,
             MovementDirection::Right => DefaultAnimations::WalkRight,
             MovementDirection::None => {
                 // If the player is not moving, map the current walking animation to the corresponding idle animation
-                match player_animations {
+                match *self {
                     DefaultAnimations::WalkUp => DefaultAnimations::IdleUp,
                     DefaultAnimations::WalkDown => DefaultAnimations::IdleDown,
                     DefaultAnimations::WalkLeft => DefaultAnimations::IdleLeft,
                     DefaultAnimations::WalkRight => DefaultAnimations::IdleRight,
-                    _ => player_animations, // If already idle, keep the current animation
+                    _ => *self, // If already idle, keep the current animation
                 }
             }
         };
-        player_animation_from_current_direction
+
+        // Update the animation state
+        *self = new_animation;
     }
 }
 
@@ -147,10 +147,10 @@ impl Default for DefaultAnimationConfig {
 }
 
 impl DefaultAnimationConfig {
-    pub fn get_indices(&self, state: DefaultAnimations) -> AnimationIndices {
+    pub fn get_indices(&self, state: &DefaultAnimations) -> AnimationIndices {
         let animation_data = self
             .animations
-            .get(&state)
+            .get(state)
             .unwrap_or_else(|| panic!("Missing animation data for {:?}", state));
 
         let first = animation_data.row * self.columns;
@@ -159,10 +159,10 @@ impl DefaultAnimationConfig {
         AnimationIndices { first, last }
     }
 
-    pub fn get_timer(&self, state: DefaultAnimations) -> Timer {
+    pub fn get_timer(&self, state: &DefaultAnimations) -> Timer {
         let animation_data = self
             .animations
-            .get(&state)
+            .get(state)
             .unwrap_or_else(|| panic!("Missing animation data for {:?}", state));
 
         Timer::from_seconds(animation_data.frame_duration, TimerMode::Repeating)

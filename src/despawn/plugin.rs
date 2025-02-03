@@ -10,7 +10,7 @@ use crate::{
     map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,
-    ui::{game_over_screen::RestartEvent, game_overlay::GameOverlay},
+    ui::{game_over_screen::RestartEvent, player_overlay::GameOverlay},
 };
 
 pub struct DespawnPlugin;

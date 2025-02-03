@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use crate::labels::{sets::InGameSet, states::AppState};
-
-use super::{
-    game_over_screen::{self, handle_restart_button},
-    game_overlay::{self, on_damage_overlay_amount},
-    start_screen,
+use crate::{
+    labels::{sets::InGameSet, states::AppState},
+    ui::*,
 };
 
 /// Plugin responsible for managing all UI-related systems and state transitions
@@ -30,12 +27,25 @@ impl Plugin for UIPlugin {
                     .run_if(in_state(AppState::StartScreen)),
             )
             // Core game overlay (HUD)
-            .add_systems(OnEnter(AppState::SpawnPlayer), game_overlay::spawn)
+            .add_systems(OnEnter(AppState::SpawnPlayer), player_overlay::spawn)
             .add_systems(
                 Update,
-                (game_overlay::update, game_overlay::update_mana_bar).in_set(InGameSet::HudOverlay),
+                (
+                    player_overlay::update_player_stats_text,
+                    (
+                        player_overlay::update_mana_bar,
+                        player_overlay::update_lost_mana_bar,
+                    )
+                        .chain(),
+                    (
+                        player_overlay::update_health_bar,
+                        player_overlay::update_lost_health_bar,
+                    )
+                        .chain(),
+                )
+                    .in_set(InGameSet::HudOverlay),
             )
-            .add_observer(on_damage_overlay_amount)
+            .add_observer(damage_overlay::on_damage_overlay_amount)
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(
@@ -45,7 +55,7 @@ impl Plugin for UIPlugin {
             .add_observer(game_over_screen::on_restart_event_cleanup_zone)
             .add_systems(
                 Update,
-                handle_restart_button.run_if(in_state(AppState::GameOver)),
+                game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),
             );
     }
 }

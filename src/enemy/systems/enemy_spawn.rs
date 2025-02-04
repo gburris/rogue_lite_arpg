@@ -3,12 +3,19 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
-    combat::attributes::Health,
+    combat::{
+        attributes::{Health, Mana},
+        components::{ActionState, AimPosition},
+    },
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
+    items::{
+        equipment::{use_equipped::on_main_hand_activated, EquipmentSlots},
+        spawn_random_mainhand_weapon,
+    },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,
 };
@@ -44,14 +51,31 @@ fn spawn_enemy(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
+    let random_mainhand: Entity = spawn_random_mainhand_weapon(commands, &sprites, &atlases);
+    let sprite = Sprite::from_atlas_image(
+        sprites.enemy_sprite_sheet.clone(),
+        TextureAtlas {
+            layout: atlases.enemy_atlas_layout.clone(),
+            index: animation_config
+                .get_indices(&DefaultAnimations::IdleDown)
+                .first,
+        },
+    );
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
-        let new_enemy = commands
+        commands
             .spawn((
                 Enemy,
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),
                 RigidBody::Dynamic,
+                AimPosition::default(),
+                Mana::new(100.0, 10.0),
+                ActionState::None,
+                EquipmentSlots {
+                    mainhand: Some(random_mainhand),
+                    head: None,
+                },
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Enemy, GameCollisionLayer::Grounded],
@@ -63,28 +87,17 @@ fn spawn_enemy(
                         GameCollisionLayer::LowObstacle,
                     ],
                 ),
-                Transform::from_translation(spawn_position),
+                (
+                    Transform::from_translation(spawn_position),
+                    animation_config.get_indices(&DefaultAnimations::IdleDown),
+                    AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
+                    sprite,
+                    DefaultAnimations::IdleDown,
+                    MovementDirection::None,
+                ),
             ))
             .observe(on_enemy_defeated)
-            .id();
-        let sprite = Sprite::from_atlas_image(
-            sprites.enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: atlases.enemy_atlas_layout.clone(),
-                index: animation_config
-                    .get_indices(&DefaultAnimations::IdleDown)
-                    .first,
-            },
-        );
-
-        //Todo move to setup file / trigger / something besides bloating this
-        commands.entity(new_enemy).insert((
-            animation_config.get_indices(&DefaultAnimations::IdleDown),
-            AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
-            sprite,
-            DefaultAnimations::IdleDown,
-            MovementDirection::None,
-        ));
+            .observe(on_main_hand_activated);
     } else {
         eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }

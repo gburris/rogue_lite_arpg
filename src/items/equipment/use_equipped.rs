@@ -2,16 +2,18 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{
+        aim_position::AimPosition,
         attributes::{mana::ManaCost, Mana},
-        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
-        projectile::spawn::spawn_projectile,
+        melee::{
+            components::MeleeWeapon,
+            swing_melee_attacks::{start_melee_attack, MeleeSourceType},
+        },
+        projectile::spawn::{spawn_projectile, ProjectileSourceType},
         weapon::weapon::{ProjectileWeapon, Weapon},
     },
+    enemy::Enemy,
     items::equipment::Equippable,
-    player::{
-        systems::{AimPosition, CurrentActionState},
-        MainHandActivated,
-    },
+    player::{systems::ActionState, MainHandActivated},
 };
 
 use super::equipment_slots::EquipmentSlots;
@@ -76,18 +78,23 @@ pub fn on_weapon_fired(
     mut commands: Commands,
     weapon_query: Query<&ProjectileWeapon>,
     holder_query: Query<(&Transform, &AimPosition)>,
+    enemy_query: Query<Entity, With<Enemy>>,
 ) {
+    let mut projectile_source_type = ProjectileSourceType::Player;
     let Ok(projectile_weapon) = weapon_query.get(fired_trigger.entity()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
-
+    if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
+        projectile_source_type = ProjectileSourceType::Enemy;
+    }
     let Ok((holder_transform, holder_aim)) = holder_query.get(fired_trigger.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };
 
     spawn_projectile(
+        projectile_source_type,
         &mut commands,
         holder_transform,
         holder_aim.position,
@@ -99,9 +106,12 @@ pub fn on_weapon_melee(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon), With<Weapon>>,
-    mut action_state_query: Query<&mut CurrentActionState>,
+    mut action_state_query: Query<&mut ActionState>,
     holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
+    enemy_query: Query<Entity, With<Enemy>>,
 ) {
+    let mut melee_source_type = MeleeSourceType::Player;
+
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
@@ -111,6 +121,9 @@ pub fn on_weapon_melee(
         warn!("Holder missing required components");
         return;
     };
+    if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
+        melee_source_type = MeleeSourceType::Enemy;
+    }
 
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
@@ -118,6 +131,7 @@ pub fn on_weapon_melee(
     attack_angle -= std::f32::consts::FRAC_PI_2;
 
     start_melee_attack(
+        melee_source_type,
         &mut commands,
         weapon_entity,
         &mut melee_weapon,
@@ -126,6 +140,6 @@ pub fn on_weapon_melee(
 
     //TODO: Refactor action state stuff
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
-        *action_state = CurrentActionState::Attacking;
+        *action_state = ActionState::Attacking;
     }
 }

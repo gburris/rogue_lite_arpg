@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::attributes::Health, enemy::Enemy, movement::components::SimpleMotion, player::Player,
+    combat::{aim_position::AimPosition, attributes::Health},
+    enemy::Enemy,
+    movement::components::SimpleMotion,
+    player::{MainHandActivated, Player},
 };
 
 #[derive(Component)]
@@ -17,6 +20,15 @@ impl Default for WanderDirection {
             direction: Vec3::ZERO,
             timer: Timer::from_seconds(2.0, TimerMode::Repeating),
         }
+    }
+}
+
+pub fn update_enemy_aim_position(
+    mut enemy_aim_pos_query: Query<&mut AimPosition, With<Enemy>>,
+    player_transform: Single<&mut Transform, With<Player>>,
+) {
+    for mut aim_position in enemy_aim_pos_query.iter_mut() {
+        aim_position.position = player_transform.translation.truncate();
     }
 }
 
@@ -47,7 +59,7 @@ pub fn move_enemies_toward_player(
             if wander.is_some() {
                 commands.entity(entity).remove::<WanderDirection>();
             }
-
+            commands.trigger_targets(MainHandActivated, entity);
             // Chase behavior
             (player_pos - enemy_transform.translation).normalize_or_zero()
         } else {

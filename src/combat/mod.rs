@@ -1,3 +1,4 @@
+pub mod aim_position;
 pub mod attributes;
 pub mod damage;
 pub mod melee;

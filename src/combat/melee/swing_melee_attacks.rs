@@ -1,33 +1,56 @@
 use crate::{
-    animation::MovementDirection, items::equipment::equipment_transform::DirectionTransforms,
-    player::systems::CurrentActionState,
+    animation::MovementDirection, configuration::GameCollisionLayer,
+    items::equipment::equipment_transform::DirectionTransforms, player::systems::ActionState,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
+use avian2d::prelude::CollisionLayers;
 use bevy::prelude::*;
 
+#[derive(PartialEq)]
+pub enum MeleeSourceType {
+    Player,
+    Enemy,
+    NPC,
+    Environment,
+}
+
 pub fn start_melee_attack(
+    source: MeleeSourceType,
     commands: &mut Commands,
     weapon_entity: Entity,
     melee_weapon: &mut MeleeWeapon,
     attack_angle: f32,
 ) {
     melee_weapon.attack_duration.reset();
-    commands.entity(weapon_entity).insert(ActiveMeleeAttack {
-        initial_angle: attack_angle,
-    });
+    if source == MeleeSourceType::Player {
+        commands.entity(weapon_entity).insert(ActiveMeleeAttack {
+            initial_angle: attack_angle,
+        });
+    } else if source == MeleeSourceType::Enemy {
+        commands.entity(weapon_entity).insert((
+            ActiveMeleeAttack {
+                initial_angle: attack_angle,
+            },
+            enemy_melee_collision_layers(),
+        ));
+    }
+}
+
+fn enemy_melee_collision_layers() -> CollisionLayers {
+    CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Player])
 }
 
 pub fn end_melee_attacks(
     mut commands: Commands,
     mut query: Query<(Entity, &Parent, &MeleeWeapon, &mut Transform), With<ActiveMeleeAttack>>,
-    mut action_state_query: Query<&mut CurrentActionState>,
+    mut action_state_query: Query<&mut ActionState>,
 ) {
     for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
         if melee_weapon.attack_duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
                 commands.entity(entity).remove::<ActiveMeleeAttack>();
-                *action_state = CurrentActionState::None;
+                *action_state = ActionState::None;
                 *transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
             }
         }

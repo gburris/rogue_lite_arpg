@@ -15,7 +15,7 @@ pub fn handle_melee_collisions(
 
     for (weapon_entity, melee_weapon, colliding_entities) in melee_query.iter() {
         for &colliding_entity in colliding_entities.iter() {
-            if enemy_query.contains(colliding_entity) {
+            if enemy_query.contains(colliding_entity) || colliding_entity == player_entity {
                 commands.trigger_targets(
                     AttemptDamageEvent {
                         damage: melee_weapon.damage,
@@ -24,16 +24,6 @@ pub fn handle_melee_collisions(
                     colliding_entity,
                 );
             }
-            if colliding_entity == player_entity {
-                commands.trigger_targets(
-                    AttemptDamageEvent {
-                        damage: melee_weapon.damage,
-                        damage_source: Some(weapon_entity),
-                    },
-                    player_entity,
-                );
-            }
-            return;
         }
     }
 }

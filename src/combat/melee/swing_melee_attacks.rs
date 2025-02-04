@@ -1,44 +1,31 @@
 use crate::{
-    animation::MovementDirection, configuration::GameCollisionLayer,
-    items::equipment::equipment_transform::DirectionTransforms, player::systems::ActionState,
+    animation::MovementDirection, combat::{components::ActionState, damage::components::DamageSource},
+    configuration::GameCollisionLayer, items::equipment::equipment_transform::DirectionTransforms,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
 use avian2d::prelude::CollisionLayers;
 use bevy::prelude::*;
 
-#[derive(PartialEq)]
-pub enum MeleeSourceType {
-    Player,
-    Enemy,
-    NPC,
-    Environment,
-}
-
 pub fn start_melee_attack(
-    source: MeleeSourceType,
+    source: DamageSource,
     commands: &mut Commands,
     weapon_entity: Entity,
     melee_weapon: &mut MeleeWeapon,
     attack_angle: f32,
 ) {
     melee_weapon.attack_duration.reset();
-    if source == MeleeSourceType::Player {
-        commands.entity(weapon_entity).insert(ActiveMeleeAttack {
+    let collision_target = if source == DamageSource::Enemy {
+        GameCollisionLayer::Player
+    } else {
+        GameCollisionLayer::Enemy
+    };
+    commands.entity(weapon_entity).insert((
+        ActiveMeleeAttack {
             initial_angle: attack_angle,
-        });
-    } else if source == MeleeSourceType::Enemy {
-        commands.entity(weapon_entity).insert((
-            ActiveMeleeAttack {
-                initial_angle: attack_angle,
-            },
-            enemy_melee_collision_layers(),
-        ));
-    }
-}
-
-fn enemy_melee_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Player])
+        },
+        CollisionLayers::new(GameCollisionLayer::Grounded, [collision_target]),
+    ));
 }
 
 pub fn end_melee_attacks(

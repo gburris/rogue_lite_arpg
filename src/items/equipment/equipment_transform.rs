@@ -1,7 +1,7 @@
 use super::equipment_slots::EquipmentSlots;
 use crate::animation::MovementDirection;
+use crate::combat::components::ActionState;
 use crate::labels::layer::ZLayer;
-use crate::player::systems::ActionState;
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::sync::OnceLock;

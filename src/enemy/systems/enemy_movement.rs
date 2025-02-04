@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::{aim_position::AimPosition, attributes::Health},
+    combat::{components::AimPosition, attributes::Health},
     enemy::Enemy,
     movement::components::SimpleMotion,
     player::{MainHandActivated, Player},

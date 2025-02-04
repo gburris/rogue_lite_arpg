@@ -19,22 +19,13 @@ pub fn handle_projectile_collisions(
     let player_entity = player.into_inner();
     for (collision_damage, colliding_entities, projectile_entity) in projectile_query.iter() {
         for &colliding_entity in colliding_entities.iter() {
-            if enemy_query.contains(colliding_entity) {
+            if enemy_query.contains(colliding_entity) || colliding_entity == player_entity {
                 commands.trigger_targets(
                     AttemptDamageEvent {
                         damage: collision_damage.damage,
                         damage_source: Some(projectile_entity),
                     },
                     colliding_entity,
-                );
-            }
-            if colliding_entity == player_entity {
-                commands.trigger_targets(
-                    AttemptDamageEvent {
-                        damage: collision_damage.damage,
-                        damage_source: Some(projectile_entity),
-                    },
-                    player_entity,
                 );
             }
             // despawn projectile and ignore further collisions after ANY collision

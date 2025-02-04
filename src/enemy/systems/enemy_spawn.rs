@@ -3,7 +3,10 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
-    combat::{aim_position::AimPosition, attributes::{Health, Mana}},
+    combat::{
+        attributes::{Health, Mana},
+        components::{ActionState, AimPosition},
+    },
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
@@ -15,7 +18,6 @@ use crate::{
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,
-    player::systems::ActionState,
 };
 
 pub fn spawn_enemies(

@@ -3,20 +3,15 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::{projectile::components::*, weapon::weapon::ProjectileWeapon},
+    combat::{
+        damage::components::DamageSource, projectile::components::*,
+        weapon::weapon::ProjectileWeapon,
+    },
     configuration::GameCollisionLayer,
 };
 
-#[derive(PartialEq)]
-pub enum ProjectileSourceType {
-    Player,
-    Enemy,
-    NPC,
-    Environment,
-}
-
 pub fn spawn_projectile(
-    source: ProjectileSourceType, //Player, enemy, NPC, Party Member
+    source: DamageSource, //Player, enemy, NPC, Party Member
     commands: &mut Commands,
     caster_transform: &Transform,
     caster_aim_position: Vec2,
@@ -36,26 +31,23 @@ pub fn spawn_projectile(
     let velocity = aim_direction.normalize() * weapon.projectile_speed;
 
     trace!("Spawning projectile w/ velocity: {}", velocity);
-    if source == ProjectileSourceType::Enemy {
-        commands.spawn((
-            Projectile,
-            weapon.projectile.clone(),
-            transform,
-            LinearVelocity(velocity),
-            AnimationIndices { first: 0, last: 4 },
-            AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-            enemy_projectile_collision_layers(),
-        ));
+    let collision_target = if source == DamageSource::Enemy {
+        GameCollisionLayer::Player
     } else {
-        commands.spawn((
-            Projectile,
-            weapon.projectile.clone(),
-            transform,
-            LinearVelocity(velocity),
-            AnimationIndices { first: 0, last: 4 },
-            AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-        ));
-    }
+        GameCollisionLayer::Enemy
+    };
+    commands.spawn((
+        Projectile,
+        weapon.projectile.clone(),
+        transform,
+        LinearVelocity(velocity),
+        AnimationIndices { first: 0, last: 4 },
+        AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+        CollisionLayers::new(
+            GameCollisionLayer::InAir,
+            [collision_target, GameCollisionLayer::HighObstacle],
+        ),
+    ));
 }
 
 fn enemy_projectile_collision_layers() -> CollisionLayers {

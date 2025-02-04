@@ -2,18 +2,16 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{
-        aim_position::AimPosition,
         attributes::{mana::ManaCost, Mana},
-        melee::{
-            components::MeleeWeapon,
-            swing_melee_attacks::{start_melee_attack, MeleeSourceType},
-        },
-        projectile::spawn::{spawn_projectile, ProjectileSourceType},
+        components::{ActionState, AimPosition},
+        damage::components::DamageSource,
+        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
+        projectile::spawn::spawn_projectile,
         weapon::weapon::{ProjectileWeapon, Weapon},
     },
     enemy::Enemy,
     items::equipment::Equippable,
-    player::{systems::ActionState, MainHandActivated},
+    player::MainHandActivated,
 };
 
 use super::equipment_slots::EquipmentSlots;
@@ -80,13 +78,13 @@ pub fn on_weapon_fired(
     holder_query: Query<(&Transform, &AimPosition)>,
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
-    let mut projectile_source_type = ProjectileSourceType::Player;
+    let mut damage_source = DamageSource::Player;
     let Ok(projectile_weapon) = weapon_query.get(fired_trigger.entity()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
     if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
-        projectile_source_type = ProjectileSourceType::Enemy;
+        damage_source = DamageSource::Enemy;
     }
     let Ok((holder_transform, holder_aim)) = holder_query.get(fired_trigger.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
@@ -94,7 +92,7 @@ pub fn on_weapon_fired(
     };
 
     spawn_projectile(
-        projectile_source_type,
+        damage_source,
         &mut commands,
         holder_transform,
         holder_aim.position,
@@ -110,7 +108,7 @@ pub fn on_weapon_melee(
     holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
-    let mut melee_source_type = MeleeSourceType::Player;
+    let mut damage_source = DamageSource::Player;
 
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to melee attack with invalid weapon");
@@ -122,7 +120,7 @@ pub fn on_weapon_melee(
         return;
     };
     if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
-        melee_source_type = MeleeSourceType::Enemy;
+        damage_source = DamageSource::Enemy;
     }
 
     let holder_pos = holder_transform.translation.truncate();
@@ -131,7 +129,7 @@ pub fn on_weapon_melee(
     attack_angle -= std::f32::consts::FRAC_PI_2;
 
     start_melee_attack(
-        melee_source_type,
+        damage_source,
         &mut commands,
         weapon_entity,
         &mut melee_weapon,

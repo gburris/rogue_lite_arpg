@@ -27,6 +27,13 @@ pub struct HealthLostBar {
     previous_hp: f32,
 }
 
+// Add a new component for the exp bar
+#[derive(Component)]
+pub struct ExpBar;
+
+// Add this new color constant
+const EXP_COLOR: Color = Color::srgb(0.5, 0.0, 0.5); // Purple color for exp bar
+
 const HEALTH_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const MANA_COLOR: Color = Color::srgb(0.0, 0.173, 0.878);
 const BAR_CHANGE_COLOR: Color = Color::srgb(1.0, 0.89, 0.41);
@@ -50,50 +57,49 @@ pub fn spawn(mut commands: Commands) {
             },
         ))
         .with_children(|parent| {
-            parent.spawn((
-                PlayerOverlayStatsText,
-                Node {
-                    height: Val::Px(80.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                Text::new("(0.0, 0.0)"),
-            ));
-
-            // Spacer between stats text and mana bar
-            parent.spawn(Node {
-                width: Val::Percent(100.0),
-                flex_grow: 1.0,
-                ..default()
-            });
-
-            // Footer
+            // Top left container for health and mana bars
             parent
-                .spawn((Node {
-                    align_items: AlignItems::Start,
-                    justify_content: JustifyContent::Start,
+                .spawn(Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Auto,
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(10.0),
                     ..default()
-                },))
-                .with_children(|footer| {
+                })
+                .with_children(|bars| {
                     create_attribute_bar(
-                        footer,
+                        bars,
                         HealthBar,
-                        HealthLostBar {
-                            previous_hp: 100.0, // For now we assume player starts with 100 mana and health
-                        },
+                        HealthLostBar { previous_hp: 100.0 },
                         HEALTH_COLOR,
                     );
                     create_attribute_bar(
-                        footer,
+                        bars,
                         ManaBar,
                         ManaLostBar {
                             previous_mana: 100.0,
                         },
                         MANA_COLOR,
                     );
+                });
+
+            // Spacer
+            parent.spawn(Node {
+                flex_grow: 1.0,
+                ..default()
+            });
+
+            // Bottom right exp bar container
+            parent
+                .spawn(Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Auto,
+                    justify_content: JustifyContent::FlexStart, // Ensures children align to the left
+                    align_items: AlignItems::FlexStart,         // Aligns items to the left
+                    ..default()
+                })
+                .with_children(|exp_container| {
+                    create_exp_bar(exp_container);
                 });
         });
 }
@@ -137,25 +143,6 @@ fn create_attribute_bar(
                 BackgroundColor::from(BAR_CHANGE_COLOR),
             ));
         });
-}
-
-pub fn update_player_stats_text(
-    player: Single<(&PlayerExperience, &PlayerLevel, &Health, &Mana), With<Player>>,
-    overlay_stat_text: Single<&mut Text, With<PlayerOverlayStatsText>>,
-) {
-    let (exp, level, health, mana) = player.into_inner();
-
-    let mut overlay_stat_text = overlay_stat_text.into_inner();
-    *overlay_stat_text = Text::new(format!(
-        "Level: {:.1} Exp: {:.1} / {:.1} ||| Health: {:.1} / {:.1} ||| Mana: {:.1} / {:.1}",
-        level.current,
-        exp.current,
-        exp.next_level_requirement,
-        health.hp,
-        health.max_hp,
-        mana.current_mana,
-        mana.max_mana
-    ));
 }
 
 pub fn update_health_bar(
@@ -237,4 +224,62 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
 
     // Negative pixel values arne't allowed
     Val::Px((current_pixels + pixel_change).max(0.0))
+}
+
+fn create_exp_bar(parent: &mut ChildBuilder) {
+    parent
+        .spawn(Node {
+            width: Val::Px(400.0),
+            height: Val::Px(20.0),
+            ..default()
+        })
+        .with_children(|bar| {
+            // Background
+            bar.spawn((
+                Node {
+                    width: Val::Px(400.0),
+                    height: Val::Px(20.0),
+                    ..default()
+                },
+                BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
+            ));
+
+            // Fill bar
+            bar.spawn((
+                ExpBar,
+                Node {
+                    width: Val::Px(0.0),
+                    height: Val::Px(20.0),
+                    ..default()
+                },
+                BackgroundColor::from(EXP_COLOR),
+            ));
+
+            // Hash marks
+            for i in 1..10 {
+                bar.spawn(Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(i as f32 * 40.0), // 400px / 10 sections = 40px per section
+                    width: Val::Px(2.0),
+                    height: Val::Px(20.0),
+                    ..default()
+                })
+                .insert(BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)));
+            }
+        });
+}
+
+pub fn update_exp_bar(
+    player_exp: Option<Single<&PlayerExperience, (With<Player>, Changed<PlayerExperience>)>>,
+    mut exp_bar: Single<&mut Node, With<ExpBar>>,
+) {
+    if let Some(player_exp) = player_exp {
+        let exp = player_exp.into_inner();
+        warn!("updating exp bar");
+        warn!("Exp current {}", exp.current);
+        warn!("Exp needed {}", exp.next_level_requirement);
+        let progress = exp.current as f32 / exp.next_level_requirement as f32;
+        warn!("Exp progress {}", progress);
+        exp_bar.width = Val::Px(400.0 * progress);
+    }
 }

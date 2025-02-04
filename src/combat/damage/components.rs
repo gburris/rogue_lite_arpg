@@ -48,3 +48,11 @@ impl Default for Invulnerable {
         }
     }
 }
+
+#[derive(PartialEq)]
+pub enum DamageSource {
+    Player,
+    Enemy,
+    NPC,
+    Environment,
+}

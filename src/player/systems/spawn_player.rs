@@ -7,6 +7,7 @@ use crate::{
     animation::{DefaultAnimations, MovementDirection},
     combat::{
         attributes::{mana::Mana, Health},
+        components::{ActionState, AimPosition},
         damage::components::HasIFrames,
     },
     configuration::{
@@ -23,19 +24,6 @@ use crate::{
     movement::components::SimpleMotion,
     player::{systems::*, Player, PlayerStats},
 };
-
-#[derive(Component, Default)]
-pub struct AimPosition {
-    pub position: Vec2, // position where entitiy is aiming, for player this is the cursor
-}
-
-//This is used to decide if we should update the item transform to keep up with the player moving
-//Or leave it alone during an attack animation
-#[derive(Component, Debug, Hash, Eq, PartialEq, Clone)]
-pub enum CurrentActionState {
-    Attacking, //Sword is swinging
-    None,      //Moving
-}
 
 pub fn spawn_player(
     mut commands: Commands,
@@ -59,10 +47,7 @@ pub fn spawn_player(
         .add_item(spawn_ice_staff(&mut commands, &sprites, &texture_layouts))
         .ok();
 
-    let fire_staff = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
-
-    // TODO: Fix it such that any equipped weapon is made visible
-    commands.entity(fire_staff).insert(Visibility::Visible);
+    let fire_staff: Entity = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
 
     commands
         .spawn((
@@ -96,7 +81,7 @@ pub fn spawn_player(
             LockedAxes::new().lock_rotation(),
             (
                 MovementDirection::None,
-                CurrentActionState::None,
+                ActionState::None,
                 DefaultAnimations::IdleDown,
             ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),

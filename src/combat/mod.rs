@@ -1,3 +1,4 @@
+pub mod components;
 pub mod attributes;
 pub mod damage;
 pub mod melee;

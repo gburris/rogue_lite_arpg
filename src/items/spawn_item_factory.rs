@@ -71,8 +71,13 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             EquipmentSlot::Mainhand,
             Weapon,
             MeleeWeapon {
-                damage: 6.0,
-                effects_list: EffectsList { effects: vec![] },
+                damage: 60.0,
+                effects_list: EffectsList {
+                    effects: vec![ApplyStatus {
+                        status: StatusType::Frozen,
+                        duration: 2.0,
+                    }],
+                },
                 hitbox: MeleeHitbox::default(),
                 attack_type: MeleeSwingType::slash(),
                 attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
@@ -223,14 +228,13 @@ pub fn spawn_random_mainhand_weapon(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let mut rng = thread_rng();
-    let choice = rng.gen_range(0..5); // Adjust range based on number of weapons
+    let choice = rng.gen_range(0..4);
 
     match choice {
         0 => spawn_sword(commands, sprites),
         1 => spawn_axe(commands, sprites),
-        2 => spawn_shovel(commands, sprites),
-        3 => spawn_fire_staff(commands, sprites, texture_layouts),
-        4 => spawn_ice_staff(commands, sprites, texture_layouts),
+        2 => spawn_fire_staff(commands, sprites, texture_layouts),
+        3 => spawn_ice_staff(commands, sprites, texture_layouts),
         _ => unreachable!(), // Should never happen
     }
 }

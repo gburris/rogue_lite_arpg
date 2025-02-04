@@ -1,33 +1,43 @@
 use crate::{
-    animation::MovementDirection, items::equipment::equipment_transform::DirectionTransforms,
-    player::systems::CurrentActionState,
+    animation::MovementDirection, combat::{components::ActionState, damage::components::DamageSource},
+    configuration::GameCollisionLayer, items::equipment::equipment_transform::DirectionTransforms,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
+use avian2d::prelude::CollisionLayers;
 use bevy::prelude::*;
 
 pub fn start_melee_attack(
+    source: DamageSource,
     commands: &mut Commands,
     weapon_entity: Entity,
     melee_weapon: &mut MeleeWeapon,
     attack_angle: f32,
 ) {
     melee_weapon.attack_duration.reset();
-    commands.entity(weapon_entity).insert(ActiveMeleeAttack {
-        initial_angle: attack_angle,
-    });
+    let collision_target = if source == DamageSource::Enemy {
+        GameCollisionLayer::Player
+    } else {
+        GameCollisionLayer::Enemy
+    };
+    commands.entity(weapon_entity).insert((
+        ActiveMeleeAttack {
+            initial_angle: attack_angle,
+        },
+        CollisionLayers::new(GameCollisionLayer::Grounded, [collision_target]),
+    ));
 }
 
 pub fn end_melee_attacks(
     mut commands: Commands,
     mut query: Query<(Entity, &Parent, &MeleeWeapon, &mut Transform), With<ActiveMeleeAttack>>,
-    mut action_state_query: Query<&mut CurrentActionState>,
+    mut action_state_query: Query<&mut ActionState>,
 ) {
     for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
         if melee_weapon.attack_duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
                 commands.entity(entity).remove::<ActiveMeleeAttack>();
-                *action_state = CurrentActionState::None;
+                *action_state = ActionState::None;
                 *transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
             }
         }

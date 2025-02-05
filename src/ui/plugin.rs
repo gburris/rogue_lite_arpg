@@ -31,7 +31,7 @@ impl Plugin for UIPlugin {
             .add_systems(
                 Update,
                 (
-                    player_overlay::update_player_stats_text,
+                    player_overlay::update_exp_bar,
                     (
                         player_overlay::update_mana_bar,
                         player_overlay::update_lost_mana_bar,

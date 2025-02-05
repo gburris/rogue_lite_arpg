@@ -12,7 +12,7 @@ use crate::map::{
 pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
     let mut tiles = create_grass_map(size);
 
-    let hub_size = TilemapSize { x: 75, y: 75 };
+    let hub_size = TilemapSize { x: 25, y: 25 };
     let hub_center = Vec2::new((size.x / 2) as f32, (size.y / 2) as f32);
     let hub_bounds =
         Rect::from_center_size(hub_center, Vec2::new(hub_size.x as f32, hub_size.y as f32));
@@ -71,7 +71,7 @@ fn add_moat(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
 }
 
 fn add_wall_entrance(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
-    let entrance_width = 20; // Entrance width is 20 tiles
+    let entrance_width = 5; // Entrance width is 20 tiles
     let entrance_x_start = (bounds.min.x as i32 + bounds.max.x as i32) / 2 - entrance_width / 2;
 
     // Force a solid ground bridge across the moat and into the hub
@@ -100,13 +100,13 @@ fn generate_hub_markers(bounds: Rect) -> MapMarkers {
 
     let level_exit_spawn = Vec2::new(
         (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 55.0,
+        bounds.min.y as f32 + 15.0,
     );
     single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
 
     let npc_spawn = Vec2::new(
         (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 35.0,
+        bounds.min.y as f32 + 5.0,
     );
     single_markers.insert(MarkerType::NPCSpawn, npc_spawn);
 

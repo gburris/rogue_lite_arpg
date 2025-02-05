@@ -49,11 +49,3 @@ pub fn spawn_projectile(
         ),
     ));
 }
-
-fn enemy_projectile_collision_layers() -> CollisionLayers {
-    // Currently projectiles can only collide with enemies
-    CollisionLayers::new(
-        GameCollisionLayer::InAir,
-        [GameCollisionLayer::Player, GameCollisionLayer::HighObstacle],
-    )
-}

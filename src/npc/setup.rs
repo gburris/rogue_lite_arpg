@@ -23,7 +23,7 @@ pub fn npc_setup(
             Transform {
                 translation: npc_spawn_trigger.position,
                 rotation: Quat::IDENTITY,
-                scale: Vec3::splat(0.2),
+                scale: Vec3::splat(0.02),
             },
         ))
         .with_child(NPCInteractionRadius);

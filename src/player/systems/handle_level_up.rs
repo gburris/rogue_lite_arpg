@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::sprite::Material2d;
 
 use crate::{
     labels::layer::ZLayer,

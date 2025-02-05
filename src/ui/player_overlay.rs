@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
-    player::{components::Player, PlayerExperience, PlayerLevel},
+    player::{components::Player, PlayerExperience},
 };
 
 #[derive(Component)]
@@ -27,13 +27,10 @@ pub struct HealthLostBar {
     previous_hp: f32,
 }
 
-// Add a new component for the exp bar
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct ExpBar;
 
-// Add this new color constant
-const EXP_COLOR: Color = Color::srgb(0.5, 0.0, 0.5); // Purple color for exp bar
-
+const EXP_COLOR: Color = Color::srgb(0.5, 0.0, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const MANA_COLOR: Color = Color::srgb(0.0, 0.173, 0.878);
 const BAR_CHANGE_COLOR: Color = Color::srgb(1.0, 0.89, 0.41);
@@ -99,7 +96,7 @@ pub fn spawn(mut commands: Commands) {
                     ..default()
                 })
                 .with_children(|exp_container| {
-                    create_exp_bar(exp_container);
+                    create_exp_bar(exp_container); //Not an attribute bar -> It does not go down?
                 });
         });
 }
@@ -231,10 +228,13 @@ fn create_exp_bar(parent: &mut ChildBuilder) {
         .spawn(Node {
             width: Val::Px(400.0),
             height: Val::Px(20.0),
+            justify_content: JustifyContent::FlexStart,
+            align_items: AlignItems::FlexStart,
+            // Add overflow visibility for debugging
+            overflow: Overflow::visible(),
             ..default()
         })
         .with_children(|bar| {
-            // Background
             bar.spawn((
                 Node {
                     width: Val::Px(400.0),
@@ -244,12 +244,13 @@ fn create_exp_bar(parent: &mut ChildBuilder) {
                 BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
             ));
 
-            // Fill bar
             bar.spawn((
                 ExpBar,
                 Node {
                     width: Val::Px(0.0),
                     height: Val::Px(20.0),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
                     ..default()
                 },
                 BackgroundColor::from(EXP_COLOR),
@@ -259,7 +260,7 @@ fn create_exp_bar(parent: &mut ChildBuilder) {
             for i in 1..10 {
                 bar.spawn(Node {
                     position_type: PositionType::Absolute,
-                    left: Val::Px(i as f32 * 40.0), // 400px / 10 sections = 40px per section
+                    left: Val::Px(i as f32 * 40.0),
                     width: Val::Px(2.0),
                     height: Val::Px(20.0),
                     ..default()
@@ -275,11 +276,7 @@ pub fn update_exp_bar(
 ) {
     if let Some(player_exp) = player_exp {
         let exp = player_exp.into_inner();
-        warn!("updating exp bar");
-        warn!("Exp current {}", exp.current);
-        warn!("Exp needed {}", exp.next_level_requirement);
         let progress = exp.current as f32 / exp.next_level_requirement as f32;
-        warn!("Exp progress {}", progress);
         exp_bar.width = Val::Px(400.0 * progress);
     }
 }

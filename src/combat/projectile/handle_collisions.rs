@@ -1,28 +1,22 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{
-    combat::{
-        damage::{components::CollisionDamage, events::AttemptDamageEvent},
-        projectile::components::*,
-    },
-    enemy::Enemy,
-    player::Player,
+use crate::combat::{
+    attributes::Health, damage::events::AttemptDamageEvent, projectile::components::*,
 };
 
 pub fn handle_projectile_collisions(
     mut commands: Commands,
-    projectile_query: Query<(&CollisionDamage, &CollidingEntities, Entity), With<Projectile>>,
-    enemy_query: Query<&Enemy>,
-    player: Single<Entity, With<Player>>,
+    projectile_query: Query<(&Projectile, &CollidingEntities, Entity)>,
+    health_query: Query<&Health>,
 ) {
-    let player_entity = player.into_inner();
-    for (collision_damage, colliding_entities, projectile_entity) in projectile_query.iter() {
+    for (projectile, colliding_entities, projectile_entity) in projectile_query.iter() {
         for &colliding_entity in colliding_entities.iter() {
-            if enemy_query.contains(colliding_entity) || colliding_entity == player_entity {
+            // If the thing we collide with has health, lets try to damage it!
+            if health_query.contains(colliding_entity) {
                 commands.trigger_targets(
                     AttemptDamageEvent {
-                        damage: collision_damage.damage,
+                        damage: projectile.damage,
                         damage_source: Some(projectile_entity),
                     },
                     colliding_entity,

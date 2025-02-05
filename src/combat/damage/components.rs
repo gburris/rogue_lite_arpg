@@ -1,18 +1,9 @@
 use std::time::Duration;
 
+use avian2d::prelude::{LayerMask, PhysicsLayer};
 use bevy::prelude::*;
 
-//How much damage an enemy does when it collides with you
-#[derive(Component, Clone)]
-pub struct CollisionDamage {
-    pub damage: f32,
-}
-
-impl Default for CollisionDamage {
-    fn default() -> Self {
-        CollisionDamage { damage: 10.1 }
-    }
-}
+use crate::configuration::GameCollisionLayer;
 
 // Component to mark whether an entity has iframes when hit
 // Currently only the player has iframes
@@ -55,4 +46,19 @@ pub enum DamageSource {
     Enemy,
     NPC,
     Environment,
+}
+
+impl From<DamageSource> for LayerMask {
+    fn from(source: DamageSource) -> Self {
+        match source {
+            DamageSource::Player => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Enemy => GameCollisionLayer::Player.to_bits(),
+            DamageSource::NPC => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Environment => {
+                // Combine both Player and Enemy layers for Environment
+                GameCollisionLayer::Enemy.to_bits() | GameCollisionLayer::Player.to_bits()
+            }
+        }
+        .into()
+    }
 }

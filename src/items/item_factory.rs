@@ -1,3 +1,4 @@
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
@@ -13,14 +14,13 @@ use crate::{
     animation::MovementDirection,
     combat::{
         attributes::mana::ManaCost,
-        damage::components::CollisionDamage,
-        melee::components::{MeleeHitbox, MeleeSwingType, MeleeWeapon},
-        projectile::components::ProjectileBundle,
+        melee::components::{MeleeSwingType, MeleeWeapon},
+        projectile::components::{Projectile, ProjectileBundle},
         status_effects::{
             components::{BurningStatus, EffectsList, StatusType},
             events::ApplyStatus,
         },
-        weapon::weapon::{ProjectileWeapon, Weapon},
+        weapon::weapon::ProjectileWeapon,
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{equipment::EquipmentSlot, HealthPotion, ItemId},
@@ -46,11 +46,10 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
         .spawn((
             ItemName("Sword".to_string()),
             EquipmentSlot::Mainhand,
-            Weapon,
             MeleeWeapon {
                 damage: 6.0,
                 effects_list: EffectsList { effects: vec![] },
-                hitbox: MeleeHitbox::default(),
+                hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::stab(),
                 attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
             },
@@ -69,7 +68,6 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
         .spawn((
             ItemName("Axe".to_string()),
             EquipmentSlot::Mainhand,
-            Weapon,
             MeleeWeapon {
                 damage: 60.0,
                 effects_list: EffectsList {
@@ -78,7 +76,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
                         duration: 2.0,
                     }],
                 },
-                hitbox: MeleeHitbox::default(),
+                hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::slash(),
                 attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
             },
@@ -99,11 +97,10 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             EquipmentSlot::Mainhand,
             Equippable::default(),
             ItemId(3),
-            Weapon,
             MeleeWeapon {
                 damage: 6.0,
                 effects_list: EffectsList { effects: vec![] },
-                hitbox: MeleeHitbox::default(),
+                hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::stab(),
                 attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
             },
@@ -135,6 +132,7 @@ pub fn spawn_fire_staff(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let fireball = ProjectileBundle {
+        projectile: Projectile { damage: 6.0 },
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Burning(BurningStatus::default()),
@@ -148,7 +146,6 @@ pub fn spawn_fire_staff(
                 index: 0,
             },
         ),
-        damage: CollisionDamage { damage: 6.0 },
     };
 
     let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
@@ -161,7 +158,6 @@ pub fn spawn_fire_staff(
                 spread: 0.0,
             },
             ManaCost(6.0),
-            Weapon,
             ItemName("Staff of Flames".to_string()),
             ItemId(6),
             EquipmentSlot::Mainhand,
@@ -180,6 +176,7 @@ pub fn spawn_ice_staff(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let icicle_projectile = ProjectileBundle {
+        projectile: Projectile { damage: 25.0 }, // big damage
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Frozen,
@@ -193,7 +190,6 @@ pub fn spawn_ice_staff(
                 index: 0,
             },
         ),
-        damage: CollisionDamage { damage: 25.0 }, // big damage
     };
 
     let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
@@ -205,7 +201,6 @@ pub fn spawn_ice_staff(
                 projectile_speed: 500.0,
                 spread: 0.0,
             },
-            Weapon,
             ItemName("Staff of Ice".to_string()),
             ItemId(6),
             ManaCost(20.0), // big mana cost

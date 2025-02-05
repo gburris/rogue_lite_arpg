@@ -7,7 +7,7 @@ use crate::{
         damage::components::DamageSource,
         melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
         projectile::spawn::spawn_projectile,
-        weapon::weapon::{ProjectileWeapon, Weapon},
+        weapon::weapon::ProjectileWeapon,
     },
     enemy::Enemy,
     items::equipment::Equippable,
@@ -103,13 +103,10 @@ pub fn on_weapon_fired(
 pub fn on_weapon_melee(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    mut weapon_query: Query<(Entity, &mut MeleeWeapon), With<Weapon>>,
+    mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
-    holder_query: Query<(&Transform, &AimPosition), Without<Weapon>>,
-    enemy_query: Query<Entity, With<Enemy>>,
+    holder_query: Query<(&Transform, &AimPosition)>,
 ) {
-    let mut damage_source = DamageSource::Player;
-
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
@@ -119,9 +116,6 @@ pub fn on_weapon_melee(
         warn!("Holder missing required components");
         return;
     };
-    if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
-        damage_source = DamageSource::Enemy;
-    }
 
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
@@ -129,7 +123,6 @@ pub fn on_weapon_melee(
     attack_angle -= std::f32::consts::FRAC_PI_2;
 
     start_melee_attack(
-        damage_source,
         &mut commands,
         weapon_entity,
         &mut melee_weapon,

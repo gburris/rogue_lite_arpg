@@ -1,60 +1,99 @@
 use bevy::prelude::*;
+use rand::{thread_rng, Rng};
 
-use crate::{movement::components::SimpleMotion, npc::NPC};
+use crate::{movement::components::SimpleMotion, npc::components::NPC};
 
 #[derive(Component)]
-pub struct NPCMovement {
-    start_pos: Vec3,
-    stand_timer: Timer,
-    is_standing: bool,
+pub struct NPCWanderState {
+    origin: Vec3,
+    direction: Vec3,
+    movement_timer: Timer,
+    idle_timer: Timer,
+    is_moving: bool,
 }
 
-impl Default for NPCMovement {
+impl Default for NPCWanderState {
     fn default() -> Self {
+        let mut rng = thread_rng();
         Self {
-            start_pos: Vec3::ZERO,
-            stand_timer: Timer::from_seconds(1.0, TimerMode::Once),
-            is_standing: false,
+            origin: Vec3::ZERO,
+            direction: Vec3::ZERO,
+            movement_timer: Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once),
+            idle_timer: Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once),
+            is_moving: false, // Always start idle
         }
     }
 }
+
+const TILE_SIZE: f32 = 32.0;
+const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 pub fn move_npcs(
     time: Res<Time>,
-    mut query: Query<(&Transform, &mut SimpleMotion, &mut NPCMovement), With<NPC>>,
+    mut commands: Commands,
+    mut npc_query: Query<
+        (
+            Entity,
+            &Transform,
+            &mut SimpleMotion,
+            Option<&mut NPCWanderState>,
+        ),
+        With<NPC>,
+    >,
 ) {
-    for (transform, mut simple_motion, mut npc_movement) in query.iter_mut() {
-        // Initialize start position if it's zero
-        if npc_movement.start_pos == Vec3::ZERO {
-            npc_movement.start_pos = transform.translation;
-        }
+    let mut rng = thread_rng();
 
-        // If standing, update timer and check if we should start moving again
-        if npc_movement.is_standing {
-            npc_movement.stand_timer.tick(time.delta());
+    for (entity, transform, mut motion, wander_state) in npc_query.iter_mut() {
+        match wander_state {
+            Some(mut state) => {
+                // Update timers
+                state.movement_timer.tick(time.delta());
+                state.idle_timer.tick(time.delta());
 
-            if npc_movement.stand_timer.finished() {
-                npc_movement.is_standing = false;
-                simple_motion.direction = Vec2::new(simple_motion.direction.x * -1.0, 0.0); // Reverse direction
-                npc_movement.stand_timer.reset();
-                npc_movement.start_pos = transform.translation;
-                simple_motion.can_move = true;
+                // Handle state transitions
+                if state.is_moving && state.movement_timer.finished() {
+                    state.is_moving = false;
+                    state.idle_timer =
+                        Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once);
+                    motion.direction = Vec2::ZERO;
+                } else if !state.is_moving && state.idle_timer.finished() {
+                    state.is_moving = true;
+                    state.movement_timer =
+                        Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once);
+                    state.direction = random_direction();
+                }
+
+                // Check if NPC is too far from origin
+                let distance_from_origin = transform.translation.distance(state.origin);
+                if distance_from_origin > WANDER_RADIUS {
+                    // Move back towards origin
+                    state.direction = (state.origin - transform.translation).normalize();
+                }
+
+                // Update motion
+                if state.is_moving {
+                    motion.direction = state.direction.truncate();
+                }
             }
-        } else {
-            let distance_from_start = (transform.translation.x - npc_movement.start_pos.x).abs();
-
-            trace!(
-                "NPC is moving, distance from start: {}, speed: {}, direction: {}",
-                distance_from_start,
-                simple_motion.current_speed,
-                simple_motion.direction
-            );
-
-            // Check if we've reached the movement boundary (50 units)
-            if distance_from_start >= 500.0 {
-                npc_movement.is_standing = true;
-                simple_motion.can_move = false;
+            None => {
+                // Initialize wandering state for new NPCs
+                let state = NPCWanderState {
+                    origin: transform.translation,
+                    direction: Vec3::ZERO,
+                    movement_timer: Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once),
+                    idle_timer: Timer::from_seconds(rng.gen_range(3.0..10.0), TimerMode::Once),
+                    is_moving: false, // Start in idle state
+                };
+                commands.entity(entity).insert(state);
+                // Ensure motion is zeroed initially
+                motion.direction = Vec2::ZERO;
             }
         }
     }
+}
+
+fn random_direction() -> Vec3 {
+    let mut rng = thread_rng();
+    let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+    Vec3::new(angle.cos(), angle.sin(), 0.0)
 }

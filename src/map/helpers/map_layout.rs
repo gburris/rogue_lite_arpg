@@ -83,7 +83,7 @@ fn generate_markers(
     enemy_count: u32,
 ) -> MapMarkers {
     let mut single_markers = HashMap::new();
-    let mut multi_markers = HashMap::new();
+    let mut multi_markers: HashMap<MultiMarkerType, Vec<Vec2>> = HashMap::new();
 
     // Generate player spawn in the left third of the map
     if let Some(spawn_pos) = find_valid_position(map, map_size, 0.0..0.3) {

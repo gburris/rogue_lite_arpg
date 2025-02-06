@@ -5,10 +5,7 @@ use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::{
-        equipment::EquipmentSlots, spawn_axe, spawn_ice_staff, spawn_random_mainhand_weapon,
-        spawn_sword,
-    },
+    items::{equipment::EquipmentSlots, spawn_axe, spawn_ice_staff, spawn_sword},
     map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
@@ -16,7 +13,7 @@ use crate::{
 
 use super::components::NPCInteractionRadius;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Component, Copy)]
 pub enum NPCType {
     Helper,
     Shopkeeper,
@@ -90,6 +87,7 @@ pub fn spawn_npc(
             Health::new(1000.0),
             LockedAxes::new().lock_rotation(),
             ActionState::None,
+            npc_type,
             EquipmentSlots {
                 mainhand: Some(mainhand_to_weild),
                 head: None,

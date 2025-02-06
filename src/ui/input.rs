@@ -1,16 +1,21 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::AppState, player::systems::PauseInputEvent};
+use crate::{
+    labels::states::{AppState, PausedState},
+    player::systems::PauseInputEvent,
+};
 
+//UN-Pause logic, runs when App State is Paused
 pub fn handle_ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<ButtonInput<KeyCode>>) {
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         debug!("ui_inputs, enter");
-        commands.trigger(PauseInputEvent);
+        commands.trigger(PauseInputEvent { paused_state: None });
     }
 }
 
 pub fn on_pause_input(
-    _: Trigger<PauseInputEvent>, // Access keyboard input
+    pause_input_trigger: Trigger<PauseInputEvent>,
+    mut next_pause_state: ResMut<NextState<PausedState>>,
     state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
@@ -22,6 +27,9 @@ pub fn on_pause_input(
         _ => {
             debug!("Not currently paused, transitioning to paused");
             next_state.set(AppState::Paused);
+            if let Some(paused_state) = pause_input_trigger.paused_state {
+                next_pause_state.set(paused_state);
+            }
         }
     }
 }

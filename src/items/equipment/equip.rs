@@ -104,7 +104,7 @@ pub fn handle_unequip_success_event(
         if let Ok(mut visibility) = visibility_query.get_mut(unequip_success_trigger.item_entity) {
             *visibility = Visibility::Hidden
         }
-        warn!("removing hitbox");
+        trace!("removing hitbox");
         commands
             .entity(unequip_success_trigger.item_entity)
             .remove::<Collider>();
@@ -117,7 +117,7 @@ pub fn on_equipment_slot_equip(
     mut holder_query: Query<(Entity, &EquipmentSlots), Changed<EquipmentSlots>>,
 ) {
     for (holder_entity, equipment_slot) in holder_query.iter_mut() {
-        warn!("equipment slots changed");
+        trace!("equipment slots changed");
         if let Some(mainhand) = equipment_slot.mainhand {
             //The mainhand exists (equip)
             if let Ok((item_entity, mut visibility, mainhand_item)) = item_query.get_mut(mainhand) {
@@ -125,7 +125,7 @@ pub fn on_equipment_slot_equip(
                 commands.entity(holder_entity).add_child(item_entity);
                 if let Some(melee_weapon) = mainhand_item {
                     let hitbox = &melee_weapon.hitbox;
-                    warn!("adding hitbox");
+                    trace!("adding hitbox");
                     commands
                         .entity(mainhand)
                         .insert(Collider::rectangle(hitbox.width, hitbox.length));

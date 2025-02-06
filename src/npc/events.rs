@@ -1,6 +1,13 @@
 use bevy::prelude::*;
 
 #[derive(Event)]
-pub struct DialogueBegin {
-    pub entity: Entity,
-}
+pub struct NPCInteraction;
+
+#[derive(Event)]
+pub struct ShopKeeperStoreOpen;
+
+#[derive(Event)]
+pub struct StatTrainerStoreOpen;
+
+#[derive(Event)]
+pub struct GameGuideStart;

@@ -6,7 +6,7 @@ use noise::{NoiseFn, Perlin};
 
 use crate::map::{
     components::{MapLayout, TileType},
-    MapMarkers, MarkerType,
+    MapMarkers, MarkerType, MultiMarkerType,
 };
 
 pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
@@ -18,10 +18,10 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
         Rect::from_center_size(hub_center, Vec2::new(hub_size.x as f32, hub_size.y as f32));
 
     add_walls(&mut tiles, hub_bounds);
-    add_moat(&mut tiles, hub_bounds);
+    //add_moat(&mut tiles, hub_bounds); //Disable for now - The colliders are too wack
     add_wall_entrance(&mut tiles, hub_bounds);
 
-    let markers = generate_hub_markers(hub_bounds);
+    let markers: MapMarkers = generate_hub_markers(hub_bounds);
 
     MapLayout {
         size,
@@ -90,29 +90,28 @@ fn add_wall_entrance(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
 
 fn generate_hub_markers(bounds: Rect) -> MapMarkers {
     let mut single_markers = HashMap::new();
-
-    // Spawn player near the entrance
-    let player_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 5.0,
+    let mut multi_markers = HashMap::new();
+    let center_of_hub = Vec2::new(
+        (bounds.min.x + bounds.max.x) / 2.0,
+        (bounds.min.y + bounds.max.y) / 2.0,
     );
+
+    let player_spawn = Vec2::new(center_of_hub.x, bounds.min.y as f32 + 5.0);
     single_markers.insert(MarkerType::PlayerSpawn, player_spawn);
 
-    let level_exit_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 15.0,
-    );
-    single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
+    let level_exit_spawn = Vec2::new(center_of_hub.x, bounds.min.y as f32 + 22.0);
 
-    let npc_spawn = Vec2::new(
-        (bounds.min.x + bounds.max.x) as f32 / 2.0,
-        bounds.min.y as f32 + 5.0,
-    );
-    single_markers.insert(MarkerType::NPCSpawn, npc_spawn);
+    single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
+    let npc_positiions = vec![
+        Vec2::new(center_of_hub.x + 5.0, center_of_hub.y + 5.0),
+        Vec2::new(center_of_hub.x - 5.0, center_of_hub.y + -5.0),
+        Vec2::new(center_of_hub.x + 5.0, center_of_hub.y + -5.0),
+    ];
+    multi_markers.insert(MultiMarkerType::NPCSpawns, npc_positiions);
 
     MapMarkers {
         single_markers,
-        multi_markers: HashMap::new(),
+        multi_markers,
     }
 }
 

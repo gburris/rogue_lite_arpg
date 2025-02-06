@@ -71,10 +71,8 @@ pub struct SpriteAssets {
     pub wall_tiles: Handle<Image>,
     #[asset(path = "tilesets/wood_tiles.png")]
     pub wood_tiles: Handle<Image>,
-    #[asset(path = "run_start_portal.png")]
+    #[asset(path = "door.png")]
     pub run_start_portal: Handle<Image>,
-    #[asset(path = "npc.png")]
-    pub npc: Handle<Image>,
     #[asset(path = "open_chest.png")]
     pub open_chest: Handle<Image>,
     #[asset(path = "closed_chest.png")]
@@ -83,4 +81,10 @@ pub struct SpriteAssets {
     pub player_sprite_sheet: Handle<Image>,
     #[asset(path = "enemies/alien_zombie_sprite_sheet.png")]
     pub enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "npcs/shop_keeper.png")]
+    pub shop_keeper_sprite_sheet: Handle<Image>,
+    #[asset(path = "npcs/game_guide.png")]
+    pub game_guide_sprite_sheet: Handle<Image>,
+    #[asset(path = "npcs/stat_trainer.png")]
+    pub stat_trainer_sprite_sheet: Handle<Image>,
 }

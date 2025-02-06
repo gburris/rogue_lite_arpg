@@ -25,7 +25,6 @@ pub enum TileType {
 pub enum MarkerType {
     PlayerSpawn,
     LevelExit,
-    NPCSpawn, //Move this to multi marker once we have more than one NPC in the hub
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,6 +32,7 @@ pub enum MultiMarkerType {
     EnemySpawns,
     BossSpawns,
     ChestSpawns,
+    NPCSpawns,
 }
 
 #[derive(Clone, Debug)]

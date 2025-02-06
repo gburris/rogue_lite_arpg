@@ -1,6 +1,7 @@
 mod damage_overlay;
 pub mod game_over_screen;
 pub mod input;
+pub mod npc;
 pub mod pause_menu;
 pub mod player_overlay;
 pub mod start_screen;

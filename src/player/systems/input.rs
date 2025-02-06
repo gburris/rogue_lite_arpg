@@ -2,13 +2,16 @@ use bevy::prelude::*;
 
 use crate::{
     animation::MovementDirection,
+    labels::states::PausedState,
     player::{
         AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
     },
 };
 
 #[derive(Event)]
-pub struct PauseInputEvent;
+pub struct PauseInputEvent {
+    pub paused_state: Option<PausedState>, //What pause state to default to
+}
 
 pub fn player_input(
     mut commands: Commands,
@@ -20,7 +23,9 @@ pub fn player_input(
     let (movement_direction, player_entity) = player_movement_query.into_inner();
 
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        commands.trigger(PauseInputEvent);
+        commands.trigger(PauseInputEvent {
+            paused_state: Some(PausedState::MainMenu),
+        });
         return;
     }
 

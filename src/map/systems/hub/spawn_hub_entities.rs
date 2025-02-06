@@ -3,14 +3,12 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{portal::Portal, MapLayout, MarkerType, WorldSpaceConfig},
+    map::{portal::Portal, MapLayout, MarkerType, MultiMarkerType, WorldSpaceConfig},
     player::Player,
 };
 
 #[derive(Event)]
-pub struct NPCSpawnEvent {
-    pub position: Vec3,
-}
+pub struct NPCSpawnEvent(pub Vec<Vec3>);
 
 pub fn spawn_hub_entities(
     mut commands: Commands,
@@ -37,21 +35,19 @@ pub fn spawn_hub_entities(
         Transform::from_translation(warp_position),
     ));
 
-    if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::NPCSpawn) {
-        let spawn_position_in_world =
-            world_config.tile_to_world(spawn_position_in_tiles.as_ivec2());
-        let npc_spawn_position: Vec3 = Vec3::new(
-            spawn_position_in_world.x,
-            spawn_position_in_world.y,
-            ZLayer::Player.z(),
-        );
-
-        //Trigger this spawn position
-        commands.trigger(NPCSpawnEvent {
-            position: npc_spawn_position,
-        });
+    if let Some(npc_spawn_positions_in_tiles) =
+        map_layout.markers.get_multi(MultiMarkerType::NPCSpawns)
+    {
+        let npc_spawn_positions: Vec<Vec3> = npc_spawn_positions_in_tiles
+            .iter()
+            .map(|tile_position| {
+                let world_position = world_config.tile_to_world(tile_position.as_ivec2());
+                Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
+            })
+            .collect();
+        commands.trigger(NPCSpawnEvent(npc_spawn_positions));
     } else {
-        warn!("Player spawn marker not found in map layout.");
+        warn!("No NPC spawn markers found in map layout.");
     }
 
     // Locate the player spawn position

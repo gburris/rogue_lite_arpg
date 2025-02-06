@@ -22,6 +22,8 @@ pub enum PausedState {
     #[default]
     MainMenu,
     Inventory,
+    StatsShop,
+    ItemsShop,
     Equipment,
     Stats,
 }

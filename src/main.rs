@@ -14,7 +14,7 @@ use baba_yaga::{
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
     progression::plugin::ProgressionPlugin,
-    ui::{plugin::UIPlugin, PauseMenuPlugin},
+    ui::plugin::UIPlugin,
 };
 
 fn main() {
@@ -38,6 +38,6 @@ fn main() {
             ChestPlugin,
         ))
         // UI plugins group
-        .add_plugins((UIPlugin, PauseMenuPlugin))
+        .add_plugins(UIPlugin)
         .run();
 }

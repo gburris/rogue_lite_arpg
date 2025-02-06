@@ -5,20 +5,13 @@ use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::{equipment::EquipmentSlots, spawn_axe, spawn_ice_staff, spawn_sword},
+    items::equipment::EquipmentSlots,
     map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
 };
 
-use super::components::NPCInteractionRadius;
-
-#[derive(Debug, Clone, Component, Copy)]
-pub enum NPCType {
-    Helper,
-    Shopkeeper,
-    StatTrainer,
-}
+use super::components::{NPCInteractionRadius, NPCType};
 
 pub fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
@@ -27,29 +20,20 @@ pub fn spawn_npcs(
     sprites: Res<SpriteAssets>,
     atlases: Res<SpriteSheetLayouts>,
 ) {
+    // Define the NPC types we want to spawn in order
+    let npc_types = [NPCType::Helper, NPCType::Shopkeeper, NPCType::StatTrainer];
     let npc_spawn_positions = npc_spawn_trigger.0.clone();
-    let mut npc_counter = 0;
 
-    for spawn_position in npc_spawn_positions {
-        let npc_type = match npc_counter {
-            0 => NPCType::Helper,
-            1 => NPCType::Shopkeeper,
-            2 => NPCType::StatTrainer,
-            _ => {
-                warn!("No NPC type defined for index: {}", npc_counter);
-                NPCType::Helper // Default type
-            }
-        };
-
+    // Zip the positions with NPC types and spawn them
+    for (spawn_position, &npc_type) in npc_spawn_positions.iter().zip(npc_types.iter()) {
         spawn_npc(
             &mut commands,
             npc_type,
-            spawn_position,
+            *spawn_position,
             &animation_config,
             &sprites,
             &atlases,
         );
-        npc_counter += 1;
     }
 }
 
@@ -61,16 +45,9 @@ pub fn spawn_npc(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    let mainhand_to_weild = match npc_type {
-        NPCType::Helper => spawn_ice_staff(commands, &sprites, &atlases),
-        NPCType::Shopkeeper => spawn_axe(commands, &sprites),
-        NPCType::StatTrainer => spawn_sword(commands, &sprites),
-    };
-    let sprite_sheet_to_use = match npc_type {
-        NPCType::Helper => sprites.game_guide_sprite_sheet.clone(),
-        NPCType::Shopkeeper => sprites.shop_keeper_sprite_sheet.clone(),
-        NPCType::StatTrainer => sprites.stat_trainer_sprite_sheet.clone(),
-    };
+    let mainhand_to_weild = npc_type.spawn_weapon(commands, sprites, atlases);
+    let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
+    let observer_to_use = npc_type.get_observer();
     let sprite = Sprite::from_atlas_image(
         sprite_sheet_to_use,
         TextureAtlas {
@@ -101,5 +78,6 @@ pub fn spawn_npc(
                 MovementDirection::None,
             ),
         ))
-        .with_child(NPCInteractionRadius);
+        .with_child(NPCInteractionRadius)
+        .observe(observer_to_use);
 }

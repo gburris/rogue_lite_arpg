@@ -1,7 +1,7 @@
 use super::stats_shop::{
-    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatType, StatsMenu, StatsUIUpdateEvent,
+    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatsMenu, StatsUIUpdateEvent,
 };
-use crate::{player::PlayerStats, progression::GameProgress};
+use crate::{player::{DisplayableStatType, PlayerStats}, progression::GameProgress};
 use bevy::prelude::*;
 
 pub fn handle_stat_button_interaction(
@@ -50,11 +50,11 @@ pub fn handle_player_stat_change(
     match (trigger.stat_type, trigger.is_increase) {
         (stat_type, true) if game_progress.progress_points > 0 => {
             match stat_type {
-                StatType::Agility => stats.agility += 1,
-                StatType::Strength => stats.strength += 1,
-                StatType::Dexterity => stats.dexterity += 1,
-                StatType::Intellect => stats.intellect += 1,
-                StatType::Luck => stats.luck += 1,
+                DisplayableStatType::Agility => stats.agility += 1,
+                DisplayableStatType::Strength => stats.strength += 1,
+                DisplayableStatType::Dexterity => stats.dexterity += 1,
+                DisplayableStatType::Intellect => stats.intellect += 1,
+                DisplayableStatType::Luck => stats.luck += 1,
             }
             game_progress.progress_points -= 1;
             commands.trigger(StatsUIUpdateEvent);
@@ -63,11 +63,11 @@ pub fn handle_player_stat_change(
             let current_value = stat_type.get_value(&stats);
             if current_value > 1 {
                 match stat_type {
-                    StatType::Agility => stats.agility -= 1,
-                    StatType::Strength => stats.strength -= 1,
-                    StatType::Dexterity => stats.dexterity -= 1,
-                    StatType::Intellect => stats.intellect -= 1,
-                    StatType::Luck => stats.luck -= 1,
+                    DisplayableStatType::Agility => stats.agility -= 1,
+                    DisplayableStatType::Strength => stats.strength -= 1,
+                    DisplayableStatType::Dexterity => stats.dexterity -= 1,
+                    DisplayableStatType::Intellect => stats.intellect -= 1,
+                    DisplayableStatType::Luck => stats.luck -= 1,
                 }
                 game_progress.progress_points += 1;
                 commands.trigger(StatsUIUpdateEvent);

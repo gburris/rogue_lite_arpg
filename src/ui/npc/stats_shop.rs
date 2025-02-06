@@ -1,4 +1,7 @@
-use crate::{player::PlayerStats, progression::GameProgress};
+use crate::{
+    player::{DisplayableStatType, PlayerStats},
+    progression::GameProgress,
+};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -6,44 +9,13 @@ pub struct StatsMenu;
 
 #[derive(Component)]
 pub struct StatShopButton {
-    pub stat_type: StatType,
+    pub stat_type: DisplayableStatType,
     pub is_increase: bool,
-}
-
-#[derive(Clone, Debug, Copy, PartialEq)]
-pub enum StatType {
-    Agility,
-    Strength,
-    Dexterity,
-    Intellect,
-    Luck,
-}
-
-impl StatType {
-    pub fn get_description(&self) -> &'static str {
-        match self {
-            StatType::Agility => "Movement speed, roll range",
-            StatType::Strength => "Melee swing damage",
-            StatType::Dexterity => "Critical Strike Chance",
-            StatType::Intellect => "Spell damage",
-            StatType::Luck => "Drop rate",
-        }
-    }
-
-    pub fn get_value(&self, stats: &PlayerStats) -> u32 {
-        match self {
-            StatType::Agility => stats.agility,
-            StatType::Strength => stats.strength,
-            StatType::Dexterity => stats.dexterity,
-            StatType::Intellect => stats.intellect,
-            StatType::Luck => stats.luck,
-        }
-    }
 }
 
 #[derive(Event)]
 pub struct StatChangeEvent {
-    pub stat_type: StatType,
+    pub stat_type: DisplayableStatType,
     pub is_increase: bool,
 }
 
@@ -102,11 +74,11 @@ pub fn spawn_stats_shop_menu(
                 .with_children(|container| {
                     // Spawn each stat row
                     for stat_type in [
-                        StatType::Agility,
-                        StatType::Strength,
-                        StatType::Dexterity,
-                        StatType::Intellect,
-                        StatType::Luck,
+                        DisplayableStatType::Agility,
+                        DisplayableStatType::Strength,
+                        DisplayableStatType::Dexterity,
+                        DisplayableStatType::Intellect,
+                        DisplayableStatType::Luck,
                     ] {
                         spawn_stat_row(container, stat_type, stats, game_progress.progress_points);
                     }
@@ -132,7 +104,7 @@ pub fn spawn_stats_shop_menu(
 
 fn spawn_stat_row(
     parent: &mut ChildBuilder,
-    stat_type: StatType,
+    stat_type: DisplayableStatType,
     stats: &PlayerStats,
     progress_points: u32, //TODO: Make the buttons visually reflect "Yes you can click this
                           //Before hovering using this parameter
@@ -181,7 +153,11 @@ fn spawn_stat_row(
         });
 }
 
-fn spawn_stat_shop_button(parent: &mut ChildBuilder, stat_type: StatType, is_increase: bool) {
+fn spawn_stat_shop_button(
+    parent: &mut ChildBuilder,
+    stat_type: DisplayableStatType,
+    is_increase: bool,
+) {
     parent
         .spawn((
             StatShopButton {

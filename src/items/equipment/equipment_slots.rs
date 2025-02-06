@@ -3,7 +3,7 @@ use bevy::prelude::*;
 /**
  * Goes on the equipment marking where it should be equipped
  */
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Clone)]
 pub enum EquipmentSlot {
     Mainhand,
     Helmet,

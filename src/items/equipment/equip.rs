@@ -12,16 +12,24 @@ use crate::{
     ui::pause_menu::button_interactions::{AttemptEquipEvent, AttemptUnequipEvent},
 };
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone)]
 pub struct Equippable {
+    pub slot: EquipmentSlot,
     pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
 }
 
 impl Default for Equippable {
     fn default() -> Self {
         Self {
+            slot: EquipmentSlot::Mainhand,
             use_rate: Timer::from_seconds(0.4, TimerMode::Once),
         }
+    }
+}
+
+impl Equippable {
+    pub fn new(slot: EquipmentSlot) -> Self {
+        Equippable { slot, ..default() }
     }
 }
 
@@ -34,14 +42,14 @@ pub fn attempt_equip_from_inventory(
     try_equip_trigger: Trigger<AttemptEquipEvent>,
     mut commands: Commands,
     mut holder_query: Query<(&mut EquipmentSlots, &mut Inventory), With<Player>>,
-    equipment_query: Query<&EquipmentSlot>,
+    equipment_query: Query<&Equippable>,
 ) {
     if let Ok((mut equipment_slots, mut inventory)) =
         holder_query.get_mut(try_equip_trigger.entity())
     {
-        if let Ok(slot_to_fill) = equipment_query.get(try_equip_trigger.item_entity) {
+        if let Ok(equippable) = equipment_query.get(try_equip_trigger.item_entity) {
             if let Some(previous_item) =
-                equipment_slots.equip(try_equip_trigger.item_entity, slot_to_fill)
+                equipment_slots.equip(try_equip_trigger.item_entity, &equippable.slot)
             {
                 if inventory.add_item(previous_item).is_ok() {
                     commands.trigger(UnequipSuccessEvent {
@@ -63,14 +71,14 @@ pub fn handle_try_unequip_event(
     try_unequip_trigger: Trigger<AttemptUnequipEvent>,
     mut commands: Commands,
     mut holder_query: Query<(&mut EquipmentSlots, &mut Inventory)>,
-    equipment_query: Query<&EquipmentSlot>,
+    equipment_query: Query<&Equippable>,
 ) {
     if let Ok((mut equipment_slots, mut inventory)) =
         holder_query.get_mut(try_unequip_trigger.entity())
     {
-        if let Ok(slot_to_empty) = equipment_query.get(try_unequip_trigger.item_entity) {
+        if let Ok(equipped) = equipment_query.get(try_unequip_trigger.item_entity) {
             if inventory.add_item(try_unequip_trigger.item_entity).is_ok() {
-                equipment_slots.unequip(slot_to_empty);
+                equipment_slots.unequip(&equipped.slot);
                 commands.trigger(UnequipSuccessEvent {
                     item_entity: try_unequip_trigger.item_entity,
                 });

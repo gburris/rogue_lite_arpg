@@ -78,9 +78,8 @@ fn spawn_enemy(
                 },
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
-                    [GameCollisionLayer::Enemy, GameCollisionLayer::Grounded],
+                    [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],
                     [
-                        GameCollisionLayer::Player,
                         GameCollisionLayer::InAir,
                         GameCollisionLayer::Grounded,
                         GameCollisionLayer::HighObstacle,

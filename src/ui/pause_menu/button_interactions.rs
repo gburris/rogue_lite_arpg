@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     items::{equipment::Equippable, Consumable, ItemName},
     labels::states::PausedState,
+    player::Player,
 };
 
 use super::{
@@ -21,12 +22,12 @@ pub struct EquipmentItemClicked {
     pub item_entity: Option<Entity>,
 }
 #[derive(Event)]
-pub struct TryEquipFromUIEvent {
+pub struct AttemptEquipEvent {
     pub item_entity: Entity,
 }
 
 #[derive(Event)]
-pub struct TryUnequipFromUIEvent {
+pub struct AttemptUnequipEvent {
     pub item_entity: Entity,
 }
 
@@ -70,11 +71,13 @@ pub fn handle_equipment_interactions(
     }
 }
 
-pub fn handle_equipment_click(trigger: Trigger<EquipmentItemClicked>, mut commands: Commands) {
+pub fn handle_equipment_click(
+    trigger: Trigger<EquipmentItemClicked>,
+    mut commands: Commands,
+    player: Single<Entity, With<Player>>,
+) {
     if let Some(item_entity) = trigger.item_entity {
-        commands.trigger(TryUnequipFromUIEvent {
-            item_entity: item_entity,
-        });
+        commands.trigger_targets(AttemptUnequipEvent { item_entity }, *player);
         //Redraw equipment
         commands.trigger(EquipmentUIUpdatedEvent);
     }
@@ -119,6 +122,7 @@ pub fn handle_inventory_click(
     equipable_query: Query<&Equippable>,
     consumable_query: Query<&Consumable>,
     item_name_query: Query<&ItemName>,
+    player: Single<Entity, With<Player>>,
 ) {
     if let Some(item_entity) = trigger.item_entity {
         // Check if item is equipable
@@ -127,9 +131,7 @@ pub fn handle_inventory_click(
         }
 
         if equipable_query.contains(item_entity) {
-            commands.trigger(TryEquipFromUIEvent {
-                item_entity: item_entity,
-            });
+            commands.trigger_targets(AttemptEquipEvent { item_entity }, *player);
         }
         // Check if item is consumable
         else if consumable_query.contains(item_entity) {

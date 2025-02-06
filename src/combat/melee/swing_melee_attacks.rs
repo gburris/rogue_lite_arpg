@@ -1,31 +1,21 @@
 use crate::{
-    animation::MovementDirection, combat::{components::ActionState, damage::components::DamageSource},
-    configuration::GameCollisionLayer, items::equipment::equipment_transform::DirectionTransforms,
+    animation::MovementDirection, combat::components::ActionState,
+    items::equipment::equipment_transform::DirectionTransforms,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
-use avian2d::prelude::CollisionLayers;
 use bevy::prelude::*;
 
 pub fn start_melee_attack(
-    source: DamageSource,
     commands: &mut Commands,
     weapon_entity: Entity,
     melee_weapon: &mut MeleeWeapon,
     attack_angle: f32,
 ) {
     melee_weapon.attack_duration.reset();
-    let collision_target = if source == DamageSource::Enemy {
-        GameCollisionLayer::Player
-    } else {
-        GameCollisionLayer::Enemy
-    };
-    commands.entity(weapon_entity).insert((
-        ActiveMeleeAttack {
-            initial_angle: attack_angle,
-        },
-        CollisionLayers::new(GameCollisionLayer::Grounded, [collision_target]),
-    ));
+    commands.entity(weapon_entity).insert(ActiveMeleeAttack {
+        initial_angle: attack_angle,
+    });
 }
 
 pub fn end_melee_attacks(

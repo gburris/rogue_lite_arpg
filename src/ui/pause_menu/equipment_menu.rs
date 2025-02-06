@@ -1,5 +1,5 @@
 use crate::{
-    items::{equipment::EquipmentSlots, ItemName},
+    items::{equipment::EquipmentSlots, Item},
     player::Player,
 };
 use bevy::prelude::*;
@@ -16,7 +16,7 @@ pub struct EquipmentButton {
 }
 pub fn spawn_equipment_menu(
     mut commands: Commands,
-    item_query: Query<&ItemName>,
+    item_query: Query<&Name, With<Item>>,
     player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
 ) {
     debug!("spawn_equipment_menu called");
@@ -72,7 +72,7 @@ pub fn spawn_equipment_menu(
 }
 
 fn spawn_equipment_slot(
-    item_query: &Query<&ItemName>,
+    item_query: &Query<&Name, With<Item>>,
     builder: &mut ChildBuilder,
     slot_name: &str,
     slot_entity: &Option<Entity>,
@@ -114,7 +114,7 @@ fn spawn_equipment_slot(
                 // Display all inventory items
                 if let Ok(item_name) = item_query.get(*slot_entity) {
                     parent.spawn((
-                        Text::new(item_name.0.clone()),
+                        Text::new(item_name.clone()),
                         TextColor::default(), // Add this line
                         EquipmentItemText,
                         EquipmentButton {
@@ -165,7 +165,7 @@ pub fn handle_equipment_update(
     _: Trigger<EquipmentUIUpdatedEvent>,
     mut commands: Commands,
     eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
-    item_query: Query<&ItemName>,
+    item_query: Query<&Name, With<Item>>,
     player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
 ) {
     // Despawn the existing inventory menu

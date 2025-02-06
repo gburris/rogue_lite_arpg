@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::{equipment::Equippable, Consumable, ItemName},
+    items::{equipment::Equippable, Consumable, Item},
     labels::states::PausedState,
+    player::Player,
 };
 
 use super::{
@@ -21,12 +22,12 @@ pub struct EquipmentItemClicked {
     pub item_entity: Option<Entity>,
 }
 #[derive(Event)]
-pub struct TryEquipFromUIEvent {
+pub struct AttemptEquipEvent {
     pub item_entity: Entity,
 }
 
 #[derive(Event)]
-pub struct TryUnequipFromUIEvent {
+pub struct AttemptUnequipEvent {
     pub item_entity: Entity,
 }
 
@@ -70,11 +71,13 @@ pub fn handle_equipment_interactions(
     }
 }
 
-pub fn handle_equipment_click(trigger: Trigger<EquipmentItemClicked>, mut commands: Commands) {
+pub fn handle_equipment_click(
+    trigger: Trigger<EquipmentItemClicked>,
+    mut commands: Commands,
+    player: Single<Entity, With<Player>>,
+) {
     if let Some(item_entity) = trigger.item_entity {
-        commands.trigger(TryUnequipFromUIEvent {
-            item_entity: item_entity,
-        });
+        commands.trigger_targets(AttemptUnequipEvent { item_entity }, *player);
         //Redraw equipment
         commands.trigger(EquipmentUIUpdatedEvent);
     }
@@ -116,27 +119,18 @@ pub fn handle_inventory_interactions(
 pub fn handle_inventory_click(
     trigger: Trigger<InventoryItemClicked>,
     mut commands: Commands,
-    equipable_query: Query<&Equippable>,
-    consumable_query: Query<&Consumable>,
-    item_name_query: Query<&ItemName>,
+    item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
+    player: Single<Entity, With<Player>>,
 ) {
     if let Some(item_entity) = trigger.item_entity {
-        // Check if item is equipable
-        if let Ok(item_name) = item_name_query.get(item_entity) {
-            debug!("User clicked on {:?}", item_name);
+        if let Ok((equippable, consumable)) = item_query.get(item_entity) {
+            if equippable {
+                commands.trigger_targets(AttemptEquipEvent { item_entity }, *player);
+            } else if consumable {
+                commands.trigger(ConsumeEvent { item_entity });
+            }
         }
 
-        if equipable_query.contains(item_entity) {
-            commands.trigger(TryEquipFromUIEvent {
-                item_entity: item_entity,
-            });
-        }
-        // Check if item is consumable
-        else if consumable_query.contains(item_entity) {
-            commands.trigger(ConsumeEvent {
-                item_entity: item_entity,
-            });
-        }
         //Redraw inventory
         commands.trigger(InventoryUpdatedEvent);
     }

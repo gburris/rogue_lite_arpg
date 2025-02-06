@@ -1,16 +1,24 @@
 use bevy::prelude::*;
 
-#[derive(Component, Clone, Debug, Default)]
-pub struct ItemId(pub u32);
+#[derive(Component)]
+pub struct Item {
+    id: u32,
+}
+
+impl Item {
+    pub fn new(id: u32) -> Self {
+        Item { id }
+    }
+
+    pub fn get_id(&self) -> u32 {
+        self.id
+    }
+}
 
 #[derive(Component, Clone, Debug)]
 pub struct Consumable;
 
-#[derive(Component, Clone, Debug, Default)]
-pub struct ItemName(pub String);
-
 #[derive(Component, Clone, Debug)]
-#[require(ItemName, ItemId)]
 pub struct HealthPotion;
 
 #[derive(Component)]

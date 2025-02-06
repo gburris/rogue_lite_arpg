@@ -3,7 +3,7 @@ use bevy::prelude::*;
 /**
  * Goes on the equipment marking where it should be equipped
  */
-#[derive(Component, Clone, PartialEq, Debug)]
+#[derive(Clone)]
 pub enum EquipmentSlot {
     Mainhand,
     Helmet,
@@ -19,7 +19,8 @@ pub struct EquipmentSlots {
 }
 
 impl EquipmentSlots {
-    fn add_equipment(&mut self, slot: EquipmentSlot, new_item: Entity) -> Option<Entity> {
+    /// Equip the new_item in the specified slot
+    pub fn equip(&mut self, new_item: Entity, slot: &EquipmentSlot) -> Option<Entity> {
         let slot_ref = match slot {
             EquipmentSlot::Mainhand => &mut self.mainhand,
             EquipmentSlot::Helmet => &mut self.head,
@@ -32,40 +33,13 @@ impl EquipmentSlots {
         previous
     }
 
-    fn remove_equipment(&mut self, slot: EquipmentSlot) {
+    /// Remove the existing item from the specified slot, if it exists
+    pub fn unequip(&mut self, slot: &EquipmentSlot) {
         let slot_ref = match slot {
             EquipmentSlot::Mainhand => &mut self.mainhand,
             EquipmentSlot::Helmet => &mut self.head,
         };
 
         *slot_ref = None;
-    }
-}
-
-//TODO move this into the actual equipment class as self
-//Public API below, just equip or remove
-pub fn equip_item(
-    equipment_slots: &mut EquipmentSlots,
-    new_item: Entity,
-    slot_query: &Query<&EquipmentSlot>,
-) -> Option<Entity> {
-    // Get the equipment slot from the item
-    if let Ok(slot) = slot_query.get(new_item) {
-        // Add the new item and get back any previous item that was equipped
-        equipment_slots.add_equipment(slot.clone(), new_item)
-    } else {
-        None
-    }
-}
-
-pub fn unequip_item(
-    equipment_slots: &mut EquipmentSlots,
-    new_item: Entity,
-    slot_query: &Query<&EquipmentSlot>,
-) {
-    // Get the equipment slot from the item
-    if let Ok(slot) = slot_query.get(new_item) {
-        // Add the new item and get back any previous item that was equipped
-        equipment_slots.remove_equipment(slot.clone());
     }
 }

@@ -5,6 +5,8 @@ use crate::{
     ui::*,
 };
 
+use super::npc::plugin::NPCPauseScreensPlugin;
+
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;
 
@@ -12,6 +14,9 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         // Game UI systems
         app
+            //Other UI Plugins here
+            .add_plugins(PauseMenuPlugin)
+            .add_plugins(NPCPauseScreensPlugin)
             //Start screen
             .add_systems(
                 OnEnter(AppState::StartScreen),

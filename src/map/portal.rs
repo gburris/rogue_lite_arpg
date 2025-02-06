@@ -14,7 +14,7 @@ use super::events::CleanupZone;
 #[derive(Component)]
 #[require(
     RigidBody(|| RigidBody::Static),
-    Collider(|| Collider::rectangle(100.0, 100.0)),
+    Collider(|| Collider::rectangle(32.0, 64.0)),
     CollidingEntities,
     CollisionLayers(default_collision_layers),
 )]

@@ -20,3 +20,34 @@ impl Default for PlayerStats {
         }
     }
 }
+
+#[derive(Clone, Debug, Copy, PartialEq)]
+pub enum DisplayableStatType {
+    Agility,
+    Strength,
+    Dexterity,
+    Intellect,
+    Luck,
+}
+
+impl DisplayableStatType {
+    pub fn get_description(&self) -> &'static str {
+        match self {
+            DisplayableStatType::Agility => "Movement speed, roll range",
+            DisplayableStatType::Strength => "Melee swing damage",
+            DisplayableStatType::Dexterity => "Critical Strike Chance",
+            DisplayableStatType::Intellect => "Spell damage",
+            DisplayableStatType::Luck => "Drop rate",
+        }
+    }
+
+    pub fn get_value(&self, stats: &PlayerStats) -> u32 {
+        match self {
+            DisplayableStatType::Agility => stats.agility,
+            DisplayableStatType::Strength => stats.strength,
+            DisplayableStatType::Dexterity => stats.dexterity,
+            DisplayableStatType::Intellect => stats.intellect,
+            DisplayableStatType::Luck => stats.luck,
+        }
+    }
+}

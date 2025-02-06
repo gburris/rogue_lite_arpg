@@ -2,41 +2,31 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{
-        damage::components::CollisionDamage, status_effects::components::EffectsList,
-        weapon::weapon::Weapon,
-    },
+    combat::{damage::components::DamageSource, status_effects::components::EffectsList},
     configuration::GameCollisionLayer,
 };
 
-//Big TODO: Move basically everything in this into this component so there is just one component to
 //Repesent a melee weapon
 #[derive(Component, Clone)]
-#[require(Weapon)]
 pub struct MeleeWeapon {
     pub attack_duration: Timer,
     pub damage: f32,
-    pub hitbox: MeleeHitbox,
+    pub hitbox: Collider,
     pub effects_list: EffectsList,
     pub attack_type: MeleeSwingType,
 }
 
-#[derive(Component, Clone)]
-
-pub struct MeleeHitbox {
-    pub length: f32,
-    pub width: f32,
-}
-
-impl Default for MeleeHitbox {
-    fn default() -> Self {
-        MeleeHitbox {
-            length: 40.0,
-            width: 10.0,
-        }
+impl MeleeWeapon {
+    /// Gets collision layers for melee weapon based on source of damage
+    ///
+    /// This is meant to be added when the weapon is equipped.
+    /// We consider melee weapons "Grounded" so they can be used to break chests, etc... on the ground
+    pub fn collision_layers(damage_source: DamageSource) -> CollisionLayers {
+        CollisionLayers::new(GameCollisionLayer::Grounded, LayerMask::from(damage_source))
     }
 }
-#[derive(Component, Debug, Clone)]
+
+#[derive(Debug, Clone)]
 pub enum MeleeSwingType {
     Stab { speed: f32 },
     Slash { radius: f32 },
@@ -53,16 +43,7 @@ impl MeleeSwingType {
 }
 
 #[derive(Component)]
-#[require(
-    CollidingEntities,
-    CollisionDamage,
-    Sensor,
-    CollisionLayers(default_collision_layers)
-)]
+#[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
     pub initial_angle: f32,
-}
-
-fn default_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Enemy])
 }

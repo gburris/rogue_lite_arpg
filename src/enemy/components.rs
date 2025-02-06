@@ -4,21 +4,11 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::{
-    combat::{attributes::health::Health, damage::components::CollisionDamage},
-    movement::components::SimpleMotion,
-};
+use crate::{combat::attributes::health::Health, movement::components::SimpleMotion};
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(
-    Health,
-    SimpleMotion,
-    CollisionDamage,
-    Collider,
-    CollidingEntities,
-    Experience
-)]
+#[require(Health, SimpleMotion, Collider, CollidingEntities, Experience)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it

@@ -3,15 +3,12 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::{
-        damage::components::DamageSource, projectile::components::*,
-        weapon::weapon::ProjectileWeapon,
-    },
+    combat::{damage::components::DamageSource, weapon::weapon::ProjectileWeapon},
     configuration::GameCollisionLayer,
 };
 
 pub fn spawn_projectile(
-    source: DamageSource, //Player, enemy, NPC, Party Member
+    damage_source: DamageSource, //Player, enemy, NPC, Party Member
     commands: &mut Commands,
     caster_transform: &Transform,
     caster_aim_position: Vec2,
@@ -31,13 +28,8 @@ pub fn spawn_projectile(
     let velocity = aim_direction.normalize() * weapon.projectile_speed;
 
     trace!("Spawning projectile w/ velocity: {}", velocity);
-    let collision_target = if source == DamageSource::Enemy {
-        GameCollisionLayer::Player
-    } else {
-        GameCollisionLayer::Enemy
-    };
+
     commands.spawn((
-        Projectile,
         weapon.projectile.clone(),
         transform,
         LinearVelocity(velocity),
@@ -45,7 +37,7 @@ pub fn spawn_projectile(
         AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         CollisionLayers::new(
             GameCollisionLayer::InAir,
-            [collision_target, GameCollisionLayer::HighObstacle],
+            LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
         ),
     ));
 }

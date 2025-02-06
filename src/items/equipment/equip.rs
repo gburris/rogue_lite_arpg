@@ -2,13 +2,14 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use crate::{
-    combat::melee::components::MeleeWeapon,
+    combat::{damage::components::DamageSource, melee::components::MeleeWeapon},
+    enemy::Enemy,
     items::{
-        equipment::{equipment_slots::*, EquipmentSlot, EquipmentSlots},
+        equipment::{EquipmentSlot, EquipmentSlots},
         inventory::inventory::Inventory,
     },
     player::Player,
-    ui::pause_menu::button_interactions::{TryEquipFromUIEvent, TryUnequipFromUIEvent},
+    ui::pause_menu::button_interactions::{AttemptEquipEvent, AttemptUnequipEvent},
 };
 
 #[derive(Component, Clone, Debug)]
@@ -29,59 +30,52 @@ pub struct UnequipSuccessEvent {
     pub item_entity: Entity,
 }
 
-#[derive(Event)]
-pub struct EquipSuccessEvent {
-    pub item_entity: Entity,
-}
-
-pub fn handle_try_equip_event(
-    try_equip_trigger: Trigger<TryEquipFromUIEvent>,
+pub fn attempt_equip_from_inventory(
+    try_equip_trigger: Trigger<AttemptEquipEvent>,
     mut commands: Commands,
-    mut equipment_query: Query<&mut EquipmentSlots, With<Player>>,
-    mut inventory_query: Query<&mut Inventory>,
-    slot_query: Query<&EquipmentSlot>,
+    mut holder_query: Query<(&mut EquipmentSlots, &mut Inventory), With<Player>>,
+    equipment_query: Query<&EquipmentSlot>,
 ) {
-    if let Ok(mut equipment_slots) = equipment_query.get_single_mut() {
-        if let Some(previous_item) = equip_item(
-            &mut equipment_slots,
-            try_equip_trigger.item_entity,
-            &slot_query,
-        ) {
-            if let Ok(mut inventory) = inventory_query.get_single_mut() {
-                let _ = inventory.remove_item(try_equip_trigger.item_entity);
-                let _ = inventory.add_item(previous_item);
+    if let Ok((mut equipment_slots, mut inventory)) =
+        holder_query.get_mut(try_equip_trigger.entity())
+    {
+        if let Ok(slot_to_fill) = equipment_query.get(try_equip_trigger.item_entity) {
+            if let Some(previous_item) =
+                equipment_slots.equip(try_equip_trigger.item_entity, slot_to_fill)
+            {
+                if inventory.add_item(previous_item).is_ok() {
+                    commands.trigger(UnequipSuccessEvent {
+                        item_entity: previous_item,
+                    });
+                } else {
+                    // TODO: handle this scenario, need to prevent equip if inventory is going to be full
+                    error!("Inventory was full! Already equipped new item before previous one was unequiped");
+                }
             }
-            commands.trigger(UnequipSuccessEvent {
-                item_entity: previous_item,
-            });
-        } else {
-            if let Ok(mut inventory) = inventory_query.get_single_mut() {
-                let _ = inventory.remove_item(try_equip_trigger.item_entity);
-            }
+
+            // Regardless of if there was a previous item or not, we need to remove equipped item from inventory
+            inventory.remove_item(try_equip_trigger.item_entity).ok();
         }
     }
 }
 
 pub fn handle_try_unequip_event(
-    try_equip_trigger: Trigger<TryUnequipFromUIEvent>,
+    try_unequip_trigger: Trigger<AttemptUnequipEvent>,
     mut commands: Commands,
-    mut equipment_query: Query<&mut EquipmentSlots>,
-    mut inventory_query: Query<&mut Inventory>,
-    slot_query: Query<&EquipmentSlot>,
+    mut holder_query: Query<(&mut EquipmentSlots, &mut Inventory)>,
+    equipment_query: Query<&EquipmentSlot>,
 ) {
-    if let Ok(mut equipment_slots) = equipment_query.get_single_mut() {
-        if let Ok(mut inventory) = inventory_query.get_single_mut() {
-            let did_add_item = inventory.add_item(try_equip_trigger.item_entity);
-            if did_add_item.is_ok() {
-                unequip_item(
-                    &mut equipment_slots,
-                    try_equip_trigger.item_entity,
-                    &slot_query,
-                );
+    if let Ok((mut equipment_slots, mut inventory)) =
+        holder_query.get_mut(try_unequip_trigger.entity())
+    {
+        if let Ok(slot_to_empty) = equipment_query.get(try_unequip_trigger.item_entity) {
+            if inventory.add_item(try_unequip_trigger.item_entity).is_ok() {
+                equipment_slots.unequip(slot_to_empty);
                 commands.trigger(UnequipSuccessEvent {
-                    item_entity: try_equip_trigger.item_entity,
+                    item_entity: try_unequip_trigger.item_entity,
                 });
             } else {
+                // TODO: add UI to inform player this failed
                 warn!("Inventory was full! Cannot unequip weapon");
             }
         }
@@ -104,7 +98,6 @@ pub fn handle_unequip_success_event(
         if let Ok(mut visibility) = visibility_query.get_mut(unequip_success_trigger.item_entity) {
             *visibility = Visibility::Hidden
         }
-        warn!("removing hitbox");
         commands
             .entity(unequip_success_trigger.item_entity)
             .remove::<Collider>();
@@ -113,22 +106,29 @@ pub fn handle_unequip_success_event(
 
 pub fn on_equipment_slot_equip(
     mut commands: Commands,
-    mut item_query: Query<(Entity, &mut Visibility, Option<&MeleeWeapon>)>,
-    mut holder_query: Query<(Entity, &EquipmentSlots), Changed<EquipmentSlots>>,
+    mut item_query: Query<(Entity, Option<&MeleeWeapon>)>,
+    mut holder_query: Query<(Entity, &EquipmentSlots, Option<&Enemy>), Changed<EquipmentSlots>>,
 ) {
-    for (holder_entity, equipment_slot) in holder_query.iter_mut() {
+    for (holder_entity, equipment_slot, enemy) in holder_query.iter_mut() {
         warn!("equipment slots changed");
         if let Some(mainhand) = equipment_slot.mainhand {
             //The mainhand exists (equip)
-            if let Ok((item_entity, mut visibility, mainhand_item)) = item_query.get_mut(mainhand) {
-                *visibility = Visibility::Visible;
+            if let Ok((item_entity, melee_weapon)) = item_query.get_mut(mainhand) {
+                // Add equipment as child to holder, this will make the entity visible
                 commands.entity(holder_entity).add_child(item_entity);
-                if let Some(melee_weapon) = mainhand_item {
-                    let hitbox = &melee_weapon.hitbox;
-                    warn!("adding hitbox");
-                    commands
-                        .entity(mainhand)
-                        .insert(Collider::rectangle(hitbox.width, hitbox.length));
+
+                if let Some(melee_weapon) = melee_weapon {
+                    let damage_source = if enemy.is_some() {
+                        DamageSource::Enemy
+                    } else {
+                        DamageSource::Player
+                    };
+
+                    // If melee weapon, we need to add collider and new collision layers on equip
+                    commands.entity(mainhand).insert((
+                        melee_weapon.hitbox.clone(),
+                        MeleeWeapon::collision_layers(damage_source),
+                    ));
                 }
             }
         }

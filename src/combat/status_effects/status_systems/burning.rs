@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{
-    combat::{damage::events::AttemptDamageEvent, status_effects::components::BurningStatus},
-    enemy::Enemy,
+use crate::combat::{
+    attributes::Health, damage::events::AttemptDamageEvent,
+    status_effects::components::BurningStatus,
 };
 
 const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
@@ -13,10 +13,11 @@ pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {
     }
 }
 
+// TODO: Modify this to be a "DamagePerSecond" component + system since it isn't specific to burning
 pub fn while_burning(
     status_query: Query<(&BurningStatus, &Parent)>,
     mut commands: Commands,
-    mut parent_query: Query<Entity, With<Enemy>>,
+    mut parent_query: Query<Entity, With<Health>>,
 ) {
     for (burn, parent) in status_query.iter() {
         if let Ok(entity) = parent_query.get_mut(parent.get()) {

@@ -5,28 +5,27 @@ use crate::{
         components::{SlowedStatus, StatusType, StunnedStatus},
         events::ApplyStatus,
     },
-    enemy::Enemy,
     movement::components::SimpleMotion,
 };
 
 pub fn on_stun_applied(
     trigger: Trigger<OnInsert, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut motion_query: Query<&mut SimpleMotion, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
     if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
-        motion.can_move = false;
+        motion.stun();
     }
 }
 
 pub fn on_stun_removed(
     trigger: Trigger<OnRemove, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut motion_query: Query<&mut SimpleMotion, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion>,
     mut commands: Commands,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
@@ -34,7 +33,7 @@ pub fn on_stun_removed(
     };
 
     if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
-        motion.can_move = true;
+        motion.remove_debuff();
     }
 
     commands.trigger_targets(

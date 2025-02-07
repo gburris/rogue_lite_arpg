@@ -114,15 +114,17 @@ pub fn handle_unequip_success_event(
 
 pub fn on_equipment_slot_equip(
     mut commands: Commands,
-    mut item_query: Query<(Entity, Option<&MeleeWeapon>)>,
+    mut item_query: Query<(Entity, &mut Visibility, Option<&MeleeWeapon>)>,
     mut holder_query: Query<(Entity, &EquipmentSlots, Option<&Enemy>), Changed<EquipmentSlots>>,
 ) {
     for (holder_entity, equipment_slot, enemy) in holder_query.iter_mut() {
         warn!("equipment slots changed");
         if let Some(mainhand) = equipment_slot.mainhand {
             //The mainhand exists (equip)
-            if let Ok((item_entity, melee_weapon)) = item_query.get_mut(mainhand) {
+            if let Ok((item_entity, mut visibility, melee_weapon)) = item_query.get_mut(mainhand) {
                 // Add equipment as child to holder, this will make the entity visible
+                //Just kidding, player somehow still requires visibility toggle
+                *visibility = Visibility::Visible;
                 commands.entity(holder_entity).add_child(item_entity);
 
                 if let Some(melee_weapon) = melee_weapon {

@@ -2,22 +2,21 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::{components::AimPosition, attributes::Health},
+    combat::{attributes::Health, components::AimPosition},
     enemy::Enemy,
     movement::components::SimpleMotion,
+    npc::NPC,
     player::{MainHandActivated, Player},
 };
 
 #[derive(Component)]
 pub struct WanderDirection {
-    direction: Vec3,
     timer: Timer,
 }
 
 impl Default for WanderDirection {
     fn default() -> Self {
         Self {
-            direction: Vec3::ZERO,
             timer: Timer::from_seconds(2.0, TimerMode::Repeating),
         }
     }
@@ -43,7 +42,7 @@ pub fn move_enemies_toward_player(
             &mut SimpleMotion,
             Option<&mut WanderDirection>,
         ),
-        With<Enemy>,
+        (With<Enemy>, Without<NPC>),
     >,
     player_transform: Single<&Transform, With<Player>>,
 ) {
@@ -54,42 +53,40 @@ pub fn move_enemies_toward_player(
     for (entity, health, enemy_transform, mut motion, wander) in enemy_query.iter_mut() {
         let distance_to_player = player_pos.distance(enemy_transform.translation);
 
-        let new_direction = if distance_to_player <= CHASE_DISTANCE || health.hp < health.max_hp {
+        if distance_to_player <= CHASE_DISTANCE || health.hp < health.max_hp {
             // Remove wandering component if it exists when in chase mode
             if wander.is_some() {
                 commands.entity(entity).remove::<WanderDirection>();
             }
             commands.trigger_targets(MainHandActivated, entity);
             // Chase behavior
-            (player_pos - enemy_transform.translation).normalize_or_zero()
+            let towards_player_direction = (player_pos - enemy_transform.translation)
+                .normalize_or_zero()
+                .truncate();
+            motion.start_moving(towards_player_direction);
         } else {
             // Wandering behavior
             match wander {
                 Some(mut wander) => {
                     // Update wander timer and change direction if needed
                     if wander.timer.tick(time.delta()).just_finished() {
-                        wander.direction = random_direction();
+                        motion.start_moving(random_direction());
                     }
-                    wander.direction
                 }
                 None => {
                     // Initialize wandering for enemies that don't have it
-                    let direction = random_direction();
+                    motion.start_moving(random_direction());
                     commands.entity(entity).insert(WanderDirection {
-                        direction,
                         timer: Timer::from_seconds(2.0, TimerMode::Repeating),
                     });
-                    direction
                 }
             }
         };
-
-        motion.direction = new_direction.truncate();
     }
 }
 
-fn random_direction() -> Vec3 {
+fn random_direction() -> Vec2 {
     let mut rng = thread_rng();
     let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-    Vec3::new(angle.cos(), angle.sin(), 0.0)
+    Vec2::new(angle.cos(), angle.sin())
 }

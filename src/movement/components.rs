@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use crate::animation::MovementDirection;
+use crate::animation::FacingDirection;
 
 /// Simple motion has no acceleration and assumes all entities move at max speed unless altered by slowed_percentage
 /// by Movement
 #[derive(Component)]
-#[require(MovementDirection)]
+#[require(FacingDirection)]
 pub struct SimpleMotion {
     pub direction: Vec2,
     pub max_speed: f32,
@@ -18,7 +18,7 @@ impl SimpleMotion {
     pub fn new(max_speed: f32) -> Self {
         SimpleMotion {
             max_speed,
-            current_speed: max_speed,
+            current_speed: 0.0,
             direction: Vec2::ZERO,
             slowed_percentage: 0.0,
         }
@@ -40,12 +40,12 @@ impl SimpleMotion {
 
     pub fn start_moving(&mut self, direction: Vec2) {
         self.current_speed = self.max_speed;
-        self.direction = direction
+        self.direction = direction;
     }
 
     pub fn stop_moving(&mut self) {
         self.current_speed = 0.0;
-        self.direction = Vec2::ZERO
+        self.direction = Vec2::ZERO;
     }
 
     pub fn is_stunned(&self) -> bool {

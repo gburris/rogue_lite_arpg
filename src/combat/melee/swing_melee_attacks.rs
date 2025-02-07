@@ -1,6 +1,6 @@
 use crate::{
-    animation::MovementDirection, combat::components::ActionState,
-    items::equipment::equipment_transform::DirectionTransforms,
+    animation::FacingDirection, combat::components::ActionState,
+    items::equipment::equipment_transform::EquipmentTransform,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
@@ -26,9 +26,15 @@ pub fn end_melee_attacks(
     for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
         if melee_weapon.attack_duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
+                //A lot of code here to handle the edge case of
+                //Dying mid melee swing
+                if *action_state != ActionState::Defeated {
+                    *action_state = ActionState::Movement;
+                    *transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
+                } else {
+                    *transform = EquipmentTransform::get_defeated().mainhand;
+                }
                 commands.entity(entity).remove::<ActiveMeleeAttack>();
-                *action_state = ActionState::None;
-                *transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
             }
         }
     }

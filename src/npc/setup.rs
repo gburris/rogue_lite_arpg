@@ -2,7 +2,7 @@ use avian2d::prelude::LockedAxes;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::equipment::EquipmentSlots,
@@ -53,7 +53,7 @@ pub fn spawn_npc(
         TextureAtlas {
             layout: atlases.enemy_atlas_layout.clone(),
             index: animation_config
-                .get_indices(&DefaultAnimations::IdleDown)
+                .get_indices(ActionState::Idle, FacingDirection::Down)
                 .first,
         },
     );
@@ -63,7 +63,7 @@ pub fn spawn_npc(
             SimpleMotion::new(100.0),
             Health::new(1000.0),
             LockedAxes::new().lock_rotation(),
-            ActionState::None,
+            ActionState::Idle,
             npc_type,
             EquipmentSlots {
                 mainhand: Some(mainhand_to_weild),
@@ -71,11 +71,12 @@ pub fn spawn_npc(
             },
             (
                 Transform::from_translation(spawn_position),
-                animation_config.get_indices(&DefaultAnimations::IdleDown),
-                AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
+                animation_config.get_indices(ActionState::Idle, FacingDirection::Down),
+                AnimationTimer(
+                    animation_config.get_timer(ActionState::Idle, FacingDirection::Down),
+                ),
                 sprite,
-                DefaultAnimations::IdleDown,
-                MovementDirection::None,
+                FacingDirection::Down,
             ),
         ))
         .with_child(NPCInteractionRadius)

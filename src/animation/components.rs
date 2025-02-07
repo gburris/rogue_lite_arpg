@@ -1,5 +1,7 @@
 use bevy::{prelude::*, utils::HashMap};
 
+use crate::combat::components::ActionState;
+
 #[derive(Component)]
 pub struct AnimationIndices {
     pub first: usize,
@@ -14,44 +16,7 @@ pub struct DefaultAnimationConfig {
     pub sprite_size: UVec2,
     pub columns: usize,
     pub rows: usize,
-    pub animations: HashMap<DefaultAnimations, AnimationData>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, States, Hash, Component)]
-pub enum DefaultAnimations {
-    IdleDown,
-    IdleUp,
-    IdleRight,
-    IdleLeft,
-    WalkDown,
-    WalkUp,
-    WalkRight,
-    WalkLeft,
-}
-
-impl DefaultAnimations {
-    /** Updates animation direction when movement direction changes */
-    pub fn update_based_on_movement(&mut self, direction: &MovementDirection) {
-        let new_animation = match direction {
-            MovementDirection::Up => DefaultAnimations::WalkUp,
-            MovementDirection::Down => DefaultAnimations::WalkDown,
-            MovementDirection::Left => DefaultAnimations::WalkLeft,
-            MovementDirection::Right => DefaultAnimations::WalkRight,
-            MovementDirection::None => {
-                // If the player is not moving, map the current walking animation to the corresponding idle animation
-                match *self {
-                    DefaultAnimations::WalkUp => DefaultAnimations::IdleUp,
-                    DefaultAnimations::WalkDown => DefaultAnimations::IdleDown,
-                    DefaultAnimations::WalkLeft => DefaultAnimations::IdleLeft,
-                    DefaultAnimations::WalkRight => DefaultAnimations::IdleRight,
-                    _ => *self, // If already idle, keep the current animation
-                }
-            }
-        };
-
-        // Update the animation state
-        *self = new_animation;
-    }
+    pub animations: HashMap<(ActionState, FacingDirection), AnimationData>,
 }
 
 #[derive(Debug, Clone)]
@@ -67,7 +32,7 @@ impl Default for DefaultAnimationConfig {
 
         // Define all animations
         animations.insert(
-            DefaultAnimations::IdleDown,
+            (ActionState::Idle, FacingDirection::Down),
             AnimationData {
                 row: 14,
                 frame_count: 3,
@@ -75,7 +40,7 @@ impl Default for DefaultAnimationConfig {
             },
         );
         animations.insert(
-            DefaultAnimations::IdleUp,
+            (ActionState::Idle, FacingDirection::Up),
             AnimationData {
                 row: 12,
                 frame_count: 3,
@@ -83,7 +48,7 @@ impl Default for DefaultAnimationConfig {
             },
         );
         animations.insert(
-            DefaultAnimations::IdleLeft,
+            (ActionState::Idle, FacingDirection::Left),
             AnimationData {
                 row: 13,
                 frame_count: 3,
@@ -91,7 +56,7 @@ impl Default for DefaultAnimationConfig {
             },
         );
         animations.insert(
-            DefaultAnimations::IdleRight,
+            (ActionState::Idle, FacingDirection::Right),
             AnimationData {
                 row: 15,
                 frame_count: 3,
@@ -100,7 +65,7 @@ impl Default for DefaultAnimationConfig {
         );
 
         animations.insert(
-            DefaultAnimations::WalkDown,
+            (ActionState::Movement, FacingDirection::Down),
             AnimationData {
                 row: 10,
                 frame_count: 9,
@@ -109,7 +74,7 @@ impl Default for DefaultAnimationConfig {
         );
 
         animations.insert(
-            DefaultAnimations::WalkUp,
+            (ActionState::Movement, FacingDirection::Up),
             AnimationData {
                 row: 8,
                 frame_count: 9,
@@ -118,7 +83,7 @@ impl Default for DefaultAnimationConfig {
         );
 
         animations.insert(
-            DefaultAnimations::WalkLeft,
+            (ActionState::Movement, FacingDirection::Left),
             AnimationData {
                 row: 9,
                 frame_count: 9,
@@ -127,9 +92,80 @@ impl Default for DefaultAnimationConfig {
         );
 
         animations.insert(
-            DefaultAnimations::WalkRight,
+            (ActionState::Movement, FacingDirection::Right),
             AnimationData {
                 row: 11,
+                frame_count: 9,
+                frame_duration: 0.1,
+            },
+        );
+        //Literally less code to repeat this 4x than solve it in a proper way
+        //All four FacingDirections map to defeated down row / animation
+        animations.insert(
+            (ActionState::Defeated, FacingDirection::Down),
+            AnimationData {
+                row: 20,
+                frame_count: 5,
+                frame_duration: 0.4,
+            },
+        );
+
+        animations.insert(
+            (ActionState::Defeated, FacingDirection::Left),
+            AnimationData {
+                row: 20,
+                frame_count: 5,
+                frame_duration: 0.4,
+            },
+        );
+        animations.insert(
+            (ActionState::Defeated, FacingDirection::Right),
+            AnimationData {
+                row: 20,
+                frame_count: 5,
+                frame_duration: 0.4,
+            },
+        );
+
+        animations.insert(
+            (ActionState::Defeated, FacingDirection::Up),
+            AnimationData {
+                row: 20,
+                frame_count: 5,
+                frame_duration: 0.4,
+            },
+        );
+
+        animations.insert(
+            (ActionState::Attacking, FacingDirection::Up),
+            AnimationData {
+                row: 16,
+                frame_count: 9,
+                frame_duration: 0.1,
+            },
+        );
+
+        animations.insert(
+            (ActionState::Attacking, FacingDirection::Down),
+            AnimationData {
+                row: 18,
+                frame_count: 9,
+                frame_duration: 0.1,
+            },
+        );
+        animations.insert(
+            (ActionState::Attacking, FacingDirection::Left),
+            AnimationData {
+                row: 17,
+                frame_count: 9,
+                frame_duration: 0.1,
+            },
+        );
+
+        animations.insert(
+            (ActionState::Attacking, FacingDirection::Right),
+            AnimationData {
+                row: 19,
                 frame_count: 9,
                 frame_duration: 0.1,
             },
@@ -147,46 +183,48 @@ impl Default for DefaultAnimationConfig {
 }
 
 impl DefaultAnimationConfig {
-    pub fn get_indices(&self, state: &DefaultAnimations) -> AnimationIndices {
-        let animation_data = self
-            .animations
-            .get(state)
-            .unwrap_or_else(|| panic!("Missing animation data for {:?}", state));
-
-        let first = animation_data.row * self.columns;
-        let last = first + animation_data.frame_count - 1;
-
-        AnimationIndices { first, last }
+    pub fn get_animation(&self, state: ActionState, direction: FacingDirection) -> &AnimationData {
+        self.animations.get(&(state, direction)).unwrap_or_else(|| {
+            panic!(
+                "Missing animation data for {:?} {:?}",
+                state.clone(),
+                direction.clone()
+            )
+        })
     }
 
-    pub fn get_timer(&self, state: &DefaultAnimations) -> Timer {
-        let animation_data = self
-            .animations
-            .get(state)
-            .unwrap_or_else(|| panic!("Missing animation data for {:?}", state));
+    pub fn get_indices(&self, state: ActionState, direction: FacingDirection) -> AnimationIndices {
+        let animation = self.get_animation(state, direction);
+        let first = animation.row * self.columns;
+        AnimationIndices {
+            first,
+            last: first + animation.frame_count - 1,
+        }
+    }
 
-        Timer::from_seconds(animation_data.frame_duration, TimerMode::Repeating)
+    pub fn get_timer(&self, state: ActionState, direction: FacingDirection) -> Timer {
+        let animation = self.get_animation(state, direction);
+        Timer::from_seconds(animation.frame_duration, TimerMode::Repeating)
     }
 }
 
 #[derive(Component, Default, Hash, PartialEq, Eq, Clone, Copy, Debug)]
-pub enum MovementDirection {
+pub enum FacingDirection {
     Up,
+    #[default]
     Down,
     Left,
     Right,
-    #[default]
-    None,
 }
 
-impl MovementDirection {
-    pub fn from_vec2(vec: Vec2) -> Self {
+impl FacingDirection {
+    pub fn from_vec2(&self, vec: Vec2) -> Self {
         match vec.normalize() {
             v if v.y > 0.5 => Self::Up,
             v if v.y < -0.5 => Self::Down,
             v if v.x > 0.5 => Self::Right,
             v if v.x < -0.5 => Self::Left,
-            _ => Self::None,
+            _ => *self,
         }
     }
 }

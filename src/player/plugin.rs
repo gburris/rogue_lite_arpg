@@ -39,7 +39,6 @@ impl Plugin for PlayerPlugin {
                 )
                     .in_set(InGameSet::Simulation),
             )
-            .add_observer(reset_player_position)
             .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)

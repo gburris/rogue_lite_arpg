@@ -9,7 +9,7 @@ impl Plugin for MovementPlugin {
         app.add_systems(
             Update,
             (
-                update_movement_direction_on_motion_change,
+                update_facing_direction_and_action_state_on_motion_change, //Handle idle to walking states here
                 simple_movement_to_velocity,
             )
                 .in_set(InGameSet::Physics),

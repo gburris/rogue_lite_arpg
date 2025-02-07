@@ -1,5 +1,6 @@
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations},
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
+    combat::components::ActionState,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     player::Player,
 };
@@ -18,15 +19,15 @@ pub fn set_starting_player_animation_and_sprite_sheet(
         TextureAtlas {
             layout: atlases.player_atlas_layout.clone(),
             index: animation_config
-                .get_indices(&DefaultAnimations::IdleDown)
+                .get_indices(ActionState::Idle, FacingDirection::Down)
                 .first,
         },
     );
 
     if let Ok(player) = query.get_single_mut() {
         commands.entity(player).insert((
-            animation_config.get_indices(&DefaultAnimations::IdleDown),
-            AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
+            animation_config.get_indices(ActionState::Idle, FacingDirection::Down),
+            AnimationTimer(animation_config.get_timer(ActionState::Idle, FacingDirection::Down)),
             sprite,
         ));
     }

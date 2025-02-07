@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use super::equipment::{
-    equipment_transform::DirectionTransforms,
+    equipment_transform::EquipmentTransform,
     use_equipped::{on_weapon_fired, on_weapon_melee},
     Equippable,
 };
 use crate::{
-    animation::MovementDirection,
+    animation::FacingDirection,
     combat::{
         attributes::mana::ManaCost,
         melee::components::{MeleeSwingType, MeleeWeapon},
@@ -38,7 +38,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             Item::new(3),
             Visibility::Visible,
             Sprite::from_image(sprites.sword.clone()),
-            DirectionTransforms::get(MovementDirection::Down).mainhand,
+            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -64,7 +64,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             Item::new(4),
             Visibility::Visible,
             Sprite::from_image(sprites.axe.clone()),
-            DirectionTransforms::get(MovementDirection::Down).mainhand,
+            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -85,7 +85,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             Item::new(5),
             Visibility::Hidden,
             Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            DirectionTransforms::get(MovementDirection::Down).mainhand,
+            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -113,7 +113,7 @@ pub fn spawn_fire_staff(
         ),
     };
 
-    let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
+    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
 
     commands
         .spawn((
@@ -156,7 +156,7 @@ pub fn spawn_ice_staff(
         ),
     };
 
-    let weapon_transform: Transform = DirectionTransforms::get(MovementDirection::Down).mainhand;
+    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
 
     commands
         .spawn((

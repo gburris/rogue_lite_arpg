@@ -4,7 +4,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{DefaultAnimations, MovementDirection},
+    animation::FacingDirection,
     combat::{
         attributes::{mana::Mana, Health},
         components::{ActionState, AimPosition},
@@ -79,11 +79,7 @@ pub fn spawn_player(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
-            (
-                MovementDirection::None,
-                ActionState::None,
-                DefaultAnimations::IdleDown,
-            ),
+            (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .observe(death::on_player_defeated)

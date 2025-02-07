@@ -118,7 +118,6 @@ pub fn on_equipment_slot_equip(
     mut holder_query: Query<(Entity, &EquipmentSlots, Option<&Enemy>), Changed<EquipmentSlots>>,
 ) {
     for (holder_entity, equipment_slot, enemy) in holder_query.iter_mut() {
-        warn!("equipment slots changed");
         if let Some(mainhand) = equipment_slot.mainhand {
             //The mainhand exists (equip)
             if let Ok((item_entity, mut visibility, melee_weapon)) = item_query.get_mut(mainhand) {

@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, DefaultAnimations, MovementDirection},
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
     combat::{
         attributes::{Health, Mana},
         components::{ActionState, AimPosition},
@@ -57,7 +57,7 @@ fn spawn_enemy(
         TextureAtlas {
             layout: atlases.enemy_atlas_layout.clone(),
             index: animation_config
-                .get_indices(&DefaultAnimations::IdleDown)
+                .get_indices(ActionState::Idle, FacingDirection::Down)
                 .first,
         },
     );
@@ -71,7 +71,7 @@ fn spawn_enemy(
                 RigidBody::Dynamic,
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
-                ActionState::None,
+                ActionState::Idle,
                 EquipmentSlots {
                     mainhand: Some(random_mainhand),
                     head: None,
@@ -88,11 +88,12 @@ fn spawn_enemy(
                 ),
                 (
                     Transform::from_translation(spawn_position),
-                    animation_config.get_indices(&DefaultAnimations::IdleDown),
-                    AnimationTimer(animation_config.get_timer(&DefaultAnimations::IdleDown)),
+                    animation_config.get_indices(ActionState::Idle, FacingDirection::Down),
+                    AnimationTimer(
+                        animation_config.get_timer(ActionState::Idle, FacingDirection::Down),
+                    ),
                     sprite,
-                    DefaultAnimations::IdleDown,
-                    MovementDirection::None,
+                    FacingDirection::Down,
                 ),
             ))
             .observe(on_enemy_defeated)

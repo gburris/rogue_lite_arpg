@@ -19,7 +19,7 @@ impl Plugin for DespawnPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (despawn_expired_entities, despawn_on_zero_health).in_set(InGameSet::DespawnEntities),
+            (despawn_expired_entities).in_set(InGameSet::DespawnEntities),
         )
         .add_observer(despawn_all::<CleanupZone, Portal>)
         .add_observer(despawn_all::<CleanupZone, TilemapId>)

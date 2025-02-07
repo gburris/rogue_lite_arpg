@@ -1,5 +1,5 @@
 use super::equipment_slots::EquipmentSlots;
-use crate::animation::MovementDirection;
+use crate::animation::FacingDirection;
 use crate::combat::components::ActionState;
 use crate::labels::layer::ZLayer;
 use bevy::prelude::*;
@@ -11,22 +11,22 @@ const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
 const HEAD_SCALE: Vec3 = Vec3::new(0.15, 0.15, 1.0);
 
 #[derive(Clone, Copy)]
-pub struct DirectionTransforms {
+pub struct EquipmentTransform {
     pub mainhand: Transform,
     pub head: Transform,
 }
 
 //You wish this wasn't like this but it is
 //See std lib example here https://crates.io/crates/lazy_static
-fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransforms> {
-    static TRANSFORMS: OnceLock<HashMap<MovementDirection, DirectionTransforms>> = OnceLock::new();
+fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransform> {
+    static TRANSFORMS: OnceLock<HashMap<FacingDirection, EquipmentTransform>> = OnceLock::new();
     TRANSFORMS.get_or_init(|| {
         let mut m = HashMap::new();
 
         // Up direction
         m.insert(
-            MovementDirection::Up,
-            DirectionTransforms {
+            FacingDirection::Up,
+            EquipmentTransform {
                 mainhand: Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
@@ -37,8 +37,8 @@ fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransf
 
         // Down direction
         m.insert(
-            MovementDirection::Down,
-            DirectionTransforms {
+            FacingDirection::Down,
+            EquipmentTransform {
                 mainhand: Transform::from_xyz(0.0, 8.0, ZLayer::WeaponBehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
@@ -49,8 +49,8 @@ fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransf
 
         // Left direction
         m.insert(
-            MovementDirection::Left,
-            DirectionTransforms {
+            FacingDirection::Left,
+            EquipmentTransform {
                 mainhand: Transform::from_xyz(-8.0, -15.0, ZLayer::WeaponBehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
@@ -61,8 +61,8 @@ fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransf
 
         // Right direction
         m.insert(
-            MovementDirection::Right,
-            DirectionTransforms {
+            FacingDirection::Right,
+            EquipmentTransform {
                 mainhand: Transform::from_xyz(8.0, -15.0, ZLayer::WeaponAboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
@@ -75,32 +75,42 @@ fn direction_transforms() -> &'static HashMap<MovementDirection, DirectionTransf
     })
 }
 
-impl DirectionTransforms {
-    pub fn get(direction: MovementDirection) -> Self {
-        // We default to down equipment position if entity is not moving
-        let direction = if direction == MovementDirection::None {
-            MovementDirection::Down
-        } else {
-            direction
-        };
+fn defeated_transform() -> &'static EquipmentTransform {
+    static TRANSFORM: OnceLock<EquipmentTransform> = OnceLock::new();
+    TRANSFORM.get_or_init(|| EquipmentTransform {
+        mainhand: Transform::from_xyz(25.0, -55.0, ZLayer::WeaponBehindSprite.z())
+            .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
+            .with_scale(MAINHAND_SCALE),
+        head: Transform::from_xyz(0.0, -5.0, ZLayer::WeaponBehindSprite.z()).with_scale(HEAD_SCALE),
+    })
+}
 
+impl EquipmentTransform {
+    pub fn get(direction: FacingDirection) -> Self {
         direction_transforms().get(&direction).copied().unwrap()
+    }
+    pub fn get_defeated() -> Self {
+        *defeated_transform()
     }
 }
 
 pub fn update_equipment_transforms(
     all_worn_equipment_in_game: Query<
-        (&EquipmentSlots, &ActionState, &MovementDirection),
-        Changed<MovementDirection>,
+        (&EquipmentSlots, &ActionState, &FacingDirection),
+        Or<(Changed<FacingDirection>, Changed<ActionState>)>,
     >,
     mut transforms: Query<&mut Transform>,
 ) {
     for (equipment_slots, action_state, direction) in &all_worn_equipment_in_game {
-        if *direction == MovementDirection::None || *action_state == ActionState::Attacking {
+        if *action_state == ActionState::Attacking {
             return;
         }
 
-        let direction_transforms = DirectionTransforms::get(*direction);
+        let direction_transforms = if *action_state == ActionState::Defeated {
+            EquipmentTransform::get_defeated()
+        } else {
+            EquipmentTransform::get(*direction)
+        };
 
         // Update mainhand equipment
         if let Some(entity) = equipment_slots.mainhand {

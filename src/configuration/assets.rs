@@ -79,7 +79,7 @@ pub struct SpriteAssets {
     pub closed_chest: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
-    #[asset(path = "enemies/alien_zombie_sprite_sheet.png")]
+    #[asset(path = "enemies/basic_enemy_sprite_sheet.png")]
     pub enemy_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/shop_keeper.png")]
     pub shop_keeper_sprite_sheet: Handle<Image>,

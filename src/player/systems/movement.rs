@@ -1,4 +1,3 @@
-use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::{
@@ -6,12 +5,9 @@ use crate::{
     map::WorldSpaceConfig,
     movement::components::SimpleMotion,
     npc::NPC,
-    player::{
-        resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
-    },
+    player::{resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent},
 };
 
-// fires when the player moves
 pub fn player_movement(
     player_motion_query: Single<&mut SimpleMotion, With<Player>>,
     mut event_reader: EventReader<PlayerMovementEvent>,
@@ -22,7 +18,6 @@ pub fn player_movement(
     }
 }
 
-//Fires once the player has stopped moving
 pub fn on_player_stopped(
     _: Trigger<PlayerStoppedEvent>,
     mut player_motion: Single<&mut SimpleMotion, (With<Player>, Without<Enemy>, Without<NPC>)>,
@@ -30,7 +25,6 @@ pub fn on_player_stopped(
     player_motion.stop_moving();
 }
 
-// System to keep player within map bounds
 pub fn enforce_map_bounds(
     mut query: Query<&mut Transform, With<Player>>,
     world_config: Res<WorldSpaceConfig>,
@@ -54,20 +48,5 @@ pub fn enforce_map_bounds(
             world_min_y + playersize.y / 2.0,
             world_max_y - playersize.y / 2.0,
         );
-    }
-}
-
-pub fn reset_player_position(
-    _: Trigger<ResetPlayerPosition>,
-    mut player_query: Query<(&mut Transform, &mut LinearVelocity), With<Player>>,
-) {
-    if let Ok((mut transform, mut linear_velocity)) = player_query.get_single_mut() {
-        // Reset position
-        transform.translation.x = 0.0;
-        transform.translation.y = 0.0;
-
-        // Reset velocity
-        linear_velocity.x = 0.0;
-        linear_velocity.y = 0.0;
     }
 }

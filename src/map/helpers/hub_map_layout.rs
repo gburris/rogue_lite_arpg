@@ -18,7 +18,6 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
         Rect::from_center_size(hub_center, Vec2::new(hub_size.x as f32, hub_size.y as f32));
 
     add_walls(&mut tiles, hub_bounds);
-    //add_moat(&mut tiles, hub_bounds); //Disable for now - The colliders are too wack
     add_wall_entrance(&mut tiles, hub_bounds);
 
     let markers: MapMarkers = generate_hub_markers(hub_bounds);
@@ -44,27 +43,6 @@ fn add_walls(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
 
             if is_wall {
                 map[x as usize][y as usize] = TileType::Wall;
-            }
-        }
-    }
-}
-
-fn add_moat(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
-    let moat_offset = 5; // Minimum moat width
-    let perlin = Perlin::new(1);
-    let scale = 0.1;
-
-    for x in (bounds.min.x as i32 - moat_offset)..(bounds.max.x as i32 + moat_offset) {
-        for y in (bounds.min.y as i32 - moat_offset)..(bounds.max.y as i32 + moat_offset) {
-            let is_moat_base = (x < bounds.min.x as i32 || x >= bounds.max.x as i32)
-                || (y < bounds.min.y as i32 || y >= bounds.max.y as i32);
-
-            if is_moat_base && x >= 0 && y >= 0 && x < map.len() as i32 && y < map[0].len() as i32 {
-                let noise_value = perlin.get([x as f64 * scale, y as f64 * scale]);
-                if noise_value > -0.2 {
-                    // Adjust noise threshold as needed
-                    map[x as usize][y as usize] = TileType::Water;
-                }
             }
         }
     }

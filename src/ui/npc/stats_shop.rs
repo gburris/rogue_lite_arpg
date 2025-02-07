@@ -80,7 +80,7 @@ pub fn spawn_stats_shop_menu(
                         DisplayableStatType::Intellect,
                         DisplayableStatType::Luck,
                     ] {
-                        spawn_stat_row(container, stat_type, stats, game_progress.progress_points);
+                        spawn_stat_row(container, stat_type, stats);
                     }
                 });
 
@@ -102,13 +102,7 @@ pub fn spawn_stats_shop_menu(
         });
 }
 
-fn spawn_stat_row(
-    parent: &mut ChildBuilder,
-    stat_type: DisplayableStatType,
-    stats: &PlayerStats,
-    progress_points: u32, //TODO: Make the buttons visually reflect "Yes you can click this
-                          //Before hovering using this parameter
-) {
+fn spawn_stat_row(parent: &mut ChildBuilder, stat_type: DisplayableStatType, stats: &PlayerStats) {
     parent
         .spawn((Node {
             width: Val::Percent(100.0),

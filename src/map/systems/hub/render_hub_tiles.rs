@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use rand::Rng;
 
 use crate::{
     configuration::assets::SpriteAssets,
@@ -14,10 +15,12 @@ pub fn render_hub_tiles(
     world_config: Res<WorldSpaceConfig>,
     zone_level: Res<CurrentZoneLevel>,
 ) {
+    let mut rng = rand::thread_rng();
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
     let ground_texture_handle: Handle<Image> = sprites.grass_tiles.clone();
     let wood_texture_handle: Handle<Image> = sprites.wood_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
+    let cobblestone_texture_handle: Handle<Image> = sprites.cobblestone_tiles.clone();
     let map_size = world_config.map_size;
     let tile_size = world_config.tile_size;
 
@@ -28,11 +31,13 @@ pub fn render_hub_tiles(
     let mut wood_storage = TileStorage::empty(map_size);
     let mut wall_storage = TileStorage::empty(map_size);
     let mut water_storage = TileStorage::empty(map_size);
+    let mut cobblestone_storage = TileStorage::empty(map_size);
 
     let ground_tilemap_entity = commands.spawn_empty().id();
     let wood_tilemap_entity = commands.spawn_empty().id();
     let wall_tilemap_entity = commands.spawn_empty().id();
     let water_tilemap_entity = commands.spawn_empty().id();
+    let cobblestone_tilemap_entity = commands.spawn_empty().id();
 
     let map_size = world_config.map_size;
     let tile_size = world_config.tile_size;
@@ -43,7 +48,7 @@ pub fn render_hub_tiles(
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
-            let color = zone_level.0 % 6;
+            let random_tile_index = rng.gen_range(0..10);
 
             match map_layout.tiles[x as usize][y as usize] {
                 TileType::Ground => {
@@ -51,7 +56,7 @@ pub fn render_hub_tiles(
                         .spawn(TileBundle {
                             position: tile_pos,
                             tilemap_id: TilemapId(ground_tilemap_entity),
-                            texture_index: TileTextureIndex(color),
+                            texture_index: TileTextureIndex(random_tile_index),
                             ..Default::default()
                         })
                         .id();
@@ -62,7 +67,7 @@ pub fn render_hub_tiles(
                         .spawn(TileBundle {
                             position: tile_pos,
                             tilemap_id: TilemapId(wall_tilemap_entity),
-                            texture_index: TileTextureIndex(0),
+                            texture_index: TileTextureIndex(random_tile_index),
                             ..Default::default()
                         })
                         .id();
@@ -73,7 +78,7 @@ pub fn render_hub_tiles(
                         .spawn(TileBundle {
                             position: tile_pos,
                             tilemap_id: TilemapId(water_tilemap_entity),
-                            texture_index: TileTextureIndex(0),
+                            texture_index: TileTextureIndex(random_tile_index),
                             ..Default::default()
                         })
                         .id();
@@ -84,11 +89,22 @@ pub fn render_hub_tiles(
                         .spawn(TileBundle {
                             position: tile_pos,
                             tilemap_id: TilemapId(wood_tilemap_entity),
-                            texture_index: TileTextureIndex(color),
+                            texture_index: TileTextureIndex(random_tile_index),
                             ..Default::default()
                         })
                         .id();
                     wood_storage.set(&tile_pos, wood_entity);
+                }
+                TileType::Cobblestone => {
+                    let cobblestone_entity = commands
+                        .spawn(TileBundle {
+                            position: tile_pos,
+                            tilemap_id: TilemapId(cobblestone_tilemap_entity),
+                            texture_index: TileTextureIndex(random_tile_index),
+                            ..Default::default()
+                        })
+                        .id();
+                    cobblestone_storage.set(&tile_pos, cobblestone_entity);
                 }
             }
         }
@@ -162,4 +178,21 @@ pub fn render_hub_tiles(
         ),
         ..Default::default()
     });
+    commands
+        .entity(cobblestone_tilemap_entity)
+        .insert(TilemapBundle {
+            grid_size,
+            size: map_size,
+            storage: cobblestone_storage,
+            map_type,
+            texture: TilemapTexture::Single(cobblestone_texture_handle),
+            tile_size,
+            transform: get_tilemap_center_transform(
+                &map_size,
+                &grid_size,
+                &map_type,
+                ZLayer::Ground.z(),
+            ),
+            ..Default::default()
+        });
 }

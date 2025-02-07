@@ -2,9 +2,10 @@ use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::{
-    animation::MovementDirection,
+    enemy::Enemy,
     map::WorldSpaceConfig,
     movement::components::SimpleMotion,
+    npc::NPC,
     player::{
         resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent, ResetPlayerPosition,
     },
@@ -17,16 +18,16 @@ pub fn player_movement(
 ) {
     let mut motion = player_motion_query.into_inner();
     for event in event_reader.read() {
-        motion.direction = event.direction;
+        motion.start_moving(event.direction);
     }
 }
 
 //Fires once the player has stopped moving
 pub fn on_player_stopped(
     _: Trigger<PlayerStoppedEvent>,
-    movement_direction: Single<&mut MovementDirection, With<Player>>,
+    mut player_motion: Single<&mut SimpleMotion, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
-    *movement_direction.into_inner() = MovementDirection::None;
+    player_motion.stop_moving();
 }
 
 // System to keep player within map bounds

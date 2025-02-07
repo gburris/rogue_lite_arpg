@@ -17,6 +17,8 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
     let hub_bounds =
         Rect::from_center_size(hub_center, Vec2::new(hub_size.x as f32, hub_size.y as f32));
 
+    add_cobblestone(&mut tiles, &hub_bounds);
+
     add_walls(&mut tiles, hub_bounds);
     add_wall_entrance(&mut tiles, hub_bounds);
 
@@ -31,6 +33,15 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
 
 fn create_grass_map(map_size: TilemapSize) -> Vec<Vec<TileType>> {
     vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize]
+}
+
+fn add_cobblestone(map: &mut Vec<Vec<TileType>>, bounds: &Rect) {
+    // Iterate over the integer coordinates within the bounds.
+    for x in bounds.min.x as i32..bounds.max.x as i32 {
+        for y in bounds.min.y as i32..bounds.max.y as i32 {
+            map[x as usize][y as usize] = TileType::Cobblestone;
+        }
+    }
 }
 
 fn add_walls(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
@@ -77,7 +88,7 @@ fn generate_hub_markers(bounds: Rect) -> MapMarkers {
     let player_spawn = Vec2::new(center_of_hub.x, bounds.min.y as f32 + 5.0);
     single_markers.insert(MarkerType::PlayerSpawn, player_spawn);
 
-    let level_exit_spawn = Vec2::new(center_of_hub.x, bounds.min.y as f32 + 22.0);
+    let level_exit_spawn = Vec2::new(center_of_hub.x, bounds.min.y as f32 + 23.0);
 
     single_markers.insert(MarkerType::LevelExit, level_exit_spawn);
     let npc_positiions = vec![

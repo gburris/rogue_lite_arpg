@@ -71,6 +71,8 @@ pub struct SpriteAssets {
     pub wall_tiles: Handle<Image>,
     #[asset(path = "tilesets/wood_tiles.png")]
     pub wood_tiles: Handle<Image>,
+    #[asset(path = "tilesets/cobblestone_tiles.png")]
+    pub cobblestone_tiles: Handle<Image>,
     #[asset(path = "door.png")]
     pub run_start_portal: Handle<Image>,
     #[asset(path = "open_chest.png")]

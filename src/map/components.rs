@@ -19,6 +19,7 @@ pub enum TileType {
     Ground,
     Wall,
     Water,
+    Cobblestone,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

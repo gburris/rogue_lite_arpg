@@ -62,7 +62,9 @@ pub fn attempt_equip_from_inventory(
             }
 
             // Regardless of if there was a previous item or not, we need to remove equipped item from inventory
-            inventory.remove_item(try_equip_trigger.item_entity).ok();
+            inventory
+                .remove_item_by_value(try_equip_trigger.item_entity)
+                .expect("Failed to remove newly equipped item from inventory");
         }
     }
 }
@@ -84,7 +86,7 @@ pub fn handle_try_unequip_event(
                 });
             } else {
                 // TODO: add UI to inform player this failed
-                warn!("Inventory was full! Cannot unequip weapon");
+                error!("Inventory was full! Cannot unequip weapon");
             }
         }
     }

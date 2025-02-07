@@ -1,44 +1,43 @@
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::collections::VecDeque;
 
 #[derive(Component, Default, Debug)]
 pub struct Inventory {
     pub max_capacity: usize,
-    pub items: HashMap<u8, Entity>,
+    pub items: VecDeque<Entity>,
 }
 
 impl Inventory {
     pub fn add_item(&mut self, item: Entity) -> Result<(), String> {
         if self.items.len() < self.max_capacity {
-            // Find the first available slot
-            let slot = (0..self.max_capacity as u8)
-                .find(|i| !self.items.contains_key(i))
-                .ok_or_else(|| "No available slots".to_string())?;
-
-            self.items.insert(slot, item);
+            self.items.push_back(item);
             Ok(())
         } else {
             Err("Inventory is full".to_string())
         }
     }
 
-    pub fn remove_item(&mut self, item: Entity) -> Result<(), String> {
-        if let Some(slot) = self
-            .items
-            .iter()
-            .find_map(|(&k, &v)| if v == item { Some(k) } else { None })
-        {
-            self.items.remove(&slot);
-            Ok(())
+    pub fn remove_item_by_value(&mut self, item: Entity) -> Result<Entity, String> {
+        // Search for item by comparing values (entities) and then remove by index
+        if let Some(item_index) = self.items.iter().position(|&e| e == item) {
+            self.items
+                .remove(item_index)
+                .ok_or("Index was out of bounds".to_string())
         } else {
             Err("Item not found in inventory".to_string())
         }
     }
 
+    pub fn remove_item(&mut self, index: usize) -> Result<Entity, String> {
+        self.items
+            .remove(index)
+            .ok_or("Index was out of bounds".to_string())
+    }
+
     pub fn default_inventory() -> Self {
         Inventory {
             max_capacity: 10,
-            items: HashMap::new(),
+            items: VecDeque::new(),
         }
     }
 }

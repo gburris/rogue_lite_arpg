@@ -28,3 +28,10 @@ pub fn despawn_all<T: Event, C: Component>(
         commands.entity(e).despawn_recursive();
     }
 }
+
+/**
+ * Despawn singleton entity with the specific component
+ */
+pub fn despawn_single<C: Component>(mut commands: Commands, entity: Single<Entity, With<C>>) {
+    commands.entity(*entity).despawn_recursive();
+}

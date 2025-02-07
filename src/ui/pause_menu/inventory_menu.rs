@@ -1,157 +1,162 @@
-use crate::items::{inventory::inventory::Inventory, Item};
+use crate::{
+    enemy::Enemy,
+    items::{equipment::EquipmentSlots, inventory::*, Item},
+    npc::NPC,
+    player::Player,
+    ui::pause_menu::{
+        button_interactions::*,
+        equipment_menu::{spawn_equipment_slot, EquipmentMenu},
+    },
+};
 use bevy::prelude::*;
-
-use super::button_interactions::InventoryUpdatedEvent;
 
 #[derive(Component)]
 pub struct InventoryMenu;
 
 #[derive(Component)]
-pub struct InventoryMenuButton;
+pub struct InventorySlot {
+    pub item: Option<Entity>,
+    pub index: usize,
+}
 
 #[derive(Component)]
-pub struct InventoryDisplay;
+pub struct InventoryCapacityText;
+
+#[derive(Component)]
+pub struct ItemText;
 
 pub fn spawn_inventory_menu(
     mut commands: Commands,
-    item_query: Query<&Name, With<Item>>,
-    player_inventory: Query<&Inventory>,
+    player: Single<(&Inventory, &EquipmentSlots), (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
-    debug!("spawn_inventory_menu called");
+    let (inventory, equipment_slots) = player.into_inner();
 
-    if let Ok(inventory) = player_inventory.get_single() {
-        commands
-            .spawn((
-                InventoryMenu,
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
+    debug!("spawn_inventory_menu called");
+    commands
+        .spawn((
+            InventoryMenu,
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(40.0), // space between inventory and equipment lists
+                padding: UiRect::all(Val::Px(20.0)),
+                ..default()
+            },
+            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
+            GlobalZIndex(1),
+        ))
+        .with_children(|parent| {
+            parent
+                .spawn(Node {
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
                     ..default()
-                },
-                BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-                Visibility::Visible,
-                GlobalZIndex(1),
-            ))
-            .with_children(|parent| {
-                // Title
-                parent.spawn((
-                    Text::new("Inventory"),
-                    TextFont {
-                        font_size: 70.0,
-                        ..default()
-                    },
-                    Node {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
-                ));
-
-                // Inventory capacity display
-                parent.spawn((
-                    Text::new(format!(
-                        "Capacity: {}/{}",
-                        inventory.items.len(),
-                        inventory.max_capacity
-                    )),
-                    TextFont {
-                        font_size: 24.0,
-                        ..default()
-                    },
-                    Node {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
-                ));
-
-                // Inventory items container with scrolling
-                parent
-                    .spawn((
-                        InventoryDisplay,
-                        Node {
-                            width: Val::Px(600.0),
-                            height: Val::Percent(80.0),
-                            flex_direction: FlexDirection::Column,
-                            padding: UiRect::all(Val::Px(20.0)),
-                            overflow: Overflow::scroll_y(),
+                })
+                .with_children(|parent| {
+                    // Title
+                    parent.spawn((
+                        Text::new("Inventory"),
+                        TextFont {
+                            font_size: 70.0,
                             ..default()
                         },
-                        BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
-                    ))
-                    .with_children(|slot_parent| {
-                        // Display all inventory items
-                        for item_entity in inventory.items.values() {
-                            let item_name = item_query.get(*item_entity).unwrap();
-                            spawn_inventory_item(slot_parent, item_name.to_string(), *item_entity);
-                        }
+                        Node {
+                            margin: UiRect::bottom(Val::Px(20.0)),
+                            ..default()
+                        },
+                    ));
 
-                        // Display empty slots
-                        let empty_slots = inventory.max_capacity - inventory.items.len();
-                        for _ in 0..empty_slots {
-                            spawn_empty_slot(slot_parent);
-                        }
-                    });
-            });
-    }
-}
+                    // Inventory capacity display
+                    parent.spawn((
+                        InventoryCapacityText,
+                        Text::new("Inventory Capacity"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                        Node {
+                            margin: UiRect::bottom(Val::Px(20.0)),
+                            ..default()
+                        },
+                    ));
 
-// Add these new components
-#[derive(Component)]
-pub struct InventoryItemButton {
-    pub item_entity: Option<Entity>, // None for empty slots
-}
+                    // Inventory items container with scrolling
+                    parent
+                        .spawn((
+                            Node {
+                                width: Val::Px(600.0),
+                                height: Val::Percent(80.0),
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect::all(Val::Px(20.0)),
+                                overflow: Overflow::scroll_y(),
+                                ..default()
+                            },
+                            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                        ))
+                        .with_children(|slot_parent| {
+                            for index in 0..inventory.max_capacity {
+                                spawn_empty_slot(slot_parent, index);
+                            }
+                        });
+                });
 
-// Add these new components
-#[derive(Component)]
-pub struct InventoryItemNameText;
-
-// Modified spawn_inventory_item function
-fn spawn_inventory_item(builder: &mut ChildBuilder, item_name: String, item_entity: Entity) {
-    builder
-        .spawn((
-            InventoryItemButton {
-                item_entity: Some(item_entity),
-            },
-            Button,
-            Interaction::default(),
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Px(60.0),
-                padding: UiRect::all(Val::Px(10.0)),
-                margin: UiRect::bottom(Val::Px(5.0)),
-                justify_content: JustifyContent::SpaceBetween,
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-            // Add border
-            BorderColor::from(Color::NONE),
-            //Border::all(Val::Px(2.0)),
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text::new(item_name),
-                TextColor::default(),
-                InventoryItemNameText,
-                TextFont {
-                    font_size: 24.0,
+            parent
+                .spawn(Node {
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
                     ..default()
-                },
-                Node::default(),
-            ));
+                })
+                .with_children(|parent| {
+                    // Title
+                    parent.spawn((
+                        Text::new("Equipment"),
+                        TextFont {
+                            font_size: 70.0,
+                            ..default()
+                        },
+                        Node {
+                            margin: UiRect::bottom(Val::Px(20.0)),
+                            ..default()
+                        },
+                    ));
+
+                    // Equipment slots container with scrolling
+                    parent
+                        .spawn((
+                            Node {
+                                width: Val::Px(600.0),
+                                height: Val::Percent(80.0), // Limit height to percentage of screen
+                                flex_direction: FlexDirection::Column,
+                                padding: UiRect::all(Val::Px(20.0)),
+                                overflow: Overflow::scroll_y(), // Enable vertical scrolling
+                                ..default()
+                            },
+                            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                        ))
+                        .with_children(|slot_parent| {
+                            spawn_equipment_slot(slot_parent, "Dumb", equipment_slots.mainhand);
+                            spawn_equipment_slot(
+                                slot_parent,
+                                "Head",
+                                "Dumb 2",
+                                equipment_slots.head,
+                            );
+                        });
+                });
         });
+    // We spawned base inventory UI, now lets update it with items
+    commands.trigger(UpdateInventoryUIEvent);
 }
 
-// Modified spawn_empty_slot function
-fn spawn_empty_slot(builder: &mut ChildBuilder) {
+fn spawn_empty_slot(builder: &mut ChildBuilder, index: usize) {
     builder
         .spawn((
-            InventoryItemButton { item_entity: None },
-            Button,
-            Interaction::default(),
+            InventorySlot { index, item: None },
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(60.0),
@@ -159,13 +164,16 @@ fn spawn_empty_slot(builder: &mut ChildBuilder) {
                 margin: UiRect::bottom(Val::Px(5.0)),
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
-                border: UiRect::all(Val::Px(2.0)),
                 ..default()
             },
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         ))
+        .observe(on_item_clicked)
+        .observe(on_item_hover)
+        .observe(on_item_done_hovering)
         .with_children(|parent| {
             parent.spawn((
+                ItemText,
                 Text::new("Empty Slot"),
                 TextFont {
                     font_size: 20.0,
@@ -179,28 +187,33 @@ fn spawn_empty_slot(builder: &mut ChildBuilder) {
         });
 }
 
-pub fn despawn_inventory_menu(
-    mut commands: Commands,
-    inventory_menu_query: Query<Entity, With<InventoryMenu>>,
-) {
-    debug!("despawn_inventory_menu called");
-    for entity in inventory_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
-
 //Called after dispatching a click event
 pub fn handle_inventory_update(
-    _: Trigger<InventoryUpdatedEvent>,
-    mut commands: Commands,
-    inventory_menu_query: Query<Entity, With<InventoryMenu>>,
+    _: Trigger<UpdateInventoryUIEvent>,
+    mut capacity_text: Single<&mut Text, (With<InventoryCapacityText>, Without<ItemText>)>,
+    mut item_text_query: Query<(&mut Text, &Parent), With<ItemText>>,
+    mut inventory_slot_query: Query<&mut InventorySlot>,
     item_query: Query<&Name, With<Item>>,
-    player_inventory: Query<&Inventory>,
+    player_inventory: Single<&Inventory, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
-    // Despawn the existing inventory menu
-    for entity in inventory_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
+    capacity_text.0 = format!(
+        "Capacity: {}/{}",
+        player_inventory.items.len(),
+        player_inventory.max_capacity
+    );
+
+    // Iterate through all ItemText components and fetch the parent InventorySlot component
+    for (mut item_text, item_slot) in item_text_query.iter_mut() {
+        if let Ok(mut item_slot) = inventory_slot_query.get_mut(item_slot.get()) {
+            // If there is an item in the player inventory at this index, set item text and item slot
+            if let Some(&item_entity) = player_inventory.items.get(item_slot.index) {
+                item_slot.item = Some(item_entity);
+                item_text.0 = item_query.get(item_entity).unwrap().to_string();
+            } else {
+                // Otherwise there is no item, set default stuff
+                item_text.0 = "Empty Slot".to_string();
+                item_slot.item = None;
+            }
+        }
     }
-    // Respawn the inventory menu
-    spawn_inventory_menu(commands, item_query, player_inventory);
 }

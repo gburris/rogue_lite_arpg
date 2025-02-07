@@ -1,8 +1,15 @@
-use crate::{
-    items::{equipment::EquipmentSlots, Item},
-    player::Player,
-};
 use bevy::prelude::*;
+
+use crate::{
+    enemy::Enemy,
+    items::{
+        equipment::{EquipmentSlot, EquipmentSlots},
+        Item,
+    },
+    npc::NPC,
+    player::Player,
+    ui::pause_menu::button_interactions::*,
+};
 
 #[derive(Component)]
 pub struct EquipmentMenu;
@@ -14,71 +21,23 @@ pub struct EquipmentItemText;
 pub struct EquipmentButton {
     pub item_entity: Option<Entity>,
 }
-pub fn spawn_equipment_menu(
-    mut commands: Commands,
-    item_query: Query<&Name, With<Item>>,
-    player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
-) {
-    debug!("spawn_equipment_menu called");
-    let equipment = player_equipment_slots.into_inner();
-    commands
-        .spawn((
-            EquipmentMenu,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(20.0)), // Add padding to prevent edge touching
-                ..default()
-            },
-            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-            Visibility::Visible,
-            GlobalZIndex(1),
-        ))
-        .with_children(|parent| {
-            // Title
-            parent.spawn((
-                Text::new("Equipment"),
-                TextFont {
-                    font_size: 70.0,
-                    ..default()
-                },
-                Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
-                    ..default()
-                },
-            ));
+#[derive(Event)]
+pub struct UpdateEquipmentUIEvent;
 
-            // Equipment slots container with scrolling
-            parent
-                .spawn((
-                    Node {
-                        width: Val::Px(600.0),
-                        height: Val::Percent(80.0), // Limit height to percentage of screen
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(20.0)),
-                        overflow: Overflow::scroll_y(), // Enable vertical scrolling
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
-                ))
-                .with_children(|slot_parent| {
-                    spawn_equipment_slot(&item_query, slot_parent, "Mainhand", &equipment.mainhand);
-                    spawn_equipment_slot(&item_query, slot_parent, "Helmet", &equipment.head);
-                });
-        });
-}
-
-fn spawn_equipment_slot(
-    item_query: &Query<&Name, With<Item>>,
+pub fn spawn_equipment_slot(
     builder: &mut ChildBuilder,
-    slot_name: &str,
-    slot_entity: &Option<Entity>,
+    slot_type: EquipmentSlot,
+    item_name: &str,
+    item_entity: Option<Entity>,
 ) {
+    let slot_name = match slot_type {
+        EquipmentSlot::Mainhand => "Mainhand",
+        EquipmentSlot::Helmet => "Helmet",
+    };
+
     builder
         .spawn((
+            EquipmentButton { item_entity },
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(60.0),
@@ -88,18 +47,14 @@ fn spawn_equipment_slot(
                 align_items: AlignItems::Center,
                 ..default()
             },
-            EquipmentButton {
-                item_entity: *slot_entity,
-            },
-            Interaction::default(),
-            Button,
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         ))
+        .observe(on_item_clicked)
+        .observe(on_item_hover)
         .with_children(|parent| {
             // Slot name
             parent.spawn((
                 Text::new(slot_name),
-                EquipmentItemText,
                 TextColor::default(), // Add this line
                 TextFont {
                     font_size: 24.0,
@@ -107,31 +62,21 @@ fn spawn_equipment_slot(
                 },
                 Node::default(),
             ));
-            if let Some(slot_entity) = slot_entity {
-                // Get equipment name here.
-                // Can do this by passing in item query, and finding that item in the slot
-                // resolve text from slot entity
-                // Display all inventory items
-                if let Ok(item_name) = item_query.get(*slot_entity) {
-                    parent.spawn((
-                        Text::new(item_name.clone()),
-                        TextColor::default(), // Add this line
-                        EquipmentItemText,
-                        EquipmentButton {
-                            item_entity: Some(*slot_entity),
-                        },
-                        Interaction::default(),
-                        Button,
-                        TextFont {
-                            font_size: 20.0,
-                            ..default()
-                        },
-                        Node {
-                            margin: UiRect::left(Val::Px(10.0)),
-                            ..default()
-                        },
-                    ));
-                }
+            if let Some(_) = item_entity {
+                parent.spawn((
+                    EquipmentItemText,
+                    Text::new(item_name),
+                    TextColor::default(), // Add this line
+                    Button,
+                    TextFont {
+                        font_size: 20.0,
+                        ..default()
+                    },
+                    Node {
+                        margin: UiRect::left(Val::Px(10.0)),
+                        ..default()
+                    },
+                ));
             } else {
                 parent.spawn((
                     Text::new("Empty"),
@@ -148,30 +93,44 @@ fn spawn_equipment_slot(
         });
 }
 
-pub fn despawn_equipment_menu(
-    mut commands: Commands,
-    equipment_menu_query: Query<Entity, With<EquipmentMenu>>,
-) {
-    debug!("despawn_equipment_menu called");
-    for entity in equipment_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
-
-#[derive(Event)]
-pub struct EquipmentUIUpdatedEvent;
-
+//Called after dispatching a click event
 pub fn handle_equipment_update(
-    _: Trigger<EquipmentUIUpdatedEvent>,
-    mut commands: Commands,
-    eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
+    _: Trigger<UpdateEquipmentUIEvent>,
+    mut item_text_query: Query<(&mut Text, &Parent), With<EquipmentItemText>>,
     item_query: Query<&Name, With<Item>>,
-    player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
+    equpment_slots: Single<&EquipmentSlots, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
-    // Despawn the existing inventory menu
-    for entity in eqipment_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
+    if let Some(mainhand) = equpment_slots.mainhand {
+        let name = item_query.get(mainhand).unwrap();
     }
-    // Respawn the equipment menu
-    spawn_equipment_menu(commands, item_query, player_equipment_slots);
+
+    // Iterate through all ItemText components and fetch the parent InventorySlot component
+    for (mut item_text, item_slot) in item_text_query.iter_mut() {
+        if let Ok(mut item_slot) = inventory_slot_query.get_mut(item_slot.get()) {
+            // If there is an item in the player inventory at this index, set item text and item slot
+            if let Some(&item_entity) = player_inventory.items.get(item_slot.index) {
+                item_slot.item = Some(item_entity);
+                item_text.0 = item_query.get(item_entity).unwrap().to_string();
+            } else {
+                // Otherwise there is no item, set default stuff
+                item_text.0 = "Empty Slot".to_string();
+                item_slot.item = None;
+            }
+        }
+    }
 }
+
+// pub fn handle_equipment_update(
+//     _: Trigger<EquipmentUIUpdatedEvent>,
+//     mut commands: Commands,
+//     eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
+//     item_query: Query<&Name, With<Item>>,
+//     player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
+// ) {
+//     // Despawn the existing inventory menu
+//     for entity in eqipment_menu_query.iter() {
+//         commands.entity(entity).despawn_recursive();
+//     }
+//     // Respawn the equipment menu
+//     spawn_equipment_menu(commands, item_query, player_equipment_slots);
+// }

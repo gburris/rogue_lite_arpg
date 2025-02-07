@@ -6,11 +6,19 @@ use crate::{
     combat::projectile::components::Projectile,
     despawn::systems::*,
     enemy::Enemy,
-    labels::sets::InGameSet,
+    labels::{
+        sets::InGameSet,
+        states::{AppState, PausedState},
+    },
     map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,
-    ui::{game_over_screen::RestartEvent, player_overlay::GameOverlay},
+    ui::{
+        game_over_screen::RestartEvent,
+        npc::stats_shop::StatsMenu,
+        pause_menu::{inventory_menu::InventoryMenu, main_menu::MainMenu, pause::PauseBackground},
+        player_overlay::GameOverlay,
+    },
 };
 
 pub struct DespawnPlugin;
@@ -21,6 +29,13 @@ impl Plugin for DespawnPlugin {
             Update,
             (despawn_expired_entities).in_set(InGameSet::DespawnEntities),
         )
+        .add_systems(OnExit(AppState::Paused), despawn_single::<PauseBackground>)
+        .add_systems(
+            OnExit(PausedState::Inventory),
+            despawn_single::<InventoryMenu>,
+        )
+        .add_systems(OnExit(PausedState::Stats), despawn_single::<StatsMenu>)
+        .add_systems(OnExit(PausedState::MainMenu), despawn_single::<MainMenu>)
         .add_observer(despawn_all::<CleanupZone, Portal>)
         .add_observer(despawn_all::<CleanupZone, TilemapId>)
         .add_observer(despawn_all::<CleanupZone, Wall>)

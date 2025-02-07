@@ -7,15 +7,10 @@ use crate::{
 };
 
 use super::{
-    equipment_menu::{EquipmentButton, EquipmentItemText, EquipmentUIUpdatedEvent},
-    inventory_menu::{InventoryItemButton, InventoryItemNameText},
+    equipment_menu::{EquipmentButton, EquipmentItemText, UpdateEquipmentUIEvent},
+    inventory_menu::{InventorySlot, ItemText},
     main_menu::MenuButton,
 };
-
-#[derive(Event)]
-pub struct InventoryItemClicked {
-    pub item_entity: Option<Entity>,
-}
 
 #[derive(Event)]
 pub struct EquipmentItemClicked {
@@ -32,107 +27,97 @@ pub struct AttemptUnequipEvent {
 }
 
 #[derive(Event)]
-pub struct InventoryUpdatedEvent;
+pub struct UpdateInventoryUIEvent;
 
 #[derive(Event)]
 pub struct ConsumeEvent {
     pub item_entity: Entity,
 }
 
-pub fn handle_equipment_interactions(
-    mut interaction_query: Query<(&Interaction, &EquipmentButton, Entity)>,
-    mut menu_item_text: Query<(&mut TextColor, &Parent), With<EquipmentItemText>>,
+pub fn on_equipped_clicked(
+    trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
-) {
-    for (interaction, button, entity) in interaction_query.iter_mut() {
-        // Find the text color component for this button's text
-        let text_color = menu_item_text
-            .iter_mut()
-            .find(|(_, parent)| parent.get() == entity);
-
-        match *interaction {
-            Interaction::Hovered => {
-                if let Some((mut color, _)) = text_color {
-                    *color = TextColor::from(Color::srgb(0.0, 1.0, 1.0));
-                    debug!("Updated text color to bright cyan for entity: {:?}", entity);
-                }
-            }
-            Interaction::Pressed => {
-                commands.trigger(EquipmentItemClicked {
-                    item_entity: button.item_entity,
-                });
-            }
-            Interaction::None => {
-                if let Some((mut color, _)) = text_color {
-                    *color = TextColor::default();
-                }
-            }
-        }
-    }
-}
-
-pub fn handle_equipment_click(
-    trigger: Trigger<EquipmentItemClicked>,
-    mut commands: Commands,
+    slot_query: Query<&EquipmentButton>,
     player: Single<Entity, With<Player>>,
 ) {
-    if let Some(item_entity) = trigger.item_entity {
-        commands.trigger_targets(AttemptUnequipEvent { item_entity }, *player);
-        //Redraw equipment
-        commands.trigger(EquipmentUIUpdatedEvent);
+    let slot = slot_query.get(trigger.entity());
+
+    if let Ok(EquipmentButton {
+        item_entity: Some(item_entity),
+    }) = slot
+    {
+        commands.trigger_targets(
+            AttemptUnequipEvent {
+                item_entity: *item_entity,
+            },
+            *player,
+        );
+        //Redraw item lists
+        commands.trigger(UpdateEquipmentUIEvent);
+        commands.trigger(UpdateInventoryUIEvent);
     }
 }
 
-pub fn handle_inventory_interactions(
-    mut interaction_query: Query<(&Interaction, &InventoryItemButton, Entity)>,
-    mut menu_item_text: Query<(&mut TextColor, &Parent), With<InventoryItemNameText>>,
-    mut commands: Commands,
+pub fn on_item_done_hovering(
+    trigger: Trigger<Pointer<Out>>,
+    mut menu_item_text: Query<(&mut TextColor, &Parent), With<ItemText>>,
 ) {
-    for (interaction, button, entity) in interaction_query.iter_mut() {
-        // Find the text color component for this button's text
-        let text_color = menu_item_text
-            .iter_mut()
-            .find(|(_, parent)| parent.get() == entity);
-
-        match *interaction {
-            Interaction::Hovered => {
-                if let Some((mut color, _)) = text_color {
-                    // Change text color to a brighter shade when hovering
-                    *color = TextColor::from(Color::srgb(0.0, 1.0, 1.0));
-                }
-            }
-            Interaction::Pressed => {
-                commands.trigger(InventoryItemClicked {
-                    item_entity: button.item_entity,
-                });
-            }
-            Interaction::None => {
-                if let Some((mut color, _)) = text_color {
-                    // Change text color to a brighter shade when hovering
-                    *color = TextColor::default();
-                }
-            }
-        }
+    // Find the text color component for this button's text
+    if let Some((mut text_color, _)) = menu_item_text
+        .iter_mut()
+        .find(|(_, parent)| parent.get() == trigger.entity())
+    {
+        *text_color = TextColor::default();
     }
 }
 
-pub fn handle_inventory_click(
-    trigger: Trigger<InventoryItemClicked>,
+pub fn on_item_hover(
+    trigger: Trigger<Pointer<Over>>,
+    mut menu_item_text: Query<(&mut TextColor, &Parent), With<ItemText>>,
+) {
+    // Find the text color component for this button's text
+    if let Some((mut text_color, _)) = menu_item_text
+        .iter_mut()
+        .find(|(_, parent)| parent.get() == trigger.entity())
+    {
+        // Change text color to a brighter shade when hovering
+        text_color.0 = Color::srgb(0.0, 1.0, 1.0);
+    }
+}
+
+pub fn on_item_clicked(
+    trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
+    slot_query: Query<&InventorySlot>,
     item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
 ) {
-    if let Some(item_entity) = trigger.item_entity {
-        if let Ok((equippable, consumable)) = item_query.get(item_entity) {
-            if equippable {
-                commands.trigger_targets(AttemptEquipEvent { item_entity }, *player);
-            } else if consumable {
-                commands.trigger(ConsumeEvent { item_entity });
-            }
-        }
+    let slot = slot_query.get(trigger.entity());
 
-        //Redraw inventory
-        commands.trigger(InventoryUpdatedEvent);
+    if let Ok(InventorySlot {
+        item: Some(item_entity),
+        index: _,
+    }) = slot
+    {
+        if let Ok((equippable, consumable)) = item_query.get(*item_entity) {
+            if equippable {
+                commands.trigger_targets(
+                    AttemptEquipEvent {
+                        item_entity: *item_entity,
+                    },
+                    *player,
+                );
+            } else if consumable {
+                commands.trigger_targets(
+                    ConsumeEvent {
+                        item_entity: *item_entity,
+                    },
+                    *player,
+                );
+            }
+
+            commands.trigger(UpdateInventoryUIEvent);
+        }
     }
 }
 

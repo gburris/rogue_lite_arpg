@@ -1,4 +1,7 @@
-use crate::items::{inventory::inventory::Inventory, Item};
+use crate::{
+    items::{inventory::inventory::Inventory, Item},
+    player::Player,
+};
 use bevy::prelude::*;
 
 use super::button_interactions::InventoryUpdatedEvent;
@@ -15,7 +18,7 @@ pub struct InventoryDisplay;
 pub fn spawn_inventory_menu(
     mut commands: Commands,
     item_query: Query<&Name, With<Item>>,
-    player_inventory: Query<&Inventory>,
+    player_inventory: Query<&Inventory, With<Player>>,
 ) {
     debug!("spawn_inventory_menu called");
 
@@ -195,7 +198,7 @@ pub fn handle_inventory_update(
     mut commands: Commands,
     inventory_menu_query: Query<Entity, With<InventoryMenu>>,
     item_query: Query<&Name, With<Item>>,
-    player_inventory: Query<&Inventory>,
+    player_inventory: Query<&Inventory, With<Player>>,
 ) {
     // Despawn the existing inventory menu
     for entity in inventory_menu_query.iter() {

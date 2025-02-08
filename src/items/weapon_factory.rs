@@ -2,10 +2,13 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use super::equipment::{
-    equipment_transform::EquipmentTransform,
-    use_equipped::{on_weapon_fired, on_weapon_melee},
-    Equippable,
+use super::{
+    equipment::{
+        equipment_transform::EquipmentTransform,
+        use_equipped::{on_weapon_fired, on_weapon_melee},
+        Equippable,
+    },
+    grounded::handle_item_to_ground::handle_item_ground_transition,
 };
 use crate::{
     animation::FacingDirection,
@@ -41,6 +44,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
+        .observe(handle_item_ground_transition)
         .id()
 }
 
@@ -67,6 +71,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
+        .observe(handle_item_ground_transition)
         .id()
 }
 
@@ -87,6 +92,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
+        .observe(handle_item_ground_transition)
         .observe(on_weapon_melee)
         .id()
 }
@@ -131,6 +137,7 @@ pub fn spawn_fire_staff(
             weapon_transform,
         ))
         .observe(on_weapon_fired)
+        .observe(handle_item_ground_transition)
         .id()
 }
 
@@ -177,6 +184,7 @@ pub fn spawn_ice_staff(
             weapon_transform,
         ))
         .observe(on_weapon_fired)
+        .observe(handle_item_ground_transition)
         .id()
 }
 

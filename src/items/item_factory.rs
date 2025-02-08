@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use super::{
     equipment::{equipment_transform::EquipmentTransform, Equippable},
+    grounded::handle_item_to_ground::handle_item_ground_transition,
     Consumable, ConsumableEffect, ConsumableType, Item,
 };
 use crate::{
@@ -22,6 +23,7 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
             Consumable,
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
+        .observe(handle_item_ground_transition)
         .id()
 }
 
@@ -35,5 +37,6 @@ pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
             Sprite::from_image(sprites.helmet_equipment_sprite.clone()),
             EquipmentTransform::get(FacingDirection::Down).head,
         ))
+        .observe(handle_item_ground_transition)
         .id()
 }

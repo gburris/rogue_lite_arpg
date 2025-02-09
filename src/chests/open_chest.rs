@@ -3,16 +3,13 @@
 
 use bevy::prelude::*;
 
-use crate::{
-    configuration::assets::SpriteAssets,
-    items::{inventory::inventory::Inventory, spawn_health_potion},
-};
+use crate::{configuration::assets::SpriteAssets, econ::components::GoldDropEvent};
 
-use super::components::OpenChest;
+use super::components::{Chest, OpenChest};
 
 pub fn open_chest(
     open_chest_trigger: Trigger<OpenChest>,
-    mut player_inventory: Single<&mut Inventory>,
+    chest_transforms: Query<&Transform, With<Chest>>,
     sprites: Res<SpriteAssets>,
     mut commands: Commands,
 ) {
@@ -22,5 +19,10 @@ pub fn open_chest(
     commands
         .entity(open_chest_trigger.chest_entity)
         .despawn_descendants();
-    let _ = player_inventory.add_item(spawn_health_potion(&mut commands, &sprites));
+    if let Ok(chest_transform) = chest_transforms.get(open_chest_trigger.chest_entity) {
+        commands.trigger(GoldDropEvent {
+            amount: 999,
+            drop_location: *chest_transform,
+        });
+    };
 }

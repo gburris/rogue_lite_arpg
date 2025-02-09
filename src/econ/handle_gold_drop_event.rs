@@ -18,10 +18,10 @@ pub fn on_gold_drop_event(
     let mut rng = rand::thread_rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = trigger.amount;
-    warn!("Spawning gold");
+    const MAX_COINS_TO_SPAWN: i32 = 3;
     // Calculate how many of each coin type to spawn
-    while remaining_gold > 0 && entities_spawned < 10 {
-        warn!("Spawning gold 1");
+
+    while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
         let (sprite_path, value) = if remaining_gold >= 10000 {
             (sprites.gold_coin.clone(), 10000)
         } else if remaining_gold >= 1000 {
@@ -36,7 +36,7 @@ pub fn on_gold_drop_event(
 
         // Random position within radius
         let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-        let distance = rng.gen_range(0.0..100.0);
+        let distance = rng.gen_range(0.0..50.0);
         let offset = Vec2::new(angle.cos() * distance, angle.sin() * distance);
 
         let mut transform = trigger.drop_location;
@@ -52,7 +52,7 @@ pub fn on_gold_drop_event(
             Currency { value: value },
             Grounded,
             Sensor,
-            Collider::circle(100.0), //Magnet Radius
+            Collider::circle(150.0), //Magnet Radius
             CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
             CollidingEntities::default(),
         ));

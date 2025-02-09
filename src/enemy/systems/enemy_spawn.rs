@@ -15,7 +15,7 @@ use crate::{
     items::{
         equipment::{use_equipped::on_main_hand_activated, EquipmentSlots},
         inventory::inventory::Inventory,
-        spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
+        spawn_health_potion, spawn_random_mainhand_weapon,
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,

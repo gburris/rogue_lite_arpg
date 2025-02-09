@@ -71,11 +71,15 @@ pub fn on_enemy_defeated(
                 }
             }
         }
-
-        commands.trigger(GoldDropEvent {
-            drop_location: *transform,
-            amount: experience_to_gain.base_exp,
-        });
+        
+        if rng.gen_range(0.0..1.0) < 0.1 {
+            commands.trigger(GoldDropEvent {
+                drop_location: *transform,
+                amount: experience_to_gain.base_exp,
+                //For now, just drop the amount of EXP an enemy gives
+                //10% of the time
+            });
+        }
 
         commands
             .entity(trigger.entity())

@@ -14,7 +14,8 @@ use crate::{
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
         equipment::{use_equipped::on_main_hand_activated, EquipmentSlots},
-        spawn_random_mainhand_weapon,
+        inventory::inventory::Inventory,
+        spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,
@@ -61,10 +62,16 @@ fn spawn_enemy(
                 .first,
         },
     );
+    let mut inventory = Inventory::default_inventory();
+    inventory
+        .add_item(spawn_health_potion(commands, &sprites))
+        .ok();
+    inventory.add_item(spawn_axe(commands, &sprites)).ok();
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
         commands
             .spawn((
                 Enemy,
+                inventory,
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),

@@ -8,11 +8,7 @@ use crate::{
     },
     despawn::components::LiveDuration,
     enemy::{Enemy, Experience},
-    items::{
-        equipment::{EquipmentSlot, EquipmentSlots},
-        inventory::inventory::Inventory,
-        ItemToGroundEvent,
-    },
+    items::{equipment::EquipmentSlots, inventory::inventory::Inventory, ItemToGroundEvent},
     player::components::{Player, PlayerExperience},
 };
 

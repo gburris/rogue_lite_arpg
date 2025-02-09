@@ -43,18 +43,17 @@ pub struct ItemToGroundEvent {
 #[require(CollidingEntities)]
 pub struct Grounded;
 
-// Component to track glow effect animation
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct GroundedItemEffect {
-    pub rotation: f32,
-    pub glow_offset: f32,
+    pub rotation_timer: f32,
+    pub glow_timer: f32,
 }
 
-impl Default for GroundedItemEffect {
-    fn default() -> Self {
+impl GroundedItemEffect {
+    pub fn default() -> Self {
         Self {
-            rotation: 0.0,
-            glow_offset: 0.0,
+            rotation_timer: 0.0,
+            glow_timer: 0.0,
         }
     }
 }

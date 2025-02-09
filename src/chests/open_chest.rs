@@ -3,7 +3,10 @@
 
 use bevy::prelude::*;
 
-use crate::{configuration::assets::SpriteAssets, items::{inventory::inventory::Inventory, spawn_health_potion}};
+use crate::{
+    configuration::assets::SpriteAssets,
+    items::{inventory::inventory::Inventory, spawn_health_potion},
+};
 
 use super::components::OpenChest;
 
@@ -19,5 +22,5 @@ pub fn open_chest(
     commands
         .entity(open_chest_trigger.chest_entity)
         .despawn_descendants();
-    let _ = player_inventory.add_item(spawn_health_potion(&mut commands));
+    let _ = player_inventory.add_item(spawn_health_potion(&mut commands, &sprites));
 }

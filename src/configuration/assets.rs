@@ -51,6 +51,8 @@ pub struct SpriteAssets {
     pub ice_staff: Handle<Image>,
     #[asset(path = "items/helmet.png")]
     pub helmet_equipment_sprite: Handle<Image>,
+    #[asset(path = "items/health_potion.png")]
+    pub health_potion: Handle<Image>,
     #[asset(path = "items/shovel.png")]
     pub shovel_equipment_sprite: Handle<Image>,
     #[asset(path = "enemies/merman.png")]

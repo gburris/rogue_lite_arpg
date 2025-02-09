@@ -32,7 +32,9 @@ pub fn spawn_player(
 ) {
     //Player Inventory Setup
     let mut inventory = Inventory::default_inventory();
-    inventory.add_item(spawn_health_potion(&mut commands)).ok();
+    inventory
+        .add_item(spawn_health_potion(&mut commands, &sprites))
+        .ok();
     inventory
         .add_item(spawn_sword(&mut commands, &sprites))
         .ok();

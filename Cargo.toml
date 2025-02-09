@@ -3,6 +3,9 @@ name = "baba_yaga"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata]
+wasm-opt = false
+
 [dependencies]
 bevy = "0.15.0"
 bevy_ecs_tilemap = "0.15.0"

@@ -55,18 +55,3 @@ pub struct ItemToGroundEvent {
 #[derive(Component, Clone, Debug)]
 #[require(CollidingEntities)]
 pub struct Grounded;
-
-#[derive(Component, Default)]
-pub struct GroundedItemEffect {
-    pub rotation_timer: f32,
-    pub glow_timer: f32,
-}
-
-impl GroundedItemEffect {
-    pub fn default() -> Self {
-        Self {
-            rotation_timer: 0.0,
-            glow_timer: 0.0,
-        }
-    }
-}

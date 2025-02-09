@@ -2,7 +2,7 @@ use crate::{
     combat::melee::components::ActiveMeleeAttack,
     configuration::GameCollisionLayer,
     despawn::components::LiveDuration,
-    items::{Grounded, GroundedItemEffect, ItemToGroundEvent},
+    items::{Grounded, ItemToGroundEvent},
 };
 use avian2d::prelude::{Collider, CollisionLayers, Sensor};
 use bevy::prelude::*;
@@ -34,7 +34,6 @@ pub fn handle_item_ground_transition(
         .insert(Collider::circle(10.0))
         .insert(Sensor)
         .insert(Visibility::Visible)
-        .insert(GroundedItemEffect::default())
         .insert(CollisionLayers::new(
             GameCollisionLayer::Interaction,
             [GameCollisionLayer::Player],

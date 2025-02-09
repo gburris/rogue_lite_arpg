@@ -75,29 +75,16 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
     })
 }
 
-fn defeated_transform() -> &'static EquipmentTransform {
-    static TRANSFORM: OnceLock<EquipmentTransform> = OnceLock::new();
-    TRANSFORM.get_or_init(|| EquipmentTransform {
-        mainhand: Transform::from_xyz(25.0, -55.0, ZLayer::WeaponBehindSprite.z())
-            .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
-            .with_scale(MAINHAND_SCALE),
-        head: Transform::from_xyz(0.0, -5.0, ZLayer::WeaponBehindSprite.z()).with_scale(HEAD_SCALE),
-    })
-}
-
 impl EquipmentTransform {
     pub fn get(direction: FacingDirection) -> Self {
         direction_transforms().get(&direction).copied().unwrap()
-    }
-    pub fn get_defeated() -> Self {
-        *defeated_transform()
     }
 }
 
 pub fn update_equipment_transforms(
     all_worn_equipment_in_game: Query<
         (&EquipmentSlots, &ActionState, &FacingDirection),
-        Or<(Changed<FacingDirection>, Changed<ActionState>)>,
+        Changed<FacingDirection>,
     >,
     mut transforms: Query<&mut Transform>,
 ) {
@@ -106,11 +93,7 @@ pub fn update_equipment_transforms(
             return;
         }
 
-        let direction_transforms = if *action_state == ActionState::Defeated {
-            EquipmentTransform::get_defeated()
-        } else {
-            EquipmentTransform::get(*direction)
-        };
+        let direction_transforms = EquipmentTransform::get(*direction);
 
         // Update mainhand equipment
         if let Some(entity) = equipment_slots.mainhand {

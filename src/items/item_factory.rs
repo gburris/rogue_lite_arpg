@@ -11,7 +11,7 @@ use crate::{
     items::{equipment::EquipmentSlot, HealthPotion},
 };
 
-pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
+pub fn spawn_health_potion(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
     commands
         .spawn((
             HealthPotion,
@@ -21,6 +21,7 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
                 effect_type: ConsumableType::Heal(50.0), // Heals 50 HP
             },
             Consumable,
+            Sprite::from_image(sprites.health_potion.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(handle_item_ground_transition)

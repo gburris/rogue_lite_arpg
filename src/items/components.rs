@@ -22,6 +22,9 @@ pub struct Consumable;
 #[derive(Component, Clone, Debug)]
 pub struct HealthPotion;
 
+#[derive(Component, Clone, Debug)]
+pub struct DropRate(pub f32);
+
 #[derive(Component)]
 pub struct ConsumableEffect {
     pub effect_type: ConsumableType,

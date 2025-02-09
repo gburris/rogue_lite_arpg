@@ -4,10 +4,11 @@ use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use crate::{
     despawn::components::LiveDuration,
     items::{inventory::inventory::Inventory, Grounded, GroundedItemEffect},
-    player::Player,
+    player::{AttemptInteractionInput, Player},
 };
 
-pub fn handle_grounded_item_collision(
+pub fn on_grounded_item_input_interaction(
+    _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
     colliding_items: Query<(Entity, &CollidingEntities), With<Grounded>>,
     mut inventory_query: Query<&mut Inventory, With<Player>>,
@@ -23,7 +24,6 @@ pub fn handle_grounded_item_collision(
         if colliding_entities.contains(&player_entity) {
             if let Ok(mut inventory) = inventory_query.get_single_mut() {
                 if inventory.add_item(item_entity).is_ok() {
-                    // Successfully added to inventory, remove ground state
                     commands
                         .entity(item_entity)
                         .remove::<Grounded>()
@@ -33,9 +33,10 @@ pub fn handle_grounded_item_collision(
                         .remove::<LiveDuration>()
                         .remove::<CollisionLayers>()
                         .insert(Visibility::Hidden);
+                } else {
+                    warn!("Inventory is full!")
                 }
             }
         }
     }
 }
-

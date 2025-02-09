@@ -1,3 +1,4 @@
+// Module declarations - keep these at the top
 pub mod animation;
 pub mod chests;
 pub mod combat;
@@ -14,27 +15,53 @@ pub mod player;
 pub mod progression;
 pub mod ui;
 
+// External crate imports
 use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
+use console_error_panic_hook;
 use wasm_bindgen::prelude::*;
 
-// This is the entry point for WASM
+// Local imports grouped by functionality
+use crate::{
+    // Core systems
+    animation::AnimationPlugin,
+    chests::plugin::ChestPlugin,
+
+    combat::plugin::CombatPlugin,
+    // Configuration and setup
+    configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+
+    despawn::plugin::DespawnPlugin,
+    enemy::plugin::EnemyPlugin,
+    items::{equipment::plugin::EquipmentPlugin, grounded::plugin::GroundedPlugin},
+    // Entity systems
+    map::plugin::MapPlugin,
+    movement::plugin::MovementPlugin,
+    npc::NPCPlugin,
+    player::plugin::PlayerPlugin,
+    progression::plugin::ProgressionPlugin,
+
+    // UI
+    ui::plugin::UIPlugin,
+};
+
 #[wasm_bindgen(start)]
 pub fn start() {
-    // Enable better error messages for WASM
     console_error_panic_hook::set_once();
 
-    // Start your Bevy app - this should be similar to your main.rs setup
     App::new()
+        // Setup and configuration
         .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
-        .add_plugins((AssetLoadingPlugin, TilemapPlugin)) // 3rd party crates
-        // Core plugins
+        // Third-party plugins
+        .add_plugins((AssetLoadingPlugin, TilemapPlugin))
+        // Core systems
         .add_plugins((
             DespawnPlugin,
             MovementPlugin,
             CombatPlugin,
             ProgressionPlugin,
         ))
-        // Entity-domain plugins (map, player, enemy, npc, etc..)
+        // Entity systems
         .add_plugins((
             MapPlugin,
             EquipmentPlugin,
@@ -44,7 +71,7 @@ pub fn start() {
             NPCPlugin,
             ChestPlugin,
         ))
-        // UI plugins group
+        // UI
         .add_plugins(UIPlugin)
         .run();
 }

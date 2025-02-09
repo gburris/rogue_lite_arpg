@@ -1,15 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    enemy::Enemy,
-    items::{
-        equipment::{EquipmentSlot, EquipmentSlots},
-        Item,
-    },
-    npc::NPC,
-    player::Player,
-    ui::pause_menu::button_interactions::*,
-};
+use crate::{items::equipment::EquipmentSlot, ui::pause_menu::button_interactions::*};
 
 #[derive(Component)]
 pub struct EquipmentMenu;
@@ -92,45 +83,3 @@ pub fn spawn_equipment_slot(
             }
         });
 }
-
-//Called after dispatching a click event
-pub fn handle_equipment_update(
-    _: Trigger<UpdateEquipmentUIEvent>,
-    mut item_text_query: Query<(&mut Text, &Parent), With<EquipmentItemText>>,
-    item_query: Query<&Name, With<Item>>,
-    equpment_slots: Single<&EquipmentSlots, (With<Player>, Without<Enemy>, Without<NPC>)>,
-) {
-    if let Some(mainhand) = equpment_slots.mainhand {
-        let name = item_query.get(mainhand).unwrap();
-    }
-
-    // Iterate through all ItemText components and fetch the parent InventorySlot component
-    for (mut item_text, item_slot) in item_text_query.iter_mut() {
-        if let Ok(mut item_slot) = inventory_slot_query.get_mut(item_slot.get()) {
-            // If there is an item in the player inventory at this index, set item text and item slot
-            if let Some(&item_entity) = player_inventory.items.get(item_slot.index) {
-                item_slot.item = Some(item_entity);
-                item_text.0 = item_query.get(item_entity).unwrap().to_string();
-            } else {
-                // Otherwise there is no item, set default stuff
-                item_text.0 = "Empty Slot".to_string();
-                item_slot.item = None;
-            }
-        }
-    }
-}
-
-// pub fn handle_equipment_update(
-//     _: Trigger<EquipmentUIUpdatedEvent>,
-//     mut commands: Commands,
-//     eqipment_menu_query: Query<Entity, With<EquipmentMenu>>,
-//     item_query: Query<&Name, With<Item>>,
-//     player_equipment_slots: Single<&EquipmentSlots, With<Player>>,
-// ) {
-//     // Despawn the existing inventory menu
-//     for entity in eqipment_menu_query.iter() {
-//         commands.entity(entity).despawn_recursive();
-//     }
-//     // Respawn the equipment menu
-//     spawn_equipment_menu(commands, item_query, player_equipment_slots);
-// }

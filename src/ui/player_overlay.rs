@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[derive(Component)]
-pub struct GameOverlay;
+pub struct PlayerOverlay;
 
 #[derive(Component)]
 pub struct PlayerOverlayStatsText;
@@ -44,7 +44,7 @@ const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 pub fn spawn(mut commands: Commands) {
     commands
         .spawn((
-            GameOverlay,
+            PlayerOverlay,
             Node {
                 width: Val::Percent(100.),
                 height: Val::Percent(100.0),

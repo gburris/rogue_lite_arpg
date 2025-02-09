@@ -1,9 +1,13 @@
 use crate::{
     combat::attributes::Health,
     items::{inventory::inventory::Inventory, ConsumableEffect, ConsumableType},
-    ui::pause_menu::button_interactions::ConsumeEvent,
 };
 use bevy::prelude::*;
+
+#[derive(Event)]
+pub struct ConsumeEvent {
+    pub item_entity: Entity,
+}
 
 pub fn handle_consume_event(
     consume_trigger: Trigger<ConsumeEvent>,

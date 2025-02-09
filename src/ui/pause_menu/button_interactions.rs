@@ -1,14 +1,21 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::{equipment::Equippable, Consumable, Item},
+    items::{
+        equipment::{
+            equip::{AttemptEquipEvent, AttemptUnequipEvent},
+            Equippable,
+        },
+        Consumable, Item,
+    },
     labels::states::PausedState,
-    player::Player,
+    player::{systems::ConsumeEvent, Player},
+    ui::display_case::{DisplayCaseSlot, FilledDisplaySlot},
 };
 
 use super::{
-    equipment_menu::{EquipmentButton, EquipmentItemText, UpdateEquipmentUIEvent},
-    inventory_menu::{InventorySlot, ItemText},
+    equipment_menu::{EquipmentButton, UpdateEquipmentUIEvent},
+    inventory_menu::ItemText,
     main_menu::MenuButton,
 };
 
@@ -16,23 +23,16 @@ use super::{
 pub struct EquipmentItemClicked {
     pub item_entity: Option<Entity>,
 }
-#[derive(Event)]
-pub struct AttemptEquipEvent {
-    pub item_entity: Entity,
-}
 
 #[derive(Event)]
-pub struct AttemptUnequipEvent {
+pub struct ItemRemovedUIEvent {
     pub item_entity: Entity,
+    pub index: usize,
 }
 
+/// Trigger on entity with Inventory component (i.e. the player entity)
 #[derive(Event)]
 pub struct UpdateInventoryUIEvent;
-
-#[derive(Event)]
-pub struct ConsumeEvent {
-    pub item_entity: Entity,
-}
 
 pub fn on_equipped_clicked(
     trigger: Trigger<Pointer<Click>>,
@@ -54,7 +54,7 @@ pub fn on_equipped_clicked(
         );
         //Redraw item lists
         commands.trigger(UpdateEquipmentUIEvent);
-        commands.trigger(UpdateInventoryUIEvent);
+        // commands.trigger(UpdateInventoryUIEvent);
     }
 }
 
@@ -88,36 +88,23 @@ pub fn on_item_hover(
 pub fn on_item_clicked(
     trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
-    slot_query: Query<&InventorySlot>,
+    slot_query: Query<(&FilledDisplaySlot, &Parent)>,
+    slot_index_query: Query<&DisplayCaseSlot>,
     item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
 ) {
-    let slot = slot_query.get(trigger.entity());
+    let (item_slot, slot_parent) = slot_query.get(trigger.entity()).unwrap();
 
-    if let Ok(InventorySlot {
-        item: Some(item_entity),
-        index: _,
-    }) = slot
-    {
-        if let Ok((equippable, consumable)) = item_query.get(*item_entity) {
-            if equippable {
-                commands.trigger_targets(
-                    AttemptEquipEvent {
-                        item_entity: *item_entity,
-                    },
-                    *player,
-                );
-            } else if consumable {
-                commands.trigger_targets(
-                    ConsumeEvent {
-                        item_entity: *item_entity,
-                    },
-                    *player,
-                );
-            }
+    let item_entity = item_slot.item;
 
-            commands.trigger(UpdateInventoryUIEvent);
+    if let Ok((equippable, consumable)) = item_query.get(item_entity) {
+        if equippable {
+            commands.trigger_targets(AttemptEquipEvent { item_entity }, *player);
+        } else if consumable {
+            commands.trigger_targets(ConsumeEvent { item_entity }, *player);
         }
+
+        commands.trigger_targets(UpdateInventoryUIEvent, *player);
     }
 }
 

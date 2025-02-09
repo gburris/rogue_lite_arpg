@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
+    pub display_case: Option<Entity>, // If you want to open this inventory in a UI
 }
 
 impl Inventory {
@@ -38,6 +39,7 @@ impl Inventory {
         Inventory {
             max_capacity: 10,
             items: VecDeque::new(),
+            display_case: None,
         }
     }
 }

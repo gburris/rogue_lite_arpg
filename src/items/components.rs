@@ -3,11 +3,15 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Item {
     id: u32,
+    pub display_slot: Option<Entity>,
 }
 
 impl Item {
     pub fn new(id: u32) -> Self {
-        Item { id }
+        Item {
+            display_slot: None,
+            id,
+        }
     }
 
     pub fn get_id(&self) -> u32 {

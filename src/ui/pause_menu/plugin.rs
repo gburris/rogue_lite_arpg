@@ -1,18 +1,15 @@
 use bevy::prelude::*;
 
 use crate::{
+    configuration::time_control,
     labels::{
         sets::MainSet,
         states::{AppState, PausedState},
     },
-    ui::{input, time_control},
+    ui::{display_case, input},
 };
 
-use super::{
-    button_interactions,
-    equipment_menu::{self},
-    inventory_menu, main_menu, pause, stats_menu,
-};
+use super::{button_interactions, inventory_menu, main_menu, pause, stats_menu};
 pub struct PauseMenuPlugin;
 
 impl Plugin for PauseMenuPlugin {
@@ -35,7 +32,7 @@ impl Plugin for PauseMenuPlugin {
                     .in_set(MainSet::Menu),
             )
             // Inventory menu systems
-            .add_observer(inventory_menu::handle_inventory_update)
+            .add_observer(display_case::on_display_case_updated)
             .add_systems(
                 OnEnter(PausedState::Inventory),
                 inventory_menu::spawn_inventory_menu,

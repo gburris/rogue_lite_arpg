@@ -4,6 +4,7 @@ use bevy_ecs_tilemap::map::TilemapId;
 use crate::{
     chests::components::Chest,
     combat::projectile::components::Projectile,
+    configuration::time_control::RestartEvent,
     despawn::systems::*,
     enemy::Enemy,
     labels::{
@@ -13,12 +14,7 @@ use crate::{
     map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,
-    ui::{
-        game_over_screen::RestartEvent,
-        npc::stats_shop::StatsMenu,
-        pause_menu::{inventory_menu::InventoryMenu, main_menu::MainMenu, pause::PauseBackground},
-        player_overlay::GameOverlay,
-    },
+    ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatsMenu},
 };
 
 pub struct DespawnPlugin;
@@ -45,6 +41,6 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, Projectile>)
         .add_observer(despawn_all::<CleanupZone, NPC>)
         .add_observer(despawn_all::<RestartEvent, Player>)
-        .add_observer(despawn_all::<RestartEvent, GameOverlay>);
+        .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
     }
 }

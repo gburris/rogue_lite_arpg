@@ -9,7 +9,6 @@ use crate::{
         inventory::inventory::Inventory,
     },
     player::Player,
-    ui::pause_menu::button_interactions::{AttemptEquipEvent, AttemptUnequipEvent},
 };
 
 #[derive(Component, Clone)]
@@ -31,6 +30,16 @@ impl Equippable {
     pub fn new(slot: EquipmentSlot) -> Self {
         Equippable { slot, ..default() }
     }
+}
+
+#[derive(Event)]
+pub struct AttemptEquipEvent {
+    pub item_entity: Entity,
+}
+
+#[derive(Event)]
+pub struct AttemptUnequipEvent {
+    pub item_entity: Entity,
 }
 
 #[derive(Event)]

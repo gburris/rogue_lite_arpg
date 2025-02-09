@@ -24,16 +24,3 @@ pub fn spawn_health_potion(commands: &mut Commands) -> Entity {
         ))
         .id()
 }
-
-pub fn spawn_helmet(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
-    commands
-        .spawn((
-            Equippable::new(EquipmentSlot::Helmet),
-            Name::new("Helmet"),
-            Item::new(2),
-            Visibility::Hidden,
-            Sprite::from_image(sprites.helmet_equipment_sprite.clone()),
-            EquipmentTransform::get(FacingDirection::Down).head,
-        ))
-        .id()
-}

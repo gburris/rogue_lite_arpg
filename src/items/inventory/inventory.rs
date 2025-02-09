@@ -5,7 +5,23 @@ use std::collections::VecDeque;
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
-    pub display_case: Option<Entity>, // If you want to open this inventory in a UI
+
+    /// Equipment slots
+    pub mainhand: Option<Entity>,
+    pub offhand: Option<Entity>,
+
+    /// If you want to open this inventory in a UI    
+    pub display_case: Option<Entity>,
+}
+
+impl Default for Inventory {
+    fn default() -> Self {
+        Self {
+            max_capacity: 10,
+            items: VecDeque::new(),
+            ..default()
+        }
+    }
 }
 
 impl Inventory {
@@ -35,11 +51,27 @@ impl Inventory {
             .ok_or("Index was out of bounds".to_string())
     }
 
-    pub fn default_inventory() -> Self {
-        Inventory {
-            max_capacity: 10,
-            items: VecDeque::new(),
-            display_case: None,
-        }
+    /// Equip the new_item in the specified slot
+    pub fn equip(&mut self, new_item: Entity, slot: &EquipmentSlot) -> Option<Entity> {
+        let slot_ref = match slot {
+            EquipmentSlot::Mainhand => &mut self.mainhand,
+            EquipmentSlot::Helmet => &mut self.head,
+        };
+
+        let previous = slot_ref.take();
+
+        *slot_ref = Some(new_item);
+
+        previous
+    }
+
+    /// Remove the existing item from the specified slot, if it exists
+    pub fn unequip(&mut self, slot: &EquipmentSlot) {
+        let slot_ref = match slot {
+            EquipmentSlot::Mainhand => &mut self.mainhand,
+            EquipmentSlot::Offhand => &mut self.head,
+        };
+
+        *slot_ref = None;
     }
 }

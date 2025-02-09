@@ -341,6 +341,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "bevy_ecs_tilemap",
+ "console_error_panic_hook",
  "ldtk_rust",
  "log",
  "noise",
@@ -349,6 +350,8 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tiled",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

@@ -81,6 +81,7 @@ pub fn spawn_player(
                     GameCollisionLayer::Grounded,
                     GameCollisionLayer::HighObstacle,
                     GameCollisionLayer::LowObstacle,
+                    GameCollisionLayer::Magnet,
                 ],
             ),
             LockedAxes::new().lock_rotation(),

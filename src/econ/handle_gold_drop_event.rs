@@ -1,41 +1,63 @@
-//Spawn gold pieces here
+use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
+use rand::Rng;
 
-use super::components::GoldDropEvent;
+use crate::{
+    configuration::{assets::SpriteAssets, GameCollisionLayer},
+    items::{Autoloot, Grounded, Magnet},
+    labels::layer::ZLayer,
+};
 
-// #[derive(Event)]
-// pub struct GoldDropEvent {
-//     pub drop_location: Transform,
-//     pub amount: u32,
-// }
+use super::components::{Currency, GoldDropEvent};
 
-pub fn on_gold_drop_event(trigger: Trigger<GoldDropEvent>) {
-    //Only spawn a maximum of 10 new entities
-    //10 gold = 10 "small" sprite
-    //100 gold = 10 "medium" sprite
-    //1101 gold = One Large, One Medium, One Small sprite
-    //Etc.
+pub fn on_gold_drop_event(
+    trigger: Trigger<GoldDropEvent>,
+    mut commands: Commands,
+    sprites: Res<SpriteAssets>,
+) {
+    let mut rng = rand::thread_rng();
+    let mut entities_spawned = 0;
+    let mut remaining_gold = trigger.amount;
+    warn!("Spawning gold");
+    // Calculate how many of each coin type to spawn
+    while remaining_gold > 0 && entities_spawned < 10 {
+        warn!("Spawning gold 1");
+        let (sprite_path, value) = if remaining_gold >= 10000 {
+            (sprites.gold_coin.clone(), 10000)
+        } else if remaining_gold >= 1000 {
+            (sprites.gold_coin.clone(), 1000)
+        } else if remaining_gold >= 100 {
+            (sprites.gold_coin.clone(), 100)
+        } else if remaining_gold >= 10 {
+            (sprites.gold_coin.clone(), 10)
+        } else {
+            (sprites.gold_coin.clone(), 1)
+        };
 
-    //Command.spawn(AutoLoot -> Loots when it touches the player
-    //magenet -> scoots on the ground to the player
-    //Sprite -> look of the gold itself, small, medium, large, xlarge, xxlarge piles sizes
-    //Transform -> random location with 50 of the drop location, z-axis "grounded item"
-    //GoldEffect -> current rotation of the coin and how much the sprite is glowing
-    //Sensor -> Used to detect CollidingEntities with the player
-    //CollidingEntities -> Used to figure out who is colliding with the coin
-    //Magnet will use that colliding entites to scoot
-    //Autoloot will collect the gold and despawn it when it's position is within 10 of the player
-}
-pub fn update_grounded_magnets() {
-    //Any entity with magnet is attacked to their target entity (Just player for now)
-}
+        // Random position within radius
+        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+        let distance = rng.gen_range(0.0..100.0);
+        let offset = Vec2::new(angle.cos() * distance, angle.sin() * distance);
 
-pub fn update_grounded_autoloot_currency() {
-    //Query for all items grounded with AutoLoot and Currency Tag
-    //Place into wallet when positions overlap
-}
+        let mut transform = trigger.drop_location;
+        transform.translation.x += offset.x;
+        transform.translation.y += offset.y;
+        transform.translation.z = ZLayer::ItemOnGround.z();
 
-pub fn update_grounded_autoloot_items() {
-    //Query for all items grounded with AutoLoot and Currency Tag
-    //Place into inventory if there is room
+        commands.spawn((
+            Sprite::from_image(sprite_path),
+            Autoloot,
+            Magnet,
+            transform,
+            Currency { value: value },
+            Grounded,
+            Sensor,
+            Collider::circle(100.0), //Magnet Radius
+            CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
+            CollidingEntities::default(),
+        ));
+
+        remaining_gold -= value;
+        entities_spawned += 1;
+    }
 }

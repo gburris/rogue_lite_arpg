@@ -5,8 +5,9 @@ use bevy::prelude::*;
 pub struct Item {
     id: u32,
     //For any data that is assoicated with all items, we should put it here
-    pub drop_glow_effect: f32,
-    pub drop_rotation_timer: f32,
+    pub drop_glow_effect: f32, //Tracks the glow effect status on a grounded item
+    pub drop_rotation_timer: f32, //Tracks the rotation time on a grounded item (maybe not needed?)
+    pub drop_rate: f32,        //Tracks the items drop rate
 }
 
 impl Default for Item {
@@ -15,13 +16,18 @@ impl Default for Item {
             id: 0,
             drop_glow_effect: 0.0,
             drop_rotation_timer: 0.0,
+            drop_rate: 0.0,
         }
     }
 }
 
 impl Item {
     pub fn new(id: u32) -> Self {
-        Item { id, ..default() }
+        Item {
+            id,
+            drop_rate: 0.1,
+            ..default()
+        }
     }
 
     pub fn get_id(&self) -> u32 {
@@ -55,3 +61,11 @@ pub struct ItemToGroundEvent {
 #[derive(Component, Clone, Debug)]
 #[require(CollidingEntities)]
 pub struct Grounded;
+
+//Automatically loot the item when passing over it
+#[derive(Component)]
+pub struct Autoloot;
+
+// Grounded loot scoots to player
+#[derive(Component)]
+pub struct Magnet;

@@ -66,7 +66,6 @@ fn spawn_enemy(
     inventory
         .add_item(spawn_health_potion(commands, &sprites))
         .ok();
-    inventory.add_item(spawn_axe(commands, &sprites)).ok();
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
         commands
             .spawn((

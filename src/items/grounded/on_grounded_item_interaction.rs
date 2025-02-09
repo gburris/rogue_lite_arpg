@@ -3,14 +3,14 @@ use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 
 use crate::{
     despawn::components::LiveDuration,
-    items::{inventory::inventory::Inventory, Grounded},
+    items::{inventory::inventory::Inventory, Autoloot, Grounded},
     player::{AttemptInteractionInput, Player},
 };
 
 pub fn on_grounded_item_input_interaction(
     _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
-    colliding_items: Query<(Entity, &CollidingEntities), With<Grounded>>,
+    colliding_items: Query<(Entity, &CollidingEntities), (With<Grounded>, Without<Autoloot>)>,
     mut inventory_query: Query<&mut Inventory, With<Player>>,
     player_query: Query<Entity, With<Player>>,
 ) {

@@ -31,7 +31,7 @@ pub fn spawn_hub_entities(
 
     commands.spawn((
         Portal::StartingPortal,
-        Sprite::from_image(sprites.run_start_portal.clone()),
+        Sprite::from_image(sprites.run_start_door.clone()),
         Transform::from_translation(warp_position),
     ));
 

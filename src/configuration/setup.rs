@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResolution};
 
 use crate::{
     configuration::debug::DebugPlugin,
@@ -14,76 +14,13 @@ pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
-        // only in dev mode and not in WASM
+        #[cfg(all(debug_assertions))]
         app.add_plugins(DebugPlugin);
 
-        #[cfg(not(debug_assertions))] // only in release mode
-        #[cfg(not(target_arch = "wasm32"))] // only on wasmp
+        #[cfg(not(debug_assertions))]
         app.add_plugins(
             DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: String::from(
-                            "Right click to cast Icebolt Left Click to Cast Fireball",
-                        ),
-                        resolution: WindowResolution::new(1920.0, 1080.0),
-                        ..Default::default()
-                    }),
-                    ..default()
-                })
-                .set(ImagePlugin::default_nearest()),
-        );
-        #[cfg(not(debug_assertions))] // only in release mode
-        #[cfg(target_arch = "wasm32")] // only on wasm
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: String::from(
-                            "Right click to cast Icebolt Left Click to Cast Fireball",
-                        ),
-                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
-                        fit_canvas_to_parent: true,
-                        ..Default::default()
-                    }),
-                    ..default()
-                })
-                .set(ImagePlugin::default_nearest()),
-        );
-        #[cfg(all(debug_assertions))] // only in release mode
-        #[cfg(target_arch = "wasm32")] // only on wasm
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: String::from(
-                            "Right click to cast Icebolt Left Click to Cast Fireball",
-                        ),
-                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
-                        fit_canvas_to_parent: true,
-                        ..Default::default()
-                    }),
-                    ..default()
-                })
-                .set(ImagePlugin::default_nearest()),
-        );
-
-        #[cfg(debug_assertions)] // only in release mode
-        #[cfg(target_arch = "wasm32")] // only on wasm
-        app.add_plugins(
-            DefaultPlugins
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: String::from(
-                            "Right click to cast Icebolt Left Click to Cast Fireball",
-                        ),
-                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
-                        fit_canvas_to_parent: true,
-                        ..Default::default()
-                    }),
-                    ..default()
-                })
+                .set(get_release_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         );
 
@@ -104,4 +41,30 @@ impl Plugin for SetupPlugin {
 
 fn setup_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
+}
+
+fn get_release_window_plugin() -> WindowPlugin {
+    #[cfg(target_arch = "wasm32")]
+    {
+        WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Right click to cast Icebolt Left Click to Cast Fireball"),
+                fit_canvas_to_parent: true,
+                ..Default::default()
+            }),
+            ..default()
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        WindowPlugin {
+            primary_window: Some(Window {
+                title: String::from("Right click to cast Icebolt Left Click to Cast Fireball"),
+                resolution: WindowResolution::new(1920.0, 1080.0),
+                ..Default::default()
+            }),
+            ..default()
+        }
+    }
 }

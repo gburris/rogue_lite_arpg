@@ -2,7 +2,7 @@ use crate::{
     combat::melee::components::ActiveMeleeAttack,
     configuration::GameCollisionLayer,
     despawn::components::LiveDuration,
-    items::{Grounded, ItemToGroundEvent},
+    items::{Grounded, Item, ItemToGroundEvent},
 };
 use avian2d::prelude::{Collider, CollisionLayers, Sensor};
 use bevy::prelude::*;
@@ -15,10 +15,10 @@ pub fn handle_item_ground_transition(
     let mut rng = thread_rng();
     let offset = Vec3::new(rng.gen_range(-50.0..50.0), rng.gen_range(-50.0..50.0), 3.0);
     let final_position = item_drop_trigger.origin_position + offset;
-
     // First, reset everything about the transform
     // Needs to be two seperate "Command" operations
     // Otherwise transforms get messed up for equipped items
+
     commands
         .entity(item_drop_trigger.entity())
         .remove_parent()

@@ -7,6 +7,7 @@ use baba_yaga::{
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
+    econ::plugin::EconPlugin,
     enemy::plugin::EnemyPlugin,
     items::{equipment::plugin::EquipmentPlugin, grounded::plugin::GroundedPlugin},
     map::plugin::MapPlugin,
@@ -37,6 +38,7 @@ fn main() {
             EnemyPlugin,
             NPCPlugin,
             ChestPlugin,
+            EconPlugin,
         ))
         // UI plugins group
         .add_plugins(UIPlugin)

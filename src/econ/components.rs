@@ -16,8 +16,7 @@ impl Wallet {
         self.coins += currency.value;
     }
 }
-// Currency
-// This is needed to tell Bevy to not treat gold as an item (into inventory)
+// This is needed to tell auto loot systems to not treat gold as an item
 // But rather a curreny (into wallet)
 #[derive(Component)]
 pub struct Currency {

@@ -4,11 +4,24 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Item {
     id: u32,
+    //For any data that is assoicated with all items, we should put it here
+    pub drop_glow_effect: f32,
+    pub drop_rotation_timer: f32,
+}
+
+impl Default for Item {
+    fn default() -> Self {
+        Item {
+            id: 0,
+            drop_glow_effect: 0.0,
+            drop_rotation_timer: 0.0,
+        }
+    }
 }
 
 impl Item {
     pub fn new(id: u32) -> Self {
-        Item { id }
+        Item { id, ..default() }
     }
 
     pub fn get_id(&self) -> u32 {

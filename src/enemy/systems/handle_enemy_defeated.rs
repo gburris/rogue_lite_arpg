@@ -37,7 +37,6 @@ pub fn on_enemy_defeated(
         // Drop inventory items
         if let Some(inventory) = inventory {
             for (_slot, item) in inventory.items.iter() {
-                warn!("Dropping inventory");
                 commands.trigger_targets(
                     ItemToGroundEvent {
                         origin_position: transform.translation,
@@ -50,7 +49,6 @@ pub fn on_enemy_defeated(
         // Drop equipped items
         if let Some(equipment_slots) = equipment_slots {
             if let Some(mainhand) = equipment_slots.mainhand {
-                warn!("Dropping Equipment");
                 commands.trigger_targets(
                     ItemToGroundEvent {
                         origin_position: transform.translation,

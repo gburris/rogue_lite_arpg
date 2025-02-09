@@ -3,8 +3,7 @@ use bevy::prelude::*;
 use crate::labels::sets::InGameSet;
 
 use super::{
-    on_grounded_item_interaction::on_grounded_item_input_interaction,
-    update_grounded_items::update_grounded_items,
+    handle_item_to_ground::handle_item_ground_transition, on_grounded_item_interaction::on_grounded_item_input_interaction, update_grounded_items::update_grounded_items
 };
 
 pub struct GroundedPlugin;
@@ -15,6 +14,7 @@ impl Plugin for GroundedPlugin {
             Update,
             (update_grounded_items).in_set(InGameSet::Simulation),
         )
+        .add_observer(handle_item_ground_transition)
         .add_observer(on_grounded_item_input_interaction);
     }
 }

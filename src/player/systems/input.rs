@@ -1,38 +1,40 @@
 use bevy::prelude::*;
 
 use crate::{
-    movement::components::IsMoving,
-    npc::events::AttemptDialogueInput,
-    player::{Inventory, Player, PlayerMovementEvent},
+    labels::states::PausedState,
+    player::{
+        AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
+    },
 };
 
-use super::print_inventory;
-
-//Component with an event tag called
-//Pause Input evemt
-//and bevy macros for component and event
 #[derive(Event)]
-pub struct PauseInputEvent;
+pub struct PauseInputEvent {
+    pub paused_state: Option<PausedState>, //What pause state to default to
+}
 
 pub fn player_input(
     mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
+    buttons: Res<ButtonInput<MouseButton>>,
     mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
-    mut is_moving_query: Query<&mut IsMoving, With<Player>>,
-    query_inventory: Query<&Inventory>,
+    player_movement_query: Single<Entity, With<Player>>,
 ) {
+    let player_entity = player_movement_query.into_inner();
+
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        commands.trigger(PauseInputEvent);
+        commands.trigger(PauseInputEvent {
+            paused_state: Some(PausedState::MainMenu),
+        });
         return;
     }
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(AttemptDialogueInput);
+        commands.trigger(AttemptInteractionInput);
         return;
     }
 
-    if keyboard_input.just_pressed(KeyCode::KeyI) {
-        print_inventory(query_inventory);
+    if buttons.pressed(MouseButton::Left) {
+        commands.trigger_targets(MainHandActivated, player_entity);
     }
 
     let mut direction = Vec2::ZERO;
@@ -51,10 +53,9 @@ pub fn player_input(
         direction.x += 1.0;
     }
 
-    // If there is movement input, dispatch the movement event
     if direction.length() > 0.0 {
         event_writer.send(PlayerMovementEvent { direction });
     } else {
-        is_moving_query.single_mut().0 = false;
+        commands.trigger(PlayerStoppedEvent);
     }
 }

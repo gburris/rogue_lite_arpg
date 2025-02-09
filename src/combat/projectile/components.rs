@@ -1,18 +1,31 @@
-//Shared component between all projectile conpoments
-//This marks something as a projectile when it's a component of it
-//Projectile systems will move it and detect collision with the player and enimes
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::despawn::components::LiveDuration;
+use crate::{combat::status_effects::components::EffectsList, despawn::components::LiveDuration};
 
-#[derive(Component, Default)]
-#[require(LiveDuration)]
-pub struct Projectile {
-    pub speed: f32,
+#[derive(Bundle, Clone)]
+pub struct ProjectileBundle {
+    pub projectile: Projectile,
+    pub sprite: Sprite,
+    pub effects_list: EffectsList,
 }
 
-impl Projectile {
-    pub fn new(speed: f32) -> Self {
-        Projectile { speed }
-    }
+#[derive(Component, Clone)]
+#[require(
+    LiveDuration(|| LiveDuration::new(1.0)),
+    Sensor,
+    RigidBody(default_rigid_body),
+    Collider(default_collider),
+    CollidingEntities,
+)]
+pub struct Projectile {
+    pub damage: f32,
+}
+
+fn default_collider() -> Collider {
+    Collider::rectangle(10.0, 10.0)
+}
+
+fn default_rigid_body() -> RigidBody {
+    RigidBody::Dynamic
 }

@@ -1,31 +1,43 @@
 use bevy::prelude::*;
 
-use crate::{
-    combat::damage::{
-        components::{Health, InvulnerableFromDamage},
-        events::{DamageEvent, DefeatedEvent},
+use crate::combat::{
+    attributes::health::Health,
+    damage::{
+        components::Invulnerable,
+        events::{AttemptDamageEvent, DefeatedEvent},
     },
-    combat::status_effects::{components::EffectsList, events::ApplyEffect},
+    status_effects::{components::EffectsList, events::ApplyEffect},
 };
 
+use super::{components::HasIFrames, events::DamageDealtEvent};
+
 pub fn on_damage_event(
-    damage_trigger: Trigger<DamageEvent>,
+    damage_trigger: Trigger<AttemptDamageEvent>,
     mut commands: Commands,
-    mut damaged_query: Query<(&mut Health, Option<&InvulnerableFromDamage>)>,
+    mut damaged_query: Query<(&mut Health, Option<&HasIFrames>, Option<&Invulnerable>)>,
     source_query: Query<&EffectsList>,
 ) {
-    if let Ok((mut health, invulnerable)) = damaged_query.get_mut(damage_trigger.entity()) {
+    if let Ok((mut health, has_iframes, invulnerable)) =
+        damaged_query.get_mut(damage_trigger.entity())
+    {
         if invulnerable.is_some() {
             return;
         }
 
         health.take_damage(damage_trigger.damage);
 
+        commands.trigger_targets(
+            DamageDealtEvent {
+                damage: damage_trigger.damage,
+            },
+            damage_trigger.entity(),
+        );
+
         // Damage event decides whether the entity becomes invulernable afterwards
-        if damage_trigger.makes_invulnerable {
+        if let Some(iframes) = has_iframes {
             commands
                 .entity(damage_trigger.entity())
-                .insert(InvulnerableFromDamage::default());
+                .insert(Invulnerable::new(iframes));
         }
 
         if health.hp == 0.0 {
@@ -48,11 +60,11 @@ pub fn on_damage_event(
 pub fn handle_invulnerability(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut InvulnerableFromDamage, &mut Sprite)>,
+    mut query: Query<(Entity, &mut Invulnerable, &mut Sprite)>,
 ) {
     for (entity, mut invulnerable, mut sprite) in query.iter_mut() {
         // Update main invulnerability timer
-        invulnerable.timer.tick(time.delta());
+        invulnerable.total_time.tick(time.delta());
 
         // Update flash timer
         invulnerable.flash_timer.tick(time.delta());
@@ -68,9 +80,20 @@ pub fn handle_invulnerability(
         }
 
         // Remove invulnerability when timer is finished
-        if invulnerable.timer.finished() {
-            commands.entity(entity).remove::<InvulnerableFromDamage>();
-            sprite.color.set_alpha(1.0); // Ensure sprite is fully visible when done
+        if invulnerable.total_time.finished() {
+            commands.entity(entity).remove::<Invulnerable>();
         }
     }
+}
+
+pub fn on_remove_invulnerable(
+    trigger: Trigger<OnRemove, Invulnerable>,
+    mut query: Query<&mut Sprite>,
+) {
+    // Ensure sprite is fully visible when invulnerability is removed
+    query
+        .get_mut(trigger.entity())
+        .unwrap()
+        .color
+        .set_alpha(1.0);
 }

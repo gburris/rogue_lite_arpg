@@ -1,7 +1,4 @@
-pub mod equipment;
-pub mod inventory;
 pub mod player;
-
-pub use equipment::*;
-pub use inventory::*;
+pub mod stats;
 pub use player::*;
+pub use stats::*;

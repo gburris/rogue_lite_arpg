@@ -11,4 +11,10 @@ pub struct PlayerMovementEvent {
 }
 
 #[derive(Event)]
-pub struct ResetPlayerPosition;
+pub struct PlayerStoppedEvent;
+
+#[derive(Event)]
+pub struct MainHandActivated;
+
+#[derive(Event)]
+pub struct AttemptInteractionInput;

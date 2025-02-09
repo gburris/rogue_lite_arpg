@@ -1,40 +1,39 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::Enemy,
-    movement::components::IsMoving,
     combat::status_effects::{
         components::{SlowedStatus, StatusType, StunnedStatus},
         events::ApplyStatus,
     },
+    movement::components::SimpleMotion,
 };
 
 pub fn on_stun_applied(
     trigger: Trigger<OnInsert, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion>,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
-        is_moving.0 = false;
+    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+        motion.stun();
     }
 }
 
 pub fn on_stun_removed(
     trigger: Trigger<OnRemove, StunnedStatus>,
     status_query: Query<&Parent, With<StunnedStatus>>,
-    mut is_moving_query: Query<&mut IsMoving, With<Enemy>>,
+    mut motion_query: Query<&mut SimpleMotion>,
     mut commands: Commands,
 ) {
     let Ok(parent) = status_query.get(trigger.entity()) else {
         return;
     };
 
-    if let Ok(mut is_moving) = is_moving_query.get_mut(parent.get()) {
-        is_moving.0 = true;
+    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+        motion.remove_debuff();
     }
 
     commands.trigger_targets(

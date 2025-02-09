@@ -1,5 +1,10 @@
 pub mod components;
-pub mod factory;
+pub mod equipment;
+pub mod grounded;
+pub mod inventory;
+pub mod item_factory;
+pub mod weapon_factory;
 
 pub use components::*;
-pub use factory::*;
+pub use item_factory::*;
+pub use weapon_factory::*;

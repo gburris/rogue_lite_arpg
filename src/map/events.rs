@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(Event)]
-pub struct StartRunEvent;
+pub struct CreateInstanceEvent;
 
 #[derive(Event)]
-pub struct WarpZoneEnterEvent;
+pub struct CleanupZone;

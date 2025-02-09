@@ -7,7 +7,7 @@ use super::events::ApplyStatus;
 /**
  * "Effects" are currently just a list of statuses to apply
  */
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct EffectsList {
     pub effects: Vec<ApplyStatus>,
 }
@@ -30,7 +30,7 @@ pub struct BurningStatus {
 impl Default for BurningStatus {
     fn default() -> Self {
         BurningStatus {
-            damage: 10.0,
+            damage: 2.0,
             damage_frequency: Timer::from_seconds(0.5, TimerMode::Repeating),
         }
     }

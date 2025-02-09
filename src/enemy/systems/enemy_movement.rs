@@ -2,87 +2,101 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    combat::damage::components::Health, enemy::Enemy, movement::components::SimpleMotion,
-    player::components::Player,
+    combat::{
+        attributes::Health,
+        components::{ActionState, AimPosition},
+    },
+    enemy::Enemy,
+    movement::components::SimpleMotion,
+    npc::NPC,
+    player::{MainHandActivated, Player},
 };
 
-// Add this to your components module
 #[derive(Component)]
 pub struct WanderDirection {
-    direction: Vec3,
     timer: Timer,
 }
 
 impl Default for WanderDirection {
     fn default() -> Self {
         Self {
-            direction: Vec3::ZERO,
             timer: Timer::from_seconds(2.0, TimerMode::Repeating),
         }
+    }
+}
+
+pub fn update_enemy_aim_position(
+    mut enemy_aim_pos_query: Query<&mut AimPosition, With<Enemy>>,
+    player_transform: Single<&mut Transform, With<Player>>,
+) {
+    for mut aim_position in enemy_aim_pos_query.iter_mut() {
+        aim_position.position = player_transform.translation.truncate();
     }
 }
 
 pub fn move_enemies_toward_player(
     time: Res<Time>,
     mut commands: Commands,
-    mut param_set: ParamSet<(
-        Query<&Transform, With<Player>>,
-        Query<
-            (
-                Entity,
-                &Health,
-                &Transform,
-                &mut SimpleMotion,
-                Option<&mut WanderDirection>,
-            ),
-            With<Enemy>,
-        >,
-    )>,
+    mut enemy_query: Query<
+        (
+            Entity,
+            &Health,
+            &Transform,
+            &mut SimpleMotion,
+            &ActionState,
+            Option<&mut WanderDirection>,
+        ),
+        (With<Enemy>, Without<NPC>),
+    >,
+    player_transform: Single<&Transform, With<Player>>,
 ) {
     const CHASE_DISTANCE: f32 = 400.0;
 
-    // Get the player's transform (read-only)
-    if let Ok(player_transform) = param_set.p0().get_single() {
-        let player_pos = player_transform.translation;
+    let player_pos = player_transform.translation;
 
-        // Iterate through enemies and update their transforms
-        for (entity, healh, enemy_transform, mut motion, wander) in param_set.p1().iter_mut() {
-            let distance_to_player = player_pos.distance(enemy_transform.translation);
+    for (entity, health, enemy_transform, mut motion, state, wander) in enemy_query.iter_mut() {
+        if *state == ActionState::Defeated {
+            motion.stop_moving();
+            continue;
+        }
+        let distance_to_player = player_pos.distance(enemy_transform.translation);
 
-            if distance_to_player <= CHASE_DISTANCE || healh.hp < healh.max_hp {
-                // Remove wandering component if it exists when in chase mode
-                if wander.is_some() {
-                    commands.entity(entity).remove::<WanderDirection>();
+        if distance_to_player <= CHASE_DISTANCE || health.hp < health.max_hp {
+            // Remove wandering component if it exists when in chase mode
+            if wander.is_some() {
+                commands.entity(entity).remove::<WanderDirection>();
+            }
+
+            commands.trigger_targets(MainHandActivated, entity);
+
+            // Chase behavior
+            let towards_player_direction = (player_pos - enemy_transform.translation)
+                .normalize_or_zero()
+                .truncate();
+            motion.start_moving(towards_player_direction);
+        } else {
+            // Wandering behavior
+            match wander {
+                Some(mut wander) => {
+                    // Update wander timer and change direction if needed
+                    if wander.timer.tick(time.delta()).just_finished() {
+                        motion.start_moving(random_direction());
+                    }
                 }
-
-                // Chase behavior
-                let direction = (player_pos - enemy_transform.translation).normalize_or_zero();
-                motion.direction = direction.truncate();
-            } else {
-                // Wandering behavior
-                match wander {
-                    Some(mut wander) => {
-                        // Update wander timer and change direction if needed
-                        if wander.timer.tick(time.delta()).just_finished() {
-                            wander.direction = random_direction();
-                        }
-                        motion.direction = wander.direction.truncate();
-                    }
-                    None => {
-                        // Initialize wandering for enemies that don't have it
-                        commands.entity(entity).insert(WanderDirection {
-                            direction: random_direction(),
-                            timer: Timer::from_seconds(2.0, TimerMode::Repeating),
-                        });
-                    }
+                None => {
+                    // Initialize wandering for enemies that don't have it
+                    motion.start_moving(random_direction());
+                    commands.entity(entity).insert(WanderDirection {
+                        timer: Timer::from_seconds(2.0, TimerMode::Repeating),
+                    });
                 }
             }
-        }
+        };
     }
 }
 
-fn random_direction() -> Vec3 {
+fn random_direction() -> Vec2 {
     let mut rng = thread_rng();
     let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-    Vec3::new(angle.cos(), 0.0, 0.5)
+    Vec2::new(angle.cos(), angle.sin())
 }

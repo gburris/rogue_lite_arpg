@@ -1,12 +1,17 @@
 use bevy::prelude::*;
 
-use crate::labels::states::AppState;
+use crate::{labels::states::AppState, map::events::CleanupZone, player::PlayerLevel};
 
 #[derive(Component)]
 pub struct GameOverScreen;
 
 #[derive(Component)]
 pub struct RestartButton;
+
+#[derive(Event)]
+pub struct RestartEvent {
+    pub player_level: u32,
+}
 
 pub fn create(mut commands: Commands) {
     commands
@@ -68,13 +73,24 @@ pub fn despawn_game_over_screen(
         commands.entity(entity).despawn_recursive();
     }
 }
+
+//Query the player level, add it to the restart event
 pub fn handle_restart_button(
     mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<AppState>>,
+    player_level: Single<&PlayerLevel>,
+    mut commands: Commands,
 ) {
     for interaction in &mut restart_query {
         if *interaction == Interaction::Pressed {
-            game_state.set(AppState::CreateOverworld);
+            commands.trigger(RestartEvent {
+                player_level: player_level.current,
+            });
+            game_state.set(AppState::SpawnPlayer);
         }
     }
+}
+
+pub fn on_restart_event_cleanup_zone(_: Trigger<RestartEvent>, mut commands: Commands) {
+    commands.trigger(CleanupZone);
 }

@@ -1,11 +1,14 @@
-use avian2d::prelude::Collider;
-use bevy::prelude::*;
+use std::collections::HashMap;
 
-use crate::{combat::damage::components::Health, movement::components::SimpleMotion};
+use avian2d::prelude::*;
+use bevy::prelude::*;
+use serde::Deserialize;
+
+use crate::{combat::attributes::health::Health, movement::components::SimpleMotion};
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(Health, SimpleMotion, CollisionDamage, Collider, Experience)]
+#[require(Health, SimpleMotion, Collider, CollidingEntities, Experience)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -20,14 +23,19 @@ impl Default for Experience {
     }
 }
 
-//How much damage an enemy does when it collides with you
-#[derive(Component, Clone)]
-pub struct CollisionDamage {
-    pub damage: f32,
+#[derive(Deserialize, Debug)]
+pub struct EnemiesConfig {
+    pub enemies: HashMap<String, EnemyType>,
+}
+#[derive(Deserialize, Debug)]
+pub struct EnemyType {
+    pub simple_motion_speed: f32,
+    pub health: f32,
+    pub sprite_path: String,
+    pub collider_size: (f32, f32),
 }
 
-impl Default for CollisionDamage {
-    fn default() -> Self {
-        CollisionDamage { damage: 10.1 }
-    }
+#[derive(Resource)]
+pub struct EnemyAssets {
+    pub enemy_config: HashMap<String, EnemyType>,
 }

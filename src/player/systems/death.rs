@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::damage::events::DefeatedEvent, despawn::events::CleanupCurrentWorldSpace,
-    labels::states::AppState,
+    combat::damage::events::DefeatedEvent, labels::states::AppState, map::events::CleanupZone,
 };
 
 pub fn on_player_defeated(
@@ -11,6 +10,6 @@ pub fn on_player_defeated(
     mut game_state: ResMut<NextState<AppState>>,
 ) {
     // TODO: Add death animation
-    commands.trigger(CleanupCurrentWorldSpace);
+    commands.trigger(CleanupZone);
     game_state.set(AppState::GameOver);
 }

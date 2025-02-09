@@ -1,51 +1,57 @@
+use avian2d::prelude::CollidingEntities;
 use bevy::prelude::*;
-use std::{collections::HashMap, fmt};
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component)]
 pub struct Item {
-    pub name: String,
-    pub stats: HashMap<StatType, i32>,
+    id: u32,
+    //For any data that is assoicated with all items, we should put it here
+    pub drop_glow_effect: f32,
+    pub drop_rotation_timer: f32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum StatType {
-    SpellPower,
-    CastSpeed,
-    AttackDamage,
-    Durability,
-}
-
-impl fmt::Display for StatType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let stat_name = match self {
-            StatType::SpellPower => "Spell Power",
-            StatType::CastSpeed => "Cast SimpleMotion",
-            StatType::AttackDamage => "Attack Damage",
-            StatType::Durability => "Durability",
-        };
-        write!(f, "{}", stat_name)
+impl Default for Item {
+    fn default() -> Self {
+        Item {
+            id: 0,
+            drop_glow_effect: 0.0,
+            drop_rotation_timer: 0.0,
+        }
     }
 }
 
 impl Item {
-    pub fn new(name: &str) -> Self {
-        Item {
-            name: name.to_string(),
-            stats: HashMap::new(),
-        }
+    pub fn new(id: u32) -> Self {
+        Item { id, ..default() }
     }
 
-    pub fn add_stat(&mut self, stat_type: StatType, value: i32) {
-        self.stats.insert(stat_type, value);
-    }
-
-    pub fn modify_stat(&mut self, stat_type: StatType, value: i32) {
-        if let Some(stat) = self.stats.get_mut(&stat_type) {
-            *stat = value;
-        }
-    }
-
-    pub fn get_stat(&self, stat_type: &StatType) -> Option<i32> {
-        self.stats.get(stat_type).copied()
+    pub fn get_id(&self) -> u32 {
+        self.id
     }
 }
+
+#[derive(Component, Clone, Debug)]
+pub struct Consumable;
+
+#[derive(Component, Clone, Debug)]
+pub struct HealthPotion;
+
+#[derive(Component, Clone, Debug)]
+pub struct DropRate(pub f32);
+
+#[derive(Component)]
+pub struct ConsumableEffect {
+    pub effect_type: ConsumableType,
+}
+
+pub enum ConsumableType {
+    Heal(f32), // Heal player for a specific amount
+}
+
+#[derive(Event)]
+pub struct ItemToGroundEvent {
+    pub origin_position: Vec3,
+}
+
+#[derive(Component, Clone, Debug)]
+#[require(CollidingEntities)]
+pub struct Grounded;

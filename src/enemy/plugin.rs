@@ -1,24 +1,19 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 
-use crate::{enemy::systems::*, labels::sets::InGameSet, labels::states::InGameState};
+use crate::{enemy::systems::*, labels::sets::InGameSet};
 
-use super::resources::EnemySpawnConfig;
+use super::systems::enemy_movement::update_enemy_aim_position;
 
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(EnemySpawnConfig {
-            timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
-            quantity: 1,
-        })
-        .add_systems(
-            Update,
-            (spawn_enemies_with_timer, move_enemies_toward_player)
-                .in_set(InGameSet::Simulation)
-                .run_if(in_state(InGameState::Run)),
-        );
+        app.add_systems(Startup, setup_enemy_assets)
+            .add_observer(spawn_enemies)
+            .add_systems(
+                Update,
+                (move_enemies_toward_player, update_enemy_aim_position)
+                    .in_set(InGameSet::Simulation),
+            );
     }
 }

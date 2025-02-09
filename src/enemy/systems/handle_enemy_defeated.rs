@@ -7,6 +7,7 @@ use crate::{
         damage::{components::Invulnerable, events::DefeatedEvent},
     },
     despawn::components::LiveDuration,
+    econ::components::GoldDropEvent,
     enemy::{Enemy, Experience},
     items::{equipment::EquipmentSlots, inventory::inventory::Inventory, ItemToGroundEvent},
     player::components::{Player, PlayerExperience},
@@ -57,6 +58,12 @@ pub fn on_enemy_defeated(
                 );
             }
         }
+
+        commands.trigger(GoldDropEvent {
+            drop_location: *transform,
+            amount: experience_to_gain.base_exp,
+        });
+
         commands
             .entity(trigger.entity())
             .insert(LiveDuration::new(2.0))

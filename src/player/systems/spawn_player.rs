@@ -14,6 +14,7 @@ use crate::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
+    econ::components::Wallet,
     items::{
         equipment::{equipment_slots::EquipmentSlots, use_equipped},
         inventory::inventory::Inventory,
@@ -53,12 +54,14 @@ pub fn spawn_player(
 
     commands
         .spawn((
-            Player,
-            PlayerStats::default(),
-            AimPosition::default(),
-            SimpleMotion::new(450.0),
-            Health::new(100.0),
-            Mana::new(100.0, 10.0),
+            (
+                Player,
+                PlayerStats::default(),
+                AimPosition::default(),
+                SimpleMotion::new(450.0),
+                Health::new(100.0),
+                Mana::new(100.0, 10.0),
+            ),
             inventory,
             EquipmentSlots {
                 mainhand: Some(fire_staff),
@@ -81,6 +84,7 @@ pub fn spawn_player(
                 ],
             ),
             LockedAxes::new().lock_rotation(),
+            Wallet::default(),
             (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

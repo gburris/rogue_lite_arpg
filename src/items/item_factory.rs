@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::FacingDirection,
+    configuration::assets::SpriteAssets,
     items::{
         equipment::EquipmentTransform, Consumable, ConsumableEffect, ConsumableType, HealthPotion,
         Item,

@@ -4,10 +4,6 @@ use crate::{
     configuration::assets::SpriteAssets,
     items::{inventory::inventory::Inventory, spawn_health_potion},
 };
-use crate::{
-    configuration::assets::SpriteAssets,
-    items::{inventory::inventory::Inventory, spawn_health_potion},
-};
 
 use super::components::OpenChest;
 
@@ -23,6 +19,6 @@ pub fn open_chest(
         .despawn_descendants();
 
     player_inventory
-        .add_item(spawn_health_potion(&mut commands))
+        .add_item(spawn_health_potion(&mut commands, &sprites))
         .expect("Chest tried adding health potion but inventory was full");
 }

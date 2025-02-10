@@ -2,61 +2,24 @@ use bevy::prelude::*;
 
 use crate::{
     items::{
-        equipment::{
-            equip::{AttemptEquipEvent, AttemptUnequipEvent},
-            Equippable,
-        },
+        equipment::{EquipEvent, Equippable},
         Consumable, Item,
     },
     labels::states::PausedState,
     player::{systems::ConsumeEvent, Player},
-    ui::display_case::{DisplayCaseSlot, FilledDisplaySlot},
+    ui::display_case::FilledDisplaySlot,
 };
 
-use super::{
-    equipment_menu::{EquipmentButton, UpdateEquipmentUIEvent},
-    inventory_menu::ItemText,
-    main_menu::MenuButton,
-};
+use super::{inventory_menu::ItemText, main_menu::MenuButton};
 
 #[derive(Event)]
 pub struct EquipmentItemClicked {
     pub item_entity: Option<Entity>,
 }
 
-#[derive(Event)]
-pub struct ItemRemovedUIEvent {
-    pub item_entity: Entity,
-    pub index: usize,
-}
-
 /// Trigger on entity with Inventory component (i.e. the player entity)
 #[derive(Event)]
 pub struct UpdateInventoryUIEvent;
-
-pub fn on_equipped_clicked(
-    trigger: Trigger<Pointer<Click>>,
-    mut commands: Commands,
-    slot_query: Query<&EquipmentButton>,
-    player: Single<Entity, With<Player>>,
-) {
-    let slot = slot_query.get(trigger.entity());
-
-    if let Ok(EquipmentButton {
-        item_entity: Some(item_entity),
-    }) = slot
-    {
-        commands.trigger_targets(
-            AttemptUnequipEvent {
-                item_entity: *item_entity,
-            },
-            *player,
-        );
-        //Redraw item lists
-        commands.trigger(UpdateEquipmentUIEvent);
-        // commands.trigger(UpdateInventoryUIEvent);
-    }
-}
 
 pub fn on_item_done_hovering(
     trigger: Trigger<Pointer<Out>>,
@@ -88,18 +51,17 @@ pub fn on_item_hover(
 pub fn on_item_clicked(
     trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
-    slot_query: Query<(&FilledDisplaySlot, &Parent)>,
-    slot_index_query: Query<&DisplayCaseSlot>,
+    slot_query: Query<&FilledDisplaySlot>,
     item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
 ) {
-    let (item_slot, slot_parent) = slot_query.get(trigger.entity()).unwrap();
+    let item_slot = slot_query.get(trigger.entity()).unwrap();
 
     let item_entity = item_slot.item;
 
     if let Ok((equippable, consumable)) = item_query.get(item_entity) {
         if equippable {
-            commands.trigger_targets(AttemptEquipEvent { item_entity }, *player);
+            commands.trigger_targets(EquipEvent { item_entity }, *player);
         } else if consumable {
             commands.trigger_targets(ConsumeEvent { item_entity }, *player);
         }

@@ -1,10 +1,13 @@
-use super::equipment_slots::EquipmentSlots;
-use crate::animation::FacingDirection;
-use crate::combat::components::ActionState;
-use crate::labels::layer::ZLayer;
+use std::{collections::HashMap, sync::OnceLock};
+
 use bevy::prelude::*;
-use std::collections::HashMap;
-use std::sync::OnceLock;
+
+use crate::{
+    animation::FacingDirection, combat::components::ActionState, items::inventory::Inventory,
+    labels::layer::ZLayer,
+};
+
+use super::EquipmentSlot;
 
 // Constants for transform values
 const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
@@ -96,12 +99,12 @@ impl EquipmentTransform {
 
 pub fn update_equipment_transforms(
     all_worn_equipment_in_game: Query<
-        (&EquipmentSlots, &ActionState, &FacingDirection),
+        (&Inventory, &ActionState, &FacingDirection),
         Or<(Changed<FacingDirection>, Changed<ActionState>)>,
     >,
     mut transforms: Query<&mut Transform>,
 ) {
-    for (equipment_slots, action_state, direction) in &all_worn_equipment_in_game {
+    for (inventory, action_state, direction) in &all_worn_equipment_in_game {
         if *action_state == ActionState::Attacking {
             return;
         }
@@ -113,16 +116,9 @@ pub fn update_equipment_transforms(
         };
 
         // Update mainhand equipment
-        if let Some(entity) = equipment_slots.mainhand {
+        if let Some(entity) = inventory.get_equipped(EquipmentSlot::Mainhand) {
             if let Ok(mut transform) = transforms.get_mut(entity) {
                 *transform = direction_transforms.mainhand;
-            }
-        }
-
-        // Update head equipment
-        if let Some(entity) = equipment_slots.head {
-            if let Ok(mut transform) = transforms.get_mut(entity) {
-                *transform = direction_transforms.head;
             }
         }
     }

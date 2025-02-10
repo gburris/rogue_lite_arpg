@@ -10,11 +10,11 @@ use crate::{
         weapon::weapon::ProjectileWeapon,
     },
     enemy::Enemy,
-    items::equipment::Equippable,
+    items::{equipment::Equippable, inventory::Inventory},
     player::MainHandActivated,
 };
 
-use super::equipment_slots::EquipmentSlots;
+use super::EquipmentSlot;
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
@@ -23,17 +23,22 @@ pub struct UseEquipmentEvent {
     pub holder: Entity, // entity holding the equipment
 }
 
+pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
+    for mut equippable in equippable_query.iter_mut() {
+        equippable.use_rate.tick(time.delta());
+    }
+}
+
 // TODO: All of the "warns" in this function should be shown to the player through UI so they know why using main hand failed
 // TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
 // Their weapon is on cooldown
 pub fn on_main_hand_activated(
     main_hand_trigger: Trigger<MainHandActivated>,
     mut commands: Commands,
-    mut holder_query: Query<(&EquipmentSlots, Option<&mut Mana>)>,
+    mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
     mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
 ) {
-    let Ok((equipment_slots, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity())
-    else {
+    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
         error!(
             "Entity: {} tried to use main hand, but is missing equipment slots",
             main_hand_trigger.entity()
@@ -41,7 +46,7 @@ pub fn on_main_hand_activated(
         return;
     };
 
-    let Some(main_hand_entity) = equipment_slots.mainhand else {
+    let Some(main_hand_entity) = inventory.get_equipped(EquipmentSlot::Mainhand) else {
         warn!("Main hand is empty!");
         return;
     };

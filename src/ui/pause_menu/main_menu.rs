@@ -207,13 +207,3 @@ fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
             ));
         });
 }
-
-pub fn despawn_main_menu(
-    mut commands: Commands,
-    pause_menu_background_query: Query<Entity, With<MainMenu>>,
-) {
-    debug!("despawn_main_menu called");
-    for entity in pause_menu_background_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
-}

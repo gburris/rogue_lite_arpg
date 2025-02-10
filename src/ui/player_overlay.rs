@@ -9,9 +9,6 @@ use crate::{
 pub struct PlayerOverlay;
 
 #[derive(Component)]
-pub struct PlayerOverlayStatsText;
-
-#[derive(Component)]
 pub struct ManaBar;
 
 #[derive(Component)]

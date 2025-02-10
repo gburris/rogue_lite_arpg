@@ -8,7 +8,7 @@ use baba_yaga::{
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
     enemy::plugin::EnemyPlugin,
-    items::equipment::plugin::EquipmentPlugin,
+    items::equipment::EquipmentPlugin,
     map::plugin::MapPlugin,
     movement::plugin::MovementPlugin,
     npc::NPCPlugin,

@@ -13,7 +13,8 @@ use crate::{
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
-        equipment::{use_equipped::on_main_hand_activated, EquipmentSlots},
+        equipment::{on_main_hand_activated, EquipEvent, EquipmentSlot},
+        inventory::Inventory,
         spawn_random_mainhand_weapon,
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
@@ -62,7 +63,7 @@ fn spawn_enemy(
         },
     );
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
-        commands
+        let enemy = commands
             .spawn((
                 Enemy,
                 SimpleMotion::new(enemy.simple_motion_speed),
@@ -72,10 +73,7 @@ fn spawn_enemy(
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
                 ActionState::Idle,
-                EquipmentSlots {
-                    mainhand: Some(random_mainhand),
-                    head: None,
-                },
+                Inventory::default(),
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],
@@ -97,7 +95,10 @@ fn spawn_enemy(
                 ),
             ))
             .observe(on_enemy_defeated)
-            .observe(on_main_hand_activated);
+            .observe(on_main_hand_activated)
+            .id();
+
+        commands.trigger_targets(EquipEvent::new(random_mainhand), enemy);
     } else {
         eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }

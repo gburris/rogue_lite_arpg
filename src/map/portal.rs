@@ -42,6 +42,7 @@ pub fn handle_portal_collisions(
     for portal_colliding_entities in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
+                info!("Creating instance");
                 commands.trigger(CreateInstanceEvent);
             }
         }

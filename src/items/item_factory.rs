@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 
-use super::{
-    equipment::{equipment_transform::EquipmentTransform, Equippable},
-    Consumable, ConsumableEffect, ConsumableType, Item,
-};
 use crate::{
     animation::FacingDirection,
-    configuration::assets::SpriteAssets,
-    items::{equipment::EquipmentSlot, HealthPotion},
+    items::{
+        equipment::EquipmentTransform, Consumable, ConsumableEffect, ConsumableType, HealthPotion,
+        Item,
+    },
 };
 
 pub fn spawn_health_potion(commands: &mut Commands) -> Entity {

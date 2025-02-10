@@ -1,14 +1,15 @@
 use bevy::prelude::*;
 use std::collections::VecDeque;
 
-#[derive(Component, Default, Debug)]
+use crate::items::equipment::EquipmentSlot;
+
+#[derive(Component)]
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
 
-    /// Equipment slots
-    pub mainhand: Option<Entity>,
-    pub offhand: Option<Entity>,
+    mainhand_index: Option<usize>,
+    offhand_index: Option<usize>,
 
     /// If you want to open this inventory in a UI    
     pub display_case: Option<Entity>,
@@ -19,16 +20,26 @@ impl Default for Inventory {
         Self {
             max_capacity: 10,
             items: VecDeque::new(),
-            ..default()
+            mainhand_index: None,
+            offhand_index: None,
+            display_case: None,
         }
     }
 }
 
 impl Inventory {
-    pub fn add_item(&mut self, item: Entity) -> Result<(), String> {
+    pub fn new(starting_equipment: Entity, slot: EquipmentSlot) -> Self {
+        let mut inventory = Inventory::default();
+        inventory.equip(starting_equipment, slot);
+        inventory
+    }
+
+    /// Adds an item to the inventory if there's space
+    /// Returns the index of the added item
+    pub fn add_item(&mut self, item: Entity) -> Result<usize, String> {
         if self.items.len() < self.max_capacity {
             self.items.push_back(item);
-            Ok(())
+            Ok(self.items.len() - 1)
         } else {
             Err("Inventory is full".to_string())
         }
@@ -52,26 +63,49 @@ impl Inventory {
     }
 
     /// Equip the new_item in the specified slot
-    pub fn equip(&mut self, new_item: Entity, slot: &EquipmentSlot) -> Option<Entity> {
-        let slot_ref = match slot {
-            EquipmentSlot::Mainhand => &mut self.mainhand,
-            EquipmentSlot::Helmet => &mut self.head,
-        };
+    ///
+    /// This method expects the equipment to already exist in the inventory.
+    /// But if it does not it will still attempt to add it. If that fails, you messed up calling this function.
+    ///
+    /// Performance: Equipping linearly searches inventory to find item by comparing entities
+    /// Consider: Adding a reverse mapping entity_to_index: HashMap<Entity, usize> if we care about making this O(1)
+    pub fn equip(&mut self, item: Entity, slot: EquipmentSlot) {
+        let index = self.find_item_by_entity(item);
 
-        let previous = slot_ref.take();
-
-        *slot_ref = Some(new_item);
-
-        previous
+        if index.is_none() {
+            let index = self.add_item(item).expect("Why did you try to equip an item outside the inventory while said inventory was full you dummy");
+            *self.get_equipped_slot_mut(slot) = Some(index);
+        } else {
+            *self.get_equipped_slot_mut(slot) = index;
+        }
     }
 
-    /// Remove the existing item from the specified slot, if it exists
-    pub fn unequip(&mut self, slot: &EquipmentSlot) {
-        let slot_ref = match slot {
-            EquipmentSlot::Mainhand => &mut self.mainhand,
-            EquipmentSlot::Offhand => &mut self.head,
-        };
+    /// Sets the specified equipment slot to None in inventory
+    pub fn unequip(&mut self, slot: EquipmentSlot) {
+        self.get_equipped_slot(slot).take();
+    }
 
-        *slot_ref = None;
+    pub fn get_equipped(&self, slot: EquipmentSlot) -> Option<Entity> {
+        self.get_equipped_slot(slot)
+            .map(|i| self.items.get(i).cloned())
+            .flatten()
+    }
+
+    fn find_item_by_entity(&self, item: Entity) -> Option<usize> {
+        self.items.iter().position(|&e| e == item)
+    }
+
+    fn get_equipped_slot_mut(&mut self, slot: EquipmentSlot) -> &mut Option<usize> {
+        match slot {
+            EquipmentSlot::Mainhand => &mut self.mainhand_index,
+            EquipmentSlot::Offhand => &mut self.offhand_index,
+        }
+    }
+
+    fn get_equipped_slot(&self, slot: EquipmentSlot) -> Option<usize> {
+        match slot {
+            EquipmentSlot::Mainhand => self.mainhand_index,
+            EquipmentSlot::Offhand => self.offhand_index,
+        }
     }
 }

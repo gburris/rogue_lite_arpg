@@ -25,7 +25,7 @@ fn load_instance_data() -> HashMap<String, InstanceType> {
 
 #[cfg(target_arch = "wasm32")]
 fn load_instance_data() -> HashMap<String, EnemyType> {
-    const INSTANCE_RON: &str = include_str!("../../assets/config/instances.ron");
+    const INSTANCE_RON: &str = include_str!("assets/config/enemies.ron");
 
     match from_str::<EnemiesConfig>(INSTANCE_RON) {
         Ok(data) => data.instances,

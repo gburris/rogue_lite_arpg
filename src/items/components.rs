@@ -1,4 +1,4 @@
-use avian2d::prelude::CollidingEntities;
+use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -68,4 +68,7 @@ pub struct Autoloot;
 
 // Grounded loot scoots to player
 #[derive(Component)]
-pub struct Magnet;
+#[require(CollidingEntities, Sensor, CollisionLayers, Collider)]
+pub struct Magnet {
+    pub strength: f32,
+}

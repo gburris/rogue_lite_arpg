@@ -44,18 +44,24 @@ pub fn on_gold_drop_event(
         transform.translation.y += offset.y;
         transform.translation.z = ZLayer::ItemOnGround.z();
 
-        commands.spawn((
-            Sprite::from_image(sprite_path),
-            Autoloot,
-            Magnet,
-            transform,
-            Currency { value: value },
-            Grounded,
-            Sensor,
-            Collider::circle(150.0), //Magnet Radius
-            CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
-            CollidingEntities::default(),
-        ));
+        commands
+            .spawn((
+                Sprite::from_image(sprite_path),
+                Autoloot,
+                transform,
+                Currency { value: value },
+                Grounded,
+                Collider::circle(8.0),
+                CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Player]),
+                CollidingEntities::default(),
+            ))
+            .with_child((
+                Magnet { strength: 500.0 },
+                CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
+                CollidingEntities::default(),
+                Sensor,
+                Collider::circle(150.0),
+            ));
 
         remaining_gold -= value;
         entities_spawned += 1;

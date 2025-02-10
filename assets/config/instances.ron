@@ -1,7 +1,7 @@
 InstanceConfig(
     instances: {
         "Swamp": InstanceType(
-            number_of_enemies: 15,
+            number_of_enemies: 150,
             wall_density: .0005,
             pond_density: .0001
         )

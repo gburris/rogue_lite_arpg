@@ -1,5 +1,6 @@
 mod components;
 pub mod equipment;
+pub mod grounded;
 pub mod inventory;
 mod item_factory;
 mod weapon_factory;

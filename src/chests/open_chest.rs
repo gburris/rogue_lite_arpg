@@ -4,6 +4,10 @@ use crate::{
     configuration::assets::SpriteAssets,
     items::{inventory::inventory::Inventory, spawn_health_potion},
 };
+use crate::{
+    configuration::assets::SpriteAssets,
+    items::{inventory::inventory::Inventory, spawn_health_potion},
+};
 
 use super::components::OpenChest;
 

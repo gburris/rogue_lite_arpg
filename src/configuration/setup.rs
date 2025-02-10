@@ -14,7 +14,8 @@ pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(debug_assertions)] // only in dev mode
+        #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+        // only in dev mode and not in WASM
         app.add_plugins(DebugPlugin);
 
         #[cfg(not(debug_assertions))] // only in release mode

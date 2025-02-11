@@ -13,8 +13,8 @@ use crate::{
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
-        equipment::{use_equipped::on_main_hand_activated, EquipmentSlots},
-        inventory::inventory::Inventory,
+        equipment::{on_main_hand_activated, EquipEvent},
+        inventory::Inventory,
         spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
@@ -62,16 +62,17 @@ fn spawn_enemy(
                 .first,
         },
     );
-    let mut inventory = Inventory::default_inventory();
-    inventory
-        .add_item(spawn_health_potion(commands, &sprites))
-        .ok();
-    inventory.add_item(spawn_axe(commands, &sprites)).ok();
+
+    let starting_items = [
+        spawn_health_potion(commands, &sprites),
+        spawn_axe(commands, &sprites),
+    ];
+
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
-        commands
+        let enemy = commands
             .spawn((
                 Enemy,
-                inventory,
+                Inventory::new(&starting_items.into()),
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),
@@ -79,10 +80,6 @@ fn spawn_enemy(
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
                 ActionState::Idle,
-                EquipmentSlots {
-                    mainhand: Some(random_mainhand),
-                    head: None,
-                },
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],
@@ -103,8 +100,12 @@ fn spawn_enemy(
                     FacingDirection::Down,
                 ),
             ))
+            .add_children(&starting_items)
             .observe(on_enemy_defeated)
-            .observe(on_main_hand_activated);
+            .observe(on_main_hand_activated)
+            .id();
+
+        commands.trigger_targets(EquipEvent::new(random_mainhand), enemy);
     } else {
         eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }

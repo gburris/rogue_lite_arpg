@@ -1,44 +1,123 @@
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::collections::VecDeque;
 
-#[derive(Component, Default, Debug)]
+use crate::items::equipment::EquipmentSlot;
+
+#[derive(Component)]
 pub struct Inventory {
     pub max_capacity: usize,
-    pub items: HashMap<u8, Entity>,
+    pub items: VecDeque<Entity>,
+
+    mainhand_index: Option<usize>,
+    offhand_index: Option<usize>,
+
+    /// If you want to open this inventory in a UI    
+    pub display_case: Option<Entity>,
+}
+
+impl Default for Inventory {
+    fn default() -> Self {
+        Self {
+            max_capacity: 10,
+            items: VecDeque::new(),
+            mainhand_index: None,
+            offhand_index: None,
+            display_case: None,
+        }
+    }
 }
 
 impl Inventory {
-    pub fn add_item(&mut self, item: Entity) -> Result<(), String> {
-        if self.items.len() < self.max_capacity {
-            // Find the first available slot
-            let slot = (0..self.max_capacity as u8)
-                .find(|i| !self.items.contains_key(i))
-                .ok_or_else(|| "No available slots".to_string())?;
+    pub fn new(items: &Vec<Entity>) -> Self {
+        let mut inventory = Inventory::default();
 
-            self.items.insert(slot, item);
-            Ok(())
+        items.iter().for_each(|&i| {
+            inventory.add_item(i).ok();
+        });
+
+        inventory
+    }
+
+    /// Adds an item to the inventory if there's space
+    /// Returns the index of the added item
+    pub fn add_item(&mut self, item: Entity) -> Result<usize, String> {
+        if self.items.len() < self.max_capacity {
+            self.items.push_back(item);
+            Ok(self.items.len() - 1)
         } else {
             Err("Inventory is full".to_string())
         }
     }
 
-    pub fn remove_item(&mut self, item: Entity) -> Result<(), String> {
-        if let Some(slot) = self
-            .items
-            .iter()
-            .find_map(|(&k, &v)| if v == item { Some(k) } else { None })
-        {
-            self.items.remove(&slot);
-            Ok(())
+    pub fn remove_item_by_value(&mut self, item: Entity) -> Result<Entity, String> {
+        // Search for item by comparing values (entities) and then remove by index
+        if let Some(item_index) = self.items.iter().position(|&e| e == item) {
+            self.remove_item(item_index)
         } else {
             Err("Item not found in inventory".to_string())
         }
     }
 
-    pub fn default_inventory() -> Self {
-        Inventory {
-            max_capacity: 10,
-            items: HashMap::new(),
+    pub fn remove_item(&mut self, index_to_remove: usize) -> Result<Entity, String> {
+        // all equipment indicies shift
+        // TODO - add this for offhand
+        if let Some(mainhand) = self.mainhand_index {
+            if index_to_remove < mainhand {
+                self.mainhand_index = Some(mainhand - 1);
+            } else if index_to_remove == mainhand {
+                self.mainhand_index = None;
+            }
+        }
+
+        self.items
+            .remove(index_to_remove)
+            .ok_or("Index was out of bounds".to_string())
+    }
+
+    /// Equip the new_item in the specified slot
+    ///
+    /// This method expects the equipment to already exist in the inventory.
+    /// But if it does not it will still attempt to add it. If that fails, you messed up calling this function.
+    ///
+    /// Performance: Equipping linearly searches inventory to find item by comparing entities
+    /// Consider: Adding a reverse mapping entity_to_index: HashMap<Entity, usize> if we care about making this O(1)
+    pub fn equip(&mut self, item: Entity, slot: EquipmentSlot) {
+        let index = self.find_item_by_entity(item);
+
+        if index.is_none() {
+            let index = self.add_item(item).expect("Why did you try to equip an item outside the inventory while said inventory was full you dummy");
+            *self.get_equipped_slot_mut(slot) = Some(index);
+        } else {
+            *self.get_equipped_slot_mut(slot) = index;
+        }
+    }
+
+    /// Sets the specified equipment slot to None in inventory
+    pub fn unequip(&mut self, slot: EquipmentSlot) {
+        self.get_equipped_slot(slot).take();
+    }
+
+    pub fn get_equipped(&self, slot: EquipmentSlot) -> Option<Entity> {
+        self.get_equipped_slot(slot)
+            .map(|i| self.items.get(i).cloned())
+            .flatten()
+    }
+
+    fn find_item_by_entity(&self, item: Entity) -> Option<usize> {
+        self.items.iter().position(|&e| e == item)
+    }
+
+    fn get_equipped_slot_mut(&mut self, slot: EquipmentSlot) -> &mut Option<usize> {
+        match slot {
+            EquipmentSlot::Mainhand => &mut self.mainhand_index,
+            EquipmentSlot::Offhand => &mut self.offhand_index,
+        }
+    }
+
+    fn get_equipped_slot(&self, slot: EquipmentSlot) -> Option<usize> {
+        match slot {
+            EquipmentSlot::Mainhand => self.mainhand_index,
+            EquipmentSlot::Offhand => self.offhand_index,
         }
     }
 }

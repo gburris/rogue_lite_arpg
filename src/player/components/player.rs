@@ -1,10 +1,24 @@
-use avian2d::prelude::Collider;
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{combat::attributes::Health, movement::components::SimpleMotion};
+use crate::{
+    combat::{attributes::Health, components::AimPosition},
+    movement::components::SimpleMotion,
+};
+
+use super::PlayerStats;
 
 #[derive(Component)]
-#[require(Health, SimpleMotion, Collider, PlayerExperience, PlayerLevel)]
+#[require(
+    Health(|| Health::new(100.0)),
+    SimpleMotion(|| SimpleMotion::new(450.0)),
+    PlayerExperience,
+    PlayerLevel,
+    PlayerStats,
+    AimPosition,
+    RigidBody,
+    LockedAxes(|| LockedAxes::new().lock_rotation())
+)]
 pub struct Player;
 
 //Components for experience and leveling

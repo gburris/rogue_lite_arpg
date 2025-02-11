@@ -6,9 +6,6 @@ use crate::player::PlayerStats;
 pub struct StatsMenu;
 
 #[derive(Component)]
-pub struct StatsMenuButton;
-
-#[derive(Component)]
 pub struct StatsDisplay;
 
 pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
@@ -142,14 +139,4 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                 Node::default(),
             ));
         });
-}
-
-pub fn despawn_stats_menu(
-    mut commands: Commands,
-    stats_menu_query: Query<Entity, With<StatsMenu>>,
-) {
-    debug!("despawn_stats_menu called");
-    for entity in stats_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
 }

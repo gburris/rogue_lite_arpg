@@ -14,7 +14,6 @@ pub struct MenuButton(pub PausedState);
 
 #[derive(Clone, Copy)]
 enum MenuButtonConfig {
-    Equipment,
     Inventory,
     Stats,
 }
@@ -22,7 +21,6 @@ enum MenuButtonConfig {
 impl MenuButtonConfig {
     fn to_component(self) -> (MenuButton, &'static str) {
         match self {
-            MenuButtonConfig::Equipment => (MenuButton(PausedState::Equipment), "EQUIPMENT"),
             MenuButtonConfig::Inventory => (MenuButton(PausedState::Inventory), "INVENTORY"),
             MenuButtonConfig::Stats => (MenuButton(PausedState::Stats), "STATS"),
         }
@@ -93,11 +91,7 @@ pub fn spawn_main_menu(
                 ))
                 .with_children(|body| {
                     // Spawn all menu buttons
-                    let buttons = [
-                        MenuButtonConfig::Equipment,
-                        MenuButtonConfig::Inventory,
-                        MenuButtonConfig::Stats,
-                    ];
+                    let buttons = [MenuButtonConfig::Inventory, MenuButtonConfig::Stats];
 
                     for button_config in buttons {
                         spawn_menu_button(body, button_config);
@@ -212,14 +206,4 @@ fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
                 Node::default(),
             ));
         });
-}
-
-pub fn despawn_main_menu(
-    mut commands: Commands,
-    pause_menu_background_query: Query<Entity, With<MainMenu>>,
-) {
-    debug!("despawn_main_menu called");
-    for entity in pause_menu_background_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
 }

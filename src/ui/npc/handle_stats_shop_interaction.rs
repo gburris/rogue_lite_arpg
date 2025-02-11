@@ -1,7 +1,10 @@
 use super::stats_shop::{
-    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatsMenu, StatsUIUpdateEvent,
+    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent,
 };
-use crate::{player::{DisplayableStatType, PlayerStats}, progression::GameProgress};
+use crate::{
+    player::{DisplayableStatType, PlayerStats},
+    progression::GameProgress,
+};
 use bevy::prelude::*;
 
 pub fn handle_stat_button_interaction(
@@ -80,7 +83,7 @@ pub fn handle_player_stat_change(
 pub fn handle_stats_shop_ui_update(
     _: Trigger<StatsUIUpdateEvent>,
     mut commands: Commands,
-    stats_menu_query: Query<Entity, With<StatsMenu>>,
+    stats_menu_query: Query<Entity, With<StatShopMenu>>,
     player_stats: Query<&PlayerStats>,
     game_progress: Res<GameProgress>,
 ) {

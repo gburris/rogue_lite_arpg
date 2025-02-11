@@ -48,7 +48,7 @@ fn get_release_window_plugin() -> WindowPlugin {
     {
         WindowPlugin {
             primary_window: Some(Window {
-                title: String::from("Right click to cast Icebolt Left Click to Cast Fireball"),
+                title: String::from("Baba Yaga"),
                 fit_canvas_to_parent: true,
                 ..Default::default()
             }),

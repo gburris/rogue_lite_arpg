@@ -52,7 +52,10 @@ pub fn on_gold_drop_event(
                 Currency { value: value },
                 Grounded,
                 Collider::circle(8.0),
-                CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Player]),
+                CollisionLayers::new(
+                    GameCollisionLayer::Interaction,
+                    [GameCollisionLayer::Player],
+                ),
                 CollidingEntities::default(),
             ))
             .with_child((

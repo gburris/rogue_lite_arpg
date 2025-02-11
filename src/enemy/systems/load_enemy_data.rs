@@ -1,6 +1,9 @@
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use bevy::{prelude::Commands, scene::ron::de::from_reader};
+use bevy::{
+    prelude::Commands,
+    scene::ron::{de::from_reader, from_str},
+};
 
 use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyType};
 

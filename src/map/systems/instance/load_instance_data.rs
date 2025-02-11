@@ -24,10 +24,10 @@ fn load_instance_data() -> HashMap<String, InstanceType> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn load_instance_data() -> HashMap<String, EnemyType> {
-    const INSTANCE_RON: &str = include_str!("../../../assets/config/instances.ron");
+fn load_instance_data() -> HashMap<String, InstanceType> {
+    const INSTANCE_RON: &str = include_str!("../../../../assets/config/instances.ron");
 
-    match from_str::<EnemiesConfig>(INSTANCE_RON) {
+    match from_str::<InstanceConfig>(INSTANCE_RON) {
         Ok(data) => data.instances,
         Err(e) => {
             eprintln!("Failed to parse RON file: {:?}", e);

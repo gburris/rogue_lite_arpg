@@ -9,7 +9,7 @@ use crate::{
     despawn::components::LiveDuration,
     econ::components::GoldDropEvent,
     enemy::{Enemy, Experience},
-    items::{equipment::EquipmentSlots, inventory::inventory::Inventory, Item, ItemToGroundEvent},
+    items::{inventory::inventory::Inventory, Item, ItemToGroundEvent},
     player::components::{Player, PlayerExperience},
 };
 use rand::{thread_rng, Rng};
@@ -17,21 +17,13 @@ use rand::{thread_rng, Rng};
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
-    mut defeated_enemy_query: Query<
-        (
-            &Experience,
-            &Transform,
-            Option<&Inventory>,
-            Option<&EquipmentSlots>,
-        ),
-        With<Enemy>,
-    >,
+    mut defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
     mut player_query: Query<&mut PlayerExperience, With<Player>>,
     item_query: Query<&Item>,
 ) {
     let mut rng = thread_rng();
 
-    if let Ok((experience_to_gain, transform, inventory, equipment_slots)) =
+    if let Ok((experience_to_gain, transform, inventory)) =
         defeated_enemy_query.get_mut(trigger.entity())
     {
         // Handle experience gain
@@ -40,10 +32,10 @@ pub fn on_enemy_defeated(
         }
 
         if let Some(inventory) = inventory {
-            for (_slot, item_entity) in inventory.items.iter() {
-                if let Ok(item) = item_query.get(*item_entity) {
+            for item_entity in inventory.items.iter() {
+                if let Ok(item_result) = item_query.get(*item_entity) {
                     let roll = rng.gen_range(0.0..1.0);
-                    if roll > (1.0 - item.drop_rate) {
+                    if roll > (1.0 - item_result.drop_rate) {
                         commands.trigger_targets(
                             ItemToGroundEvent {
                                 origin_position: transform.translation,
@@ -55,23 +47,6 @@ pub fn on_enemy_defeated(
             }
         }
 
-        if let Some(equipment_slots) = equipment_slots {
-            if let Some(mainhand_entity) = equipment_slots.mainhand {
-                if let Ok(item) = item_query.get(mainhand_entity) {
-                    // Query the item
-                    let roll = rng.gen_range(0.0..1.0);
-                    if roll > (1.0 - item.drop_rate) {
-                        commands.trigger_targets(
-                            ItemToGroundEvent {
-                                origin_position: transform.translation,
-                            },
-                            mainhand_entity,
-                        );
-                    }
-                }
-            }
-        }
-        
         if rng.gen_range(0.0..1.0) < 0.1 {
             commands.trigger(GoldDropEvent {
                 drop_location: *transform,

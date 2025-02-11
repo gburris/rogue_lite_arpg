@@ -1,13 +1,16 @@
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
 
+/// This is the base component for all items in the game. If you have a new concept that will be
+/// shared by all items, add it as a field here.
+///
+/// Ex.  All items can be dropped, so drop-related info can go here
 #[derive(Component)]
 pub struct Item {
     id: u32,
-    //For any data that is assoicated with all items, we should put it here
-    pub drop_glow_effect: f32, //Tracks the glow effect status on a grounded item
-    pub drop_rotation_timer: f32, //Tracks the rotation time on a grounded item (maybe not needed?)
-    pub drop_rate: f32,        //Tracks the items drop rate
+    pub drop_glow_effect: f32,
+    pub drop_rotation_timer: f32,
+    pub drop_rate: f32,
 }
 
 impl Default for Item {

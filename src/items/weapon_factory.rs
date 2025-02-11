@@ -2,11 +2,6 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use super::equipment::{
-    equipment_transform::EquipmentTransform,
-    use_equipped::{on_weapon_fired, on_weapon_melee},
-    Equippable,
-};
 use crate::{
     animation::FacingDirection,
     combat::{
@@ -20,7 +15,10 @@ use crate::{
         weapon::weapon::ProjectileWeapon,
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::Item,
+    items::{
+        equipment::{on_weapon_fired, on_weapon_melee, EquipmentTransform, Equippable},
+        Item,
+    },
 };
 
 pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {

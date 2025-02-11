@@ -37,7 +37,7 @@ pub fn on_item_equipped(
     mut holder_query: Query<(&mut Inventory, Option<&Enemy>)>,
 ) {
     let equipped_entity = trigger.entity();
-
+    warn!("try equip");
     let (equippable, equipped, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");
@@ -60,6 +60,7 @@ pub fn on_item_equipped(
 
     if equippable.slot == EquipmentSlot::Mainhand {
         // Make sure item is now visible, since it is hidden while in inventory
+        warn!("making equip vis");
         *visibility = Visibility::Visible;
     }
 

@@ -12,7 +12,7 @@ pub fn update_grounded_magnets(
     mut parent_query: Query<&mut Transform, (Without<Magnet>, With<Grounded>)>,
     player_query: Query<(Entity, &Transform), (With<Player>, Without<Magnet>, Without<Grounded>)>,
 ) {
-    const MAGNETIC_FORCE_CONSTANT: f32 = 1000000.0;
+    const MAGNETIC_FORCE_CONSTANT: f32 = 10000000.0;
     if let Ok((player_entity, player_transform)) = player_query.get_single() {
         for (parent_entity, magnet, colliding_entities) in magnet_query.iter() {
             if colliding_entities.contains(&player_entity) {
@@ -23,12 +23,9 @@ pub fn update_grounded_magnets(
                         .translation
                         .distance(parent_transform.translation);
                     // https://en.wikipedia.org/wiki/Force_between_magnets#Magnetic_dipole_moment
-                    // "One characteristic of a dipole field is that the strength of the field
-                    // falls off inversely with the cube of the distance from the magnet's center"
                     // https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxJQAdhCorNz-fMDq7qdEQhwGPm5YxFYCTQA&s
                     let magnetic_force =
                         ((magnet.strength * MAGNETIC_FORCE_CONSTANT) / distance.powi(3)).max(50.0);
-                    warn!("force {}", magnetic_force);
                     parent_transform.translation += direction * magnetic_force * time.delta_secs();
                 }
             }

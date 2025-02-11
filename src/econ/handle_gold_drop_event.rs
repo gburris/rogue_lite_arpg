@@ -56,7 +56,7 @@ pub fn on_gold_drop_event(
                 CollidingEntities::default(),
             ))
             .with_child((
-                Magnet { strength: 500.0 },
+                Magnet { strength: 8.0 },
                 CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
                 CollidingEntities::default(),
                 Sensor,

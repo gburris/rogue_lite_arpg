@@ -45,7 +45,7 @@ pub fn spawn_npc(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    let mainhand_to_weild = npc_type.spawn_weapon(commands, sprites, atlases);
+    let mainhand = npc_type.spawn_weapon(commands, sprites, atlases);
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
     let observer_to_use = npc_type.get_observer();
     let sprite = Sprite::from_atlas_image(
@@ -77,8 +77,9 @@ pub fn spawn_npc(
             ),
         ))
         .with_child(NPCInteractionRadius)
+        .add_child(mainhand)
         .observe(observer_to_use)
         .id();
 
-    commands.trigger_targets(EquipEvent::new(mainhand_to_weild), npc);
+    commands.trigger_targets(EquipEvent::new(mainhand), npc);
 }

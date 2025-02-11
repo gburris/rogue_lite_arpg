@@ -36,8 +36,6 @@ pub fn on_item_equipped(
     )>,
     mut holder_query: Query<(&mut Inventory, Option<&Enemy>)>,
 ) {
-    info!("On Item Equipped");
-
     let equipped_entity = trigger.entity();
 
     let (equippable, equipped, mut visibility, melee_weapon) = item_query
@@ -58,10 +56,6 @@ pub fn on_item_equipped(
         );
     }
 
-    // TODO: Bevy 0.16 - Set relationship here
-    commands
-        .entity(equipped.get_equipped_to())
-        .add_child(equipped_entity);
     inventory.equip(equipped_entity, equippable.slot);
 
     if equippable.slot == EquipmentSlot::Mainhand {

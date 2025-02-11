@@ -12,9 +12,10 @@ mod start_screen;
 // These are marker components for use in our despawn logic
 // Otherwise, UI code should not need to be called outside the UI module 99% of the time
 pub use game_over_screen::GameOverScreen;
-pub use npc::stats_shop::StatsMenu;
+pub use npc::stats_shop::StatShopMenu;
 pub use pause_menu::inventory_menu::InventoryMenu;
 pub use pause_menu::main_menu::MainMenu;
 pub use pause_menu::pause::PauseBackground;
 pub use pause_menu::plugin::PauseMenuPlugin;
+pub use pause_menu::stats_menu::StatsMenu;
 pub use player_overlay::PlayerOverlay;

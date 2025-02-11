@@ -14,9 +14,6 @@ use bevy::prelude::*;
 pub struct InventoryMenu;
 
 #[derive(Component)]
-pub struct InventoryCapacityText;
-
-#[derive(Component)]
 pub struct ItemText;
 
 pub fn spawn_inventory_menu(

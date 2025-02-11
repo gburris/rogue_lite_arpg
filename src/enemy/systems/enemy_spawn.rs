@@ -79,7 +79,6 @@ fn spawn_enemy(
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
                 ActionState::Idle,
-                Inventory::default(),
                 Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],

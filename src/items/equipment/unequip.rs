@@ -11,8 +11,6 @@ pub struct UnequipEvent {
 }
 
 pub fn on_unequip_event(unequip_trigger: Trigger<UnequipEvent>, mut commands: Commands) {
-    info!("On Unequip Event");
-
     commands
         .entity(unequip_trigger.item_entity)
         .remove::<Equipped>();
@@ -24,24 +22,23 @@ pub fn on_item_unequipped(
     mut item_query: Query<(&Equippable, &Parent, &mut Visibility)>,
     mut holder_query: Query<&mut Inventory>,
 ) {
-    info!("On Item Unequipped");
     let item_entity = trigger.entity();
 
     let Ok((equippable, holder, mut visibility)) = item_query.get_mut(item_entity) else {
-        debug!("Item was despawned prior unequip");
+        info!("Item was despawned prior to unequip");
         return;
     };
 
-    let mut inventory = holder_query
-        .get_mut(holder.get())
-        .expect("If item has a parent, that parent should have an inventory");
+    let Ok(mut inventory) = holder_query.get_mut(holder.get()) else {
+        info!("Holder was despawned prior to unequip");
+        return;
+    };
 
     *visibility = Visibility::Hidden;
 
+    commands.entity(item_entity).remove::<Collider>();
+
     inventory.unequip(equippable.slot);
 
-    commands
-        .entity(item_entity)
-        .remove::<Collider>()
-        .remove_parent();
+    info!("Item Unequipped!");
 }

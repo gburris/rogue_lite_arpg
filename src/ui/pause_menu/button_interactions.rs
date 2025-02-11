@@ -12,11 +12,6 @@ use crate::{
 
 use super::{inventory_menu::ItemText, main_menu::MenuButton};
 
-#[derive(Event)]
-pub struct EquipmentItemClicked {
-    pub item_entity: Option<Entity>,
-}
-
 /// Trigger on entity with Inventory component (i.e. the player entity)
 #[derive(Event)]
 pub struct UpdateInventoryUIEvent;

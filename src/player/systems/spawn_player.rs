@@ -5,11 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::FacingDirection,
-    combat::{
-        attributes::{mana::Mana, Health},
-        components::{ActionState, AimPosition},
-        damage::components::HasIFrames,
-    },
+    combat::{attributes::mana::Mana, components::ActionState, damage::components::HasIFrames},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
@@ -20,8 +16,7 @@ use crate::{
         *,
     },
     labels::layer::ZLayer,
-    movement::components::SimpleMotion,
-    player::{systems::*, Player, PlayerStats},
+    player::{systems::*, Player},
 };
 
 pub fn spawn_player(
@@ -31,33 +26,29 @@ pub fn spawn_player(
 ) {
     //Player Inventory Setup
     let mut inventory = Inventory::default();
-    inventory
-        .add_item(spawn_health_potion(&mut commands, &sprites))
-        .ok();
-    inventory
-        .add_item(spawn_sword(&mut commands, &sprites))
-        .ok();
-    inventory.add_item(spawn_axe(&mut commands, &sprites)).ok();
-    inventory
-        .add_item(spawn_shovel(&mut commands, &sprites))
-        .ok();
-    inventory
-        .add_item(spawn_ice_staff(&mut commands, &sprites, &texture_layouts))
-        .ok();
+
+    let main_hand = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
+
+    let starting_items = [
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_sword(&mut commands, &sprites),
+        spawn_shovel(&mut commands, &sprites),
+        spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
+        main_hand,
+    ];
+
+    for item in starting_items {
+        inventory.add_item(item).ok();
+    }
 
     let player = commands
         .spawn((
             Player,
-            PlayerStats::default(),
-            AimPosition::default(),
-            SimpleMotion::new(450.0),
-            Health::new(100.0),
-            Mana::new(100.0, 10.0),
             inventory,
+            Mana::new(100.0, 10.0),
             HasIFrames {
                 duration: Duration::from_secs(1),
             },
-            RigidBody::Dynamic,
             Collider::rectangle(40.0, 50.0),
             CollisionLayers::new(
                 [GameCollisionLayer::Player, GameCollisionLayer::Grounded],
@@ -70,16 +61,15 @@ pub fn spawn_player(
                     GameCollisionLayer::LowObstacle,
                 ],
             ),
-            LockedAxes::new().lock_rotation(),
             (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
+        .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_main_hand_activated)
         .id();
 
-    let starting_staff = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
-    commands.trigger_targets(EquipEvent::new(starting_staff), player);
+    commands.trigger_targets(EquipEvent::new(main_hand), player);
 
     info!("Player spawned: {}", player);
 }

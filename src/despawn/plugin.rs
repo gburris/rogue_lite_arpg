@@ -14,7 +14,7 @@ use crate::{
     map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,
-    ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatsMenu},
+    ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu},
 };
 
 pub struct DespawnPlugin;
@@ -31,6 +31,10 @@ impl Plugin for DespawnPlugin {
             despawn_single::<InventoryMenu>,
         )
         .add_systems(OnExit(PausedState::Stats), despawn_single::<StatsMenu>)
+        .add_systems(
+            OnExit(PausedState::StatsShop),
+            despawn_single::<StatShopMenu>,
+        )
         .add_systems(OnExit(PausedState::MainMenu), despawn_single::<MainMenu>)
         .add_observer(despawn_all::<CleanupZone, Portal>)
         .add_observer(despawn_all::<CleanupZone, TilemapId>)

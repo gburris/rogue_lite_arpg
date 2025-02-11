@@ -24,7 +24,6 @@ pub enum Portal {
 }
 
 fn default_collision_layers() -> CollisionLayers {
-    // Portals are sensors since we don't actually want collisions
     CollisionLayers::new(
         GameCollisionLayer::HighObstacle,
         GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
@@ -42,7 +41,7 @@ pub fn handle_portal_collisions(
     for portal_colliding_entities in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
-                info!("Creating instance");
+                info!("Creating new instance");
                 commands.trigger(CreateInstanceEvent);
             }
         }
@@ -54,6 +53,7 @@ pub fn on_portal_entered(
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
 ) {
+    info!("Portal entered!");
     commands.trigger(CleanupZone);
     game_state.set(AppState::CreateInstance);
 }

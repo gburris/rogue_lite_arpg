@@ -1,5 +1,8 @@
 use crate::{
-    combat::attributes::Health, econ::components::Wallet, labels::states::PausedState, player::{Player, PlayerLevel}, progression::GameProgress
+    combat::attributes::Health,
+    labels::states::PausedState,
+    player::{Player, PlayerLevel},
+    progression::GameProgress,
 };
 use bevy::prelude::*;
 
@@ -28,14 +31,12 @@ pub fn spawn_main_menu(
     mut commands: Commands,
     player_level: Query<&PlayerLevel>,
     player_health: Query<&Health, With<Player>>,
-    player_wallet: Query<&Wallet, With<Player>>,
     game_progress: Res<GameProgress>,
 ) {
     debug!("spawn_main_menu called");
     // Get the current values
     let level = player_level.single();
     let health = player_health.single();
-    let wallet = player_wallet.single();
     commands
         .spawn((
             MainMenu,
@@ -147,16 +148,6 @@ pub fn spawn_main_menu(
                                 },
                                 Node::default(),
                             ));
-
-                            stats.spawn((
-                                Text::new(format!("Wallet: {:.1}", wallet.coins)),
-                                TextFont {
-                                    font_size: 24.0,
-                                    ..default()
-                                },
-                                Node::default(),
-                            ));
-
                             stats.spawn((
                                 Text::new(format!(
                                     "Health: {:.1} / {:.1}",

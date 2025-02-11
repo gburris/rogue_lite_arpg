@@ -7,7 +7,7 @@ use crate::items::equipment::EquipmentSlot;
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
-
+    pub coins: u32,
     mainhand_index: Option<usize>,
     offhand_index: Option<usize>,
 
@@ -20,6 +20,7 @@ impl Default for Inventory {
         Self {
             max_capacity: 10,
             items: VecDeque::new(),
+            coins: 0,
             mainhand_index: None,
             offhand_index: None,
             display_case: None,
@@ -28,8 +29,9 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub fn new(items: &Vec<Entity>) -> Self {
+    pub fn new(items: &Vec<Entity>, coins: u32) -> Self {
         let mut inventory = Inventory::default();
+        inventory.coins = coins;
 
         items.iter().for_each(|&i| {
             inventory.add_item(i).ok();
@@ -49,29 +51,13 @@ impl Inventory {
         }
     }
 
-    pub fn remove_item_by_value(&mut self, item: Entity) -> Result<Entity, String> {
+    pub fn remove_item(&mut self, item: Entity) -> Result<Entity, String> {
         // Search for item by comparing values (entities) and then remove by index
         if let Some(item_index) = self.items.iter().position(|&e| e == item) {
-            self.remove_item(item_index)
+            self.remove_item_by_index(item_index)
         } else {
             Err("Item not found in inventory".to_string())
         }
-    }
-
-    pub fn remove_item(&mut self, index_to_remove: usize) -> Result<Entity, String> {
-        // all equipment indicies shift
-        // TODO - add this for offhand
-        if let Some(mainhand) = self.mainhand_index {
-            if index_to_remove < mainhand {
-                self.mainhand_index = Some(mainhand - 1);
-            } else if index_to_remove == mainhand {
-                self.mainhand_index = None;
-            }
-        }
-
-        self.items
-            .remove(index_to_remove)
-            .ok_or("Index was out of bounds".to_string())
     }
 
     /// Equip the new_item in the specified slot
@@ -101,6 +87,35 @@ impl Inventory {
         self.get_equipped_slot(slot)
             .map(|i| self.items.get(i).cloned())
             .flatten()
+    }
+
+    pub fn add_coins(&mut self, amount: u32) {
+        self.coins += amount;
+    }
+
+    pub fn remove_coins(&mut self, amount: u32) -> Result<u32, String> {
+        if self.coins >= amount {
+            self.coins -= amount;
+            Ok(self.coins)
+        } else {
+            Err("Not enough coins!".to_string())
+        }
+    }
+
+    fn remove_item_by_index(&mut self, index_to_remove: usize) -> Result<Entity, String> {
+        // all equipment indicies shift
+        // TODO - add this for offhand
+        if let Some(mainhand) = self.mainhand_index {
+            if index_to_remove < mainhand {
+                self.mainhand_index = Some(mainhand - 1);
+            } else if index_to_remove == mainhand {
+                self.mainhand_index = None;
+            }
+        }
+
+        self.items
+            .remove(index_to_remove)
+            .ok_or("Index was out of bounds".to_string())
     }
 
     fn find_item_by_entity(&self, item: Entity) -> Option<usize> {

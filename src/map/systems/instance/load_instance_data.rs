@@ -1,10 +1,10 @@
 use std::{collections::HashMap, fs::File, io::BufReader};
 
 use crate::map::{InstanceAssets, InstanceConfig, InstanceType};
-use bevy::{
-    prelude::Commands,
-    scene::ron::{de::from_reader, from_str},
-};
+use bevy::{prelude::Commands, scene::ron::de::from_reader};
+
+#[cfg(target_arch = "wasm32")]
+use bevy::scene::ron::from_str;
 
 pub fn setup_instance_data(mut commands: Commands) {
     let instance_config = load_instance_data();

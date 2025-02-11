@@ -2,7 +2,7 @@ use crate::{
     combat::melee::components::ActiveMeleeAttack,
     configuration::GameCollisionLayer,
     despawn::components::LiveDuration,
-    items::{Grounded, Item, ItemToGroundEvent},
+    items::{Grounded, ItemToGroundEvent},
 };
 use avian2d::prelude::{Collider, CollisionLayers, Sensor};
 use bevy::prelude::*;

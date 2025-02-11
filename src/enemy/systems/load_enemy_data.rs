@@ -1,11 +1,9 @@
+use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyType};
+use bevy::{prelude::Commands, scene::ron::de::from_reader};
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use bevy::{
-    prelude::Commands,
-    scene::ron::{de::from_reader, from_str},
-};
-
-use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyType};
+#[cfg(target_arch = "wasm32")]
+use bevy::scene::ron::from_str;
 
 pub fn setup_enemy_assets(mut commands: Commands) {
     let enemy_config = load_enemy_data();

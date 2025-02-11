@@ -24,6 +24,8 @@ pub fn on_grounded_item_input_interaction(
         if colliding_entities.contains(&player_entity) {
             if let Ok(mut inventory) = inventory_query.get_single_mut() {
                 if inventory.add_item(item_entity).is_ok() {
+                    commands.entity(player_entity).add_child(item_entity);
+
                     commands
                         .entity(item_entity)
                         .remove::<Grounded>()

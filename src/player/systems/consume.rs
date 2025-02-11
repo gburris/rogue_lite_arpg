@@ -25,9 +25,12 @@ pub fn handle_consume_event(
                     let previous_hp = health.hp;
                     health.hp = (health.hp + amount).min(health.max_hp); // Ensure HP does not exceed max
                     let healed_amount = health.hp - previous_hp;
-                    warn!(
-                        "Entity healed by {:.2} points (HP: {:.2}/{:.2})",
-                        healed_amount, health.hp, health.max_hp
+                    info!(
+                        "Entity {} healed by {:.2} points (HP: {:.2}/{:.2})",
+                        consume_trigger.entity(),
+                        healed_amount,
+                        health.hp,
+                        health.max_hp
                     );
                 }
             }
@@ -36,7 +39,7 @@ pub fn handle_consume_event(
             inventory
                 .remove_item_by_value(item_entity)
                 .expect("Went to consume item and it was not in inventory!");
-            commands.entity(item_entity).despawn();
+            commands.entity(item_entity).despawn_recursive();
         }
     }
 }

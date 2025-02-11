@@ -25,8 +25,6 @@ pub fn spawn_player(
     texture_layouts: Res<SpriteSheetLayouts>,
 ) {
     //Player Inventory Setup
-    let mut inventory = Inventory::default();
-
     let main_hand = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
 
     let starting_items = [
@@ -37,14 +35,10 @@ pub fn spawn_player(
         main_hand,
     ];
 
-    for item in starting_items {
-        inventory.add_item(item).ok();
-    }
-
     let player = commands
         .spawn((
             Player,
-            inventory,
+            Inventory::new(&starting_items.into()),
             Mana::new(100.0, 10.0),
             HasIFrames {
                 duration: Duration::from_secs(1),

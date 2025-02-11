@@ -62,16 +62,17 @@ fn spawn_enemy(
                 .first,
         },
     );
-    let mut inventory = Inventory::default();
-    inventory
-        .add_item(spawn_health_potion(commands, &sprites))
-        .ok();
-    inventory.add_item(spawn_axe(commands, &sprites)).ok();
+
+    let starting_items = [
+        spawn_health_potion(commands, &sprites),
+        spawn_axe(commands, &sprites),
+    ];
+
     if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
         let enemy = commands
             .spawn((
                 Enemy,
-                inventory,
+                Inventory::new(&starting_items.into()),
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),
@@ -99,6 +100,7 @@ fn spawn_enemy(
                     FacingDirection::Down,
                 ),
             ))
+            .add_children(&starting_items)
             .observe(on_enemy_defeated)
             .observe(on_main_hand_activated)
             .id();

@@ -37,8 +37,9 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
     builder
         .spawn(Node {
             justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
+            align_items: AlignItems::Start,
             flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(20.0),
             ..default()
         })
         .with_children(|parent| {
@@ -46,11 +47,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
             parent.spawn((
                 Text::new(context.title),
                 TextFont {
-                    font_size: 70.0,
-                    ..default()
-                },
-                Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
+                    font_size: 60.0,
                     ..default()
                 },
             ));
@@ -64,10 +61,6 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
                         font_size: 24.0,
                         ..default()
                     },
-                    Node {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
                 ));
             }
 
@@ -75,11 +68,9 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
                 .spawn((
                     DisplayCaseContainer,
                     Node {
-                        width: Val::Px(600.0),
-                        height: Val::Percent(80.0),
                         flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(20.0), // Space items in display case
-                        padding: UiRect::all(Val::Px(20.0)),
+                        row_gap: Val::Px(5.0), // Space items in display case
+                        padding: UiRect::all(Val::Px(5.0)),
                         overflow: Overflow::scroll_y(),
                         ..default()
                     },
@@ -101,9 +92,8 @@ fn spawn_slot_background(builder: &mut ChildBuilder, index: usize) {
     builder.spawn((
         DisplayCaseSlot { index },
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(65.0),
-            padding: UiRect::all(Val::Px(10.0)),
+            padding: UiRect::all(Val::Px(5.0)),
+            min_height: Val::Px(40.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
@@ -118,8 +108,7 @@ fn spawn_filled_slot(builder: &mut ChildBuilder, item: Entity, item_name: &str) 
         .spawn((
             FilledDisplaySlot { item },
             Node {
-                width: Val::Percent(95.0), // Make width % of parent slot
-                padding: UiRect::all(Val::Px(10.0)),
+                width: Val::Px(500.0), // Make width % of parent slot
                 justify_content: JustifyContent::Start,
                 align_items: AlignItems::Center,
                 ..default()
@@ -131,11 +120,11 @@ fn spawn_filled_slot(builder: &mut ChildBuilder, item: Entity, item_name: &str) 
                 ItemText,
                 Text::new(item_name),
                 TextFont {
-                    font_size: 20.0,
+                    font_size: 18.0,
                     ..default()
                 },
                 Node {
-                    margin: UiRect::left(Val::Px(10.0)),
+                    margin: UiRect::all(Val::Px(5.0)),
                     ..default()
                 },
             ));

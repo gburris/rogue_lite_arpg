@@ -28,9 +28,13 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub fn new(starting_equipment: Entity, slot: EquipmentSlot) -> Self {
+    pub fn new(items: &Vec<Entity>) -> Self {
         let mut inventory = Inventory::default();
-        inventory.equip(starting_equipment, slot);
+
+        items.iter().for_each(|&i| {
+            inventory.add_item(i).ok();
+        });
+
         inventory
     }
 
@@ -48,17 +52,25 @@ impl Inventory {
     pub fn remove_item_by_value(&mut self, item: Entity) -> Result<Entity, String> {
         // Search for item by comparing values (entities) and then remove by index
         if let Some(item_index) = self.items.iter().position(|&e| e == item) {
-            self.items
-                .remove(item_index)
-                .ok_or("Index was out of bounds".to_string())
+            self.remove_item(item_index)
         } else {
             Err("Item not found in inventory".to_string())
         }
     }
 
-    pub fn remove_item(&mut self, index: usize) -> Result<Entity, String> {
+    pub fn remove_item(&mut self, index_to_remove: usize) -> Result<Entity, String> {
+        // all equipment indicies shift
+        // TODO - add this for offhand
+        if let Some(mainhand) = self.mainhand_index {
+            if index_to_remove < mainhand {
+                self.mainhand_index = Some(mainhand - 1);
+            } else if index_to_remove == mainhand {
+                self.mainhand_index = None;
+            }
+        }
+
         self.items
-            .remove(index)
+            .remove(index_to_remove)
             .ok_or("Index was out of bounds".to_string())
     }
 

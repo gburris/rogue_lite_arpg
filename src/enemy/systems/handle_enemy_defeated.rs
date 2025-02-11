@@ -9,25 +9,17 @@ use crate::{
     despawn::components::LiveDuration,
     econ::components::GoldDropEvent,
     enemy::{Enemy, Experience},
-    items::{equipment::EquipmentSlots, inventory::inventory::Inventory, ItemToGroundEvent},
+    items::{inventory::inventory::Inventory, ItemToGroundEvent},
     player::components::{Player, PlayerExperience},
 };
 
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
-    mut defeated_enemy_query: Query<
-        (
-            &Experience,
-            &Transform,
-            Option<&Inventory>,
-            Option<&EquipmentSlots>,
-        ),
-        With<Enemy>,
-    >,
+    mut defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
     mut player_query: Query<&mut PlayerExperience, With<Player>>,
 ) {
-    if let Ok((experience_to_gain, transform, inventory, equipment_slots)) =
+    if let Ok((experience_to_gain, transform, inventory)) =
         defeated_enemy_query.get_mut(trigger.entity())
     {
         // Handle experience gain
@@ -37,24 +29,12 @@ pub fn on_enemy_defeated(
 
         // Drop inventory items
         if let Some(inventory) = inventory {
-            for (_slot, item) in inventory.items.iter() {
+            for item in inventory.items.iter() {
                 commands.trigger_targets(
                     ItemToGroundEvent {
                         origin_position: transform.translation,
                     },
                     *item,
-                );
-            }
-        }
-
-        // Drop equipped items
-        if let Some(equipment_slots) = equipment_slots {
-            if let Some(mainhand) = equipment_slots.mainhand {
-                commands.trigger_targets(
-                    ItemToGroundEvent {
-                        origin_position: transform.translation,
-                    },
-                    mainhand,
                 );
             }
         }

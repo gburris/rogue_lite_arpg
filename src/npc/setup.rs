@@ -5,7 +5,7 @@ use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::equipment::EquipmentSlots,
+    items::{equipment::EquipEvent, inventory::Inventory},
     map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
@@ -45,7 +45,7 @@ pub fn spawn_npc(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    let mainhand_to_weild = npc_type.spawn_weapon(commands, sprites, atlases);
+    let mainhand = npc_type.spawn_weapon(commands, sprites, atlases);
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
     let observer_to_use = npc_type.get_observer();
     let sprite = Sprite::from_atlas_image(
@@ -57,7 +57,7 @@ pub fn spawn_npc(
                 .first,
         },
     );
-    commands
+    let npc = commands
         .spawn((
             NPC,
             SimpleMotion::new(100.0),
@@ -65,10 +65,7 @@ pub fn spawn_npc(
             LockedAxes::new().lock_rotation(),
             ActionState::Idle,
             npc_type,
-            EquipmentSlots {
-                mainhand: Some(mainhand_to_weild),
-                head: None,
-            },
+            Inventory::default(),
             (
                 Transform::from_translation(spawn_position),
                 animation_config.get_indices(ActionState::Idle, FacingDirection::Down),
@@ -80,5 +77,9 @@ pub fn spawn_npc(
             ),
         ))
         .with_child(NPCInteractionRadius)
-        .observe(observer_to_use);
+        .add_child(mainhand)
+        .observe(observer_to_use)
+        .id();
+
+    commands.trigger_targets(EquipEvent::new(mainhand), npc);
 }

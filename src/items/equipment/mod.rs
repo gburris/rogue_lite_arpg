@@ -1,9 +1,26 @@
-pub mod equip;
-pub mod equipment_slots;
-pub mod equipment_transform;
-pub mod plugin;
-pub mod use_equipped;
+mod equip;
+mod equipment_transform;
+mod equippable;
+mod plugin;
+mod unequip;
+mod use_equipped;
 
-pub use equip::Equippable;
-pub use equipment_slots::EquipmentSlot;
-pub use equipment_slots::EquipmentSlots;
+// Only expose the things outside modules need!!!
+
+// Components!!
+pub use equipment_transform::EquipmentTransform;
+pub use equippable::EquipmentSlot;
+pub use equippable::Equippable;
+pub use equippable::Equipped;
+
+// Equipment events to "get shit done"
+pub use equip::EquipEvent;
+pub use unequip::UnequipEvent;
+pub use use_equipped::UseEquipmentEvent;
+
+// Observers to be added to respective equipment/weapons that want this functionality
+pub use use_equipped::on_main_hand_activated;
+pub use use_equipped::on_weapon_fired;
+pub use use_equipped::on_weapon_melee;
+
+pub use plugin::EquipmentPlugin;

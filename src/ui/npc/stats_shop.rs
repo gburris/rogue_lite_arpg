@@ -5,7 +5,7 @@ use crate::{
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub struct StatsMenu;
+pub struct StatShopMenu;
 
 #[derive(Component)]
 pub struct StatShopButton {
@@ -31,7 +31,7 @@ pub fn spawn_stats_shop_menu(
 
     commands
         .spawn((
-            StatsMenu,
+            StatShopMenu,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
@@ -183,13 +183,4 @@ fn spawn_stat_shop_button(
                 Node::default(),
             ));
         });
-}
-
-pub fn despawn_stats_shop_menu(
-    mut commands: Commands,
-    stats_menu_query: Query<Entity, With<StatsMenu>>,
-) {
-    for entity in stats_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
 }

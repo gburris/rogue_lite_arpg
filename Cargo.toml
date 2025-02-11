@@ -3,13 +3,11 @@ name = "baba_yaga"
 version = "0.1.0"
 edition = "2021"
 
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
 [dependencies]
 bevy = "0.15.0"
 bevy_ecs_tilemap = "0.15.0"
 bevy_asset_loader = { version = "0.22.0", features = ["2d"] }
+bevy-inspector-egui = "0.29"
 avian2d = "0.2.0"
 tiled = "0.11.0"
 ldtk_rust = "0.6"
@@ -19,14 +17,6 @@ rand = "0.8"
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 serde = "1.0.217"
 noise = "0.9"
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = [
-    "Document",
-    "Window",
-    "Element",
-    "HtmlCanvasElement",
-] }
-console_error_panic_hook = "0.1"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }

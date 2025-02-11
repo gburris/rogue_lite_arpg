@@ -1,6 +1,11 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+#[derive(Event)]
+pub struct RestartEvent {
+    pub player_level: u32,
+}
+
 // Make pause menu visible when we enter the state
 pub fn resume_game(mut time: ResMut<Time<Physics>>) {
     debug!("resume_game");

@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub struct PauseScreen;
+pub struct PauseBackground;
 
-pub fn spawn_pause_screen(mut commands: Commands) {
-    debug!("spawn_pause_screen called");
+pub fn spawn_pause_background(mut commands: Commands) {
+    trace!("spawn_pause_screen called");
     commands.spawn((
-        PauseScreen,
+        PauseBackground,
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -18,14 +18,4 @@ pub fn spawn_pause_screen(mut commands: Commands) {
         Visibility::Visible,
         GlobalZIndex(1),
     ));
-}
-
-pub fn despawn_pause_screen(
-    mut commands: Commands,
-    pause_menu_background_query: Query<Entity, With<PauseScreen>>,
-) {
-    debug!("despawn_pause_screen called");
-    for entity in pause_menu_background_query.iter() {
-        commands.entity(entity).despawn();
-    }
 }

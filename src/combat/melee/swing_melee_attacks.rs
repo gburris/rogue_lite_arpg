@@ -1,6 +1,6 @@
 use crate::{
     animation::FacingDirection, combat::components::ActionState,
-    items::equipment::equipment_transform::EquipmentTransform,
+    items::equipment::EquipmentTransform,
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};

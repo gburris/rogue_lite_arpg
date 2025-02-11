@@ -1,17 +1,15 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::AppState, map::events::CleanupZone, player::PlayerLevel};
+use crate::{
+    configuration::time_control::RestartEvent, labels::states::AppState, map::events::CleanupZone,
+    player::PlayerLevel,
+};
 
 #[derive(Component)]
 pub struct GameOverScreen;
 
 #[derive(Component)]
 pub struct RestartButton;
-
-#[derive(Event)]
-pub struct RestartEvent {
-    pub player_level: u32,
-}
 
 pub fn create(mut commands: Commands) {
     commands

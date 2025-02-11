@@ -25,6 +25,15 @@ pub fn despawn_all<T: Event, C: Component>(
     query: Query<Entity, With<C>>,
 ) {
     for e in query.iter() {
+        // debug!("Despawning entity: {}", e);
         commands.entity(e).despawn_recursive();
     }
+}
+
+/**
+ * Despawn singleton entity with the specific component
+ */
+pub fn despawn_single<C: Component>(mut commands: Commands, entity: Single<Entity, With<C>>) {
+    // debug!("Despawning single entity: {}", *entity);
+    commands.entity(*entity).despawn_recursive();
 }

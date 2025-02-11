@@ -5,7 +5,7 @@ use rand::Rng;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{resources::CurrentZoneLevel, MapLayout, TileType, WorldSpaceConfig},
+    map::{MapLayout, TileType, WorldSpaceConfig},
 };
 
 pub fn render_hub_tiles(
@@ -13,7 +13,6 @@ pub fn render_hub_tiles(
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
-    zone_level: Res<CurrentZoneLevel>,
 ) {
     let mut rng = rand::thread_rng();
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();

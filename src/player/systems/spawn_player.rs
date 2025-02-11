@@ -10,6 +10,7 @@ use crate::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
+    econ::components::Wallet,
     items::{
         equipment::{on_main_hand_activated, EquipEvent},
         inventory::Inventory,
@@ -55,6 +56,7 @@ pub fn spawn_player(
                     GameCollisionLayer::LowObstacle,
                 ],
             ),
+            Wallet::default(),
             (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

@@ -3,7 +3,7 @@ use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 
 use crate::{
     despawn::components::LiveDuration,
-    items::{inventory::inventory::Inventory, Grounded, GroundedItemEffect},
+    items::{inventory::inventory::Inventory, Grounded},
     player::{AttemptInteractionInput, Player},
 };
 
@@ -31,7 +31,6 @@ pub fn on_grounded_item_input_interaction(
                         .remove::<Grounded>()
                         .remove::<Collider>()
                         .remove::<Sensor>()
-                        .remove::<GroundedItemEffect>()
                         .remove::<LiveDuration>()
                         .remove::<CollisionLayers>()
                         .insert(Visibility::Hidden);

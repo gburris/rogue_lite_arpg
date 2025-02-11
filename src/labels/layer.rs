@@ -8,6 +8,7 @@ pub enum ZLayer {
     Warpzone,
     VisualEffect,
     LevelUpEffect,
+    ItemOnGround,
 }
 
 impl ZLayer {
@@ -20,6 +21,7 @@ impl ZLayer {
             //Parent 1 + child entity weapon of 0.1 = 1.1
             ZLayer::WeaponBehindSprite => -0.4,
             ZLayer::WeaponAboveSprite => 0.1,
+            ZLayer::ItemOnGround => 0.4,
             ZLayer::LevelUpEffect => -0.1,
             ZLayer::Player => 1.0,
             ZLayer::Warpzone => 1.0,

@@ -19,6 +19,7 @@ impl Plugin for SetupPlugin {
         app.add_plugins(DebugPlugin);
 
         #[cfg(not(debug_assertions))] // only in release mode
+        #[cfg(not(target_arch = "wasm32"))] // only on wasmp
         app.add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -27,6 +28,58 @@ impl Plugin for SetupPlugin {
                             "Right click to cast Icebolt Left Click to Cast Fireball",
                         ),
                         resolution: WindowResolution::new(1920.0, 1080.0),
+                        ..Default::default()
+                    }),
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        );
+        #[cfg(not(debug_assertions))] // only in release mode
+        #[cfg(target_arch = "wasm32")] // only on wasm
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from(
+                            "Right click to cast Icebolt Left Click to Cast Fireball",
+                        ),
+                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
+                        fit_canvas_to_parent: true,
+                        ..Default::default()
+                    }),
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        );
+        #[cfg(all(debug_assertions))] // only in release mode
+        #[cfg(target_arch = "wasm32")] // only on wasm
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from(
+                            "Right click to cast Icebolt Left Click to Cast Fireball",
+                        ),
+                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
+                        fit_canvas_to_parent: true,
+                        ..Default::default()
+                    }),
+                    ..default()
+                })
+                .set(ImagePlugin::default_nearest()),
+        );
+
+        #[cfg(debug_assertions)] // only in release mode
+        #[cfg(target_arch = "wasm32")] // only on wasm
+        app.add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: String::from(
+                            "Right click to cast Icebolt Left Click to Cast Fireball",
+                        ),
+                        // For WASM, use fit_canvas_to_parent instead of WindowResolution
+                        fit_canvas_to_parent: true,
                         ..Default::default()
                     }),
                     ..default()

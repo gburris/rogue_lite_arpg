@@ -77,7 +77,7 @@ pub struct Autoloot;
     Visibility(|| Visibility::Visible),
     LiveDuration(|| LiveDuration::new(10.0))
 )]
-pub struct Grounded;
+pub struct Lootable;
 
 #[derive(Component)]
 #[require(

@@ -1,26 +1,16 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::items::inventory::Inventory;
-
 use super::{equippable::Equipped, Equippable};
-
-#[derive(Event)]
-pub struct UnequipEvent {
-    pub item_entity: Entity,
-}
-
-pub fn on_unequip_event(unequip_trigger: Trigger<UnequipEvent>, mut commands: Commands) {
-    commands
-        .entity(unequip_trigger.item_entity)
-        .remove::<Equipped>();
-}
+use crate::combat::components::ActionState;
+use crate::combat::melee::components::ActiveMeleeAttack;
+use crate::items::inventory::Inventory;
 
 pub fn on_item_unequipped(
     trigger: Trigger<OnRemove, Equipped>,
     mut commands: Commands,
     mut item_query: Query<(&Equippable, &Parent, &mut Visibility)>,
-    mut holder_query: Query<&mut Inventory>,
+    mut holder_query: Query<(&ActionState, &mut Inventory)>,
 ) {
     let item_entity = trigger.entity();
 
@@ -29,14 +19,21 @@ pub fn on_item_unequipped(
         return;
     };
 
-    let Ok(mut inventory) = holder_query.get_mut(holder.get()) else {
+    let Ok((action_state, mut inventory)) = holder_query.get_mut(holder.get()) else {
         info!("Holder was despawned prior to unequip");
         return;
     };
 
-    *visibility = Visibility::Hidden;
+    if *action_state == ActionState::Defeated {
+        info!("Holder was in the death animation prior to unequip");
+        return;
+    }
 
-    commands.entity(item_entity).remove::<Collider>();
+    *visibility = Visibility::Hidden;
+    commands
+        .entity(item_entity)
+        .remove::<Collider>()
+        .remove::<ActiveMeleeAttack>();
 
     inventory.unequip(equippable.slot);
 

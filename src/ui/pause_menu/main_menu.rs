@@ -131,7 +131,7 @@ pub fn spawn_main_menu(
                             ));
                             stats.spawn((
                                 Text::new(format!(
-                                    "Progress Points: {}",
+                                    "Stat Points: {}",
                                     game_progress.progress_points,
                                 )),
                                 TextFont {
@@ -141,17 +141,13 @@ pub fn spawn_main_menu(
                                 Node::default(),
                             ));
                             stats.spawn((
-                                Text::new(format!(
-                                    "Death Coutner: {}",
-                                    game_progress.death_counter,
-                                )),
+                                Text::new(format!("Deaths: {}", game_progress.death_counter,)),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
                                 },
                                 Node::default(),
                             ));
-
                             stats.spawn((
                                 Text::new(format!(
                                     "Health: {:.1} / {:.1}",

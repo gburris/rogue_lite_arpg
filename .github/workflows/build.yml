@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - deployment_debug
 
 env:
   CARGO_INCREMENTAL: 0
@@ -78,35 +79,35 @@ jobs:
           cp Cargo.lock gh-pages/     
           cp package.json gh-pages/                                       
           echo '<!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8"/>
-                    <title>Bevy game</title>
-                    <style>
-                        body {
-                            margin: 0;
-                            height: 100vh;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            background: #333;
-                        }
-                        canvas {
-                            background-color: white;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <script type="module">
-                        console.log("Starting import...");
-                        import init from './baba_yaga.js';
-                        console.log("Import completed, initializing...");
-                        init().catch((error) => {
-                            console.error("Error during initialization:", error);
-                        });
-                    </script>
-                </body>
-                </html>' > gh-pages/index.html
+            <html>
+            <head>
+                <meta charset="utf-8"/>
+                <title>Bevy game</title>
+                <style>
+                    body {
+                        margin: 0;
+                        height: 100vh;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        background: #333;
+                    }
+                    canvas {
+                        background-color: white;
+                    }
+                </style>
+            </head>
+            <body>
+                <script type="module">
+                    console.log("Starting import...");
+                    import init from "./baba_yaga.js";
+                    console.log("Import completed, initializing...");
+                    init().catch((error) => {
+                        console.error("Error during initialization:", error);
+                    });
+                </script>
+            </body>
+            </html>' > gh-pages/index.html
 
       - name: Debug gh-pages Directory
         run: |

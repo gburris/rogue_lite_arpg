@@ -7,7 +7,7 @@ use crate::items::equipment::EquipmentSlot;
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
-
+    pub coins: u32,
     mainhand_index: Option<usize>,
     offhand_index: Option<usize>,
 
@@ -20,6 +20,7 @@ impl Default for Inventory {
         Self {
             max_capacity: 10,
             items: VecDeque::new(),
+            coins: 0,
             mainhand_index: None,
             offhand_index: None,
             display_case: None,
@@ -28,14 +29,8 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub fn new(items: &Vec<Entity>) -> Self {
-        let mut inventory = Inventory::default();
-
-        items.iter().for_each(|&i| {
-            inventory.add_item(i).ok();
-        });
-
-        inventory
+    pub fn builder() -> InventoryBuilder {
+        InventoryBuilder::new()
     }
 
     /// Adds an item to the inventory if there's space
@@ -49,29 +44,13 @@ impl Inventory {
         }
     }
 
-    pub fn remove_item_by_value(&mut self, item: Entity) -> Result<Entity, String> {
+    pub fn remove_item(&mut self, item: Entity) -> Result<Entity, String> {
         // Search for item by comparing values (entities) and then remove by index
         if let Some(item_index) = self.items.iter().position(|&e| e == item) {
-            self.remove_item(item_index)
+            self.remove_item_by_index(item_index)
         } else {
             Err("Item not found in inventory".to_string())
         }
-    }
-
-    pub fn remove_item(&mut self, index_to_remove: usize) -> Result<Entity, String> {
-        // all equipment indicies shift
-        // TODO - add this for offhand
-        if let Some(mainhand) = self.mainhand_index {
-            if index_to_remove < mainhand {
-                self.mainhand_index = Some(mainhand - 1);
-            } else if index_to_remove == mainhand {
-                self.mainhand_index = None;
-            }
-        }
-
-        self.items
-            .remove(index_to_remove)
-            .ok_or("Index was out of bounds".to_string())
     }
 
     /// Equip the new_item in the specified slot
@@ -103,6 +82,35 @@ impl Inventory {
             .flatten()
     }
 
+    pub fn add_coins(&mut self, amount: u32) {
+        self.coins += amount;
+    }
+
+    pub fn remove_coins(&mut self, amount: u32) -> Result<u32, String> {
+        if self.coins >= amount {
+            self.coins -= amount;
+            Ok(self.coins)
+        } else {
+            Err("Not enough coins!".to_string())
+        }
+    }
+
+    fn remove_item_by_index(&mut self, index_to_remove: usize) -> Result<Entity, String> {
+        // all equipment indicies shift
+        // TODO - add this for offhand
+        if let Some(mainhand) = self.mainhand_index {
+            if index_to_remove < mainhand {
+                self.mainhand_index = Some(mainhand - 1);
+            } else if index_to_remove == mainhand {
+                self.mainhand_index = None;
+            }
+        }
+
+        self.items
+            .remove(index_to_remove)
+            .ok_or("Index was out of bounds".to_string())
+    }
+
     fn find_item_by_entity(&self, item: Entity) -> Option<usize> {
         self.items.iter().position(|&e| e == item)
     }
@@ -119,5 +127,59 @@ impl Inventory {
             EquipmentSlot::Mainhand => self.mainhand_index,
             EquipmentSlot::Offhand => self.offhand_index,
         }
+    }
+}
+
+pub struct InventoryBuilder {
+    max_capacity: usize,
+    items: Vec<Entity>,
+    coins: u32,
+    display_case: Option<Entity>,
+}
+
+impl InventoryBuilder {
+    pub fn new() -> Self {
+        Self {
+            max_capacity: 10,
+            items: Vec::new(),
+            coins: 0,
+            display_case: None,
+        }
+    }
+
+    pub fn max_capacity(mut self, max_capacity: usize) -> Self {
+        self.max_capacity = max_capacity;
+        self
+    }
+
+    pub fn items(mut self, items: Vec<Entity>) -> Self {
+        self.items = items;
+        self
+    }
+
+    pub fn coins(mut self, coins: u32) -> Self {
+        self.coins = coins;
+        self
+    }
+
+    pub fn display_case(mut self, display_case: Option<Entity>) -> Self {
+        self.display_case = display_case;
+        self
+    }
+
+    pub fn build(self) -> Inventory {
+        let mut inventory = Inventory {
+            max_capacity: self.max_capacity,
+            items: VecDeque::new(),
+            coins: self.coins,
+            mainhand_index: None,
+            offhand_index: None,
+            display_case: self.display_case,
+        };
+
+        for item in self.items {
+            inventory.add_item(item).unwrap(); // Assuming all items can fit for now.  Handle errors as needed
+        }
+        inventory
     }
 }

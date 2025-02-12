@@ -1,19 +1,13 @@
 use bevy::prelude::*;
 
-#[derive(Component)]
-pub struct Wallet {
-    pub coins: f32,
-}
+use crate::items::{Autoloot, Grounded};
 
-impl Default for Wallet {
-    fn default() -> Self {
-        Self { coins: 0.0 }
-    }
-}
-
-// Components
+// This is needed to tell auto loot systems to not treat gold as an item
 #[derive(Component)]
-pub struct Magnet;
+#[require(Autoloot, Grounded)]
+pub struct Currency {
+    pub value: u32,
+}
 
 #[derive(Event)]
 pub struct GoldDropEvent {

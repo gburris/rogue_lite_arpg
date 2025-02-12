@@ -1,5 +1,7 @@
-use avian2d::prelude::CollidingEntities;
+use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
+
+use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration};
 
 /// This is the base component for all items in the game. If you have a new concept that will be
 /// shared by all items, add it as a field here.
@@ -10,6 +12,7 @@ pub struct Item {
     id: u32,
     pub drop_glow_effect: f32,
     pub drop_rotation_timer: f32,
+    pub drop_rate: f32,
 }
 
 impl Default for Item {
@@ -18,13 +21,18 @@ impl Default for Item {
             id: 0,
             drop_glow_effect: 0.0,
             drop_rotation_timer: 0.0,
+            drop_rate: 0.0,
         }
     }
 }
 
 impl Item {
     pub fn new(id: u32) -> Self {
-        Item { id, ..default() }
+        Item {
+            id,
+            drop_rate: 0.1,
+            ..default()
+        }
     }
 
     pub fn get_id(&self) -> u32 {
@@ -55,6 +63,34 @@ pub struct ItemToGroundEvent {
     pub origin_position: Vec3,
 }
 
-#[derive(Component, Clone, Debug)]
-#[require(CollidingEntities)]
+//Automatically loot the item when passing over it
+#[derive(Component, Default)]
+pub struct Autoloot;
+
+#[derive(Component, Clone, Debug, Default)]
+#[require(
+    CollidingEntities,
+    Sensor,
+    Collider(|| Collider::circle(10.0)),
+    CollisionLayers(|| CollisionLayers::new(
+        GameCollisionLayer::Interaction,
+        [GameCollisionLayer::Player]
+    )),
+    Visibility(|| Visibility::Visible),
+    LiveDuration(|| LiveDuration::new(10.0))
+)]
 pub struct Grounded;
+
+#[derive(Component)]
+#[require(
+    CollidingEntities,
+    Sensor,
+    Collider(|| Collider::circle(150.0)),
+    CollisionLayers(|| CollisionLayers::new(
+        GameCollisionLayer::Magnet,
+        [GameCollisionLayer::Player]
+    ))
+)]
+pub struct Magnet {
+    pub strength: f32,
+}

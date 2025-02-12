@@ -1,30 +1,23 @@
 use bevy::prelude::*;
 
-use crate::{
-    configuration::assets::SpriteAssets,
-    items::{inventory::inventory::Inventory, spawn_health_potion},
-};
+use crate::{configuration::assets::SpriteAssets, econ::components::GoldDropEvent};
 
-use super::components::OpenChest;
+use super::components::{Chest, OpenChest};
 
 pub fn open_chest(
     open_chest_trigger: Trigger<OpenChest>,
-    player: Single<(Entity, &mut Inventory)>,
+    chest_transforms: Query<&Transform, With<Chest>>,
     sprites: Res<SpriteAssets>,
     mut commands: Commands,
 ) {
-    let (player, mut inventory) = player.into_inner();
-
     commands
         .entity(open_chest_trigger.chest_entity)
         .insert(Sprite::from_image(sprites.open_chest.clone()))
         .despawn_descendants();
-
-    let health_potion = spawn_health_potion(&mut commands, &sprites);
-
-    inventory
-        .add_item(health_potion)
-        .expect("Chest tried adding health potion but inventory was full");
-
-    commands.entity(player).add_child(health_potion);
+    if let Ok(chest_transform) = chest_transforms.get(open_chest_trigger.chest_entity) {
+        commands.trigger(GoldDropEvent {
+            amount: 999,
+            drop_location: *chest_transform,
+        });
+    };
 }

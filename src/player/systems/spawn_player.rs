@@ -10,7 +10,6 @@ use crate::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
-    econ::components::Wallet,
     items::{
         equipment::{on_main_hand_activated, EquipEvent},
         inventory::Inventory,
@@ -39,7 +38,11 @@ pub fn spawn_player(
     let player = commands
         .spawn((
             Player,
-            Inventory::new(&starting_items.into()),
+            Inventory::builder()
+                .items(starting_items.into())
+                .coins(0)
+                .max_capacity(10)
+                .build(),
             Mana::new(100.0, 10.0),
             HasIFrames {
                 duration: Duration::from_secs(1),
@@ -54,9 +57,9 @@ pub fn spawn_player(
                     GameCollisionLayer::Grounded,
                     GameCollisionLayer::HighObstacle,
                     GameCollisionLayer::LowObstacle,
+                    GameCollisionLayer::Magnet,
                 ],
             ),
-            Wallet::default(),
             (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))

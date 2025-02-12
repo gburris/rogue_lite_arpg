@@ -34,7 +34,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             Name::new("Sword"),
             Equippable::default(),
             Item::new(3),
-            Visibility::Visible,
+            Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
@@ -60,7 +60,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             Name::new("Axe"),
             Equippable::default(),
             Item::new(4),
-            Visibility::Visible,
+            Visibility::Hidden,
             Sprite::from_image(sprites.axe.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))

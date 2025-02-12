@@ -37,7 +37,7 @@ pub fn handle_consume_event(
 
             // Once we are here we know the item was consumed, so we remove it from inventory and despawn it
             inventory
-                .remove_item_by_value(item_entity)
+                .remove_item(item_entity)
                 .expect("Went to consume item and it was not in inventory!");
             commands.entity(item_entity).despawn_recursive();
         }

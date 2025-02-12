@@ -2,19 +2,10 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
-    chests::components::Chest,
-    combat::projectile::components::Projectile,
-    configuration::time_control::RestartEvent,
-    despawn::systems::*,
-    enemy::Enemy,
-    labels::{
+    chests::components::Chest, combat::projectile::components::Projectile, configuration::time_control::RestartEvent, despawn::systems::*, enemy::Enemy, items::Grounded, labels::{
         sets::InGameSet,
         states::{AppState, PausedState},
-    },
-    map::{components::Wall, events::CleanupZone, portal::Portal, Water},
-    npc::NPC,
-    player::Player,
-    ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu},
+    }, map::{components::Wall, events::CleanupZone, portal::Portal, Water}, npc::NPC, player::Player, ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu}
 };
 
 pub struct DespawnPlugin;
@@ -40,6 +31,7 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, TilemapId>)
         .add_observer(despawn_all::<CleanupZone, Wall>)
         .add_observer(despawn_all::<CleanupZone, Water>)
+        .add_observer(despawn_all::<CleanupZone, Grounded>)
         .add_observer(despawn_all::<CleanupZone, Chest>)
         .add_observer(despawn_all::<CleanupZone, Enemy>)
         .add_observer(despawn_all::<CleanupZone, Projectile>)

@@ -3,22 +3,18 @@ use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 
 use crate::{
     despawn::components::LiveDuration,
-    items::{inventory::inventory::Inventory, Grounded},
+    items::{inventory::inventory::Inventory, Autoloot, Grounded},
     player::{AttemptInteractionInput, Player},
 };
 
 pub fn on_grounded_item_input_interaction(
     _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
-    colliding_items: Query<(Entity, &CollidingEntities), With<Grounded>>,
-    mut inventory_query: Query<&mut Inventory, With<Player>>,
-    player_query: Query<Entity, With<Player>>,
+    colliding_items: Query<(Entity, &CollidingEntities), (With<Grounded>, Without<Autoloot>)>,
+    mut inventory_query: Query<&mut Inventory>,
+    player_query: Single<Entity, With<Player>>,
 ) {
-    let player_entity = if let Ok(entity) = player_query.get_single() {
-        entity
-    } else {
-        return;
-    };
+    let player_entity = player_query.into_inner();
 
     for (item_entity, colliding_entities) in colliding_items.iter() {
         if colliding_entities.contains(&player_entity) {
@@ -31,6 +27,7 @@ pub fn on_grounded_item_input_interaction(
                         .remove::<Grounded>()
                         .remove::<Collider>()
                         .remove::<Sensor>()
+                        .remove::<CollidingEntities>()
                         .remove::<LiveDuration>()
                         .remove::<CollisionLayers>()
                         .insert(Visibility::Hidden);

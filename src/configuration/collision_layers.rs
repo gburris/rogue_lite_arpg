@@ -6,6 +6,7 @@ pub enum GameCollisionLayer {
     Default, // Layer 0 - the default layer that objects are assigned to
     Player, // Marker for player, used for interactions and other player-specific stuff
     Enemy,
+    Magnet,       // Used to "Magnet" to entities colliding with it
     LowObstacle, // Obstacle that stops ground movement but lets things "fly" over, like projectiles
     HighObstacle, // Obstacle that stops all movement
     Grounded,    // Marks entities that get stopped by all obstacles

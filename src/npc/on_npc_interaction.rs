@@ -13,9 +13,9 @@ pub fn on_npc_input_interaction(
     _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
     query: Query<(&Parent, &CollidingEntities), With<NPCInteractionRadius>>,
-    player_query: Query<Entity, With<Player>>,
+    player_query: Single<Entity, With<Player>>,
 ) {
-    let player_entity = player_query.single();
+    let player_entity = player_query.into_inner();
     for (parent, colliding_entities) in &query {
         if colliding_entities.contains(&player_entity) {
             commands.trigger_targets(NPCInteraction, parent.get());

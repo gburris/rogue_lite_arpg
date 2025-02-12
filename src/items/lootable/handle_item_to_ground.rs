@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    items::{equipment::Equipped, inventory::Inventory, Grounded, Item, ItemDropEvent},
+    items::{equipment::Equipped, inventory::Inventory, Item, ItemDropEvent, Lootable},
     labels::layer::ZLayer,
 };
 
@@ -19,7 +19,7 @@ pub fn handle_item_ground_transition(
     let item_entity = trigger.entity();
 
     let Ok(parent) = item_query.get(item_entity) else {
-        warn!("Grounded item missing parent");
+        warn!("Lootable item missing parent");
         return;
     };
 
@@ -41,7 +41,7 @@ pub fn handle_item_ground_transition(
     commands
         .entity(item_entity)
         .remove::<Equipped>()
-        .insert(Grounded)
+        .insert(Lootable)
         .insert(Transform::from_translation(final_position))
         .insert(Visibility::Visible)
         .remove_parent();

@@ -14,7 +14,7 @@ use {
     crate::despawn::plugin::DespawnPlugin,
     crate::econ::plugin::EconPlugin,
     crate::enemy::plugin::EnemyPlugin,
-    crate::items::{equipment::EquipmentPlugin, grounded::plugin::GroundedPlugin},
+    crate::items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
     crate::map::plugin::MapPlugin,
     crate::movement::plugin::MovementPlugin,
     crate::npc::NPCPlugin,
@@ -42,7 +42,7 @@ impl Plugin for GamePlugins {
             // Entity systems
             .add_plugins((
                 MapPlugin,
-                GroundedPlugin,
+                LootablePlugin,
                 PlayerPlugin,
                 EnemyPlugin,
                 NPCPlugin,

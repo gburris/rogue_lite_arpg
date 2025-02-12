@@ -2,10 +2,10 @@ use std::f32::consts::PI;
 
 use ::bevy::prelude::*;
 
-use crate::items::{Grounded, Item};
+use crate::items::{Item, Lootable};
 
-pub fn update_grounded_items(
-    mut query: Query<(Entity, &mut Item, &mut Transform, &mut Sprite), With<Grounded>>,
+pub fn update_lootable_items(
+    mut query: Query<(Entity, &mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
     time: Res<Time>,
 ) {
     for (_entity, mut item, mut transform, mut sprite) in query.iter_mut() {

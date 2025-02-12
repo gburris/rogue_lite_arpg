@@ -39,44 +39,41 @@ pub fn on_level_up(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut player_query: Query<(Entity, &mut PlayerLevel), With<Player>>,
+    player_query: Single<(Entity, &mut PlayerLevel), With<Player>>,
 ) {
-    if let Ok((player_entity, mut player_level)) = player_query.get_single_mut() {
-        player_level.current = trigger.new_level;
+    let (player_entity, mut player_level) = player_query.into_inner();
+    player_level.current = trigger.new_level;
 
-        // Spawn circular ring effect
-        let ring = commands
-            .spawn((
-                Mesh2d(meshes.add(Circle::new(50.0))),
-                MeshMaterial2d(
-                    materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7))),
-                ),
-                Transform::from_xyz(0.0, 0.0, ZLayer::LevelUpEffect.z()),
-                LevelUpEffect {
-                    timer: Timer::from_seconds(1.2, TimerMode::Once),
-                    initial_scale: Vec3::splat(0.1),
-                    rotation_speed: 2.0,
-                },
-            ))
-            .id();
+    // Spawn circular ring effect
+    let ring = commands
+        .spawn((
+            Mesh2d(meshes.add(Circle::new(50.0))),
+            MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7)))),
+            Transform::from_xyz(0.0, 0.0, ZLayer::LevelUpEffect.z()),
+            LevelUpEffect {
+                timer: Timer::from_seconds(1.2, TimerMode::Once),
+                initial_scale: Vec3::splat(0.1),
+                rotation_speed: 2.0,
+            },
+        ))
+        .id();
 
-        // Spawn level up text
-        let text = commands
-            .spawn((
-                Text2d::new("Level up!"),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-                TextColor::from(Color::srgb(1.0, 0.84, 0.0)),
-                Transform::from_xyz(0.0, 60.0, ZLayer::LevelUpEffect.z()),
-                LevelUpText,
-            ))
-            .id();
+    // Spawn level up text
+    let text = commands
+        .spawn((
+            Text2d::new("Level up!"),
+            TextFont {
+                font_size: 24.0,
+                ..default()
+            },
+            TextColor::from(Color::srgb(1.0, 0.84, 0.0)),
+            Transform::from_xyz(0.0, 60.0, ZLayer::LevelUpEffect.z()),
+            LevelUpText,
+        ))
+        .id();
 
-        // Add both effects as children of the player
-        commands.entity(player_entity).add_children(&[ring, text]);
-    }
+    // Add both effects as children of the player
+    commands.entity(player_entity).add_children(&[ring, text]);
 }
 
 pub fn animate_level_up(

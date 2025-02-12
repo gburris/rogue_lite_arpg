@@ -11,14 +11,10 @@ pub fn on_grounded_item_input_interaction(
     _: Trigger<AttemptInteractionInput>,
     mut commands: Commands,
     colliding_items: Query<(Entity, &CollidingEntities), (With<Grounded>, Without<Autoloot>)>,
-    mut inventory_query: Query<&mut Inventory, With<Player>>,
-    player_query: Query<Entity, With<Player>>,
+    mut inventory_query: Query<&mut Inventory>,
+    player_query: Single<Entity, With<Player>>,
 ) {
-    let player_entity = if let Ok(entity) = player_query.get_single() {
-        entity
-    } else {
-        return;
-    };
+    let player_entity = player_query.into_inner();
 
     for (item_entity, colliding_entities) in colliding_items.iter() {
         if colliding_entities.contains(&player_entity) {

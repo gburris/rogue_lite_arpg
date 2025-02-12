@@ -14,9 +14,7 @@ impl Plugin for EquipmentPlugin {
             ))
                 .in_set(InGameSet::Simulation),
         )
-        .add_observer(equip::on_equip_event)
         .add_observer(equip::on_item_equipped)
-        .add_observer(unequip::on_unequip_event)
         .add_observer(unequip::on_item_unequipped);
     }
 }

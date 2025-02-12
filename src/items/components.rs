@@ -30,7 +30,7 @@ impl Item {
     pub fn new(id: u32) -> Self {
         Item {
             id,
-            drop_rate: 0.1,
+            drop_rate: 1.2,
             ..default()
         }
     }
@@ -71,7 +71,7 @@ pub struct Autoloot;
 #[require(
     CollidingEntities,
     Sensor,
-    Collider(|| Collider::circle(10.0)),
+    Collider(|| Collider::circle(20.0)),
     CollisionLayers(|| CollisionLayers::new(
         GameCollisionLayer::Interaction,
         [GameCollisionLayer::Player]

@@ -14,7 +14,7 @@ use crate::{
     player::MainHandActivated,
 };
 
-use super::EquipmentSlot;
+use super::{EquipmentSlot, Equipped};
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
@@ -36,7 +36,7 @@ pub fn on_main_hand_activated(
     main_hand_trigger: Trigger<MainHandActivated>,
     mut commands: Commands,
     mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>)>,
+    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     let Ok((inventory, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
         error!(

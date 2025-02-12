@@ -29,15 +29,8 @@ impl Default for Inventory {
 }
 
 impl Inventory {
-    pub fn new(items: &Vec<Entity>, coins: u32) -> Self {
-        let mut inventory = Inventory::default();
-        inventory.coins = coins;
-
-        items.iter().for_each(|&i| {
-            inventory.add_item(i).ok();
-        });
-
-        inventory
+    pub fn builder() -> InventoryBuilder {
+        InventoryBuilder::new()
     }
 
     /// Adds an item to the inventory if there's space
@@ -134,5 +127,59 @@ impl Inventory {
             EquipmentSlot::Mainhand => self.mainhand_index,
             EquipmentSlot::Offhand => self.offhand_index,
         }
+    }
+}
+
+pub struct InventoryBuilder {
+    max_capacity: usize,
+    items: Vec<Entity>,
+    coins: u32,
+    display_case: Option<Entity>,
+}
+
+impl InventoryBuilder {
+    pub fn new() -> Self {
+        Self {
+            max_capacity: 10,
+            items: Vec::new(),
+            coins: 0,
+            display_case: None,
+        }
+    }
+
+    pub fn max_capacity(mut self, max_capacity: usize) -> Self {
+        self.max_capacity = max_capacity;
+        self
+    }
+
+    pub fn items(mut self, items: Vec<Entity>) -> Self {
+        self.items = items;
+        self
+    }
+
+    pub fn coins(mut self, coins: u32) -> Self {
+        self.coins = coins;
+        self
+    }
+
+    pub fn display_case(mut self, display_case: Option<Entity>) -> Self {
+        self.display_case = display_case;
+        self
+    }
+
+    pub fn build(self) -> Inventory {
+        let mut inventory = Inventory {
+            max_capacity: self.max_capacity,
+            items: VecDeque::new(),
+            coins: self.coins,
+            mainhand_index: None,
+            offhand_index: None,
+            display_case: self.display_case,
+        };
+
+        for item in self.items {
+            inventory.add_item(item).unwrap(); // Assuming all items can fit for now.  Handle errors as needed
+        }
+        inventory
     }
 }

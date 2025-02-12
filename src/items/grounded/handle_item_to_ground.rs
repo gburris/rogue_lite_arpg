@@ -1,11 +1,9 @@
 use crate::{
     combat::melee::components::ActiveMeleeAttack,
-    configuration::GameCollisionLayer,
-    despawn::components::LiveDuration,
     items::{Grounded, ItemToGroundEvent},
     labels::layer::ZLayer,
 };
-use avian2d::prelude::{Collider, CollisionLayers, Sensor};
+use avian2d::prelude::{Collider, Sensor};
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 

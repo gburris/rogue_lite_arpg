@@ -1,12 +1,7 @@
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{
-    configuration::{assets::SpriteAssets, GameCollisionLayer},
-    items::{Autoloot, Grounded, Magnet},
-    labels::layer::ZLayer,
-};
+use crate::{configuration::assets::SpriteAssets, items::Magnet, labels::layer::ZLayer};
 
 use super::components::{Currency, GoldDropEvent};
 

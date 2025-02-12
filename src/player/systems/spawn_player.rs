@@ -38,7 +38,11 @@ pub fn spawn_player(
     let player = commands
         .spawn((
             Player,
-            Inventory::new(&starting_items.into(), 0),
+            Inventory::builder()
+                .items(starting_items.into())
+                .coins(0)
+                .max_capacity(10)
+                .build(),
             Mana::new(100.0, 10.0),
             HasIFrames {
                 duration: Duration::from_secs(1),

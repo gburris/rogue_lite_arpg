@@ -72,7 +72,11 @@ fn spawn_enemy(
         let enemy = commands
             .spawn((
                 Enemy,
-                Inventory::new(&starting_items.into(), 99),
+                Inventory::builder()
+                    .items(starting_items.into())
+                    .coins(0)
+                    .max_capacity(10)
+                    .build(),
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),

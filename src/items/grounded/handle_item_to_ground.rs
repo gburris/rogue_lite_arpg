@@ -2,22 +2,19 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    items::{inventory::Inventory, Grounded},
+    items::{equipment::Equipped, inventory::Inventory, Grounded, Item, ItemDropEvent},
     labels::layer::ZLayer,
 };
 
 /// Notes:
-/// 1. Grounded is for ITEMS. If it isn't an item, it can't be grounded in the current state
-/// 2. This item should not exist in the entities inventory anymore,
-/// 3. Call remove::<Equipped>() FIRST
-/// 4. Still needs parent to be holder for position, then removes parent
-///
-/// This IS brittle, and will be made so much easier in Bevy 0.16 with relations circa end of March
+/// 1. ItemDropEvent is for items only!
+/// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
+/// 3. Needs parent to be holder for position, then removes parent
 pub fn handle_item_ground_transition(
-    trigger: Trigger<OnAdd, Grounded>,
+    trigger: Trigger<ItemDropEvent>,
     mut commands: Commands,
-    item_query: Query<&Parent>,
-    parent_query: Query<&Transform, With<Inventory>>,
+    item_query: Query<&Parent, With<Item>>,
+    mut parent_query: Query<(&Transform, &mut Inventory)>,
 ) {
     let item_entity = trigger.entity();
 
@@ -26,7 +23,7 @@ pub fn handle_item_ground_transition(
         return;
     };
 
-    let Ok(parent_transform) = parent_query.get(parent.get()) else {
+    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(parent.get()) else {
         error!("Why does the parent not have a transform or inventory on drop");
         return;
     };
@@ -36,10 +33,15 @@ pub fn handle_item_ground_transition(
     let final_position =
         (parent_transform.translation.truncate() + offset).extend(ZLayer::ItemOnGround.z());
 
-    warn!("Dropping item at {}", offset);
+    // We don't care if item is actually found in inventory
+    inventory.remove_item(item_entity).ok();
+
+    trace!("Dropping item at {}", offset);
 
     commands
         .entity(item_entity)
+        .remove::<Equipped>()
+        .insert(Grounded)
         .insert(Transform::from_translation(final_position))
         .insert(Visibility::Visible)
         .remove_parent();

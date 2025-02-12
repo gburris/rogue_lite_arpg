@@ -59,9 +59,7 @@ pub enum ConsumableType {
 }
 
 #[derive(Event)]
-pub struct ItemToGroundEvent {
-    pub origin_position: Vec3,
-}
+pub struct ItemDropEvent;
 
 //Automatically loot the item when passing over it
 #[derive(Component, Default)]

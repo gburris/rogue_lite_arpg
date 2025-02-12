@@ -6,7 +6,7 @@ pub struct GamePlugins;
 
 use {
     crate::animation::AnimationPlugin,
-    crate::chests::plugin::ChestPlugin,
+    crate::chests::ChestPlugin,
     crate::combat::plugin::CombatPlugin,
     crate::configuration::{
         assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin,

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     labels::states::PausedState,
     player::{
-        AttemptInteractionInput, MainHandActivated, Player, PlayerMovementEvent, PlayerStoppedEvent,
+        InteractInputEvent, Player, PlayerMovementEvent, PlayerStoppedEvent, UseMainhandInputEvent,
     },
 };
 
@@ -29,12 +29,12 @@ pub fn player_input(
     }
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(AttemptInteractionInput);
+        commands.trigger(InteractInputEvent);
         return;
     }
 
     if buttons.pressed(MouseButton::Left) {
-        commands.trigger_targets(MainHandActivated, player_entity);
+        commands.trigger_targets(UseMainhandInputEvent, player_entity);
     }
 
     let mut direction = Vec2::ZERO;

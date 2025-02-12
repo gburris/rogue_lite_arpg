@@ -1,5 +1,9 @@
-pub mod components;
-pub mod handle_open_chest_input;
-pub mod open_chest;
-pub mod plugin;
-pub mod spawn_chests;
+mod open_chest;
+mod plugin;
+mod spawn_chests;
+
+pub use plugin::ChestPlugin;
+
+pub use spawn_chests::Chest;
+
+pub use open_chest::OpenChest;

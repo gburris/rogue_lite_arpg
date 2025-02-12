@@ -4,11 +4,11 @@ use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use crate::{
     despawn::components::LiveDuration,
     items::{inventory::inventory::Inventory, Autoloot, Lootable},
-    player::{AttemptInteractionInput, Player},
+    player::{InteractInputEvent, Player},
 };
 
 pub fn on_lootable_item_input_interaction(
-    _: Trigger<AttemptInteractionInput>,
+    _: Trigger<InteractInputEvent>,
     mut commands: Commands,
     colliding_items: Query<(Entity, &CollidingEntities), (With<Lootable>, Without<Autoloot>)>,
     player: Single<(Entity, &mut Inventory), With<Player>>,

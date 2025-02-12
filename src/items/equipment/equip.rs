@@ -3,27 +3,10 @@ use bevy::prelude::*;
 use crate::{
     combat::{damage::components::DamageSource, melee::components::MeleeWeapon},
     enemy::Enemy,
-    items::{equipment::UnequipEvent, inventory::Inventory},
+    items::inventory::Inventory,
 };
 
 use super::{equippable::Equipped, EquipmentSlot, Equippable};
-
-#[derive(Event)]
-pub struct EquipEvent {
-    pub item_entity: Entity,
-}
-
-impl EquipEvent {
-    pub fn new(item_entity: Entity) -> Self {
-        Self { item_entity }
-    }
-}
-
-pub fn on_equip_event(equip_trigger: Trigger<EquipEvent>, mut commands: Commands) {
-    commands
-        .entity(equip_trigger.item_entity)
-        .insert(Equipped::new(equip_trigger.entity()));
-}
 
 pub fn on_item_equipped(
     trigger: Trigger<OnAdd, Equipped>,
@@ -47,12 +30,7 @@ pub fn on_item_equipped(
 
     // If previously equipped, must handle it!
     if let Some(previous) = inventory.get_equipped(equippable.slot) {
-        commands.trigger_targets(
-            UnequipEvent {
-                item_entity: previous,
-            },
-            equipped.get_equipped_to(),
-        );
+        commands.entity(previous).remove::<Equipped>();
     }
 
     inventory.equip(equipped_entity, equippable.slot);

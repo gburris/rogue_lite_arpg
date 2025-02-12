@@ -5,7 +5,7 @@ use crate::{
     animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::{equipment::EquipEvent, inventory::Inventory},
+    items::{equipment::Equipped, inventory::Inventory},
     map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
@@ -81,5 +81,5 @@ pub fn spawn_npc(
         .observe(observer_to_use)
         .id();
 
-    commands.trigger_targets(EquipEvent::new(mainhand), npc);
+    commands.entity(mainhand).insert(Equipped::new(npc));
 }

@@ -31,6 +31,7 @@ pub fn on_grounded_item_input_interaction(
                         .remove::<Grounded>()
                         .remove::<Collider>()
                         .remove::<Sensor>()
+                        .remove::<CollidingEntities>()
                         .remove::<LiveDuration>()
                         .remove::<CollisionLayers>()
                         .insert(Visibility::Hidden);

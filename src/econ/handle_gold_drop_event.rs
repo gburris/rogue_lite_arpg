@@ -19,8 +19,9 @@ pub fn on_gold_drop_event(
     let mut entities_spawned = 0;
     let mut remaining_gold = trigger.amount;
     const MAX_COINS_TO_SPAWN: i32 = 3;
-    // Calculate how many of each coin type to spawn
 
+    //TODO: Give each visual representation of money quantity
+    //It's own sprite. Like red, yellow and blue coins in Mario 64.
     while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
         let (sprite_path, value) = if remaining_gold >= 10000 {
             (sprites.gold_coin.clone(), 10000)
@@ -46,25 +47,11 @@ pub fn on_gold_drop_event(
 
         commands
             .spawn((
+                Currency { value },
                 Sprite::from_image(sprite_path),
-                Autoloot,
                 transform,
-                Currency { value: value },
-                Grounded,
-                Collider::circle(8.0),
-                CollisionLayers::new(
-                    GameCollisionLayer::Interaction,
-                    [GameCollisionLayer::Player],
-                ),
-                CollidingEntities::default(),
             ))
-            .with_child((
-                Magnet { strength: 8.0 },
-                CollisionLayers::new(GameCollisionLayer::Magnet, [GameCollisionLayer::Player]),
-                CollidingEntities::default(),
-                Sensor,
-                Collider::circle(150.0),
-            ));
+            .with_child(Magnet { strength: 8.0 });
 
         remaining_gold -= value;
         entities_spawned += 1;

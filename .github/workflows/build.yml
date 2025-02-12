@@ -100,7 +100,7 @@ jobs:
             <body>
                 <script type="module">
                     console.log("Starting import...");
-                    import init from './baba_yaga.js';
+                    import init from "./baba_yaga.js";
                     console.log("Import completed, initializing...");
                     init().catch((error) => {
                         console.error("Error during initialization:", error);

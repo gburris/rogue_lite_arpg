@@ -1,9 +1,9 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::items::inventory::Inventory;
-
 use super::{equippable::Equipped, Equippable};
+use crate::combat::components::ActionState;
+use crate::items::inventory::Inventory;
 
 #[derive(Event)]
 pub struct UnequipEvent {
@@ -20,7 +20,7 @@ pub fn on_item_unequipped(
     trigger: Trigger<OnRemove, Equipped>,
     mut commands: Commands,
     mut item_query: Query<(&Equippable, &Parent, &mut Visibility)>,
-    mut holder_query: Query<&mut Inventory>,
+    mut holder_query: Query<(&ActionState, &mut Inventory)>,
 ) {
     let item_entity = trigger.entity();
 
@@ -29,10 +29,15 @@ pub fn on_item_unequipped(
         return;
     };
 
-    let Ok(mut inventory) = holder_query.get_mut(holder.get()) else {
+    let Ok((action_state, mut inventory)) = holder_query.get_mut(holder.get()) else {
         info!("Holder was despawned prior to unequip");
         return;
     };
+
+    if *action_state == ActionState::Defeated {
+        info!("Holder was in the death animation prior to unequip");
+        return;
+    }
 
     *visibility = Visibility::Hidden;
 

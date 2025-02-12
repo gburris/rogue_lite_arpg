@@ -26,10 +26,10 @@ pub fn handle_item_ground_transition(
         .entity(item_drop_trigger.entity())
         .remove_parent()
         .remove::<ActiveMeleeAttack>()
-        .remove::<Sensor>()
-        .remove::<Collider>()
+        // .remove::<Sensor>()
+        // .remove::<Collider>()
         .insert(Transform::default());
-
+    warn!("Dropping item at {}", final_position);
     commands
         .entity(item_drop_trigger.entity())
         .insert(Transform::from_translation(final_position))

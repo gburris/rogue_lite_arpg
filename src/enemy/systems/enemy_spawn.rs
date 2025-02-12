@@ -68,23 +68,23 @@ fn spawn_enemy(
         spawn_axe(commands, &sprites),
     ];
 
-    if let Some(enemy) = enemy_assets.enemy_config.get(enemy_name) {
+    if let Some(enemy_type) = enemy_assets.enemy_config.get(enemy_name) {
         let enemy = commands
             .spawn((
                 Enemy,
                 Inventory::builder()
                     .items(starting_items.into())
-                    .coins(0)
+                    .coins(99)
                     .max_capacity(10)
                     .build(),
-                SimpleMotion::new(enemy.simple_motion_speed),
-                Health::new(enemy.health),
+                SimpleMotion::new(enemy_type.simple_motion_speed),
+                Health::new(enemy_type.health),
                 LockedAxes::new().lock_rotation(),
                 RigidBody::Dynamic,
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
                 ActionState::Idle,
-                Collider::rectangle(enemy.collider_size.0, enemy.collider_size.1),
+                Collider::rectangle(enemy_type.collider_size.0, enemy_type.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],
                     [

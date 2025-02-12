@@ -41,6 +41,7 @@ pub fn on_enemy_defeated(
                 if let Ok(item_result) = item_query.get(*item_entity) {
                     let roll = rng.gen_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
+                        warn!("Dropping Item");
                         commands.trigger_targets(
                             ItemToGroundEvent {
                                 origin_position: transform.translation,

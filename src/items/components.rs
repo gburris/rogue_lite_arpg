@@ -30,7 +30,7 @@ impl Item {
     pub fn new(id: u32) -> Self {
         Item {
             id,
-            drop_rate: 0.1,
+            drop_rate: 1.2,
             ..default()
         }
     }

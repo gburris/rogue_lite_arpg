@@ -17,6 +17,10 @@ pub mod ui;
 
 #[cfg(target_arch = "wasm32")]
 use crate::configuration::plugins::WasmPlugins;
+
+#[cfg(target_arch = "wasm32")]
+use bevy::prelude::App;
+
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]

@@ -71,7 +71,7 @@ pub struct Autoloot;
 #[require(
     CollidingEntities,
     Sensor,
-    Collider(|| Collider::circle(10.0)),
+    Collider(|| Collider::circle(20.0)),
     CollisionLayers(|| CollisionLayers::new(
         GameCollisionLayer::Interaction,
         [GameCollisionLayer::Player]

@@ -11,7 +11,7 @@ use crate::{
         GameCollisionLayer,
     },
     items::{
-        equipment::{on_main_hand_activated, EquipEvent},
+        equipment::{on_main_hand_activated, Equipped},
         inventory::Inventory,
         *,
     },
@@ -24,15 +24,12 @@ pub fn spawn_player(
     sprites: Res<SpriteAssets>,
     texture_layouts: Res<SpriteSheetLayouts>,
 ) {
-    //Player Inventory Setup
-    let main_hand = spawn_fire_staff(&mut commands, &sprites, &texture_layouts);
-
     let starting_items = [
+        spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
         spawn_shovel(&mut commands, &sprites),
         spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
-        main_hand,
     ];
 
     let player = commands
@@ -68,7 +65,9 @@ pub fn spawn_player(
         .observe(on_main_hand_activated)
         .id();
 
-    commands.trigger_targets(EquipEvent::new(main_hand), player);
+    commands
+        .entity(starting_items[0])
+        .insert(Equipped::new(player));
 
     info!("Player spawned: {}", player);
 }

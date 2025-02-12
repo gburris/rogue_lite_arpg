@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     items::{
-        equipment::{EquipEvent, Equippable},
+        equipment::{Equippable, Equipped},
         Consumable, Item,
     },
     labels::states::PausedState,
@@ -56,7 +56,7 @@ pub fn on_item_clicked(
 
     if let Ok((equippable, consumable)) = item_query.get(item_entity) {
         if equippable {
-            commands.trigger_targets(EquipEvent { item_entity }, *player);
+            commands.entity(item_entity).insert(Equipped::new(*player));
         } else if consumable {
             commands.trigger_targets(ConsumeEvent { item_entity }, *player);
         }

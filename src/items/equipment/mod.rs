@@ -14,8 +14,6 @@ pub use equippable::Equippable;
 pub use equippable::Equipped;
 
 // Equipment events to "get shit done"
-pub use equip::EquipEvent;
-pub use unequip::UnequipEvent;
 pub use use_equipped::UseEquipmentEvent;
 
 // Observers to be added to respective equipment/weapons that want this functionality

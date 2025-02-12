@@ -3,18 +3,8 @@ use bevy::prelude::*;
 
 use super::{equippable::Equipped, Equippable};
 use crate::combat::components::ActionState;
+use crate::combat::melee::components::ActiveMeleeAttack;
 use crate::items::inventory::Inventory;
-
-#[derive(Event)]
-pub struct UnequipEvent {
-    pub item_entity: Entity,
-}
-
-pub fn on_unequip_event(unequip_trigger: Trigger<UnequipEvent>, mut commands: Commands) {
-    commands
-        .entity(unequip_trigger.item_entity)
-        .remove::<Equipped>();
-}
 
 pub fn on_item_unequipped(
     trigger: Trigger<OnRemove, Equipped>,
@@ -40,8 +30,10 @@ pub fn on_item_unequipped(
     }
 
     *visibility = Visibility::Hidden;
-
-    commands.entity(item_entity).remove::<Collider>();
+    commands
+        .entity(item_entity)
+        .remove::<Collider>()
+        .remove::<ActiveMeleeAttack>();
 
     inventory.unequip(equippable.slot);
 

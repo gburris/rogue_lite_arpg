@@ -6,6 +6,13 @@ use crate::{
     labels::layer::ZLayer,
 };
 
+/// Notes:
+/// 1. Grounded is for ITEMS. If it isn't an item, it can't be grounded in the current state
+/// 2. This item should not exist in the entities inventory anymore,
+/// 3. Call remove::<Equipped>() FIRST
+/// 4. Still needs parent to be holder for position, then removes parent
+///
+/// This IS brittle, and will be made so much easier in Bevy 0.16 with relations circa end of March
 pub fn handle_item_ground_transition(
     trigger: Trigger<OnAdd, Grounded>,
     mut commands: Commands,
@@ -15,7 +22,7 @@ pub fn handle_item_ground_transition(
     let item_entity = trigger.entity();
 
     let Ok(parent) = item_query.get(item_entity) else {
-        warn!("Grounded item missing parent, maybe unequipped on accident?");
+        warn!("Grounded item missing parent");
         return;
     };
 

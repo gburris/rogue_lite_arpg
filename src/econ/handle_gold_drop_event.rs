@@ -1,41 +1,54 @@
-//Spawn gold pieces here
 use bevy::prelude::*;
+use rand::Rng;
 
-use super::components::GoldDropEvent;
+use crate::{configuration::assets::SpriteAssets, items::Magnet, labels::layer::ZLayer};
 
-// #[derive(Event)]
-// pub struct GoldDropEvent {
-//     pub drop_location: Transform,
-//     pub amount: u32,
-// }
+use super::components::{Currency, GoldDropEvent};
 
-pub fn on_gold_drop_event(trigger: Trigger<GoldDropEvent>) {
-    //Only spawn a maximum of 10 new entities
-    //10 gold = 10 "small" sprite
-    //100 gold = 10 "medium" sprite
-    //1101 gold = One Large, One Medium, One Small sprite
-    //Etc.
+pub fn on_gold_drop_event(
+    trigger: Trigger<GoldDropEvent>,
+    mut commands: Commands,
+    sprites: Res<SpriteAssets>,
+) {
+    let mut rng = rand::thread_rng();
+    let mut entities_spawned = 0;
+    let mut remaining_gold = trigger.amount;
+    const MAX_COINS_TO_SPAWN: i32 = 3;
 
-    //Command.spawn(AutoLoot -> Loots when it touches the player
-    //magenet -> scoots on the ground to the player
-    //Sprite -> look of the gold itself, small, medium, large, xlarge, xxlarge piles sizes
-    //Transform -> random location with 50 of the drop location, z-axis "grounded item"
-    //GoldEffect -> current rotation of the coin and how much the sprite is glowing
-    //Sensor -> Used to detect CollidingEntities with the player
-    //CollidingEntities -> Used to figure out who is colliding with the coin
-    //Magnet will use that colliding entites to scoot
-    //Autoloot will collect the gold and despawn it when it's position is within 10 of the player
-}
-pub fn update_grounded_magnets() {
-    //Any entity with magnet is attacked to their target entity (Just player for now)
-}
+    //TODO: Give each visual representation of money quantity
+    //It's own sprite. Like red, yellow and blue coins in Mario 64.
+    while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
+        let (sprite_path, value) = if remaining_gold >= 10000 {
+            (sprites.gold_coin.clone(), 10000)
+        } else if remaining_gold >= 1000 {
+            (sprites.gold_coin.clone(), 1000)
+        } else if remaining_gold >= 100 {
+            (sprites.gold_coin.clone(), 100)
+        } else if remaining_gold >= 10 {
+            (sprites.gold_coin.clone(), 10)
+        } else {
+            (sprites.gold_coin.clone(), 1)
+        };
 
-pub fn update_grounded_autoloot_currency() {
-    //Query for all items grounded with AutoLoot and Currency Tag
-    //Place into wallet when positions overlap
-}
+        // Random position within radius
+        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+        let distance = rng.gen_range(0.0..50.0);
+        let offset = Vec2::new(angle.cos() * distance, angle.sin() * distance);
 
-pub fn update_grounded_autoloot_items() {
-    //Query for all items grounded with AutoLoot and Currency Tag
-    //Place into inventory if there is room
+        let mut transform = trigger.drop_location;
+        transform.translation.x += offset.x;
+        transform.translation.y += offset.y;
+        transform.translation.z = ZLayer::ItemOnGround.z();
+
+        commands
+            .spawn((
+                Currency { value },
+                Sprite::from_image(sprite_path),
+                transform,
+            ))
+            .with_child(Magnet { strength: 8.0 });
+
+        remaining_gold -= value;
+        entities_spawned += 1;
+    }
 }

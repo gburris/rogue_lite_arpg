@@ -37,7 +37,6 @@ pub fn on_item_equipped(
     mut holder_query: Query<(&mut Inventory, Option<&Enemy>)>,
 ) {
     let equipped_entity = trigger.entity();
-
     let (equippable, equipped, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");

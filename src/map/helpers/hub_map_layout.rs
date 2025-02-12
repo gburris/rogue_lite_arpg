@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
-use noise::{NoiseFn, Perlin};
 
 use crate::map::{
     components::{MapLayout, TileType},

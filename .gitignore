@@ -10,6 +10,8 @@ cmds.txt
 # Rust-specific configuration files
 /.cargo
 
+.vs/
+
 # macOS-specific files
 .DS_Store
 

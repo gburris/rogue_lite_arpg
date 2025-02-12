@@ -52,7 +52,6 @@ fn spawn_enemy(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    let random_mainhand: Entity = spawn_random_mainhand_weapon(commands, &sprites, &atlases);
     let sprite = Sprite::from_atlas_image(
         sprites.enemy_sprite_sheet.clone(),
         TextureAtlas {
@@ -64,6 +63,7 @@ fn spawn_enemy(
     );
 
     let starting_items = [
+        spawn_random_mainhand_weapon(commands, &sprites, &atlases),
         spawn_health_potion(commands, &sprites),
         spawn_axe(commands, &sprites),
     ];
@@ -72,7 +72,11 @@ fn spawn_enemy(
         let enemy = commands
             .spawn((
                 Enemy,
-                Inventory::new(&starting_items.into()),
+                Inventory::builder()
+                    .items(starting_items.into())
+                    .coins(0)
+                    .max_capacity(10)
+                    .build(),
                 SimpleMotion::new(enemy.simple_motion_speed),
                 Health::new(enemy.health),
                 LockedAxes::new().lock_rotation(),
@@ -105,7 +109,7 @@ fn spawn_enemy(
             .observe(on_main_hand_activated)
             .id();
 
-        commands.trigger_targets(EquipEvent::new(random_mainhand), enemy);
+        commands.trigger_targets(EquipEvent::new(starting_items[0]), enemy);
     } else {
         eprintln!("Enemy {} not found in enemy config.", enemy_name);
     }

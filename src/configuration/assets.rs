@@ -39,6 +39,8 @@ pub struct SpriteSheetLayouts {
 
 #[derive(AssetCollection, Resource)]
 pub struct SpriteAssets {
+    #[asset(path = "coin.png")]
+    pub gold_coin: Handle<Image>,
     #[asset(path = "player/skeleton.png")]
     pub skeleton_player: Handle<Image>,
     #[asset(path = "items/sword.png")]
@@ -76,7 +78,7 @@ pub struct SpriteAssets {
     #[asset(path = "tilesets/cobblestone_tiles.png")]
     pub cobblestone_tiles: Handle<Image>,
     #[asset(path = "door.png")]
-    pub run_start_portal: Handle<Image>,
+    pub run_start_door: Handle<Image>,
     #[asset(path = "open_chest.png")]
     pub open_chest: Handle<Image>,
     #[asset(path = "closed_chest.png")]

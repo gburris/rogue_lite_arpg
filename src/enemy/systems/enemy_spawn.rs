@@ -11,11 +11,11 @@ use crate::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
-    enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
+    enemy::{Enemy, EnemyAssets},
     items::{
         equipment::{on_main_hand_activated, Equipped},
         inventory::Inventory,
-        spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
+        spawn_axe, spawn_random_mainhand_weapon,
     },
     map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,
@@ -64,7 +64,6 @@ fn spawn_enemy(
 
     let starting_items = [
         spawn_random_mainhand_weapon(commands, &sprites, &atlases),
-        spawn_health_potion(commands, &sprites),
         spawn_axe(commands, &sprites),
     ];
 
@@ -105,7 +104,6 @@ fn spawn_enemy(
                 ),
             ))
             .add_children(&starting_items)
-            .observe(on_enemy_defeated)
             .observe(on_main_hand_activated)
             .id();
 

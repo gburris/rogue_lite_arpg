@@ -46,6 +46,12 @@ pub struct Consumable;
 #[derive(Component, Clone, Debug)]
 pub struct HealthPotion;
 
+#[derive(Component)]
+pub struct Charges {
+    pub current: u32,
+    pub max: u32,
+}
+
 #[derive(Component, Clone, Debug)]
 pub struct DropRate(pub f32);
 
@@ -56,6 +62,14 @@ pub struct ConsumableEffect {
 
 pub enum ConsumableType {
     Heal(f32), // Heal player for a specific amount
+}
+
+#[derive(Component)]
+pub struct RechargeOnKill;
+
+#[derive(Event)]
+pub struct RechargeEvent {
+    pub item_entity: Entity,
 }
 
 #[derive(Event)]

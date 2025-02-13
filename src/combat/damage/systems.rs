@@ -16,6 +16,7 @@ pub fn on_damage_event(
     mut commands: Commands,
     mut damaged_query: Query<(&mut Health, Option<&HasIFrames>, Option<&Invulnerable>)>,
     source_query: Query<&EffectsList>,
+    mut defeated_events: EventWriter<DefeatedEvent>, // EventWriter to send DefeatedEvent
 ) {
     if let Ok((mut health, has_iframes, invulnerable)) =
         damaged_query.get_mut(damage_trigger.entity())
@@ -41,7 +42,10 @@ pub fn on_damage_event(
         }
 
         if health.hp == 0.0 {
-            commands.trigger_targets(DefeatedEvent, damage_trigger.entity());
+            // Send DefeatedEvent when health reaches 0
+            defeated_events.send(DefeatedEvent {
+                entity: damage_trigger.entity(),
+            });
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects_list) = source_query.get(source_entity) {

@@ -1,6 +1,6 @@
 use crate::{
     combat::attributes::Health,
-    items::{inventory::inventory::Inventory, ConsumableEffect, ConsumableType},
+    items::{Charges, ConsumableEffect, ConsumableType},
 };
 use bevy::prelude::*;
 
@@ -11,35 +11,35 @@ pub struct ConsumeEvent {
 
 pub fn handle_consume_event(
     consume_trigger: Trigger<ConsumeEvent>,
-    mut commands: Commands,
-    consumable_query: Query<&ConsumableEffect>,
-    mut to_heal_query: Query<(&mut Health, &mut Inventory)>,
+    mut consumable_query: Query<(&ConsumableEffect, &mut Charges)>, // Only the potion has Charges
+    mut health_query: Query<&mut Health>,                           // Player only has Health
 ) {
     let item_entity = consume_trigger.item_entity;
 
-    if let Ok(consumable) = consumable_query.get(item_entity) {
-        // Apply the consumable's effect
-        if let Ok((mut health, mut inventory)) = to_heal_query.get_mut(consume_trigger.entity()) {
+    // Get the consumable effect and charges from the item
+    if let Ok((consumable, mut item_charges)) = consumable_query.get_mut(item_entity) {
+        if item_charges.current < 15 {
+            warn!("Not enough charges to use health potion!");
+            return;
+        }
+
+        // Get the player's health (player no longer has Charges)
+        if let Ok(mut health) = health_query.get_mut(consume_trigger.entity()) {
             match &consumable.effect_type {
                 ConsumableType::Heal(amount) => {
                     let previous_hp = health.hp;
-                    health.hp = (health.hp + amount).min(health.max_hp); // Ensure HP does not exceed max
+                    health.hp = (health.hp + amount).min(health.max_hp);
                     let healed_amount = health.hp - previous_hp;
                     info!(
-                        "Entity {} healed by {:.2} points (HP: {:.2}/{:.2})",
-                        consume_trigger.entity(),
-                        healed_amount,
-                        health.hp,
-                        health.max_hp
+                        "Player healed by {:.2} points (HP: {:.2}/{:.2})",
+                        healed_amount, health.hp, health.max_hp
                     );
                 }
             }
 
-            // Once we are here we know the item was consumed, so we remove it from inventory and despawn it
-            inventory
-                .remove_item(item_entity)
-                .expect("Went to consume item and it was not in inventory!");
-            commands.entity(item_entity).despawn_recursive();
+            // Consume 15 charges from the potion
+            item_charges.current -= 15;
+            info!("Health potion charges remaining: {}", item_charges.current);
         }
     }
 }

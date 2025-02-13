@@ -16,4 +16,6 @@ pub struct DamageDealtEvent {
 }
 
 #[derive(Event)]
-pub struct DefeatedEvent;
+pub struct DefeatedEvent {
+    pub entity: Entity,
+}

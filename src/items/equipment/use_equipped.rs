@@ -56,7 +56,7 @@ pub fn on_main_hand_activated(
             // If the equipment uses mana, and we don't have enough, return
             if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
                 if !mana.attempt_use_mana(mana_cost) {
-                    warn!("Not enough mana!");
+                    // warn!("Not enough mana!");
                     return;
                 }
             } else if holder_mana.is_none() && mana_cost.is_some() {

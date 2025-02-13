@@ -1,4 +1,3 @@
-use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
@@ -6,18 +5,18 @@ use std::collections::HashMap;
 
 use crate::map::{
     components::{MapLayout, TileType},
-    EnvironmentalMapCollider, EnvironmentalType, InstanceAssets, MapMarkers, MarkerType,
-    MultiMarkerType, WallSection,
+    InstanceAssets, MapMarkers, MarkerType, MultiMarkerType,
 };
 
 pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAssets>) -> MapLayout {
     // Generate the base map with exterior walls
-    let tiles = create_map_with_exterior_walls(size);
+    let tiles = super::tile_generator::create_map_with_exterior_walls(size);
     let instance = instance_assets.instance_config.get("Swamp").unwrap();
 
     // Generate markers after physical layout is done
     let markers = generate_markers(&tiles, size, instance.number_of_enemies);
-    let environmental_colliders = generate_environmental_colliders(&tiles, size);
+    let environmental_colliders =
+        super::collider_generator::generate_environmental_colliders(&tiles, size);
 
     MapLayout {
         size,
@@ -25,125 +24,6 @@ pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAsse
         markers,
         environmental_colliders,
     }
-}
-
-fn generate_environmental_colliders(
-    tiles: &[Vec<TileType>],
-    map_size: TilemapSize,
-) -> Vec<EnvironmentalMapCollider> {
-    let mut colliders = Vec::new();
-    let wall_sections = find_wall_sections(tiles, map_size);
-
-    for section in wall_sections {
-        let start_pos = Vec2::new(section.start.0 as f32, section.start.1 as f32);
-
-        let length = section.length() as f32;
-
-        // The width/height should be in tile units
-        let (width, height) = if section.is_horizontal {
-            (length, 1.0)
-        } else {
-            (1.0, length)
-        };
-
-        let collider_pos = if section.is_horizontal {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + 0.5)
-        } else {
-            Vec2::new(start_pos.x + 0.5, start_pos.y + (height / 2.0))
-        };
-
-        // Create collider with half-extents (half of the full size)
-        let collider = if section.is_horizontal {
-            Collider::rectangle(width, 1.0)
-        } else {
-            Collider::rectangle(1.0, height)
-        };
-
-        colliders.push(EnvironmentalMapCollider {
-            collider_type: EnvironmentalType::Wall,
-            transform: Transform::from_xyz(collider_pos.x, collider_pos.y, 1.0),
-            width,
-            height,
-        });
-    }
-
-    colliders
-}
-
-fn find_wall_sections(tiles: &[Vec<TileType>], map_size: TilemapSize) -> Vec<WallSection> {
-    let mut visited = vec![vec![false; map_size.y as usize]; map_size.x as usize];
-    let mut wall_sections = Vec::new();
-
-    for x in 0..map_size.x {
-        for y in 0..map_size.y {
-            if !visited[x as usize][y as usize] && tiles[x as usize][y as usize] == TileType::Wall {
-                if let Some(section) = extract_wall_section(tiles, map_size, x, y, &mut visited) {
-                    wall_sections.push(section);
-                }
-            }
-        }
-    }
-
-    wall_sections
-}
-
-fn extract_wall_section(
-    tiles: &[Vec<TileType>],
-    map_size: TilemapSize,
-    x: u32,
-    y: u32,
-    visited: &mut Vec<Vec<bool>>,
-) -> Option<WallSection> {
-    visited[x as usize][y as usize] = true;
-
-    // Try horizontal first
-    if x + 1 < map_size.x && tiles[(x + 1) as usize][y as usize] == TileType::Wall {
-        let mut section = WallSection::new((x, y), true);
-        let mut current_x = x + 1;
-
-        while current_x < map_size.x && tiles[current_x as usize][y as usize] == TileType::Wall {
-            visited[current_x as usize][y as usize] = true;
-            section.extend((current_x, y));
-            current_x += 1;
-        }
-
-        Some(section)
-    }
-    // Then try vertical
-    else if y + 1 < map_size.y && tiles[x as usize][(y + 1) as usize] == TileType::Wall {
-        let mut section = WallSection::new((x, y), false);
-        let mut current_y = y + 1;
-
-        while current_y < map_size.y && tiles[x as usize][current_y as usize] == TileType::Wall {
-            visited[x as usize][current_y as usize] = true;
-            section.extend((x, current_y));
-            current_y += 1;
-        }
-
-        Some(section)
-    }
-    // Single wall tile
-    else {
-        Some(WallSection::new((x, y), true))
-    }
-}
-
-fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType>> {
-    let mut map = vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize];
-
-    // Add top and bottom walls
-    for x in 0..map_size.x as usize {
-        map[x][0] = TileType::Wall;
-        map[x][map_size.y as usize - 1] = TileType::Wall;
-    }
-
-    // Add left and right walls
-    for y in 0..map_size.y as usize {
-        map[0][y] = TileType::Wall;
-        map[map_size.x as usize - 1][y] = TileType::Wall;
-    }
-
-    map
 }
 
 #[derive(Debug)]

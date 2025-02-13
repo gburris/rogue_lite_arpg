@@ -25,7 +25,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
     commands
         .spawn((
             MeleeWeapon {
-                damage: 6.0,
+                damage: (1.0, 6.0),
                 effects_list: EffectsList { effects: vec![] },
                 hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::stab(),
@@ -46,7 +46,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
     commands
         .spawn((
             MeleeWeapon {
-                damage: 60.0,
+                damage: (2.0, 12.0),
                 effects_list: EffectsList {
                     effects: vec![ApplyStatus {
                         status: StatusType::Frozen,
@@ -72,7 +72,7 @@ pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Ent
     commands
         .spawn((
             MeleeWeapon {
-                damage: 6.0,
+                damage: (1.0, 6.0),
                 effects_list: EffectsList { effects: vec![] },
                 hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::stab(),
@@ -95,7 +95,7 @@ pub fn spawn_fire_staff(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let fireball = ProjectileBundle {
-        projectile: Projectile { damage: 6.0 },
+        projectile: Projectile { damage: (1.0, 6.0) },
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Burning(BurningStatus::default()),
@@ -138,7 +138,9 @@ pub fn spawn_ice_staff(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let icicle_projectile = ProjectileBundle {
-        projectile: Projectile { damage: 25.0 }, // big damage
+        projectile: Projectile {
+            damage: (12.0, 25.0),
+        }, // big damage
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Frozen,

@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{
     combat::{damage::components::DamageSource, status_effects::components::EffectsList},
@@ -10,7 +11,7 @@ use crate::{
 #[derive(Component, Clone)]
 pub struct MeleeWeapon {
     pub attack_duration: Timer,
-    pub damage: f32,
+    pub damage: (f32, f32),
     pub hitbox: Collider,
     pub effects_list: EffectsList,
     pub attack_type: MeleeSwingType,
@@ -46,4 +47,9 @@ impl MeleeSwingType {
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
     pub initial_angle: f32,
+}
+
+pub fn calculate_damage(damage_range: (f32, f32)) -> f32 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(damage_range.0..damage_range.1)
 }

@@ -38,8 +38,16 @@ pub fn on_damage_overlay_amount(
     // Scale the direction vector by the desired text height to place the damage text above the entity
     let text_position = (rotated_vector.normalize() * text_height).extend(ZLayer::VisualEffect.z());
 
+    let damage = damage_trigger.damage;
+    let rounded_damage = (damage * 10.0).round() / 10.0; // Round to 1 decimal place
+    let formatted_damage = if rounded_damage.fract() == 0.0 {
+        format!("{:.0}", rounded_damage) // Display as a whole number
+    } else {
+        format!("{:.1}", rounded_damage) // Display with one decimal place
+    };
+
     commands.entity(damage_trigger.entity()).with_child((
-        Text2d::new(damage_trigger.damage.to_string()),
+        Text2d::new(formatted_damage),
         TextColor::from(RED_COLOR),
         LiveDuration::new(0.4),
         Transform::from_translation(text_position),

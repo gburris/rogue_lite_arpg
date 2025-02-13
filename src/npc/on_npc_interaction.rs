@@ -35,6 +35,6 @@ pub fn on_stat_trainer_store_open(_: Trigger<NPCInteraction>, mut commands: Comm
     });
 }
 
-pub fn on_game_guide_start(_: Trigger<NPCInteraction>, mut commands: Commands) {
+pub fn on_game_guide_start(_: Trigger<NPCInteraction>, mut _commands: Commands) {
     warn!("on_game_guide_start");
 }

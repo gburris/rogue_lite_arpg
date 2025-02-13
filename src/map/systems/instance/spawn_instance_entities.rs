@@ -39,7 +39,7 @@ pub fn spawn_instance_entities(
 
     commands.spawn((
         Portal::WarpZone,
-        Sprite::from_image(sprites.warp_zone.clone()),
+        Sprite::from_image(sprites.exit_door.clone()),
         Transform::from_translation(warpzone_position),
     ));
 

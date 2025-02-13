@@ -67,7 +67,7 @@ pub fn move_enemies_toward_player(
                 commands.entity(entity).remove::<WanderDirection>();
             }
 
-            commands.trigger_targets(MainHandActivated, entity);
+            //commands.trigger_targets(MainHandActivated, entity);
 
             // Chase behavior
             let towards_player_direction = (player_pos - enemy_transform.translation)

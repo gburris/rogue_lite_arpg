@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
+use std::collections::HashMap;
 
 use crate::map::{
     components::{MapLayout, TileType},
@@ -10,11 +9,9 @@ use crate::map::{
 };
 
 pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAssets>) -> MapLayout {
-    // First generate the base physical map
-    let mut tiles = create_empty_map(size);
+    // Generate the base map with exterior walls
+    let mut tiles = create_map_with_exterior_walls(size);
     let instance = instance_assets.instance_config.get("Swamp").unwrap();
-    generate_walls(&mut tiles, size, instance.wall_density);
-    generate_water_bodies(&mut tiles, size, instance.pond_density);
 
     // Generate markers after physical layout is done
     let markers = generate_markers(&tiles, size, instance.number_of_enemies);
@@ -26,53 +23,70 @@ pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAsse
     }
 }
 
-fn create_empty_map(map_size: TilemapSize) -> Vec<Vec<TileType>> {
-    vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize]
+fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType>> {
+    let mut map = vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize];
+
+    // Add top and bottom walls
+    for x in 0..map_size.x as usize {
+        map[x][0] = TileType::Wall;
+        map[x][map_size.y as usize - 1] = TileType::Wall;
+    }
+
+    // Add left and right walls
+    for y in 0..map_size.y as usize {
+        map[0][y] = TileType::Wall;
+        map[map_size.x as usize - 1][y] = TileType::Wall;
+    }
+
+    map
 }
 
-fn generate_walls(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize, density: f32) {
-    let num_walls = (map_size.x as f32 * map_size.y as f32 * density) as i32;
+#[derive(Debug)]
+enum MapOrientation {
+    Horizontal,
+    Vertical,
+    Square,
+}
 
-    for _ in 0..num_walls {
-        if let Some((start_x, start_y, is_horizontal, length)) = generate_wall_parameters(map_size)
-        {
-            if can_place_wall(map, map_size, start_x, start_y, is_horizontal, length) {
-                place_wall(map, start_x, start_y, is_horizontal, length);
-            }
-        }
+fn determine_map_orientation(map_size: TilemapSize) -> MapOrientation {
+    let aspect_ratio = map_size.x as f32 / map_size.y as f32;
+
+    if (aspect_ratio - 1.0).abs() < 0.1 {
+        MapOrientation::Square
+    } else if aspect_ratio > 1.0 {
+        MapOrientation::Horizontal
+    } else {
+        MapOrientation::Vertical
     }
 }
 
-fn generate_water_bodies(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize, density: f32) {
+fn generate_entrance_exit_positions(map_size: TilemapSize) -> (Vec2, Vec2) {
     let mut rng = rand::thread_rng();
-    let num_water_bodies = (map_size.x as f32 * map_size.y as f32 * density) as i32;
 
-    for _ in 0..num_water_bodies {
-        let x = rng.gen_range(5..(map_size.x - 5) as i32);
-        let y = rng.gen_range(5..(map_size.y - 5) as i32);
-        let radius = rng.gen_range(2..5);
-
-        place_water_body(map, map_size, x, y, radius);
-    }
-}
-
-fn place_water_body(
-    map: &mut Vec<Vec<TileType>>,
-    map_size: TilemapSize,
-    center_x: i32,
-    center_y: i32,
-    radius: i32,
-) {
-    for dx in -radius..=radius {
-        for dy in -radius..=radius {
-            if dx * dx + dy * dy <= radius * radius {
-                let x = center_x + dx;
-                let y = center_y + dy;
-
-                if x >= 0 && x < map_size.x as i32 && y >= 0 && y < map_size.y as i32 {
-                    map[x as usize][y as usize] = TileType::Water;
-                }
-            }
+    match determine_map_orientation(map_size) {
+        MapOrientation::Horizontal => {
+            // For horizontal maps: left to right
+            let player_x = 1.0; // One tile in from left wall
+            let exit_x = map_size.x as f32 - 1.0; // One tile in from right wall
+            let player_y = rng.gen_range(1..map_size.y - 1) as f32;
+            let exit_y = rng.gen_range(1..map_size.y - 1) as f32;
+            (Vec2::new(player_x, player_y), Vec2::new(exit_x, exit_y))
+        }
+        MapOrientation::Vertical => {
+            // For vertical maps: top to bottom
+            let player_y = map_size.y as f32 - 2.0; // One tile down from top wall
+            let exit_y = 1.0; // One tile up from bottom wall
+            let player_x = rng.gen_range(1..map_size.x - 1) as f32;
+            let exit_x = rng.gen_range(1..map_size.x - 1) as f32;
+            (Vec2::new(player_x, player_y), Vec2::new(exit_x, exit_y))
+        }
+        MapOrientation::Square => {
+            // For square maps: default to left to right (could be randomized if preferred)
+            let player_x = 1.0;
+            let exit_x = map_size.x as f32 - 1.0;
+            let player_y = rng.gen_range(1..map_size.y - 1) as f32;
+            let exit_y = rng.gen_range(1..map_size.y - 1) as f32;
+            (Vec2::new(player_x, player_y), Vec2::new(exit_x, exit_y))
         }
     }
 }
@@ -85,15 +99,10 @@ fn generate_markers(
     let mut single_markers = HashMap::new();
     let mut multi_markers: HashMap<MultiMarkerType, Vec<Vec2>> = HashMap::new();
 
-    // Generate player spawn in the left third of the map
-    if let Some(spawn_pos) = find_valid_position(map, map_size, 0.0..0.3) {
-        single_markers.insert(MarkerType::PlayerSpawn, spawn_pos);
-    }
-
-    // Generate exit in the right third of the map
-    if let Some(exit_pos) = find_valid_position(map, map_size, 0.7..1.0) {
-        single_markers.insert(MarkerType::LevelExit, exit_pos);
-    }
+    // Generate entrance and exit positions based on map orientation
+    let (player_pos, exit_pos) = generate_entrance_exit_positions(map_size);
+    single_markers.insert(MarkerType::PlayerSpawn, player_pos);
+    single_markers.insert(MarkerType::LevelExit, exit_pos);
 
     // Generate enemy spawns in the middle section
     let enemy_positions = find_multiple_positions(map, map_size, 0.3..0.7, enemy_count);
@@ -131,7 +140,7 @@ fn find_valid_position(
 
     for _ in 0..100 {
         let x = rng.gen_range(x_start..x_end);
-        let y = rng.gen_range(0..map_size.y);
+        let y = rng.gen_range(1..map_size.y - 1); // Avoid spawning in exterior walls
 
         if is_position_valid(map, x, y) {
             return Some(Vec2::new(x as f32, y as f32));
@@ -163,76 +172,4 @@ fn find_multiple_positions(
 
 fn is_position_valid(map: &Vec<Vec<TileType>>, x: u32, y: u32) -> bool {
     map[x as usize][y as usize] == TileType::Ground
-}
-
-fn generate_wall_parameters(map_size: TilemapSize) -> Option<(i32, i32, bool, i32)> {
-    let mut rng = rand::thread_rng();
-    let wall_length = rng.gen_range(8..20);
-    let start_x = rng.gen_range(5..(map_size.x as i32 - wall_length));
-    let start_y = rng.gen_range(5..(map_size.y as i32 - wall_length));
-    let is_horizontal = rng.gen_bool(0.5);
-    Some((start_x, start_y, is_horizontal, wall_length))
-}
-
-fn can_place_wall(
-    map: &Vec<Vec<TileType>>,
-    map_size: TilemapSize,
-    start_x: i32,
-    start_y: i32,
-    is_horizontal: bool,
-    wall_length: i32,
-) -> bool {
-    let padding = 2;
-    for i in 0..wall_length {
-        let (x, y) = if is_horizontal {
-            (start_x + i, start_y)
-        } else {
-            (start_x, start_y + i)
-        };
-
-        if !is_area_clear(map, map_size, x, y, padding) {
-            return false;
-        }
-    }
-    true
-}
-
-fn is_area_clear(
-    map: &Vec<Vec<TileType>>,
-    map_size: TilemapSize,
-    x: i32,
-    y: i32,
-    padding: i32,
-) -> bool {
-    for dx in -padding..=padding {
-        for dy in -padding..=padding {
-            let check_x = x + dx;
-            let check_y = y + dy;
-            if check_x >= 0
-                && check_x < map_size.x as i32
-                && check_y >= 0
-                && check_y < map_size.y as i32
-                && map[check_x as usize][check_y as usize] != TileType::Ground
-            {
-                return false;
-            }
-        }
-    }
-    true
-}
-
-fn place_wall(
-    map: &mut Vec<Vec<TileType>>,
-    start_x: i32,
-    start_y: i32,
-    is_horizontal: bool,
-    wall_length: i32,
-) {
-    for i in 0..wall_length {
-        if is_horizontal {
-            map[(start_x + i) as usize][start_y as usize] = TileType::Wall;
-        } else {
-            map[start_x as usize][(start_y + i) as usize] = TileType::Wall;
-        }
-    }
 }

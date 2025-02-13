@@ -21,7 +21,7 @@ use crate::{
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 pub fn on_enemy_defeated(
-    mut defeated_events: EventReader<DefeatedEvent>, // Use EventReader to read events
+    trigger: Trigger<DefeatedEvent>, // Use Trigger to process a single event
     mut commands: Commands,
     defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
     mut player_query: Query<(&PlayerStats, &mut PlayerExperience, &Inventory), With<Player>>,
@@ -32,43 +32,39 @@ pub fn on_enemy_defeated(
 ) {
     let mut rng = thread_rng();
 
-    // Iterate over all DefeatedEvent events
-    for event in defeated_events.read() {
-        // Handle player data properly
-        if let Ok((player_stats, mut experience, player_inventory)) = player_query.get_single_mut()
+    // Handle player data properly
+    if let Ok((player_stats, mut experience, player_inventory)) = player_query.get_single_mut() {
+        if let Ok((experience_to_gain, transform, enemy_inventory)) =
+            defeated_enemy_query.get(trigger.entity())
         {
-            if let Ok((experience_to_gain, transform, enemy_inventory)) =
-                defeated_enemy_query.get(event.entity)
-            {
-                // Handle experience gain
-                handle_experience_gain(&mut experience, experience_to_gain.base_exp);
+            // Handle experience gain
+            handle_experience_gain(&mut experience, experience_to_gain.base_exp);
 
-                // Recharge health potion (if needed)
-                recharge_health_potion_on_kill(
-                    &player_inventory,
-                    &health_potion_query,
-                    &mut charges_query,
-                    &mut recharge_events,
-                );
+            // Recharge health potion (if needed)
+            recharge_health_potion_on_kill(
+                &player_inventory,
+                &health_potion_query,
+                &mut charges_query,
+                &mut recharge_events,
+            );
 
-                // Handle item drops
-                handle_item_drops(&mut commands, &mut rng, &enemy_inventory, &item_query);
+            // Handle item drops
+            handle_item_drops(&mut commands, &mut rng, &enemy_inventory, &item_query);
 
-                // Handle gold drops
-                handle_gold_drops(
-                    &mut commands,
-                    &mut rng,
-                    &player_stats,
-                    &transform,
-                    &enemy_inventory,
-                );
+            // Handle gold drops
+            handle_gold_drops(
+                &mut commands,
+                &mut rng,
+                &player_stats,
+                &transform,
+                &enemy_inventory,
+            );
 
-                // Mark enemy as defeated
-                mark_enemy_as_defeated(&mut commands, event.entity);
-            }
-        } else {
-            warn!("Player not found or there was an error fetching player data.");
+            // Mark enemy as defeated
+            mark_enemy_as_defeated(&mut commands, trigger.entity());
         }
+    } else {
+        warn!("Player not found or there was an error fetching player data.");
     }
 }
 
@@ -79,8 +75,8 @@ fn handle_experience_gain(experience: &mut PlayerExperience, exp_gain: u32) {
 
 fn recharge_health_potion_on_kill(
     player_inventory: &Inventory,
-    item_query: &Query<&HealthPotion>, // Corrected to Query<&HealthPotion>
-    charges_query: &mut Query<&mut Charges>, // Corrected to &mut Query<&mut Charges>
+    item_query: &Query<&HealthPotion>,
+    charges_query: &mut Query<&mut Charges>,
     recharge_events: &mut EventWriter<RechargeEvent>,
 ) {
     for &item_entity in player_inventory.items.iter() {
@@ -93,7 +89,7 @@ fn recharge_health_potion_on_kill(
 
                 // Send a recharge event (if needed)
                 recharge_events.send(RechargeEvent { item_entity });
-                break; // Stop after recharging one health potion
+                break;
             }
         }
     }

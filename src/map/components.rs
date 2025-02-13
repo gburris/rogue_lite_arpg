@@ -7,6 +7,28 @@ use bevy_ecs_tilemap::{
 };
 use serde::Deserialize;
 
+#[derive(Component, Clone, Default)]
+pub struct Mapper {
+    pub map_layout: MapLayout,
+}
+//On Add Mapper Component
+//When an entity with Mapper Component is spawned,
+//Generate a map and attach it to the mapper
+//When we collider with an entity that has a mapper,
+//We transition to that area (How?)
+//Use the "Map Layout" struct MapLayout
+//On Collision
+//1. Transition to GameState::PreparingInstance
+//1. Validate map layout is complete from on add, if not, wait
+//2. Set the current instance resources
+//3. trigger InstansiateInstanceEvent
+//2. Despawn current zone
+//3. render instance tilemap
+//4. spawn instance colliders
+//5. spawn instance entities
+// Transition to GameState::
+//6. transition to playing
+
 #[derive(Component)]
 pub struct Wall;
 
@@ -36,7 +58,7 @@ pub enum MultiMarkerType {
     NPCSpawns,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct MapMarkers {
     pub single_markers: HashMap<MarkerType, Vec2>, // Single-instance markers
     pub multi_markers: HashMap<MultiMarkerType, Vec<Vec2>>, // Multi-instance markers
@@ -53,7 +75,7 @@ impl MapMarkers {
     }
 }
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Default, Clone)]
 pub struct MapLayout {
     // used to prevent having to find the length of the vecs below
     pub size: TilemapSize,

@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -6,7 +8,10 @@ use crate::{
     player::Player,
 };
 
-use super::events::CleanupZone;
+use super::{
+    events::CleanupZone, helpers::map_layout::generate_map_layout, InstanceAssets, Mapper,
+    WorldSpaceConfig,
+};
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -16,6 +21,7 @@ use super::events::CleanupZone;
     RigidBody(|| RigidBody::Static),
     Collider(|| Collider::rectangle(32.0, 64.0)),
     CollidingEntities,
+    Mapper,
     CollisionLayers(default_collision_layers),
 )]
 pub enum Portal {
@@ -56,4 +62,24 @@ pub fn on_portal_entered(
     info!("Portal entered!");
     commands.trigger(CleanupZone);
     game_state.set(AppState::CreateInstance);
+}
+
+pub fn on_mapper_spawned(
+    trigger: Trigger<OnAdd, Mapper>,
+    mut commands: Commands,
+    mut portal_query: Query<&mut Mapper, With<Portal>>,
+    world_config: Res<WorldSpaceConfig>,
+    instance_assets: Res<InstanceAssets>,
+) {
+    let start_time = Instant::now();
+
+    let mut new_mapper = portal_query.get_mut(trigger.entity()).unwrap();
+    new_mapper.map_layout = generate_map_layout(world_config.map_size, &instance_assets);
+    commands.insert_resource(new_mapper.map_layout.clone());
+
+    let duration = start_time.elapsed();
+    warn!(
+        "Finished setting the instance! Generation took: {:?}",
+        duration
+    );
 }

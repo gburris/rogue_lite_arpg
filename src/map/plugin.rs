@@ -5,7 +5,7 @@ use crate::{
     map::{portal, resources::CurrentZoneLevel, systems::*},
 };
 
-use super::WorldSpaceConfig;
+use super::{portal::on_mapper_spawned, WorldSpaceConfig};
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
@@ -14,7 +14,6 @@ impl Plugin for MapPlugin {
             .add_systems(
                 OnEnter(AppState::CreateInstance),
                 (
-                    instance::generate_instance_layout,
                     instance::render_instance_tilemap,
                     instance::spawn_instance_collisions_zones,
                     instance::spawn_instance_entities,
@@ -39,6 +38,7 @@ impl Plugin for MapPlugin {
             )
             .insert_resource(WorldSpaceConfig::default())
             .insert_resource(CurrentZoneLevel(0))
-            .add_observer(portal::on_portal_entered);
+            .add_observer(portal::on_portal_entered)
+            .add_observer(on_mapper_spawned);
     }
 }

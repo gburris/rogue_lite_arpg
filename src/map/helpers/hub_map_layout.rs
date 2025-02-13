@@ -27,6 +27,7 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
         size,
         tiles,
         markers,
+        environmental_colliders: Vec::default(),
     }
 }
 

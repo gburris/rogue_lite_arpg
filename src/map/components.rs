@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
@@ -58,16 +59,26 @@ impl MapMarkers {
     }
 }
 
-#[derive(Resource, Default, Clone)]
-pub struct MapLayout {
-    // used to prevent having to find the length of the vecs below
-    pub size: TilemapSize,
-    // Your physical tile grid
-    pub tiles: Vec<Vec<TileType>>,
-    // Logical positions, stored in terms of tiles, but then converted to world posiitons
-    pub markers: MapMarkers,
+#[derive(Debug, Clone)]
+pub enum EnvironmentalType {
+    Wall,
+    // Water, // Commented out for now as requested
 }
 
+#[derive(Debug, Clone)]
+pub struct EnvironmentalMapCollider {
+    pub collider_type: EnvironmentalType,
+    pub transform: Transform,
+    pub width: f32,
+    pub height: f32,
+}
+#[derive(Resource, Default, Clone)]
+pub struct MapLayout {
+    pub size: TilemapSize,
+    pub tiles: Vec<Vec<TileType>>,
+    pub markers: MapMarkers,
+    pub environmental_colliders: Vec<EnvironmentalMapCollider>,
+}
 #[derive(Default)]
 pub struct WallSection {
     pub start: (u32, u32),

@@ -22,7 +22,8 @@ pub fn spawn_hub_entities(
         .markers
         .get_single(MarkerType::LevelExit)
         .unwrap();
-    let exit_position_in_world = world_config.tile_to_world(exit_position_in_tiles.as_ivec2());
+    let exit_position_in_world =
+        world_config.tile_to_world(map_layout.size, exit_position_in_tiles.as_ivec2());
     let warp_position: Vec3 = Vec3::new(
         exit_position_in_world.x,
         exit_position_in_world.y,
@@ -41,7 +42,8 @@ pub fn spawn_hub_entities(
         let npc_spawn_positions: Vec<Vec3> = npc_spawn_positions_in_tiles
             .iter()
             .map(|tile_position| {
-                let world_position = world_config.tile_to_world(tile_position.as_ivec2());
+                let world_position =
+                    world_config.tile_to_world(map_layout.size, tile_position.as_ivec2());
                 Vec3::new(world_position.x, world_position.y, ZLayer::Enemy.z())
             })
             .collect();
@@ -53,7 +55,7 @@ pub fn spawn_hub_entities(
     // Locate the player spawn position
     if let Some(spawn_position_in_tiles) = map_layout.markers.get_single(MarkerType::PlayerSpawn) {
         let spawn_position_in_world =
-            world_config.tile_to_world(spawn_position_in_tiles.as_ivec2());
+            world_config.tile_to_world(map_layout.size, spawn_position_in_tiles.as_ivec2());
         let player_spawn_position: Vec3 = Vec3::new(
             spawn_position_in_world.x,
             spawn_position_in_world.y,

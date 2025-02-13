@@ -15,7 +15,7 @@ pub fn spawn_instance_collisions_zones(
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
 ) {
-    let map_size = world_config.map_size;
+    let map_size = map_layout.size;
     //This should be casted to vec2 so we don't pass around the tilemap helper wrapper thing
     let tile_size = world_config.tile_size;
 

@@ -2,6 +2,8 @@ use std::time::Instant;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_ecs_tilemap::map::TilemapSize;
+use rand::Rng;
 
 use crate::{
     configuration::GameCollisionLayer, labels::states::AppState, map::events::CreateInstanceEvent,
@@ -68,13 +70,19 @@ pub fn on_mapper_spawned(
     trigger: Trigger<OnAdd, Mapper>,
     mut commands: Commands,
     mut portal_query: Query<&mut Mapper, With<Portal>>,
-    world_config: Res<WorldSpaceConfig>,
     instance_assets: Res<InstanceAssets>,
 ) {
     let start_time = Instant::now();
 
     let mut new_mapper = portal_query.get_mut(trigger.entity()).unwrap();
-    new_mapper.map_layout = generate_map_layout(world_config.map_size, &instance_assets);
+    // Generate random map size between 30x30 and 300x300
+    let mut rng = rand::thread_rng();
+    let random_size = TilemapSize {
+        x: rng.gen_range(10..=100),
+        y: rng.gen_range(10..=100),
+    };
+    new_mapper.map_layout = generate_map_layout(random_size, &instance_assets);
+
     commands.insert_resource(new_mapper.map_layout.clone());
 
     let duration = start_time.elapsed();
@@ -82,4 +90,5 @@ pub fn on_mapper_spawned(
         "Finished setting the instance! Generation took: {:?}",
         duration
     );
+    warn!("Instance Size: {:?}", random_size);
 }

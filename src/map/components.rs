@@ -11,23 +11,6 @@ use serde::Deserialize;
 pub struct Mapper {
     pub map_layout: MapLayout,
 }
-//On Add Mapper Component
-//When an entity with Mapper Component is spawned,
-//Generate a map and attach it to the mapper
-//When we collider with an entity that has a mapper,
-//We transition to that area (How?)
-//Use the "Map Layout" struct MapLayout
-//On Collision
-//1. Transition to GameState::PreparingInstance
-//1. Validate map layout is complete from on add, if not, wait
-//2. Set the current instance resources
-//3. trigger InstansiateInstanceEvent
-//2. Despawn current zone
-//3. render instance tilemap
-//4. spawn instance colliders
-//5. spawn instance entities
-// Transition to GameState::
-//6. transition to playing
 
 #[derive(Component)]
 pub struct Wall;
@@ -127,7 +110,7 @@ pub struct WorldSpaceConfig {
 impl Default for WorldSpaceConfig {
     fn default() -> Self {
         WorldSpaceConfig {
-            map_size: TilemapSize::new(200, 200),
+            map_size: TilemapSize::new(33, 33),
             tile_size: TilemapTileSize::new(32.0, 32.0),
             world_origin: Vec2::ZERO,
         }
@@ -138,13 +121,13 @@ impl Default for WorldSpaceConfig {
 //This seems jank, but it's because the rendering of the tiles has this offset in it's
 //Library and in rendering code it's used to "Center" the tiles onto the bevy map
 impl WorldSpaceConfig {
-    pub fn tile_to_world(&self, tile_pos: IVec2) -> Vec2 {
+    pub fn tile_to_world(&self, map_size_in_tiles: TilemapSize, tile_pos: IVec2) -> Vec2 {
         // Calculate the offset to center the tilemap
         let grid_size = TilemapGridSize::new(self.tile_size.x, self.tile_size.y);
         let map_type = TilemapType::Square;
         let low = TilePos::new(0, 0).center_in_world(&grid_size, &map_type);
-        let high =
-            TilePos::new(self.map_size.x, self.map_size.y).center_in_world(&grid_size, &map_type);
+        let high = TilePos::new(map_size_in_tiles.x, map_size_in_tiles.y)
+            .center_in_world(&grid_size, &map_type);
         let diff = high - low;
         let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
 

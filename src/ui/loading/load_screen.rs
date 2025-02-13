@@ -1,4 +1,3 @@
-use crate::labels::states::AppState;
 use bevy::prelude::*;
 
 #[derive(Component)]

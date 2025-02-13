@@ -16,7 +16,8 @@ impl Plugin for MapPlugin {
                 (
                     instance::render_instance_tilemap,
                     instance::spawn_instance_collisions_zones,
-                    instance::spawn_instance_entities,
+                    instance::spawn_instance_entities, //This is gonna mutate world size, 
+                    //Since it spawns a new map layout
                     instance::finish_create_instance,
                 )
                     .chain(),

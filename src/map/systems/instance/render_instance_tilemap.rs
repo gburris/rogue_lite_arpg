@@ -21,7 +21,7 @@ pub fn render_instance_tilemap(
     let water_texture_handle: Handle<Image> = sprites.water_tiles.clone();
     let ground_texture_handle: Handle<Image> = sprites.ground_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
-    let map_size = world_config.map_size;
+    let map_size = map_layout.size;
     let tile_size = world_config.tile_size;
 
     // Set up storage for each tile type

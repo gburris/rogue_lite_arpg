@@ -10,7 +10,10 @@ use crate::map::{
 
 pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAssets>) -> MapLayout {
     // Generate the base map with exterior walls
-    let tiles = super::tile_generator::create_map_with_exterior_walls(size);
+    let tiles: Vec<Vec<TileType>> =
+        super::tile_generator::create_map_with_exterior_walls_and_dead_zones(size);
+
+    //ALl maps generate SWAMP - TODO//Exand Instance Templates / Types
     let instance = instance_assets.instance_config.get("Swamp").unwrap();
 
     // Generate markers after physical layout is done

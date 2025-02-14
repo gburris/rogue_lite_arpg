@@ -16,7 +16,8 @@ impl Plugin for MapPlugin {
                 (
                     instance::render_instance_tilemap,
                     instance::spawn_instance_collisions_zones,
-                    instance::spawn_instance_entities, //This is gonna mutate world size, 
+                    instance::spawn_background,
+                    instance::spawn_instance_entities, //This is gonna mutate world size,
                     //Since it spawns a new map layout
                     instance::finish_create_instance,
                 )
@@ -35,7 +36,7 @@ impl Plugin for MapPlugin {
             )
             .add_systems(
                 Update,
-                portal::handle_portal_collisions.in_set(InGameSet::Collision),
+                (portal::handle_portal_collisions).in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
             .insert_resource(CurrentZoneLevel(0))

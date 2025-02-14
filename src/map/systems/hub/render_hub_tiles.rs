@@ -105,6 +105,7 @@ pub fn render_hub_tiles(
                         .id();
                     cobblestone_storage.set(&tile_pos, cobblestone_entity);
                 }
+                TileType::DeadZone => {} //Spawn nothing
             }
         }
     }

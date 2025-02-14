@@ -10,9 +10,7 @@ pub struct LoadingUIPlugin;
 impl Plugin for LoadingUIPlugin {
     fn build(&self, app: &mut App) {
         // Game UI systems
-        app
-            //Start screen
-            .add_systems(OnEnter(AppState::CreateInstance), spawn_load_screen)
+        app.add_systems(OnEnter(AppState::CreateInstance), spawn_load_screen)
             .add_systems(
                 OnExit(AppState::CreateInstance),
                 despawn_single::<LoadScreen>,

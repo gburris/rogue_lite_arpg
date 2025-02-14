@@ -12,7 +12,6 @@ use crate::{
 
 use super::{
     events::CleanupZone, helpers::instance_generation::generate_map_layout, InstanceAssets, Mapper,
-    WorldSpaceConfig,
 };
 
 /**

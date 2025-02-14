@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
-use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Component, Clone, Default)]
 pub struct Mapper {
@@ -26,6 +24,7 @@ pub enum TileType {
     Wall,
     Water,
     Cobblestone,
+    DeadZone, //Marker for DO NOT RENDER for empty space in the map
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

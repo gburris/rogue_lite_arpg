@@ -20,16 +20,19 @@ pub fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType
     map
 }
 
-pub fn create_map_with_exterior_walls_and_dead_zones(map_size: TilemapSize) -> Vec<Vec<TileType>> {
+pub fn create_map_with_exterior_walls_and_dead_zones(
+    map_size: TilemapSize,
+    should_make_zones: bool,
+) -> Vec<Vec<TileType>> {
     let mut map = vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize];
-    let area = map_size.x * map_size.y;
-    let num_dead_zones = calculate_num_dead_zones(area);
 
-    // Create multiple dead zones
-    for _ in 0..num_dead_zones {
-        create_square_dead_zone(&mut map, map_size);
+    if should_make_zones {
+        let area = map_size.x * map_size.y;
+        let num_dead_zones = calculate_num_dead_zones(area);
+        for _ in 0..num_dead_zones {
+            create_square_dead_zone(&mut map, map_size);
+        }
     }
-    create_square_dead_zone(&mut map, map_size);
 
     // Add walls to the border of the map only if it's not a deadzone tile
     for x in 0..map_size.x as usize {

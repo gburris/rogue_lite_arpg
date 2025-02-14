@@ -1,6 +1,6 @@
 use bevy::{app::AppExit, prelude::*, window::WindowCloseRequested};
 
-use crate::{map::WorldSpaceConfig, player::components::Player};
+use crate::player::components::Player;
 
 pub fn camera_follow_system(
     player_query: Query<&Transform, (With<Player>, Without<Camera>)>,
@@ -21,4 +21,6 @@ pub fn camera_follow_system(
         camera_transform.translation.x = x;
         camera_transform.translation.y = y;
     }
+    //TODO: The camera really shouldn't just follow you out of the bounds 50/50, it should still have some clamping
+    //behavior
 }

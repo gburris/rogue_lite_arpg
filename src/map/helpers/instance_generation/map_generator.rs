@@ -8,21 +8,46 @@ use crate::map::{
     InstanceAssets, MapMarkers, MarkerType, MultiMarkerType,
 };
 
-pub fn generate_map_layout(size: TilemapSize, instance_assets: &Res<InstanceAssets>) -> MapLayout {
-    // Generate the base map with exterior walls
-    let tiles: Vec<Vec<TileType>> =
-        super::tile_generator::create_map_with_exterior_walls_and_dead_zones(size);
+pub fn generate_map_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
+    let mut rng = rand::thread_rng();
 
-    //ALl maps generate SWAMP - TODO//Exand Instance Templates / Types
-    let instance = instance_assets.instance_config.get("Swamp").unwrap();
+    // Randomly select instance type
+    let instance_type = if rng.gen_bool(0.9) {
+        instance_assets.instance_config.get("Swamp").unwrap()
+    } else {
+        instance_assets.instance_config.get("TreasureRoom").unwrap()
+    };
 
-    // Generate markers after physical layout is done
-    let markers = generate_markers(&tiles, size, instance.number_of_enemies);
+    // Generate size based on instance ranges
+    let size_x = rng.gen_range(instance_type.size_x_range.0..=instance_type.size_x_range.1) as u32;
+    let size_y = rng.gen_range(instance_type.size_y_range.0..=instance_type.size_y_range.1) as u32;
+    let map_size = TilemapSize {
+        x: size_x,
+        y: size_y,
+    };
+
+    // Generate number of enemies and chests
+    let num_enemies = rng.gen_range(
+        instance_type.number_of_enemies_range.0..=instance_type.number_of_enemies_range.1,
+    ) as u32;
+    let num_chests =
+        rng.gen_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
+
+    // Generate tiles
+    let tiles = super::tile_generator::create_map_with_exterior_walls_and_dead_zones(
+        map_size,
+        instance_type.dead_zone_squares,
+    );
+
+    // Generate markers
+    let markers = generate_markers(&tiles, map_size, num_enemies, num_chests);
+
+    // Generate colliders
     let environmental_colliders =
-        super::collider_generator::generate_environmental_colliders(&tiles, size);
+        super::collider_generator::generate_environmental_colliders(&tiles, map_size);
 
     MapLayout {
-        size,
+        size: map_size,
         tiles,
         markers,
         environmental_colliders,
@@ -83,6 +108,7 @@ fn generate_markers(
     map: &Vec<Vec<TileType>>,
     map_size: TilemapSize,
     enemy_count: u32,
+    chest_count: u32,
 ) -> MapMarkers {
     let mut single_markers = HashMap::new();
     let mut multi_markers: HashMap<MultiMarkerType, Vec<Vec2>> = HashMap::new();
@@ -99,7 +125,7 @@ fn generate_markers(
     }
 
     // Generate chest spawns throughout the map
-    let chest_positions = find_multiple_positions(map, map_size, 0.2..0.8, 3);
+    let chest_positions = find_multiple_positions(map, map_size, 0.2..0.8, chest_count);
     if !chest_positions.is_empty() {
         multi_markers.insert(MultiMarkerType::ChestSpawns, chest_positions);
     }

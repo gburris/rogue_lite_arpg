@@ -2,10 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     enemy::Enemy,
-    map::WorldSpaceConfig,
     movement::components::SimpleMotion,
     npc::NPC,
-    player::{resources::PlayerSize, Player, PlayerMovementEvent, PlayerStoppedEvent},
+    player::{Player, PlayerMovementEvent, PlayerStoppedEvent},
 };
 
 pub fn player_movement(

@@ -154,11 +154,14 @@ impl WorldSpaceConfig {
 pub struct InstanceConfig {
     pub instances: HashMap<String, InstanceType>,
 }
+
 #[derive(Deserialize, Debug)]
 pub struct InstanceType {
-    pub number_of_enemies: u32,
-    pub wall_density: f32,
-    pub pond_density: f32,
+    pub size_x_range: (f32, f32),
+    pub size_y_range: (f32, f32),
+    pub number_of_enemies_range: (f32, f32),
+    pub dead_zone_squares: bool,
+    pub chest_range: (f32, f32),
 }
 
 #[derive(Resource)]

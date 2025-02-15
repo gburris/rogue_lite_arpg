@@ -17,10 +17,11 @@ pub struct Wall;
 #[derive(Component)]
 pub struct Water;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq)]
 pub enum TileType {
     Wood,
     Ground,
+    Grass,
     Wall,
     Water,
     Cobblestone,

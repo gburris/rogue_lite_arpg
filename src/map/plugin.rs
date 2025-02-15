@@ -14,7 +14,7 @@ impl Plugin for MapPlugin {
             .add_systems(
                 OnEnter(AppState::CreateInstance),
                 (
-                    instance::render_instance_tilemap,
+                    instance::render_tilemap,
                     instance::spawn_instance_collisions_zones,
                     instance::spawn_background,
                     instance::spawn_instance_entities, //This is gonna mutate world size,
@@ -27,7 +27,7 @@ impl Plugin for MapPlugin {
                 OnEnter(AppState::CreateHub),
                 (
                     hub::generate_hub_layout,
-                    hub::render_hub_tiles,
+                    instance::render_tilemap,
                     hub::spawn_hub_colliders,
                     hub::spawn_hub_entities,
                     hub::finish_create_hub,

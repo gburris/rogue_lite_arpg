@@ -2,8 +2,9 @@ use crate::map::components::TileType;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
+//Used for HUB today
 pub fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType>> {
-    let mut map = vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize];
+    let mut map = vec![vec![TileType::Grass; map_size.y as usize]; map_size.x as usize];
 
     // Add top and bottom walls
     for x in 0..map_size.x as usize {

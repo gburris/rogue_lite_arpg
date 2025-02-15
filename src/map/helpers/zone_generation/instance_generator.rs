@@ -8,7 +8,7 @@ use crate::map::{
     InstanceAssets, MapMarkers, MarkerType, MultiMarkerType,
 };
 
-pub fn generate_map_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
+pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     let mut rng = rand::thread_rng();
 
     // Randomly select instance type

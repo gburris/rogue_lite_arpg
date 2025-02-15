@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-pub fn spawn_instance_collisions_zones(
+pub fn spawn_zone_colliders(
     mut commands: Commands,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,

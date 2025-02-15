@@ -8,9 +8,10 @@ use crate::map::{
     MapMarkers, MarkerType, MultiMarkerType,
 };
 
-use super::instance_generation::create_map_with_exterior_walls;
+use super::{collider_generator::generate_environmental_colliders, create_map_with_exterior_walls};
 
-pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
+pub fn generate_hub_layout() -> MapLayout {
+    let size = TilemapSize { x: 100, y: 100 };
     let mut tiles = create_map_with_exterior_walls(size);
 
     let hub_size = TilemapSize { x: 25, y: 25 };
@@ -24,12 +25,13 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
     add_wall_entrance(&mut tiles, hub_bounds);
 
     let markers: MapMarkers = generate_hub_markers(hub_bounds);
+    let environmental_colliders = generate_environmental_colliders(&tiles, size);
 
     MapLayout {
         size,
         tiles,
         markers,
-        environmental_colliders: Vec::default(),
+        environmental_colliders,
     }
 }
 

@@ -10,27 +10,27 @@ pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, instance::setup_instance_data)
+        app.add_systems(Startup, setup_instance_data)
             .add_systems(
                 OnEnter(AppState::CreateInstance),
                 (
-                    instance::render_tilemap,
-                    instance::spawn_zone_colliders,
-                    instance::spawn_background,
-                    hub::spawn_map_entities,
-                    instance::finish_create_zone,
+                    zone::spawn_zone_tilemap,
+                    zone::spawn_zone_colliders,
+                    zone::spawn_background,
+                    zone::spawn_zone_entities,
+                    zone::finish_create_zone,
                 )
                     .chain(),
             )
             .add_systems(
                 OnEnter(AppState::CreateHub),
                 (
-                    hub::insert_hub_layout,
-                    instance::render_tilemap,
-                    instance::spawn_zone_colliders,
-                    instance::spawn_background,
-                    hub::spawn_map_entities,
-                    instance::finish_create_zone,
+                    insert_hub_layout,
+                    zone::spawn_zone_tilemap,
+                    zone::spawn_zone_colliders,
+                    zone::spawn_background,
+                    zone::spawn_zone_entities,
+                    zone::finish_create_zone,
                 )
                     .chain(),
             )

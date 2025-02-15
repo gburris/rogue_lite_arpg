@@ -31,7 +31,7 @@ fn tile_configurations() -> &'static HashMap<TileType, TileIndexType> {
     })
 }
 
-pub fn render_tilemap(
+pub fn spawn_zone_tilemap(
     mut commands: Commands,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,

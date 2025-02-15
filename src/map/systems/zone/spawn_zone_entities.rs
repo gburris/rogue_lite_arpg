@@ -15,7 +15,7 @@ pub struct EnemySpawnEvent(pub Vec<Vec3>);
 #[derive(Debug, Event)]
 pub struct ChestSpawnEvent(pub Vec<Vec3>);
 
-pub fn spawn_map_entities(
+pub fn spawn_zone_entities(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,

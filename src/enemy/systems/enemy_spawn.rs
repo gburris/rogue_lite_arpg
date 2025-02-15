@@ -17,7 +17,7 @@ use crate::{
         inventory::Inventory,
         spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
     },
-    map::systems::hub::spawn_hub_entities::EnemySpawnEvent,
+    map::systems::zone::spawn_zone_entities::EnemySpawnEvent,
     movement::components::SimpleMotion,
 };
 

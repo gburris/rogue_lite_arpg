@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use crate::combat::damage::events::DefeatedEvent;
 
 #[derive(Component)]
-pub struct InstanceBackground;
+pub struct ZoneBackground;
 
 #[derive(Component)]
 pub struct GemCluster {
@@ -39,7 +39,7 @@ pub fn spawn_background(mut commands: Commands) {
             Vec2::new(FLOOR_SIZE, FLOOR_SIZE),
         ),
         Transform::from_xyz(0.0, 0.0, -1.0),
-        InstanceBackground,
+        ZoneBackground,
     ));
 
     // Generate grid of rock piles
@@ -66,7 +66,7 @@ pub fn spawn_background(mut commands: Commands) {
                         rock_size,
                     ),
                     Transform::from_xyz(base_x + offset_x, base_y + offset_y, -0.9),
-                    InstanceBackground,
+                    ZoneBackground,
                 ));
             }
 
@@ -98,7 +98,7 @@ fn spawn_gem_cluster(
         commands.spawn((
             Sprite::from_color(Color::srgba(r, g, b, 0.9), gem_size),
             Transform::from_xyz(base_x + offset_x, base_y + offset_y, -0.8),
-            InstanceBackground,
+            ZoneBackground,
             GemCluster { glow_timer: 0.0 },
         ));
     }

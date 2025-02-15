@@ -1,37 +1,33 @@
 use ::bevy::prelude::*;
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 
 use crate::{
     despawn::components::LiveDuration,
-    items::{inventory::inventory::Inventory, Autoloot, Lootable},
-    player::{interact::PlayerInteractionInput, Player},
+    items::{inventory::inventory::Inventory, Lootable},
+    player::{interact::InteractionEvent, Player},
 };
 
-pub fn on_lootable_item_input_interaction(
-    _: Trigger<PlayerInteractionInput>,
+pub fn on_lootable_item_interaction(
+    trigger: Trigger<InteractionEvent>,
     mut commands: Commands,
-    colliding_items: Query<(Entity, &CollidingEntities), (With<Lootable>, Without<Autoloot>)>,
     player: Single<(Entity, &mut Inventory), With<Player>>,
 ) {
+    let item_entity = trigger.entity();
+
     let (player_entity, mut inventory) = player.into_inner();
 
-    for (item_entity, colliding_entities) in colliding_items.iter() {
-        if colliding_entities.contains(&player_entity) {
-            if inventory.add_item(item_entity).is_ok() {
-                commands.entity(player_entity).add_child(item_entity);
+    if inventory.add_item(item_entity).is_ok() {
+        commands.entity(player_entity).add_child(item_entity);
 
-                commands
-                    .entity(item_entity)
-                    .remove::<Lootable>()
-                    .remove::<Collider>()
-                    .remove::<Sensor>()
-                    .remove::<CollidingEntities>()
-                    .remove::<LiveDuration>()
-                    .remove::<CollisionLayers>()
-                    .insert(Visibility::Hidden);
-            } else {
-                warn!("Inventory is full!")
-            }
-        }
+        // Make sure item doesn't despawn and is hidden (since its in inventory)
+        commands
+            .entity(item_entity)
+            .remove::<Lootable>()
+            .remove::<LiveDuration>()
+            .insert(Visibility::Hidden);
+
+        // Remove interaction zone once itme is picked up
+        commands.entity(trigger.interaction_zone_entity).despawn();
+    } else {
+        warn!("Inventory is full!")
     }
 }

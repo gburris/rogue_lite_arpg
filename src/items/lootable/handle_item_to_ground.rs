@@ -4,6 +4,7 @@ use rand::{thread_rng, Rng};
 use crate::{
     items::{equipment::Equipped, inventory::Inventory, Item, ItemDropEvent, Lootable},
     labels::layer::ZLayer,
+    player::interact::InteractionZone,
 };
 
 /// Notes:
@@ -44,5 +45,6 @@ pub fn handle_item_ground_transition(
         .insert(Lootable)
         .insert(Transform::from_translation(final_position))
         .insert(Visibility::Visible)
-        .remove_parent();
+        .remove_parent()
+        .with_child(InteractionZone { radius: 20.0 });
 }

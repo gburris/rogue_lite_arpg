@@ -67,13 +67,6 @@ pub struct Autoloot;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    CollidingEntities,
-    Sensor,
-    Collider(|| Collider::circle(20.0)),
-    CollisionLayers(|| CollisionLayers::new(
-        GameCollisionLayer::Interaction,
-        [GameCollisionLayer::Player]
-    )),
     Visibility(|| Visibility::Visible),
     LiveDuration(|| LiveDuration::new(10.0))
 )]

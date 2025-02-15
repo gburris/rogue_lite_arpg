@@ -80,7 +80,7 @@ impl MapMarkers {
 #[derive(Debug, Clone)]
 pub enum EnvironmentalType {
     Wall,
-    // Water, // Commented out for now as requested
+    Water,
 }
 
 #[derive(Debug, Clone)]

@@ -53,6 +53,7 @@ pub fn spawn_zone_colliders(
                     ),
                 ));
             }
+            EnvironmentalType::Water => todo!(),
         }
     }
 }

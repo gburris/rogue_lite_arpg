@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    map::{portal, resources::CurrentZoneLevel, systems::*},
+    map::{portal, systems::*},
 };
 
 use super::{portal::on_mapper_spawned, WorldSpaceConfig};
@@ -17,8 +17,7 @@ impl Plugin for MapPlugin {
                     instance::render_tilemap,
                     instance::spawn_zone_colliders,
                     instance::spawn_background,
-                    instance::spawn_instance_entities, //This is gonna mutate world size,
-                    //Since it spawns a new map layout
+                    hub::spawn_map_entities,
                     instance::finish_create_zone,
                 )
                     .chain(),
@@ -29,7 +28,8 @@ impl Plugin for MapPlugin {
                     hub::insert_hub_layout,
                     instance::render_tilemap,
                     instance::spawn_zone_colliders,
-                    hub::spawn_hub_entities,
+                    instance::spawn_background,
+                    hub::spawn_map_entities,
                     instance::finish_create_zone,
                 )
                     .chain(),
@@ -39,7 +39,6 @@ impl Plugin for MapPlugin {
                 (portal::handle_portal_collisions).in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
-            .insert_resource(CurrentZoneLevel(0))
             .add_observer(portal::on_portal_entered)
             .add_observer(on_mapper_spawned);
     }

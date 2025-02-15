@@ -4,7 +4,9 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    configuration::GameCollisionLayer, labels::states::AppState, map::{events::CreateInstanceEvent, helpers::zone_generation::generate_instance_layout},
+    configuration::GameCollisionLayer,
+    labels::states::AppState,
+    map::{events::CreateInstanceEvent, helpers::zone_generation::generate_instance_layout},
     player::Player,
 };
 
@@ -21,10 +23,7 @@ use super::{events::CleanupZone, InstanceAssets, Mapper};
     Mapper,
     CollisionLayers(default_collision_layers),
 )]
-pub enum Portal {
-    StartingPortal,
-    WarpZone,
-}
+pub struct Portal;
 
 fn default_collision_layers() -> CollisionLayers {
     CollisionLayers::new(

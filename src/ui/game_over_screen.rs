@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    configuration::time_control::RestartEvent, labels::states::AppState, map::events::CleanupZone,
-    player::PlayerLevel,
+    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone, player::PlayerLevel
 };
 
 #[derive(Component)]

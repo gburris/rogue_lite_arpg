@@ -6,11 +6,11 @@ use bevy::prelude::*;
 use crate::{
     configuration::GameCollisionLayer,
     labels::states::AppState,
-    map::{events::CreateInstanceEvent, helpers::zone_generation::generate_instance_layout},
+    map::{components::CreateInstanceEvent, helpers::zone_generation::generate_instance_layout, CleanupZone},
     player::Player,
 };
 
-use super::{events::CleanupZone, InstanceAssets, Mapper};
+use super::components::{InstanceAssets, Mapper};
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered

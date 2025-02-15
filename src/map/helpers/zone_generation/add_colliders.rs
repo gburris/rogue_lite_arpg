@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 
-use crate::map::{components::TileType, EnvironmentalMapCollider, EnvironmentalType, WallSection};
+use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, TileType, WallSection};
 
 pub fn add_environmental_colliders_to_zone(
     tiles: &[Vec<TileType>],

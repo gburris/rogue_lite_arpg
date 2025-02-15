@@ -4,10 +4,7 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
     configuration::GameCollisionLayer,
-    map::{
-        components::{MapLayout, Wall},
-        EnvironmentalType, WorldSpaceConfig,
-    },
+    map::components::{EnvironmentalType, MapLayout, Wall, WorldSpaceConfig},
 };
 
 pub fn spawn_zone_colliders(

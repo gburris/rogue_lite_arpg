@@ -3,17 +3,12 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{portal::Portal, MapLayout, MarkerType, MultiMarkerType, WorldSpaceConfig},
+    map::{components::{
+        ChestSpawnEvent, EnemySpawnEvent, MapLayout, MarkerType, MultiMarkerType, NPCSpawnEvent,
+        WorldSpaceConfig,
+    }, portal::Portal},
     player::Player,
 };
-
-#[derive(Event)]
-pub struct NPCSpawnEvent(pub Vec<Vec3>);
-#[derive(Debug, Event)]
-pub struct EnemySpawnEvent(pub Vec<Vec3>);
-
-#[derive(Debug, Event)]
-pub struct ChestSpawnEvent(pub Vec<Vec3>);
 
 pub fn spawn_zone_entities(
     mut commands: Commands,

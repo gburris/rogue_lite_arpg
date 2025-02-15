@@ -2,13 +2,7 @@ use avian2d::prelude::LockedAxes;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
-    combat::{attributes::Health, components::ActionState},
-    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::{equipment::Equipped, inventory::Inventory},
-    map::systems::zone::spawn_zone_entities::NPCSpawnEvent,
-    movement::components::SimpleMotion,
-    npc::components::NPC,
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection}, combat::{attributes::Health, components::ActionState}, configuration::assets::{SpriteAssets, SpriteSheetLayouts}, items::{equipment::Equipped, inventory::Inventory}, map::NPCSpawnEvent, movement::components::SimpleMotion, npc::components::NPC
 };
 
 use super::components::{NPCInteractionRadius, NPCType};

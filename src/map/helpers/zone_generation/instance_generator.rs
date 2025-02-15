@@ -3,9 +3,8 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 use std::collections::HashMap;
 
-use crate::map::{
-    components::{MapLayout, TileType},
-    InstanceAssets, MapMarkers, MarkerType, MultiMarkerType,
+use crate::map::components::{
+    InstanceAssets, MapLayout, MapMarkers, MarkerType, MultiMarkerType, TileType,
 };
 
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {

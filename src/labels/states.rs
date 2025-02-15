@@ -8,9 +8,7 @@ pub enum AppState {
     CreateHub,
     SpawnPlayer, // Also creates player overlay UI
     CreateInstance,
-    // Represents time in game where all game-play systems are actually running
-    // If you want to distinguish between different phases within "Playing" make a new state!
-    // Ex. MapRegionState
+    SpawnZone, //Used to 1. put a load screen on 2. Spawn everything in ur zone
     Playing,
     Paused,
     GameOver,

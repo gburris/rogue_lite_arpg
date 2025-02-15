@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 
-use crate::map::{components::MapLayout, MapMarkers, MarkerType, MultiMarkerType};
+use crate::map::components::{MapLayout, MapMarkers, MarkerType, MultiMarkerType};
 
-use super::{add_colliders::add_environmental_colliders_to_zone, create_hub};
+use super::{add_colliders::add_environmental_colliders_to_zone, create_tile_layout::create_hub};
 
 pub fn generate_hub_layout() -> MapLayout {
     let size: TilemapSize = TilemapSize { x: 100, y: 100 };

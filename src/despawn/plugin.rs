@@ -12,9 +12,7 @@ use crate::{
         sets::InGameSet,
         states::{AppState, PausedState},
     },
-    map::{
-        components::Wall, events::CleanupZone, portal::Portal, systems::zone::ZoneBackground, Water,
-    },
+    map::{components::Wall, portal::Portal, systems::zone::ZoneBackground, CleanupZone, Water},
     npc::NPC,
     player::Player,
     ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu},

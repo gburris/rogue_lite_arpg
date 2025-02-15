@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use crate::map::{InstanceAssets, InstanceConfig, InstanceType};
+use crate::map::components::{InstanceAssets, InstanceConfig, InstanceType};
 use bevy::{prelude::Commands, scene::ron::de::from_reader};
 
 #[cfg(target_arch = "wasm32")]

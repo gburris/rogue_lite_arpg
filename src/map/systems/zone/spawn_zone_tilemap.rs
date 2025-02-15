@@ -6,7 +6,7 @@ use std::{collections::HashMap, sync::OnceLock};
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{MapLayout, TileType, WorldSpaceConfig},
+    map::components::{MapLayout, TileType, WorldSpaceConfig},
 };
 
 #[derive(Clone, Copy)]

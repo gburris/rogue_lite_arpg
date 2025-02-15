@@ -5,7 +5,7 @@ use crate::{
     map::{portal, systems::*},
 };
 
-use super::{portal::on_mapper_spawned, WorldSpaceConfig};
+use super::{components::WorldSpaceConfig, portal::on_mapper_spawned};
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {

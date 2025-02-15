@@ -1,5 +1,4 @@
 pub mod components;
-pub mod events;
 pub mod movement;
 pub mod on_npc_interaction;
 pub mod plugin;

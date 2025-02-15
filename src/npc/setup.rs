@@ -9,9 +9,10 @@ use crate::{
     map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
+    player::interact::InteractionZone,
 };
 
-use super::components::{NPCInteractionRadius, NPCType};
+use super::components::NPCType;
 
 pub fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
@@ -47,7 +48,7 @@ pub fn spawn_npc(
 ) {
     let mainhand = npc_type.spawn_weapon(commands, sprites, atlases);
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
-    let observer_to_use = npc_type.get_observer();
+    let on_player_interaction = npc_type.get_interaction_observer();
     let sprite = Sprite::from_atlas_image(
         sprite_sheet_to_use,
         TextureAtlas {
@@ -76,9 +77,9 @@ pub fn spawn_npc(
                 FacingDirection::Down,
             ),
         ))
-        .with_child(NPCInteractionRadius)
+        .with_child(InteractionZone { radius: 70.0 })
         .add_child(mainhand)
-        .observe(observer_to_use)
+        .observe(on_player_interaction)
         .id();
 
     commands.entity(mainhand).insert(Equipped::new(npc));

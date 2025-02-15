@@ -1,9 +1,9 @@
 use crate::map::components::TileType;
+use bevy::math::{Rect, Vec2};
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-//Used for HUB today
-pub fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType>> {
+pub fn create_hub(map_size: TilemapSize, hub_size: TilemapSize) -> Vec<Vec<TileType>> {
     let mut map = vec![vec![TileType::Grass; map_size.y as usize]; map_size.x as usize];
 
     // Add top and bottom walls
@@ -17,6 +17,13 @@ pub fn create_map_with_exterior_walls(map_size: TilemapSize) -> Vec<Vec<TileType
         map[0][y] = TileType::Wall;
         map[map_size.x as usize - 1][y] = TileType::Wall;
     }
+    let hub_center = Vec2::new((map_size.x / 2) as f32, (map_size.y / 2) as f32);
+    let hub_bounds =
+        Rect::from_center_size(hub_center, Vec2::new(hub_size.x as f32, hub_size.y as f32));
+
+    add_cobblestone(&mut map, &hub_bounds);
+    add_walls(&mut map, hub_bounds);
+    add_wall_entrance(&mut map, hub_bounds);
 
     map
 }
@@ -59,6 +66,48 @@ pub fn create_map_with_exterior_walls_and_dead_zones(
     }
 
     map
+}
+
+fn add_cobblestone(map: &mut Vec<Vec<TileType>>, bounds: &Rect) {
+    // Iterate over the integer coordinates within the bounds.
+    for x in bounds.min.x as i32..bounds.max.x as i32 {
+        for y in bounds.min.y as i32..bounds.max.y as i32 {
+            map[x as usize][y as usize] = TileType::Cobblestone;
+        }
+    }
+}
+
+fn add_walls(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
+    for x in bounds.min.x as i32..bounds.max.x as i32 {
+        for y in bounds.min.y as i32..bounds.max.y as i32 {
+            let is_wall = x < bounds.min.x as i32 + 3
+                || x >= bounds.max.x as i32 - 3
+                || y < bounds.min.y as i32 + 3
+                || y >= bounds.max.y as i32 - 3;
+
+            if is_wall {
+                map[x as usize][y as usize] = TileType::Wall;
+            }
+        }
+    }
+}
+
+fn add_wall_entrance(map: &mut Vec<Vec<TileType>>, bounds: Rect) {
+    let entrance_width = 5; // Entrance width is 20 tiles
+    let entrance_x_start = (bounds.min.x as i32 + bounds.max.x as i32) / 2 - entrance_width / 2;
+
+    // Force a solid ground bridge across the moat and into the hub
+    let y_range_start = bounds.min.y as i32 - 5; // Extend the range ~20 tiles above the hub
+    let y_range_end = bounds.min.y as i32 + 5; // Extend the range ~20 tiles into the hub
+
+    for x in entrance_x_start..(entrance_x_start + entrance_width) {
+        for y in y_range_start..y_range_end {
+            // Ensure indices are within bounds
+            if x >= 0 && y >= 0 && x < map.len() as i32 && y < map[0].len() as i32 {
+                map[x as usize][y as usize] = TileType::Wood;
+            }
+        }
+    }
 }
 
 fn create_square_dead_zone(map: &mut Vec<Vec<TileType>>, map_size: TilemapSize) {

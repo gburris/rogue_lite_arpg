@@ -36,5 +36,7 @@ pub fn on_stat_trainer_store_open(_: Trigger<NPCInteraction>, mut commands: Comm
 }
 
 pub fn on_game_guide_start(_: Trigger<NPCInteraction>, mut commands: Commands) {
-    warn!("on_game_guide_start");
+    commands.trigger(PauseInputEvent {
+        paused_state: Some(PausedState::Inventory),
+    });
 }

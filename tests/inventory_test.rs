@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use baba_yaga::items::equipment::EquipmentSlot;
     use baba_yaga::items::inventory::Inventory;
     use bevy::ecs::entity::Entity;

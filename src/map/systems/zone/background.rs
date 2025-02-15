@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::combat::damage::events::DefeatedEvent;
-
 #[derive(Component)]
 pub struct ZoneBackground;
 

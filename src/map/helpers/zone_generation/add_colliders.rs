@@ -3,7 +3,7 @@ use bevy_ecs_tilemap::map::TilemapSize;
 
 use crate::map::{components::TileType, EnvironmentalMapCollider, EnvironmentalType, WallSection};
 
-pub fn generate_environmental_colliders(
+pub fn add_environmental_colliders_to_zone(
     tiles: &[Vec<TileType>],
     map_size: TilemapSize,
 ) -> Vec<EnvironmentalMapCollider> {

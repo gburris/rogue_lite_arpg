@@ -12,7 +12,7 @@ impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_instance_data)
             .add_systems(
-                OnEnter(AppState::CreateInstance),
+                OnEnter(AppState::SpawnZone),
                 (
                     zone::spawn_zone_tilemap,
                     zone::spawn_zone_colliders,
@@ -22,18 +22,7 @@ impl Plugin for MapPlugin {
                 )
                     .chain(),
             )
-            .add_systems(
-                OnEnter(AppState::CreateHub),
-                (
-                    insert_hub_layout,
-                    zone::spawn_zone_tilemap,
-                    zone::spawn_zone_colliders,
-                    zone::spawn_background,
-                    zone::spawn_zone_entities,
-                    zone::finish_create_zone,
-                )
-                    .chain(),
-            )
+            .add_systems(OnEnter(AppState::CreateHub), (insert_hub_layout,).chain())
             .add_systems(
                 Update,
                 (portal::handle_portal_collisions).in_set(InGameSet::Collision),

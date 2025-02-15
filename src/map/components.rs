@@ -11,7 +11,7 @@ MAP EVENTS - Should be the only part of map exposed to other crates
 */
 
 #[derive(Event)]
-pub struct CreateInstanceEvent;
+pub struct SpawnZoneEvent;
 
 #[derive(Event)]
 pub struct CleanupZone;

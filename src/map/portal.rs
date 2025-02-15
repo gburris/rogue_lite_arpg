@@ -6,7 +6,9 @@ use bevy::prelude::*;
 use crate::{
     configuration::GameCollisionLayer,
     labels::states::AppState,
-    map::{components::CreateInstanceEvent, helpers::zone_generation::generate_instance_layout, CleanupZone},
+    map::{
+        components::SpawnZoneEvent, helpers::zone_generation::generate_instance_layout, CleanupZone,
+    },
     player::Player,
 };
 
@@ -44,20 +46,20 @@ pub fn handle_portal_collisions(
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
                 info!("Creating new instance");
-                commands.trigger(CreateInstanceEvent);
+                commands.trigger(SpawnZoneEvent);
             }
         }
     }
 }
 
 pub fn on_portal_entered(
-    _: Trigger<CreateInstanceEvent>,
+    _: Trigger<SpawnZoneEvent>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
 ) {
     info!("Portal entered!");
     commands.trigger(CleanupZone);
-    game_state.set(AppState::CreateInstance);
+    game_state.set(AppState::SpawnZone);
 }
 
 pub fn on_mapper_spawned(

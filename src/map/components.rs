@@ -110,7 +110,6 @@ impl WallSection {
 //This holds the concept of "Tiles are this big relative to world cordinaties"
 #[derive(Resource)]
 pub struct WorldSpaceConfig {
-    pub map_size: TilemapSize,
     pub tile_size: TilemapTileSize, // Size of each tile in world units
     pub world_origin: Vec2,         // Where (0,0) in tile coordinates maps to in world space
 }
@@ -120,7 +119,6 @@ pub struct WorldSpaceConfig {
 impl Default for WorldSpaceConfig {
     fn default() -> Self {
         WorldSpaceConfig {
-            map_size: TilemapSize::new(33, 33),
             tile_size: TilemapTileSize::new(32.0, 32.0),
             world_origin: Vec2::ZERO,
         }

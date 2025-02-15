@@ -15,7 +15,7 @@ pub fn spawn_hub_colliders(
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
 ) {
-    let map_size = world_config.map_size;
+    let map_size = map_layout.size;
     let tile_size = world_config.tile_size;
 
     // Calculate center offset based on tilemap centering logic

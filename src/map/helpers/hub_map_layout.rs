@@ -8,8 +8,10 @@ use crate::map::{
     MapMarkers, MarkerType, MultiMarkerType,
 };
 
+use super::instance_generation::create_map_with_exterior_walls;
+
 pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
-    let mut tiles = create_grass_map(size);
+    let mut tiles = create_map_with_exterior_walls(size);
 
     let hub_size = TilemapSize { x: 25, y: 25 };
     let hub_center = Vec2::new((size.x / 2) as f32, (size.y / 2) as f32);
@@ -29,10 +31,6 @@ pub fn generate_hub_map(size: TilemapSize) -> MapLayout {
         markers,
         environmental_colliders: Vec::default(),
     }
-}
-
-fn create_grass_map(map_size: TilemapSize) -> Vec<Vec<TileType>> {
-    vec![vec![TileType::Ground; map_size.y as usize]; map_size.x as usize]
 }
 
 fn add_cobblestone(map: &mut Vec<Vec<TileType>>, bounds: &Rect) {

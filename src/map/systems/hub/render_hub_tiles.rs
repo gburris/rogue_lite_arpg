@@ -20,7 +20,7 @@ pub fn render_hub_tiles(
     let wood_texture_handle: Handle<Image> = sprites.wood_tiles.clone();
     let wall_texture_handle: Handle<Image> = sprites.wall_tiles.clone();
     let cobblestone_texture_handle: Handle<Image> = sprites.cobblestone_tiles.clone();
-    let map_size = world_config.map_size;
+    let map_size = map_layout.size;
     let tile_size = world_config.tile_size;
 
     let grid_size: TilemapGridSize = tile_size.into();
@@ -38,7 +38,7 @@ pub fn render_hub_tiles(
     let water_tilemap_entity = commands.spawn_empty().id();
     let cobblestone_tilemap_entity = commands.spawn_empty().id();
 
-    let map_size = world_config.map_size;
+    let map_size = map_layout.size;
     let tile_size = world_config.tile_size;
 
     let map_type = TilemapType::Square;

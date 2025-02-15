@@ -42,6 +42,12 @@ pub fn generate_map_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     // Generate markers
     let markers = generate_markers(&tiles, map_size, num_enemies, num_chests);
 
+    // Generate "pre-fabs"
+    //Prefabs are groupings of markers and tiles.
+    //Roll dice to set up a prefab
+    //Find valid location (At least 25x25 square of ground tiles somewhere)
+    //Add wall tiles, special ground tiles, enemy markers, chest markers, NPC markers etc
+
     // Generate colliders
     let environmental_colliders =
         super::collider_generator::generate_environmental_colliders(&tiles, map_size);

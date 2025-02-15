@@ -4,13 +4,13 @@ use bevy::prelude::*;
 
 use crate::{
     labels::states::PausedState,
-    player::{systems::PauseInputEvent, InteractInputEvent, Player},
+    player::{interact::PlayerInteractionInput, systems::PauseInputEvent, Player},
 };
 
 use super::{components::NPCInteractionRadius, events::NPCInteraction};
 
 pub fn on_npc_input_interaction(
-    _: Trigger<InteractInputEvent>,
+    _: Trigger<PlayerInteractionInput>,
     mut commands: Commands,
     query: Query<(&Parent, &CollidingEntities), With<NPCInteractionRadius>>,
     player_query: Single<Entity, With<Player>>,

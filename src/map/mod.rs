@@ -1,3 +1,4 @@
+mod chest;
 pub mod components;
 pub mod events;
 pub mod helpers;
@@ -7,3 +8,5 @@ pub mod resources;
 pub mod systems;
 
 pub use components::*;
+
+pub use chest::Chest;

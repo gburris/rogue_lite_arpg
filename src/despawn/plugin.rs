@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
-    chests::Chest,
     combat::projectile::components::Projectile,
     configuration::time_control::RestartEvent,
     despawn::systems::*,
@@ -12,6 +11,7 @@ use crate::{
         sets::InGameSet,
         states::{AppState, PausedState},
     },
+    map::Chest,
     map::{components::Wall, events::CleanupZone, portal::Portal, Water},
     npc::NPC,
     player::Player,

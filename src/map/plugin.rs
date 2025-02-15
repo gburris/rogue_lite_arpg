@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    map::{portal, resources::CurrentZoneLevel, systems::*},
+    map::{chest, portal, resources::CurrentZoneLevel, systems::*},
 };
 
 use super::WorldSpaceConfig;
@@ -39,6 +39,7 @@ impl Plugin for MapPlugin {
             )
             .insert_resource(WorldSpaceConfig::default())
             .insert_resource(CurrentZoneLevel(0))
-            .add_observer(portal::on_portal_entered);
+            .add_observer(portal::on_portal_entered)
+            .add_observer(chest::on_chest_spawn_event);
     }
 }

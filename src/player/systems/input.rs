@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::{
     labels::states::PausedState,
     player::{
-        InteractInputEvent, Player, PlayerMovementEvent, PlayerStoppedEvent, UseMainhandInputEvent,
+        interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
+        UseMainhandInputEvent,
     },
 };
 
@@ -29,7 +30,7 @@ pub fn player_input(
     }
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(InteractInputEvent);
+        commands.trigger(PlayerInteractionInput);
         return;
     }
 

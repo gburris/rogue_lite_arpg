@@ -4,17 +4,14 @@ use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
     map::{
-        portal::Portal, resources::CurrentZoneLevel, MapLayout, MarkerType, MultiMarkerType,
-        WorldSpaceConfig,
+        chest::ChestSpawnEvent, portal::Portal, resources::CurrentZoneLevel, MapLayout, MarkerType,
+        MultiMarkerType, WorldSpaceConfig,
     },
     player::Player,
 };
 
 #[derive(Debug, Event)]
 pub struct EnemySpawnEvent(pub Vec<Vec3>);
-
-#[derive(Debug, Event)]
-pub struct ChestSpawnEvent(pub Vec<Vec3>);
 
 pub fn spawn_instance_entities(
     mut commands: Commands,

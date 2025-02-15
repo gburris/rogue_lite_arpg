@@ -6,7 +6,10 @@ use crate::{
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
 
-use super::animation::animation_setup::set_starting_player_animation_and_sprite_sheet;
+use super::{
+    animation::animation_setup::set_starting_player_animation_and_sprite_sheet,
+    interact::{on_interaction_zone_added, on_player_interaction_input},
+};
 
 pub struct PlayerPlugin;
 
@@ -42,6 +45,8 @@ impl Plugin for PlayerPlugin {
             .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)
+            .add_observer(on_player_interaction_input)
+            .add_observer(on_interaction_zone_added)
             .insert_resource(PlayerSize { x: 256.0, y: 256.0 });
     }
 }

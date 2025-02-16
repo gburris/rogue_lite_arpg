@@ -30,7 +30,6 @@ impl Plugin for PlayerPlugin {
                         player_movement,
                         update_player_aim_position,
                         draw_cursor,
-                        enforce_map_bounds,
                         on_player_experience_change,
                         animate_level_up,
                     )

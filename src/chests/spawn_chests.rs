@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    configuration::assets::SpriteAssets,
-    map::systems::instance::spawn_instance_entities::ChestSpawnEvent,
-};
+use crate::{configuration::assets::SpriteAssets, map::ChestSpawnEvent};
 
 use super::components::{Chest, ChestInteractionRadius};
 

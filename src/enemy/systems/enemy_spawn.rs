@@ -2,23 +2,17 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
-    combat::{
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection}, combat::{
         attributes::{Health, Mana},
         components::{ActionState, AimPosition},
-    },
-    configuration::{
+    }, configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
-    },
-    enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
-    items::{
+    }, enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets}, items::{
         equipment::{on_main_hand_activated, Equipped},
         inventory::Inventory,
         spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
-    },
-    map::systems::instance::spawn_instance_entities::EnemySpawnEvent,
-    movement::components::SimpleMotion,
+    }, map::EnemySpawnEvent, movement::components::SimpleMotion
 };
 
 pub fn spawn_enemies(

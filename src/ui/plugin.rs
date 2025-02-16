@@ -5,7 +5,7 @@ use crate::{
     ui::*,
 };
 
-use super::npc::plugin::NPCPauseScreensPlugin;
+use super::{loading::plugin::LoadingUIPlugin, npc::plugin::NPCPauseScreensPlugin};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;
@@ -17,6 +17,7 @@ impl Plugin for UIPlugin {
             //Other UI Plugins here
             .add_plugins(PauseMenuPlugin)
             .add_plugins(NPCPauseScreensPlugin)
+            .add_plugins(LoadingUIPlugin)
             //Start screen
             .add_systems(
                 OnEnter(AppState::StartScreen),

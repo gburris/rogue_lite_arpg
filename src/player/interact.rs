@@ -28,21 +28,42 @@ pub struct InteractionEvent {
 pub fn on_player_interaction_input(
     _: Trigger<PlayerInteractionInput>,
     mut commands: Commands,
-    query: Query<(Entity, &Parent, &CollidingEntities)>,
-    player_query: Single<Entity, With<Player>>,
+    interact_query: Query<
+        (Entity, &Parent, &Transform, &CollidingEntities),
+        (With<InteractionZone>, With<CollidingEntities>),
+    >,
+    player_query: Single<(Entity, &Transform), With<Player>>,
 ) {
-    let player_entity = player_query.into_inner();
+    let (player_entity, player_transform) = player_query.into_inner();
 
-    for (interaction_zone_entity, parent, colliding_entities) in query.iter() {
-        // Check if any of the colliding entities is the player
-        if colliding_entities.contains(&player_entity) {
-            commands.trigger_targets(
-                InteractionEvent {
-                    interaction_zone_entity,
-                },
-                parent.get(),
-            );
-        }
+    // Go through all interaction zones colliding with player
+    let closest_interaction: Option<(Entity, Entity, f32)> = interact_query
+        .iter()
+        .filter(|(_, _, _, colliding)| colliding.contains(&player_entity))
+        .fold(None, |current, (new_entity, parent, next_transform, _)| {
+            let new_distance = (player_transform.translation.truncate()
+                - next_transform.translation.truncate())
+            .abs()
+            .length();
+
+            if let Some(closest) = current {
+                if closest.2 < new_distance {
+                    Some((new_entity, parent.get(), new_distance))
+                } else {
+                    Some(closest)
+                }
+            } else {
+                Some((new_entity, parent.get(), new_distance))
+            }
+        });
+
+    if let Some((interaction_zone_entity, interactable_entity, _)) = closest_interaction {
+        commands.trigger_targets(
+            InteractionEvent {
+                interaction_zone_entity,
+            },
+            interactable_entity,
+        );
     }
 }
 

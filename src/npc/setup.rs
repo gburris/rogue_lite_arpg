@@ -77,9 +77,9 @@ pub fn spawn_npc(
                 FacingDirection::Down,
             ),
         ))
+        .observe(on_player_interaction)
         .with_child(InteractionZone { radius: 70.0 })
         .add_child(mainhand)
-        .observe(on_player_interaction)
         .id();
 
     commands.entity(mainhand).insert(Equipped::new(npc));

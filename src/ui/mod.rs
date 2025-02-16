@@ -2,6 +2,7 @@ mod damage_overlay;
 mod display_case;
 mod game_over_screen;
 mod input;
+mod loading;
 mod npc;
 mod pause_menu;
 mod player_overlay;

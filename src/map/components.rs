@@ -48,32 +48,22 @@ pub enum TileType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MarkerType {
-    PlayerSpawn,
-    LevelExit,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum MultiMarkerType {
     EnemySpawns,
     BossSpawns,
     ChestSpawns,
     NPCSpawns,
+    PlayerSpawns,
+    LevelExits,
 }
 
 #[derive(Clone, Default, Debug)]
 pub struct MapMarkers {
-    pub single_markers: HashMap<MarkerType, Vec2>, // Single-instance markers
-    pub multi_markers: HashMap<MultiMarkerType, Vec<Vec2>>, // Multi-instance markers
+    pub markers: HashMap<MarkerType, Vec<Vec2>>,
 }
 
-//Code to actually get the marker
 impl MapMarkers {
-    pub fn get_single(&self, marker_type: MarkerType) -> Option<&Vec2> {
-        self.single_markers.get(&marker_type)
-    }
-
-    pub fn get_multi(&self, marker_type: MultiMarkerType) -> Option<&Vec<Vec2>> {
-        self.multi_markers.get(&marker_type)
+    pub fn get_markers(&self, marker_type: MarkerType) -> Option<&Vec<Vec2>> {
+        self.markers.get(&marker_type)
     }
 }
 

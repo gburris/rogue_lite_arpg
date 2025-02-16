@@ -39,7 +39,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
     // Generate markers
     let markers = generate_instance_markers(&tiles, map_size, num_enemies, num_chests);
 
-    // Generate "pre-fabs"
+    // TODO: Generate "pre-fabs"
     //Prefabs are groupings of markers and tiles.
     //Roll dice to set up a prefab
     //Find valid location (At least 25x25 square of ground tiles somewhere)

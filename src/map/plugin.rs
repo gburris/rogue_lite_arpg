@@ -5,7 +5,7 @@ use crate::{
     map::{portal, systems::*},
 };
 
-use super::{components::WorldSpaceConfig, portal::on_mapper_spawned};
+use super::components::WorldSpaceConfig;
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
@@ -28,7 +28,6 @@ impl Plugin for MapPlugin {
                 (portal::handle_portal_collisions).in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
-            .add_observer(portal::on_portal_entered)
-            .add_observer(on_mapper_spawned);
+            .add_observer(portal::on_portal_entered);
     }
 }

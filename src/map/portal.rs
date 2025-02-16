@@ -12,7 +12,7 @@ use crate::{
     player::Player,
 };
 
-use super::components::{InstanceAssets, Mapper};
+use super::components::{InstanceAssets, MapLayout, Mapper};
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -25,7 +25,9 @@ use super::components::{InstanceAssets, Mapper};
     Mapper,
     CollisionLayers(default_collision_layers),
 )]
-pub struct Portal;
+pub struct Portal {
+    pub map_layout: MapLayout,
+}
 
 fn default_collision_layers() -> CollisionLayers {
     CollisionLayers::new(
@@ -36,46 +38,32 @@ fn default_collision_layers() -> CollisionLayers {
 
 pub fn handle_portal_collisions(
     mut commands: Commands,
-    portal_query: Query<&CollidingEntities, With<Portal>>,
+    portal_query: Query<(Entity, &CollidingEntities), With<Portal>>,
     player_entity: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_entity.into_inner();
 
     // If player is colliding with portal, we spawn a new instance
-    for portal_colliding_entities in portal_query.iter() {
+    for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
                 info!("Creating new instance");
-                commands.trigger(SpawnZoneEvent);
+                commands.trigger_targets(SpawnZoneEvent, entity);
             }
         }
     }
 }
 
 pub fn on_portal_entered(
-    _: Trigger<SpawnZoneEvent>,
+    trigger: Trigger<SpawnZoneEvent>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
+    portal_query: Query<&Portal>,
 ) {
     info!("Portal entered!");
-    commands.trigger(CleanupZone);
+    if let Ok(portal) = portal_query.get(trigger.entity()) {
+        commands.trigger(CleanupZone);
+        commands.insert_resource(portal.map_layout.clone());
+    }
     game_state.set(AppState::SpawnZone);
-}
-
-pub fn on_mapper_spawned(
-    trigger: Trigger<OnAdd, Mapper>,
-    mut commands: Commands,
-    mut portal_query: Query<&mut Mapper, With<Portal>>,
-    instance_assets: Res<InstanceAssets>,
-) {
-    let start_time = Instant::now();
-
-    let mut new_mapper = portal_query.get_mut(trigger.entity()).unwrap();
-    new_mapper.map_layout = generate_instance_layout(&instance_assets);
-    commands.insert_resource(new_mapper.map_layout.clone());
-    let duration = start_time.elapsed();
-    warn!(
-        "Finished setting the instance! Generation took: {:?}",
-        duration
-    );
 }

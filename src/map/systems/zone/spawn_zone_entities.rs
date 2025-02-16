@@ -3,10 +3,14 @@ use bevy::prelude::*;
 use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
-    map::{components::{
-        ChestSpawnEvent, EnemySpawnEvent, MapLayout, MarkerType, MultiMarkerType, NPCSpawnEvent,
-        WorldSpaceConfig,
-    }, portal::Portal},
+    map::{
+        components::{
+            ChestSpawnEvent, EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType,
+            MultiMarkerType, NPCSpawnEvent, WorldSpaceConfig,
+        },
+        helpers::zone_generation::generate_instance_layout,
+        portal::Portal,
+    },
     player::Player,
 };
 
@@ -15,6 +19,7 @@ pub fn spawn_zone_entities(
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
+    instance_assets: Res<InstanceAssets>,
     mut query: Query<&mut Transform, With<Player>>,
 ) {
     // Spawn portal
@@ -28,7 +33,9 @@ pub fn spawn_zone_entities(
         );
 
         commands.spawn((
-            Portal,
+            Portal {
+                map_layout: generate_instance_layout(&instance_assets),
+            },
             Sprite::from_image(sprites.exit_door.clone()),
             Transform::from_translation(portal_position),
         ));

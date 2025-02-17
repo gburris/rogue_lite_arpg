@@ -1,18 +1,12 @@
-use std::time::Instant;
-
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    configuration::GameCollisionLayer,
-    labels::states::AppState,
-    map::{
-        components::SpawnZoneEvent, helpers::zone_generation::generate_instance_layout, CleanupZone,
-    },
+    configuration::GameCollisionLayer, labels::states::AppState, map::components::SpawnZoneEvent,
     player::Player,
 };
 
-use super::components::{InstanceAssets, MapLayout, Mapper};
+use super::components::{MapLayout, Mapper};
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -62,8 +56,7 @@ pub fn on_portal_entered(
 ) {
     info!("Portal entered!");
     if let Ok(portal) = portal_query.get(trigger.entity()) {
-        commands.trigger(CleanupZone);
         commands.insert_resource(portal.map_layout.clone());
+        game_state.set(AppState::SpawnZone);
     }
-    game_state.set(AppState::SpawnZone);
 }

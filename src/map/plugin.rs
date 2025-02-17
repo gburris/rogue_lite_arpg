@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
+use super::components::WorldSpaceConfig;
 use crate::{
     labels::{sets::InGameSet, states::AppState},
     map::{portal, systems::*},
 };
 
-use super::components::WorldSpaceConfig;
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
@@ -14,6 +14,7 @@ impl Plugin for MapPlugin {
             .add_systems(
                 OnEnter(AppState::SpawnZone),
                 (
+                    zone::despawn_previous_zone,
                     zone::spawn_zone_tilemap,
                     zone::spawn_zone_colliders,
                     zone::spawn_background,

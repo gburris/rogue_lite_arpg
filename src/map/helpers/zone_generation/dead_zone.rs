@@ -69,27 +69,19 @@ fn is_valid_dead_zone_location(
 }
 
 fn add_dead_zone_walls(map_data: &mut MapData, start_x: usize, start_y: usize, size: u32) {
-    // Add horizontal walls and colliders
     for x in (start_x - 1)..=(start_x + size as usize) {
-        // Top wall
         map_data.tiles[x][start_y - 1] = TileType::Wall;
-        // Bottom wall
         map_data.tiles[x][start_y + size as usize] = TileType::Wall;
     }
 
-    // Add horizontal colliders
     map_data.add_wall_collider((start_x as u32 - 1, start_y as u32 - 1), true, size + 2);
     map_data.add_wall_collider((start_x as u32 - 1, start_y as u32 + size), true, size + 2);
 
-    // Add vertical walls and colliders
     for y in (start_y - 1)..=(start_y + size as usize) {
-        // Left wall
         map_data.tiles[start_x - 1][y] = TileType::Wall;
-        // Right wall
         map_data.tiles[start_x + size as usize][y] = TileType::Wall;
     }
 
-    // Add vertical colliders
     map_data.add_wall_collider((start_x as u32 - 1, start_y as u32 - 1), false, size + 2);
     map_data.add_wall_collider((start_x as u32 + size, start_y as u32 - 1), false, size + 2);
 }

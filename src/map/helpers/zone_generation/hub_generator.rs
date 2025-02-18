@@ -33,15 +33,15 @@ pub fn generate_hub_layout() -> MapLayout {
     let size = TilemapSize { x: 100, y: 100 };
     let hub_size = TilemapSize { x: 25, y: 25 };
 
-    let tiles = create_hub(size, hub_size);
+    let map_data = create_hub(size, hub_size);
     let markers = generate_hub_markers(size, hub_size);
-    let environmental_colliders = add_environmental_colliders_to_zone(&tiles, size);
+    // let environmental_colliders = add_environmental_colliders_to_zone(&tiles, size);
 
     MapLayout {
         size,
-        tiles,
+        tiles: map_data.tiles,
         markers,
-        environmental_colliders,
+        environmental_colliders: map_data.colliders,
     }
 }
 

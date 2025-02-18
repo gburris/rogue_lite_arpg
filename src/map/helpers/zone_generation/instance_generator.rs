@@ -31,13 +31,13 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         rng.gen_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
 
     // Generate tiles
-    let tiles = super::create_tile_layout::create_map_with_exterior_walls_and_dead_zones(
+    let map_data = super::create_tile_layout::create_map_with_exterior_walls_and_dead_zones(
         map_size,
         instance_type.dead_zone_squares,
     );
 
     // Generate markers
-    let markers = generate_instance_markers(&tiles, map_size, num_enemies, num_chests);
+    let markers = generate_instance_markers(&map_data.tiles, map_size, num_enemies, num_chests);
 
     // TODO: Generate "pre-fabs"
     //Prefabs are groupings of markers and tiles.
@@ -46,14 +46,14 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
     //Add wall tiles, special ground tiles, enemy markers, chest markers, NPC markers etc
 
     // Generate colliders
-    let environmental_colliders =
-        super::add_colliders::add_environmental_colliders_to_zone(&tiles, map_size);
+    // let environmental_colliders =
+    //     super::add_colliders::add_environmental_colliders_to_zone(&tiles, map_size);
 
     MapLayout {
         size: map_size,
-        tiles,
+        tiles: map_data.tiles,
         markers,
-        environmental_colliders,
+        environmental_colliders: map_data.colliders,
     }
 }
 

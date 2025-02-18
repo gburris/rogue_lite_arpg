@@ -3,6 +3,8 @@ use bevy_ecs_tilemap::map::TilemapSize;
 
 use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, TileType};
 
+use super::utils::{calculate_collider_position, calculate_wall_dimensions};
+
 pub struct MapData {
     pub tiles: Vec<Vec<TileType>>,
     pub colliders: Vec<EnvironmentalMapCollider>,
@@ -25,17 +27,8 @@ impl MapData {
         let start_pos = Vec2::new(start.0 as f32, start.1 as f32);
         let length = length as f32;
 
-        let (width, height) = if is_horizontal {
-            (length, 1.0)
-        } else {
-            (1.0, length)
-        };
-
-        let collider_pos = if is_horizontal {
-            Vec2::new(start_pos.x + (width / 2.0), start_pos.y + 0.5)
-        } else {
-            Vec2::new(start_pos.x + 0.5, start_pos.y + (height / 2.0))
-        };
+        let (width, height) = calculate_wall_dimensions(is_horizontal, length);
+        let collider_pos = calculate_collider_position(start_pos, width, height, is_horizontal);
 
         self.colliders.push(EnvironmentalMapCollider {
             collider_type: EnvironmentalType::Wall,

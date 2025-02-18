@@ -13,13 +13,7 @@ pub fn build_hub(mut map_data: &mut MapData, hub_bounds: &Rect) {
 fn add_hub_cobblestone(map_data: &mut MapData, bounds: &Rect) {
     for x in bounds.min.x as i32..bounds.max.x as i32 {
         for y in bounds.min.y as i32..bounds.max.y as i32 {
-            if x >= 0
-                && y >= 0
-                && x < map_data.tiles.len() as i32
-                && y < map_data.tiles[0].len() as i32
-            {
-                map_data.tiles[x as usize][y as usize] = TileType::Cobblestone;
-            }
+            map_data.tiles[x as usize][y as usize] = TileType::Cobblestone;
         }
     }
 }

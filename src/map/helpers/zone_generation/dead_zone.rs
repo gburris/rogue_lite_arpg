@@ -3,7 +3,7 @@ use rand::Rng;
 
 use crate::map::components::TileType;
 
-use super::map_data::MapData;
+use super::{map_data::MapData, utils::calculate_num_dead_zones};
 
 pub fn add_dead_zones(map_data: &mut MapData, map_size: TilemapSize) {
     let area = map_size.x * map_size.y;
@@ -92,11 +92,4 @@ fn add_dead_zone_walls(map_data: &mut MapData, start_x: usize, start_y: usize, s
     // Add vertical colliders
     map_data.add_wall_collider((start_x as u32 - 1, start_y as u32 - 1), false, size + 2);
     map_data.add_wall_collider((start_x as u32 + size, start_y as u32 - 1), false, size + 2);
-}
-
-fn calculate_num_dead_zones(area: u32) -> u32 {
-    if area < 625 {
-        return 0;
-    }
-    ((area as f32 / 2500.0).ceil() as u32).min(10)
 }

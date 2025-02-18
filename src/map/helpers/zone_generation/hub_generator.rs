@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use std::collections::HashMap;
 
-use super::{add_colliders::add_environmental_colliders_to_zone, create_tile_layout::create_hub};
+use super::create_tile_layout::create_hub;
 use crate::map::components::{MapLayout, MapMarkers, MarkerType};
 
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;

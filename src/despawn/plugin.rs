@@ -11,8 +11,9 @@ use crate::{
         sets::InGameSet,
         states::{AppState, PausedState},
     },
-    map::Chest,
-    map::{components::Wall, events::CleanupZone, portal::Portal, Water},
+    map::{
+        components::Wall, portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Water,
+    },
     npc::NPC,
     player::Player,
     ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu},
@@ -41,6 +42,7 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, TilemapId>)
         .add_observer(despawn_all::<CleanupZone, Wall>)
         .add_observer(despawn_all::<CleanupZone, Water>)
+        .add_observer(despawn_all::<CleanupZone, ZoneBackground>)
         .add_observer(despawn_all::<CleanupZone, Lootable>)
         .add_observer(despawn_all::<CleanupZone, Chest>)
         .add_observer(despawn_all::<CleanupZone, Enemy>)

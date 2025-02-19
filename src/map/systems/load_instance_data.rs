@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use crate::map::{InstanceAssets, InstanceConfig, InstanceType};
+use crate::map::components::{InstanceAssets, InstanceConfig, InstanceType};
 use bevy::{prelude::Commands, scene::ron::de::from_reader};
 
 #[cfg(target_arch = "wasm32")]
@@ -27,7 +27,7 @@ fn load_instance_data() -> HashMap<String, InstanceType> {
 
 #[cfg(target_arch = "wasm32")]
 fn load_instance_data() -> HashMap<String, InstanceType> {
-    const INSTANCE_RON: &str = include_str!("../../../../assets/config/instances.ron");
+    const INSTANCE_RON: &str = include_str!("../../../assets/config/instances.ron");
 
     match from_str::<InstanceConfig>(INSTANCE_RON) {
         Ok(data) => data.instances,

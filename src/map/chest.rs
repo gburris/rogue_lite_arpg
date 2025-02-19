@@ -10,7 +10,7 @@ use crate::econ::components::GoldDropEvent;
 use crate::player::interact::{InteractionEvent, InteractionZone};
 
 #[derive(Debug, Event)]
-pub struct ChestSpawnEvent(pub Vec<Vec3>);
+pub struct SpawnChestsEvent(pub Vec<Vec3>);
 
 #[derive(Component)]
 pub struct Chest;
@@ -23,8 +23,8 @@ pub struct Chest;
 )]
 pub struct ChestCollider;
 
-pub fn on_chest_spawn_event(
-    chest_spawn_trigger: Trigger<ChestSpawnEvent>,
+pub fn on_spawn_chests_event(
+    chest_spawn_trigger: Trigger<SpawnChestsEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,

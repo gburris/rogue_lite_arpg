@@ -72,8 +72,8 @@ pub struct SpriteAssets {
     pub ice_bolt: Handle<Image>,
     #[asset(path = "projectiles/fireball.png")]
     pub fire_ball: Handle<Image>,
-    #[asset(path = "warpzone.png")]
-    pub warp_zone: Handle<Image>,
+    #[asset(path = "door.png")]
+    pub exit_door: Handle<Image>,
     #[asset(path = "tilesets/ground_tiles.png")]
     pub ground_tiles: Handle<Image>,
     #[asset(path = "tilesets/grass_tiles.png")]

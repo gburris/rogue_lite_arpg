@@ -2,44 +2,33 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    map::{chest, portal, resources::CurrentZoneLevel, systems::*},
+    map::{chest, components::WorldSpaceConfig, portal, systems::*},
 };
 
-use super::WorldSpaceConfig;
 pub struct MapPlugin;
 
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, instance::setup_instance_data)
+        app.add_systems(Startup, setup_instance_data)
             .add_systems(
-                OnEnter(AppState::CreateInstance),
+                OnEnter(AppState::SpawnZone),
                 (
-                    instance::generate_instance_layout,
-                    instance::render_instance_tilemap,
-                    instance::spawn_instance_collisions_zones,
-                    instance::spawn_instance_entities,
-                    instance::finish_create_instance,
+                    zone::despawn_previous_zone,
+                    zone::spawn_zone_tilemap,
+                    zone::spawn_zone_colliders,
+                    zone::spawn_background,
+                    zone::spawn_zone_entities,
+                    zone::finish_create_zone,
                 )
                     .chain(),
             )
-            .add_systems(
-                OnEnter(AppState::CreateHub),
-                (
-                    hub::generate_hub_layout,
-                    hub::render_hub_tiles,
-                    hub::spawn_hub_colliders,
-                    hub::spawn_hub_entities,
-                    hub::finish_create_hub,
-                )
-                    .chain(),
-            )
+            .add_systems(OnEnter(AppState::CreateHub), (insert_hub_layout,).chain())
             .add_systems(
                 Update,
-                portal::handle_portal_collisions.in_set(InGameSet::Collision),
+                (portal::handle_portal_collisions).in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
-            .insert_resource(CurrentZoneLevel(0))
             .add_observer(portal::on_portal_entered)
-            .add_observer(chest::on_chest_spawn_event);
+            .add_observer(chest::on_spawn_chests_event);
     }
 }

@@ -2,11 +2,11 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    configuration::GameCollisionLayer, labels::states::AppState, map::events::CreateInstanceEvent,
+    configuration::GameCollisionLayer, labels::states::AppState, map::components::SpawnZoneEvent,
     player::Player,
 };
 
-use super::events::CleanupZone;
+use super::components::{MapLayout, Mapper};
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -16,11 +16,11 @@ use super::events::CleanupZone;
     RigidBody(|| RigidBody::Static),
     Collider(|| Collider::rectangle(32.0, 64.0)),
     CollidingEntities,
+    Mapper,
     CollisionLayers(default_collision_layers),
 )]
-pub enum Portal {
-    StartingPortal,
-    WarpZone,
+pub struct Portal {
+    pub map_layout: MapLayout,
 }
 
 fn default_collision_layers() -> CollisionLayers {
@@ -32,28 +32,31 @@ fn default_collision_layers() -> CollisionLayers {
 
 pub fn handle_portal_collisions(
     mut commands: Commands,
-    portal_query: Query<&CollidingEntities, With<Portal>>,
+    portal_query: Query<(Entity, &CollidingEntities), With<Portal>>,
     player_entity: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_entity.into_inner();
 
     // If player is colliding with portal, we spawn a new instance
-    for portal_colliding_entities in portal_query.iter() {
+    for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
                 info!("Creating new instance");
-                commands.trigger(CreateInstanceEvent);
+                commands.trigger_targets(SpawnZoneEvent, entity);
             }
         }
     }
 }
 
 pub fn on_portal_entered(
-    _: Trigger<CreateInstanceEvent>,
+    trigger: Trigger<SpawnZoneEvent>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
+    portal_query: Query<&Portal>,
 ) {
     info!("Portal entered!");
-    commands.trigger(CleanupZone);
-    game_state.set(AppState::CreateInstance);
+    if let Ok(portal) = portal_query.get(trigger.entity()) {
+        commands.insert_resource(portal.map_layout.clone());
+        game_state.set(AppState::SpawnZone);
+    }
 }

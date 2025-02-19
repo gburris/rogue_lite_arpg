@@ -6,7 +6,7 @@ use crate::{
     combat::{attributes::Health, components::ActionState},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{equipment::Equipped, inventory::Inventory},
-    map::systems::hub::spawn_hub_entities::NPCSpawnEvent,
+    map::NPCSpawnEvent,
     movement::components::SimpleMotion,
     npc::components::NPC,
     player::interact::InteractionZone,

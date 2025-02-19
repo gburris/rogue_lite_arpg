@@ -35,6 +35,15 @@ pub struct SpriteSheetLayouts {
     pub ice_bolt_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 4))]
     pub bat_enemy_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(
+        tile_size_x = 48,
+        tile_size_y = 24,
+        columns = 5,
+        rows = 8,
+        padding_y = 8,
+        offset_y = 8,
+    ))]
+    pub chest_layout: Handle<TextureAtlasLayout>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -79,10 +88,8 @@ pub struct SpriteAssets {
     pub cobblestone_tiles: Handle<Image>,
     #[asset(path = "door.png")]
     pub run_start_door: Handle<Image>,
-    #[asset(path = "open_chest.png")]
-    pub open_chest: Handle<Image>,
-    #[asset(path = "closed_chest.png")]
-    pub closed_chest: Handle<Image>,
+    #[asset(path = "chests.png")]
+    pub chests_sprite_sheet: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
     #[asset(path = "enemies/basic_enemy_sprite_sheet.png")]

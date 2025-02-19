@@ -46,5 +46,5 @@ pub fn handle_item_ground_transition(
         .insert(Transform::from_translation(final_position))
         .insert(Visibility::Visible)
         .remove_parent()
-        .with_child(InteractionZone { radius: 20.0 });
+        .with_child(InteractionZone::Circle { radius: 25.0 });
 }

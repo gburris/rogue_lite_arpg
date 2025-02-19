@@ -78,7 +78,7 @@ pub fn spawn_npc(
             ),
         ))
         .observe(on_player_interaction)
-        .with_child(InteractionZone { radius: 70.0 })
+        .with_child(InteractionZone::Circle { radius: 70.0 })
         .add_child(mainhand)
         .id();
 

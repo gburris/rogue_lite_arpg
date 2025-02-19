@@ -13,8 +13,9 @@ use super::Player;
     CollidingEntities,
     CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::Player))
 )]
-pub struct InteractionZone {
-    pub radius: f32,
+pub enum InteractionZone {
+    Circle { radius: f32 },
+    Square { length: f32 },
 }
 
 #[derive(Event)]
@@ -75,7 +76,10 @@ pub fn on_interaction_zone_added(
     // We can unwrap since this is an OnAdd. Surely it exists right 0.o
     let interact = interact_query.get(trigger.entity()).unwrap();
 
-    commands
-        .entity(trigger.entity())
-        .insert(Collider::circle(interact.radius));
+    let collider = match interact {
+        InteractionZone::Circle { radius } => Collider::circle(*radius),
+        InteractionZone::Square { length } => Collider::rectangle(*length, *length),
+    };
+
+    commands.entity(trigger.entity()).insert(collider);
 }

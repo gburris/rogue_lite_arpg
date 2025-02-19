@@ -2,14 +2,14 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-use crate::map::components::{InstanceAssets, MapLayout, MapMarkers};
+use crate::map::components::{InstanceAssets, MapLayout, MapMarkers, TileType};
 
 use super::map_data::{MapDataBuilder, MarkerPlacement};
 
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     let mut rng = rand::thread_rng();
 
-    // Randomly select instance type
+    // Randomly select instance type & Resolves ranges from RON file
     let instance_type = if rng.gen_bool(0.9) {
         instance_assets.instance_config.get("Swamp").unwrap()
     } else {

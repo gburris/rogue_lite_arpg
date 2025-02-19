@@ -22,22 +22,24 @@ pub struct MapData {
 }
 
 impl MapData {
-    pub fn new(size: TilemapSize) -> Self {
+    pub fn new(size: TilemapSize, floor_type: TileType) -> Self {
         Self {
             size,
-            tiles: vec![vec![TileType::Ground; size.y as usize]; size.x as usize],
+            tiles: vec![vec![floor_type; size.y as usize]; size.x as usize],
             colliders: Vec::new(),
             markers: HashMap::new(),
         }
     }
-    pub fn new_with_grass(size: TilemapSize) -> Self {
-        Self {
-            size,
-            tiles: vec![vec![TileType::Grass; size.y as usize]; size.x as usize],
-            colliders: Vec::new(),
-            markers: HashMap::new(),
+
+    // Updates all ground tiles to the new floor type while preserving other tile types
+    pub fn set_floor(&mut self, floor_type: TileType) {
+        for row in self.tiles.iter_mut() {
+            for tile in row.iter_mut() {
+                *tile = floor_type;
+            }
         }
     }
+
     pub fn add_wall_collider(&mut self, start: (u32, u32), is_horizontal: bool, length: u32) {
         let start_pos = Vec2::new(start.0 as f32, start.1 as f32);
         let length = length as f32;
@@ -64,7 +66,6 @@ pub struct MapDataBuilder {
     size: TilemapSize,
     hub_size: Option<TilemapSize>,
     should_add_dead_zones: bool,
-    floor_type: TileType,
     num_enemies: Option<u32>,
     num_chests: Option<u32>,
     marker_placement: Option<MarkerPlacement>,
@@ -73,22 +74,21 @@ pub struct MapDataBuilder {
 impl MapDataBuilder {
     pub fn new(size: TilemapSize) -> Self {
         Self {
-            map_data: MapData::new(size),
+            map_data: MapData::new(size, TileType::Ground), // Default to ground
             size,
             hub_size: None,
             should_add_dead_zones: false,
-            floor_type: TileType::Ground,
             num_enemies: None,
             num_chests: None,
             marker_placement: None,
         }
     }
 
-    pub fn with_grass_floor(mut self) -> Self {
-        self.floor_type = TileType::Grass;
-        self.map_data = MapData::new_with_grass(self.size);
+    pub fn with_floor(mut self, floor_type: TileType) -> Self {
+        self.map_data.set_floor(floor_type);
         self
     }
+
     pub fn with_enemies(mut self, count: u32) -> Self {
         self.num_enemies = Some(count);
         self
@@ -98,6 +98,7 @@ impl MapDataBuilder {
         self.num_chests = Some(count);
         self
     }
+    
     pub fn with_exterior_walls(mut self) -> Self {
         add_exterior_walls(&mut self.map_data, self.size);
         self

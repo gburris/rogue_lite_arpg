@@ -85,8 +85,11 @@ pub fn find_multiple_positions(
     positions
 }
 
+const INVALID_SPAWN_TILES: [TileType; 2] = [TileType::Wall, TileType::DeadZone];
+
 pub fn is_position_valid(map: &Vec<Vec<TileType>>, x: u32, y: u32) -> bool {
-    map[x as usize][y as usize] == TileType::Ground
+    let tile = &map[x as usize][y as usize];
+    !INVALID_SPAWN_TILES.contains(tile)
 }
 
 fn determine_map_orientation(map_size: TilemapSize) -> MapOrientation {

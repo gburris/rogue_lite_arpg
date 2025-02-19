@@ -6,7 +6,7 @@ use crate::animation::{AnimationIndices, AnimationTimer};
 use crate::configuration::GameCollisionLayer;
 
 use crate::configuration::assets::{SpriteAssets, SpriteSheetLayouts};
-use crate::econ::components::GoldDropEvent;
+use crate::econ::gold_drop::GoldDropEvent;
 use crate::player::interact::{InteractionEvent, InteractionZone};
 
 #[derive(Debug, Event)]
@@ -72,7 +72,7 @@ fn spawn_chest(
             ));
 
             p.spawn((
-                InteractionZone::Square { length: 50.0 },
+                InteractionZone::OPEN_CHEST,
                 Transform::from_translation(Vec3::new(0.0, -12.0, 0.0)),
             ));
         });

@@ -1,16 +1,13 @@
 use avian2d::prelude::CollidingEntities;
 use bevy::prelude::*;
 
-use crate::{
-    items::{Lootable, Magnet},
-    player::Player,
-};
+use crate::{items::Magnet, player::Player};
 
 pub fn update_magnets(
     time: Res<Time>,
     magnet_query: Query<(&Parent, &Magnet, &CollidingEntities), With<Magnet>>,
-    mut parent_query: Query<&mut Transform, (Without<Magnet>, With<Lootable>)>,
-    player_query: Single<(Entity, &Transform), (With<Player>, Without<Magnet>, Without<Lootable>)>,
+    mut parent_query: Query<&mut Transform, Without<Player>>,
+    player_query: Single<(Entity, &Transform), (With<Player>, Without<Magnet>)>,
 ) {
     const MAGNETIC_FORCE_CONSTANT: f32 = 10000000.0;
     let (player_entity, player_transform) = player_query.into_inner();

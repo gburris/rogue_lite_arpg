@@ -1,9 +1,16 @@
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{configuration::assets::SpriteAssets, items::Magnet, labels::layer::ZLayer};
+use crate::{
+    configuration::assets::SpriteAssets, econ::currency::Currency, items::Magnet,
+    labels::layer::ZLayer,
+};
 
-use super::components::{Currency, GoldDropEvent};
+#[derive(Event)]
+pub struct GoldDropEvent {
+    pub drop_location: Transform,
+    pub amount: u32,
+}
 
 pub fn on_gold_drop_event(
     trigger: Trigger<GoldDropEvent>,

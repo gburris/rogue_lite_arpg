@@ -61,10 +61,6 @@ pub enum ConsumableType {
 #[derive(Event)]
 pub struct ItemDropEvent;
 
-//Automatically loot the item when passing over it
-#[derive(Component, Default)]
-pub struct Autoloot;
-
 #[derive(Component, Clone, Debug, Default)]
 #[require(
     Visibility(|| Visibility::Visible),

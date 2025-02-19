@@ -5,6 +5,8 @@ use std::collections::HashMap;
 
 use crate::map::components::{InstanceAssets, MapLayout, MapMarkers, MarkerType, TileType};
 
+use super::map_data::MapDataBuilder;
+
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     let mut rng = rand::thread_rng();
 
@@ -30,11 +32,10 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
     let num_chests =
         rng.gen_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
 
-    // Generate tiles
-    let map_data = super::create_tile_layout::create_map_with_exterior_walls_and_dead_zones(
-        map_size,
-        instance_type.dead_zone_squares,
-    );
+    let map_data = MapDataBuilder::new(map_size)
+        .with_dead_zones()
+        .with_exterior_walls()
+        .build();
 
     // Generate markers
     let markers = generate_instance_markers(&map_data.tiles, map_size, num_enemies, num_chests);

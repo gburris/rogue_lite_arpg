@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use std::collections::HashMap;
 
-use super::{create_tile_layout::create_hub, utils::calculate_center_rect};
+use super::{map_data::MapDataBuilder, utils::calculate_center_rect};
 use crate::map::components::{MapLayout, MapMarkers, MarkerType};
 
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;
@@ -12,10 +12,13 @@ const NPC_OFFSET: f32 = 5.0;
 pub fn generate_hub_layout() -> MapLayout {
     let size = TilemapSize { x: 100, y: 100 };
     let hub_size = TilemapSize { x: 25, y: 25 };
-
-    let map_data = create_hub(size, hub_size);
     let markers = generate_hub_markers(size, hub_size);
-    // let environmental_colliders = add_environmental_colliders_to_zone(&tiles, size);
+
+    let map_data = MapDataBuilder::new(size)
+        .with_grass_floor()
+        .with_exterior_walls()
+        .with_hub(hub_size)
+        .build();
 
     MapLayout {
         size,

@@ -153,3 +153,4 @@ pub fn generate_entrance_exit_positions(map_size: TilemapSize) -> (Vec<Vec2>, Ve
     };
     (player_spawn, exits)
 }
+

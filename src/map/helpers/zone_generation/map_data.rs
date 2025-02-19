@@ -1,4 +1,4 @@
-use bevy::{math::Vec2, transform::components::Transform};
+use bevy::{log::warn, math::Vec2, transform::components::Transform};
 use bevy_ecs_tilemap::map::TilemapSize;
 use std::collections::HashMap;
 
@@ -7,6 +7,7 @@ use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, Marker
 use super::{
     dead_zone::add_dead_zones,
     hub::{build_hub, get_hub_markers},
+    temple::{build_temple, get_temple_markers},
     utils::{
         calculate_center_rect, calculate_collider_position, calculate_wall_dimensions,
         find_multiple_positions, generate_entrance_exit_positions,
@@ -61,10 +62,16 @@ pub enum MarkerPlacement {
     Hub,
 }
 
+pub enum Prefab {
+    Hub(TilemapSize),
+    Temple,
+}
+
 pub struct MapDataBuilder {
     map_data: MapData,
     size: TilemapSize,
     hub_size: Option<TilemapSize>,
+    prefabs: Vec<Prefab>,
     should_add_dead_zones: bool,
     num_enemies: Option<u32>,
     num_chests: Option<u32>,
@@ -76,6 +83,7 @@ impl MapDataBuilder {
         Self {
             map_data: MapData::new(size, TileType::Ground), // Default to ground
             size,
+            prefabs: Vec::new(),
             hub_size: None,
             should_add_dead_zones: false,
             num_enemies: None,
@@ -89,6 +97,11 @@ impl MapDataBuilder {
         self
     }
 
+    pub fn with_prefab(mut self, prefab: Prefab) -> Self {
+        self.prefabs.push(prefab);
+        self
+    }
+
     pub fn with_enemies(mut self, count: u32) -> Self {
         self.num_enemies = Some(count);
         self
@@ -98,7 +111,7 @@ impl MapDataBuilder {
         self.num_chests = Some(count);
         self
     }
-    
+
     pub fn with_exterior_walls(mut self) -> Self {
         add_exterior_walls(&mut self.map_data, self.size);
         self
@@ -155,18 +168,15 @@ impl MapDataBuilder {
     }
 
     pub fn build(mut self) -> MapData {
-        // Add dead zones if requested
         if self.should_add_dead_zones {
             add_dead_zones(&mut self.map_data, self.size);
         }
 
-        // Hub is now a "prefab" and can be added to any map
         if let Some(hub_size) = self.hub_size {
             let hub_bounds = calculate_center_rect(self.size, hub_size);
             build_hub(&mut self.map_data, &hub_bounds);
         }
 
-        //Add markers based on user settings
         if let Some(ref placement) = self.marker_placement {
             match placement {
                 MarkerPlacement::Random => {
@@ -177,6 +187,34 @@ impl MapDataBuilder {
                 }
             }
         }
+
+        for prefab in self.prefabs {
+            match prefab {
+                Prefab::Temple => {
+                    if let Some(template_rectangle) = build_temple(&mut self.map_data) {
+                        let temple_markers: HashMap<MarkerType, Vec<Vec2>> =
+                            get_temple_markers(&template_rectangle);
+                        merge_markers(&mut self.map_data.markers, temple_markers);
+                    } else {
+                        warn!("No temple markers -> Temple was not returned");
+                    }
+                }
+                Prefab::Hub(tilemap_size) => todo!(),
+            }
+        }
+
         self.map_data
+    }
+}
+
+fn merge_markers(
+    existing_markers: &mut HashMap<MarkerType, Vec<Vec2>>,
+    new_markers: HashMap<MarkerType, Vec<Vec2>>,
+) {
+    for (marker_type, positions) in new_markers {
+        existing_markers
+            .entry(marker_type)
+            .or_insert_with(Vec::new)
+            .extend(positions);
     }
 }

@@ -74,8 +74,8 @@ impl MapDataBuilder {
         self
     }
 
-    pub fn with_dead_zones(mut self) -> Self {
-        self.should_add_dead_zones = true;
+    pub fn with_dead_zones(mut self, include_dead_zones: bool) -> Self {
+        self.should_add_dead_zones = include_dead_zones;
         self
     }
 

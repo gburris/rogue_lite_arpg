@@ -12,7 +12,7 @@ use super::{
 };
 use crate::map::components::{MarkerType, TileType};
 
-const TEMPLE_WIDTH: u32 = 7; // Reduced size for better control
+const TEMPLE_WIDTH: u32 = 7;
 const TEMPLE_HEIGHT: u32 = 7;
 const ENTRANCE_WIDTH: u32 = 3;
 
@@ -30,12 +30,11 @@ fn find_temple_position(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> Opti
         let offset_y = rng.gen_range(-(map_size.y as i32 / 4)..(map_size.y as i32 / 4));
 
         let base_bounds = calculate_center_rect(map_size, temple_size);
-        let bounds = Rect::new(
-            base_bounds.min.x + offset_x as f32,
-            base_bounds.min.y + offset_y as f32,
-            TEMPLE_WIDTH as f32,
-            TEMPLE_HEIGHT as f32,
-        );
+        let min_x = base_bounds.min.x + offset_x as f32;
+        let min_y = base_bounds.min.y + offset_y as f32;
+        let max_x = min_x + TEMPLE_WIDTH as f32;
+        let max_y = min_y + TEMPLE_HEIGHT as f32;
+        let bounds = Rect::new(min_x, min_y, max_x, max_y);
 
         if can_place_temple(map, &bounds) {
             return Some(bounds);

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-use crate::map::components::{InstanceAssets, MapLayout, MapMarkers, TileType};
+use crate::map::components::{InstanceAssets, MapLayout, MapMarkers};
 
 use super::map_data::{MapDataBuilder, MarkerPlacement, Prefab};
 

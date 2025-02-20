@@ -13,11 +13,20 @@ use super::{map_data::MapData, utils::calculate_center_rect};
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;
 const LEVEL_EXIT_Y_OFFSET: f32 = 23.0;
 const NPC_OFFSET: f32 = 5.0;
+const HUB_WIDTH: u32 = 25; // Reduced size for better control
+const HUB_HEIGHT: u32 = 25;
+const ENTRANCE_WIDTH: u32 = 25;
 
-pub fn build_hub(mut map_data: &mut MapData, hub_bounds: &Rect) {
+pub fn build_hub(mut map_data: &mut MapData) -> TilemapSize {
+    let hub_size = TilemapSize {
+        x: HUB_WIDTH,
+        y: HUB_HEIGHT,
+    };
+    let hub_bounds = calculate_center_rect(map_data.size, hub_size);
     add_hub_cobblestone(&mut map_data, &hub_bounds);
     add_hub_walls(&mut map_data, &hub_bounds);
     add_hub_entrance(&mut map_data, &hub_bounds);
+    hub_size
 }
 
 fn add_hub_cobblestone(map_data: &mut MapData, bounds: &Rect) {

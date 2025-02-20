@@ -63,7 +63,7 @@ pub enum MarkerPlacement {
 }
 
 pub enum Prefab {
-    Hub(TilemapSize),
+    NPCHub,
     Temple,
 }
 
@@ -127,39 +127,27 @@ impl MapDataBuilder {
         self
     }
 
-    fn generate_random_markers(&mut self) {
+    fn generate_random_markers(&self) -> HashMap<MarkerType, Vec<Vec2>> {
+        let mut markers = HashMap::new();
+
         if let Some(num_enemies) = self.num_enemies {
             let enemy_positions =
                 find_multiple_positions(&self.map_data.tiles, self.size, 0.3..0.7, num_enemies);
-            self.map_data
-                .markers
-                .insert(MarkerType::EnemySpawns, enemy_positions);
+            markers.insert(MarkerType::EnemySpawns, enemy_positions);
         }
 
         if let Some(num_chests) = self.num_chests {
             let chest_positions =
                 find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests);
-            self.map_data
-                .markers
-                .insert(MarkerType::ChestSpawns, chest_positions);
+            markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
         // Always generate entrance/exit positions for random layouts
         let (player_pos, exit_positions) = generate_entrance_exit_positions(self.size);
-        self.map_data
-            .markers
-            .insert(MarkerType::PlayerSpawns, player_pos);
-        self.map_data
-            .markers
-            .insert(MarkerType::LevelExits, exit_positions);
-    }
+        markers.insert(MarkerType::PlayerSpawns, player_pos);
+        markers.insert(MarkerType::LevelExits, exit_positions);
 
-    fn generate_hub_markers(&mut self) {
-        let hub_size = self
-            .hub_size
-            .unwrap_or_else(|| panic!("Cannot add hub markers without a hub"));
-
-        self.map_data.markers = get_hub_markers(self.size, hub_size);
+        markers
     }
 
     pub fn build(mut self) -> MapData {
@@ -167,21 +155,7 @@ impl MapDataBuilder {
             add_dead_zones(&mut self.map_data, self.size);
         }
 
-        if let Some(hub_size) = self.hub_size {
-            let hub_bounds = calculate_center_rect(self.size, hub_size);
-            build_hub(&mut self.map_data, &hub_bounds);
-        }
-
-        if let Some(ref placement) = self.marker_placement {
-            match placement {
-                MarkerPlacement::Random => {
-                    self.generate_random_markers();
-                }
-                MarkerPlacement::Fixed => todo!(),
-            }
-        }
-
-        for prefab in self.prefabs {
+        for prefab in &self.prefabs {
             match prefab {
                 Prefab::Temple => {
                     if let Some(template_rectangle) = build_temple(&mut self.map_data) {
@@ -192,14 +166,24 @@ impl MapDataBuilder {
                         warn!("No temple markers -> Temple was not returned");
                     }
                 }
-                Prefab::Hub(hub_size) => {
-                    let hub_bounds = calculate_center_rect(self.size, hub_size);
-                    build_hub(&mut self.map_data, &hub_bounds);
+                Prefab::NPCHub => {
+                    let hub_size = build_hub(&mut self.map_data);
                     merge_markers(
                         &mut self.map_data.markers,
                         get_hub_markers(self.size, hub_size),
                     );
                 }
+            }
+        }
+
+        if let Some(ref placement) = self.marker_placement {
+            match placement {
+                MarkerPlacement::Random => {
+                    //TODO, update generate random markers to return random markers, then call merge on it
+                    let random_markers = self.generate_random_markers();
+                    merge_markers(&mut self.map_data.markers, random_markers);
+                }
+                MarkerPlacement::Fixed => todo!(),
             }
         }
 

@@ -6,7 +6,7 @@ use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, Marker
 
 use super::{
     dead_zone::add_dead_zones,
-    hub::{build_hub, get_hub_markers},
+    hub::{self, build_hub, get_hub_markers},
     temple::{build_temple, get_temple_markers},
     utils::{
         calculate_center_rect, calculate_collider_position, calculate_wall_dimensions,
@@ -59,7 +59,7 @@ impl MapData {
 
 pub enum MarkerPlacement {
     Random,
-    Hub,
+    Fixed,
 }
 
 pub enum Prefab {
@@ -122,11 +122,6 @@ impl MapDataBuilder {
         self
     }
 
-    pub fn with_hub(mut self, hub_size: TilemapSize) -> Self {
-        self.hub_size = Some(hub_size);
-        self
-    }
-
     pub fn with_marker_placement(mut self, placement: MarkerPlacement) -> Self {
         self.marker_placement = Some(placement);
         self
@@ -182,9 +177,7 @@ impl MapDataBuilder {
                 MarkerPlacement::Random => {
                     self.generate_random_markers();
                 }
-                MarkerPlacement::Hub => {
-                    self.generate_hub_markers();
-                }
+                MarkerPlacement::Fixed => todo!(),
             }
         }
 
@@ -199,7 +192,14 @@ impl MapDataBuilder {
                         warn!("No temple markers -> Temple was not returned");
                     }
                 }
-                Prefab::Hub(tilemap_size) => todo!(),
+                Prefab::Hub(hub_size) => {
+                    let hub_bounds = calculate_center_rect(self.size, hub_size);
+                    build_hub(&mut self.map_data, &hub_bounds);
+                    merge_markers(
+                        &mut self.map_data.markers,
+                        get_hub_markers(self.size, hub_size),
+                    );
+                }
             }
         }
 

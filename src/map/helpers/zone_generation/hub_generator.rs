@@ -1,6 +1,6 @@
 use bevy_ecs_tilemap::map::TilemapSize;
 
-use super::map_data::{MapDataBuilder, MarkerPlacement};
+use super::map_data::{MapDataBuilder, Prefab};
 use crate::map::components::{MapLayout, MapMarkers, TileType};
 
 pub fn generate_hub_layout() -> MapLayout {
@@ -10,8 +10,7 @@ pub fn generate_hub_layout() -> MapLayout {
     let map_data = MapDataBuilder::new(size)
         .with_floor(TileType::Grass)
         .with_exterior_walls()
-        .with_hub(hub_size)
-        .with_marker_placement(MarkerPlacement::Hub)
+        .with_prefab(Prefab::Hub(hub_size))
         .build();
 
     MapLayout {

@@ -20,7 +20,8 @@ pub fn calculate_num_dead_zones(area: u32) -> u32 {
     if area < 625 {
         return 0;
     }
-    ((area as f32 / 2500.0).ceil() as u32).min(10)
+
+    ((area as f32 / 8333.33).ceil() as u32).min(10)
 }
 
 pub fn calculate_wall_dimensions(is_horizontal: bool, length: f32) -> (f32, f32) {
@@ -153,4 +154,3 @@ pub fn generate_entrance_exit_positions(map_size: TilemapSize) -> (Vec<Vec2>, Ve
     };
     (player_spawn, exits)
 }
-

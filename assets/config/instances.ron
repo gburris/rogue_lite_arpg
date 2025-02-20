@@ -5,7 +5,7 @@ InstanceConfig(
             size_y_range: (50.0, 100.0),
             number_of_enemies_range: (10.0, 15.0),
             dead_zone_squares: true,
-            chest_range: (1.0, 3.0),
+            chest_range: (0.0, 0.0),
         ),
         "TreasureRoom": InstanceType(
             size_x_range: (50.0, 50.0),

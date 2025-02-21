@@ -5,9 +5,9 @@ use crate::{items::Magnet, player::Player};
 
 pub fn update_magnets(
     time: Res<Time>,
-    magnet_query: Query<(&Parent, &Magnet, &CollidingEntities), With<Magnet>>,
+    magnet_query: Query<(&Parent, &Magnet, &CollidingEntities)>,
     mut parent_query: Query<&mut Transform, Without<Player>>,
-    player_query: Single<(Entity, &Transform), (With<Player>, Without<Magnet>)>,
+    player_query: Single<(Entity, &Transform), With<Player>>,
 ) {
     const MAGNETIC_FORCE_CONSTANT: f32 = 10000000.0;
     let (player_entity, player_transform) = player_query.into_inner();

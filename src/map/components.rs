@@ -21,9 +21,6 @@ pub struct NPCSpawnEvent(pub Vec<Vec3>);
 #[derive(Debug, Event)]
 pub struct EnemySpawnEvent(pub Vec<Vec3>);
 
-#[derive(Debug, Event)]
-pub struct ChestSpawnEvent(pub Vec<Vec3>);
-
 #[derive(Component, Clone, Default)]
 pub struct Mapper {
     pub map_layout: MapLayout,

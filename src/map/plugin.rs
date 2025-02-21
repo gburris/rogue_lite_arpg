@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use super::components::WorldSpaceConfig;
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    map::{portal, systems::*},
+    map::{chest, components::WorldSpaceConfig, portal, systems::*},
 };
 
 pub struct MapPlugin;
@@ -29,6 +28,7 @@ impl Plugin for MapPlugin {
                 (portal::handle_portal_collisions).in_set(InGameSet::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
-            .add_observer(portal::on_portal_entered);
+            .add_observer(portal::on_portal_entered)
+            .add_observer(chest::on_spawn_chests_event);
     }
 }

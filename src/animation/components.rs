@@ -6,6 +6,7 @@ use crate::combat::components::ActionState;
 pub struct AnimationIndices {
     pub first: usize,
     pub last: usize,
+    pub is_one_shot: bool,
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -199,6 +200,7 @@ impl DefaultAnimationConfig {
         AnimationIndices {
             first,
             last: first + animation.frame_count - 1,
+            is_one_shot: false,
         }
     }
 

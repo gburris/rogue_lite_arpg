@@ -11,7 +11,7 @@ use crate::{
     },
     enemy::Enemy,
     items::{equipment::Equippable, inventory::Inventory},
-    player::MainHandActivated,
+    player::UseMainhandInputEvent,
 };
 
 use super::{EquipmentSlot, Equipped};
@@ -33,7 +33,7 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
 // TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
 // Their weapon is on cooldown
 pub fn on_main_hand_activated(
-    main_hand_trigger: Trigger<MainHandActivated>,
+    main_hand_trigger: Trigger<UseMainhandInputEvent>,
     mut commands: Commands,
     mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
     mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,

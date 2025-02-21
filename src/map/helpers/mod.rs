@@ -1,1 +1,1 @@
-pub mod zone_generation;
+pub mod generator;

@@ -36,12 +36,9 @@ pub fn handle_portal_collisions(
     player_entity: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_entity.into_inner();
-
-    // If player is colliding with portal, we spawn a new instance
     for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == player_entity {
-                info!("Creating new instance");
                 commands.trigger_targets(SpawnZoneEvent, entity);
             }
         }
@@ -54,7 +51,6 @@ pub fn on_portal_entered(
     mut game_state: ResMut<NextState<AppState>>,
     portal_query: Query<&Portal>,
 ) {
-    info!("Portal entered!");
     if let Ok(portal) = portal_query.get(trigger.entity()) {
         commands.insert_resource(portal.map_layout.clone());
         game_state.set(AppState::SpawnZone);

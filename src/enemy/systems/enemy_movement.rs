@@ -9,7 +9,7 @@ use crate::{
     enemy::Enemy,
     movement::components::SimpleMotion,
     npc::NPC,
-    player::{MainHandActivated, Player},
+    player::{Player, UseMainhandInputEvent},
 };
 
 #[derive(Component)]
@@ -67,7 +67,7 @@ pub fn move_enemies_toward_player(
                 commands.entity(entity).remove::<WanderDirection>();
             }
 
-            commands.trigger_targets(MainHandActivated, entity);
+            commands.trigger_targets(UseMainhandInputEvent, entity);
 
             // Chase behavior
             let towards_player_direction = (player_pos - enemy_transform.translation)

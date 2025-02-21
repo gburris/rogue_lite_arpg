@@ -1,18 +1,16 @@
-use avian2d::prelude::CollidingEntities;
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{
-    econ::components::Currency,
-    items::{inventory::Inventory, Autoloot},
-    player::Player,
-};
+use crate::{items::inventory::Inventory, player::Player};
 
-pub fn update_autoloot_currency(
+#[derive(Component)]
+pub struct Currency {
+    pub value: u32,
+}
+
+pub fn handle_currency_collisions(
     mut commands: Commands,
-    currency_query: Query<
-        (Entity, &Currency, &CollidingEntities),
-        (With<Autoloot>, With<Currency>),
-    >,
+    currency_query: Query<(Entity, &Currency, &CollidingEntities), With<Currency>>,
     player: Single<(Entity, &mut Inventory), With<Player>>,
 ) {
     let (player_entity, mut player_inventory) = player.into_inner();

@@ -7,7 +7,7 @@ use crate::{
         damage::{components::Invulnerable, events::DefeatedEvent},
     },
     despawn::components::LiveDuration,
-    econ::components::GoldDropEvent,
+    econ::gold_drop::GoldDropEvent,
     enemy::{Enemy, Experience},
     items::{inventory::inventory::Inventory, Item, ItemDropEvent},
     player::{

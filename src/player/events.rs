@@ -14,7 +14,4 @@ pub struct PlayerMovementEvent {
 pub struct PlayerStoppedEvent;
 
 #[derive(Event)]
-pub struct MainHandActivated;
-
-#[derive(Event)]
-pub struct AttemptInteractionInput;
+pub struct UseMainhandInputEvent;

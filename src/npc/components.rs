@@ -9,12 +9,10 @@ use crate::{
     },
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
     movement::components::SimpleMotion,
+    player::interact::InteractionEvent,
 };
 
-use super::{
-    events::NPCInteraction, on_game_guide_start, on_shop_keeper_store_open,
-    on_stat_trainer_store_open,
-};
+use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_store_open};
 
 #[derive(Component)]
 #[require(
@@ -25,16 +23,6 @@ use super::{
     CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded, GameCollisionLayer::InAir]))
 )]
 pub struct NPC;
-
-#[derive(Component)]
-#[require(
-    CollidingEntities,
-    Sensor,
-    Collider(||  Collider::circle(70.0)),
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, [GameCollisionLayer::Player]))
-
-)]
-pub struct NPCInteractionRadius;
 
 #[derive(Debug, Clone, Component, Copy)]
 pub enum NPCType {
@@ -65,7 +53,7 @@ impl NPCType {
         }
     }
 
-    pub fn get_observer(&self) -> fn(Trigger<NPCInteraction>, Commands) {
+    pub fn get_interaction_observer(&self) -> fn(Trigger<InteractionEvent>, Commands) {
         match self {
             NPCType::Helper => on_game_guide_start,
             NPCType::Shopkeeper => on_shop_keeper_store_open,

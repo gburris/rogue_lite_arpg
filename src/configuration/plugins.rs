@@ -6,7 +6,6 @@ pub struct GamePlugins;
 
 use {
     crate::animation::AnimationPlugin,
-    crate::chests::plugin::ChestPlugin,
     crate::combat::plugin::CombatPlugin,
     crate::configuration::{
         assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin,
@@ -46,7 +45,6 @@ impl Plugin for GamePlugins {
                 PlayerPlugin,
                 EnemyPlugin,
                 NPCPlugin,
-                ChestPlugin,
             ))
             // UI
             .add_plugins(UIPlugin);

@@ -33,7 +33,11 @@ pub fn spawn_projectile(
         weapon.projectile.clone(),
         transform,
         LinearVelocity(velocity),
-        AnimationIndices { first: 0, last: 4 },
+        AnimationIndices {
+            first: 0,
+            last: 4,
+            is_one_shot: false,
+        },
         AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         CollisionLayers::new(
             GameCollisionLayer::InAir,

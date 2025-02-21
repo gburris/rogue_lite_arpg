@@ -1,3 +1,3 @@
-pub mod components;
-pub mod handle_gold_drop_event;
+pub mod currency;
+pub mod gold_drop;
 pub mod plugin;

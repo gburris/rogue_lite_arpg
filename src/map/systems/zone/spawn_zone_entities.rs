@@ -4,9 +4,9 @@ use crate::{
     configuration::assets::SpriteAssets,
     labels::layer::ZLayer,
     map::{
+        chest::SpawnChestsEvent,
         components::{
-            ChestSpawnEvent, EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent,
-            WorldSpaceConfig,
+            EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent, WorldSpaceConfig,
         },
         helpers::zone_generation::generate_instance_layout,
         portal::Portal,
@@ -80,7 +80,7 @@ pub fn spawn_zone_entities(
             &map_layout,
             ZLayer::Enemy,
         );
-        commands.trigger(ChestSpawnEvent(spawn_positions));
+        commands.trigger(SpawnChestsEvent(spawn_positions));
     }
 
     // Spawn NPCs

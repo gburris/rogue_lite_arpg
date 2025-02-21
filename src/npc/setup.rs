@@ -2,10 +2,17 @@ use avian2d::prelude::LockedAxes;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection}, combat::{attributes::Health, components::ActionState}, configuration::assets::{SpriteAssets, SpriteSheetLayouts}, items::{equipment::Equipped, inventory::Inventory}, map::NPCSpawnEvent, movement::components::SimpleMotion, npc::components::NPC
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
+    combat::{attributes::Health, components::ActionState},
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    items::{equipment::Equipped, inventory::Inventory},
+    map::NPCSpawnEvent,
+    movement::components::SimpleMotion,
+    npc::components::NPC,
+    player::interact::InteractionZone,
 };
 
-use super::components::{NPCInteractionRadius, NPCType};
+use super::components::NPCType;
 
 pub fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
@@ -41,7 +48,7 @@ pub fn spawn_npc(
 ) {
     let mainhand = npc_type.spawn_weapon(commands, sprites, atlases);
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
-    let observer_to_use = npc_type.get_observer();
+    let on_player_interaction = npc_type.get_interaction_observer();
     let sprite = Sprite::from_atlas_image(
         sprite_sheet_to_use,
         TextureAtlas {
@@ -70,9 +77,9 @@ pub fn spawn_npc(
                 FacingDirection::Down,
             ),
         ))
-        .with_child(NPCInteractionRadius)
+        .observe(on_player_interaction)
+        .with_child(InteractionZone::NPC)
         .add_child(mainhand)
-        .observe(observer_to_use)
         .id();
 
     commands.entity(mainhand).insert(Equipped::new(npc));

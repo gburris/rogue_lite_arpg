@@ -1,6 +1,5 @@
 // Module declarations - keep these at the top
 pub mod animation;
-pub mod chests;
 pub mod combat;
 pub mod configuration;
 pub mod despawn;

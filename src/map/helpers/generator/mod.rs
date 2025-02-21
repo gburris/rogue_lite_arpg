@@ -1,9 +1,8 @@
 mod dead_zone;
-mod hub;
 mod hub_generator;
 mod instance_generator;
 mod map_data;
-mod temple;
+mod prefabs;
 mod utils;
 mod walls;
 

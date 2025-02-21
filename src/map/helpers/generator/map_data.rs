@@ -6,8 +6,9 @@ use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, Marker
 
 use super::{
     dead_zone::add_dead_zones,
-    hub::{build_hub, get_hub_markers},
-    temple::{build_temple, get_temple_markers},
+    prefabs::{
+        build_hub, build_temple, get_hub_markers, get_temple_markers, prefab::Prefab, Hub, Temple,
+    },
     utils::{
         calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
         generate_entrance_exit_positions,
@@ -57,7 +58,7 @@ impl MapData {
     }
 }
 
-pub enum Prefab {
+pub enum PrefabType {
     NPCHub,
     Temple,
 }
@@ -65,7 +66,7 @@ pub enum Prefab {
 pub struct MapDataBuilder {
     map_data: MapData,
     size: TilemapSize,
-    prefabs: Vec<Prefab>,
+    prefabs: Vec<PrefabType>,
     should_add_dead_zones: bool,
     num_enemies: Option<u32>,
     num_chests: Option<u32>,
@@ -88,7 +89,7 @@ impl MapDataBuilder {
         self
     }
 
-    pub fn with_prefab(mut self, prefab: Prefab) -> Self {
+    pub fn with_prefab(mut self, prefab: PrefabType) -> Self {
         self.prefabs.push(prefab);
         self
     }
@@ -141,24 +142,17 @@ impl MapDataBuilder {
             add_dead_zones(&mut self.map_data, self.size);
         }
 
-        for prefab in &self.prefabs {
-            match prefab {
-                Prefab::Temple => {
-                    if let Some(template_rectangle) = build_temple(&mut self.map_data) {
-                        let temple_markers: HashMap<MarkerType, Vec<Vec2>> =
-                            get_temple_markers(&template_rectangle);
-                        merge_markers(&mut self.map_data.markers, temple_markers);
-                    } else {
-                        warn!("No temple markers -> Temple was not returned");
-                    }
-                }
-                Prefab::NPCHub => {
-                    let hub_size = build_hub(&mut self.map_data);
-                    merge_markers(
-                        &mut self.map_data.markers,
-                        get_hub_markers(self.size, hub_size),
-                    );
-                }
+        for prefab_type in &self.prefabs {
+            let prefab: Box<dyn Prefab> = match prefab_type {
+                PrefabType::Temple => Box::new(Temple),
+                PrefabType::NPCHub => Box::new(Hub),
+            };
+
+            if let Some(bounds) = prefab.build(&mut self.map_data) {
+                let markers = prefab.get_markers(&bounds);
+                merge_markers(&mut self.map_data.markers, markers);
+            } else {
+                warn!("Failed to build prefab: ");
             }
         }
         //Add all other map markers

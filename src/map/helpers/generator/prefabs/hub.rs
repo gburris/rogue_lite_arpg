@@ -6,9 +6,12 @@ use bevy::{
 };
 use bevy_ecs_tilemap::map::TilemapSize;
 
-use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
+use crate::map::{
+    components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType},
+    helpers::generator::{utils::calculate_center_rect, MapData},
+};
 
-use super::{map_data::MapData, utils::calculate_center_rect};
+use super::prefab::Prefab;
 
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;
 const LEVEL_EXIT_Y_OFFSET: f32 = 23.0;
@@ -16,6 +19,47 @@ const NPC_OFFSET: f32 = 5.0;
 const HUB_WIDTH: u32 = 25; // Reduced size for better control
 const HUB_HEIGHT: u32 = 25;
 const ENTRANCE_WIDTH: i32 = 5;
+
+pub struct Hub;
+
+impl Prefab for Hub {
+    fn build(&self, map_data: &mut MapData) -> Option<Rect> {
+        let hub_size = TilemapSize {
+            x: HUB_WIDTH,
+            y: HUB_HEIGHT,
+        };
+        let hub_bounds = calculate_center_rect(map_data.size, hub_size);
+
+        add_hub_cobblestone(map_data, &hub_bounds);
+        add_hub_walls(map_data, &hub_bounds);
+        add_hub_entrance(map_data, &hub_bounds);
+
+        Some(hub_bounds)
+    }
+
+    fn get_markers(&self, bounds: &Rect) -> HashMap<MarkerType, Vec<Vec2>> {
+        let mut markers: HashMap<MarkerType, Vec<Vec2>> = HashMap::new();
+        let center_of_hub = bounds.center();
+
+        // Generate player spawn
+        let player_spawn = Vec2::new(center_of_hub.x, bounds.min.y + PLAYER_SPAWN_Y_OFFSET);
+        markers.insert(MarkerType::PlayerSpawns, vec![player_spawn]);
+
+        // Generate level exit
+        let level_exit = Vec2::new(center_of_hub.x, bounds.min.y + LEVEL_EXIT_Y_OFFSET);
+        markers.insert(MarkerType::LevelExits, vec![level_exit]);
+
+        // Generate NPC positions
+        let npc_positions = vec![
+            Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y + NPC_OFFSET),
+            Vec2::new(center_of_hub.x - NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
+            Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
+        ];
+        markers.insert(MarkerType::NPCSpawns, npc_positions);
+
+        markers
+    }
+}
 
 pub fn build_hub(mut map_data: &mut MapData) -> TilemapSize {
     let hub_size = TilemapSize {

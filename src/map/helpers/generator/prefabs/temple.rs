@@ -6,11 +6,41 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 use std::collections::HashMap;
 
-use super::{
-    map_data::MapData,
-    utils::{calculate_center_rect, is_position_valid},
+use crate::map::{
+    components::{MarkerType, TileType},
+    helpers::generator::{
+        utils::{calculate_center_rect, is_position_valid},
+        MapData,
+    },
 };
-use crate::map::components::{MarkerType, TileType};
+
+use super::prefab::Prefab;
+pub struct Temple;
+
+impl Prefab for Temple {
+    fn build(&self, map_data: &mut MapData) -> Option<Rect> {
+        if let Some(bounds) = find_temple_position(&map_data.tiles, map_data.size) {
+            add_temple_structure(map_data, &bounds);
+            Some(bounds)
+        } else {
+            warn!("No valid temple position was found");
+            None
+        }
+    }
+
+    fn get_markers(&self, bounds: &Rect) -> HashMap<MarkerType, Vec<Vec2>> {
+        let mut markers = HashMap::new();
+
+        let chest_pos = Vec2::new(
+            bounds.min.x + TEMPLE_WIDTH as f32 / 2.0,
+            bounds.min.y + TEMPLE_HEIGHT as f32 / 2.0,
+        );
+
+        markers.insert(MarkerType::ChestSpawns, vec![chest_pos]);
+
+        markers
+    }
+}
 
 const TEMPLE_WIDTH: u32 = 7;
 const TEMPLE_HEIGHT: u32 = 7;

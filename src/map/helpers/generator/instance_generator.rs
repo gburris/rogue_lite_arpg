@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::map::components::{InstanceAssets, MapLayout};
 
-use super::map_data::{MapDataBuilder, Prefab};
+use super::map_data::{MapDataBuilder, PrefabType};
 
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     let mut rng = rand::thread_rng();
@@ -29,7 +29,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
 
     let map_data = MapDataBuilder::new(map_size)
         .with_dead_zones(instance_type.dead_zone_squares)
-        .with_prefab(Prefab::Temple)
+        .with_prefab(PrefabType::Temple)
         .with_exterior_walls()
         .with_chests(num_chests)
         .with_enemies(num_enemies)

@@ -1,5 +1,6 @@
 use crate::{
     combat::attributes::Health,
+    items::inventory::Inventory,
     labels::states::PausedState,
     player::{Player, PlayerLevel},
     progression::GameProgress,
@@ -29,14 +30,11 @@ impl MenuButtonConfig {
 
 pub fn spawn_main_menu(
     mut commands: Commands,
-    player_level: Query<&PlayerLevel>,
-    player_health: Query<&Health, With<Player>>,
+    player: Single<(&Health, &PlayerLevel, &Inventory), With<Player>>,
     game_progress: Res<GameProgress>,
 ) {
+    let (health, level, inventory) = player.into_inner();
     debug!("spawn_main_menu called");
-    // Get the current values
-    let level = player_level.single();
-    let health = player_health.single();
     commands
         .spawn((
             MainMenu,
@@ -153,6 +151,15 @@ pub fn spawn_main_menu(
                                     "Health: {:.1} / {:.1}",
                                     health.hp, health.max_hp
                                 )),
+                                TextFont {
+                                    font_size: 24.0,
+                                    ..default()
+                                },
+                                Node::default(),
+                            ));
+
+                            stats.spawn((
+                                Text::new(format!("Total coins: {:.1}", inventory.coins)),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()

@@ -16,14 +16,6 @@ pub fn calculate_center_rect(map_size: TilemapSize, size: TilemapSize) -> Rect {
     Rect::from_center_size(center, Vec2::new(size.x as f32, size.y as f32))
 }
 
-pub fn calculate_num_dead_zones(area: u32) -> u32 {
-    if area < 625 {
-        return 0;
-    }
-
-    ((area as f32 / 8333.33).ceil() as u32).min(10)
-}
-
 pub fn calculate_wall_dimensions(is_horizontal: bool, length: f32) -> (f32, f32) {
     if is_horizontal {
         (length, 1.0)

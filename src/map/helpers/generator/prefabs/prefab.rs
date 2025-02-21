@@ -1,6 +1,5 @@
 use crate::map::{components::MarkerType, helpers::generator::MapData};
 use bevy::math::{Rect, Vec2};
-use bevy_ecs_tilemap::map::TilemapSize;
 use std::collections::HashMap;
 
 /// A trait for prefabricated map structures that can be placed in the game world

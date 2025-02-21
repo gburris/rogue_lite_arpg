@@ -1,14 +1,13 @@
 use bevy::{log::warn, math::Vec2, transform::components::Transform};
 use bevy_ecs_tilemap::map::TilemapSize;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
 
 use super::{
-    dead_zone::add_dead_zones,
-    prefabs::{
-        build_hub, build_temple, get_hub_markers, get_temple_markers, prefab::Prefab, Hub, Temple,
-    },
+    prefabs::{prefab::Prefab, EmptySquare, Hub, Temple},
     utils::{
         calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
         generate_entrance_exit_positions,
@@ -58,16 +57,18 @@ impl MapData {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+
 pub enum PrefabType {
     NPCHub,
     Temple,
+    EmptySquare,
 }
 
 pub struct MapDataBuilder {
     map_data: MapData,
     size: TilemapSize,
     prefabs: Vec<PrefabType>,
-    should_add_dead_zones: bool,
     num_enemies: Option<u32>,
     num_chests: Option<u32>,
 }
@@ -78,7 +79,6 @@ impl MapDataBuilder {
             map_data: MapData::new(size, TileType::Ground), // Default to ground
             size,
             prefabs: Vec::new(),
-            should_add_dead_zones: false,
             num_enemies: None,
             num_chests: None,
         }
@@ -109,11 +109,6 @@ impl MapDataBuilder {
         self
     }
 
-    pub fn with_dead_zones(mut self, include_dead_zones: bool) -> Self {
-        self.should_add_dead_zones = include_dead_zones;
-        self
-    }
-
     fn generate_random_markers(&self) -> HashMap<MarkerType, Vec<Vec2>> {
         let mut markers = HashMap::new();
 
@@ -138,14 +133,11 @@ impl MapDataBuilder {
     }
 
     pub fn build(mut self) -> MapData {
-        if self.should_add_dead_zones {
-            add_dead_zones(&mut self.map_data, self.size);
-        }
-
         for prefab_type in &self.prefabs {
             let prefab: Box<dyn Prefab> = match prefab_type {
                 PrefabType::Temple => Box::new(Temple),
                 PrefabType::NPCHub => Box::new(Hub),
+                PrefabType::EmptySquare => Box::new(EmptySquare),
             };
 
             if let Some(bounds) = prefab.build(&mut self.map_data) {

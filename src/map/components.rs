@@ -3,7 +3,7 @@ use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::helpers::generator::MapData;
@@ -37,7 +37,7 @@ pub struct Wall;
 #[derive(Component)]
 pub struct Water;
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize)]
 pub enum TileType {
     Wood,
     Ground,
@@ -182,8 +182,9 @@ pub struct InstanceType {
     pub size_x_range: (f32, f32),
     pub size_y_range: (f32, f32),
     pub number_of_enemies_range: (f32, f32),
-    pub dead_zone_squares: bool,
     pub chest_range: (f32, f32),
+    pub prefabs: Vec<String>,
+    pub floor_type: String,
 }
 
 #[derive(Resource)]

@@ -61,18 +61,6 @@ impl Prefab for Hub {
     }
 }
 
-pub fn build_hub(mut map_data: &mut MapData) -> TilemapSize {
-    let hub_size = TilemapSize {
-        x: HUB_WIDTH,
-        y: HUB_HEIGHT,
-    };
-    let hub_bounds = calculate_center_rect(map_data.size, hub_size);
-    add_hub_cobblestone(&mut map_data, &hub_bounds);
-    add_hub_walls(&mut map_data, &hub_bounds);
-    add_hub_entrance(&mut map_data, &hub_bounds);
-    hub_size
-}
-
 fn add_hub_cobblestone(map_data: &mut MapData, bounds: &Rect) {
     for x in bounds.min.x as i32..bounds.max.x as i32 {
         for y in bounds.min.y as i32..bounds.max.y as i32 {
@@ -269,33 +257,4 @@ fn add_hub_entrance(map_data: &mut MapData, bounds: &Rect) {
             }
         }
     }
-}
-
-pub fn get_hub_markers(
-    map_size: TilemapSize,
-    hub_size: TilemapSize,
-) -> HashMap<MarkerType, Vec<Vec2>> {
-    let mut markers: HashMap<MarkerType, Vec<Vec2>> = HashMap::new();
-
-    let hub_bounds = calculate_center_rect(map_size, hub_size);
-
-    let center_of_hub = hub_bounds.center();
-
-    // Generate player spawn
-    let player_spawn = Vec2::new(center_of_hub.x, hub_bounds.min.y + PLAYER_SPAWN_Y_OFFSET);
-    markers.insert(MarkerType::PlayerSpawns, vec![player_spawn]);
-
-    // Generate level exit
-    let level_exit = Vec2::new(center_of_hub.x, hub_bounds.min.y + LEVEL_EXIT_Y_OFFSET);
-    markers.insert(MarkerType::LevelExits, vec![level_exit]);
-
-    // Generate NPC positions
-    let npc_positions = vec![
-        Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y + NPC_OFFSET),
-        Vec2::new(center_of_hub.x - NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
-        Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
-    ];
-    markers.insert(MarkerType::NPCSpawns, npc_positions);
-
-    markers
 }

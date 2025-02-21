@@ -87,16 +87,6 @@ fn can_place_temple(map: &Vec<Vec<TileType>>, bounds: &Rect) -> bool {
     true
 }
 
-pub fn build_temple(map_data: &mut MapData) -> Option<Rect> {
-    if let Some(bounds) = find_temple_position(&map_data.tiles, map_data.size) {
-        add_temple_structure(map_data, &bounds);
-        Some(bounds)
-    } else {
-        warn!("No valid temple position was found");
-        None
-    }
-}
-
 fn add_temple_structure(map_data: &mut MapData, bounds: &Rect) {
     let start_x = bounds.min.x as u32;
     let start_y = bounds.min.y as u32;
@@ -148,17 +138,4 @@ fn add_temple_structure(map_data: &mut MapData, bounds: &Rect) {
             }
         }
     }
-}
-
-pub fn get_temple_markers(bounds: &Rect) -> HashMap<MarkerType, Vec<Vec2>> {
-    let mut markers = HashMap::new();
-
-    let chest_pos = Vec2::new(
-        bounds.min.x + TEMPLE_WIDTH as f32 / 2.0,
-        bounds.min.y + TEMPLE_HEIGHT as f32 / 2.0,
-    );
-
-    markers.insert(MarkerType::ChestSpawns, vec![chest_pos]);
-
-    markers
 }

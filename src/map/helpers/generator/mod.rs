@@ -1,4 +1,3 @@
-mod dead_zone;
 mod hub_generator;
 mod instance_generator;
 mod map_data;

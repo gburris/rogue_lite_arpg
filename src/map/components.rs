@@ -3,8 +3,10 @@ use bevy_ecs_tilemap::{
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use super::helpers::generator::MapData;
 
 /*
 MAP EVENTS - Should be the only part of map exposed to other crates
@@ -32,7 +34,7 @@ pub struct Wall;
 #[derive(Component)]
 pub struct Water;
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize)]
 pub enum TileType {
     Wood,
     Ground,
@@ -83,6 +85,19 @@ pub struct MapLayout {
     pub tiles: Vec<Vec<TileType>>,
     pub markers: MapMarkers,
     pub environmental_colliders: Vec<EnvironmentalMapCollider>,
+}
+
+impl From<MapData> for MapLayout {
+    fn from(map_data: MapData) -> Self {
+        MapLayout {
+            size: map_data.size,
+            tiles: map_data.tiles,
+            markers: MapMarkers {
+                markers: map_data.markers,
+            },
+            environmental_colliders: map_data.colliders,
+        }
+    }
 }
 #[derive(Default)]
 pub struct WallSection {
@@ -164,8 +179,9 @@ pub struct InstanceType {
     pub size_x_range: (f32, f32),
     pub size_y_range: (f32, f32),
     pub number_of_enemies_range: (f32, f32),
-    pub dead_zone_squares: bool,
     pub chest_range: (f32, f32),
+    pub prefabs: Vec<String>,
+    pub floor_type: String,
 }
 
 #[derive(Resource)]

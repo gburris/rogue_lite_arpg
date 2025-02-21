@@ -8,7 +8,7 @@ use crate::{
         components::{
             EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent, WorldSpaceConfig,
         },
-        helpers::zone_generation::generate_instance_layout,
+        helpers::generator::generate_instance_layout,
         portal::Portal,
     },
     player::Player,

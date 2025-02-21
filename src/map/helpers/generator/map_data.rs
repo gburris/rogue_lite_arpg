@@ -6,11 +6,11 @@ use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, Marker
 
 use super::{
     dead_zone::add_dead_zones,
-    hub::{self, build_hub, get_hub_markers},
+    hub::{build_hub, get_hub_markers},
     temple::{build_temple, get_temple_markers},
     utils::{
-        calculate_center_rect, calculate_collider_position, calculate_wall_dimensions,
-        find_multiple_positions, generate_entrance_exit_positions,
+        calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
+        generate_entrance_exit_positions,
     },
     walls::add_exterior_walls,
 };
@@ -57,11 +57,6 @@ impl MapData {
     }
 }
 
-pub enum MarkerPlacement {
-    Random,
-    Fixed,
-}
-
 pub enum Prefab {
     NPCHub,
     Temple,
@@ -70,12 +65,10 @@ pub enum Prefab {
 pub struct MapDataBuilder {
     map_data: MapData,
     size: TilemapSize,
-    hub_size: Option<TilemapSize>,
     prefabs: Vec<Prefab>,
     should_add_dead_zones: bool,
     num_enemies: Option<u32>,
     num_chests: Option<u32>,
-    marker_placement: Option<MarkerPlacement>,
 }
 
 impl MapDataBuilder {
@@ -84,11 +77,9 @@ impl MapDataBuilder {
             map_data: MapData::new(size, TileType::Ground), // Default to ground
             size,
             prefabs: Vec::new(),
-            hub_size: None,
             should_add_dead_zones: false,
             num_enemies: None,
             num_chests: None,
-            marker_placement: None,
         }
     }
 
@@ -119,11 +110,6 @@ impl MapDataBuilder {
 
     pub fn with_dead_zones(mut self, include_dead_zones: bool) -> Self {
         self.should_add_dead_zones = include_dead_zones;
-        self
-    }
-
-    pub fn with_marker_placement(mut self, placement: MarkerPlacement) -> Self {
-        self.marker_placement = Some(placement);
         self
     }
 
@@ -175,17 +161,9 @@ impl MapDataBuilder {
                 }
             }
         }
-
-        if let Some(ref placement) = self.marker_placement {
-            match placement {
-                MarkerPlacement::Random => {
-                    //TODO, update generate random markers to return random markers, then call merge on it
-                    let random_markers = self.generate_random_markers();
-                    merge_markers(&mut self.map_data.markers, random_markers);
-                }
-                MarkerPlacement::Fixed => todo!(),
-            }
-        }
+        //Add all other map markers
+        let random_markers = self.generate_random_markers();
+        merge_markers(&mut self.map_data.markers, random_markers);
 
         self.map_data
     }

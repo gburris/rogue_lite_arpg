@@ -15,7 +15,7 @@ const LEVEL_EXIT_Y_OFFSET: f32 = 23.0;
 const NPC_OFFSET: f32 = 5.0;
 const HUB_WIDTH: u32 = 25; // Reduced size for better control
 const HUB_HEIGHT: u32 = 25;
-const ENTRANCE_WIDTH: u32 = 25;
+const ENTRANCE_WIDTH: i32 = 5;
 
 pub fn build_hub(mut map_data: &mut MapData) -> TilemapSize {
     let hub_size = TilemapSize {
@@ -142,7 +142,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
 }
 
 fn add_hub_entrance(map_data: &mut MapData, bounds: &Rect) {
-    let entrance_width = 5;
+    let entrance_width = ENTRANCE_WIDTH;
     let entrance_x_start = (bounds.min.x as i32 + bounds.max.x as i32) / 2 - entrance_width / 2;
 
     // Create the entrance path

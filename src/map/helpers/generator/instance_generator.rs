@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-use crate::map::components::{InstanceAssets, MapLayout, MapMarkers};
+use crate::map::components::{InstanceAssets, MapLayout};
 
-use super::map_data::{MapDataBuilder, MarkerPlacement, Prefab};
+use super::map_data::{MapDataBuilder, Prefab};
 
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
     let mut rng = rand::thread_rng();
@@ -33,15 +33,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .with_exterior_walls()
         .with_chests(num_chests)
         .with_enemies(num_enemies)
-        .with_marker_placement(MarkerPlacement::Random)
         .build();
 
-    MapLayout {
-        size: map_data.size,
-        tiles: map_data.tiles,
-        markers: MapMarkers {
-            markers: map_data.markers,
-        },
-        environmental_colliders: map_data.colliders,
-    }
+    return MapLayout::from(map_data);
 }

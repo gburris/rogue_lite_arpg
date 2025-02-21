@@ -6,6 +6,8 @@ use bevy_ecs_tilemap::{
 use serde::Deserialize;
 use std::collections::HashMap;
 
+use super::helpers::generator::MapData;
+
 /*
 MAP EVENTS - Should be the only part of map exposed to other crates
 */
@@ -86,6 +88,19 @@ pub struct MapLayout {
     pub tiles: Vec<Vec<TileType>>,
     pub markers: MapMarkers,
     pub environmental_colliders: Vec<EnvironmentalMapCollider>,
+}
+
+impl From<MapData> for MapLayout {
+    fn from(map_data: MapData) -> Self {
+        MapLayout {
+            size: map_data.size,
+            tiles: map_data.tiles,
+            markers: MapMarkers {
+                markers: map_data.markers,
+            },
+            environmental_colliders: map_data.colliders,
+        }
+    }
 }
 #[derive(Default)]
 pub struct WallSection {

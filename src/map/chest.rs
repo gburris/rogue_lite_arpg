@@ -99,7 +99,11 @@ pub fn on_interaction_open_chest(
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
         commands.trigger(GoldDropEvent {
             amount: 999,
-            drop_location: *chest_transform,
+            drop_location: Transform {
+                translation: chest_transform.translation,
+                scale: Vec3::ONE,
+                rotation: Quat::IDENTITY,
+            },
         });
     };
 }

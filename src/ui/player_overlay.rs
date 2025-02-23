@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
+    configuration::assets::SpriteAssets,
+    items::{equipment::EquipmentSlot, inventory::Inventory, Item},
     player::{components::Player, PlayerExperience},
 };
 
@@ -38,7 +40,7 @@ const ATTRIBUTE_TO_PIXEL_SCALE: f32 = 4.0;
 // Represents how fast the yellow "amount lost" of health or mana goes away
 const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 
-pub fn spawn(mut commands: Commands) {
+pub fn spawn(mut commands: Commands, sprites: Res<SpriteAssets>) {
     commands
         .spawn((
             PlayerOverlay,
@@ -76,6 +78,15 @@ pub fn spawn(mut commands: Commands) {
                         MANA_COLOR,
                     );
                 });
+
+            // Add spacing before action bar
+            parent.spawn(Node {
+                height: Val::Px(20.0),
+                ..default()
+            });
+
+            // Add action bar
+            create_action_bar(parent, &sprites);
 
             // Spacer
             parent.spawn(Node {
@@ -275,5 +286,103 @@ pub fn update_exp_bar(
         let exp = player_exp.into_inner();
         let progress = exp.current as f32 / exp.next_level_requirement as f32;
         exp_bar.width = Val::Px(400.0 * progress);
+    }
+}
+
+#[derive(Component)]
+pub struct ActionBar;
+
+#[derive(Component)]
+pub struct ActionBox {
+    pub index: usize,
+}
+
+const ACTION_BOX_SIZE: f32 = 50.0;
+const ACTION_BAR_SPACING: f32 = 5.0;
+const ACTION_BAR_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.0); // Transparent background
+const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
+
+fn create_action_bar(parent: &mut ChildBuilder, sprites: &Res<SpriteAssets>) {
+    parent
+        .spawn((
+            ActionBar,
+            Node {
+                width: Val::Auto,
+                height: Val::Px(ACTION_BOX_SIZE),
+                flex_direction: FlexDirection::Row,
+                padding: UiRect::all(Val::Px(2.0)),
+                ..default()
+            },
+            BackgroundColor::from(ACTION_BAR_COLOR),
+        ))
+        .with_children(|action_bar| {
+            // Spawn 5 action boxes
+            for i in 0..5 {
+                action_bar
+                    .spawn((
+                        ActionBox { index: i },
+                        Node {
+                            width: Val::Px(ACTION_BOX_SIZE),
+                            height: Val::Px(ACTION_BOX_SIZE),
+                            border: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                        BackgroundColor::from(ACTION_BAR_COLOR),
+                        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
+                    ))
+                    .with_children(|action_box| {
+                        // Ensure the image node is a child of the action box node
+                        action_box.spawn((
+                            ImageNode {
+                                //image: sprites.fire_staff.clone(),
+                                ..default()
+                            },
+                            Node {
+                                width: Val::Percent(100.),
+                                height: Val::Percent(100.),
+                                ..default()
+                            },
+                        ));
+                    });
+            }
+        });
+}
+
+pub fn update_action_bar(
+    mut action_bar_query: Query<&Children, With<ActionBar>>,
+    action_box_query: Query<&Children, With<ActionBox>>, // Query ActionBoxes
+    mut image_query: Query<&mut ImageNode>,              // Query ImageNodes
+    inventory_query: Query<&Inventory, (Changed<Inventory>, With<Player>)>,
+    item_query: Query<(&Item, &Sprite)>,
+    item_sprites: Res<SpriteAssets>,
+) {
+    for inventory in inventory_query.iter() {
+        warn!("update action bar 1");
+
+        if let Some(mainhand) = inventory.get_equipped(EquipmentSlot::Mainhand) {
+            warn!("update action bar 2");
+
+            if let Ok(children) = action_bar_query.get_single() {
+                warn!("update action bar 3");
+
+                if let Some(&slot_one) = children.get(0) {
+                    warn!("update action bar 4");
+
+                    // Get the children of the ActionBox (should contain an ImageNode)
+                    if let Ok(action_box_children) = action_box_query.get(slot_one) {
+                        for &child in action_box_children.iter() {
+                            if let Ok(mut image_node) = image_query.get_mut(child) {
+                                warn!("update action bar 5");
+                                if let Ok((mainhand_item, mainhand_item_sprite)) =
+                                    item_query.get(mainhand)
+                                {
+                                    image_node.image = mainhand_item_sprite.image.clone()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

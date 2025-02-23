@@ -2,10 +2,14 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
+    player,
     ui::*,
 };
 
-use super::{loading::plugin::LoadingUIPlugin, npc::plugin::NPCPauseScreensPlugin};
+use super::{
+    action_bar::ActionBarPlugin, loading::plugin::LoadingUIPlugin,
+    npc::plugin::NPCPauseScreensPlugin,
+};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;
@@ -18,6 +22,7 @@ impl Plugin for UIPlugin {
             .add_plugins(PauseMenuPlugin)
             .add_plugins(NPCPauseScreensPlugin)
             .add_plugins(LoadingUIPlugin)
+            .add_plugins(ActionBarPlugin)
             //Start screen
             .add_systems(
                 OnEnter(AppState::StartScreen),
@@ -38,6 +43,7 @@ impl Plugin for UIPlugin {
                 Update,
                 (
                     player_overlay::update_exp_bar,
+                    player_overlay::update_action_bar,
                     (
                         player_overlay::update_mana_bar,
                         player_overlay::update_lost_mana_bar,

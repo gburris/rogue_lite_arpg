@@ -1,3 +1,4 @@
+mod action_bar;
 mod damage_overlay;
 mod display_case;
 mod game_over_screen;

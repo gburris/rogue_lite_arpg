@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use crate::{
     labels::{sets::InGameSet, states::AppState},
-    player,
     ui::*,
 };
 

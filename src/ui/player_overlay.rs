@@ -389,7 +389,7 @@ pub fn update_action_bar(
     }
 }
 
-const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // 80% opaque black
+const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
 
 #[derive(Component)]
 pub struct CooldownIndicator {
@@ -397,12 +397,16 @@ pub struct CooldownIndicator {
 }
 
 pub fn on_main_hand_activated(
-    _: Trigger<UseMainhandInputEvent>,
+    trigger: Trigger<UseMainhandInputEvent>,
     mut commands: Commands,
+    player_query: Single<Entity, With<Player>>,
     action_bar_query: Query<&Children, With<ActionBar>>,
     inventory_query: Query<&Inventory, With<Player>>,
     weapon_query: Query<&Equippable>,
 ) {
+    if (trigger.entity()) != player_query.into_inner() {
+        return;
+    }
     if let Ok(action_bar_children) = action_bar_query.get_single() {
         if let Some(&first_box_entity) = action_bar_children.first() {
             if let Ok(inventory) = inventory_query.get_single() {

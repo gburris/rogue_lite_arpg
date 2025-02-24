@@ -246,6 +246,7 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
     Val::Px((current_pixels + pixel_change).max(0.0))
 }
 
+/* Exp Bar Code */
 fn create_exp_bar(parent: &mut ChildBuilder) {
     parent
         .spawn(Node {
@@ -304,6 +305,7 @@ pub fn update_exp_bar(
     }
 }
 
+/* Action Bar Code */
 #[derive(Component)]
 pub struct ActionBar;
 
@@ -311,6 +313,9 @@ pub struct ActionBar;
 pub struct ActionBox {
     pub index: usize,
 }
+
+#[derive(Component)]
+pub struct CooldownLine;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
@@ -464,6 +469,3 @@ pub fn update_cooldowns(
         commands.entity(box_entity).remove::<CooldownIndicator>();
     }
 }
-
-#[derive(Component)]
-pub struct CooldownLine;

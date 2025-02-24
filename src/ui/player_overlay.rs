@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
-    configuration::assets::SpriteAssets,
     items::{
         equipment::{EquipmentSlot, Equippable},
         inventory::Inventory,
@@ -85,12 +84,13 @@ pub fn spawn(mut commands: Commands) {
                 });
 
             // Spacer to push everything else down
+            // TODO: Don't think we need this
             parent.spawn(Node {
                 flex_grow: 1.0,
                 ..default()
             });
 
-            // Bottom container for EXP and Action bars, aligned at the bottom
+            // Bottom container for EXP and Action bars, health pot stuff
             parent
                 .spawn(Node {
                     width: Val::Percent(100.0),
@@ -115,7 +115,6 @@ pub fn spawn(mut commands: Commands) {
                         .spawn(Node {
                             width: Val::Auto,
                             height: Val::Auto,
-                            // margin: UiRect::axes(Val::Auto, Val::Px(20.0)), // Center horizontally, margin from bottom
                             ..default()
                         })
                         .with_children(|action_container| {
@@ -314,7 +313,6 @@ pub struct ActionBox {
 }
 
 const ACTION_BOX_SIZE: f32 = 50.0;
-const ACTION_BAR_SPACING: f32 = 5.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
 const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
 
@@ -332,6 +330,7 @@ fn create_action_bar(parent: &mut ChildBuilder) {
         ))
         .with_children(|action_bar| {
             // Spawn 5 action boxes
+            // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
             for i in 0..5 {
                 action_bar
                     .spawn((
@@ -346,7 +345,6 @@ fn create_action_bar(parent: &mut ChildBuilder) {
                         BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
                     ))
                     .with_children(|action_box| {
-                        // Ensure the image node is a child of the action box node
                         action_box.spawn((
                             ImageNode { ..default() },
                             Node {
@@ -361,33 +359,20 @@ fn create_action_bar(parent: &mut ChildBuilder) {
 }
 
 pub fn update_action_bar(
-    mut action_bar_query: Query<&Children, With<ActionBar>>,
-    action_box_query: Query<&Children, With<ActionBox>>, // Query ActionBoxes
-    mut image_query: Query<&mut ImageNode>,              // Query ImageNodes
+    action_bar_query: Query<&Children, With<ActionBar>>,
+    action_box_query: Query<&Children, With<ActionBox>>,
+    mut image_query: Query<&mut ImageNode>,
     inventory_query: Query<&Inventory, (Changed<Inventory>, With<Player>)>,
     item_query: Query<(&Item, &Sprite)>,
-    item_sprites: Res<SpriteAssets>,
 ) {
     for inventory in inventory_query.iter() {
-        warn!("update action bar 1");
-
         if let Some(mainhand) = inventory.get_equipped(EquipmentSlot::Mainhand) {
-            warn!("update action bar 2");
-
             if let Ok(children) = action_bar_query.get_single() {
-                warn!("update action bar 3");
-
                 if let Some(&slot_one) = children.get(0) {
-                    warn!("update action bar 4");
-
-                    // Get the children of the ActionBox (should contain an ImageNode)
                     if let Ok(action_box_children) = action_box_query.get(slot_one) {
                         for &child in action_box_children.iter() {
                             if let Ok(mut image_node) = image_query.get_mut(child) {
-                                warn!("update action bar 5");
-                                if let Ok((mainhand_item, mainhand_item_sprite)) =
-                                    item_query.get(mainhand)
-                                {
+                                if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
                                     image_node.image = mainhand_item_sprite.image.clone()
                                 }
                             }
@@ -401,28 +386,23 @@ pub fn update_action_bar(
 
 const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // 80% opaque black
 
-// New component to track cooldown state
 #[derive(Component)]
 pub struct CooldownIndicator {
     timer: Timer,
 }
 
-// Systems for the action bar plugin
 pub fn on_main_hand_activated(
-    main_hand_trigger: Trigger<UseMainhandInputEvent>,
+    _: Trigger<UseMainhandInputEvent>,
     mut commands: Commands,
     action_bar_query: Query<&Children, With<ActionBar>>,
     inventory_query: Query<&Inventory, With<Player>>,
     weapon_query: Query<&Equippable>,
 ) {
-    // Get the first action box
     if let Ok(action_bar_children) = action_bar_query.get_single() {
         if let Some(&first_box_entity) = action_bar_children.first() {
-            // Get the weapon's use rate from inventory
             if let Ok(inventory) = inventory_query.get_single() {
                 if let Some(weapon_entity) = inventory.get_equipped(EquipmentSlot::Mainhand) {
                     if let Ok(weapon) = weapon_query.get(weapon_entity) {
-                        // Add cooldown indicator with weapon's timer
                         commands.entity(first_box_entity).insert(CooldownIndicator {
                             timer: weapon.use_rate.clone(),
                         });
@@ -433,19 +413,17 @@ pub fn on_main_hand_activated(
     }
 }
 
-// This system runs when a CooldownIndicator is added to an entity
 pub fn on_cooldown_indicator_added(
     mut commands: Commands,
     query: Query<Entity, Added<CooldownIndicator>>,
 ) {
     for entity in query.iter() {
-        // Spawn the white line indicator as a child
         commands.entity(entity).with_children(|parent| {
             parent.spawn((
                 CooldownLine,
                 Node {
                     width: Val::Percent(98.),
-                    height: Val::Px(ACTION_BOX_SIZE), // Start at full height
+                    height: Val::Px(ACTION_BOX_SIZE),
                     position_type: PositionType::Absolute,
                     left: Val::Px(0.0),
                     top: Val::Px(0.0),
@@ -462,34 +440,25 @@ pub fn update_cooldowns(
     mut query: Query<(Entity, &mut CooldownIndicator, &Children)>,
     mut line_query: Query<&mut Node, With<CooldownLine>>,
 ) {
-    // Collect entities to remove
     let mut to_remove = Vec::new();
 
     for (entity, mut cooldown, children) in query.iter_mut() {
-        warn!("update_cooldowns 1");
         cooldown.timer.tick(time.delta());
 
-        // Update the line height based on remaining time
         if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
-            warn!("update_cooldowns 2");
             if let Ok(mut line_node) = line_query.get_mut(line_entity) {
-                warn!("update_cooldowns 3");
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }
         }
 
-        // If timer is finished, queue for removal
         if cooldown.timer.finished() {
-            warn!("update_cooldowns 4");
             if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
-                warn!("update_cooldowns 5");
                 to_remove.push((entity, line_entity));
             }
         }
     }
 
-    // Process removals after iteration
     for (box_entity, line_entity) in to_remove {
         commands.entity(line_entity).despawn_recursive();
         commands.entity(box_entity).remove::<CooldownIndicator>();

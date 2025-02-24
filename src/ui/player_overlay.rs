@@ -52,7 +52,6 @@ pub fn spawn(mut commands: Commands) {
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(20.0), Val::Px(20.0)),
-                position_type: PositionType::Absolute, // Ensure the overlay fills the screen
                 ..default()
             },
         ))

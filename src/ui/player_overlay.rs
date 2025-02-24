@@ -44,7 +44,7 @@ const ATTRIBUTE_TO_PIXEL_SCALE: f32 = 4.0;
 // Represents how fast the yellow "amount lost" of health or mana goes away
 const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 
-pub fn spawn(mut commands: Commands, sprites: Res<SpriteAssets>) {
+pub fn spawn(mut commands: Commands) {
     commands
         .spawn((
             PlayerOverlay,
@@ -96,12 +96,11 @@ pub fn spawn(mut commands: Commands, sprites: Res<SpriteAssets>) {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
                     flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::FlexStart, // Align EXP bar to left, let action bar center
-                    align_items: AlignItems::FlexEnd,           // Align both to the bottom
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::FlexEnd,
                     ..default()
                 })
                 .with_children(|bottom_container| {
-                    // EXP bar (bottom-left aligned)
                     bottom_container
                         .spawn(Node {
                             width: Val::Auto,
@@ -112,16 +111,15 @@ pub fn spawn(mut commands: Commands, sprites: Res<SpriteAssets>) {
                             create_exp_bar(exp_container);
                         });
 
-                    // Centered action bar (bottom-aligned, truly centered)
                     bottom_container
                         .spawn(Node {
                             width: Val::Auto,
                             height: Val::Auto,
-                            margin: UiRect::axes(Val::Auto, Val::Px(20.0)), // Center horizontally, margin from bottom
+                            // margin: UiRect::axes(Val::Auto, Val::Px(20.0)), // Center horizontally, margin from bottom
                             ..default()
                         })
                         .with_children(|action_container| {
-                            create_action_bar(action_container, &sprites);
+                            create_action_bar(action_container);
                         });
                 });
         });
@@ -320,7 +318,7 @@ const ACTION_BAR_SPACING: f32 = 5.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
 const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
 
-fn create_action_bar(parent: &mut ChildBuilder, sprites: &Res<SpriteAssets>) {
+fn create_action_bar(parent: &mut ChildBuilder) {
     parent
         .spawn((
             ActionBar,
@@ -350,10 +348,7 @@ fn create_action_bar(parent: &mut ChildBuilder, sprites: &Res<SpriteAssets>) {
                     .with_children(|action_box| {
                         // Ensure the image node is a child of the action box node
                         action_box.spawn((
-                            ImageNode {
-                                //image: sprites.fire_staff.clone(),
-                                ..default()
-                            },
+                            ImageNode { ..default() },
                             Node {
                                 width: Val::Percent(100.),
                                 height: Val::Percent(100.),

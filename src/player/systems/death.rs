@@ -40,7 +40,6 @@ pub fn finish_death_animation(
     let mut death_timer = player_death_timer_single.into_inner();
     death_timer.0.tick(time.delta());
     if death_timer.0.finished() {
-        warn!("Finishing Death Animation");
         commands.trigger(CleanupZone);
         game_over_state.set(AppState::GameOver);
     }

@@ -75,7 +75,7 @@ pub fn spawn_fire_staff(
 ) -> Entity {
     let fireball = ProjectileBundle {
         projectile: Projectile {
-            damage: (100.0, 600.0),
+            damage: (5.0, 10.0),
         },
         effects_list: EffectsList {
             effects: vec![ApplyStatus {

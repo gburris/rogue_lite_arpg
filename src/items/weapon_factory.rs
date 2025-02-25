@@ -68,27 +68,6 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
         .id()
 }
 
-pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
-    commands
-        .spawn((
-            MeleeWeapon {
-                damage: (1.0, 6.0),
-                effects_list: EffectsList { effects: vec![] },
-                hitbox: Collider::rectangle(10.0, 40.0),
-                attack_type: MeleeSwingType::stab(),
-                attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
-            },
-            Name::new("Shovel"),
-            Equippable::default(),
-            Item::new(5),
-            Visibility::Hidden,
-            Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
-        ))
-        .observe(on_weapon_melee)
-        .id()
-}
-
 pub fn spawn_fire_staff(
     commands: &mut Commands,
     sprites: &Res<SpriteAssets>,

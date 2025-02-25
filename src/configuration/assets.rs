@@ -43,8 +43,6 @@ pub struct SpriteSheetLayouts {
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
     pub gold_coin: Handle<Image>,
-    #[asset(path = "player/skeleton.png")]
-    pub skeleton_player: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword: Handle<Image>,
     #[asset(path = "items/axe.png")]
@@ -53,14 +51,8 @@ pub struct SpriteAssets {
     pub fire_staff: Handle<Image>,
     #[asset(path = "items/ice_staff.png")]
     pub ice_staff: Handle<Image>,
-    #[asset(path = "items/helmet.png")]
-    pub helmet_equipment_sprite: Handle<Image>,
     #[asset(path = "items/health_potion.png")]
     pub health_potion: Handle<Image>,
-    #[asset(path = "items/shovel.png")]
-    pub shovel_equipment_sprite: Handle<Image>,
-    #[asset(path = "enemies/merman.png")]
-    pub merman_enemy: Handle<Image>,
     #[asset(path = "projectiles/IceBolt.png")]
     pub ice_bolt: Handle<Image>,
     #[asset(path = "projectiles/fireball.png")]

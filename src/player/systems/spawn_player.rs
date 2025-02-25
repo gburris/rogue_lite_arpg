@@ -30,8 +30,6 @@ pub fn spawn_player(
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
-        spawn_shovel(&mut commands, &sprites),
-        spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
     ];
     let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
     let player = commands

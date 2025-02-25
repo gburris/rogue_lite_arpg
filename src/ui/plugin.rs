@@ -38,6 +38,9 @@ impl Plugin for UIPlugin {
                 Update,
                 (
                     player_overlay::update_exp_bar,
+                    player_overlay::update_action_bar,
+                    player_overlay::on_cooldown_indicator_added,
+                    player_overlay::update_cooldowns,
                     (
                         player_overlay::update_mana_bar,
                         player_overlay::update_lost_mana_bar,
@@ -59,6 +62,7 @@ impl Plugin for UIPlugin {
                 game_over_screen::despawn_game_over_screen,
             )
             .add_observer(game_over_screen::on_restart_event_cleanup_zone)
+            .add_observer(player_overlay::on_main_hand_activated)
             .add_systems(
                 Update,
                 game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),

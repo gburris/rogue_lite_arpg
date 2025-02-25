@@ -2,7 +2,12 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
-    player::{components::Player, PlayerExperience},
+    items::{
+        equipment::{EquipmentSlot, Equippable},
+        inventory::Inventory,
+        Item,
+    },
+    player::{components::Player, PlayerExperience, UseMainhandInputEvent},
 };
 
 #[derive(Component)]
@@ -77,23 +82,43 @@ pub fn spawn(mut commands: Commands) {
                     );
                 });
 
-            // Spacer
+            // Spacer to push everything else down
+            // TODO: Don't think we need this
             parent.spawn(Node {
                 flex_grow: 1.0,
                 ..default()
             });
 
-            // Bottom right exp bar container
+            // Bottom container for EXP and Action bars, health pot stuff
             parent
                 .spawn(Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
-                    justify_content: JustifyContent::FlexStart, // Ensures children align to the left
-                    align_items: AlignItems::FlexStart,         // Aligns items to the left
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::FlexEnd,
                     ..default()
                 })
-                .with_children(|exp_container| {
-                    create_exp_bar(exp_container); //Not an attribute bar -> It does not go down?
+                .with_children(|bottom_container| {
+                    bottom_container
+                        .spawn(Node {
+                            width: Val::Auto,
+                            height: Val::Auto,
+                            ..default()
+                        })
+                        .with_children(|exp_container| {
+                            create_exp_bar(exp_container);
+                        });
+
+                    bottom_container
+                        .spawn(Node {
+                            width: Val::Auto,
+                            height: Val::Auto,
+                            ..default()
+                        })
+                        .with_children(|action_container| {
+                            create_action_bar(action_container);
+                        });
                 });
         });
 }
@@ -220,6 +245,7 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
     Val::Px((current_pixels + pixel_change).max(0.0))
 }
 
+/* Exp Bar Code */
 fn create_exp_bar(parent: &mut ChildBuilder) {
     parent
         .spawn(Node {
@@ -275,5 +301,163 @@ pub fn update_exp_bar(
         let exp = player_exp.into_inner();
         let progress = exp.current as f32 / exp.next_level_requirement as f32;
         exp_bar.width = Val::Px(400.0 * progress);
+    }
+}
+
+/* Action Bar Code */
+#[derive(Component)]
+pub struct ActionBar;
+
+#[derive(Component)]
+pub struct ActionBox;
+
+#[derive(Component)]
+pub struct CooldownLine;
+
+const ACTION_BOX_SIZE: f32 = 50.0;
+const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
+const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
+
+fn create_action_bar(parent: &mut ChildBuilder) {
+    parent
+        .spawn((
+            ActionBar,
+            Node {
+                width: Val::Auto,
+                height: Val::Px(ACTION_BOX_SIZE),
+                flex_direction: FlexDirection::Row,
+                padding: UiRect::all(Val::Px(2.0)),
+                ..default()
+            },
+        ))
+        .with_children(|action_bar| {
+            // Spawn 5 action boxes
+            // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
+            for i in 0..5 {
+                action_bar
+                    .spawn((
+                        ActionBox,
+                        Node {
+                            width: Val::Px(ACTION_BOX_SIZE),
+                            height: Val::Px(ACTION_BOX_SIZE),
+                            border: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                        BackgroundColor::from(ACTION_BOX_COLOR),
+                        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
+                    ))
+                    .with_children(|action_box| {
+                        action_box.spawn((
+                            ImageNode { ..default() },
+                            Node {
+                                width: Val::Percent(100.),
+                                height: Val::Percent(100.),
+                                ..default()
+                            },
+                        ));
+                    });
+            }
+        });
+}
+
+pub fn update_action_bar(
+    action_bar_query: Single<&Children, With<ActionBar>>,
+    action_box_query: Query<&Children, With<ActionBox>>,
+    mut image_query: Query<&mut ImageNode>,
+    inventory_query: Option<Single<&Inventory, (Changed<Inventory>, With<Player>)>>,
+    item_query: Query<(&Item, &Sprite)>,
+) {
+    if let Some(player_inventory_result) = inventory_query {
+        let player_inventory = player_inventory_result.into_inner();
+        if let Some(mainhand) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
+            let action_bar_children = action_bar_query.into_inner();
+            if let Some(&slot_one) = action_bar_children.first() {
+                if let Ok(action_box_children) = action_box_query.get(slot_one) {
+                    if let Some(image_box_child) = action_box_children.first() {
+                        if let Ok(mut image_node) = image_query.get_mut(*image_box_child) {
+                            if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
+                                image_node.image = mainhand_item_sprite.image.clone()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
+
+#[derive(Component)]
+pub struct CooldownIndicator {
+    timer: Timer,
+}
+
+pub fn on_main_hand_activated(
+    trigger: Trigger<UseMainhandInputEvent>,
+    mut commands: Commands,
+    player_query: Single<Entity, With<Player>>,
+    action_bar_query: Single<&Children, With<ActionBar>>,
+    inventory_query: Single<&Inventory, With<Player>>,
+    weapon_query: Query<&Equippable>,
+) {
+    if (trigger.entity()) != player_query.into_inner() {
+        return;
+    }
+    let action_bar_children = action_bar_query.into_inner();
+    let player_inventory = inventory_query.into_inner();
+    if let Some(&first_box_entity) = action_bar_children.first() {
+        if let Some(weapon_entity) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
+            if let Ok(weapon) = weapon_query.get(weapon_entity) {
+                commands.entity(first_box_entity).insert(CooldownIndicator {
+                    timer: weapon.use_rate.clone(),
+                });
+            }
+        }
+    }
+}
+
+pub fn on_cooldown_indicator_added(
+    mut commands: Commands,
+    query: Query<Entity, Added<CooldownIndicator>>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn((
+                CooldownLine,
+                Node {
+                    width: Val::Percent(98.),
+                    height: Val::Px(ACTION_BOX_SIZE),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    ..default()
+                },
+                BackgroundColor::from(COOLDOWN_LINE_COLOR),
+            ));
+        });
+    }
+}
+
+pub fn update_cooldowns(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut CooldownIndicator, &Children)>,
+    mut line_query: Query<&mut Node, With<CooldownLine>>,
+) {
+    for (entity, mut cooldown, children) in query.iter_mut() {
+        cooldown.timer.tick(time.delta());
+
+        if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
+            if cooldown.timer.finished() {
+                // Remove immediately if finished
+                commands.entity(line_entity).despawn_recursive();
+                commands.entity(entity).remove::<CooldownIndicator>();
+            } else if let Ok(mut line_node) = line_query.get_mut(line_entity) {
+                // Otherwise update the line height
+                let progress = 1.0 - cooldown.timer.fraction_remaining();
+                line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
+            }
+        }
     }
 }

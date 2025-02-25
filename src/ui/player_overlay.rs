@@ -309,9 +309,7 @@ pub fn update_exp_bar(
 pub struct ActionBar;
 
 #[derive(Component)]
-pub struct ActionBox {
-    pub index: usize,
-}
+pub struct ActionBox;
 
 #[derive(Component)]
 pub struct CooldownLine;
@@ -338,7 +336,7 @@ fn create_action_bar(parent: &mut ChildBuilder) {
             for i in 0..5 {
                 action_bar
                     .spawn((
-                        ActionBox { index: i },
+                        ActionBox,
                         Node {
                             width: Val::Px(ACTION_BOX_SIZE),
                             height: Val::Px(ACTION_BOX_SIZE),
@@ -440,33 +438,26 @@ pub fn on_cooldown_indicator_added(
         });
     }
 }
+
 pub fn update_cooldowns(
     mut commands: Commands,
     time: Res<Time>,
     mut query: Query<(Entity, &mut CooldownIndicator, &Children)>,
     mut line_query: Query<&mut Node, With<CooldownLine>>,
 ) {
-    let mut to_remove = Vec::new();
-
     for (entity, mut cooldown, children) in query.iter_mut() {
         cooldown.timer.tick(time.delta());
 
         if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
-            if let Ok(mut line_node) = line_query.get_mut(line_entity) {
+            if cooldown.timer.finished() {
+                // Remove immediately if finished
+                commands.entity(line_entity).despawn_recursive();
+                commands.entity(entity).remove::<CooldownIndicator>();
+            } else if let Ok(mut line_node) = line_query.get_mut(line_entity) {
+                // Otherwise update the line height
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }
         }
-
-        if cooldown.timer.finished() {
-            if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
-                to_remove.push((entity, line_entity));
-            }
-        }
-    }
-
-    for (box_entity, line_entity) in to_remove {
-        commands.entity(line_entity).despawn_recursive();
-        commands.entity(box_entity).remove::<CooldownIndicator>();
     }
 }

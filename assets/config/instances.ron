@@ -5,7 +5,7 @@ InstanceConfig(
             size_y_range: (50.0, 100.0),
             number_of_enemies_range: (10.0, 15.0),
             chest_range: (0.0, 0.0),
-            num_exits: 3,
+            num_exits: 2,
             prefabs: ["Temple", "EmptySquare"],
             floor_type: "Ground",
         ),

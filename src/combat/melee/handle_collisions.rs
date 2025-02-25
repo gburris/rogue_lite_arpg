@@ -7,15 +7,30 @@ use super::components::{calculate_damage, ActiveMeleeAttack, MeleeWeapon};
 
 pub fn handle_melee_collisions(
     mut commands: Commands,
-    melee_query: Query<(Entity, &MeleeWeapon, &CollidingEntities), With<ActiveMeleeAttack>>,
+    mut melee_query: Query<(
+        Entity,
+        &MeleeWeapon,
+        &mut ActiveMeleeAttack,
+        &CollidingEntities,
+    )>,
     enemy_query: Query<&Enemy>,
     player: Single<Entity, With<Player>>,
 ) {
     let player_entity = player.into_inner();
 
-    for (weapon_entity, melee_weapon, colliding_entities) in melee_query.iter() {
+    for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities) in
+        melee_query.iter_mut()
+    {
         for &colliding_entity in colliding_entities.iter() {
             if enemy_query.contains(colliding_entity) || colliding_entity == player_entity {
+                if active_melee_attack
+                    .entities_damaged
+                    .contains(&colliding_entity)
+                {
+                    //We have already hit this entity (or tried to)
+                    //With this swing, return early
+                    continue;
+                }
                 let damage = calculate_damage(melee_weapon.damage);
                 commands.trigger_targets(
                     AttemptDamageEvent {
@@ -24,6 +39,7 @@ pub fn handle_melee_collisions(
                     },
                     colliding_entity,
                 );
+                active_melee_attack.entities_damaged.push(colliding_entity);
             }
         }
     }

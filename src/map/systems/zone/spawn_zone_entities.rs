@@ -47,7 +47,7 @@ pub fn spawn_zone_entities(
             let portal_position = Vec3::new(
                 exit_position_in_world.x,
                 exit_position_in_world.y,
-                ZLayer::Warpzone.z(),
+                ZLayer::Exit.z(),
             );
 
             // Generate a unique instance layout for each portal

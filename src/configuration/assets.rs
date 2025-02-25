@@ -11,16 +11,9 @@ impl Plugin for AssetLoadingPlugin {
             LoadingState::new(AppState::AssetLoading)
                 .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>()
-                .load_collection::<SpriteSheetLayouts>()
-                .load_collection::<FontAssets>(),
+                .load_collection::<SpriteSheetLayouts>(),
         );
     }
-}
-//dead code, not used anywhere
-#[derive(AssetCollection, Resource)]
-pub struct FontAssets {
-    #[asset(path = "font.otf")]
-    pub game_font: Handle<Font>,
 }
 
 #[derive(AssetCollection, Resource)]

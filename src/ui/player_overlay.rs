@@ -82,8 +82,6 @@ pub fn spawn(mut commands: Commands) {
                     );
                 });
 
-            // Spacer to push everything else down
-            // TODO: Don't think we need this
             parent.spawn(Node {
                 flex_grow: 1.0,
                 ..default()

@@ -363,22 +363,22 @@ fn create_action_bar(parent: &mut ChildBuilder) {
 }
 
 pub fn update_action_bar(
-    action_bar_query: Query<&Children, With<ActionBar>>,
+    action_bar_query: Single<&Children, With<ActionBar>>,
     action_box_query: Query<&Children, With<ActionBox>>,
     mut image_query: Query<&mut ImageNode>,
-    inventory_query: Query<&Inventory, (Changed<Inventory>, With<Player>)>,
+    inventory_query: Option<Single<&Inventory, (Changed<Inventory>, With<Player>)>>,
     item_query: Query<(&Item, &Sprite)>,
 ) {
-    for inventory in inventory_query.iter() {
-        if let Some(mainhand) = inventory.get_equipped(EquipmentSlot::Mainhand) {
-            if let Ok(children) = action_bar_query.get_single() {
-                if let Some(&slot_one) = children.get(0) {
-                    if let Ok(action_box_children) = action_box_query.get(slot_one) {
-                        for &child in action_box_children.iter() {
-                            if let Ok(mut image_node) = image_query.get_mut(child) {
-                                if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
-                                    image_node.image = mainhand_item_sprite.image.clone()
-                                }
+    if let Some(player_inventory_result) = inventory_query {
+        let player_inventory = player_inventory_result.into_inner();
+        if let Some(mainhand) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
+            let action_bar_children = action_bar_query.into_inner();
+            if let Some(&slot_one) = action_bar_children.first() {
+                if let Ok(action_box_children) = action_box_query.get(slot_one) {
+                    if let Some(image_box_child) = action_box_children.first() {
+                        if let Ok(mut image_node) = image_query.get_mut(*image_box_child) {
+                            if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
+                                image_node.image = mainhand_item_sprite.image.clone()
                             }
                         }
                     }
@@ -399,23 +399,21 @@ pub fn on_main_hand_activated(
     trigger: Trigger<UseMainhandInputEvent>,
     mut commands: Commands,
     player_query: Single<Entity, With<Player>>,
-    action_bar_query: Query<&Children, With<ActionBar>>,
-    inventory_query: Query<&Inventory, With<Player>>,
+    action_bar_query: Single<&Children, With<ActionBar>>,
+    inventory_query: Single<&Inventory, With<Player>>,
     weapon_query: Query<&Equippable>,
 ) {
     if (trigger.entity()) != player_query.into_inner() {
         return;
     }
-    if let Ok(action_bar_children) = action_bar_query.get_single() {
-        if let Some(&first_box_entity) = action_bar_children.first() {
-            if let Ok(inventory) = inventory_query.get_single() {
-                if let Some(weapon_entity) = inventory.get_equipped(EquipmentSlot::Mainhand) {
-                    if let Ok(weapon) = weapon_query.get(weapon_entity) {
-                        commands.entity(first_box_entity).insert(CooldownIndicator {
-                            timer: weapon.use_rate.clone(),
-                        });
-                    }
-                }
+    let action_bar_children = action_bar_query.into_inner();
+    let player_inventory = inventory_query.into_inner();
+    if let Some(&first_box_entity) = action_bar_children.first() {
+        if let Some(weapon_entity) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
+            if let Ok(weapon) = weapon_query.get(weapon_entity) {
+                commands.entity(first_box_entity).insert(CooldownIndicator {
+                    timer: weapon.use_rate.clone(),
+                });
             }
         }
     }

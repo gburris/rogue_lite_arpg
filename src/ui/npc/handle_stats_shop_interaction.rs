@@ -89,7 +89,6 @@ pub fn handle_stats_shop_ui_update(
 ) {
     //Set Game Progress to current player stats
     let player_stats = player_stats_query.clone();
-
     game_progress.base_stats = player_stats.clone();
 
     // Despawn existing menu

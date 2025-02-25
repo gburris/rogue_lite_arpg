@@ -97,7 +97,10 @@ fn determine_map_orientation(map_size: TilemapSize) -> MapOrientation {
     }
 }
 
-pub fn generate_entrance_exit_positions(map_size: TilemapSize) -> (Vec<Vec2>, Vec<Vec2>) {
+pub fn generate_entrance_exit_positions(
+    map_size: TilemapSize,
+    num_exits: u32,
+) -> (Vec<Vec2>, Vec<Vec2>) {
     let mut rng = rand::thread_rng();
 
     let player_spawn = match determine_map_orientation(map_size) {
@@ -144,5 +147,11 @@ pub fn generate_entrance_exit_positions(map_size: TilemapSize) -> (Vec<Vec2>, Ve
             vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
         }
     };
-    (player_spawn, exits)
+    if num_exits == 0 {
+        (player_spawn, [].to_vec())
+    } else if num_exits == 1 {
+        (player_spawn, vec![*exits.get(0).unwrap()])
+    } else {
+        (player_spawn, exits)
+    }
 }

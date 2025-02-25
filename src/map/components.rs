@@ -177,6 +177,7 @@ pub struct InstanceType {
     pub size_x_range: (f32, f32),
     pub size_y_range: (f32, f32),
     pub number_of_enemies_range: (f32, f32),
+    pub num_exits: u32,
     pub chest_range: (f32, f32),
     pub prefabs: Vec<String>,
     pub floor_type: String,

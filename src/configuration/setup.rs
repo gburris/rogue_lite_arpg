@@ -3,7 +3,7 @@ use bevy::{prelude::*, window::WindowResolution};
 
 use crate::{
     configuration::debug::DebugPlugin,
-    labels::states::{AppState, PausedState},
+    labels::states::{AppState, PausedState, PlayingState},
     progression::components::GameProgress,
 };
 
@@ -35,6 +35,7 @@ impl Plugin for SetupPlugin {
             // initialize states
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()
+            .add_sub_state::<PlayingState>()
             .add_systems(Startup, setup_camera);
     }
 }

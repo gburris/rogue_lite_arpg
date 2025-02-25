@@ -74,7 +74,9 @@ pub fn spawn_fire_staff(
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let fireball = ProjectileBundle {
-        projectile: Projectile { damage: (1.0, 6.0) },
+        projectile: Projectile {
+            damage: (100.0, 600.0),
+        },
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Burning(BurningStatus::default()),

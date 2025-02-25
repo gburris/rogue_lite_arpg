@@ -1,6 +1,7 @@
 // In a new file, e.g., src/lib.rs or src/plugins.rs
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub struct GamePlugins;
 
@@ -70,5 +71,8 @@ pub struct NativePlugins;
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(GamePlugins); // Add native-only plugins
+        if cfg!(feature = "debug") {
+            app.add_plugins(WorldInspectorPlugin::new());
+        }
     }
 }

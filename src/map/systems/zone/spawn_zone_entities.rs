@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::assets::SpriteAssets,
+    enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
     labels::layer::ZLayer,
     map::{
         chest::SpawnChestsEvent,
@@ -62,7 +63,6 @@ pub fn spawn_zone_entities(
         }
     }
 
-    // Spawn enemies
     if let Some(enemy_positions) = map_layout.markers.get_markers(MarkerType::EnemySpawns) {
         let spawn_positions = convert_tiles_to_world_positions(
             enemy_positions,
@@ -70,7 +70,15 @@ pub fn spawn_zone_entities(
             &map_layout,
             ZLayer::Enemy,
         );
-        commands.trigger(EnemiesSpawnEvent(spawn_positions));
+        let mut enemy_spawn_data_list: Vec<EnemySpawnData> = [].to_vec();
+        for pos in spawn_positions {
+            let enemy_spawn_data = EnemySpawnData {
+                position: pos,
+                enemy_type: EnemyType::FireMage,
+            };
+            enemy_spawn_data_list.push(enemy_spawn_data)
+        }
+        commands.trigger(EnemiesSpawnEvent(enemy_spawn_data_list));
     }
 
     // Spawn chests

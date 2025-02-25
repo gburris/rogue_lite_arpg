@@ -84,13 +84,19 @@ pub fn handle_stats_shop_ui_update(
     _: Trigger<StatsUIUpdateEvent>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
-    player_stats: Query<&PlayerStats>,
-    game_progress: Res<GameProgress>,
+    player_stats_query: Single<&PlayerStats>,
+    mut game_progress: ResMut<GameProgress>,
 ) {
+    //Set Game Progress to current player stats
+    let player_stats = player_stats_query.clone();
+
+    game_progress.base_stats = player_stats.clone();
+
     // Despawn existing menu
     for entity in stats_menu_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+
     // Respawn with updated values
-    spawn_stats_shop_menu(commands, player_stats, game_progress);
+    spawn_stats_shop_menu(commands, player_stats_query, game_progress);
 }

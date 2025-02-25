@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use rand::{thread_rng, Rng};
 use serde::Serialize;
 
 use crate::{
@@ -23,7 +22,7 @@ use crate::{
     movement::components::SimpleMotion,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnemySpawnData {
     pub position: Vec3,
     pub enemy_type: EnemyType,
@@ -36,6 +35,14 @@ pub enum EnemyType {
     FireMage,
 }
 
+pub fn get_name_from_type(enemy_type: EnemyType) -> String {
+    match enemy_type {
+        EnemyType::IceMage => return "IceMage".to_owned(),
+        EnemyType::Warrior => return "Warrior".to_owned(),
+        EnemyType::FireMage => return "FireMage".to_owned(),
+    };
+}
+
 pub fn spawn_enemies(
     enemy_trigger: Trigger<EnemiesSpawnEvent>,
     mut commands: Commands,
@@ -44,17 +51,14 @@ pub fn spawn_enemies(
     sprites: Res<SpriteAssets>,
     atlases: Res<SpriteSheetLayouts>,
 ) {
-    let enemy_spawn_positions = enemy_trigger.0.clone();
-    for spawn_position in enemy_spawn_positions {
-        let enemy_list = ["FireMage", "Warrior", "IceMage"];
-        let mut rng = thread_rng();
-        let choice = rng.gen_range(0..enemy_list.len());
-        let enemy_to_spawn = enemy_list[choice];
+    let enemies_spawn_data = enemy_trigger.0.clone();
+    for spawn_data in enemies_spawn_data {
+        let enemy_to_spawn = get_name_from_type(spawn_data.enemy_type);
         spawn_enemy(
             &mut commands,
-            enemy_to_spawn,
+            &enemy_to_spawn,
             &enemy_assets,
-            spawn_position,
+            spawn_data,
             &animation_config,
             &sprites,
             &atlases,
@@ -66,7 +70,7 @@ fn spawn_enemy(
     commands: &mut Commands,
     enemy_name: &str,
     enemy_assets: &Res<EnemyAssets>,
-    spawn_position: Vec3,
+    spawn_data: EnemySpawnData,
     animation_config: &Res<DefaultAnimationConfig>,
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
@@ -81,13 +85,9 @@ fn spawn_enemy(
                     .first,
             },
         );
-        warn!("Spawning wep {:?}", enemy_type.weapon);
         let weapon = spawn_mainhand_weapon(commands, &sprites, &atlases, &enemy_type.weapon);
-
         let health_potion = spawn_health_potion(commands, &sprites);
-
         let starting_items = [weapon, health_potion];
-
         let enemy = commands
             .spawn((
                 Enemy,
@@ -114,7 +114,7 @@ fn spawn_enemy(
                     ],
                 ),
                 (
-                    Transform::from_translation(spawn_position),
+                    Transform::from_translation(spawn_data.position),
                     animation_config.get_indices(ActionState::Idle, FacingDirection::Down),
                     AnimationTimer(
                         animation_config.get_timer(ActionState::Idle, FacingDirection::Down),
@@ -132,6 +132,6 @@ fn spawn_enemy(
             .entity(starting_items[0])
             .insert(Equipped::new(enemy));
     } else {
-        eprintln!("Enemy {} not found in enemy config.", enemy_name);
+        warn!("Enemy {} not found in enemy config.", enemy_name);
     }
 }

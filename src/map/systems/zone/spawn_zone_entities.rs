@@ -38,7 +38,7 @@ pub fn spawn_zone_entities(
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
     instance_assets: Res<InstanceAssets>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    player_query: Single<&mut Transform, With<Player>>,
 ) {
     if let Some(exit_positions) = map_layout.markers.get_markers(MarkerType::LevelExits) {
         for exit_position in exit_positions {
@@ -115,11 +115,8 @@ pub fn spawn_zone_entities(
                 ZLayer::Player.z(),
             );
 
-            if let Ok(mut player_transform) = player_query.get_single_mut() {
-                player_transform.translation = player_spawn_position;
-            } else {
-                warn!("Player entity not found. Ensure the player is spawned before this system runs.");
-            }
+            let mut player_transform = player_query.into_inner();
+            player_transform.translation = player_spawn_position;
         }
     } else {
         warn!("Player spawn marker not found in map layout.");

@@ -196,3 +196,18 @@ pub fn spawn_random_mainhand_weapon(
         _ => unreachable!(), // Should never happen
     }
 }
+
+pub fn spawn_mainhand_weapon(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    texture_layouts: &Res<SpriteSheetLayouts>,
+    weapon_name: &str,
+) -> Entity {
+    match weapon_name {
+        "sword" => spawn_sword(commands, sprites),
+        "axe" => spawn_axe(commands, sprites),
+        "fire_staff" => spawn_fire_staff(commands, sprites, texture_layouts),
+        "ice_staff" => spawn_ice_staff(commands, sprites, texture_layouts),
+        _ => unreachable!(), // Should never happen
+    }
+}

@@ -6,7 +6,8 @@ use crate::{
     map::{
         chest::SpawnChestsEvent,
         components::{
-            EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent, WorldSpaceConfig,
+            EnemiesSpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent,
+            WorldSpaceConfig,
         },
         helpers::generator::generate_instance_layout,
         portal::Portal,
@@ -69,7 +70,7 @@ pub fn spawn_zone_entities(
             &map_layout,
             ZLayer::Enemy,
         );
-        commands.trigger(EnemySpawnEvent(spawn_positions));
+        commands.trigger(EnemiesSpawnEvent(spawn_positions));
     }
 
     // Spawn chests

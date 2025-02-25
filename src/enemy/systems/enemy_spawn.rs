@@ -1,22 +1,43 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use rand::{thread_rng, Rng};
+use serde::Serialize;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection}, combat::{
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
+    combat::{
         attributes::{Health, Mana},
         components::{ActionState, AimPosition},
-    }, configuration::{
+    },
+    configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
-    }, enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets}, items::{
+    },
+    enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
+    items::{
         equipment::{on_main_hand_activated, Equipped},
         inventory::Inventory,
-        spawn_axe, spawn_health_potion, spawn_random_mainhand_weapon,
-    }, map::EnemySpawnEvent, movement::components::SimpleMotion
+        spawn_health_potion, spawn_mainhand_weapon,
+    },
+    map::EnemiesSpawnEvent,
+    movement::components::SimpleMotion,
 };
 
+#[derive(Debug)]
+pub struct EnemySpawnData {
+    pub position: Vec3,
+    pub enemy_type: EnemyType,
+}
+
+#[derive(Debug, Clone, Serialize, Component, Copy)]
+pub enum EnemyType {
+    IceMage,
+    Warrior,
+    FireMage,
+}
+
 pub fn spawn_enemies(
-    enemy_trigger: Trigger<EnemySpawnEvent>,
+    enemy_trigger: Trigger<EnemiesSpawnEvent>,
     mut commands: Commands,
     enemy_assets: Res<EnemyAssets>,
     animation_config: Res<DefaultAnimationConfig>,
@@ -25,9 +46,13 @@ pub fn spawn_enemies(
 ) {
     let enemy_spawn_positions = enemy_trigger.0.clone();
     for spawn_position in enemy_spawn_positions {
+        let enemy_list = ["FireMage", "Warrior", "IceMage"];
+        let mut rng = thread_rng();
+        let choice = rng.gen_range(0..enemy_list.len());
+        let enemy_to_spawn = enemy_list[choice];
         spawn_enemy(
             &mut commands,
-            "Merman",
+            enemy_to_spawn,
             &enemy_assets,
             spawn_position,
             &animation_config,
@@ -46,23 +71,23 @@ fn spawn_enemy(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    let sprite = Sprite::from_atlas_image(
-        sprites.enemy_sprite_sheet.clone(),
-        TextureAtlas {
-            layout: atlases.enemy_atlas_layout.clone(),
-            index: animation_config
-                .get_indices(ActionState::Idle, FacingDirection::Down)
-                .first,
-        },
-    );
-
-    let starting_items = [
-        spawn_random_mainhand_weapon(commands, &sprites, &atlases),
-        spawn_health_potion(commands, &sprites),
-        spawn_axe(commands, &sprites),
-    ];
-
     if let Some(enemy_type) = enemy_assets.enemy_config.get(enemy_name) {
+        let sprite = Sprite::from_atlas_image(
+            sprites.enemy_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: atlases.enemy_atlas_layout.clone(),
+                index: animation_config
+                    .get_indices(ActionState::Idle, FacingDirection::Down)
+                    .first,
+            },
+        );
+        warn!("Spawning wep {:?}", enemy_type.weapon);
+        let weapon = spawn_mainhand_weapon(commands, &sprites, &atlases, &enemy_type.weapon);
+
+        let health_potion = spawn_health_potion(commands, &sprites);
+
+        let starting_items = [weapon, health_potion];
+
         let enemy = commands
             .spawn((
                 Enemy,

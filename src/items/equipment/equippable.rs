@@ -28,6 +28,12 @@ impl Equippable {
     pub fn new(slot: EquipmentSlot) -> Self {
         Equippable { slot, ..default() }
     }
+    pub fn from(duration: f32, slot: EquipmentSlot) -> Self {
+        Equippable {
+            use_rate: Timer::from_seconds(duration, TimerMode::Once),
+            slot,
+        }
+    }
 }
 
 /// Marker component that represents when an "Equippable" item has been equipped

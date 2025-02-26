@@ -63,6 +63,7 @@ impl Plugin for UIPlugin {
             )
             .add_observer(game_over_screen::on_restart_event_cleanup_zone)
             .add_observer(player_overlay::on_main_hand_activated)
+            .add_observer(player_overlay::on_off_hand_activated)
             .add_systems(
                 Update,
                 game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),

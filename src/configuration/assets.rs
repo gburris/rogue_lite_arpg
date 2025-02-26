@@ -43,6 +43,8 @@ pub struct SpriteSheetLayouts {
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
     pub gold_coin: Handle<Image>,
+    #[asset(path = "items/tome_of_healing.png")]
+    pub tome_of_healing: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword: Handle<Image>,
     #[asset(path = "items/axe.png")]

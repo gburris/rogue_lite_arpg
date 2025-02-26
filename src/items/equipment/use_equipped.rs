@@ -11,7 +11,7 @@ use crate::{
     },
     enemy::Enemy,
     items::{equipment::Equippable, inventory::Inventory},
-    player::UseMainhandInputEvent,
+    player::{UseMainhandInputEvent, UseOffhandInputEvent},
 };
 
 use super::{EquipmentSlot, Equipped};
@@ -69,6 +69,49 @@ pub fn on_main_hand_activated(
                     holder: main_hand_trigger.entity(),
                 },
                 main_hand_entity,
+            );
+            equippable.use_rate.reset();
+        }
+    }
+}
+
+pub fn on_off_hand_activated(
+    off_hand_trigger: Trigger<UseOffhandInputEvent>,
+    mut commands: Commands,
+    mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
+    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+) {
+    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(off_hand_trigger.entity()) else {
+        error!(
+            "Entity: {} tried to use off hand, but is missing equipment slots",
+            off_hand_trigger.entity()
+        );
+        return;
+    };
+
+    let Some(off_hand_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
+        warn!("Off hand is empty!");
+        return;
+    };
+
+    if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(off_hand_entity) {
+        if equippable.use_rate.finished() {
+            // If the equipment uses mana, and we don't have enough, return
+            if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
+                if !mana.attempt_use_mana(mana_cost) {
+                    warn!("Not enough mana!");
+                    return;
+                }
+            } else if holder_mana.is_none() && mana_cost.is_some() {
+                warn!("This wielder is not skilled in the arts of the arcane");
+                return;
+            }
+
+            commands.trigger_targets(
+                UseEquipmentEvent {
+                    holder: off_hand_trigger.entity(),
+                },
+                off_hand_entity,
             );
             equippable.use_rate.reset();
         }

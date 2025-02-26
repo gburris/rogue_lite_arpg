@@ -15,3 +15,6 @@ pub struct PlayerStoppedEvent;
 
 #[derive(Event)]
 pub struct UseMainhandInputEvent;
+
+#[derive(Event)]
+pub struct UseOffhandInputEvent;

@@ -1,22 +1,19 @@
-use std::{collections::HashMap, sync::OnceLock};
-
-use bevy::prelude::*;
-
+use super::EquipmentSlot;
 use crate::{
     animation::FacingDirection, combat::components::ActionState, items::inventory::Inventory,
     labels::layer::ZLayer,
 };
-
-use super::EquipmentSlot;
+use bevy::prelude::*;
+use std::{collections::HashMap, sync::OnceLock};
 
 // Constants for transform values
 const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
-const HEAD_SCALE: Vec3 = Vec3::new(0.15, 0.15, 1.0);
+const OFFHAND_SCALE: Vec3 = Vec3::new(0.5, 0.5, 0.5);
 
 #[derive(Clone, Copy)]
 pub struct EquipmentTransform {
     pub mainhand: Transform,
-    pub head: Transform,
+    pub offhand: Transform,
 }
 
 //You wish this wasn't like this but it is
@@ -33,8 +30,9 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
                 mainhand: Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                head: Transform::from_xyz(0.0, 5.0, ZLayer::WeaponAboveSprite.z())
-                    .with_scale(HEAD_SCALE),
+                offhand: Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z())
+                    .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
+                    .with_scale(OFFHAND_SCALE),
             },
         );
 
@@ -45,8 +43,9 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
                 mainhand: Transform::from_xyz(0.0, 8.0, ZLayer::WeaponBehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                head: Transform::from_xyz(0.0, 0.0, ZLayer::WeaponAboveSprite.z())
-                    .with_scale(HEAD_SCALE),
+                offhand: Transform::from_xyz(0.0, 8.0, ZLayer::WeaponBehindSprite.z())
+                    .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
+                    .with_scale(OFFHAND_SCALE),
             },
         );
 
@@ -57,8 +56,9 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
                 mainhand: Transform::from_xyz(-8.0, -15.0, ZLayer::WeaponBehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                head: Transform::from_xyz(-5.0, 0.0, ZLayer::WeaponAboveSprite.z())
-                    .with_scale(HEAD_SCALE),
+                offhand: Transform::from_xyz(1.0, -15.0, ZLayer::WeaponAboveSprite.z())
+                    .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
+                    .with_scale(OFFHAND_SCALE),
             },
         );
 
@@ -69,8 +69,9 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
                 mainhand: Transform::from_xyz(8.0, -15.0, ZLayer::WeaponAboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                head: Transform::from_xyz(5.0, 0.0, ZLayer::WeaponAboveSprite.z())
-                    .with_scale(HEAD_SCALE),
+                offhand: Transform::from_xyz(8.0, -15.0, ZLayer::WeaponBehindSprite.z())
+                    .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
+                    .with_scale(OFFHAND_SCALE),
             },
         );
 
@@ -102,6 +103,13 @@ pub fn update_equipment_transforms(
         if let Some(entity) = inventory.get_equipped(EquipmentSlot::Mainhand) {
             if let Ok(mut transform) = transforms.get_mut(entity) {
                 *transform = direction_transforms.mainhand;
+            }
+        }
+
+        // Update offhand equipment
+        if let Some(entity) = inventory.get_equipped(EquipmentSlot::Offhand) {
+            if let Ok(mut transform) = transforms.get_mut(entity) {
+                *transform = direction_transforms.offhand;
             }
         }
     }

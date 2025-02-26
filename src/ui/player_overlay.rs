@@ -7,7 +7,7 @@ use crate::{
         inventory::Inventory,
         Item,
     },
-    player::{components::Player, PlayerExperience, UseMainhandInputEvent},
+    player::{components::Player, PlayerExperience, UseMainhandInputEvent, UseOffhandInputEvent},
 };
 
 #[derive(Component)]
@@ -301,13 +301,14 @@ pub fn update_exp_bar(
         exp_bar.width = Val::Px(400.0 * progress);
     }
 }
-
 /* Action Bar Code */
 #[derive(Component)]
 pub struct ActionBar;
 
 #[derive(Component)]
-pub struct ActionBox;
+pub struct ActionBox {
+    slot: EquipmentSlot,
+}
 
 #[derive(Component)]
 pub struct CooldownLine;
@@ -329,12 +330,43 @@ fn create_action_bar(parent: &mut ChildBuilder) {
             },
         ))
         .with_children(|action_bar| {
-            // Spawn 5 action boxes
-            // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
-            for _ in 0..5 {
+            // Define equipment slots in order
+            let slots = [
+                EquipmentSlot::Mainhand,
+                EquipmentSlot::Offhand,
+                // TODO: Add Spell Slot 1, Spell Slot 2, etc.
+            ];
+
+            // Create boxes for equipment slots
+            for slot in slots {
                 action_bar
                     .spawn((
-                        ActionBox,
+                        ActionBox { slot },
+                        Node {
+                            width: Val::Px(ACTION_BOX_SIZE),
+                            height: Val::Px(ACTION_BOX_SIZE),
+                            border: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                        BackgroundColor::from(ACTION_BOX_COLOR),
+                        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
+                    ))
+                    .with_children(|action_box| {
+                        action_box.spawn((
+                            ImageNode { ..default() },
+                            Node {
+                                width: Val::Percent(100.),
+                                height: Val::Percent(100.),
+                                ..default()
+                            },
+                        ));
+                    });
+            }
+
+            // Add remaining generic action boxes
+            for _ in 0..(5 - slots.len()) {
+                action_bar
+                    .spawn((
                         Node {
                             width: Val::Px(ACTION_BOX_SIZE),
                             height: Val::Px(ACTION_BOX_SIZE),
@@ -359,23 +391,21 @@ fn create_action_bar(parent: &mut ChildBuilder) {
 }
 
 pub fn update_action_bar(
-    action_bar_query: Single<&Children, With<ActionBar>>,
-    action_box_query: Query<&Children, With<ActionBox>>,
+    action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     inventory_query: Option<Single<&Inventory, (Changed<Inventory>, With<Player>)>>,
     item_query: Query<(&Item, &Sprite)>,
 ) {
     if let Some(player_inventory_result) = inventory_query {
         let player_inventory = player_inventory_result.into_inner();
-        if let Some(mainhand) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
-            let action_bar_children = action_bar_query.into_inner();
-            if let Some(&slot_one) = action_bar_children.first() {
-                if let Ok(action_box_children) = action_box_query.get(slot_one) {
-                    if let Some(image_box_child) = action_box_children.first() {
-                        if let Ok(mut image_node) = image_query.get_mut(*image_box_child) {
-                            if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
-                                image_node.image = mainhand_item_sprite.image.clone()
-                            }
+
+        // Update all action boxes that correspond to equipment slots
+        for (action_box, children) in action_box_query.iter() {
+            if let Some(equipped_entity) = player_inventory.get_equipped(action_box.slot) {
+                if let Some(&image_entity) = children.first() {
+                    if let Ok(mut image_node) = image_query.get_mut(image_entity) {
+                        if let Ok((_, item_sprite)) = item_query.get(equipped_entity) {
+                            image_node.image = item_sprite.image.clone();
                         }
                     }
                 }
@@ -389,26 +419,73 @@ const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
 #[derive(Component)]
 pub struct CooldownIndicator {
     timer: Timer,
+    slot: EquipmentSlot,
 }
 
+// Event handling for mainhand activation
 pub fn on_main_hand_activated(
     trigger: Trigger<UseMainhandInputEvent>,
     mut commands: Commands,
     player_query: Single<Entity, With<Player>>,
-    action_bar_query: Single<&Children, With<ActionBar>>,
+    action_box_query: Query<(Entity, &ActionBox)>,
     inventory_query: Single<&Inventory, With<Player>>,
     weapon_query: Query<&Equippable>,
 ) {
     if (trigger.entity()) != player_query.into_inner() {
         return;
     }
-    let action_bar_children = action_bar_query.into_inner();
+
     let player_inventory = inventory_query.into_inner();
-    if let Some(&first_box_entity) = action_bar_children.first() {
-        if let Some(weapon_entity) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
+    handle_equipment_activation(
+        &mut commands,
+        &action_box_query,
+        player_inventory,
+        &weapon_query,
+        EquipmentSlot::Mainhand,
+    );
+}
+
+// Event handling for offhand activation
+pub fn on_off_hand_activated(
+    trigger: Trigger<UseOffhandInputEvent>,
+    mut commands: Commands,
+    player_query: Single<Entity, With<Player>>,
+    action_box_query: Query<(Entity, &ActionBox)>,
+    inventory_query: Single<&Inventory, With<Player>>,
+    weapon_query: Query<&Equippable>,
+) {
+    if (trigger.entity()) != player_query.into_inner() {
+        return;
+    }
+
+    let player_inventory = inventory_query.into_inner();
+    handle_equipment_activation(
+        &mut commands,
+        &action_box_query,
+        player_inventory,
+        &weapon_query,
+        EquipmentSlot::Offhand,
+    );
+}
+
+// Helper function to reduce code duplication in activation handlers
+fn handle_equipment_activation(
+    commands: &mut Commands,
+    action_box_query: &Query<(Entity, &ActionBox)>,
+    player_inventory: &Inventory,
+    weapon_query: &Query<&Equippable>,
+    slot: EquipmentSlot,
+) {
+    // Find the action box matching the equipment slot
+    if let Some((box_entity, _)) = action_box_query
+        .iter()
+        .find(|(_, action_box)| action_box.slot == slot)
+    {
+        if let Some(weapon_entity) = player_inventory.get_equipped(slot) {
             if let Ok(weapon) = weapon_query.get(weapon_entity) {
-                commands.entity(first_box_entity).insert(CooldownIndicator {
+                commands.entity(box_entity).insert(CooldownIndicator {
                     timer: weapon.use_rate.clone(),
+                    slot,
                 });
             }
         }

@@ -4,7 +4,7 @@ use crate::{
     labels::states::PausedState,
     player::{
         interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        UseMainhandInputEvent,
+        UseMainhandInputEvent, UseOffhandInputEvent,
     },
 };
 
@@ -36,6 +36,10 @@ pub fn player_input(
 
     if buttons.pressed(MouseButton::Left) {
         commands.trigger_targets(UseMainhandInputEvent, player_entity);
+    }
+
+    if buttons.pressed(MouseButton::Right) {
+        commands.trigger_targets(UseOffhandInputEvent, player_entity);
     }
 
     let mut direction = Vec2::ZERO;

@@ -2,6 +2,7 @@
 pub mod animation;
 pub mod combat;
 pub mod configuration;
+pub mod debug;
 pub mod despawn;
 pub mod econ;
 pub mod enemy;

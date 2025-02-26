@@ -1,4 +1,4 @@
-use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyType};
+use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyDetails};
 use bevy::{prelude::Commands, scene::ron::de::from_reader};
 use std::{collections::HashMap, fs::File, io::BufReader};
 
@@ -11,7 +11,7 @@ pub fn setup_enemy_assets(mut commands: Commands) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn load_enemy_data() -> HashMap<String, EnemyType> {
+fn load_enemy_data() -> HashMap<String, EnemyDetails> {
     let file = File::open("assets/config/enemies.ron").expect("Failed to open RON file");
     let reader = BufReader::new(file);
 
@@ -25,7 +25,7 @@ fn load_enemy_data() -> HashMap<String, EnemyType> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn load_enemy_data() -> HashMap<String, EnemyType> {
+fn load_enemy_data() -> HashMap<String, EnemyDetails> {
     const ENEMY_RON: &str = include_str!("../../../assets/config/enemies.ron");
 
     match from_str::<EnemiesConfig>(ENEMY_RON) {

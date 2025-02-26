@@ -4,7 +4,7 @@ use crate::{
 };
 
 use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 
 pub fn start_melee_attack(
     commands: &mut Commands,
@@ -15,6 +15,7 @@ pub fn start_melee_attack(
     melee_weapon.attack_duration.reset();
     commands.entity(weapon_entity).insert(ActiveMeleeAttack {
         initial_angle: attack_angle,
+        entities_damaged: HashSet::new(),
     });
 }
 

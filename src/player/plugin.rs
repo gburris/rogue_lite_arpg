@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSet, states::AppState},
+    labels::{
+        sets::InGameSet,
+        states::{AppState, PlayingState},
+    },
     map::systems::state::transition_to_create_hub,
     player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
 };
@@ -9,6 +12,7 @@ use crate::{
 use super::{
     animation::animation_setup::set_starting_player_animation_and_sprite_sheet,
     interact::{on_interaction_zone_added, on_player_interaction_input},
+    systems::death::finish_death_animation,
 };
 
 pub struct PlayerPlugin;
@@ -25,7 +29,16 @@ impl Plugin for PlayerPlugin {
                 )
                     .chain(),
             )
-            .add_systems(Update, player_input.in_set(InGameSet::PlayerInput))
+            .add_systems(
+                Update,
+                finish_death_animation.run_if(in_state(PlayingState::Death)),
+            )
+            .add_systems(
+                Update,
+                player_input
+                    .in_set(InGameSet::PlayerInput)
+                    .run_if(in_state(PlayingState::Playing)),
+            )
             .add_systems(
                 Update,
                 (

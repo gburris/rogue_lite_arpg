@@ -9,6 +9,7 @@ pub fn generate_hub_layout() -> MapLayout {
     let map_data = MapDataBuilder::new(size)
         .with_floor(TileType::Grass)
         .with_exterior_walls()
+        .with_exits(0)
         .with_prefab(PrefabType::NPCHub)
         .build();
     return MapLayout::from(map_data);

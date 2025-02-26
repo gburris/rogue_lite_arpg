@@ -82,8 +82,6 @@ pub fn spawn(mut commands: Commands) {
                     );
                 });
 
-            // Spacer to push everything else down
-            // TODO: Don't think we need this
             parent.spawn(Node {
                 flex_grow: 1.0,
                 ..default()
@@ -333,7 +331,7 @@ fn create_action_bar(parent: &mut ChildBuilder) {
         .with_children(|action_bar| {
             // Spawn 5 action boxes
             // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
-            for i in 0..5 {
+            for _ in 0..5 {
                 action_bar
                     .spawn((
                         ActionBox,

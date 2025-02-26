@@ -15,6 +15,7 @@ pub fn start_melee_attack(
     melee_weapon.attack_duration.reset();
     commands.entity(weapon_entity).insert(ActiveMeleeAttack {
         initial_angle: attack_angle,
+        entities_damaged: vec![],
     });
 }
 

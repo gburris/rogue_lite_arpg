@@ -1,12 +1,15 @@
 use bevy::prelude::*;
+use rand::{thread_rng, Rng};
 
 use crate::{
     configuration::assets::SpriteAssets,
+    enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
     labels::layer::ZLayer,
     map::{
         chest::SpawnChestsEvent,
         components::{
-            EnemySpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent, WorldSpaceConfig,
+            EnemiesSpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent,
+            WorldSpaceConfig,
         },
         helpers::generator::generate_instance_layout,
         portal::Portal,
@@ -36,8 +39,11 @@ pub fn spawn_zone_entities(
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
     instance_assets: Res<InstanceAssets>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    player_query: Single<&mut Transform, With<Player>>,
 ) {
+    //TODO: Markers should all store an associated type
+    //So maps can have a set of enemy types that they create markers for
+    //and chest types, and NPC types
     if let Some(exit_positions) = map_layout.markers.get_markers(MarkerType::LevelExits) {
         for exit_position in exit_positions {
             let exit_position_in_world =
@@ -45,7 +51,7 @@ pub fn spawn_zone_entities(
             let portal_position = Vec3::new(
                 exit_position_in_world.x,
                 exit_position_in_world.y,
-                ZLayer::Warpzone.z(),
+                ZLayer::Exit.z(),
             );
 
             // Generate a unique instance layout for each portal
@@ -61,7 +67,6 @@ pub fn spawn_zone_entities(
         }
     }
 
-    // Spawn enemies
     if let Some(enemy_positions) = map_layout.markers.get_markers(MarkerType::EnemySpawns) {
         let spawn_positions = convert_tiles_to_world_positions(
             enemy_positions,
@@ -69,7 +74,18 @@ pub fn spawn_zone_entities(
             &map_layout,
             ZLayer::Enemy,
         );
-        commands.trigger(EnemySpawnEvent(spawn_positions));
+        let mut enemy_spawn_data_list: Vec<EnemySpawnData> = [].to_vec();
+        for pos in spawn_positions {
+            let mut rng = thread_rng();
+            let choice = rng.gen_range(0..3);
+            let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
+            let enemy_spawn_data = EnemySpawnData {
+                position: pos,
+                enemy_type: enemy_types[choice],
+            };
+            enemy_spawn_data_list.push(enemy_spawn_data)
+        }
+        commands.trigger(EnemiesSpawnEvent(enemy_spawn_data_list));
     }
 
     // Spawn chests
@@ -106,11 +122,8 @@ pub fn spawn_zone_entities(
                 ZLayer::Player.z(),
             );
 
-            if let Ok(mut player_transform) = player_query.get_single_mut() {
-                player_transform.translation = player_spawn_position;
-            } else {
-                warn!("Player entity not found. Ensure the player is spawned before this system runs.");
-            }
+            let mut player_transform = player_query.into_inner();
+            player_transform.translation = player_spawn_position;
         }
     } else {
         warn!("Player spawn marker not found in map layout.");

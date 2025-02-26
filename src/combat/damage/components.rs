@@ -31,7 +31,7 @@ impl Invulnerable {
 
     pub fn death() -> Self {
         Self {
-            total_time: Timer::new(Duration::from_secs(2), TimerMode::Once),
+            total_time: Timer::new(Duration::from_secs(4), TimerMode::Once),
             flash_timer: Timer::new(Duration::from_millis(5000), TimerMode::Repeating), //Don't flash
             is_transparent: false,
         }

@@ -25,17 +25,18 @@ impl Default for Experience {
 
 #[derive(Deserialize, Debug)]
 pub struct EnemiesConfig {
-    pub enemies: HashMap<String, EnemyType>,
+    pub enemies: HashMap<String, EnemyDetails>,
 }
 #[derive(Deserialize, Debug)]
-pub struct EnemyType {
+pub struct EnemyDetails {
     pub simple_motion_speed: f32,
     pub health: f32,
     pub sprite_path: String,
     pub collider_size: (f32, f32),
+    pub weapon: String,
 }
 
 #[derive(Resource)]
 pub struct EnemyAssets {
-    pub enemy_config: HashMap<String, EnemyType>,
+    pub enemy_config: HashMap<String, EnemyDetails>,
 }

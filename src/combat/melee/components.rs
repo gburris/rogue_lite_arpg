@@ -47,6 +47,7 @@ impl MeleeSwingType {
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
     pub initial_angle: f32,
+    pub entities_damaged: Vec<Entity>,
 }
 
 pub fn calculate_damage(damage_range: (f32, f32)) -> f32 {

@@ -8,6 +8,12 @@ use crate::{
         Item,
     },
     player::{components::Player, PlayerExperience, UseMainhandInputEvent},
+    items::{
+        equipment::{EquipmentSlot, Equippable},
+        inventory::Inventory,
+        Item,
+    },
+    player::{components::Player, PlayerExperience, UseMainhandInputEvent},
 };
 
 #[derive(Component)]
@@ -90,10 +96,36 @@ pub fn spawn(mut commands: Commands) {
             });
 
             // Bottom container for EXP and Action bars, health pot stuff
+            // Bottom container for EXP and Action bars, health pot stuff
             parent
                 .spawn(Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::FlexEnd,
+                    ..default()
+                })
+                .with_children(|bottom_container| {
+                    bottom_container
+                        .spawn(Node {
+                            width: Val::Auto,
+                            height: Val::Auto,
+                            ..default()
+                        })
+                        .with_children(|exp_container| {
+                            create_exp_bar(exp_container);
+                        });
+
+                    bottom_container
+                        .spawn(Node {
+                            width: Val::Auto,
+                            height: Val::Auto,
+                            ..default()
+                        })
+                        .with_children(|action_container| {
+                            create_action_bar(action_container);
+                        });
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::FlexEnd,
@@ -245,6 +277,7 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
     Val::Px((current_pixels + pixel_change).max(0.0))
 }
 
+/* Exp Bar Code */
 /* Exp Bar Code */
 fn create_exp_bar(parent: &mut ChildBuilder) {
     parent

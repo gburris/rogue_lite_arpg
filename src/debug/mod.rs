@@ -1,7 +1,7 @@
 use bevy::{
     diagnostic::{
-        Diagnostic, DiagnosticPath, Diagnostics, DiagnosticsStore, FrameTimeDiagnosticsPlugin,
-        RegisterDiagnostic,
+        Diagnostic, DiagnosticPath, Diagnostics, DiagnosticsStore, EntityCountDiagnosticsPlugin,
+        FrameTimeDiagnosticsPlugin, RegisterDiagnostic,
     },
     ecs::entity::Entities,
     input::common_conditions::input_toggle_active,
@@ -11,7 +11,7 @@ use bevy::{
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::hierarchy::{Hierarchy, SelectedEntities},
-    egui::{self, Color32, RichText, WidgetText},
+    egui::{self, Color32, RichText},
     DefaultInspectorConfigPlugin,
 };
 use egui_plot::{Line, Plot, PlotBounds, PlotPoint, Text};
@@ -97,42 +97,53 @@ fn diagnostics_ui(
     egui_context: Query<&mut EguiContext, With<PrimaryWindow>>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
-    if let Ok(mut egui_context) = egui_context.get_single().cloned() {
-        egui::Window::new("Diagnostics")
-            .default_size((256., 128.))
-            .show(egui_context.get_mut(), |ui| {
-                ui.horizontal(|ui| {
-                    Plot::new("fps")
-                        .height(64.)
-                        .view_aspect(3.)
-                        .y_axis_label("fps")
-                        .show_axes([false, false])
-                        .show(ui, |plt_ui| {
-                            if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
-                                let values: Vec<[f64; 2]> = fps
-                                    .values()
-                                    .enumerate()
-                                    .map(|(i, &v)| [i as f64, v])
-                                    .collect();
-                                plt_ui.set_plot_bounds(PlotBounds::from_min_max(
-                                    [0., 0.],
-                                    [fps.get_max_history_length() as f64, 120.],
-                                ));
-                                plt_ui.line(Line::new(values).fill(0.));
+    let mut egui_context = egui_context.single().clone();
+    egui::Window::new("Diagnostics")
+        .default_size((256., 128.))
+        .show(egui_context.get_mut(), |ui| {
+            let plot = Plot::new("fps")
+                .height(64.)
+                .view_aspect(3.)
+                .y_axis_label("fps")
+                .show_axes([false, false]);
 
-                                let avg_value = fps.average().unwrap_or_default();
-                                plt_ui.text(Text::new(
-                                    PlotPoint::new(24., 24.),
-                                    RichText::new(format!("{avg_value:0.0}"))
-                                        .size(16.)
-                                        .color(Color32::WHITE),
-                                ));
-                            }
-                        });
-                });
-                ui.allocate_space(ui.available_size())
+            // FPS counter + Plot
+            plot.show(ui, |plt_ui| {
+                let diagnostic = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS);
+                if let Some(fps) = diagnostic {
+                    render_fps_graph(plt_ui, fps);
+                }
             });
-    }
+
+            // Entity Count
+            if let Some(entity_count) =
+                diagnostics.get_measurement(&EntityCountDiagnosticsPlugin::ENTITY_COUNT)
+            {
+                ui.label(format!("# entities = {}", entity_count.value));
+            }
+            ui.allocate_space(ui.available_size())
+        });
+}
+
+fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {
+    let values: Vec<[f64; 2]> = fps
+        .values()
+        .enumerate()
+        .map(|(i, &v)| [i as f64, v])
+        .collect();
+    plt_ui.set_plot_bounds(PlotBounds::from_min_max(
+        [0., 0.],
+        [fps.get_max_history_length() as f64, 120.],
+    ));
+    plt_ui.line(Line::new(values).fill(0.));
+
+    let avg_value = fps.average().unwrap_or_default();
+    plt_ui.text(Text::new(
+        PlotPoint::new(24., 24.),
+        RichText::new(format!("{avg_value:0.0}"))
+            .size(16.)
+            .color(Color32::WHITE),
+    ));
 }
 
 pub struct EntityDiagnosticsPlugin;

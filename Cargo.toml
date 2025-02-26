@@ -31,6 +31,7 @@ web-sys = { version = "0.3", features = [
 ] }
 console_error_panic_hook = "0.1"
 bevy-inspector-egui = { version = "0.29.1", optional = true }
+egui_plot = { version = "0.30.0", optional = true }
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -49,7 +50,7 @@ path = "src/main.rs"
 
 [features]
 atlas = []
-debug = ["dep:bevy-inspector-egui"]
+debug = ["dep:bevy-inspector-egui", "dep:egui_plot"]
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

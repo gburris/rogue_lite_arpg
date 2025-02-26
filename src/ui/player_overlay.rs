@@ -8,12 +8,6 @@ use crate::{
         Item,
     },
     player::{components::Player, PlayerExperience, UseMainhandInputEvent},
-    items::{
-        equipment::{EquipmentSlot, Equippable},
-        inventory::Inventory,
-        Item,
-    },
-    player::{components::Player, PlayerExperience, UseMainhandInputEvent},
 };
 
 #[derive(Component)]

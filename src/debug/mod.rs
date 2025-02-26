@@ -6,6 +6,7 @@ use bevy::{
     ecs::entity::Entities,
     input::common_conditions::input_toggle_active,
     prelude::*,
+    render::diagnostic::RenderDiagnosticsPlugin,
     window::PrimaryWindow,
 };
 use bevy_inspector_egui::{
@@ -43,6 +44,7 @@ impl Plugin for DebugPlugin {
 fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities>) {
     let mut egui_context = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+        // NOTE: this panics if query result is not exactly one
         .single(world)
         .clone();
     egui::SidePanel::left("hierarchy")
@@ -102,8 +104,8 @@ fn diagnostics_ui(
         .default_size((256., 128.))
         .show(egui_context.get_mut(), |ui| {
             let plot = Plot::new("fps")
-                .height(64.)
-                .view_aspect(3.)
+                .width(128.)
+                .view_aspect(2.)
                 .y_axis_label("fps")
                 .show_axes([false, false]);
 
@@ -132,6 +134,7 @@ fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {
         .map(|(i, &v)| [i as f64, v])
         .collect();
     plt_ui.set_plot_bounds(PlotBounds::from_min_max(
+        // TODO: hardcoded values
         [0., 0.],
         [fps.get_max_history_length() as f64, 120.],
     ));
@@ -139,6 +142,7 @@ fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {
 
     let avg_value = fps.average().unwrap_or_default();
     plt_ui.text(Text::new(
+        // TODO: proper alignment
         PlotPoint::new(24., 24.),
         RichText::new(format!("{avg_value:0.0}"))
             .size(16.)

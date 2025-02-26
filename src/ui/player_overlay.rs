@@ -82,44 +82,16 @@ pub fn spawn(mut commands: Commands) {
                     );
                 });
 
-            // Spacer to push everything else down
-            // TODO: Don't think we need this
             parent.spawn(Node {
                 flex_grow: 1.0,
                 ..default()
             });
 
             // Bottom container for EXP and Action bars, health pot stuff
-            // Bottom container for EXP and Action bars, health pot stuff
             parent
                 .spawn(Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::FlexEnd,
-                    ..default()
-                })
-                .with_children(|bottom_container| {
-                    bottom_container
-                        .spawn(Node {
-                            width: Val::Auto,
-                            height: Val::Auto,
-                            ..default()
-                        })
-                        .with_children(|exp_container| {
-                            create_exp_bar(exp_container);
-                        });
-
-                    bottom_container
-                        .spawn(Node {
-                            width: Val::Auto,
-                            height: Val::Auto,
-                            ..default()
-                        })
-                        .with_children(|action_container| {
-                            create_action_bar(action_container);
-                        });
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::FlexEnd,
@@ -272,7 +244,6 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
 }
 
 /* Exp Bar Code */
-/* Exp Bar Code */
 fn create_exp_bar(parent: &mut ChildBuilder) {
     parent
         .spawn(Node {
@@ -360,7 +331,7 @@ fn create_action_bar(parent: &mut ChildBuilder) {
         .with_children(|action_bar| {
             // Spawn 5 action boxes
             // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
-            for i in 0..5 {
+            for _ in 0..5 {
                 action_bar
                     .spawn((
                         ActionBox,

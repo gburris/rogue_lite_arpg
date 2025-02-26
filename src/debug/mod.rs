@@ -6,7 +6,6 @@ use bevy::{
     ecs::entity::Entities,
     input::common_conditions::input_toggle_active,
     prelude::*,
-    render::diagnostic::RenderDiagnosticsPlugin,
     window::PrimaryWindow,
 };
 use bevy_inspector_egui::{

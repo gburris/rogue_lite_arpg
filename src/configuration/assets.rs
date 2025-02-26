@@ -77,8 +77,12 @@ pub struct SpriteAssets {
     pub chests_sprite_sheet: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
-    #[asset(path = "enemies/basic_enemy_sprite_sheet.png")]
-    pub enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/ice_mage_enemy.png")]
+    pub ice_mage_enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/warrior_enemy.png")]
+    pub warrior_enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/fire_mage_enemy.png")]
+    pub fire_mage_enemy_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/shop_keeper.png")]
     pub shop_keeper_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/game_guide.png")]

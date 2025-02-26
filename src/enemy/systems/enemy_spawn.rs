@@ -35,12 +35,22 @@ pub enum EnemyType {
     FireMage,
 }
 
-pub fn get_name_from_type(enemy_type: EnemyType) -> String {
-    match enemy_type {
-        EnemyType::IceMage => return "IceMage".to_owned(),
-        EnemyType::Warrior => return "Warrior".to_owned(),
-        EnemyType::FireMage => return "FireMage".to_owned(),
-    };
+impl EnemyType {
+    pub fn name(&self) -> String {
+        match self {
+            Self::IceMage => "IceMage".to_owned(),
+            Self::Warrior => "Warrior".to_owned(),
+            Self::FireMage => "FireMage".to_owned(),
+        }
+    }
+
+    pub fn sprite(&self, sprites: &Res<SpriteAssets>) -> Handle<Image> {
+        match self {
+            Self::IceMage => sprites.ice_mage_enemy_sprite_sheet.clone(),
+            Self::Warrior => sprites.warrior_enemy_sprite_sheet.clone(),
+            Self::FireMage => sprites.fire_mage_enemy_sprite_sheet.clone(),
+        }
+    }
 }
 
 pub fn spawn_enemies(
@@ -51,12 +61,11 @@ pub fn spawn_enemies(
     sprites: Res<SpriteAssets>,
     atlases: Res<SpriteSheetLayouts>,
 ) {
-    let enemies_spawn_data = enemy_trigger.0.clone();
-    for spawn_data in enemies_spawn_data {
-        let enemy_to_spawn = get_name_from_type(spawn_data.enemy_type);
+    for spawn_data in enemy_trigger.0.clone() {
+        let enemy_name = spawn_data.enemy_type.name();
         spawn_enemy(
             &mut commands,
-            &enemy_to_spawn,
+            &enemy_name,
             &enemy_assets,
             spawn_data,
             &animation_config,
@@ -75,9 +84,9 @@ fn spawn_enemy(
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
-    if let Some(enemy_type) = enemy_assets.enemy_config.get(enemy_name) {
+    if let Some(enemy_details) = enemy_assets.enemy_config.get(enemy_name) {
         let sprite = Sprite::from_atlas_image(
-            sprites.enemy_sprite_sheet.clone(),
+            spawn_data.enemy_type.sprite(sprites),
             TextureAtlas {
                 layout: atlases.enemy_atlas_layout.clone(),
                 index: animation_config
@@ -85,9 +94,11 @@ fn spawn_enemy(
                     .first,
             },
         );
-        let weapon = spawn_mainhand_weapon(commands, &sprites, &atlases, &enemy_type.weapon);
+
+        let weapon = spawn_mainhand_weapon(commands, &sprites, &atlases, &enemy_details.weapon);
         let health_potion = spawn_health_potion(commands, &sprites);
         let starting_items = [weapon, health_potion];
+
         let enemy = commands
             .spawn((
                 Enemy,
@@ -96,14 +107,14 @@ fn spawn_enemy(
                     .coins(99)
                     .max_capacity(10)
                     .build(),
-                SimpleMotion::new(enemy_type.simple_motion_speed),
-                Health::new(enemy_type.health),
+                SimpleMotion::new(enemy_details.simple_motion_speed),
+                Health::new(enemy_details.health),
                 LockedAxes::new().lock_rotation(),
                 RigidBody::Dynamic,
                 AimPosition::default(),
                 Mana::new(100.0, 10.0),
                 ActionState::Idle,
-                Collider::rectangle(enemy_type.collider_size.0, enemy_type.collider_size.1),
+                Collider::rectangle(enemy_details.collider_size.0, enemy_details.collider_size.1),
                 CollisionLayers::new(
                     [GameCollisionLayer::Grounded, GameCollisionLayer::Enemy],
                     [

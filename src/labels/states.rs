@@ -24,3 +24,11 @@ pub enum PausedState {
     Equipment,
     Stats,
 }
+
+#[derive(SubStates, Eq, Hash, Default, Clone, Copy, Debug, PartialEq)]
+#[source(AppState = AppState::Playing)]
+pub enum PlayingState {
+    #[default]
+    Playing,
+    Death,
+}

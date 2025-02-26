@@ -16,22 +16,22 @@ use crate::{
         *,
     },
     labels::layer::ZLayer,
-    player::{systems::*, Player},
+    player::{systems::*, Player, PlayerStats},
+    progression::GameProgress,
 };
 
 pub fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     texture_layouts: Res<SpriteSheetLayouts>,
+    game_progress: Res<GameProgress>,
 ) {
     let starting_items = [
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
-        spawn_shovel(&mut commands, &sprites),
-        spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
     ];
-
+    let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
     let player = commands
         .spawn((
             Player,
@@ -44,6 +44,7 @@ pub fn spawn_player(
             HasIFrames {
                 duration: Duration::from_secs(1),
             },
+            current_player_base_stats,
             Collider::rectangle(40.0, 50.0),
             CollisionLayers::new(
                 [GameCollisionLayer::Player, GameCollisionLayer::Grounded],

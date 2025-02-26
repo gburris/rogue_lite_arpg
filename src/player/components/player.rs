@@ -6,15 +6,12 @@ use crate::{
     movement::components::SimpleMotion,
 };
 
-use super::PlayerStats;
-
 #[derive(Component)]
 #[require(
     Health(|| Health::new(100.0)),
     SimpleMotion(|| SimpleMotion::new(450.0)),
     PlayerExperience,
     PlayerLevel,
-    PlayerStats,
     AimPosition,
     RigidBody,
     LockedAxes(|| LockedAxes::new().lock_rotation())

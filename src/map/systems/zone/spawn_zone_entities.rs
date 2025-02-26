@@ -74,17 +74,17 @@ pub fn spawn_zone_entities(
             &map_layout,
             ZLayer::Enemy,
         );
-        let mut enemy_spawn_data_list: Vec<EnemySpawnData> = [].to_vec();
-        for pos in spawn_positions {
-            let mut rng = thread_rng();
-            let choice = rng.gen_range(0..3);
-            let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
-            let enemy_spawn_data = EnemySpawnData {
+        let mut rng = thread_rng();
+        let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
+
+        let enemy_spawn_data_list = spawn_positions
+            .into_iter()
+            .map(|pos| EnemySpawnData {
                 position: pos,
-                enemy_type: enemy_types[choice],
-            };
-            enemy_spawn_data_list.push(enemy_spawn_data)
-        }
+                enemy_type: enemy_types[rng.gen_range(0..3)],
+            })
+            .collect();
+
         commands.trigger(EnemiesSpawnEvent(enemy_spawn_data_list));
     }
 

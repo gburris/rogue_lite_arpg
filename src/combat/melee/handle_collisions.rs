@@ -22,15 +22,11 @@ pub fn handle_melee_collisions(
         melee_query.iter_mut()
     {
         for &colliding_entity in colliding_entities.iter() {
-            if enemy_query.contains(colliding_entity) || colliding_entity == player_entity {
-                if active_melee_attack
+            if (enemy_query.contains(colliding_entity) || colliding_entity == player_entity)
+                && (!active_melee_attack
                     .entities_damaged
-                    .contains(&colliding_entity)
-                {
-                    //We have already hit this entity (or tried to)
-                    //With this swing, return early
-                    continue;
-                }
+                    .contains(&colliding_entity))
+            {
                 let damage = calculate_damage(melee_weapon.damage);
                 commands.trigger_targets(
                     AttemptDamageEvent {
@@ -39,7 +35,9 @@ pub fn handle_melee_collisions(
                     },
                     colliding_entity,
                 );
-                active_melee_attack.entities_damaged.push(colliding_entity);
+                active_melee_attack
+                    .entities_damaged
+                    .insert(colliding_entity);
             }
         }
     }

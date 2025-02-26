@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use rand::Rng;
 
 use crate::{
@@ -47,7 +47,7 @@ impl MeleeSwingType {
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
     pub initial_angle: f32,
-    pub entities_damaged: Vec<Entity>,
+    pub entities_damaged: HashSet<Entity>,
 }
 
 pub fn calculate_damage(damage_range: (f32, f32)) -> f32 {

@@ -150,7 +150,7 @@ pub fn generate_entrance_exit_positions(
     if num_exits == 0 {
         (player_spawn, [].to_vec())
     } else if num_exits == 1 {
-        (player_spawn, vec![*exits.get(0).unwrap()])
+        (player_spawn, vec![exits[0]])
     } else {
         (player_spawn, exits)
     }

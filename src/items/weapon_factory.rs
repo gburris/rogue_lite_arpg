@@ -68,34 +68,15 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
         .id()
 }
 
-pub fn spawn_shovel(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
-    commands
-        .spawn((
-            MeleeWeapon {
-                damage: (1.0, 6.0),
-                effects_list: EffectsList { effects: vec![] },
-                hitbox: Collider::rectangle(10.0, 40.0),
-                attack_type: MeleeSwingType::stab(),
-                attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
-            },
-            Name::new("Shovel"),
-            Equippable::default(),
-            Item::new(5),
-            Visibility::Hidden,
-            Sprite::from_image(sprites.shovel_equipment_sprite.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
-        ))
-        .observe(on_weapon_melee)
-        .id()
-}
-
 pub fn spawn_fire_staff(
     commands: &mut Commands,
     sprites: &Res<SpriteAssets>,
     texture_layouts: &Res<SpriteSheetLayouts>,
 ) -> Entity {
     let fireball = ProjectileBundle {
-        projectile: Projectile { damage: (1.0, 6.0) },
+        projectile: Projectile {
+            damage: (5.0, 10.0),
+        },
         effects_list: EffectsList {
             effects: vec![ApplyStatus {
                 status: StatusType::Burning(BurningStatus::default()),
@@ -193,6 +174,21 @@ pub fn spawn_random_mainhand_weapon(
         1 => spawn_axe(commands, sprites),
         2 => spawn_fire_staff(commands, sprites, texture_layouts),
         3 => spawn_ice_staff(commands, sprites, texture_layouts),
+        _ => unreachable!(), // Should never happen
+    }
+}
+
+pub fn spawn_mainhand_weapon(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    texture_layouts: &Res<SpriteSheetLayouts>,
+    weapon_name: &str,
+) -> Entity {
+    match weapon_name {
+        "sword" => spawn_sword(commands, sprites),
+        "axe" => spawn_axe(commands, sprites),
+        "fire_staff" => spawn_fire_staff(commands, sprites, texture_layouts),
+        "ice_staff" => spawn_ice_staff(commands, sprites, texture_layouts),
         _ => unreachable!(), // Should never happen
     }
 }

@@ -6,6 +6,8 @@ use bevy_ecs_tilemap::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::enemy::systems::enemy_spawn::EnemySpawnData;
+
 use super::helpers::generator::MapData;
 
 /*
@@ -20,13 +22,9 @@ pub struct CleanupZone;
 
 #[derive(Event)]
 pub struct NPCSpawnEvent(pub Vec<Vec3>);
-#[derive(Debug, Event)]
-pub struct EnemySpawnEvent(pub Vec<Vec3>);
 
-#[derive(Component, Clone, Default)]
-pub struct Mapper {
-    pub map_layout: MapLayout,
-}
+#[derive(Debug, Event)]
+pub struct EnemiesSpawnEvent(pub Vec<EnemySpawnData>);
 
 #[derive(Component)]
 pub struct Wall;
@@ -179,6 +177,7 @@ pub struct InstanceType {
     pub size_x_range: (f32, f32),
     pub size_y_range: (f32, f32),
     pub number_of_enemies_range: (f32, f32),
+    pub num_exits: u32,
     pub chest_range: (f32, f32),
     pub prefabs: Vec<String>,
     pub floor_type: String,

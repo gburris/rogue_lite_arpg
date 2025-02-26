@@ -70,6 +70,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .with_floor(floor_type) //Floor really needs to go first, you don't wanna know what happens if it doesn't
         .with_exterior_walls()
         .with_chests(num_chests)
+        .with_exits(instance_type.num_exits)
         .with_enemies(num_enemies)
         .build();
 

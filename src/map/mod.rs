@@ -7,7 +7,7 @@ pub mod systems;
 
 //Used by all crates
 pub use components::CleanupZone;
-pub use components::EnemySpawnEvent;
+pub use components::EnemiesSpawnEvent;
 pub use components::NPCSpawnEvent;
 
 //Used by despawn to remove the colliders tagged with this

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub struct PlayerStats {
     pub agility: u32,   //Movement speed, roll range
     pub strength: u32,  //Melee swing damage

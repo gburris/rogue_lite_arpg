@@ -24,10 +24,10 @@ pub struct StatsUIUpdateEvent;
 
 pub fn spawn_stats_shop_menu(
     mut commands: Commands,
-    player_stats: Query<&PlayerStats>,
-    game_progress: Res<GameProgress>,
+    player_stats: Single<&PlayerStats>,
+    game_progress: ResMut<GameProgress>,
 ) {
-    let stats = player_stats.single();
+    let stats = player_stats.into_inner();
 
     commands
         .spawn((

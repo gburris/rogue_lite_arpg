@@ -17,6 +17,7 @@ use bevy_inspector_egui::{
 };
 use egui_extras::Column;
 use egui_plot::{Line, Plot, PlotBounds, PlotPoint, Text};
+use tracing::instrument;
 
 use crate::map::systems::zone::ZoneBackground;
 const ENTITY_COUNT: DiagnosticPath = EntityDiagnosticsPlugin::ENTITY_COUNT;
@@ -46,6 +47,7 @@ impl Plugin for DebugPlugin {
     }
 }
 
+#[instrument(name = "debug/inspector_ui", skip_all)]
 fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities>) {
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
@@ -59,8 +61,9 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         .default_width(200.0)
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-                ui.heading("Hierarchy");
+                let _span = info_span!("debug/hierarchy_panel").entered();
 
+                ui.heading("Hierarchy");
                 let type_registry = world.resource::<AppTypeRegistry>().clone();
                 let type_registry = type_registry.read();
                 Hierarchy {
@@ -82,8 +85,9 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         .default_width(250.0)
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-                ui.heading("Inspector");
+                let _span = info_span!("debug/inspector_panel").entered();
 
+                ui.heading("Inspector");
                 match selected_entities.as_slice() {
                     &[entity] => {
                         bevy_inspector_egui::bevy_inspector::ui_for_entity(world, entity, ui);
@@ -100,6 +104,7 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         });
 }
 
+#[instrument(name = "debug/diagnostics_ui", skip_all)]
 fn diagnostics_ui(
     egui_context: Query<&mut EguiContext, With<PrimaryWindow>>,
     diagnostics: Res<DiagnosticsStore>,
@@ -127,6 +132,7 @@ fn diagnostics_ui(
         });
 }
 
+#[instrument(name = "debug/ui_diagnostics_table", skip_all)]
 fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
     egui_extras::TableBuilder::new(ui)
         .id_salt("diagnostics_table")
@@ -156,6 +162,7 @@ fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
         });
 }
 
+#[instrument(name = "debug/ui_plot", skip_all)]
 fn ui_plot(ui: &mut egui::Ui, diagnostics: &Res<'_, DiagnosticsStore>) {
     let plot = Plot::new("fps")
         .width(128.)
@@ -172,6 +179,7 @@ fn ui_plot(ui: &mut egui::Ui, diagnostics: &Res<'_, DiagnosticsStore>) {
     });
 }
 
+#[instrument(name = "debug/render_fps_graph", skip_all)]
 fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {
     let values: Vec<[f64; 2]> = fps
         .values()

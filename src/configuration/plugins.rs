@@ -10,7 +10,6 @@ use {
     crate::configuration::{
         assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin,
     },
-    crate::debug::DebugPlugin,
     crate::despawn::plugin::DespawnPlugin,
     crate::econ::plugin::EconPlugin,
     crate::enemy::plugin::EnemyPlugin,
@@ -71,7 +70,9 @@ pub struct NativePlugins;
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(GamePlugins); // Add native-only plugins
-        if cfg!(feature = "debug") {
+        #[cfg(feature = "debug")]
+        {
+            use crate::debug::DebugPlugin;
             app.add_plugins(DebugPlugin);
         }
     }

@@ -387,6 +387,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tiled",
+ "tracing",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -4805,7 +4806,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69fff37da548239c3bf9e64a12193d261e8b22b660991c6fd2df057c168f435f"
 dependencies = [
  "cc",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]

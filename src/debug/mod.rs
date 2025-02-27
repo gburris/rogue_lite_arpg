@@ -16,6 +16,8 @@ use bevy_inspector_egui::{
 };
 use egui_plot::{Line, Plot, PlotBounds, PlotPoint, Text};
 
+use crate::map::systems::zone::ZoneBackground;
+
 pub struct DebugPlugin;
 
 impl Plugin for DebugPlugin {
@@ -62,10 +64,7 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
                     shortcircuit_entity: None,
                     extra_state: &mut (),
                 }
-                // FIXME: There's a fuck ton of sprites
-                // for some reason which lags everything
-                .show::<Without<Sprite>>(ui);
-                //.show::<()>(ui);
+                .show::<Without<ZoneBackground>>(ui);
 
                 ui.label("Press `~` to toggle UI");
                 ui.allocate_space(ui.available_size());

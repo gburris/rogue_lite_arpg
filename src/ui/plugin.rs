@@ -55,6 +55,7 @@ impl Plugin for UIPlugin {
                     .in_set(InGameSet::HudOverlay),
             )
             .add_observer(damage_overlay::on_damage_overlay_amount)
+            .add_observer(damage_overlay::on_healing_overlay_amount)
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(

@@ -8,9 +8,12 @@ use crate::{
     labels::sets::InGameSet,
 };
 
-use super::melee::{
-    handle_collisions::handle_melee_collisions,
-    swing_melee_attacks::{end_melee_attacks, process_melee_attacks},
+use super::{
+    attributes::on_healing_event,
+    melee::{
+        handle_collisions::handle_melee_collisions,
+        swing_melee_attacks::{end_melee_attacks, process_melee_attacks},
+    },
 };
 
 pub struct CombatPlugin;
@@ -27,6 +30,7 @@ impl Plugin for CombatPlugin {
                     handle_projectile_collisions.in_set(InGameSet::Collision),
                     handle_melee_collisions.in_set(InGameSet::Collision),
                 ),
-            );
+            )
+            .add_observer(on_healing_event);
     }
 }

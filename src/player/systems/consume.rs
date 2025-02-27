@@ -1,5 +1,5 @@
 use crate::{
-    combat::attributes::Health,
+    combat::attributes::{health::AttemptHealingEvent, Health},
     items::{inventory::inventory::Inventory, ConsumableEffect, ConsumableType},
 };
 use bevy::prelude::*;
@@ -18,19 +18,17 @@ pub fn handle_consume_event(
     let item_entity = consume_trigger.item_entity;
 
     if let Ok(consumable) = consumable_query.get(item_entity) {
-        // Apply the consumable's effect
         if let Ok((mut health, mut inventory)) = to_heal_query.get_mut(consume_trigger.entity()) {
             match &consumable.effect_type {
                 ConsumableType::Heal(amount) => {
-                    let previous_hp = health.hp;
-                    health.hp = (health.hp + amount).min(health.max_hp); // Ensure HP does not exceed max
-                    let healed_amount = health.hp - previous_hp;
-                    info!(
-                        "Entity {} healed by {:.2} points (HP: {:.2}/{:.2})",
+                    commands.trigger_targets(
+                        AttemptHealingEvent { amount: *amount },
                         consume_trigger.entity(),
-                        healed_amount,
-                        health.hp,
-                        health.max_hp
+                    );
+                    info!(
+                        "Entity {} healed by {:.2} points",
+                        consume_trigger.entity(),
+                        amount,
                     );
                 }
             }

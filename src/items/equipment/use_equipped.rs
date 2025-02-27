@@ -1,8 +1,10 @@
 use bevy::prelude::*;
+use rand::Rng;
 
+use super::{EquipmentSlot, Equipped};
 use crate::{
     combat::{
-        attributes::{mana::ManaCost, Mana},
+        attributes::{health::AttemptHealingEvent, mana::ManaCost, Health, Mana},
         components::{ActionState, AimPosition},
         damage::components::DamageSource,
         melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
@@ -10,11 +12,11 @@ use crate::{
         weapon::weapon::ProjectileWeapon,
     },
     enemy::Enemy,
-    items::{equipment::Equippable, inventory::Inventory},
+    items::{
+        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
+    },
     player::{UseMainhandInputEvent, UseOffhandInputEvent},
 };
-
-use super::{EquipmentSlot, Equipped};
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
@@ -181,4 +183,31 @@ pub fn on_weapon_melee(
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = ActionState::Attacking;
     }
+}
+
+pub fn on_healing_tome_cast(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    tome_query: Query<&HealingTome>,
+    mut holder_query: Query<(Entity, &mut Health)>,
+) {
+    let Ok(tome) = tome_query.get(fired_trigger.entity()) else {
+        warn!("Tried to use a tome that does not exist");
+        return;
+    };
+
+    let Ok((holder_entity, mut holder_health)) = holder_query.get_mut(fired_trigger.holder) else {
+        warn!("Holder has no transform or health");
+        return;
+    };
+
+    let health_to_add = rand::thread_rng().gen_range(tome.healing.0..tome.healing.1);
+    commands.trigger_targets(
+        AttemptHealingEvent {
+            amount: health_to_add,
+        },
+        holder_entity,
+    );
+    let viz_effect = commands.spawn(HealingTomeSpellVisualEffect).id();
+    commands.entity(holder_entity).add_child(viz_effect);
 }

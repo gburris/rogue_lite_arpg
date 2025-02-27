@@ -107,15 +107,12 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
 }
 
 fn diagnostics_ui(
-    egui_context: Query<&mut EguiContext, With<PrimaryWindow>>,
+    egui_context: Single<&mut EguiContext, With<PrimaryWindow>>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
     #[cfg(feature = "trace")]
     let _span = info_span!("debug/ui", name = "diagnostics_ui").entered();
 
-    let Ok(egui_context) = egui_context.get_single() else {
-        return;
-    };
     let mut egui_context = egui_context.clone();
 
     egui::Window::new("Diagnostics")

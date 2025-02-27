@@ -1,3 +1,4 @@
+use crate::map::systems::zone::ZoneBackground;
 use bevy::{
     diagnostic::{
         Diagnostic, DiagnosticPath, Diagnostics, DiagnosticsStore, FrameTimeDiagnosticsPlugin,
@@ -17,9 +18,6 @@ use bevy_inspector_egui::{
 };
 use egui_extras::Column;
 use egui_plot::{Line, Plot, PlotBounds, PlotPoint, Text};
-use tracing::instrument;
-
-use crate::map::systems::zone::ZoneBackground;
 const ENTITY_COUNT: DiagnosticPath = EntityDiagnosticsPlugin::ENTITY_COUNT;
 
 pub struct DebugPlugin;
@@ -47,8 +45,9 @@ impl Plugin for DebugPlugin {
     }
 }
 
-#[instrument(name = "debug/inspector_ui", skip_all)]
 fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities>) {
+    #[cfg(feature = "trace")]
+    let _span = info_span!("debug/ui", name = "inspector_ui").entered();
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
@@ -61,7 +60,8 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         .default_width(200.0)
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-                let _span = info_span!("debug/hierarchy_panel").entered();
+                #[cfg(feature = "trace")]
+                let _span = info_span!("debug/ui", name = "hierarchy_panel").entered();
 
                 ui.heading("Hierarchy");
                 let type_registry = world.resource::<AppTypeRegistry>().clone();
@@ -85,7 +85,8 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         .default_width(250.0)
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
-                let _span = info_span!("debug/inspector_panel").entered();
+                #[cfg(feature = "trace")]
+                let _span = info_span!("debug/ui", name = "inspector_panel").entered();
 
                 ui.heading("Inspector");
                 match selected_entities.as_slice() {
@@ -104,11 +105,13 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
         });
 }
 
-#[instrument(name = "debug/diagnostics_ui", skip_all)]
 fn diagnostics_ui(
     egui_context: Query<&mut EguiContext, With<PrimaryWindow>>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
+    #[cfg(feature = "trace")]
+    let _span = info_span!("debug/ui", name = "diagnostics_ui").entered();
+
     let Ok(egui_context) = egui_context.get_single() else {
         return;
     };
@@ -132,8 +135,9 @@ fn diagnostics_ui(
         });
 }
 
-#[instrument(name = "debug/ui_diagnostics_table", skip_all)]
 fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
+    #[cfg(feature = "trace")]
+    let _span = info_span!("debug/ui", name = "ui_diagnostics_table").entered();
     egui_extras::TableBuilder::new(ui)
         .id_salt("diagnostics_table")
         .resizable(true)
@@ -162,8 +166,9 @@ fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
         });
 }
 
-#[instrument(name = "debug/ui_plot", skip_all)]
 fn ui_plot(ui: &mut egui::Ui, diagnostics: &Res<'_, DiagnosticsStore>) {
+    #[cfg(feature = "trace")]
+    let _span = info_span!("debug/ui", name = "ui_plot").entered();
     let plot = Plot::new("fps")
         .width(128.)
         .view_aspect(2.)
@@ -179,8 +184,8 @@ fn ui_plot(ui: &mut egui::Ui, diagnostics: &Res<'_, DiagnosticsStore>) {
     });
 }
 
-#[instrument(name = "debug/render_fps_graph", skip_all)]
 fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {
+    let _span = info_span!("debug/ui", name = "render_fps_graph").entered();
     let values: Vec<[f64; 2]> = fps
         .values()
         .enumerate()

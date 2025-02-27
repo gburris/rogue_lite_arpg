@@ -387,7 +387,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tiled",
- "tracing",
  "wasm-bindgen",
  "web-sys",
 ]

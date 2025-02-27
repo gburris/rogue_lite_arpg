@@ -12,7 +12,7 @@ use bevy::{
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::hierarchy::{Hierarchy, SelectedEntities},
-    egui::{self, Color32, RichText, Widget},
+    egui::{self, Color32, RichText},
     DefaultInspectorConfigPlugin,
 };
 use egui_extras::Column;

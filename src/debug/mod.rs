@@ -12,7 +12,7 @@ use bevy::{
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::hierarchy::{Hierarchy, SelectedEntities},
-    egui::{self, Color32, RichText},
+    egui::{self, Color32, RichText, Widget},
     DefaultInspectorConfigPlugin,
 };
 use egui_extras::Column;
@@ -123,14 +123,16 @@ fn diagnostics_ui(
 fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
     egui_extras::TableBuilder::new(ui)
         .id_salt("diagnostics_table")
+        .resizable(true)
+        .striped(true)
         .column(Column::auto())
-        .column(Column::auto())
+        .column(Column::remainder())
         .header(12., |mut h| {
             h.col(|ui| {
-                ui.heading("Path");
+                ui.label("Path");
             });
             h.col(|ui| {
-                ui.heading("Value(avg)");
+                ui.label("Value(avg)");
             });
         })
         .body(|mut body| {

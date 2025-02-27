@@ -10,6 +10,7 @@ use bevy::{
     render::diagnostic::RenderDiagnosticsPlugin,
     window::PrimaryWindow,
 };
+use bevy_ecs_tilemap::map::TilemapId;
 use bevy_inspector_egui::{
     bevy_egui::{EguiContext, EguiPlugin},
     bevy_inspector::hierarchy::{Hierarchy, SelectedEntities},
@@ -74,7 +75,7 @@ fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities
                     shortcircuit_entity: None,
                     extra_state: &mut (),
                 }
-                .show::<Without<ZoneBackground>>(ui);
+                .show::<(Without<TilemapId>, Without<ZoneBackground>)>(ui);
 
                 ui.label("Press `~` to toggle UI");
                 ui.allocate_space(ui.available_size());

@@ -26,14 +26,14 @@ pub struct DebugPlugin;
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            DefaultInspectorConfigPlugin,
+            EguiPlugin,
             (
                 // Diagnostics Plugin Group
+                DefaultInspectorConfigPlugin,
                 FrameTimeDiagnosticsPlugin,
                 EntityDiagnosticsPlugin,
                 RenderDiagnosticsPlugin,
             ),
-            EguiPlugin,
         ))
         .add_systems(
             Update,
@@ -47,11 +47,14 @@ impl Plugin for DebugPlugin {
 }
 
 fn inspector_ui(world: &mut World, mut selected_entities: Local<SelectedEntities>) {
-    let mut egui_context = world
+    let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-        // NOTE: this panics if query result is not exactly one
-        .single(world)
-        .clone();
+        .get_single(world)
+    else {
+        return;
+    };
+    let mut egui_context = egui_context.clone();
+
     egui::SidePanel::left("hierarchy")
         .default_width(200.0)
         .show(egui_context.get_mut(), |ui| {
@@ -101,7 +104,11 @@ fn diagnostics_ui(
     egui_context: Query<&mut EguiContext, With<PrimaryWindow>>,
     diagnostics: Res<DiagnosticsStore>,
 ) {
-    let mut egui_context = egui_context.single().clone();
+    let Ok(egui_context) = egui_context.get_single() else {
+        return;
+    };
+    let mut egui_context = egui_context.clone();
+
     egui::Window::new("Diagnostics")
         .default_size((256., 128.))
         .show(egui_context.get_mut(), |ui| {

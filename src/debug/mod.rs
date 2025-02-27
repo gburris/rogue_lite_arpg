@@ -1,11 +1,12 @@
 use bevy::{
     diagnostic::{
-        Diagnostic, DiagnosticPath, Diagnostics, DiagnosticsStore, EntityCountDiagnosticsPlugin,
-        FrameTimeDiagnosticsPlugin, RegisterDiagnostic,
+        Diagnostic, DiagnosticPath, Diagnostics, DiagnosticsStore, FrameTimeDiagnosticsPlugin,
+        RegisterDiagnostic,
     },
     ecs::entity::Entities,
     input::common_conditions::input_toggle_active,
     prelude::*,
+    render::diagnostic::RenderDiagnosticsPlugin,
     window::PrimaryWindow,
 };
 use bevy_inspector_egui::{
@@ -14,9 +15,11 @@ use bevy_inspector_egui::{
     egui::{self, Color32, RichText},
     DefaultInspectorConfigPlugin,
 };
+use egui_extras::Column;
 use egui_plot::{Line, Plot, PlotBounds, PlotPoint, Text};
 
 use crate::map::systems::zone::ZoneBackground;
+const ENTITY_COUNT: DiagnosticPath = EntityDiagnosticsPlugin::ENTITY_COUNT;
 
 pub struct DebugPlugin;
 
@@ -28,6 +31,7 @@ impl Plugin for DebugPlugin {
                 // Diagnostics Plugin Group
                 FrameTimeDiagnosticsPlugin,
                 EntityDiagnosticsPlugin,
+                RenderDiagnosticsPlugin,
             ),
             EguiPlugin,
         ))
@@ -101,28 +105,62 @@ fn diagnostics_ui(
     egui::Window::new("Diagnostics")
         .default_size((256., 128.))
         .show(egui_context.get_mut(), |ui| {
-            let plot = Plot::new("fps")
-                .width(128.)
-                .view_aspect(2.)
-                .y_axis_label("fps")
-                .show_axes([false, false]);
-
-            // FPS counter + Plot
-            plot.show(ui, |plt_ui| {
-                let diagnostic = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS);
-                if let Some(fps) = diagnostic {
-                    render_fps_graph(plt_ui, fps);
-                }
-            });
-
+            ui_plot(ui, &diagnostics);
             // Entity Count
-            if let Some(entity_count) =
-                diagnostics.get_measurement(&EntityCountDiagnosticsPlugin::ENTITY_COUNT)
-            {
-                ui.label(format!("# entities = {}", entity_count.value));
-            }
+            let entity_count = diagnostics
+                .get_measurement(&ENTITY_COUNT)
+                .map(|d| d.value)
+                .unwrap_or_default();
+            ui.label(format!("# entities = {:}", entity_count));
+
+            // Diagnostics Table
+            ui_diagnostics_table(ui, diagnostics);
+
             ui.allocate_space(ui.available_size())
         });
+}
+
+fn ui_diagnostics_table(ui: &mut egui::Ui, diagnostics: Res<DiagnosticsStore>) {
+    egui_extras::TableBuilder::new(ui)
+        .id_salt("diagnostics_table")
+        .column(Column::auto())
+        .column(Column::auto())
+        .header(12., |mut h| {
+            h.col(|ui| {
+                ui.heading("Path");
+            });
+            h.col(|ui| {
+                ui.heading("Value(avg)");
+            });
+        })
+        .body(|mut body| {
+            for d in diagnostics.iter() {
+                body.row(32., |mut row| {
+                    row.col(|ui| {
+                        ui.label(d.path().as_str());
+                    });
+                    row.col(|ui| {
+                        ui.label(format!("{:0.2}", d.average().unwrap_or_default()));
+                    });
+                });
+            }
+        });
+}
+
+fn ui_plot(ui: &mut egui::Ui, diagnostics: &Res<'_, DiagnosticsStore>) {
+    let plot = Plot::new("fps")
+        .width(128.)
+        .view_aspect(2.)
+        .y_axis_label("fps")
+        .show_axes([false, false]);
+
+    // FPS counter + Plot
+    plot.show(ui, |plt_ui| {
+        let diagnostic = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS);
+        if let Some(fps) = diagnostic {
+            render_fps_graph(plt_ui, fps);
+        }
+    });
 }
 
 fn render_fps_graph(plt_ui: &mut egui_plot::PlotUi, fps: &Diagnostic) {

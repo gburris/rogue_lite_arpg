@@ -76,12 +76,15 @@ pub fn spawn_zone_tilemap(
                     };
 
                     let tile_entity = commands
-                        .spawn(TileBundle {
-                            position: tile_pos,
-                            tilemap_id: TilemapId(*tilemap_entity),
-                            texture_index: TileTextureIndex(texture_index),
-                            ..Default::default()
-                        })
+                        .spawn((
+                            Name::new("Tile"),
+                            TileBundle {
+                                position: tile_pos,
+                                tilemap_id: TilemapId(*tilemap_entity),
+                                texture_index: TileTextureIndex(texture_index),
+                                ..Default::default()
+                            },
+                        ))
                         .id();
                     storage.set(&tile_pos, tile_entity);
                 }

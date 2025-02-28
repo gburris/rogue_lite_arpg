@@ -10,7 +10,7 @@ use crate::configuration::assets::SpriteAssets;
 use crate::items::equipment::EquipmentTransform;
 use crate::items::equipment::Equippable;
 
-pub fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
     let offhand_transform: Transform = EquipmentTransform::get(FacingDirection::Down).offhand;
 
     commands

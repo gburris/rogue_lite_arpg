@@ -25,14 +25,8 @@ pub fn handle_consume_event(
                         AttemptHealingEvent { amount: *amount },
                         consume_trigger.entity(),
                     );
-                    info!(
-                        "Entity {} healed by {:.2} points",
-                        consume_trigger.entity(),
-                        amount,
-                    );
                 }
             }
-
             // Once we are here we know the item was consumed, so we remove it from inventory and despawn it
             inventory
                 .remove_item(item_entity)

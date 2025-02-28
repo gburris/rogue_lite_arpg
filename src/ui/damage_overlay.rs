@@ -11,7 +11,6 @@ const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
 const HEALTH_TEXT_OFFSET: f32 = 10.0;
 
-// Helper function to spawn health change text (damage or healing)
 fn spawn_health_change_text(
     commands: &mut Commands,
     entity: Entity,
@@ -58,7 +57,6 @@ fn random_angle(angle_range: f32) -> f32 {
     rng.gen_range(-angle_range..angle_range).to_radians()
 }
 
-// System to display damage amount
 pub fn on_damage_overlay_amount(
     damage_trigger: Trigger<DamageDealtEvent>,
     mut commands: Commands,
@@ -73,7 +71,6 @@ pub fn on_damage_overlay_amount(
     );
 }
 
-// System to display healing amount
 pub fn on_healing_overlay_amount(
     healing_trigger: Trigger<HealedEvent>,
     mut commands: Commands,

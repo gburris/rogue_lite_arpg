@@ -25,6 +25,7 @@ pub struct UseEquipmentEvent {
     pub holder: Entity,
 }
 
+#[derive(PartialEq)]
 pub enum EquipmentUseFailure {
     OutOfMana,
     OnCooldown,
@@ -210,15 +211,9 @@ pub fn on_healing_tome_cast(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
-    mut holder_query: Query<(Entity, &mut Health)>,
 ) {
     let Ok(tome) = tome_query.get(fired_trigger.entity()) else {
         warn!("Tried to use a tome that does not exist");
-        return;
-    };
-
-    let Ok((holder_entity, mut holder_health)) = holder_query.get_mut(fired_trigger.holder) else {
-        warn!("Holder has no transform or health");
         return;
     };
 
@@ -227,8 +222,8 @@ pub fn on_healing_tome_cast(
         AttemptHealingEvent {
             amount: health_to_add,
         },
-        holder_entity,
+        fired_trigger.holder,
     );
     let viz_effect = commands.spawn(HealingTomeSpellVisualEffect).id();
-    commands.entity(holder_entity).add_child(viz_effect);
+    commands.entity(fired_trigger.holder).add_child(viz_effect);
 }

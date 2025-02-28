@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use crate::{
     combat::attributes::{Health, Mana},
     items::{
-        equipment::{EquipmentSlot, Equippable},
+        equipment::{
+            EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable,
+            UseEquipmentEvent,
+        },
         inventory::Inventory,
         Item,
     },
@@ -426,60 +429,48 @@ pub fn update_action_bar(
 #[derive(Component)]
 pub struct CooldownIndicator {
     timer: Timer,
-    slot: EquipmentSlot,
 }
 
-// Handle successful equipment use (for cooldown indicators)
 pub fn on_equipment_used(
-    event: Trigger<UseEquipmentEvent>,
+    trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
-    inventory_query: Query<&Inventory>,
-    weapon_query: Query<&Equippable>,
+    equipment_query: Query<&Equippable>,
 ) {
-    if let Ok(inventory) = inventory_query.get(event.holder) {
-        // Find which slot this equipment is in
-        for (slot, &equipped_entity) in inventory.equipped_items() {
-            if let Ok(weapon) = weapon_query.get(equipped_entity) {
-                // Find the action box for this slot
-                if let Some((box_entity, _)) = action_box_query
-                    .iter()
-                    .find(|(_, action_box)| action_box.slot == slot)
-                {
-                    // Add or update cooldown indicator
-                    commands.entity(box_entity).insert(CooldownIndicator {
-                        timer: weapon.use_rate.clone(),
-                        slot,
-                    });
-                }
-            }
+    if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
+        if let Some((box_entity, _)) = action_box_query
+            .iter()
+            .find(|(_, action_box)| action_box.slot == equipmemnt.slot)
+        {
+            // Add or update cooldown indicator
+            commands.entity(box_entity).insert(CooldownIndicator {
+                timer: equipmemnt.use_rate.clone(),
+            });
         }
     }
 }
 
-// Handle equipment use failure (for error flash)
 pub fn on_equipment_use_failed(
-    event: Trigger<EquipmentUseFailedEvent>,
+    trigger: Trigger<EquipmentUseFailedEvent>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     cooldown_query: Query<&CooldownIndicator>,
 ) {
-    // Find the action box for this slot
     if let Some((box_entity, _)) = action_box_query
         .iter()
-        .find(|(_, action_box)| action_box.slot == event.slot)
+        .find(|(_, action_box)| action_box.slot == trigger.slot)
     {
-        // Only add error flash if there's no ongoing cooldown indicator
-        // or if the error is not due to cooldown
-        if !cooldown_query.contains(box_entity) || event.reason != EquipmentUseFailure::OnCooldown {
+        if !cooldown_query.contains(box_entity)
+            && trigger.reason != EquipmentUseFailure::NotEquipped
+        {
             commands.entity(box_entity).with_children(|parent| {
                 parent.spawn((
                     ErrorFlash {
                         timer: Timer::from_seconds(ERROR_FLASH_DURATION, TimerMode::Once),
                     },
                     Node {
-                        width: Val::Percent(100.),
-                        height: Val::Percent(100.),
+                        width: Val::Percent(90.),
+                        height: Val::Percent(90.),
                         position_type: PositionType::Absolute,
                         ..default()
                     },

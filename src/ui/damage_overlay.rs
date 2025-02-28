@@ -64,12 +64,7 @@ pub fn on_damage_overlay_amount(
     damage_trigger: Trigger<DamageDealtEvent>,
     mut commands: Commands,
     damaged_query: Query<&ColliderAabb>,
-    player: Single<Entity, With<Player>>,
 ) {
-    if damage_trigger.entity() == *player {
-        return; // No damage overlay for the player, player has a health bar
-    }
-
     spawn_health_change_text(
         &mut commands,
         damage_trigger.entity(),
@@ -84,12 +79,7 @@ pub fn on_healing_overlay_amount(
     healing_trigger: Trigger<HealedEvent>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,
-    player: Single<Entity, With<Player>>,
 ) {
-    if healing_trigger.entity() == *player {
-        return; // No healing overlay for the player, player has a health bar
-    }
-
     spawn_health_change_text(
         &mut commands,
         healing_trigger.entity(),

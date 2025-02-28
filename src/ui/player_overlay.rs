@@ -10,7 +10,7 @@ use crate::{
         inventory::Inventory,
         Item,
     },
-    player::{components::Player, PlayerExperience, UseMainhandInputEvent, UseOffhandInputEvent},
+    player::{components::Player, PlayerExperience},
 };
 
 #[derive(Component)]

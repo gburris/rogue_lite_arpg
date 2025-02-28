@@ -2,7 +2,6 @@ use crate::{
     combat::{attributes::health::HealedEvent, damage::events::DamageDealtEvent},
     despawn::components::LiveDuration,
     labels::layer::ZLayer,
-    player::Player,
 };
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;

@@ -22,7 +22,21 @@ use crate::{
 // and add different observers to different respective entities
 #[derive(Event)]
 pub struct UseEquipmentEvent {
-    pub holder: Entity, // entity holding the equipment
+    pub holder: Entity,
+}
+
+pub enum EquipmentUseFailure {
+    OutOfMana,
+    OnCooldown,
+    NotEquipped,
+}
+
+#[derive(Event)]
+
+pub struct EquipmentUseFailedEvent {
+    pub holder: Entity,
+    pub slot: EquipmentSlot,
+    pub reason: EquipmentUseFailure,
 }
 
 pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
@@ -30,93 +44,100 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
         equippable.use_rate.tick(time.delta());
     }
 }
-
-// TODO: All of the "warns" in this function should be shown to the player through UI so they know why using main hand failed
-// TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
-// Their weapon is on cooldown
 pub fn on_main_hand_activated(
-    main_hand_trigger: Trigger<UseMainhandInputEvent>,
-    mut commands: Commands,
-    mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+    trigger: Trigger<UseMainhandInputEvent>,
+    commands: Commands,
+    holder_query: Query<(&Inventory, Option<&mut Mana>)>,
+    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
-    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
-        error!(
-            "Entity: {} tried to use main hand, but is missing equipment slots",
-            main_hand_trigger.entity()
-        );
-        return;
-    };
-
-    let Some(main_hand_entity) = inventory.get_equipped(EquipmentSlot::Mainhand) else {
-        warn!("Main hand is empty!");
-        return;
-    };
-
-    if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(main_hand_entity) {
-        if equippable.use_rate.finished() {
-            // If the equipment uses mana, and we don't have enough, return
-            if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
-                if !mana.attempt_use_mana(mana_cost) {
-                    warn!("Not enough mana!");
-                    return;
-                }
-            } else if holder_mana.is_none() && mana_cost.is_some() {
-                warn!("This wielder is not skilled in the arts of the arcane");
-                return;
-            }
-
-            commands.trigger_targets(
-                UseEquipmentEvent {
-                    holder: main_hand_trigger.entity(),
-                },
-                main_hand_entity,
-            );
-            equippable.use_rate.reset();
-        }
-    }
+    handle_equipment_activation(
+        trigger.entity(),
+        EquipmentSlot::Mainhand,
+        commands,
+        holder_query,
+        equippable_query,
+    );
 }
 
 pub fn on_off_hand_activated(
-    off_hand_trigger: Trigger<UseOffhandInputEvent>,
+    trigger: Trigger<UseOffhandInputEvent>,
+    commands: Commands,
+    holder_query: Query<(&Inventory, Option<&mut Mana>)>,
+    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+) {
+    handle_equipment_activation(
+        trigger.entity(),
+        EquipmentSlot::Offhand,
+        commands,
+        holder_query,
+        equippable_query,
+    );
+}
+
+fn handle_equipment_activation(
+    entity: Entity,
+    slot: EquipmentSlot,
     mut commands: Commands,
     mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
-    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(off_hand_trigger.entity()) else {
+    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(entity) else {
         error!(
-            "Entity: {} tried to use off hand, but is missing equipment slots",
-            off_hand_trigger.entity()
+            "Entity: {} tried to use equipment, but is missing inventory",
+            entity
         );
         return;
     };
 
-    let Some(off_hand_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
-        warn!("Off hand is empty!");
+    let Some(equipment_entity) = inventory.get_equipped(slot) else {
+        warn!("{:?} is empty!", slot);
+        commands.trigger_targets(
+            EquipmentUseFailedEvent {
+                holder: entity,
+                slot,
+                reason: EquipmentUseFailure::NotEquipped,
+            },
+            entity,
+        );
         return;
     };
 
-    if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(off_hand_entity) {
-        if equippable.use_rate.finished() {
-            // If the equipment uses mana, and we don't have enough, return
-            if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
-                if !mana.attempt_use_mana(mana_cost) {
-                    warn!("Not enough mana!");
-                    return;
-                }
-            } else if holder_mana.is_none() && mana_cost.is_some() {
-                warn!("This wielder is not skilled in the arts of the arcane");
+    if let Ok((mut equippable, mana_cost)) = equippable_query.get_mut(equipment_entity) {
+        // Check cooldown first
+        if !equippable.use_rate.finished() {
+            commands.trigger_targets(
+                EquipmentUseFailedEvent {
+                    holder: entity,
+                    slot,
+                    reason: EquipmentUseFailure::OnCooldown,
+                },
+                entity,
+            );
+            return;
+        }
+
+        // Check mana next
+        if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
+            if !mana.attempt_use_mana(mana_cost) {
+                warn!("Not enough mana!");
+                commands.trigger_targets(
+                    EquipmentUseFailedEvent {
+                        holder: entity,
+                        slot,
+                        reason: EquipmentUseFailure::OutOfMana,
+                    },
+                    entity,
+                );
                 return;
             }
-
-            commands.trigger_targets(
-                UseEquipmentEvent {
-                    holder: off_hand_trigger.entity(),
-                },
-                off_hand_entity,
-            );
-            equippable.use_rate.reset();
+        } else if holder_mana.is_none() && mana_cost.is_some() {
+            warn!("This wielder is not skilled in the arts of the arcane");
+            return;
         }
+
+        // Success path - trigger equipment use and reset cooldown
+        commands.trigger_targets(UseEquipmentEvent { holder: entity }, equipment_entity);
+        equippable.use_rate.reset();
     }
 }
 

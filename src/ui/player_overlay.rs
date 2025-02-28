@@ -301,7 +301,8 @@ pub fn update_exp_bar(
         exp_bar.width = Val::Px(400.0 * progress);
     }
 }
-/* Action Bar Code */
+
+/* Action Bar Components and Systems */
 #[derive(Component)]
 pub struct ActionBar;
 
@@ -313,9 +314,17 @@ pub struct ActionBox {
 #[derive(Component)]
 pub struct CooldownLine;
 
+#[derive(Component)]
+pub struct ErrorFlash {
+    timer: Timer,
+}
+
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
 const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
+const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
+const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.6); // Semi-transparent red
+const ERROR_FLASH_DURATION: f32 = 0.1; // 0.1 seconds
 
 fn create_action_bar(parent: &mut ChildBuilder) {
     parent
@@ -414,89 +423,86 @@ pub fn update_action_bar(
     }
 }
 
-const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
-
 #[derive(Component)]
 pub struct CooldownIndicator {
     timer: Timer,
     slot: EquipmentSlot,
 }
 
-// Event handling for mainhand activation
-pub fn on_main_hand_activated(
-    trigger: Trigger<UseMainhandInputEvent>,
+// Handle successful equipment use (for cooldown indicators)
+pub fn on_equipment_used(
+    event: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    player_query: Single<Entity, With<Player>>,
     action_box_query: Query<(Entity, &ActionBox)>,
-    inventory_query: Single<&Inventory, With<Player>>,
+    inventory_query: Query<&Inventory>,
     weapon_query: Query<&Equippable>,
 ) {
-    if (trigger.entity()) != player_query.into_inner() {
-        return;
+    if let Ok(inventory) = inventory_query.get(event.holder) {
+        // Find which slot this equipment is in
+        for (slot, &equipped_entity) in inventory.equipped_items() {
+            if let Ok(weapon) = weapon_query.get(equipped_entity) {
+                // Find the action box for this slot
+                if let Some((box_entity, _)) = action_box_query
+                    .iter()
+                    .find(|(_, action_box)| action_box.slot == slot)
+                {
+                    // Add or update cooldown indicator
+                    commands.entity(box_entity).insert(CooldownIndicator {
+                        timer: weapon.use_rate.clone(),
+                        slot,
+                    });
+                }
+            }
+        }
     }
-
-    let player_inventory = inventory_query.into_inner();
-    handle_equipment_activation(
-        &mut commands,
-        &action_box_query,
-        player_inventory,
-        &weapon_query,
-        EquipmentSlot::Mainhand,
-    );
 }
 
-// Event handling for offhand activation
-pub fn on_off_hand_activated(
-    trigger: Trigger<UseOffhandInputEvent>,
+// Handle equipment use failure (for error flash)
+pub fn on_equipment_use_failed(
+    event: Trigger<EquipmentUseFailedEvent>,
     mut commands: Commands,
-    player_query: Single<Entity, With<Player>>,
     action_box_query: Query<(Entity, &ActionBox)>,
-    inventory_query: Single<&Inventory, With<Player>>,
-    weapon_query: Query<&Equippable>,
+    cooldown_query: Query<&CooldownIndicator>,
 ) {
-    if (trigger.entity()) != player_query.into_inner() {
-        return;
-    }
-
-    let player_inventory = inventory_query.into_inner();
-    handle_equipment_activation(
-        &mut commands,
-        &action_box_query,
-        player_inventory,
-        &weapon_query,
-        EquipmentSlot::Offhand,
-    );
-}
-
-// Helper function to reduce code duplication in activation handlers
-fn handle_equipment_activation(
-    commands: &mut Commands,
-    action_box_query: &Query<(Entity, &ActionBox)>,
-    player_inventory: &Inventory,
-    weapon_query: &Query<&Equippable>,
-    slot: EquipmentSlot,
-) {
-    // Find the action box matching the equipment slot
+    // Find the action box for this slot
     if let Some((box_entity, _)) = action_box_query
         .iter()
-        .find(|(_, action_box)| action_box.slot == slot)
+        .find(|(_, action_box)| action_box.slot == event.slot)
     {
-        if let Some(weapon_entity) = player_inventory.get_equipped(slot) {
-            if let Ok(weapon) = weapon_query.get(weapon_entity) {
-                commands.entity(box_entity).insert(CooldownIndicator {
-                    timer: weapon.use_rate.clone(),
-                    slot,
-                });
-            }
+        // Only add error flash if there's no ongoing cooldown indicator
+        // or if the error is not due to cooldown
+        if !cooldown_query.contains(box_entity) || event.reason != EquipmentUseFailure::OnCooldown {
+            commands.entity(box_entity).with_children(|parent| {
+                parent.spawn((
+                    ErrorFlash {
+                        timer: Timer::from_seconds(ERROR_FLASH_DURATION, TimerMode::Once),
+                    },
+                    Node {
+                        width: Val::Percent(100.),
+                        height: Val::Percent(100.),
+                        position_type: PositionType::Absolute,
+                        ..default()
+                    },
+                    BackgroundColor::from(ERROR_FLASH_COLOR),
+                ));
+            });
         }
     }
 }
 
 pub fn on_cooldown_indicator_added(
     mut commands: Commands,
-    query: Query<Entity, Added<CooldownIndicator>>,
+    query: Query<(Entity, &Children), Added<CooldownIndicator>>,
+    error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
-    for entity in query.iter() {
+    for (entity, children) in query.iter() {
+        // Remove any error flashes when a cooldown starts
+        for &child in children.iter() {
+            if error_flash_query.contains(child) {
+                commands.entity(child).despawn_recursive();
+            }
+        }
+
         commands.entity(entity).with_children(|parent| {
             parent.spawn((
                 CooldownLine,
@@ -533,6 +539,20 @@ pub fn update_cooldowns(
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }
+        }
+    }
+}
+
+pub fn update_error_flashes(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut ErrorFlash)>,
+) {
+    for (entity, mut error_flash) in query.iter_mut() {
+        error_flash.timer.tick(time.delta());
+
+        if error_flash.timer.finished() {
+            commands.entity(entity).despawn_recursive();
         }
     }
 }

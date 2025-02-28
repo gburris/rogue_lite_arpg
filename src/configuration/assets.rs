@@ -37,7 +37,7 @@ pub struct SpriteSheetLayouts {
         offset_y = 8,
     ))]
     pub chest_layout: Handle<TextureAtlasLayout>,
-    #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 1, rows = 10,))]
+    #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
     pub tome_of_healing_effect: Handle<TextureAtlasLayout>,
 }
 

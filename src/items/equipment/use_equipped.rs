@@ -241,11 +241,11 @@ pub fn on_healing_tome_cast(
                 ..default()
             },
             AnimationIndices {
-                is_one_shot: false,
+                is_one_shot: true,
                 first: 0,
                 last: 9,
             },
-            AnimationTimer(Timer::from_seconds(10.0 / 60.0, TimerMode::Repeating)),
+            AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         ))
         .id();
     commands.entity(fired_trigger.holder).add_child(viz_effect);

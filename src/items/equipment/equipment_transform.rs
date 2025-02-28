@@ -8,8 +8,7 @@ use std::{collections::HashMap, sync::OnceLock};
 
 // Constants for transform values
 const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
-const OFFHAND_SCALE: Vec3 = Vec3::new(0.5, 0.5, 0.5);
-
+const OFFHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
 #[derive(Clone, Copy)]
 pub struct EquipmentTransform {
     pub mainhand: Transform,

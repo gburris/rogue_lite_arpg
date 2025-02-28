@@ -342,14 +342,8 @@ fn create_action_bar(parent: &mut ChildBuilder) {
             },
         ))
         .with_children(|action_bar| {
-            // Define equipment slots in order
-            let slots = [
-                EquipmentSlot::Mainhand,
-                EquipmentSlot::Offhand,
-                // TODO: Add Spell Slot 1, Spell Slot 2, etc.
-            ];
+            let slots = [EquipmentSlot::Mainhand, EquipmentSlot::Offhand];
 
-            // Create boxes for equipment slots
             for slot in slots {
                 action_bar
                     .spawn((
@@ -374,8 +368,6 @@ fn create_action_bar(parent: &mut ChildBuilder) {
                         ));
                     });
             }
-
-            // Add remaining generic action boxes
             for _ in 0..(5 - slots.len()) {
                 action_bar
                     .spawn((
@@ -411,7 +403,6 @@ pub fn update_action_bar(
     if let Some(player_inventory_result) = inventory_query {
         let player_inventory = player_inventory_result.into_inner();
 
-        // Update all action boxes that correspond to equipment slots
         for (action_box, children) in action_box_query.iter() {
             if let Some(equipped_entity) = player_inventory.get_equipped(action_box.slot) {
                 if let Some(&image_entity) = children.first() {
@@ -442,7 +433,6 @@ pub fn on_equipment_used(
             .iter()
             .find(|(_, action_box)| action_box.slot == equipmemnt.slot)
         {
-            // Add or update cooldown indicator
             commands.entity(box_entity).insert(CooldownIndicator {
                 timer: equipmemnt.use_rate.clone(),
             });
@@ -487,7 +477,6 @@ pub fn on_cooldown_indicator_added(
     error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
     for (entity, children) in query.iter() {
-        // Remove any error flashes when a cooldown starts
         for &child in children.iter() {
             if error_flash_query.contains(child) {
                 commands.entity(child).despawn_recursive();
@@ -522,11 +511,9 @@ pub fn update_cooldowns(
 
         if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
             if cooldown.timer.finished() {
-                // Remove immediately if finished
                 commands.entity(line_entity).despawn_recursive();
                 commands.entity(entity).remove::<CooldownIndicator>();
             } else if let Ok(mut line_node) = line_query.get_mut(line_entity) {
-                // Otherwise update the line height
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }

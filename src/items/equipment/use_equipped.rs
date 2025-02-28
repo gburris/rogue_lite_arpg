@@ -1,8 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
+    animation::{AnimationIndices, AnimationTimer},
     combat::{
         attributes::{health::AttemptHealingEvent, mana::ManaCost, Health, Mana},
         components::{ActionState, AimPosition},
@@ -11,6 +12,7 @@ use crate::{
         projectile::spawn::spawn_projectile,
         weapon::weapon::ProjectileWeapon,
     },
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     enemy::Enemy,
     items::{
         equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
@@ -201,7 +203,6 @@ pub fn on_weapon_melee(
         attack_angle,
     );
 
-    //TODO: Refactor action state stuff
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = ActionState::Attacking;
     }
@@ -211,6 +212,8 @@ pub fn on_healing_tome_cast(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
+    sprites: Res<SpriteAssets>,
+    layouts: Res<SpriteSheetLayouts>,
 ) {
     let Ok(tome) = tome_query.get(fired_trigger.entity()) else {
         warn!("Tried to use a tome that does not exist");
@@ -224,6 +227,26 @@ pub fn on_healing_tome_cast(
         },
         fired_trigger.holder,
     );
-    let viz_effect = commands.spawn(HealingTomeSpellVisualEffect).id();
+    let viz_effect = commands
+        .spawn((
+            HealingTomeSpellVisualEffect,
+            //TODO: Move animation and sprite code into an OnAdd function inside animation/spells
+            Sprite {
+                image: sprites.tome_of_healing_effect_sprite_sheet.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: layouts.tome_of_healing_effect.clone(),
+                    index: 0,
+                }),
+                anchor: Anchor::Custom(Vec2::new(0.0, 0.10)),
+                ..default()
+            },
+            AnimationIndices {
+                is_one_shot: false,
+                first: 0,
+                last: 9,
+            },
+            AnimationTimer(Timer::from_seconds(10.0 / 60.0, TimerMode::Repeating)),
+        ))
+        .id();
     commands.entity(fired_trigger.holder).add_child(viz_effect);
 }

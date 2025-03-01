@@ -14,7 +14,6 @@ pub fn spawn_pause_background(mut commands: Commands) {
             align_items: AlignItems::Center,
             ..default()
         },
-        BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
         Visibility::Visible,
         GlobalZIndex(1),
     ));

@@ -3,14 +3,15 @@ use bevy::prelude::*;
 use crate::{
     items::{
         equipment::{Equippable, Equipped},
+        inventory::Inventory,
         Consumable, Item,
     },
     labels::states::PausedState,
     player::{systems::ConsumeEvent, Player},
-    ui::display_case::FilledDisplaySlot,
+    ui::display_case::DisplayCaseSlot,
 };
 
-use super::{inventory_menu::ItemText, main_menu::MenuButton};
+use super::main_menu::MenuButton;
 
 /// Trigger on entity with Inventory component (i.e. the player entity)
 #[derive(Event)]
@@ -18,50 +19,43 @@ pub struct UpdateInventoryUIEvent;
 
 pub fn on_item_done_hovering(
     trigger: Trigger<Pointer<Out>>,
-    mut menu_item_text: Query<(&mut TextColor, &Parent), With<ItemText>>,
+    mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
-    // Find the text color component for this button's text
-    if let Some((mut text_color, _)) = menu_item_text
-        .iter_mut()
-        .find(|(_, parent)| parent.get() == trigger.entity())
-    {
-        *text_color = TextColor::default();
+    if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
+        *background_color = BackgroundColor::DEFAULT;
     }
 }
 
 pub fn on_item_hover(
     trigger: Trigger<Pointer<Over>>,
-    mut menu_item_text: Query<(&mut TextColor, &Parent), With<ItemText>>,
+    mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
-    // Find the text color component for this button's text
-    if let Some((mut text_color, _)) = menu_item_text
-        .iter_mut()
-        .find(|(_, parent)| parent.get() == trigger.entity())
-    {
-        // Change text color to a brighter shade when hovering
-        text_color.0 = Color::srgb(0.0, 1.0, 1.0);
+    if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
+        *background_color = BackgroundColor::from(Color::WHITE);
     }
 }
 
 pub fn on_item_clicked(
     trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
-    slot_query: Query<&FilledDisplaySlot>,
+    slot_query: Query<&DisplayCaseSlot>,
     item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
-    player: Single<Entity, With<Player>>,
+    player: Single<(Entity, &Inventory), With<Player>>,
 ) {
     let item_slot = slot_query.get(trigger.entity()).unwrap();
-
-    let item_entity = item_slot.item;
+    let (player_entity, inventory) = player.into_inner();
+    let item_entity = inventory.items[item_slot.index];
 
     if let Ok((equippable, consumable)) = item_query.get(item_entity) {
         if equippable {
-            commands.entity(item_entity).insert(Equipped::new(*player));
+            commands
+                .entity(item_entity)
+                .insert(Equipped::new(player_entity));
         } else if consumable {
-            commands.trigger_targets(ConsumeEvent { item_entity }, *player);
+            commands.trigger_targets(ConsumeEvent { item_entity }, player_entity);
         }
 
-        commands.trigger_targets(UpdateInventoryUIEvent, *player);
+        commands.trigger_targets(UpdateInventoryUIEvent, player_entity);
     }
 }
 

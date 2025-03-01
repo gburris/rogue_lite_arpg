@@ -28,20 +28,40 @@ pub fn spawn_inventory_menu(
             InventoryMenu,
             Node {
                 width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(40.0), // space between inventory and equipment lists
-                padding: UiRect::all(Val::Px(20.0)),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(20.0), // space between header and item list
                 ..default()
             },
-            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
+            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.7)),
             GlobalZIndex(1),
         ))
         .with_children(|parent| {
+            // Header Section
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(120.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor::from(Color::srgb(0.1, 0.1, 0.1)),
+                ))
+                .with_children(|header| {
+                    header.spawn((
+                        Text::new("Player Inventory"),
+                        TextFont {
+                            font_size: 80.0,
+                            ..default()
+                        },
+                    ));
+                });
+
             let inventory_context = DisplayCaseContext {
-                title: "Player Inventory",
                 capacity: inventory.max_capacity,
                 capacity_text: Some("Item Capacity"),
             };

@@ -70,6 +70,7 @@ pub struct MapDataBuilder {
     size: TilemapSize,
     prefabs: Vec<PrefabType>,
     num_enemies: Option<u32>,
+    num_exits: u32,
     num_chests: Option<u32>,
 }
 
@@ -81,6 +82,7 @@ impl MapDataBuilder {
             prefabs: Vec::new(),
             num_enemies: None,
             num_chests: None,
+            num_exits: 0,
         }
     }
 
@@ -101,6 +103,11 @@ impl MapDataBuilder {
 
     pub fn with_chests(mut self, count: u32) -> Self {
         self.num_chests = Some(count);
+        self
+    }
+
+    pub fn with_exits(mut self, count: u32) -> Self {
+        self.num_exits = count;
         self
     }
 
@@ -125,7 +132,8 @@ impl MapDataBuilder {
         }
 
         // Always generate entrance/exit positions for random layouts
-        let (player_pos, exit_positions) = generate_entrance_exit_positions(self.size);
+        let (player_pos, exit_positions) =
+            generate_entrance_exit_positions(self.size, self.num_exits);
         markers.insert(MarkerType::PlayerSpawns, player_pos);
         markers.insert(MarkerType::LevelExits, exit_positions);
 

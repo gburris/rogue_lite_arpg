@@ -6,7 +6,7 @@ use crate::{
     player::Player,
 };
 
-use super::components::{MapLayout, Mapper};
+use super::components::MapLayout;
 
 /**
  * Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -16,7 +16,6 @@ use super::components::{MapLayout, Mapper};
     RigidBody(|| RigidBody::Static),
     Collider(|| Collider::rectangle(32.0, 64.0)),
     CollidingEntities,
-    Mapper,
     CollisionLayers(default_collision_layers),
 )]
 pub struct Portal {

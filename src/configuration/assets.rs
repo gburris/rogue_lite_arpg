@@ -11,16 +11,9 @@ impl Plugin for AssetLoadingPlugin {
             LoadingState::new(AppState::AssetLoading)
                 .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>()
-                .load_collection::<SpriteSheetLayouts>()
-                .load_collection::<FontAssets>(),
+                .load_collection::<SpriteSheetLayouts>(),
         );
     }
-}
-//dead code, not used anywhere
-#[derive(AssetCollection, Resource)]
-pub struct FontAssets {
-    #[asset(path = "font.otf")]
-    pub game_font: Handle<Font>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -50,8 +43,6 @@ pub struct SpriteSheetLayouts {
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
     pub gold_coin: Handle<Image>,
-    #[asset(path = "player/skeleton.png")]
-    pub skeleton_player: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword: Handle<Image>,
     #[asset(path = "items/axe.png")]
@@ -60,14 +51,8 @@ pub struct SpriteAssets {
     pub fire_staff: Handle<Image>,
     #[asset(path = "items/ice_staff.png")]
     pub ice_staff: Handle<Image>,
-    #[asset(path = "items/helmet.png")]
-    pub helmet_equipment_sprite: Handle<Image>,
     #[asset(path = "items/health_potion.png")]
     pub health_potion: Handle<Image>,
-    #[asset(path = "items/shovel.png")]
-    pub shovel_equipment_sprite: Handle<Image>,
-    #[asset(path = "enemies/merman.png")]
-    pub merman_enemy: Handle<Image>,
     #[asset(path = "projectiles/IceBolt.png")]
     pub ice_bolt: Handle<Image>,
     #[asset(path = "projectiles/fireball.png")]
@@ -92,8 +77,12 @@ pub struct SpriteAssets {
     pub chests_sprite_sheet: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
-    #[asset(path = "enemies/basic_enemy_sprite_sheet.png")]
-    pub enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/ice_mage_enemy.png")]
+    pub ice_mage_enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/warrior_enemy.png")]
+    pub warrior_enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/fire_mage_enemy.png")]
+    pub fire_mage_enemy_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/shop_keeper.png")]
     pub shop_keeper_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/game_guide.png")]

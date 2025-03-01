@@ -5,7 +5,7 @@ pub enum ZLayer {
     WeaponAboveSprite,
     Enemy,
     Projectiles,
-    Warpzone,
+    Exit,
     VisualEffect,
     LevelUpEffect,
     ItemOnGround,
@@ -24,7 +24,7 @@ impl ZLayer {
             ZLayer::ItemOnGround => 0.4,
             ZLayer::LevelUpEffect => -0.1,
             ZLayer::Player => 1.0,
-            ZLayer::Warpzone => 1.0,
+            ZLayer::Exit => 1.0,
             ZLayer::VisualEffect => 2.0,
         }
     }

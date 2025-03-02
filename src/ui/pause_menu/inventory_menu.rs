@@ -13,9 +13,6 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct InventoryMenu;
 
-#[derive(Component)]
-pub struct ItemText;
-
 pub fn spawn_inventory_menu(
     mut commands: Commands,
     player: Single<(Entity, &mut Inventory), (With<Player>, Without<Enemy>, Without<NPC>)>,

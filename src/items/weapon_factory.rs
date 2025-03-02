@@ -21,6 +21,8 @@ use crate::{
     },
 };
 
+use super::ItemType;
+
 pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
     commands
         .spawn((
@@ -33,7 +35,7 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             },
             Name::new("Sword"),
             Equippable::default(),
-            Item::new(3),
+            Item::new(120, ItemType::Melee),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
@@ -59,7 +61,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             },
             Name::new("Axe"),
             Equippable::default(),
-            Item::new(4),
+            Item::new(220, ItemType::Melee),
             Visibility::Hidden,
             Sprite::from_image(sprites.axe.clone()),
             EquipmentTransform::get(FacingDirection::Down).mainhand,
@@ -102,7 +104,7 @@ pub fn spawn_fire_staff(
                 spread: 0.0,
             },
             Name::new("Staff of Flames"),
-            Item::new(6),
+            Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
             Visibility::Hidden,
@@ -147,7 +149,7 @@ pub fn spawn_ice_staff(
                 spread: 0.0,
             },
             Name::new("Staff of Ice"),
-            Item::new(7),
+            Item::new(2050, ItemType::Staff),
             ManaCost(20.0), // big mana cost
             Equippable {
                 use_rate: Timer::from_seconds(0.7, TimerMode::Once),

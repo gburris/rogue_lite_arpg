@@ -1,8 +1,15 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::widget::NodeImageMode};
 
-use crate::items::{inventory::Inventory, Item};
+use crate::{
+    configuration::assets::{GameIcons, SpriteAssets},
+    items::{
+        equipment::{EquipmentSlot, Equippable, Equipped},
+        inventory::Inventory,
+        Item, ItemType,
+    },
+};
 
-use super::pause_menu::{button_interactions::*, inventory_menu::ItemText};
+use super::pause_menu::button_interactions::*;
 
 /// Data used to construct the display case. This is not a component just a simple object
 pub struct DisplayCaseContext<'a> {
@@ -37,18 +44,6 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
             ..default()
         })
         .with_children(|parent| {
-            // if let Some(capacity_text) = context.capacity_text {
-            //     // Display Case Capacity
-            //     parent.spawn((
-            //         CapacityText,
-            //         Text::new(capacity_text),
-            //         TextFont {
-            //             font_size: 24.0,
-            //             ..default()
-            //         },
-            //     ));
-            // }
-
             display_case_entity = parent
                 .spawn((
                     DisplayCaseContainer,
@@ -60,6 +55,55 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
                     },
                     BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
                 ))
+                .with_children(|parent| {
+                    parent
+                        .spawn((
+                            Node {
+                                width: Val::Px(900.0),
+                                height: Val::Px(35.0),
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::Start,
+                                align_items: AlignItems::Center,
+                                border: UiRect::new(
+                                    Val::ZERO,
+                                    Val::ZERO,
+                                    Val::Px(2.0),
+                                    Val::Px(2.0),
+                                ),
+                                margin: UiRect::top(Val::Px(5.0)),
+                                padding: UiRect::all(Val::Px(10.0)),
+                                ..default()
+                            },
+                            BorderColor::from(Color::WHITE),
+                        ))
+                        .with_children(|parent| {
+                            parent.spawn((Node {
+                                width: Val::Px(30.0),
+                                ..default()
+                            },));
+
+                            parent.spawn((
+                                Text::new("Name"),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                            ));
+
+                            parent.spawn((Node {
+                                flex_grow: 1.0,
+                                ..default()
+                            },));
+
+                            parent.spawn((
+                                Text::new("Value"),
+                                TextFont {
+                                    font_size: 18.0,
+                                    ..default()
+                                },
+                            ));
+                        });
+                })
                 .id();
         });
 
@@ -67,27 +111,77 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
 }
 
 /// Given an entities inventory, spawn filled slots on top of slot backgrounds
-fn spawn_slot(builder: &mut ChildBuilder, index: usize, item_name: &str) {
+fn spawn_slot(
+    builder: &mut ChildBuilder,
+    icons: &GameIcons,
+    index: usize,
+    item_name: &str,
+    item: &Item,
+    is_equipped: bool,
+) {
     builder
         .spawn((
             DisplayCaseSlot { index },
             Node {
                 width: Val::Px(900.0),
-                justify_content: JustifyContent::Start,
+                padding: UiRect::all(Val::Px(5.0)),
+                column_gap: Val::Px(5.0),
+                // justify_content: JustifyContent::Start,
                 align_items: AlignItems::Center,
                 ..default()
             },
         ))
         .with_children(|parent| {
+            let item_icon = match item.item_type {
+                ItemType::Melee => icons.melee_icon.clone(),
+                ItemType::Staff => icons.staff_icon.clone(),
+                ItemType::Potion => icons.potion_icon.clone(),
+                ItemType::Tome => icons.spell_book_icon.clone(),
+            };
+
             parent.spawn((
-                ItemText,
+                ImageNode {
+                    image: item_icon,
+                    ..default()
+                },
+                Node {
+                    width: Val::Px(30.0),
+                    height: Val::Px(30.0),
+                    ..default()
+                },
+            ));
+
+            parent.spawn((
                 Text::new(item_name),
                 TextFont {
                     font_size: 18.0,
                     ..default()
                 },
-                Node {
-                    margin: UiRect::all(Val::Px(5.0)),
+            ));
+
+            if is_equipped {
+                parent.spawn((
+                    ImageNode {
+                        image: icons.equip_icon.clone(),
+                        ..default()
+                    },
+                    Node {
+                        height: Val::Px(16.0),
+                        width: Val::Px(16.0),
+                        ..default()
+                    },
+                ));
+            }
+
+            parent.spawn((Node {
+                flex_grow: 1.0,
+                ..default()
+            },));
+
+            parent.spawn((
+                Text::new(item.value.to_string()),
+                TextFont {
+                    font_size: 18.0,
                     ..default()
                 },
             ));
@@ -100,10 +194,11 @@ fn spawn_slot(builder: &mut ChildBuilder, index: usize, item_name: &str) {
 pub fn on_display_case_updated(
     trigger: Trigger<UpdateInventoryUIEvent>,
     mut commands: Commands,
+    icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseContainer>>,
     slots_querys: Query<(Entity, &DisplayCaseSlot)>,
     inventory_query: Query<&Inventory>,
-    items_query: Query<(&Name, &Item)>,
+    items_query: Query<(&Name, &Item, Has<Equipped>)>,
 ) {
     // Get entities inventory
     let inventory = inventory_query
@@ -140,12 +235,13 @@ pub fn on_display_case_updated(
     let items = inventory
         .items
         .iter()
-        .map(|&e| (e, items_query.get(e).unwrap()))
-        .map(|(i1, (i2, i3))| i2); // flatten tuple
+        .enumerate()
+        .map(|(index, &e)| (index, e, items_query.get(e).unwrap()))
+        .map(|(index, _, (name, item, is_equipped))| (index, name, item, is_equipped)); // flatten tuple
 
     commands.entity(display_case).with_children(|builder| {
-        for (index, item_name) in items.enumerate() {
-            spawn_slot(builder, index, item_name);
+        for (index, item_name, item, is_equipped) in items {
+            spawn_slot(builder, &icons, index, item_name, item, is_equipped);
         }
     });
 }

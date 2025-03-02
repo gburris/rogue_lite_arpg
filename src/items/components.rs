@@ -9,7 +9,8 @@ use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration
 /// Ex.  All items can be dropped, so drop-related info can go here
 #[derive(Component)]
 pub struct Item {
-    id: u32,
+    pub value: i32,
+    pub item_type: ItemType,
     pub drop_glow_effect: f32,
     pub drop_rotation_timer: f32,
     pub drop_rate: f32,
@@ -18,7 +19,8 @@ pub struct Item {
 impl Default for Item {
     fn default() -> Self {
         Item {
-            id: 0,
+            value: 10,
+            item_type: ItemType::Melee,
             drop_glow_effect: 0.0,
             drop_rotation_timer: 0.0,
             drop_rate: 0.0,
@@ -27,17 +29,21 @@ impl Default for Item {
 }
 
 impl Item {
-    pub fn new(id: u32) -> Self {
+    pub fn new(value: i32, item_type: ItemType) -> Self {
         Item {
-            id,
+            value,
+            item_type,
             drop_rate: 1.2,
             ..default()
         }
     }
+}
 
-    pub fn get_id(&self) -> u32 {
-        self.id
-    }
+pub enum ItemType {
+    Melee,
+    Staff,
+    Potion,
+    Tome,
 }
 
 #[derive(Component, Clone, Debug)]

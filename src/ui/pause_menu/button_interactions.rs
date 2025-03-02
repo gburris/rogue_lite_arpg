@@ -13,6 +13,8 @@ use crate::{
 
 use super::main_menu::MenuButton;
 
+const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
+
 /// Trigger on entity with Inventory component (i.e. the player entity)
 #[derive(Event)]
 pub struct UpdateInventoryUIEvent;
@@ -22,7 +24,7 @@ pub fn on_item_done_hovering(
     mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
-        *background_color = BackgroundColor::DEFAULT;
+        background_color.0 = Color::NONE;
     }
 }
 
@@ -31,7 +33,7 @@ pub fn on_item_hover(
     mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
-        *background_color = BackgroundColor::from(Color::WHITE);
+        background_color.0 = HOVER_COLOR;
     }
 }
 

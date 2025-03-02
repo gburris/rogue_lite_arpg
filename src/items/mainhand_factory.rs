@@ -178,6 +178,8 @@ pub fn spawn_random_mainhand_weapon(
     }
 }
 
+//TODO: Everything in this class is private except this,
+//And make this more of a factory pattern kinda vibe
 pub fn spawn_mainhand_weapon(
     commands: &mut Commands,
     sprites: &Res<SpriteAssets>,

@@ -11,7 +11,7 @@ use crate::{
         GameCollisionLayer,
     },
     items::{
-        equipment::{on_main_hand_activated, Equipped},
+        equipment::{on_equipment_activated, Equipped},
         inventory::Inventory,
         *,
     },
@@ -30,7 +30,9 @@ pub fn spawn_player(
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
+        spawn_offhand(&mut commands, &sprites, "tome_of_healing"),
     ];
+
     let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
     let player = commands
         .spawn((
@@ -63,7 +65,7 @@ pub fn spawn_player(
         ))
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
-        .observe(on_main_hand_activated)
+        .observe(on_equipment_activated)
         .id();
 
     commands

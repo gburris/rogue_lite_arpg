@@ -1,8 +1,10 @@
 use bevy::prelude::*;
+use rand::Rng;
 
+use super::{EquipmentSlot, Equipped};
 use crate::{
     combat::{
-        attributes::{mana::ManaCost, Mana},
+        attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
         components::{ActionState, AimPosition},
         damage::components::DamageSource,
         melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
@@ -10,17 +12,32 @@ use crate::{
         weapon::weapon::ProjectileWeapon,
     },
     enemy::Enemy,
-    items::{equipment::Equippable, inventory::Inventory},
-    player::UseMainhandInputEvent,
+    items::{
+        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
+    },
+    player::UseEquipmentInputEvent,
 };
-
-use super::{EquipmentSlot, Equipped};
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
 #[derive(Event)]
 pub struct UseEquipmentEvent {
-    pub holder: Entity, // entity holding the equipment
+    pub holder: Entity,
+}
+
+#[derive(PartialEq)]
+pub enum EquipmentUseFailure {
+    OutOfMana,
+    OnCooldown,
+    NoneEquipped,
+}
+
+#[derive(Event)]
+
+pub struct EquipmentUseFailedEvent {
+    pub holder: Entity,
+    pub slot: EquipmentSlot,
+    pub reason: EquipmentUseFailure,
 }
 
 pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
@@ -28,50 +45,85 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
         equippable.use_rate.tick(time.delta());
     }
 }
+pub fn on_equipment_activated(
+    trigger: Trigger<UseEquipmentInputEvent>,
+    commands: Commands,
+    holder_query: Query<(&Inventory, Option<&mut Mana>)>,
+    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+) {
+    handle_equipment_activation(
+        trigger.entity(),
+        trigger.slot,
+        commands,
+        holder_query,
+        equippable_query,
+    );
+}
 
-// TODO: All of the "warns" in this function should be shown to the player through UI so they know why using main hand failed
-// TODO #2: I'm not convinced on main hand activated is the best function to validate a user is OOM or
-// Their weapon is on cooldown
-pub fn on_main_hand_activated(
-    main_hand_trigger: Trigger<UseMainhandInputEvent>,
+fn handle_equipment_activation(
+    entity: Entity,
+    slot: EquipmentSlot,
     mut commands: Commands,
     mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    mut main_hand_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
-    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(main_hand_trigger.entity()) else {
+    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(entity) else {
         error!(
-            "Entity: {} tried to use main hand, but is missing equipment slots",
-            main_hand_trigger.entity()
+            "Entity: {} tried to use equipment, but is missing inventory",
+            entity
         );
         return;
     };
 
-    let Some(main_hand_entity) = inventory.get_equipped(EquipmentSlot::Mainhand) else {
-        warn!("Main hand is empty!");
+    let Some(equipment_entity) = inventory.get_equipped(slot) else {
+        warn!("{:?} is empty!", slot);
+        commands.trigger_targets(
+            EquipmentUseFailedEvent {
+                holder: entity,
+                slot,
+                reason: EquipmentUseFailure::NoneEquipped,
+            },
+            entity,
+        );
         return;
     };
 
-    if let Ok((mut equippable, mana_cost)) = main_hand_query.get_mut(main_hand_entity) {
-        if equippable.use_rate.finished() {
-            // If the equipment uses mana, and we don't have enough, return
-            if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
-                if !mana.attempt_use_mana(mana_cost) {
-                    warn!("Not enough mana!");
-                    return;
-                }
-            } else if holder_mana.is_none() && mana_cost.is_some() {
-                warn!("This wielder is not skilled in the arts of the arcane");
+    if let Ok((mut equippable, mana_cost)) = equippable_query.get_mut(equipment_entity) {
+        // Check cooldown first
+        if !equippable.use_rate.finished() {
+            commands.trigger_targets(
+                EquipmentUseFailedEvent {
+                    holder: entity,
+                    slot,
+                    reason: EquipmentUseFailure::OnCooldown,
+                },
+                entity,
+            );
+            return;
+        }
+
+        // Check mana next
+        if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
+            if !mana.attempt_use_mana(mana_cost) {
+                warn!("Not enough mana!");
+                commands.trigger_targets(
+                    EquipmentUseFailedEvent {
+                        holder: entity,
+                        slot,
+                        reason: EquipmentUseFailure::OutOfMana,
+                    },
+                    entity,
+                );
                 return;
             }
-
-            commands.trigger_targets(
-                UseEquipmentEvent {
-                    holder: main_hand_trigger.entity(),
-                },
-                main_hand_entity,
-            );
-            equippable.use_rate.reset();
+        } else if holder_mana.is_none() && mana_cost.is_some() {
+            warn!("This wielder is not skilled in the arts of the arcane");
+            return;
         }
+
+        // Success path - trigger equipment use and reset cooldown
+        commands.trigger_targets(UseEquipmentEvent { holder: entity }, equipment_entity);
+        equippable.use_rate.reset();
     }
 }
 
@@ -134,8 +186,29 @@ pub fn on_weapon_melee(
         attack_angle,
     );
 
-    //TODO: Refactor action state stuff
     if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
         *action_state = ActionState::Attacking;
     }
+}
+
+pub fn on_healing_tome_cast(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    tome_query: Query<&HealingTome>,
+) {
+    let Ok(tome) = tome_query.get(fired_trigger.entity()) else {
+        warn!("Tried to use a tome that does not exist");
+        return;
+    };
+
+    let health_to_add = rand::thread_rng().gen_range(tome.healing.0..tome.healing.1);
+    commands.trigger_targets(
+        AttemptHealingEvent {
+            amount: health_to_add,
+        },
+        fired_trigger.holder,
+    );
+    commands
+        .entity(fired_trigger.holder)
+        .with_child(HealingTomeSpellVisualEffect);
 }

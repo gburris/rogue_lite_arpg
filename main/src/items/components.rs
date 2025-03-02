@@ -81,3 +81,15 @@ pub struct Lootable;
 pub struct Magnet {
     pub strength: f32,
 }
+
+#[derive(Component)]
+pub struct HealingTome {
+    pub healing: (f32, f32),
+}
+
+#[derive(Component)]
+#[require(
+    Visibility(|| Visibility::Visible),
+    LiveDuration(|| LiveDuration::new(1.0))
+)]
+pub struct HealingTomeSpellVisualEffect;

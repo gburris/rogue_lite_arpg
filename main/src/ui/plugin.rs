@@ -55,6 +55,7 @@ impl Plugin for UIPlugin {
                     .in_set(InGameSet::HudOverlay),
             )
             .add_observer(damage_overlay::on_damage_overlay_amount)
+            .add_observer(damage_overlay::on_healing_overlay_amount)
             // Game over systems
             .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
             .add_systems(
@@ -62,7 +63,8 @@ impl Plugin for UIPlugin {
                 game_over_screen::despawn_game_over_screen,
             )
             .add_observer(game_over_screen::on_restart_event_cleanup_zone)
-            .add_observer(player_overlay::on_main_hand_activated)
+            .add_observer(player_overlay::on_equipment_used)
+            .add_observer(player_overlay::on_equipment_use_failed)
             .add_systems(
                 Update,
                 game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),

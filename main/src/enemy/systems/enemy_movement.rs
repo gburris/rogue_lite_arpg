@@ -7,9 +7,10 @@ use crate::{
         components::{ActionState, AimPosition},
     },
     enemy::Enemy,
+    items::equipment::EquipmentSlot,
     movement::components::SimpleMotion,
     npc::NPC,
-    player::{Player, UseMainhandInputEvent},
+    player::{Player, UseEquipmentInputEvent},
 };
 
 #[derive(Component)]
@@ -67,7 +68,12 @@ pub fn move_enemies_toward_player(
                 commands.entity(entity).remove::<WanderDirection>();
             }
 
-            commands.trigger_targets(UseMainhandInputEvent, entity);
+            commands.trigger_targets(
+                UseEquipmentInputEvent {
+                    slot: EquipmentSlot::Mainhand,
+                },
+                entity,
+            );
 
             // Chase behavior
             let towards_player_direction = (player_pos - enemy_transform.translation)

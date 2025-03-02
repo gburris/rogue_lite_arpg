@@ -35,6 +35,8 @@ pub fn on_item_equipped(
 
     inventory.equip(equipped_entity, equippable.slot);
 
+    info!("Equipped new item!");
+
     if equippable.slot == EquipmentSlot::Mainhand || equippable.slot == EquipmentSlot::Offhand {
         // Make sure item is now visible, since it is hidden while in inventory
         *visibility = Visibility::Visible;

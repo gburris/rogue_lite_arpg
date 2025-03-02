@@ -41,18 +41,22 @@ pub fn on_item_clicked(
     trigger: Trigger<Pointer<Click>>,
     mut commands: Commands,
     slot_query: Query<&DisplayCaseSlot>,
-    item_query: Query<(Has<Equippable>, Has<Consumable>), With<Item>>,
+    item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
     player: Single<(Entity, &Inventory), With<Player>>,
 ) {
     let item_slot = slot_query.get(trigger.entity()).unwrap();
     let (player_entity, inventory) = player.into_inner();
     let item_entity = inventory.items[item_slot.index];
 
-    if let Ok((equippable, consumable)) = item_query.get(item_entity) {
+    if let Ok((equippable, is_equipped, consumable)) = item_query.get(item_entity) {
         if equippable {
-            commands
-                .entity(item_entity)
-                .insert(Equipped::new(player_entity));
+            if is_equipped {
+                commands.entity(item_entity).remove::<Equipped>();
+            } else {
+                commands
+                    .entity(item_entity)
+                    .insert(Equipped::new(player_entity));
+            }
         } else if consumable {
             commands.trigger_targets(ConsumeEvent { item_entity }, player_entity);
         }

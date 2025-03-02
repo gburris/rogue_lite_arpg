@@ -14,7 +14,7 @@ use crate::{
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
-        equipment::{on_main_hand_activated, Equipped},
+        equipment::{on_equipment_activated, Equipped},
         inventory::Inventory,
         spawn_health_potion, spawn_mainhand_weapon,
     },
@@ -136,7 +136,7 @@ fn spawn_enemy(
             ))
             .add_children(&starting_items)
             .observe(on_enemy_defeated)
-            .observe(on_main_hand_activated)
+            .observe(on_equipment_activated)
             .id();
 
         commands

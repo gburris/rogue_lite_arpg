@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
+    despawn::components::LiveDuration,
     items::{
         equipment::{
             EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable,
@@ -318,16 +319,16 @@ pub struct ActionBox {
 pub struct CooldownLine;
 
 #[derive(Component)]
-pub struct ErrorFlash {
-    timer: Timer,
-}
+#[require(
+    LiveDuration(|| LiveDuration::new(0.1)),
+)]
+pub struct ErrorFlash;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
 const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
 const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
 const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.6); // Semi-transparent red
-const ERROR_FLASH_DURATION: f32 = 0.1; // 0.1 seconds
 
 fn create_action_bar(parent: &mut ChildBuilder) {
     parent
@@ -424,10 +425,15 @@ pub struct CooldownIndicator {
 
 pub fn on_equipment_used(
     trigger: Trigger<UseEquipmentEvent>,
+    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     equipment_query: Query<&Equippable>,
 ) {
+    if trigger.holder != player.0 {
+        return;
+    }
+
     if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
         if let Some((box_entity, _)) = action_box_query
             .iter()
@@ -442,22 +448,25 @@ pub fn on_equipment_used(
 
 pub fn on_equipment_use_failed(
     trigger: Trigger<EquipmentUseFailedEvent>,
+    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     cooldown_query: Query<&CooldownIndicator>,
 ) {
+    if trigger.entity() != player.0 {
+        return;
+    }
+
     if let Some((box_entity, _)) = action_box_query
         .iter()
         .find(|(_, action_box)| action_box.slot == trigger.slot)
     {
         if !cooldown_query.contains(box_entity)
-            && trigger.reason != EquipmentUseFailure::NotEquipped
+            && trigger.reason != EquipmentUseFailure::NoneEquipped
         {
             commands.entity(box_entity).with_children(|parent| {
                 parent.spawn((
-                    ErrorFlash {
-                        timer: Timer::from_seconds(ERROR_FLASH_DURATION, TimerMode::Once),
-                    },
+                    ErrorFlash,
                     Node {
                         width: Val::Percent(90.),
                         height: Val::Percent(90.),
@@ -517,20 +526,6 @@ pub fn update_cooldowns(
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }
-        }
-    }
-}
-
-pub fn update_error_flashes(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut ErrorFlash)>,
-) {
-    for (entity, mut error_flash) in query.iter_mut() {
-        error_flash.timer.tick(time.delta());
-
-        if error_flash.timer.finished() {
-            commands.entity(entity).despawn_recursive();
         }
     }
 }

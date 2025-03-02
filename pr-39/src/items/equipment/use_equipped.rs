@@ -15,7 +15,7 @@ use crate::{
     items::{
         equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
     },
-    player::{UseMainhandInputEvent, UseOffhandInputEvent},
+    player::UseEquipmentInputEvent,
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -29,7 +29,7 @@ pub struct UseEquipmentEvent {
 pub enum EquipmentUseFailure {
     OutOfMana,
     OnCooldown,
-    NotEquipped,
+    NoneEquipped,
 }
 
 #[derive(Event)]
@@ -45,30 +45,15 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
         equippable.use_rate.tick(time.delta());
     }
 }
-pub fn on_main_hand_activated(
-    trigger: Trigger<UseMainhandInputEvent>,
+pub fn on_equipment_activated(
+    trigger: Trigger<UseEquipmentInputEvent>,
     commands: Commands,
     holder_query: Query<(&Inventory, Option<&mut Mana>)>,
     equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     handle_equipment_activation(
         trigger.entity(),
-        EquipmentSlot::Mainhand,
-        commands,
-        holder_query,
-        equippable_query,
-    );
-}
-
-pub fn on_off_hand_activated(
-    trigger: Trigger<UseOffhandInputEvent>,
-    commands: Commands,
-    holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
-) {
-    handle_equipment_activation(
-        trigger.entity(),
-        EquipmentSlot::Offhand,
+        trigger.slot,
         commands,
         holder_query,
         equippable_query,
@@ -96,7 +81,7 @@ fn handle_equipment_activation(
             EquipmentUseFailedEvent {
                 holder: entity,
                 slot,
-                reason: EquipmentUseFailure::NotEquipped,
+                reason: EquipmentUseFailure::NoneEquipped,
             },
             entity,
         );
@@ -223,6 +208,7 @@ pub fn on_healing_tome_cast(
         },
         fired_trigger.holder,
     );
-    let viz_effect = commands.spawn((HealingTomeSpellVisualEffect,)).id();
-    commands.entity(fired_trigger.holder).add_child(viz_effect);
+    commands
+        .entity(fired_trigger.holder)
+        .with_child(HealingTomeSpellVisualEffect);
 }

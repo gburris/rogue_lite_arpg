@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
+    items::equipment::EquipmentSlot,
     labels::states::PausedState,
     player::{
         interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        UseMainhandInputEvent, UseOffhandInputEvent,
+        UseEquipmentInputEvent,
     },
 };
 
@@ -35,11 +36,21 @@ pub fn player_input(
     }
 
     if buttons.pressed(MouseButton::Left) {
-        commands.trigger_targets(UseMainhandInputEvent, player_entity);
+        commands.trigger_targets(
+            UseEquipmentInputEvent {
+                slot: EquipmentSlot::Mainhand,
+            },
+            player_entity,
+        );
     }
 
     if buttons.pressed(MouseButton::Right) {
-        commands.trigger_targets(UseOffhandInputEvent, player_entity);
+        commands.trigger_targets(
+            UseEquipmentInputEvent {
+                slot: EquipmentSlot::Offhand,
+            },
+            player_entity,
+        );
     }
 
     let mut direction = Vec2::ZERO;

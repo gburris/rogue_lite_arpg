@@ -2,12 +2,16 @@ use bevy::prelude::*;
 
 use crate::{
     combat::attributes::{Health, Mana},
+    despawn::components::LiveDuration,
     items::{
-        equipment::{EquipmentSlot, Equippable},
+        equipment::{
+            EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable,
+            UseEquipmentEvent,
+        },
         inventory::Inventory,
         Item,
     },
-    player::{components::Player, PlayerExperience, UseMainhandInputEvent},
+    player::{components::Player, PlayerExperience},
 };
 
 #[derive(Component)]
@@ -302,19 +306,29 @@ pub fn update_exp_bar(
     }
 }
 
-/* Action Bar Code */
+/* Action Bar Components and Systems */
 #[derive(Component)]
 pub struct ActionBar;
 
 #[derive(Component)]
-pub struct ActionBox;
+pub struct ActionBox {
+    slot: EquipmentSlot,
+}
 
 #[derive(Component)]
 pub struct CooldownLine;
 
+#[derive(Component)]
+#[require(
+    LiveDuration(|| LiveDuration::new(0.1)),
+)]
+pub struct ErrorFlash;
+
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.8); // 80% opaque black
 const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Semi-transparent white
+const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
+const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.6); // Semi-transparent red
 
 fn create_action_bar(parent: &mut ChildBuilder) {
     parent
@@ -329,12 +343,35 @@ fn create_action_bar(parent: &mut ChildBuilder) {
             },
         ))
         .with_children(|action_bar| {
-            // Spawn 5 action boxes
-            // TODO: Add offhand, Spell Slot 1, Spell Slot 2, to this
-            for _ in 0..5 {
+            let slots = [EquipmentSlot::Mainhand, EquipmentSlot::Offhand];
+
+            for slot in slots {
                 action_bar
                     .spawn((
-                        ActionBox,
+                        ActionBox { slot },
+                        Node {
+                            width: Val::Px(ACTION_BOX_SIZE),
+                            height: Val::Px(ACTION_BOX_SIZE),
+                            border: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                        BackgroundColor::from(ACTION_BOX_COLOR),
+                        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
+                    ))
+                    .with_children(|action_box| {
+                        action_box.spawn((
+                            ImageNode { ..default() },
+                            Node {
+                                width: Val::Percent(100.),
+                                height: Val::Percent(100.),
+                                ..default()
+                            },
+                        ));
+                    });
+            }
+            for _ in 0..(5 - slots.len()) {
+                action_bar
+                    .spawn((
                         Node {
                             width: Val::Px(ACTION_BOX_SIZE),
                             height: Val::Px(ACTION_BOX_SIZE),
@@ -359,23 +396,20 @@ fn create_action_bar(parent: &mut ChildBuilder) {
 }
 
 pub fn update_action_bar(
-    action_bar_query: Single<&Children, With<ActionBar>>,
-    action_box_query: Query<&Children, With<ActionBox>>,
+    action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     inventory_query: Option<Single<&Inventory, (Changed<Inventory>, With<Player>)>>,
     item_query: Query<(&Item, &Sprite)>,
 ) {
     if let Some(player_inventory_result) = inventory_query {
         let player_inventory = player_inventory_result.into_inner();
-        if let Some(mainhand) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
-            let action_bar_children = action_bar_query.into_inner();
-            if let Some(&slot_one) = action_bar_children.first() {
-                if let Ok(action_box_children) = action_box_query.get(slot_one) {
-                    if let Some(image_box_child) = action_box_children.first() {
-                        if let Ok(mut image_node) = image_query.get_mut(*image_box_child) {
-                            if let Ok((_, mainhand_item_sprite)) = item_query.get(mainhand) {
-                                image_node.image = mainhand_item_sprite.image.clone()
-                            }
+
+        for (action_box, children) in action_box_query.iter() {
+            if let Some(equipped_entity) = player_inventory.get_equipped(action_box.slot) {
+                if let Some(&image_entity) = children.first() {
+                    if let Ok(mut image_node) = image_query.get_mut(image_entity) {
+                        if let Ok((_, item_sprite)) = item_query.get(equipped_entity) {
+                            image_node.image = item_sprite.image.clone();
                         }
                     }
                 }
@@ -384,42 +418,80 @@ pub fn update_action_bar(
     }
 }
 
-const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6);
-
 #[derive(Component)]
 pub struct CooldownIndicator {
     timer: Timer,
 }
 
-pub fn on_main_hand_activated(
-    trigger: Trigger<UseMainhandInputEvent>,
+pub fn on_equipment_used(
+    trigger: Trigger<UseEquipmentEvent>,
+    player: Single<(Entity, &Player)>,
     mut commands: Commands,
-    player_query: Single<Entity, With<Player>>,
-    action_bar_query: Single<&Children, With<ActionBar>>,
-    inventory_query: Single<&Inventory, With<Player>>,
-    weapon_query: Query<&Equippable>,
+    action_box_query: Query<(Entity, &ActionBox)>,
+    equipment_query: Query<&Equippable>,
 ) {
-    if (trigger.entity()) != player_query.into_inner() {
+    if trigger.holder != player.0 {
         return;
     }
-    let action_bar_children = action_bar_query.into_inner();
-    let player_inventory = inventory_query.into_inner();
-    if let Some(&first_box_entity) = action_bar_children.first() {
-        if let Some(weapon_entity) = player_inventory.get_equipped(EquipmentSlot::Mainhand) {
-            if let Ok(weapon) = weapon_query.get(weapon_entity) {
-                commands.entity(first_box_entity).insert(CooldownIndicator {
-                    timer: weapon.use_rate.clone(),
-                });
-            }
+
+    if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
+        if let Some((box_entity, _)) = action_box_query
+            .iter()
+            .find(|(_, action_box)| action_box.slot == equipmemnt.slot)
+        {
+            commands.entity(box_entity).insert(CooldownIndicator {
+                timer: equipmemnt.use_rate.clone(),
+            });
+        }
+    }
+}
+
+pub fn on_equipment_use_failed(
+    trigger: Trigger<EquipmentUseFailedEvent>,
+    player: Single<(Entity, &Player)>,
+    mut commands: Commands,
+    action_box_query: Query<(Entity, &ActionBox)>,
+    cooldown_query: Query<&CooldownIndicator>,
+) {
+    if trigger.entity() != player.0 {
+        return;
+    }
+
+    if let Some((box_entity, _)) = action_box_query
+        .iter()
+        .find(|(_, action_box)| action_box.slot == trigger.slot)
+    {
+        if !cooldown_query.contains(box_entity)
+            && trigger.reason != EquipmentUseFailure::NoneEquipped
+        {
+            commands.entity(box_entity).with_children(|parent| {
+                parent.spawn((
+                    ErrorFlash,
+                    Node {
+                        width: Val::Percent(90.),
+                        height: Val::Percent(90.),
+                        position_type: PositionType::Absolute,
+                        ..default()
+                    },
+                    BackgroundColor::from(ERROR_FLASH_COLOR),
+                ));
+            });
         }
     }
 }
 
 pub fn on_cooldown_indicator_added(
     mut commands: Commands,
-    query: Query<Entity, Added<CooldownIndicator>>,
+    query: Query<(Entity, &Children), Added<CooldownIndicator>>,
+    error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
-    for entity in query.iter() {
+    for (entity, children) in query.iter() {
+        for &child in children.iter() {
+            if error_flash_query.contains(child) {
+                commands.entity(child).despawn_recursive();
+            }
+        }
+
         commands.entity(entity).with_children(|parent| {
             parent.spawn((
                 CooldownLine,
@@ -448,11 +520,9 @@ pub fn update_cooldowns(
 
         if let Some(&line_entity) = children.iter().find(|&&e| line_query.contains(e)) {
             if cooldown.timer.finished() {
-                // Remove immediately if finished
                 commands.entity(line_entity).despawn_recursive();
                 commands.entity(entity).remove::<CooldownIndicator>();
             } else if let Ok(mut line_node) = line_query.get_mut(line_entity) {
-                // Otherwise update the line height
                 let progress = 1.0 - cooldown.timer.fraction_remaining();
                 line_node.height = Val::Px(ACTION_BOX_SIZE * (1.0 - progress));
             }

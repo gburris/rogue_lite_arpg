@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::items::equipment::EquipmentSlot;
+
 #[derive(Event)]
 pub struct PlayerLevelUpEvent {
     pub new_level: u32,
@@ -14,7 +16,6 @@ pub struct PlayerMovementEvent {
 pub struct PlayerStoppedEvent;
 
 #[derive(Event)]
-pub struct UseMainhandInputEvent;
-
-#[derive(Event)]
-pub struct UseOffhandInputEvent;
+pub struct UseEquipmentInputEvent {
+    pub slot: EquipmentSlot,
+}

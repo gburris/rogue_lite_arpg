@@ -425,10 +425,15 @@ pub struct CooldownIndicator {
 
 pub fn on_equipment_used(
     trigger: Trigger<UseEquipmentEvent>,
+    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     equipment_query: Query<&Equippable>,
 ) {
+    if trigger.holder != player.0 {
+        return;
+    }
+
     if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
         if let Some((box_entity, _)) = action_box_query
             .iter()
@@ -443,16 +448,21 @@ pub fn on_equipment_used(
 
 pub fn on_equipment_use_failed(
     trigger: Trigger<EquipmentUseFailedEvent>,
+    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     cooldown_query: Query<&CooldownIndicator>,
 ) {
+    if trigger.entity() != player.0 {
+        return;
+    }
+
     if let Some((box_entity, _)) = action_box_query
         .iter()
         .find(|(_, action_box)| action_box.slot == trigger.slot)
     {
         if !cooldown_query.contains(box_entity)
-            && trigger.reason != EquipmentUseFailure::NotEquipped
+            && trigger.reason != EquipmentUseFailure::NoneEquipped
         {
             commands.entity(box_entity).with_children(|parent| {
                 parent.spawn((

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 /// Goes on the equipment marking where it should be equipped
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this by reference
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EquipmentSlot {
     Mainhand,
     Offhand,
@@ -39,6 +39,12 @@ impl Default for Equippable {
 impl Equippable {
     pub fn new(slot: EquipmentSlot) -> Self {
         Equippable { slot, ..default() }
+    }
+    pub fn from(duration: f32, slot: EquipmentSlot) -> Self {
+        Equippable {
+            use_rate: Timer::from_seconds(duration, TimerMode::Once),
+            slot,
+        }
     }
 }
 

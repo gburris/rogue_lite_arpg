@@ -38,6 +38,8 @@ pub struct SpriteSheetLayouts {
         offset_y = 8,
     ))]
     pub chest_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
+    pub tome_of_healing_effect: Handle<TextureAtlasLayout>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -58,6 +60,8 @@ pub struct GameIcons {
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
     pub gold_coin: Handle<Image>,
+    #[asset(path = "items/tome_of_healing.png")]
+    pub tome_of_healing: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword: Handle<Image>,
     #[asset(path = "items/axe.png")]
@@ -90,6 +94,8 @@ pub struct SpriteAssets {
     pub run_start_door: Handle<Image>,
     #[asset(path = "chests.png")]
     pub chests_sprite_sheet: Handle<Image>,
+    #[asset(path = "spells/tome_of_healing_effect.png")]
+    pub tome_of_healing_effect_sprite_sheet: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
     #[asset(path = "enemies/ice_mage_enemy.png")]

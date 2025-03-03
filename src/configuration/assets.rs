@@ -38,7 +38,9 @@ pub struct SpriteSheetLayouts {
     ))]
     pub chest_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
-    pub tome_of_healing_effect: Handle<TextureAtlasLayout>,
+    pub spell_effect: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 1))]
+    pub shield_layout: Handle<TextureAtlasLayout>,
 }
 
 #[derive(AssetCollection, Resource)]
@@ -47,6 +49,10 @@ pub struct SpriteAssets {
     pub gold_coin: Handle<Image>,
     #[asset(path = "items/tome_of_healing.png")]
     pub tome_of_healing: Handle<Image>,
+    #[asset(path = "items/knight_shield.png")]
+    pub knight_shield: Handle<Image>,
+    #[asset(path = "items/magic_shield.png")]
+    pub magic_shield: Handle<Image>,
     #[asset(path = "items/sword.png")]
     pub sword: Handle<Image>,
     #[asset(path = "items/axe.png")]
@@ -81,6 +87,8 @@ pub struct SpriteAssets {
     pub chests_sprite_sheet: Handle<Image>,
     #[asset(path = "spells/tome_of_healing_effect.png")]
     pub tome_of_healing_effect_sprite_sheet: Handle<Image>,
+    #[asset(path = "spells/shield_effect.png")]
+    pub shield_effect_sprite_sheet: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,
     #[asset(path = "enemies/ice_mage_enemy.png")]

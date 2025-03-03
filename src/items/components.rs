@@ -82,6 +82,8 @@ pub struct Magnet {
     pub strength: f32,
 }
 
+/* These components are both "offhand use effect definitions"
+but I'm not sure of a better home for them yet */
 #[derive(Component)]
 pub struct HealingTome {
     pub healing: (f32, f32),
@@ -93,3 +95,13 @@ pub struct HealingTome {
     LiveDuration(|| LiveDuration::new(1.0))
 )]
 pub struct HealingTomeSpellVisualEffect;
+
+#[derive(Component, Copy, Clone)]
+pub struct Shield;
+
+#[derive(Component)]
+#[require(
+    Visibility(|| Visibility::Visible),
+    LiveDuration(|| LiveDuration::new(5.0))
+)]
+pub struct ShieldSpellVisualEffect;

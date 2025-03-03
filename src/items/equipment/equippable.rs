@@ -28,9 +28,9 @@ impl Equippable {
     pub fn new(slot: EquipmentSlot) -> Self {
         Equippable { slot, ..default() }
     }
-    pub fn from(duration: f32, slot: EquipmentSlot) -> Self {
+    pub fn from(cooldown: f32, slot: EquipmentSlot) -> Self {
         Equippable {
-            use_rate: Timer::from_seconds(duration, TimerMode::Once),
+            use_rate: Timer::from_seconds(cooldown, TimerMode::Once),
             slot,
         }
     }

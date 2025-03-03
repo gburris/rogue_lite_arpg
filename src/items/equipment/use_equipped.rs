@@ -2,6 +2,9 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
+use crate::combat::shield::components::ProjectileReflection;
+use crate::combat::shield::shield_block::start_shield_block;
+use crate::items::{Shield, ShieldSpellVisualEffect};
 use crate::{
     combat::{
         attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
@@ -211,4 +214,38 @@ pub fn on_healing_tome_cast(
     commands
         .entity(fired_trigger.holder)
         .with_child(HealingTomeSpellVisualEffect);
+}
+
+pub fn on_magic_shield_cast(fired_trigger: Trigger<UseEquipmentEvent>, mut commands: Commands) {
+    commands
+        .entity(fired_trigger.holder)
+        .insert(ProjectileReflection);
+
+    commands
+        .entity(fired_trigger.holder)
+        .with_child(ShieldSpellVisualEffect);
+}
+
+pub fn on_shield_block(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    mut shield_query: Query<(Entity, &Shield)>,
+    holder_query: Query<(&Transform, &AimPosition)>,
+) {
+    let Ok((shield_entity, shield)) = shield_query.get_mut(fired_trigger.entity()) else {
+        warn!("Tried to block with invalid shield");
+        return;
+    };
+
+    let Ok((holder_transform, aim_pos)) = holder_query.get(fired_trigger.holder) else {
+        warn!("Holder missing required components");
+        return;
+    };
+
+    let holder_pos = holder_transform.translation.truncate();
+    let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
+    let mut block_angle = aim_direction.y.atan2(aim_direction.x);
+    block_angle -= std::f32::consts::FRAC_PI_2;
+
+    start_shield_block(&mut commands, shield_entity, shield, block_angle);
 }

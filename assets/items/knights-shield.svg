@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Shield base -->
+  <path d="M16 2 L28 6 L28 14 C28 21 22 26 16 30 C10 26 4 21 4 14 L4 6 Z" fill="#7A7A7A" stroke="#333" stroke-width="1"/>
+  
+  <!-- Shield inner section -->
+  <path d="M16 4 L26 7 L26 14 C26 20 21 24 16 27 C11 24 6 20 6 14 L6 7 Z" fill="#AAA" stroke="#555" stroke-width="0.5"/>
+  
+  <!-- Shield emblem - simple cross -->
+  <path d="M13 8 L19 8 L19 11 L22 11 L22 17 L19 17 L19 22 L13 22 L13 17 L10 17 L10 11 L13 11 Z" fill="#222" stroke="#000" stroke-width="0.2"/>
+  
+  <!-- Highlight -->
+  <path d="M8 8 L10 9 L10 14 C10 15 12 20 16 23 C16 23 9 19 7 14 L7 8 Z" fill="#CCC" fill-opacity="0.3"/>
+</svg>

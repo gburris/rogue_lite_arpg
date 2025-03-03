@@ -1,3 +1,5 @@
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::prelude::*;
 use rand::Rng;
 
@@ -229,10 +231,12 @@ pub fn on_magic_shield_cast(fired_trigger: Trigger<UseEquipmentEvent>, mut comma
 pub fn on_shield_block(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    mut shield_query: Query<(Entity, &Shield)>,
+    mut shield_query: Query<(Entity, &Transform, &mut Sprite, &Shield)>,
     holder_query: Query<(&Transform, &AimPosition)>,
 ) {
-    let Ok((shield_entity, shield)) = shield_query.get_mut(fired_trigger.entity()) else {
+    let Ok((shield_entity, shield_transform, mut shield_sprite, shield)) =
+        shield_query.get_mut(fired_trigger.entity())
+    else {
         warn!("Tried to block with invalid shield");
         return;
     };
@@ -244,8 +248,14 @@ pub fn on_shield_block(
 
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
-    let mut block_angle = aim_direction.y.atan2(aim_direction.x);
-    block_angle -= std::f32::consts::FRAC_PI_2;
+    let block_angle = aim_direction.y.atan2(aim_direction.x) + FRAC_PI_2;
 
-    start_shield_block(&mut commands, shield_entity, shield, block_angle);
+    start_shield_block(
+        &mut commands,
+        shield_entity,
+        shield,
+        block_angle,
+        &mut shield_sprite,
+        shield_transform,
+    );
 }

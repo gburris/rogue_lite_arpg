@@ -8,6 +8,7 @@ use super::equipment::EquipmentSlot;
 use super::HealingTome;
 use super::Item;
 use super::Shield;
+use crate::animation::AnimationIndices;
 use crate::animation::FacingDirection;
 use crate::combat::attributes::mana::ManaCost;
 use crate::configuration::assets::SpriteAssets;
@@ -75,7 +76,7 @@ fn spawn_knight_shield(
         .spawn((
             Name::new("Knight Shield"),
             Item::new(6),
-            Equippable::from(3.0, EquipmentSlot::Offhand),
+            Equippable::from(0.5, EquipmentSlot::Offhand),
             Shield,
             Visibility::Hidden,
             Sprite {

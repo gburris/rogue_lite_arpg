@@ -1,46 +1,37 @@
-use bevy::prelude::*;
+use bevy::{
+    input::mouse::{MouseScrollUnit, MouseWheel},
+    picking::focus::HoverMap,
+    prelude::*,
+};
 
 use crate::{
     configuration::assets::GameIcons,
     items::{
-        equipment::{EquipmentSlot, Equippable, Equipped},
+        equipment::{Equippable, Equipped},
         inventory::Inventory,
-        Item, ItemType,
+        Item,
     },
+    ui::display_case_slot::{spawn_slot, DisplayCaseSlot},
 };
 
-use super::pause_menu::button_interactions::*;
+use super::display_case_slot::DisplaySlotContext;
 
-const VALUE_WIDTH: Val = Val::Px(60.0);
-const EQUIP_SLOT_WIDTH: Val = Val::Px(150.0);
+pub const VALUE_WIDTH: Val = Val::Px(60.0);
+pub const EQUIP_SLOT_WIDTH: Val = Val::Px(150.0);
 
-/// Data used to construct the display case. This is not a component just a simple object
-pub struct DisplayCaseContext<'a> {
-    /// If there is a max capacity AND we want to display capacity text
-    pub capacity: usize,
-    pub capacity_text: Option<&'a str>,
-}
-
-#[derive(Component)]
-pub struct CapacityText;
-
+/// Trigger on entity with Inventory component (i.e. the player entity)
+#[derive(Event)]
+pub struct UpdateInventoryUIEvent;
 /// Div that wraps all display slots, but not top level component
 #[derive(Component)]
 pub struct DisplayCaseContainer;
 
-/// We sort display case slots by index, magic!!!
-#[derive(Component, Copy, Clone, Deref, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DisplayCaseSlot {
-    /// Index in the display case correspoding to index in actual entities inventory
-    pub index: usize,
-}
-
-pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseContext) -> Entity {
+pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
     builder
         .spawn((
             DisplayCaseContainer,
             Node {
-                height: Val::Px(1200.0), // flow off the screen, we will scroll this
+                height: Val::Px(800.0),
                 flex_direction: FlexDirection::Column,
                 overflow: Overflow::scroll_y(),
                 ..default()
@@ -53,7 +44,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
                     Node {
                         width: Val::Px(900.0),
                         height: Val::Px(35.0),
-                        border: UiRect::new(Val::ZERO, Val::ZERO, Val::Px(2.0), Val::Px(2.0)),
+                        border: UiRect::vertical(Val::Px(2.0)),
                         margin: UiRect::top(Val::Px(5.0)),
                         padding: UiRect::all(Val::Px(5.0)),
                         column_gap: Val::Px(5.0),
@@ -109,111 +100,6 @@ pub fn spawn_display_case(builder: &mut ChildBuilder, context: &DisplayCaseConte
         .id()
 }
 
-/// Internal struct to make building display slots easier
-struct DisplaySlotContext<'a> {
-    index: usize,
-    item_name: &'a str,
-    item: &'a Item,
-    equipment_slot: Option<EquipmentSlot>,
-    is_equipped: bool,
-}
-
-/// Spawns a given "slot" in a display case representing a single item in the inventory
-fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &DisplaySlotContext) {
-    builder
-        .spawn((
-            DisplayCaseSlot {
-                index: context.index,
-            },
-            Node {
-                width: Val::Px(900.0),
-                height: Val::Px(32.0),
-                padding: UiRect::all(Val::Px(5.0)),
-                column_gap: Val::Px(5.0),
-                align_items: AlignItems::Center,
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            let item_icon = match context.item.item_type {
-                ItemType::Melee => icons.melee_icon.clone(),
-                ItemType::Staff => icons.staff_icon.clone(),
-                ItemType::Potion => icons.potion_icon.clone(),
-                ItemType::Tome => icons.spell_book_icon.clone(),
-            };
-
-            parent.spawn((
-                ImageNode {
-                    image: item_icon,
-                    ..default()
-                },
-                Node {
-                    width: Val::Px(30.0),
-                    height: Val::Px(30.0),
-                    ..default()
-                },
-            ));
-
-            parent.spawn((
-                Text::new(context.item_name),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-            ));
-
-            if context.is_equipped {
-                parent.spawn((
-                    ImageNode {
-                        image: icons.equip_icon.clone(),
-                        ..default()
-                    },
-                    Node {
-                        height: Val::Px(16.0),
-                        width: Val::Px(16.0),
-                        ..default()
-                    },
-                ));
-            }
-
-            parent.spawn((Node {
-                flex_grow: 1.0,
-                ..default()
-            },));
-
-            let slot_string: String = context
-                .equipment_slot
-                .map(|slot| slot.to_string())
-                .unwrap_or("-".to_string());
-            parent.spawn((
-                Text::new(slot_string),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                Node {
-                    width: EQUIP_SLOT_WIDTH,
-                    ..default()
-                },
-            ));
-
-            parent.spawn((
-                Text::new(context.item.value.to_string()),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                Node {
-                    width: VALUE_WIDTH,
-                    ..default()
-                },
-            ));
-        })
-        .observe(on_item_clicked)
-        .observe(on_item_hover)
-        .observe(on_item_done_hovering);
-}
-
 pub fn on_display_case_updated(
     trigger: Trigger<UpdateInventoryUIEvent>,
     mut commands: Commands,
@@ -241,18 +127,8 @@ pub fn on_display_case_updated(
     // Despawn existing slots
     slots_querys
         .iter()
-        .filter_map(|(e, _)| {
-            if display_case_children
-                .map(|c| c.contains(&e))
-                .or_else(|| Some(false))
-                .unwrap()
-            {
-                Some(e)
-            } else {
-                None
-            }
-        })
-        .for_each(|e| commands.entity(e).despawn_recursive());
+        .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(&e)))
+        .for_each(|(e, _)| commands.entity(e).despawn_recursive());
 
     // Get name and entity for each item in inventory
     let items = inventory
@@ -275,4 +151,34 @@ pub fn on_display_case_updated(
             spawn_slot(builder, &icons, &slot_context);
         }
     });
+}
+
+const LINE_HEIGHT: f32 = 35.;
+
+/// Updates the scroll position of scrollable nodes in response to mouse input
+pub fn update_scroll_position(
+    mut mouse_wheel_events: EventReader<MouseWheel>,
+    hover_map: Res<HoverMap>,
+    mut scrolled_node_query: Query<&mut ScrollPosition>,
+) {
+    for mouse_wheel_event in mouse_wheel_events.read() {
+        let (dx, dy) = match mouse_wheel_event.unit {
+            MouseScrollUnit::Line => (
+                mouse_wheel_event.x * LINE_HEIGHT,
+                mouse_wheel_event.y * LINE_HEIGHT,
+            ),
+            MouseScrollUnit::Pixel => (mouse_wheel_event.x, mouse_wheel_event.y),
+        };
+
+        info!("Scrolling {:?}", Vec2::new(dx, dy));
+
+        for (_pointer, pointer_map) in hover_map.iter() {
+            for (entity, _hit) in pointer_map.iter() {
+                if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
+                    scroll_position.offset_x -= dx;
+                    scroll_position.offset_y -= dy;
+                }
+            }
+        }
+    }
 }

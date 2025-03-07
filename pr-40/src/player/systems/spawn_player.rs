@@ -31,6 +31,33 @@ pub fn spawn_player(
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
         spawn_offhand(&mut commands, &sprites, "tome_of_healing"),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
+        spawn_health_potion(&mut commands, &sprites),
     ];
 
     let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
@@ -40,7 +67,7 @@ pub fn spawn_player(
             Inventory::builder()
                 .items(starting_items.into())
                 .coins(0)
-                .max_capacity(10)
+                .max_capacity(50)
                 .build(),
             Mana::new(100.0, 10.0),
             HasIFrames {

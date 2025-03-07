@@ -17,7 +17,14 @@ impl Plugin for PauseMenuPlugin {
         app
             // Pause Related Systems
             .add_observer(input::on_pause_input)
-            .add_systems(Update, input::handle_ui_inputs.in_set(MainSet::Menu))
+            .add_systems(
+                Update,
+                (
+                    input::handle_ui_inputs,
+                    display_case::update_scroll_position,
+                )
+                    .in_set(MainSet::Menu),
+            )
             .add_systems(
                 OnEnter(AppState::Paused),
                 (time_control::pause_game, pause::spawn_pause_background),

@@ -5,7 +5,7 @@ use crate::{
     items::inventory::*,
     npc::NPC,
     player::Player,
-    ui::display_case::{self, UpdateInventoryUIEvent},
+    ui::display_case::{self, UpdateDisplayCaseEvent},
 };
 
 #[derive(Component)]
@@ -59,5 +59,5 @@ pub fn spawn_inventory_menu(
             inventory.display_case = Some(display_case::spawn_display_case(parent));
         });
     // We spawned base inventory UI, now lets update it with items
-    commands.trigger_targets(UpdateInventoryUIEvent, player);
+    commands.trigger_targets(UpdateDisplayCaseEvent, player);
 }

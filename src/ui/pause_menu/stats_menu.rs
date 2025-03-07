@@ -2,7 +2,10 @@ use bevy::prelude::*;
 
 use crate::{
     player::PlayerStats,
-    ui::{constants::BACKGROUND_COLOR, menu_helpers::spawn_header},
+    ui::{
+        constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
+        menu_helpers::spawn_header,
+    },
 };
 
 #[derive(Component)]
@@ -40,10 +43,9 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                             height: Val::Percent(80.0),
                             flex_direction: FlexDirection::Column,
                             padding: UiRect::all(Val::Px(20.0)),
-                            overflow: Overflow::scroll_y(),
                             ..default()
                         },
-                        BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                        BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                     ))
                     .with_children(|stats_parent| {
                         spawn_stat_row(

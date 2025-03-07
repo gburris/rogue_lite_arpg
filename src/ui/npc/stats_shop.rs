@@ -1,7 +1,10 @@
 use crate::{
     player::{DisplayableStatType, PlayerStats},
     progression::GameProgress,
-    ui::{constants::BACKGROUND_COLOR, menu_helpers::spawn_header},
+    ui::{
+        constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
+        menu_helpers::spawn_header,
+    },
 };
 use bevy::prelude::*;
 
@@ -58,7 +61,7 @@ pub fn spawn_stats_shop_menu(
                         row_gap: Val::Px(10.0),
                         ..default()
                     },
-                    BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                 ))
                 .with_children(|container| {
                     // Spawn each stat row
@@ -154,11 +157,6 @@ fn spawn_stat_shop_button(
         .with_children(|button| {
             button.spawn((
                 Text::new(if is_increase { "+" } else { "-" }),
-                StatShopButton {
-                    stat_type,
-                    is_increase,
-                },
-                Button,
                 TextFont {
                     font_size: 24.0,
                     ..default()

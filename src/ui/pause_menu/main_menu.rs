@@ -4,7 +4,10 @@ use crate::{
     labels::states::PausedState,
     player::{Player, PlayerLevel},
     progression::GameProgress,
-    ui::{constants::BACKGROUND_COLOR, menu_helpers::spawn_header},
+    ui::{
+        constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR},
+        menu_helpers::spawn_header,
+    },
 };
 use bevy::prelude::*;
 
@@ -84,7 +87,7 @@ pub fn spawn_main_menu(
                         padding: UiRect::horizontal(Val::Px(40.0)),
                         ..default()
                     },
-                    BackgroundColor::from(Color::srgb(0.1, 0.1, 0.1)),
+                    BackgroundColor::from(DARK_GRAY_COLOR),
                 ))
                 .with_children(|footer| {
                     // Player Stats
@@ -167,7 +170,7 @@ fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
                 ..default()
             },
             BorderColor(Color::srgb(0.8, 0.8, 0.8)),
-            BackgroundColor(Color::srgb(0.2, 0.2, 0.2)),
+            BackgroundColor(DARK_GRAY_COLOR),
         ))
         .with_children(|button| {
             button.spawn((

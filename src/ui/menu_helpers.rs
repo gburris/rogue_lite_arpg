@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, HEADER_FONT_SIZE, HEADER_HEIGHT};
+use super::constants::{DARK_GRAY_COLOR, HEADER_FONT_SIZE, HEADER_HEIGHT};
 
 pub fn spawn_header(builder: &mut ChildBuilder, title: &str) {
     builder

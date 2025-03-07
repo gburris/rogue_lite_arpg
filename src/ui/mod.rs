@@ -1,5 +1,6 @@
 mod damage_overlay;
 mod display_case;
+mod display_case_slot;
 mod game_over_screen;
 mod input;
 mod loading;

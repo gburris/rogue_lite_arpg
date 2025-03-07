@@ -1,14 +1,12 @@
+use bevy::prelude::*;
+
 use crate::{
     enemy::Enemy,
     items::inventory::*,
     npc::NPC,
     player::Player,
-    ui::{
-        display_case::{self, DisplayCaseContext},
-        pause_menu::button_interactions::*,
-    },
+    ui::display_case::{self, UpdateInventoryUIEvent},
 };
-use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct InventoryMenu;
@@ -25,7 +23,7 @@ pub fn spawn_inventory_menu(
             InventoryMenu,
             Node {
                 width: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
+                height: Val::Percent(100.0),
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(20.0), // space between header and item list
@@ -58,13 +56,7 @@ pub fn spawn_inventory_menu(
                     ));
                 });
 
-            let inventory_context = DisplayCaseContext {
-                capacity: inventory.max_capacity,
-                capacity_text: Some("Item Capacity"),
-            };
-
-            inventory.display_case =
-                Some(display_case::spawn_display_case(parent, &inventory_context));
+            inventory.display_case = Some(display_case::spawn_display_case(parent));
         });
     // We spawned base inventory UI, now lets update it with items
     commands.trigger_targets(UpdateInventoryUIEvent, player);

@@ -4,6 +4,7 @@ use crate::{
     labels::states::PausedState,
     player::{Player, PlayerLevel},
     progression::GameProgress,
+    ui::{constants::BACKGROUND_COLOR, menu_helpers::spawn_header},
 };
 use bevy::prelude::*;
 
@@ -41,52 +42,27 @@ pub fn spawn_main_menu(
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
+                row_gap: Val::Px(20.0),
                 flex_direction: FlexDirection::Column,
                 ..default()
             },
-            GlobalZIndex(1),
-            Visibility::Visible,
+            BackgroundColor::from(BACKGROUND_COLOR),
         ))
         .with_children(|parent| {
             // Header Section
-            parent
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(120.0),
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgb(0.1, 0.1, 0.1)),
-                ))
-                .with_children(|header| {
-                    header.spawn((
-                        Text::new("GAME PAUSED"),
-                        TextFont {
-                            font_size: 80.0,
-                            ..default()
-                        },
-                        Node::default(),
-                    ));
-                });
+            spawn_header(parent, "PAUSED");
 
             // Body Section (transparent)
             parent
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        flex_grow: 1.0,
-                        flex_direction: FlexDirection::Column,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        row_gap: Val::Px(20.0),
-                        padding: UiRect::vertical(Val::Px(40.0)),
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.7)),
-                ))
+                .spawn((Node {
+                    width: Val::Percent(100.0),
+                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    row_gap: Val::Px(20.0),
+                    ..default()
+                },))
                 .with_children(|body| {
                     // Spawn all menu buttons
                     let buttons = [MenuButtonConfig::Inventory, MenuButtonConfig::Stats];

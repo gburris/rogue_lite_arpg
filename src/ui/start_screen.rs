@@ -1,6 +1,8 @@
 use crate::labels::states::AppState;
 use bevy::prelude::*;
 
+use super::constants::TITLE_FONT_SIZE;
+
 #[derive(Component)]
 pub struct StartScreen;
 
@@ -18,15 +20,10 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
-                // Make sure there's no extra space on sides
-                padding: UiRect::all(Val::Px(0.0)),
-                margin: UiRect::all(Val::Px(0.0)),
                 ..default()
             },
             // Darker background for more contrast
             BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
-            GlobalZIndex(1),
-            Visibility::Visible,
         ))
         .with_children(|parent| {
             // Top gold border
@@ -34,9 +31,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),
-                    // Ensure no unwanted margins
-                    margin: UiRect::all(Val::Px(0.0)),
-                    padding: UiRect::all(Val::Px(0.0)),
                     ..default()
                 },
                 BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),
@@ -50,9 +44,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    // Remove any potential spacing issues
-                    margin: UiRect::all(Val::Px(0.0)),
-                    padding: UiRect::all(Val::Px(0.0)),
                     ..default()
                 },))
                 .with_children(|header| {
@@ -64,7 +55,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                                 height: Val::Auto,
                                 border: UiRect::all(Val::Px(2.0)),
                                 padding: UiRect::horizontal(Val::Px(40.0)),
-                                margin: UiRect::all(Val::Px(0.0)),
                                 ..default()
                             },
                             BorderColor(Color::srgb(0.8, 0.6, 0.2)),
@@ -74,11 +64,10 @@ pub fn spawn_start_screen(mut commands: Commands) {
                             title_container.spawn((
                                 Text::new("Baba Yaga"),
                                 TextFont {
-                                    font_size: 80.0,
+                                    font_size: TITLE_FONT_SIZE,
                                     ..default()
                                 },
                                 TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
-                                Node::default(),
                                 AnimatedText,
                             ));
                         });
@@ -92,8 +81,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    margin: UiRect::all(Val::Px(0.0)),
-                    padding: UiRect::all(Val::Px(0.0)),
                     ..default()
                 },))
                 .with_children(|body| {
@@ -121,7 +108,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                                 ..default()
                             },
                             TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
-                            Node::default(),
                         ));
                     });
                 });
@@ -136,7 +122,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         padding: UiRect::all(Val::Px(20.0)),
-                        margin: UiRect::all(Val::Px(0.0)),
                         ..default()
                     },
                     BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
@@ -158,8 +143,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),
-                    margin: UiRect::all(Val::Px(0.0)),
-                    padding: UiRect::all(Val::Px(0.0)),
                     ..default()
                 },
                 BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),

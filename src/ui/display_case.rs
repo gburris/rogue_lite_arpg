@@ -14,7 +14,7 @@ use crate::{
     ui::display_case_slot::{spawn_slot, DisplayCaseSlot},
 };
 
-use super::display_case_slot::DisplaySlotContext;
+use super::{constants::DARK_GRAY_ALPHA_COLOR, display_case_slot::DisplaySlotContext};
 
 pub const VALUE_WIDTH: Val = Val::Px(60.0);
 pub const EQUIP_SLOT_WIDTH: Val = Val::Px(150.0);
@@ -37,7 +37,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                 flex_direction: FlexDirection::Column,
                 ..default()
             },
-            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+            BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
         ))
         .with_children(|parent| {
             parent

@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::ui::constants::TITLE_FONT_SIZE;
+
 #[derive(Component)]
 pub struct LoadScreen;
 
@@ -70,7 +72,7 @@ pub fn spawn_load_screen(mut commands: Commands) {
                             title_container.spawn((
                                 Text::new("Loading Instance"),
                                 TextFont {
-                                    font_size: 80.0,
+                                    font_size: TITLE_FONT_SIZE,
                                     ..default()
                                 },
                                 TextColor::from(Color::srgb(0.9, 0.7, 0.2)),

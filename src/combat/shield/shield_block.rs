@@ -109,7 +109,8 @@ pub fn update_active_shields(
 
         // Drain mana
         if let Ok(mut mana) = mana_query.get_mut(holder_entity) {
-            let drain_amount = mana_drain_rate.0 * 100.0 * time.delta_secs();
+            //This is wrong, drain amount should = drain rate when delta time is exactly 1 frame long
+            let drain_amount = mana_drain_rate.0 * time.delta_secs();
             warn!("draining {:?}", drain_amount);
             if mana.current_mana < drain_amount {
                 // Get the holder's facing direction

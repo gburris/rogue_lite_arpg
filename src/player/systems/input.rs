@@ -16,9 +16,9 @@ pub struct PauseInputEvent {
 
 pub fn player_input(
     mut commands: Commands,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
-    mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
+    mut event_writer: EventWriter<PlayerMovementEvent>,
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();

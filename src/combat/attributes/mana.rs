@@ -41,7 +41,7 @@ pub struct ManaCost(pub f32);
 
 /**
  * Attach it to projectiles, weapons, spells, etc... if they cost mana to actively use (e.g. hold down)
- * rate =  amount lost per frame
+ * rate =  amount lost per second
  */
 #[derive(Component, Clone)]
 pub struct ManaDrainRate(pub f32);

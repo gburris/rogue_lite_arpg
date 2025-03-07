@@ -14,7 +14,10 @@ use super::{
         handle_collisions::handle_melee_collisions,
         swing_melee_attacks::{end_melee_attacks, process_melee_attacks},
     },
-    shield::shield_block::update_active_shields,
+    shield::{
+        handle_collisions::handle_projectile_reflection_collisions,
+        shield_block::{activate_shield, update_active_shields},
+    },
 };
 
 pub struct CombatPlugin;
@@ -28,11 +31,13 @@ impl Plugin for CombatPlugin {
                     regenerate_mana.in_set(InGameSet::Simulation),
                     process_melee_attacks.in_set(InGameSet::Simulation),
                     end_melee_attacks.in_set(InGameSet::Collision),
+                    handle_projectile_reflection_collisions.in_set(InGameSet::Collision),
                     handle_projectile_collisions.in_set(InGameSet::Collision),
                     handle_melee_collisions.in_set(InGameSet::Collision),
                     update_active_shields.in_set(InGameSet::Simulation),
                 ),
             )
-            .add_observer(on_healing_event);
+            .add_observer(on_healing_event)
+            .add_observer(activate_shield);
     }
 }

@@ -18,7 +18,6 @@ pub fn spawn_projectile(
         translation: caster_transform.translation,
         ..default()
     };
-
     let caster_direction = caster_transform.local_x().truncate();
     let aim_direction = caster_aim_position - caster_transform.translation.truncate();
     let angle = caster_direction.angle_to(aim_direction);

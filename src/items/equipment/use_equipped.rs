@@ -6,9 +6,9 @@ use rand::Rng;
 use super::{EquipmentSlot, Equipped};
 use crate::animation::FacingDirection;
 use crate::combat::shield::components::ProjectileReflection;
-use crate::combat::shield::shield_block::{deactivate_shield, start_shield_block};
-use crate::items::equipment::EquipmentTransform;
-use crate::items::{ActiveShield, Shield, ShieldSpellVisualEffect};
+use crate::combat::shield::shield_block::deactivate_shield;
+use crate::combat::shield::ActiveShield;
+use crate::items::{Shield, ShieldSpellVisualEffect};
 use crate::player::StopUsingHoldableEquipmentInputEvent;
 use crate::{
     combat::{
@@ -41,7 +41,6 @@ pub enum EquipmentUseFailure {
 }
 
 #[derive(Event)]
-
 pub struct EquipmentUseFailedEvent {
     pub holder: Entity,
     pub slot: EquipmentSlot,
@@ -114,7 +113,7 @@ fn handle_equipment_activation(
         // Check mana next
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
-                warn!("Not enough mana!");
+                trace!("Not enough mana!");
                 commands.trigger_targets(
                     EquipmentUseFailedEvent {
                         holder: entity,

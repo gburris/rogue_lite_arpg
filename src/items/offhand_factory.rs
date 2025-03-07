@@ -1,3 +1,4 @@
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use super::equipment::on_healing_tome_cast;
@@ -11,6 +12,7 @@ use super::Shield;
 use crate::animation::FacingDirection;
 use crate::combat::attributes::mana::ManaCost;
 use crate::combat::attributes::ManaDrainRate;
+use crate::combat::shield::components::ProjectileReflection;
 use crate::configuration::assets::SpriteAssets;
 use crate::configuration::assets::SpriteSheetLayouts;
 use crate::items::equipment::EquipmentTransform;
@@ -36,19 +38,6 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
         .id()
 }
 
-//Two shields
-//Melee Shield
-//2 - When I cast, it should be in front of my player in the direction I am clicking
-//2.5 - When I keep holding down right mouse, it should continually update position & drain mana
-//3 - It should stay out for the length of it's cooldown
-//4 - If a melee weapon collides with the shield, the active melee attack should despawn
-//5 - The shield itself needs four sprites, back, left side, right side, front
-
-//Magic shield
-//2 - When I cast, it should create a spell reflection esque magic effect around me
-//3 - This should have a pretty long cooldown, and reflect any spell that hits me for x seconds
-//4 - Refelcted spells just fly in reverse and reset their live duration
-
 fn spawn_magic_shield(
     commands: &mut Commands,
     sprites: &Res<SpriteAssets>,
@@ -63,7 +52,10 @@ fn spawn_magic_shield(
             Equippable::from(0.5, EquipmentSlot::Offhand),
             ManaCost(25.0),
             ManaDrainRate(25.0),
-            Shield,
+            ProjectileReflection,
+            Shield {
+                hitbox: Collider::rectangle(25.0, 25.0),
+            },
             Holdable,
             Visibility::Hidden,
             Sprite {
@@ -92,7 +84,9 @@ fn spawn_knight_shield(
             Name::new("Knight Shield"),
             Item::new(6),
             Equippable::from(0.5, EquipmentSlot::Offhand),
-            Shield,
+            Shield {
+                hitbox: Collider::rectangle(25.0, 25.0),
+            },
             ManaDrainRate(25.0),
             ManaCost(25.0),
             Holdable,

@@ -1,16 +1,16 @@
 use bevy::prelude::*;
 
 use super::equipment::on_healing_tome_cast;
-use super::equipment::on_magic_shield_cast;
 use super::equipment::on_shield_block;
 
 use super::equipment::EquipmentSlot;
 use super::HealingTome;
+use super::Holdable;
 use super::Item;
 use super::Shield;
-use crate::animation::AnimationIndices;
 use crate::animation::FacingDirection;
 use crate::combat::attributes::mana::ManaCost;
+use crate::combat::attributes::ManaDrainRate;
 use crate::configuration::assets::SpriteAssets;
 use crate::configuration::assets::SpriteSheetLayouts;
 use crate::items::equipment::EquipmentTransform;
@@ -39,6 +39,7 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
 //Two shields
 //Melee Shield
 //2 - When I cast, it should be in front of my player in the direction I am clicking
+//2.5 - When I keep holding down right mouse, it should continually update position & drain mana
 //3 - It should stay out for the length of it's cooldown
 //4 - If a melee weapon collides with the shield, the active melee attack should despawn
 //5 - The shield itself needs four sprites, back, left side, right side, front
@@ -48,20 +49,34 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
 //3 - This should have a pretty long cooldown, and reflect any spell that hits me for x seconds
 //4 - Refelcted spells just fly in reverse and reset their live duration
 
-fn spawn_magic_shield(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+fn spawn_magic_shield(
+    commands: &mut Commands,
+    sprites: &Res<SpriteAssets>,
+    layouts: &Res<SpriteSheetLayouts>,
+) -> Entity {
     let offhand_transform: Transform = EquipmentTransform::get(FacingDirection::Down).offhand;
 
     commands
         .spawn((
             Name::new("Magic Shield"),
             Item::new(6),
-            Equippable::from(15.0, EquipmentSlot::Offhand),
-            ManaCost(30.0),
+            Equippable::from(0.5, EquipmentSlot::Offhand),
+            ManaCost(25.0),
+            ManaDrainRate(1.0),
+            Shield,
+            Holdable,
             Visibility::Hidden,
-            Sprite::from_image(sprites.magic_shield.clone()),
+            Sprite {
+                image: sprites.magic_shield.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: layouts.shield_layout.clone(),
+                    index: 0,
+                }),
+                ..default()
+            },
             offhand_transform,
         ))
-        .observe(on_magic_shield_cast)
+        .observe(on_shield_block)
         .id()
 }
 
@@ -78,6 +93,9 @@ fn spawn_knight_shield(
             Item::new(6),
             Equippable::from(0.5, EquipmentSlot::Offhand),
             Shield,
+            ManaDrainRate(1.0),
+            ManaCost(25.0),
+            Holdable,
             Visibility::Hidden,
             Sprite {
                 image: sprites.knight_shield.clone(),
@@ -101,7 +119,7 @@ pub fn spawn_offhand(
 ) -> Entity {
     match offhand_name {
         "tome_of_healing" => spawn_tome_of_healing(commands, sprites),
-        "magic_shield" => spawn_magic_shield(commands, sprites),
+        "magic_shield" => spawn_magic_shield(commands, sprites, layouts),
         "knight_shield" => spawn_knight_shield(commands, sprites, layouts),
         _ => unreachable!(),
     }

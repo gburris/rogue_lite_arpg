@@ -4,9 +4,12 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
+use crate::animation::FacingDirection;
 use crate::combat::shield::components::ProjectileReflection;
-use crate::combat::shield::shield_block::start_shield_block;
-use crate::items::{Shield, ShieldSpellVisualEffect};
+use crate::combat::shield::shield_block::{deactivate_shield, start_shield_block};
+use crate::items::equipment::EquipmentTransform;
+use crate::items::{ActiveShield, Shield, ShieldSpellVisualEffect};
+use crate::player::StopUsingHoldableEquipmentInputEvent;
 use crate::{
     combat::{
         attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
@@ -50,6 +53,7 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
         equippable.use_rate.tick(time.delta());
     }
 }
+
 pub fn on_equipment_activated(
     trigger: Trigger<UseEquipmentInputEvent>,
     commands: Commands,
@@ -231,31 +235,41 @@ pub fn on_magic_shield_cast(fired_trigger: Trigger<UseEquipmentEvent>, mut comma
 pub fn on_shield_block(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    mut shield_query: Query<(Entity, &Transform, &mut Sprite, &Shield)>,
-    holder_query: Query<(&Transform, &AimPosition)>,
+    mut shield_query: Query<(Entity, &Shield)>,
 ) {
-    let Ok((shield_entity, shield_transform, mut shield_sprite, shield)) =
-        shield_query.get_mut(fired_trigger.entity())
-    else {
+    let Ok((shield_entity, shield)) = shield_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to block with invalid shield");
         return;
     };
 
-    let Ok((holder_transform, aim_pos)) = holder_query.get(fired_trigger.holder) else {
-        warn!("Holder missing required components");
+    commands.entity(shield_entity).insert(ActiveShield);
+}
+
+pub fn on_equipment_deactivated(
+    fired_trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
+    mut commands: Commands,
+    holder_query: Query<(&Inventory, &FacingDirection)>,
+    mut shield_query: Query<(Entity, &mut Sprite), (With<Shield>, With<ActiveShield>)>,
+) {
+    // Get the holder's inventory
+    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.entity()) else {
+        warn!("Tried to stop blocking but entity has no inventory or no direction");
         return;
     };
 
-    let holder_pos = holder_transform.translation.truncate();
-    let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
-    let block_angle = aim_direction.y.atan2(aim_direction.x) + FRAC_PI_2;
+    let Some(shield_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
+        warn!("No shield equipped in offhand");
+        return;
+    };
 
-    start_shield_block(
-        &mut commands,
-        shield_entity,
-        shield,
-        block_angle,
-        &mut shield_sprite,
-        shield_transform,
-    );
+    if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
+        deactivate_shield(
+            &mut commands,
+            shield_entity,
+            *facing_direction,
+            Some(&mut shield_sprite),
+        );
+    } else {
+        warn!("Shield is equipped but doesn't have ActiveShield");
+    }
 }

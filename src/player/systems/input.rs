@@ -5,7 +5,7 @@ use crate::{
     labels::states::PausedState,
     player::{
         interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        UseEquipmentInputEvent,
+        StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
     },
 };
 
@@ -44,13 +44,24 @@ pub fn player_input(
         );
     }
 
-    if buttons.pressed(MouseButton::Right) {
+    if buttons.just_pressed(MouseButton::Right) {
         commands.trigger_targets(
             UseEquipmentInputEvent {
                 slot: EquipmentSlot::Offhand,
             },
             player_entity,
         );
+    }
+
+    if buttons.just_released(MouseButton::Right) {
+        warn!("releasing MBR");
+        commands.trigger_targets(
+            StopUsingHoldableEquipmentInputEvent {
+                slot: EquipmentSlot::Offhand,
+            },
+            player_entity,
+        );
+        return;
     }
 
     let mut direction = Vec2::ZERO;

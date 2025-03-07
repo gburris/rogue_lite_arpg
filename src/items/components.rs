@@ -99,9 +99,17 @@ pub struct HealingTomeSpellVisualEffect;
 #[derive(Component, Copy, Clone)]
 pub struct Shield;
 
+//This component tags items that are active continiously while being used
+//e.g. Holding right will keep a shield up
+#[derive(Component)]
+pub struct Holdable;
+
 #[derive(Component)]
 #[require(
     Visibility(|| Visibility::Visible),
     LiveDuration(|| LiveDuration::new(5.0))
 )]
 pub struct ShieldSpellVisualEffect;
+
+#[derive(Component)]
+pub struct ActiveShield;

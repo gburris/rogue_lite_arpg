@@ -39,6 +39,13 @@ impl Mana {
 #[derive(Component, Clone)]
 pub struct ManaCost(pub f32);
 
+/**
+ * Attach it to projectiles, weapons, spells, etc... if they cost mana to actively use (e.g. hold down)
+ * rate =  amount lost per frame
+ */
+#[derive(Component, Clone)]
+pub struct ManaDrainRate(pub f32);
+
 pub fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     let delta_time = time.delta_secs();
     for mut mana in query.iter_mut() {

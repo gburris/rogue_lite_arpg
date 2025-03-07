@@ -134,7 +134,6 @@ pub fn spawn_start_screen(mut commands: Commands) {
                             ..default()
                         },
                         TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
-                        Node::default(),
                     ));
                 });
 

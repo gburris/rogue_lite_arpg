@@ -101,7 +101,6 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                             font_size: 24.0,
                             ..default()
                         },
-                        Node::default(),
                     ));
 
                     // Description
@@ -125,7 +124,6 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                     font_size: 24.0,
                     ..default()
                 },
-                Node::default(),
             ));
         });
 }

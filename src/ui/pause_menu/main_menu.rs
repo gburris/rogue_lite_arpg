@@ -101,7 +101,6 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                                Node::default(),
                             ));
                             stats.spawn((
                                 Text::new(format!(
@@ -112,7 +111,6 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                                Node::default(),
                             ));
                             stats.spawn((
                                 Text::new(format!("Deaths: {}", game_progress.death_counter,)),
@@ -120,7 +118,6 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                                Node::default(),
                             ));
                             stats.spawn((
                                 Text::new(format!(
@@ -131,7 +128,6 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                                Node::default(),
                             ));
 
                             stats.spawn((
@@ -140,7 +136,6 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                                Node::default(),
                             ));
                         });
 
@@ -151,7 +146,6 @@ pub fn spawn_main_menu(
                             font_size: 24.0,
                             ..default()
                         },
-                        Node::default(),
                     ));
                 });
         });
@@ -182,7 +176,6 @@ fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
                     font_size: 32.0,
                     ..default()
                 },
-                Node::default(),
             ));
         });
 }

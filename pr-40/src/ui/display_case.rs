@@ -19,21 +19,22 @@ use super::display_case_slot::DisplaySlotContext;
 pub const VALUE_WIDTH: Val = Val::Px(60.0);
 pub const EQUIP_SLOT_WIDTH: Val = Val::Px(150.0);
 
-/// Trigger on entity with Inventory component (i.e. the player entity)
+/// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
 #[derive(Event)]
-pub struct UpdateInventoryUIEvent;
+pub struct UpdateDisplayCaseEvent;
+
 /// Div that wraps all display slots, but not top level component
 #[derive(Component)]
 pub struct DisplayCaseContainer;
 
 pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
+    let mut scroll_container = Entity::PLACEHOLDER;
+
     builder
         .spawn((
-            DisplayCaseContainer,
             Node {
                 height: Val::Px(800.0),
                 flex_direction: FlexDirection::Column,
-                overflow: Overflow::scroll_y(),
                 ..default()
             },
             BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
@@ -96,12 +97,24 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                         },
                     ));
                 });
-        })
-        .id()
+
+            scroll_container = parent
+                .spawn((
+                    DisplayCaseContainer,
+                    Node {
+                        overflow: Overflow::scroll_y(),
+                        flex_direction: FlexDirection::Column,
+                        ..default()
+                    },
+                ))
+                .id();
+        });
+
+    scroll_container
 }
 
 pub fn on_display_case_updated(
-    trigger: Trigger<UpdateInventoryUIEvent>,
+    trigger: Trigger<UpdateDisplayCaseEvent>,
     mut commands: Commands,
     icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseContainer>>,
@@ -144,7 +157,7 @@ pub fn on_display_case_updated(
                 equipment_slot: equippable.map(|e| e.slot),
                 is_equipped,
             },
-        ); // flatten tuple
+        );
 
     commands.entity(display_case).with_children(|builder| {
         for slot_context in items {
@@ -162,20 +175,14 @@ pub fn update_scroll_position(
     mut scrolled_node_query: Query<&mut ScrollPosition>,
 ) {
     for mouse_wheel_event in mouse_wheel_events.read() {
-        let (dx, dy) = match mouse_wheel_event.unit {
-            MouseScrollUnit::Line => (
-                mouse_wheel_event.x * LINE_HEIGHT,
-                mouse_wheel_event.y * LINE_HEIGHT,
-            ),
-            MouseScrollUnit::Pixel => (mouse_wheel_event.x, mouse_wheel_event.y),
+        let dy = match mouse_wheel_event.unit {
+            MouseScrollUnit::Line => mouse_wheel_event.y * LINE_HEIGHT,
+            MouseScrollUnit::Pixel => mouse_wheel_event.y,
         };
-
-        info!("Scrolling {:?}", Vec2::new(dx, dy));
 
         for (_pointer, pointer_map) in hover_map.iter() {
             for (entity, _hit) in pointer_map.iter() {
                 if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
-                    scroll_position.offset_x -= dx;
                     scroll_position.offset_y -= dy;
                 }
             }

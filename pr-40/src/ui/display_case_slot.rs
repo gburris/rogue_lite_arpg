@@ -11,7 +11,7 @@ use crate::{
     player::{systems::ConsumeEvent, Player},
 };
 
-use super::display_case::{UpdateInventoryUIEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH};
+use super::display_case::{UpdateDisplayCaseEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH};
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 
@@ -188,7 +188,7 @@ pub fn on_slot_clicked(
             commands.trigger_targets(ItemDropEvent, item_entity);
         }
 
-        commands.trigger_targets(UpdateInventoryUIEvent, player_entity);
+        commands.trigger_targets(UpdateDisplayCaseEvent, player_entity);
     }
 }
 

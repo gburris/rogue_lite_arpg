@@ -5,7 +5,11 @@ use crate::{
     items::inventory::*,
     npc::NPC,
     player::Player,
-    ui::display_case::{self, UpdateDisplayCaseEvent},
+    ui::{
+        constants::BACKGROUND_COLOR,
+        display_case::{self, UpdateDisplayCaseEvent},
+        menu_helpers::spawn_header,
+    },
 };
 
 #[derive(Component)]
@@ -17,7 +21,6 @@ pub fn spawn_inventory_menu(
 ) {
     let (player, mut inventory) = player.into_inner();
 
-    debug!("spawn_inventory_menu called");
     commands
         .spawn((
             InventoryMenu,
@@ -29,32 +32,10 @@ pub fn spawn_inventory_menu(
                 row_gap: Val::Px(20.0), // space between header and item list
                 ..default()
             },
-            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.7)),
-            GlobalZIndex(1),
+            BackgroundColor::from(BACKGROUND_COLOR),
         ))
         .with_children(|parent| {
-            // Header Section
-            parent
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(120.0),
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgb(0.1, 0.1, 0.1)),
-                ))
-                .with_children(|header| {
-                    header.spawn((
-                        Text::new("Player Inventory"),
-                        TextFont {
-                            font_size: 80.0,
-                            ..default()
-                        },
-                    ));
-                });
+            spawn_header(parent, "INVENTORY");
 
             inventory.display_case = Some(display_case::spawn_display_case(parent));
         });

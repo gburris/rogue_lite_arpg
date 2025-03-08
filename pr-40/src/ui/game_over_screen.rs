@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone, player::PlayerLevel
+    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone,
+    player::PlayerLevel,
 };
+
+use super::constants::TITLE_FONT_SIZE;
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -31,11 +34,7 @@ pub fn create(mut commands: Commands) {
             parent.spawn((
                 Text::new("Game Over!"),
                 TextFont {
-                    font_size: 70.0,
-                    ..default()
-                },
-                Node {
-                    // top: Val::Percent(-20.0),
+                    font_size: TITLE_FONT_SIZE,
                     ..default()
                 },
             ));

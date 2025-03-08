@@ -10,7 +10,6 @@ pub fn handle_menu_button_pressed(
 ) {
     for (interaction, menu_button) in &mut button_query {
         if *interaction == Interaction::Pressed {
-            debug!("handle_menu_button_pressed");
             pause_state.set(menu_button.0);
         }
     }

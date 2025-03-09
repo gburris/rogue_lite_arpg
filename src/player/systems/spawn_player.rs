@@ -40,7 +40,7 @@ pub fn spawn_player(
             Inventory::builder()
                 .items(starting_items.into())
                 .coins(0)
-                .max_capacity(10)
+                .max_capacity(50)
                 .build(),
             Mana::new(100.0, 10.0),
             HasIFrames {

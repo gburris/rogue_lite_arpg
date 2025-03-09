@@ -9,7 +9,7 @@ use crate::{
     ui::{display_case, input},
 };
 
-use super::{button_interactions, inventory_menu, main_menu, pause, stats_menu};
+use super::{button_interactions, inventory_menu, main_menu, stats_menu};
 pub struct PauseMenuPlugin;
 
 impl Plugin for PauseMenuPlugin {
@@ -17,11 +17,15 @@ impl Plugin for PauseMenuPlugin {
         app
             // Pause Related Systems
             .add_observer(input::on_pause_input)
-            .add_systems(Update, input::handle_ui_inputs.in_set(MainSet::Menu))
             .add_systems(
-                OnEnter(AppState::Paused),
-                (time_control::pause_game, pause::spawn_pause_background),
+                Update,
+                (
+                    input::handle_ui_inputs,
+                    display_case::update_scroll_position,
+                )
+                    .in_set(MainSet::Menu),
             )
+            .add_systems(OnEnter(AppState::Paused), (time_control::pause_game,))
             .add_systems(OnExit(AppState::Paused), time_control::resume_game)
             // Main menu UI cisystems
             .add_systems(OnEnter(PausedState::MainMenu), main_menu::spawn_main_menu)

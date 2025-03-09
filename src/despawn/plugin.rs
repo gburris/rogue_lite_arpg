@@ -7,16 +7,13 @@ use crate::{
     despawn::systems::*,
     enemy::Enemy,
     items::Lootable,
-    labels::{
-        sets::InGameSet,
-        states::{AppState, PausedState},
-    },
+    labels::{sets::InGameSet, states::PausedState},
     map::{
         components::Wall, portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Water,
     },
     npc::NPC,
     player::Player,
-    ui::{InventoryMenu, MainMenu, PauseBackground, PlayerOverlay, StatShopMenu, StatsMenu},
+    ui::{InventoryMenu, MainMenu, PlayerOverlay, StatShopMenu, StatsMenu},
 };
 
 pub struct DespawnPlugin;
@@ -27,7 +24,6 @@ impl Plugin for DespawnPlugin {
             Update,
             (despawn_expired_entities).in_set(InGameSet::DespawnEntities),
         )
-        .add_systems(OnExit(AppState::Paused), despawn_single::<PauseBackground>)
         .add_systems(
             OnExit(PausedState::Inventory),
             despawn_single::<InventoryMenu>,

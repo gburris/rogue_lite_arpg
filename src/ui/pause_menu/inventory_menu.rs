@@ -1,20 +1,19 @@
+use bevy::prelude::*;
+
 use crate::{
     enemy::Enemy,
     items::inventory::*,
     npc::NPC,
     player::Player,
     ui::{
-        display_case::{self, DisplayCaseContext},
-        pause_menu::button_interactions::*,
+        constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        display_case::{self, UpdateDisplayCaseEvent},
+        menu_helpers::spawn_header,
     },
 };
-use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct InventoryMenu;
-
-#[derive(Component)]
-pub struct ItemText;
 
 pub fn spawn_inventory_menu(
     mut commands: Commands,
@@ -22,33 +21,78 @@ pub fn spawn_inventory_menu(
 ) {
     let (player, mut inventory) = player.into_inner();
 
-    debug!("spawn_inventory_menu called");
     commands
         .spawn((
             InventoryMenu,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(40.0), // space between inventory and equipment lists
-                padding: UiRect::all(Val::Px(20.0)),
+                justify_content: JustifyContent::SpaceBetween,
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(20.0), // space between header and item list
                 ..default()
             },
-            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-            GlobalZIndex(1),
+            BackgroundColor::from(BACKGROUND_COLOR),
         ))
         .with_children(|parent| {
-            let inventory_context = DisplayCaseContext {
-                title: "Player Inventory",
-                capacity: inventory.max_capacity,
-                capacity_text: Some("Item Capacity"),
-            };
+            spawn_header(parent, "INVENTORY");
 
-            inventory.display_case =
-                Some(display_case::spawn_display_case(parent, &inventory_context));
+            inventory.display_case = Some(display_case::spawn_display_case(parent));
+
+            parent
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: FOOTER_HEIGHT,
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        padding: UiRect::horizontal(Val::Px(40.0)),
+                        column_gap: Val::Px(20.0),
+                        ..default()
+                    },
+                    BackgroundColor::from(DARK_GRAY_COLOR),
+                ))
+                .with_children(|footer| {
+                    footer.spawn((
+                        Text::new("Left click to equip/consume"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                    ));
+                    footer.spawn((
+                        Text::new("Right click to drop"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                    ));
+
+                    footer.spawn((
+                        Text::new(format!("Total coins: {:.1}", inventory.coins)),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                    ));
+
+                    // Spacer between left and right side of footer
+                    footer.spawn(Node {
+                        flex_grow: 1.0,
+                        ..default()
+                    });
+
+                    footer.spawn((
+                        Text::new("Press ESC to unpause"),
+                        TextFont {
+                            font_size: 24.0,
+                            ..default()
+                        },
+                    ));
+                });
         });
     // We spawned base inventory UI, now lets update it with items
-    commands.trigger_targets(UpdateInventoryUIEvent, player);
+    commands.trigger_targets(UpdateDisplayCaseEvent, player);
 }

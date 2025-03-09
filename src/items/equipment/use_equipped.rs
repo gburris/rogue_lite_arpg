@@ -5,6 +5,7 @@ use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::animation::FacingDirection;
+use crate::combat::projectile::spawn::spawn_projectile_from_weapon;
 use crate::combat::shield::components::ProjectileReflection;
 use crate::combat::shield::shield_block::deactivate_shield;
 use crate::combat::shield::ActiveShield;
@@ -156,7 +157,7 @@ pub fn on_weapon_fired(
         return;
     };
 
-    spawn_projectile(
+    spawn_projectile_from_weapon(
         damage_source,
         &mut commands,
         holder_transform,

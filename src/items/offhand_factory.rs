@@ -50,8 +50,8 @@ fn spawn_magic_shield(
             Name::new("Magic Shield"),
             Item::new(6),
             Equippable::from(0.5, EquipmentSlot::Offhand),
-            ManaCost(25.0),
-            ManaDrainRate(25.0),
+            ManaCost(5.0),
+            ManaDrainRate(2.0),
             ProjectileReflection,
             Shield {
                 hitbox: Collider::rectangle(25.0, 25.0),

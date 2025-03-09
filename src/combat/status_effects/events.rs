@@ -7,7 +7,7 @@ pub struct ApplyEffect {
     pub effect: Vec<ApplyStatus>,
 }
 
-#[derive(Event, Clone)]
+#[derive(Event, Debug, Clone)]
 pub struct ApplyStatus {
     pub status: StatusType,
     pub duration: f32,

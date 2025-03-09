@@ -4,14 +4,14 @@ use rand::Rng;
 
 use crate::{combat::status_effects::components::EffectsList, despawn::components::LiveDuration};
 
-#[derive(Bundle, Clone)]
+#[derive(Bundle, Debug, Clone)]
 pub struct ProjectileBundle {
     pub projectile: Projectile,
     pub sprite: Sprite,
     pub effects_list: EffectsList,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug, Clone)]
 #[require(
     LiveDuration(|| LiveDuration::new(1.0)),
     Sensor,

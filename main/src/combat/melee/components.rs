@@ -3,7 +3,7 @@ use bevy::{prelude::*, utils::HashSet};
 use rand::Rng;
 
 use crate::{
-    combat::{damage::components::DamageSource, status_effects::components::EffectsList},
+    combat::{damage::DamageSource, status_effects::components::EffectsList},
     configuration::GameCollisionLayer,
 };
 

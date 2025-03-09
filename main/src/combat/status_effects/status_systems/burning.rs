@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::combat::{
-    attributes::Health, damage::events::AttemptDamageEvent,
-    status_effects::components::BurningStatus,
+    attributes::Health, damage::AttemptDamageEvent, status_effects::components::BurningStatus,
 };
 
 const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     combat::{
         components::ActionState,
-        damage::{components::Invulnerable, events::DefeatedEvent},
+        damage::{DefeatedEvent, Invulnerable},
     },
     despawn::components::LiveDuration,
     econ::gold_drop::GoldDropEvent,

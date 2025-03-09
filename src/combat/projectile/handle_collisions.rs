@@ -1,9 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::combat::{
-    attributes::Health, damage::events::AttemptDamageEvent, projectile::components::*,
-};
+use crate::combat::{attributes::Health, damage::AttemptDamageEvent, projectile::components::*};
 
 pub fn handle_projectile_collisions(
     mut commands: Commands,

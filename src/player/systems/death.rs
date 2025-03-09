@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     combat::{
         components::ActionState,
-        damage::{components::Invulnerable, events::DefeatedEvent},
+        damage::{DefeatedEvent, Invulnerable},
     },
     labels::states::{AppState, PlayingState},
     map::CleanupZone,

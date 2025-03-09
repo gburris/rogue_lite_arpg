@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::{damage::components::DamageSource, weapon::weapon::ProjectileWeapon},
+    combat::{damage::DamageSource, weapon::weapon::ProjectileWeapon},
     configuration::GameCollisionLayer,
 };
 

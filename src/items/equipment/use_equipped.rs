@@ -6,7 +6,7 @@ use crate::{
     combat::{
         attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
         components::{ActionState, AimPosition},
-        damage::components::DamageSource,
+        damage::DamageSource,
         melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
         projectile::spawn::spawn_projectile,
         weapon::weapon::ProjectileWeapon,

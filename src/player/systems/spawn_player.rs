@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::FacingDirection,
-    combat::{attributes::mana::Mana, components::ActionState, damage::components::HasIFrames},
+    combat::{attributes::mana::Mana, components::ActionState, damage::HasIFrames},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,

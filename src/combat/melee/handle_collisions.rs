@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{combat::damage::events::AttemptDamageEvent, enemy::Enemy, player::Player};
+use crate::{combat::damage::AttemptDamageEvent, enemy::Enemy, player::Player};
 
 use super::components::{calculate_damage, ActiveMeleeAttack, MeleeWeapon};
 

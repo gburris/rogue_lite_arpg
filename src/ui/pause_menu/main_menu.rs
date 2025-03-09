@@ -5,7 +5,7 @@ use crate::{
     player::{Player, PlayerLevel},
     progression::GameProgress,
     ui::{
-        constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR},
+        constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         menu_helpers::spawn_header,
     },
 };
@@ -80,7 +80,7 @@ pub fn spawn_main_menu(
                 .spawn((
                     Node {
                         width: Val::Percent(100.0),
-                        height: Val::Px(80.0),
+                        height: FOOTER_HEIGHT,
                         flex_direction: FlexDirection::Row,
                         justify_content: JustifyContent::SpaceBetween,
                         align_items: AlignItems::Center,

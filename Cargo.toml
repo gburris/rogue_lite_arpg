@@ -10,6 +10,7 @@ wasm-opt = false
 bevy = { version = "0.15.0", features = ["dynamic_linking"] }
 bevy_ecs_tilemap = "0.15.0"
 bevy_asset_loader = { version = "0.22.0", features = ["2d"] }
+accesskit = "0.17"
 avian2d = "0.2.0"
 tiled = "0.11.0"
 ldtk_rust = "0.6"

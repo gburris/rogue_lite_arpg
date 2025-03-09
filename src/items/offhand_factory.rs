@@ -9,6 +9,7 @@ use super::HealingTome;
 use super::Holdable;
 use super::Item;
 use super::Shield;
+use super::ItemType;
 use crate::animation::FacingDirection;
 use crate::combat::attributes::mana::ManaCost;
 use crate::combat::attributes::ManaDrainRate;
@@ -24,7 +25,7 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
     commands
         .spawn((
             Name::new("Tome Of Healing"),
-            Item::new(6),
+            Item::new(355, ItemType::Tome),
             Equippable::from(2.0, EquipmentSlot::Offhand),
             ManaCost(40.0),
             HealingTome {

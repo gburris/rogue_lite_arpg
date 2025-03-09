@@ -72,8 +72,13 @@ impl Inventory {
     }
 
     /// Sets the specified equipment slot to None in inventory
-    pub fn unequip(&mut self, slot: EquipmentSlot) {
-        self.get_equipped_slot(slot).take();
+    pub fn unequip(&mut self, item_entity: Entity, slot: EquipmentSlot) {
+        if let Some(index) = self.get_equipped_slot(slot) {
+            // Only unequip if entity matches
+            if item_entity == self.items[index] {
+                self.get_equipped_slot_mut(slot).take();
+            }
+        }
     }
 
     pub fn get_equipped(&self, slot: EquipmentSlot) -> Option<Entity> {

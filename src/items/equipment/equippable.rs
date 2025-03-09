@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bevy::prelude::*;
 
 /// Goes on the equipment marking where it should be equipped
@@ -7,6 +9,16 @@ use bevy::prelude::*;
 pub enum EquipmentSlot {
     Mainhand,
     Offhand,
+}
+
+impl fmt::Display for EquipmentSlot {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let variant_name = match *self {
+            EquipmentSlot::Mainhand => "Main Hand",
+            EquipmentSlot::Offhand => "Off Hand",
+        };
+        write!(f, "{}", variant_name)
+    }
 }
 
 #[derive(Component, Clone)]

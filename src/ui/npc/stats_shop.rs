@@ -1,6 +1,10 @@
 use crate::{
     player::{DisplayableStatType, PlayerStats},
     progression::GameProgress,
+    ui::{
+        constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
+        menu_helpers::spawn_header,
+    },
 };
 use bevy::prelude::*;
 
@@ -35,29 +39,17 @@ pub fn spawn_stats_shop_menu(
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(20.0),
                 ..default()
             },
-            BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-            Visibility::Visible,
+            BackgroundColor::from(BACKGROUND_COLOR),
             GlobalZIndex(1),
         ))
         .with_children(|parent| {
             // Title
-            parent.spawn((
-                Text::new("Stats Shop"),
-                TextFont {
-                    font_size: 70.0,
-                    ..default()
-                },
-                Node {
-                    margin: UiRect::bottom(Val::Px(20.0)),
-                    ..default()
-                },
-            ));
+            spawn_header(parent, "STATS SHOP");
 
             // Stats container
             parent
@@ -69,7 +61,7 @@ pub fn spawn_stats_shop_menu(
                         row_gap: Val::Px(10.0),
                         ..default()
                     },
-                    BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                 ))
                 .with_children(|container| {
                     // Spawn each stat row
@@ -92,10 +84,6 @@ pub fn spawn_stats_shop_menu(
                 )),
                 TextFont {
                     font_size: 32.0,
-                    ..default()
-                },
-                Node {
-                    margin: UiRect::top(Val::Px(20.0)),
                     ..default()
                 },
             ));
@@ -129,7 +117,6 @@ fn spawn_stat_row(parent: &mut ChildBuilder, stat_type: DisplayableStatType, sta
                             font_size: 24.0,
                             ..default()
                         },
-                        Node::default(),
                     ));
                     info.spawn((
                         Text::new(stat_type.get_description()),
@@ -138,7 +125,6 @@ fn spawn_stat_row(parent: &mut ChildBuilder, stat_type: DisplayableStatType, sta
                             ..default()
                         },
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
-                        Node::default(),
                     ));
                 });
 
@@ -171,16 +157,10 @@ fn spawn_stat_shop_button(
         .with_children(|button| {
             button.spawn((
                 Text::new(if is_increase { "+" } else { "-" }),
-                StatShopButton {
-                    stat_type,
-                    is_increase,
-                },
-                Button,
                 TextFont {
                     font_size: 24.0,
                     ..default()
                 },
-                Node::default(),
             ));
         });
 }

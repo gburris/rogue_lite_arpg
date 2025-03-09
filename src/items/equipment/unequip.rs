@@ -35,7 +35,7 @@ pub fn on_item_unequipped(
         .remove::<Collider>()
         .remove::<ActiveMeleeAttack>();
 
-    inventory.unequip(equippable.slot);
+    inventory.unequip(item_entity, equippable.slot);
 
     info!("Item Unequipped!");
 }

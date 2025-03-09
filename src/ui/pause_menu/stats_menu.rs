@@ -1,6 +1,12 @@
 use bevy::prelude::*;
 
-use crate::player::PlayerStats;
+use crate::{
+    player::PlayerStats,
+    ui::{
+        constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
+        menu_helpers::spawn_header,
+    },
+};
 
 #[derive(Component)]
 pub struct StatsMenu;
@@ -18,29 +24,15 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
-                    justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(20.0),
                     ..default()
                 },
-                BackgroundColor::from(Color::BLACK.with_alpha(0.9)),
-                Visibility::Visible,
-                GlobalZIndex(1),
+                BackgroundColor::from(BACKGROUND_COLOR),
             ))
             .with_children(|parent| {
-                // Title
-                parent.spawn((
-                    Text::new("Character Stats"),
-                    TextFont {
-                        font_size: 70.0,
-                        ..default()
-                    },
-                    Node {
-                        margin: UiRect::bottom(Val::Px(20.0)),
-                        ..default()
-                    },
-                ));
+                spawn_header(parent, "STATS");
 
                 // Stats container
                 parent
@@ -51,10 +43,9 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                             height: Val::Percent(80.0),
                             flex_direction: FlexDirection::Column,
                             padding: UiRect::all(Val::Px(20.0)),
-                            overflow: Overflow::scroll_y(),
                             ..default()
                         },
-                        BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.95)),
+                        BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                     ))
                     .with_children(|stats_parent| {
                         spawn_stat_row(
@@ -112,7 +103,6 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                             font_size: 24.0,
                             ..default()
                         },
-                        Node::default(),
                     ));
 
                     // Description
@@ -136,7 +126,6 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                     font_size: 24.0,
                     ..default()
                 },
-                Node::default(),
             ));
         });
 }

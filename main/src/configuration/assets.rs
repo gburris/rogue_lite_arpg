@@ -11,7 +11,8 @@ impl Plugin for AssetLoadingPlugin {
             LoadingState::new(AppState::AssetLoading)
                 .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>()
-                .load_collection::<SpriteSheetLayouts>(),
+                .load_collection::<SpriteSheetLayouts>()
+                .load_collection::<GameIcons>(),
         );
     }
 }
@@ -39,6 +40,20 @@ pub struct SpriteSheetLayouts {
     pub chest_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
     pub tome_of_healing_effect: Handle<TextureAtlasLayout>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct GameIcons {
+    #[asset(path = "icons/equip_marker.png")]
+    pub equip_icon: Handle<Image>,
+    #[asset(path = "icons/potion.png")]
+    pub potion_icon: Handle<Image>,
+    #[asset(path = "icons/spell-book.png")]
+    pub spell_book_icon: Handle<Image>,
+    #[asset(path = "icons/sword-brandish.png")]
+    pub melee_icon: Handle<Image>,
+    #[asset(path = "icons/wizard-staff.png")]
+    pub staff_icon: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]

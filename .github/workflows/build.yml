@@ -25,6 +25,9 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+      - name: Fetch Git LFS files
+        run: |
+          git lfs pull
       - name: Update Rust and Add Target
         run: |
           rustup update

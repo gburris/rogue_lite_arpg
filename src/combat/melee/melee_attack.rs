@@ -2,14 +2,11 @@ use avian2d::prelude::*;
 use bevy::{prelude::*, utils::HashSet};
 
 use crate::{
-    ai::state::{ActionState, FacingDirection},
+    ai::state::ActionState,
     combat::{
         damage::{AttemptDamageEvent, Damage},
         melee::{MeleeSwingType, MeleeWeapon},
     },
-    enemy::Enemy,
-    items::equipment::EquipmentTransform,
-    player::Player,
 };
 
 #[derive(Component)]
@@ -34,16 +31,15 @@ pub fn start_melee_attack(
 
 pub fn end_melee_attacks(
     mut commands: Commands,
-    mut query: Query<(Entity, &Parent, &MeleeWeapon, &mut Transform), With<ActiveMeleeAttack>>,
+    mut query: Query<(Entity, &Parent, &MeleeWeapon), With<ActiveMeleeAttack>>,
     mut action_state_query: Query<&mut ActionState>,
 ) {
-    for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
+    for (entity, parent, melee_weapon) in query.iter_mut() {
         if melee_weapon.attack_duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
                 // This handles the edge case of dying mid-swing
                 if *action_state != ActionState::Defeated {
                     *action_state = ActionState::Movement;
-                    *transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
                 }
                 commands.entity(entity).remove::<ActiveMeleeAttack>();
             }

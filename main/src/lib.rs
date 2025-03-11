@@ -1,4 +1,5 @@
 // Module declarations - keep these at the top
+pub mod ai;
 pub mod animation;
 pub mod combat;
 pub mod configuration;
@@ -8,7 +9,6 @@ pub mod enemy;
 pub mod items;
 pub mod labels;
 pub mod map;
-pub mod movement;
 pub mod npc;
 pub mod player;
 pub mod progression;

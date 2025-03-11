@@ -3,13 +3,14 @@ use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
+    ai::state::{ActionState, AimPosition},
     combat::{
-        attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
-        components::{ActionState, AimPosition},
         damage::DamageSource,
-        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
-        projectile::spawn::spawn_projectile,
-        weapon::weapon::ProjectileWeapon,
+        health::AttemptHealingEvent,
+        mana::ManaCost,
+        melee::{start_melee_attack, MeleeWeapon},
+        projectile::{spawn::spawn_projectile, ProjectileWeapon},
+        Mana,
     },
     enemy::Enemy,
     items::{

@@ -3,11 +3,12 @@ use bevy::prelude::*;
 use serde::Serialize;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
-    combat::{
-        attributes::{Health, Mana},
-        components::{ActionState, AimPosition},
+    ai::{
+        state::{ActionState, AimPosition, FacingDirection},
+        SimpleMotion,
     },
+    animation::{AnimationTimer, DefaultAnimationConfig},
+    combat::{Health, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
@@ -19,7 +20,6 @@ use crate::{
         spawn_health_potion, spawn_mainhand_weapon,
     },
     map::EnemiesSpawnEvent,
-    movement::components::SimpleMotion,
 };
 
 #[derive(Debug, Clone)]

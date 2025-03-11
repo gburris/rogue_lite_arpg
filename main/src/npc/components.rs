@@ -2,13 +2,13 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::attributes::Health,
+    ai::SimpleMotion,
+    combat::Health,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
-    movement::components::SimpleMotion,
     player::interact::InteractionEvent,
 };
 

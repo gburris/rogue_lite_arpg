@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
-use super::equipment::on_healing_tome_cast;
-use super::equipment::EquipmentSlot;
-use super::HealingTome;
-use super::Item;
-use super::ItemType;
-use crate::animation::FacingDirection;
-use crate::combat::attributes::mana::ManaCost;
-use crate::configuration::assets::SpriteAssets;
-use crate::items::equipment::EquipmentTransform;
-use crate::items::equipment::Equippable;
+use super::{
+    equipment::{on_healing_tome_cast, EquipmentSlot},
+    HealingTome, Item, ItemType,
+};
+use crate::{
+    ai::state::FacingDirection,
+    combat::mana::ManaCost,
+    configuration::assets::SpriteAssets,
+    items::equipment::{EquipmentTransform, Equippable},
+};
 
 fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
     let offhand_transform: Transform = EquipmentTransform::get(FacingDirection::Down).offhand;

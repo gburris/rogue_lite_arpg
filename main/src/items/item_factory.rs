@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    animation::FacingDirection,
+    ai::state::FacingDirection,
     configuration::assets::SpriteAssets,
     items::{
         equipment::EquipmentTransform, Consumable, ConsumableEffect, ConsumableType, HealthPotion,

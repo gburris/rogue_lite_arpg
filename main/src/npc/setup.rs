@@ -2,12 +2,15 @@ use avian2d::prelude::LockedAxes;
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
-    combat::{attributes::Health, components::ActionState},
+    ai::{
+        state::{ActionState, FacingDirection},
+        SimpleMotion,
+    },
+    animation::{AnimationTimer, DefaultAnimationConfig},
+    combat::Health,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{equipment::Equipped, inventory::Inventory},
     map::NPCSpawnEvent,
-    movement::components::SimpleMotion,
     npc::components::NPC,
     player::interact::InteractionZone,
 };

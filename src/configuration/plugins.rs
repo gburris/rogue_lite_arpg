@@ -4,22 +4,20 @@ use bevy_ecs_tilemap::prelude::*;
 
 pub struct GamePlugins;
 
-use {
-    crate::animation::AnimationPlugin,
-    crate::combat::plugin::CombatPlugin,
-    crate::configuration::{
-        assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin,
-    },
-    crate::despawn::plugin::DespawnPlugin,
-    crate::econ::plugin::EconPlugin,
-    crate::enemy::plugin::EnemyPlugin,
-    crate::items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
-    crate::map::plugin::MapPlugin,
-    crate::movement::plugin::MovementPlugin,
-    crate::npc::NPCPlugin,
-    crate::player::plugin::PlayerPlugin,
-    crate::progression::plugin::ProgressionPlugin,
-    crate::ui::plugin::UIPlugin,
+use crate::{
+    ai::AIPlugin,
+    animation::AnimationPlugin,
+    combat::plugin::CombatPlugin,
+    configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+    despawn::plugin::DespawnPlugin,
+    econ::plugin::EconPlugin,
+    enemy::plugin::EnemyPlugin,
+    items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
+    map::plugin::MapPlugin,
+    npc::NPCPlugin,
+    player::plugin::PlayerPlugin,
+    progression::plugin::ProgressionPlugin,
+    ui::plugin::UIPlugin,
 };
 
 impl Plugin for GamePlugins {
@@ -32,7 +30,7 @@ impl Plugin for GamePlugins {
             // Core systems
             .add_plugins((
                 DespawnPlugin,
-                MovementPlugin,
+                AIPlugin,
                 CombatPlugin,
                 ProgressionPlugin,
                 EconPlugin,

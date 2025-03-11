@@ -2,9 +2,9 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use super::{equippable::Equipped, Equippable};
-use crate::combat::components::ActionState;
-use crate::combat::melee::components::ActiveMeleeAttack;
-use crate::items::inventory::Inventory;
+use crate::{
+    ai::state::ActionState, combat::melee::ActiveMeleeAttack, items::inventory::Inventory,
+};
 
 pub fn on_item_unequipped(
     trigger: Trigger<OnRemove, Equipped>,

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
+    ai::SimpleMotion,
     enemy::Enemy,
-    movement::components::SimpleMotion,
     npc::NPC,
     player::{Player, PlayerMovementEvent, PlayerStoppedEvent},
 };

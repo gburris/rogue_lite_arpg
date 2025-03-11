@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use rand::Rng;
 
 use crate::{combat::status_effects::components::EffectsList, despawn::components::LiveDuration};
 
@@ -29,9 +28,4 @@ fn default_collider() -> Collider {
 
 fn default_rigid_body() -> RigidBody {
     RigidBody::Dynamic
-}
-
-pub fn calculate_damage(damage_range: (f32, f32)) -> f32 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(damage_range.0..damage_range.1)
 }

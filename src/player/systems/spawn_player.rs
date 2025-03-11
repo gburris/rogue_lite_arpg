@@ -4,8 +4,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::FacingDirection,
-    combat::{attributes::mana::Mana, components::ActionState, damage::HasIFrames},
+    combat::{invulnerable::HasIFrames, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
@@ -60,7 +59,6 @@ pub fn spawn_player(
                     GameCollisionLayer::Magnet,
                 ],
             ),
-            (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .add_children(&starting_items)

@@ -1,11 +1,12 @@
 use avian2d::prelude::*;
 
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{
     combat::{
-        attributes::health::Health,
-        damage::{HasIFrames, Invulnerable},
+        health::Health,
+        invulnerable::{HasIFrames, Invulnerable},
         status_effects::{components::EffectsList, events::ApplyEffect},
     },
     configuration::GameCollisionLayer,
@@ -34,16 +35,22 @@ impl From<DamageSource> for LayerMask {
     }
 }
 
-#[derive(Event)]
-pub struct AttemptDamageEvent {
-    pub damage: f32,
-    pub damage_source: Option<Entity>, //Not all damage has a "Source" entity, like environmental damage or DoT effects
+#[derive(Copy, Clone)]
+pub enum Damage {
+    Range((f32, f32)),
+    Single(f32),
 }
 
-/**
- * While AttemptDamageEvent is sent any time a damage source interacts with an entity,
- * this event represents when that damage attempt succeeds
- */
+#[derive(Event)]
+pub struct AttemptDamageEvent {
+    /// We treat damage as a range with RNG determining which value is dealt
+    pub damage: Damage,
+    /// Not all damage has a "Source" entity, like environmental damage or damage-over-time effects
+    pub damage_source: Option<Entity>,
+}
+
+/// While AttemptDamageEvent is sent any time a damage source interacts with an entity,
+///this event represents when that damage attempt succeeds
 #[derive(Event)]
 pub struct DamageDealtEvent {
     pub damage: f32,
@@ -65,16 +72,13 @@ pub fn on_damage_event(
             return;
         }
 
-        health.take_damage(damage_trigger.damage);
+        // Convert `Damage` to raw damage amount
+        let damage = calculate_damage(damage_trigger.damage);
+        health.take_damage(damage);
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
-        commands.trigger_targets(
-            DamageDealtEvent {
-                damage: damage_trigger.damage,
-            },
-            damage_trigger.entity(),
-        );
+        commands.trigger_targets(DamageDealtEvent { damage }, damage_trigger.entity());
 
         // Entities have to "opt-in" to having iframes. Right now that is only the player
         if let Some(iframes) = has_iframes {
@@ -96,5 +100,12 @@ pub fn on_damage_event(
                 );
             }
         }
+    }
+}
+
+fn calculate_damage(damage: Damage) -> f32 {
+    match damage {
+        Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
+        Damage::Single(amount) => amount,
     }
 }

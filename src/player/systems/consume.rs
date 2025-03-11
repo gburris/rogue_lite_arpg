@@ -1,5 +1,5 @@
 use crate::{
-    combat::attributes::health::AttemptHealingEvent,
+    combat::health::AttemptHealingEvent,
     items::{inventory::inventory::Inventory, ConsumableEffect, ConsumableType},
 };
 use bevy::prelude::*;

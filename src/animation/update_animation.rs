@@ -1,11 +1,9 @@
 use crate::{
-    animation::{AnimationIndices, AnimationTimer},
-    combat::components::ActionState,
+    ai::state::{ActionState, FacingDirection},
+    animation::{AnimationIndices, AnimationTimer, DefaultAnimationConfig},
 };
 
 use bevy::prelude::*;
-
-use super::{DefaultAnimationConfig, FacingDirection};
 
 pub fn update_animation(
     animation_config: Res<DefaultAnimationConfig>,

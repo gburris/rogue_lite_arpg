@@ -1,10 +1,23 @@
+use avian2d::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
+
 use crate::{
-    animation::FacingDirection, combat::components::ActionState,
+    ai::state::{ActionState, FacingDirection},
+    combat::{
+        damage::{AttemptDamageEvent, Damage},
+        melee::{MeleeSwingType, MeleeWeapon},
+    },
+    enemy::Enemy,
     items::equipment::EquipmentTransform,
+    player::Player,
 };
 
-use super::components::{ActiveMeleeAttack, MeleeSwingType, MeleeWeapon};
-use bevy::{prelude::*, utils::HashSet};
+#[derive(Component)]
+#[require(CollidingEntities, Sensor)]
+pub struct ActiveMeleeAttack {
+    pub initial_angle: f32,
+    pub entities_damaged: HashSet<Entity>,
+}
 
 pub fn start_melee_attack(
     commands: &mut Commands,
@@ -27,8 +40,7 @@ pub fn end_melee_attacks(
     for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
         if melee_weapon.attack_duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
-                //Handle the edge case of
-                //Dying mid melee swing
+                // This handles the edge case of dying mid-swing
                 if *action_state != ActionState::Defeated {
                     *action_state = ActionState::Movement;
                     *transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
@@ -89,6 +101,43 @@ pub fn process_melee_attacks(
 
                 transform.translation = axe_head_position;
                 transform.rotation = Quat::from_rotation_z(blade_angle);
+            }
+        }
+    }
+}
+
+pub fn handle_melee_collisions(
+    mut commands: Commands,
+    mut melee_query: Query<(
+        Entity,
+        &MeleeWeapon,
+        &mut ActiveMeleeAttack,
+        &CollidingEntities,
+    )>,
+    enemy_query: Query<&Enemy>,
+    player: Single<Entity, With<Player>>,
+) {
+    let player_entity = player.into_inner();
+
+    for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities) in
+        melee_query.iter_mut()
+    {
+        for &colliding_entity in colliding_entities.iter() {
+            if (enemy_query.contains(colliding_entity) || colliding_entity == player_entity)
+                && (!active_melee_attack
+                    .entities_damaged
+                    .contains(&colliding_entity))
+            {
+                commands.trigger_targets(
+                    AttemptDamageEvent {
+                        damage: Damage::Range(melee_weapon.damage),
+                        damage_source: Some(weapon_entity),
+                    },
+                    colliding_entity,
+                );
+                active_melee_attack
+                    .entities_damaged
+                    .insert(colliding_entity);
             }
         }
     }

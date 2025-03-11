@@ -57,13 +57,11 @@ pub fn process_melee_attacks(
 ) {
     for (mut melee_weapon, mut transform, active_attack) in attack_query.iter_mut() {
         melee_weapon.attack_duration.tick(time.delta());
+        let attack_progress = melee_weapon.attack_duration.fraction();
 
         match melee_weapon.attack_type {
             MeleeSwingType::Stab { speed, .. } => {
-                let progress = melee_weapon.attack_duration.elapsed_secs()
-                    / melee_weapon.attack_duration.duration().as_secs_f32();
-
-                let distance = 2.0 * speed * (std::f32::consts::PI * progress).sin();
+                let distance = 2.0 * speed * (std::f32::consts::PI * attack_progress).sin();
 
                 let attack_offset = 25.0;
 
@@ -81,15 +79,13 @@ pub fn process_melee_attacks(
                 transform.rotation = Quat::from_rotation_z(active_attack.initial_angle);
             }
             MeleeSwingType::Slash { radius, .. } => {
-                let progress = melee_weapon.attack_duration.elapsed_secs()
-                    / melee_weapon.attack_duration.duration().as_secs_f32();
-
                 let adjusted_angle = active_attack.initial_angle + std::f32::consts::FRAC_PI_2; // Rotate by -90°
 
+                // Subtracting and adding 60 degrees ensures the center of the swing is where the player aimed
                 let start_angle = adjusted_angle - 60f32.to_radians();
                 let end_angle = adjusted_angle + 60f32.to_radians();
 
-                let current_angle = start_angle + (end_angle - start_angle) * progress;
+                let current_angle = start_angle + (end_angle - start_angle) * attack_progress;
 
                 let axe_head_position = Vec3::new(
                     current_angle.cos() * radius,

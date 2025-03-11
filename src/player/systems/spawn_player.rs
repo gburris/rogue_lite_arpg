@@ -29,6 +29,7 @@ pub fn spawn_player(
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
+        spawn_axe(&mut commands, &sprites),
         spawn_offhand(&mut commands, &sprites, "tome_of_healing"),
     ];
 

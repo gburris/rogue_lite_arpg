@@ -19,10 +19,11 @@ jobs:
           # Fetch all closed PRs using the GitHub API
           CLOSED_PR_NUMBERS=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed" \
-            | jq -r '.[].number')
-          echo "Closed PR numbers: $CLOSED_PR_NUMBERS"
-          echo "closed_pr_numbers=$CLOSED_PR_NUMBERS" >> $GITHUB_OUTPUT
-
+            | jq -r '.[].number' | tr '\n' ' ')  # Replace newlines with spaces
+            
+          # Properly format the output for GitHub Actions
+          echo "closed_pr_numbers=${CLOSED_PR_NUMBERS}" >> $GITHUB_OUTPUT
+  
       - name: Remove directories for closed PRs
         run: |
           # Loop through all PR directories and delete those for closed PRs

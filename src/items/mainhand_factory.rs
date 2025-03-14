@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::state::FacingDirection,
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
@@ -18,7 +17,7 @@ use crate::{
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{
-        equipment::{on_weapon_fired, on_weapon_melee, EquipmentTransform, Equippable},
+        equipment::{on_weapon_fired, on_weapon_melee, Equippable},
         Item,
     },
 };
@@ -41,7 +40,6 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             Item::new(120, ItemType::Melee),
             Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -66,9 +64,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
             Name::new("Axe"),
             Equippable::default(),
             Item::new(220, ItemType::Melee),
-            Visibility::Hidden,
             Sprite::from_image(sprites.axe.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -98,8 +94,6 @@ pub fn spawn_fire_staff(
         ),
     };
 
-    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
-
     commands
         .spawn((
             ProjectileWeapon {
@@ -111,9 +105,7 @@ pub fn spawn_fire_staff(
             Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
-            Visibility::Hidden,
             Sprite::from_image(sprites.fire_staff.clone()),
-            weapon_transform,
         ))
         .observe(on_weapon_fired)
         .id()
@@ -143,8 +135,6 @@ pub fn spawn_ice_staff(
         ),
     };
 
-    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
-
     commands
         .spawn((
             ProjectileWeapon {
@@ -159,9 +149,7 @@ pub fn spawn_ice_staff(
                 use_rate: Timer::from_seconds(0.7, TimerMode::Once),
                 ..default()
             },
-            Visibility::Hidden,
             Sprite::from_image(sprites.ice_staff.clone()),
-            weapon_transform,
         ))
         .observe(on_weapon_fired)
         .id()

@@ -76,11 +76,7 @@ pub fn process_melee_attacks(
                 // Total distance of stab * time of swing gets new position each tick
                 let distance = reach * attack_progress;
 
-                let forward = Vec2::new(
-                    active_attack.initial_angle.cos(),
-                    active_attack.initial_angle.sin(),
-                );
-
+                let forward = Vec2::from_angle(active_attack.initial_angle);
                 let new_stab_position = forward * (melee_weapon.hold_distance + distance);
 
                 transform.translation = new_stab_position.extend(0.0);
@@ -92,8 +88,7 @@ pub fn process_melee_attacks(
 
                 let current_angle = start_angle + (arc_distance * attack_progress);
 
-                let new_axe_position = Vec2::new(current_angle.cos(), current_angle.sin())
-                    * melee_weapon.hold_distance;
+                let new_axe_position = Vec2::from_angle(current_angle) * melee_weapon.hold_distance;
 
                 transform.translation = new_axe_position.extend(0.0);
                 transform.rotation = Quat::from_rotation_z(current_angle - MELEE_WEAPON_ROTATION);

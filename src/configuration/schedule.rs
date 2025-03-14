@@ -15,6 +15,7 @@ impl Plugin for SchedulePlugin {
             (
                 MainSet::InGame.run_if(in_state(AppState::Playing)),
                 MainSet::Menu.run_if(in_state(AppState::Paused)),
+                MainSet::Shared,
             )
                 .chain()
                 .after(LoadingStateSet(AppState::AssetLoading)), // appease the system ordering gods

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 pub enum MainSet {
     InGame,
     Menu,
+    Shared,
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]

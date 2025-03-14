@@ -24,7 +24,6 @@ pub fn spawn_load_screen(mut commands: Commands) {
             // Darker background for more contrast
             BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
             GlobalZIndex(1),
-            Visibility::Visible,
         ))
         .with_children(|parent| {
             // Top gold border

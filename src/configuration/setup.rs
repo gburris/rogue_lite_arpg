@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{prelude::*, window::WindowResolution};
+use bevy::prelude::*;
 
 use crate::{
     configuration::debug::DebugPlugin,
@@ -7,8 +7,7 @@ use crate::{
     progression::components::GameProgress,
 };
 
-#[derive(Component)]
-pub struct CursorCoordinates;
+use super::view;
 
 pub struct SetupPlugin;
 
@@ -20,7 +19,7 @@ impl Plugin for SetupPlugin {
         #[cfg(not(debug_assertions))]
         app.add_plugins(
             DefaultPlugins
-                .set(get_release_window_plugin())
+                .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         );
 
@@ -36,36 +35,6 @@ impl Plugin for SetupPlugin {
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()
             .add_sub_state::<PlayingState>()
-            .add_systems(Startup, setup_camera);
-    }
-}
-
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
-}
-
-fn get_release_window_plugin() -> WindowPlugin {
-    #[cfg(target_arch = "wasm32")]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Baba Yaga"),
-                fit_canvas_to_parent: true,
-                ..Default::default()
-            }),
-            ..default()
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Right click to cast Icebolt Left Click to Cast Fireball"),
-                resolution: WindowResolution::new(1920.0, 1080.0),
-                ..Default::default()
-            }),
-            ..default()
-        }
+            .add_systems(Startup, view::spawn_camera);
     }
 }

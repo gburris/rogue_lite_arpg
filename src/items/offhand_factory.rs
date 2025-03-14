@@ -23,7 +23,6 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
             HealingTome {
                 healing: (25.0, 50.0),
             },
-            Visibility::Hidden,
             Sprite::from_image(sprites.tome_of_healing.clone()),
             offhand_transform,
         ))

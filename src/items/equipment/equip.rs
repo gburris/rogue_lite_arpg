@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    ai::state::FacingDirection,
     combat::{damage::DamageSource, melee::MeleeWeapon},
     enemy::Enemy,
     items::inventory::Inventory,

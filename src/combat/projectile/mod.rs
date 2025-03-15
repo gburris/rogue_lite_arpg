@@ -1,7 +1,6 @@
 pub mod components;
-mod handle_collisions;
-mod projectile_weapon;
+pub mod handle_collisions;
 pub mod spawn;
 
-pub use handle_collisions::handle_projectile_collisions;
-pub use projectile_weapon::ProjectileWeapon;
+//Used for spell reflection code
+pub use spawn::spawn_projectile;

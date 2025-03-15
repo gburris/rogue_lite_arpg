@@ -1,11 +1,11 @@
 use avian2d::prelude::ColliderDisabled;
 use bevy::prelude::*;
 
-use rand::{thread_rng, Rng};
-
 use crate::{
-    ai::state::ActionState,
-    combat::{damage::DefeatedEvent, invulnerable::Invulnerable},
+    combat::{
+        components::ActionState,
+        damage::{components::Invulnerable, events::DefeatedEvent},
+    },
     despawn::components::LiveDuration,
     econ::gold_drop::GoldDropEvent,
     enemy::{Enemy, Experience},
@@ -15,6 +15,7 @@ use crate::{
         PlayerStats,
     },
 };
+use rand::{thread_rng, Rng};
 
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,

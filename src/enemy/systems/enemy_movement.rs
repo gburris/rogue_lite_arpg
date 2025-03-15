@@ -2,13 +2,13 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::{
-        state::{ActionState, AimPosition},
-        SimpleMotion,
+    combat::{
+        attributes::Health,
+        components::{ActionState, AimPosition},
     },
-    combat::Health,
     enemy::Enemy,
     items::equipment::EquipmentSlot,
+    movement::components::SimpleMotion,
     npc::NPC,
     player::{Player, UseEquipmentInputEvent},
 };

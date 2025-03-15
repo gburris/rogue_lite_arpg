@@ -1,16 +1,24 @@
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::prelude::*;
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
+use crate::animation::FacingDirection;
+use crate::combat::projectile::spawn::spawn_projectile_from_weapon;
+use crate::combat::shield::components::ProjectileReflection;
+use crate::combat::shield::shield_block::deactivate_shield;
+use crate::combat::shield::ActiveShield;
+use crate::items::{Shield, ShieldSpellVisualEffect};
+use crate::player::StopUsingHoldableEquipmentInputEvent;
 use crate::{
-    ai::state::{ActionState, AimPosition},
     combat::{
-        damage::DamageSource,
-        health::AttemptHealingEvent,
-        mana::ManaCost,
-        melee::{start_melee_attack, MeleeWeapon},
-        projectile::{spawn::spawn_projectile, ProjectileWeapon},
-        Mana,
+        attributes::{health::AttemptHealingEvent, mana::ManaCost, Mana},
+        components::{ActionState, AimPosition},
+        damage::components::DamageSource,
+        melee::{components::MeleeWeapon, swing_melee_attacks::start_melee_attack},
+        projectile::spawn::spawn_projectile,
+        weapon::weapon::ProjectileWeapon,
     },
     enemy::Enemy,
     items::{
@@ -34,7 +42,6 @@ pub enum EquipmentUseFailure {
 }
 
 #[derive(Event)]
-
 pub struct EquipmentUseFailedEvent {
     pub holder: Entity,
     pub slot: EquipmentSlot,
@@ -46,6 +53,7 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
         equippable.use_rate.tick(time.delta());
     }
 }
+
 pub fn on_equipment_activated(
     trigger: Trigger<UseEquipmentInputEvent>,
     commands: Commands,
@@ -106,7 +114,7 @@ fn handle_equipment_activation(
         // Check mana next
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
-                warn!("Not enough mana!");
+                trace!("Not enough mana!");
                 commands.trigger_targets(
                     EquipmentUseFailedEvent {
                         holder: entity,
@@ -149,7 +157,7 @@ pub fn on_weapon_fired(
         return;
     };
 
-    spawn_projectile(
+    spawn_projectile_from_weapon(
         damage_source,
         &mut commands,
         holder_transform,
@@ -212,4 +220,56 @@ pub fn on_healing_tome_cast(
     commands
         .entity(fired_trigger.holder)
         .with_child(HealingTomeSpellVisualEffect);
+}
+
+pub fn on_magic_shield_cast(fired_trigger: Trigger<UseEquipmentEvent>, mut commands: Commands) {
+    commands
+        .entity(fired_trigger.holder)
+        .insert(ProjectileReflection);
+
+    commands
+        .entity(fired_trigger.holder)
+        .with_child(ShieldSpellVisualEffect);
+}
+
+pub fn on_shield_block(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    mut shield_query: Query<(Entity, &Shield)>,
+) {
+    let Ok((shield_entity, shield)) = shield_query.get_mut(fired_trigger.entity()) else {
+        warn!("Tried to block with invalid shield");
+        return;
+    };
+
+    commands.entity(shield_entity).insert(ActiveShield);
+}
+
+pub fn on_equipment_deactivated(
+    fired_trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
+    mut commands: Commands,
+    holder_query: Query<(&Inventory, &FacingDirection)>,
+    mut shield_query: Query<(Entity, &mut Sprite), (With<Shield>, With<ActiveShield>)>,
+) {
+    // Get the holder's inventory
+    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.entity()) else {
+        warn!("Tried to stop blocking but entity has no inventory or no direction");
+        return;
+    };
+
+    let Some(shield_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
+        warn!("No shield equipped in offhand");
+        return;
+    };
+
+    if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
+        deactivate_shield(
+            &mut commands,
+            shield_entity,
+            *facing_direction,
+            Some(&mut shield_sprite),
+        );
+    } else {
+        warn!("Shield is equipped but doesn't have ActiveShield");
+    }
 }

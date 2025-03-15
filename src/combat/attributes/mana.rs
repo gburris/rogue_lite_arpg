@@ -16,7 +16,7 @@ impl Mana {
         }
     }
 
-    /// Optionally uses mana if it can afford it, otherwise returns false if it cost too much
+    /** Optionally uses mana if it can afford it, otherwise returns false if it cost too much */
     pub fn attempt_use_mana(&mut self, cost: &ManaCost) -> bool {
         if self.current_mana >= cost.0 {
             self.current_mana -= cost.0;
@@ -33,11 +33,19 @@ impl Mana {
     }
 }
 
-/// Attach it to projectiles, weapons, spells, etc... if they cost mana to use
+/**
+ * Attach it to projectiles, weapons, spells, etc... if they cost mana to use
+ */
 #[derive(Component, Clone)]
 pub struct ManaCost(pub f32);
 
-/// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration rate
+/**
+ * Attach it to projectiles, weapons, spells, etc... if they cost mana to actively use (e.g. hold down)
+ * rate =  amount lost per second
+ */
+#[derive(Component, Clone)]
+pub struct ManaDrainRate(pub f32);
+
 pub fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     let delta_time = time.delta_secs();
     for mut mana in query.iter_mut() {

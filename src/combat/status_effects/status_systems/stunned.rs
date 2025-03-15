@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    ai::SimpleMotion,
     combat::status_effects::{
         components::{SlowedStatus, StatusType, StunnedStatus},
         events::ApplyStatus,
     },
+    movement::components::SimpleMotion,
 };
 
 pub fn on_stun_applied(

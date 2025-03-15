@@ -1,5 +1,5 @@
 use crate::{
-    combat::Health,
+    combat::attributes::Health,
     items::inventory::Inventory,
     labels::states::PausedState,
     player::{Player, PlayerLevel},
@@ -38,7 +38,7 @@ pub fn spawn_main_menu(
     game_progress: Res<GameProgress>,
 ) {
     let (health, level, inventory) = player.into_inner();
-
+    debug!("spawn_main_menu called");
     commands
         .spawn((
             MainMenu,

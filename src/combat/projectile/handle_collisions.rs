@@ -2,9 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::combat::{
-    damage::{AttemptDamageEvent, Damage},
-    projectile::components::*,
-    Health,
+    attributes::Health, damage::events::AttemptDamageEvent, projectile::components::*,
 };
 
 pub fn handle_projectile_collisions(
@@ -16,9 +14,10 @@ pub fn handle_projectile_collisions(
         for &colliding_entity in colliding_entities.iter() {
             // If the thing we collide with has health, lets try to damage it!
             if health_query.contains(colliding_entity) {
+                let damage = calculate_damage(projectile.damage);
                 commands.trigger_targets(
                     AttemptDamageEvent {
-                        damage: Damage::Range(projectile.damage),
+                        damage,
                         damage_source: Some(projectile_entity),
                     },
                     colliding_entity,

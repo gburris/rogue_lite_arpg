@@ -5,7 +5,7 @@ use crate::{
     labels::states::PausedState,
     player::{
         interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        UseEquipmentInputEvent,
+        StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
     },
 };
 
@@ -16,9 +16,9 @@ pub struct PauseInputEvent {
 
 pub fn player_input(
     mut commands: Commands,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
-    mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
+    mut event_writer: EventWriter<PlayerMovementEvent>,
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();
@@ -44,13 +44,24 @@ pub fn player_input(
         );
     }
 
-    if buttons.pressed(MouseButton::Right) {
+    if buttons.just_pressed(MouseButton::Right) {
         commands.trigger_targets(
             UseEquipmentInputEvent {
                 slot: EquipmentSlot::Offhand,
             },
             player_entity,
         );
+    }
+
+    if buttons.just_released(MouseButton::Right) {
+        warn!("releasing MBR");
+        commands.trigger_targets(
+            StopUsingHoldableEquipmentInputEvent {
+                slot: EquipmentSlot::Offhand,
+            },
+            player_entity,
+        );
+        return;
     }
 
     let mut direction = Vec2::ZERO;

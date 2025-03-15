@@ -1,6 +1,6 @@
 use bevy::{prelude::*, utils::HashMap};
 
-use crate::ai::state::{ActionState, FacingDirection};
+use crate::combat::components::ActionState;
 
 #[derive(Component)]
 pub struct AnimationIndices {
@@ -207,5 +207,26 @@ impl DefaultAnimationConfig {
     pub fn get_timer(&self, state: ActionState, direction: FacingDirection) -> Timer {
         let animation = self.get_animation(state, direction);
         Timer::from_seconds(animation.frame_duration, TimerMode::Repeating)
+    }
+}
+
+#[derive(Component, Default, Hash, PartialEq, Eq, Clone, Copy, Debug)]
+pub enum FacingDirection {
+    Up,
+    #[default]
+    Down,
+    Left,
+    Right,
+}
+
+impl FacingDirection {
+    pub fn from_vec2(&self, vec: Vec2) -> Self {
+        match vec.normalize() {
+            v if v.y > 0.5 => Self::Up,
+            v if v.y < -0.5 => Self::Down,
+            v if v.x > 0.5 => Self::Right,
+            v if v.x < -0.5 => Self::Left,
+            _ => *self,
+        }
     }
 }

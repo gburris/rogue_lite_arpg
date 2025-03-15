@@ -1,16 +1,17 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use rand::Rng;
 
 use crate::{combat::status_effects::components::EffectsList, despawn::components::LiveDuration};
 
-#[derive(Bundle, Clone)]
+#[derive(Bundle, Debug, Clone)]
 pub struct ProjectileBundle {
     pub projectile: Projectile,
     pub sprite: Sprite,
     pub effects_list: EffectsList,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug, Clone)]
 #[require(
     LiveDuration(|| LiveDuration::new(1.0)),
     Sensor,
@@ -28,4 +29,9 @@ fn default_collider() -> Collider {
 
 fn default_rigid_body() -> RigidBody {
     RigidBody::Dynamic
+}
+
+pub fn calculate_damage(damage_range: (f32, f32)) -> f32 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range(damage_range.0..damage_range.1)
 }

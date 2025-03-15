@@ -1,5 +1,5 @@
 use crate::{
-    combat::{damage::DamageDealtEvent, health::HealedEvent},
+    combat::{attributes::health::HealedEvent, damage::events::DamageDealtEvent},
     despawn::components::LiveDuration,
     labels::layer::ZLayer,
 };

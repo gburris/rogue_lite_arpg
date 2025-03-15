@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    ai::{state::ActionState, SimpleMotion},
-    combat::{damage::DefeatedEvent, invulnerable::Invulnerable},
+    combat::{
+        components::ActionState,
+        damage::{components::Invulnerable, events::DefeatedEvent},
+    },
     labels::states::{AppState, PlayingState},
     map::CleanupZone,
+    movement::components::SimpleMotion,
     player::Player,
 };
 

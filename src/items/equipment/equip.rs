@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::{damage::DamageSource, melee::MeleeWeapon},
+    combat::{damage::components::DamageSource, melee::components::MeleeWeapon},
     enemy::Enemy,
     items::inventory::Inventory,
 };

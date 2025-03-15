@@ -1,8 +1,12 @@
 use std::time::Duration;
 
+use avian2d::prelude::{LayerMask, PhysicsLayer};
 use bevy::prelude::*;
 
-/// Component to mark whether an entity has iframes when hit
+use crate::configuration::GameCollisionLayer;
+
+// Component to mark whether an entity has iframes when hit
+// Currently only the player has iframes
 #[derive(Component)]
 pub struct HasIFrames {
     // time to be invulnerable when hit
@@ -14,6 +18,7 @@ pub struct HasIFrames {
 pub struct Invulnerable {
     pub total_time: Timer,
     pub flash_timer: Timer,
+    pub is_transparent: bool,
 }
 
 impl Invulnerable {
@@ -28,6 +33,7 @@ impl Invulnerable {
         Self {
             total_time: Timer::new(Duration::from_secs(4), TimerMode::Once),
             flash_timer: Timer::new(Duration::from_millis(5000), TimerMode::Repeating), //Don't flash
+            is_transparent: false,
         }
     }
 }
@@ -37,30 +43,30 @@ impl Default for Invulnerable {
         Self {
             total_time: Timer::new(Duration::from_secs(2), TimerMode::Once),
             flash_timer: Timer::new(Duration::from_millis(200), TimerMode::Repeating),
+            is_transparent: false,
         }
     }
 }
 
-// System to handle invulnerability duration and flashing
-pub fn handle_invulnerability(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut Invulnerable, &mut Sprite)>,
-) {
-    for (entity, mut invulnerable, mut sprite) in query.iter_mut() {
-        invulnerable.total_time.tick(time.delta());
-        invulnerable.flash_timer.tick(time.delta());
+#[derive(PartialEq)]
+pub enum DamageSource {
+    Player,
+    Enemy,
+    NPC,
+    Environment,
+}
 
-        //  Alternate sprite alpha between 1.0 and 0.1 on flash timer interval
-        if invulnerable.flash_timer.just_finished() {
-            let current_alpha = sprite.color.alpha();
-            sprite.color.set_alpha(1.1 - current_alpha);
+impl From<DamageSource> for LayerMask {
+    fn from(source: DamageSource) -> Self {
+        match source {
+            DamageSource::Player => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Enemy => GameCollisionLayer::Player.to_bits(),
+            DamageSource::NPC => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Environment => {
+                // Combine both Player and Enemy layers for Environment
+                GameCollisionLayer::Enemy.to_bits() | GameCollisionLayer::Player.to_bits()
+            }
         }
-
-        // Remove invulnerability when timer is finished and ensure sprite is visible
-        if invulnerable.total_time.finished() {
-            sprite.color.set_alpha(1.0);
-            commands.entity(entity).remove::<Invulnerable>();
-        }
+        .into()
     }
 }

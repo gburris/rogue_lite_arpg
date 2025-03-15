@@ -2,11 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    ai::{
-        state::{ActionState, AimPosition, FacingDirection},
-        SimpleMotion,
-    },
-    combat::Health,
+    combat::{attributes::Health, components::AimPosition},
+    movement::components::SimpleMotion,
 };
 
 #[derive(Component)]
@@ -17,9 +14,7 @@ use crate::{
     PlayerLevel,
     AimPosition,
     RigidBody,
-    LockedAxes(|| LockedAxes::new().lock_rotation()),
-    FacingDirection,
-    ActionState,
+    LockedAxes(|| LockedAxes::new().lock_rotation())
 )]
 pub struct Player;
 

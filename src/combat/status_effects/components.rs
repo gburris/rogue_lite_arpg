@@ -7,12 +7,12 @@ use super::events::ApplyStatus;
 /**
  * "Effects" are currently just a list of statuses to apply
  */
-#[derive(Component, Default, Clone)]
+#[derive(Component, Debug, Default, Clone)]
 pub struct EffectsList {
     pub effects: Vec<ApplyStatus>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum StatusType {
     Burning(BurningStatus),
     Frozen,
@@ -20,7 +20,7 @@ pub enum StatusType {
     Stunned,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug, Clone)]
 #[require(Status)]
 pub struct BurningStatus {
     pub damage: f32,
@@ -40,7 +40,7 @@ impl Default for BurningStatus {
 #[require(Status)]
 pub struct FrozenStatus;
 
-#[derive(Component, Clone)]
+#[derive(Component, Debug, Clone)]
 #[require(Status)]
 pub struct SlowedStatus {
     pub slow_percentage: f32,

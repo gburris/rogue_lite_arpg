@@ -1,7 +1,6 @@
 use super::EquipmentSlot;
 use crate::{
-    ai::state::{ActionState, FacingDirection},
-    items::inventory::Inventory,
+    animation::FacingDirection, combat::components::ActionState, items::inventory::Inventory,
     labels::layer::ZLayer,
 };
 use bevy::prelude::*;

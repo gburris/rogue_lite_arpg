@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::{Health, Mana},
+    combat::attributes::{Health, Mana},
     despawn::components::LiveDuration,
     items::{
         equipment::{

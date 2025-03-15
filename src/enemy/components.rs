@@ -4,7 +4,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::{ai::SimpleMotion, combat::Health};
+use crate::{combat::attributes::health::Health, movement::components::SimpleMotion};
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]

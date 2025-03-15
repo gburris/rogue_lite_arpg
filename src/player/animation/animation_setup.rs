@@ -1,6 +1,6 @@
 use crate::{
-    ai::state::{ActionState, FacingDirection},
-    animation::{AnimationTimer, DefaultAnimationConfig},
+    animation::{AnimationTimer, DefaultAnimationConfig, FacingDirection},
+    combat::components::ActionState,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     player::Player,
 };

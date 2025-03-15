@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
 use crate::combat::{
-    damage::{AttemptDamageEvent, Damage},
+    attributes::Health, damage::events::AttemptDamageEvent,
     status_effects::components::BurningStatus,
-    Health,
 };
 
 const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
@@ -26,7 +25,7 @@ pub fn while_burning(
                 commands.trigger_targets(
                     AttemptDamageEvent {
                         damage_source: None,
-                        damage: Damage::Single(burn.damage),
+                        damage: burn.damage,
                     },
                     entity,
                 );

@@ -4,13 +4,14 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{invulnerable::HasIFrames, Mana},
+    animation::FacingDirection,
+    combat::{attributes::mana::Mana, components::ActionState, damage::components::HasIFrames},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
     },
     items::{
-        equipment::{on_equipment_activated, Equipped},
+        equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
         inventory::Inventory,
         *,
     },
@@ -29,7 +30,9 @@ pub fn spawn_player(
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
-        spawn_offhand(&mut commands, &sprites, "tome_of_healing"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "tome_of_healing"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "magic_shield"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "knight_shield"),
     ];
 
     let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
@@ -59,11 +62,13 @@ pub fn spawn_player(
                     GameCollisionLayer::Magnet,
                 ],
             ),
+            (FacingDirection::Down, ActionState::Idle),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
         ))
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)
+        .observe(on_equipment_deactivated)
         .id();
 
     commands

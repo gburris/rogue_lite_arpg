@@ -3,18 +3,16 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::state::FacingDirection,
+    animation::FacingDirection,
     combat::{
-        mana::ManaCost,
-        melee::{MeleeSwingType, MeleeWeapon},
-        projectile::{
-            components::{Projectile, ProjectileBundle},
-            ProjectileWeapon,
-        },
+        attributes::mana::ManaCost,
+        melee::components::{MeleeSwingType, MeleeWeapon},
+        projectile::components::{Projectile, ProjectileBundle},
         status_effects::{
             components::{BurningStatus, EffectsList, StatusType},
             events::ApplyStatus,
         },
+        weapon::weapon::ProjectileWeapon,
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{

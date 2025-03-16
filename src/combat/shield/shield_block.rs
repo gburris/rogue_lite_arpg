@@ -4,6 +4,7 @@ use crate::{
         attributes::{Mana, ManaDrainRate},
         components::AimPosition,
     },
+    enemy::Enemy,
     items::{
         equipment::{EquipmentTransform, Equipped},
         Shield,

@@ -1,11 +1,8 @@
-use std::f32::consts::FRAC_PI_2;
-
 use bevy::prelude::*;
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::animation::FacingDirection;
-use crate::combat::projectile::spawn::spawn_projectile_from_weapon;
 use crate::combat::shield::components::ProjectileReflection;
 use crate::combat::shield::shield_block::deactivate_shield;
 use crate::combat::shield::ActiveShield;
@@ -157,7 +154,7 @@ pub fn on_weapon_fired(
         return;
     };
 
-    spawn_projectile_from_weapon(
+    spawn_projectile(
         damage_source,
         &mut commands,
         holder_transform,
@@ -237,12 +234,13 @@ pub fn on_shield_block(
     mut commands: Commands,
     mut shield_query: Query<(Entity, &Shield)>,
 ) {
-    let Ok((shield_entity, shield)) = shield_query.get_mut(fired_trigger.entity()) else {
+    let Ok((shield_entity, _)) = shield_query.get_mut(fired_trigger.entity()) else {
         warn!("Tried to block with invalid shield");
         return;
     };
-
-    commands.entity(shield_entity).insert(ActiveShield);
+    commands.entity(shield_entity).insert(ActiveShield {
+        projectiles_reflected: Default::default(),
+    });
 }
 
 pub fn on_equipment_deactivated(

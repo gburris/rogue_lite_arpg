@@ -3,12 +3,14 @@ use bevy::prelude::*;
 
 use crate::combat::{
     attributes::Health, damage::events::AttemptDamageEvent, projectile::components::*,
+    shield::components::ProjectileReflection,
 };
 
 pub fn handle_projectile_collisions(
     mut commands: Commands,
     projectile_query: Query<(&Projectile, &CollidingEntities, Entity)>,
     health_query: Query<&Health>,
+    reflector_query: Query<&ProjectileReflection>,
 ) {
     for (projectile, colliding_entities, projectile_entity) in projectile_query.iter() {
         for &colliding_entity in colliding_entities.iter() {
@@ -23,7 +25,9 @@ pub fn handle_projectile_collisions(
                     colliding_entity,
                 );
             }
-            // despawn projectile and ignore further collisions after ANY collision
+            if reflector_query.contains(colliding_entity) {
+                continue;
+            }
             commands.entity(projectile_entity).despawn_recursive();
             return;
         }

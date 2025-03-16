@@ -1,5 +1,5 @@
-use avian2d::prelude::{CollidingEntities, CollisionLayers, Sensor};
-use bevy::prelude::*;
+use avian2d::prelude::{CollidingEntities, CollisionLayers, LayerMask, Sensor};
+use bevy::{prelude::*, utils::{HashMap, HashSet}};
 
 use crate::configuration::GameCollisionLayer;
 
@@ -9,10 +9,11 @@ pub struct ProjectileReflection;
 
 impl ProjectileReflection {
     pub fn collision_layers() -> CollisionLayers {
-        //TODO: Shield PR:  Need a layer mask
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir)
     }
 }
 
 #[derive(Component)]
-pub struct ActiveShield;
+pub struct ActiveShield {
+    pub projectiles_reflected: HashSet<Entity>,
+}

@@ -1,88 +1,54 @@
 use crate::{
     combat::{
-        damage::components::DamageSource,
-        projectile::{components::*, spawn::spawn_reflected_projectile, spawn_projectile},
+        damage::components::DamageSource, projectile::components::*,
         shield::components::ProjectileReflection,
-        status_effects::components::EffectsList,
-        weapon::weapon::ProjectileWeapon,
     },
-    items::equipment::Equipped,
+    configuration::GameCollisionLayer,
+    enemy::Enemy,
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+use super::ActiveShield;
+
 pub fn handle_projectile_reflection_collisions(
-    mut commands: Commands,
-    projectile_reflector_query: Query<(
+    mut projectile_reflector_query: Query<(
         &ProjectileReflection,
+        &mut ActiveShield,
         &CollidingEntities,
-        Entity,
-        &Transform,
+        &Parent,
     )>,
-    projectile_query: Query<(
+    mut projectile_query: Query<(
         &Projectile,
-        &Transform,
-        &LinearVelocity,
-        &Sprite,
-        &EffectsList,
-        Entity,
+        &mut LinearVelocity,
+        &mut CollisionLayers,
+        &mut Transform,
     )>,
-    equipped_query: Query<&Equipped>,
-    // Add parent transform query to get the parent/caster's position
-    parent_query: Query<&Transform>,
+    enemy_query: Query<&Enemy>,
 ) {
-    for (_, colliding_entities, reflector_entity, reflector_transform) in
-        projectile_reflector_query.iter()
-    {
-        let shield_owner = match equipped_query.get(reflector_entity) {
-            Ok(equipped) => equipped.get_equipped_to(),
-            Err(_) => continue, // Skip if not equipped
-        };
-
-        // Get the caster/owner transform
-        let caster_transform = match parent_query.get(shield_owner) {
-            Ok(transform) => transform,
-            Err(_) => {
-                warn!(
-                    "Could not find caster transform for shield owner: {:?}",
-                    shield_owner
-                );
-                continue; // Skip if we can't get the caster transform
-            }
-        };
-
-        info!("Shield owner position: {:?}", caster_transform.translation);
-        info!("Shield position: {:?}", reflector_transform.translation);
-
+    for (_, mut shield, colliding_entities, holder) in projectile_reflector_query.iter_mut() {
         for &colliding_entity in colliding_entities.iter() {
-            if let Ok((
-                projectile,
-                projectile_transform,
-                linear_velocity,
-                sprite,
-                effects_list,
-                _,
-            )) = projectile_query.get(colliding_entity)
+            if shield.projectiles_reflected.contains(&colliding_entity) {
+                continue;
+            }
+            if let Ok((_, mut linear_velocity, mut collision_layers, mut transform)) =
+                projectile_query.get_mut(colliding_entity)
             {
-                info!("Reflecting projectile!");
-
-                // Pass both shield position and caster position to the reflection function
-                let impact_position =
-                    reflector_transform.translation + caster_transform.translation;
                 let incoming_velocity = linear_velocity.0;
-                let new_damage_source = DamageSource::Player;
-
-                spawn_reflected_projectile(
-                    new_damage_source,
-                    &mut commands,
-                    projectile,
-                    sprite,
-                    effects_list,
-                    impact_position,
-                    incoming_velocity,
+                let mut new_damage_source = DamageSource::Player;
+                if let Ok(_enemy) = enemy_query.get(holder.get()) {
+                    new_damage_source = DamageSource::Enemy;
+                }
+                let reflection_direction = -incoming_velocity.normalize();
+                let reflected_velocity = reflection_direction * incoming_velocity.length();
+                linear_velocity.0 = reflected_velocity;
+                let angle = reflected_velocity.y.atan2(reflected_velocity.x);
+                transform.rotation = Quat::from_rotation_z(angle);
+                *collision_layers = CollisionLayers::new(
+                    GameCollisionLayer::InAir,
+                    LayerMask::from(new_damage_source) | GameCollisionLayer::HighObstacle,
                 );
-
-                commands.entity(colliding_entity).despawn_recursive();
+                shield.projectiles_reflected.insert(colliding_entity);
             }
         }
     }

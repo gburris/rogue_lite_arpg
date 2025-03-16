@@ -1,5 +1,5 @@
-use avian2d::prelude::{CollidingEntities, CollisionLayers, LayerMask, Sensor};
-use bevy::{prelude::*, utils::{HashMap, HashSet}};
+use avian2d::prelude::{CollidingEntities, CollisionLayers, Sensor};
+use bevy::{prelude::*, utils::HashSet};
 
 use crate::configuration::GameCollisionLayer;
 

@@ -54,7 +54,6 @@ pub fn player_input(
     }
 
     if buttons.just_released(MouseButton::Right) {
-        warn!("releasing MBR");
         commands.trigger_targets(
             StopUsingHoldableEquipmentInputEvent {
                 slot: EquipmentSlot::Offhand,

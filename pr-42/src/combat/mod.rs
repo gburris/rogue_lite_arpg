@@ -1,0 +1,9 @@
+pub mod attributes;
+pub mod components;
+pub mod damage;
+pub mod melee;
+pub mod plugin;
+pub mod projectile;
+pub mod shield;
+pub mod status_effects;
+pub mod weapon;

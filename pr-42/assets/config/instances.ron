@@ -1,0 +1,40 @@
+InstanceConfig(
+    instances: {
+        "Swamp": InstanceType(
+            size_x_range: (50.0, 100.0),
+            size_y_range: (50.0, 100.0),
+            number_of_enemies_range: (10.0, 15.0),
+            chest_range: (0.0, 0.0),
+            num_exits: 2,
+            prefabs: ["Temple", "EmptySquare"],
+            floor_type: "Ground",
+        ),
+        "SwampWithALotOfEmptySquares": InstanceType(
+            size_x_range: (50.0, 100.0),
+            size_y_range: (50.0, 100.0),
+            number_of_enemies_range: (10.0, 15.0),
+            num_exits: 2,
+            chest_range: (0.0, 0.0),
+            prefabs: ["Temple", "EmptySquare", "EmptySquare", "EmptySquare", "EmptySquare", "EmptySquare"],
+            floor_type: "Ground",
+        ),
+        "LongHallway": InstanceType(
+            size_x_range: (100.0, 200.0),
+            size_y_range: (15.0, 35.0),
+            number_of_enemies_range: (10.0, 15.0),
+            num_exits: 1,
+            chest_range: (0.0, 0.0),
+            prefabs: [],
+            floor_type: "Cobblestone",
+        ),
+        "TreasureRoom": InstanceType(
+            size_x_range: (50.0, 50.0),
+            size_y_range: (50.0, 50.0),
+            number_of_enemies_range: (0.0, 0.0),
+            num_exits: 1,
+            chest_range: (10.0, 15.0),
+            prefabs: [],
+            floor_type: "Cobblestone",
+        ),
+    }
+)

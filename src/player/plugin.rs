@@ -6,7 +6,7 @@ use crate::{
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
-    player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
+    player::{systems::*, PlayerMovementEvent},
 };
 
 use super::{
@@ -58,7 +58,6 @@ impl Plugin for PlayerPlugin {
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)
             .add_observer(on_player_interaction_input)
-            .add_observer(on_interaction_zone_added)
-            .insert_resource(PlayerSize { x: 256.0, y: 256.0 });
+            .add_observer(on_interaction_zone_added);
     }
 }

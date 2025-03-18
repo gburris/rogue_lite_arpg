@@ -13,7 +13,7 @@ pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(all(debug_assertions))]
+        #[cfg(debug_assertions)]
         app.add_plugins(DebugPlugin);
 
         #[cfg(not(debug_assertions))]

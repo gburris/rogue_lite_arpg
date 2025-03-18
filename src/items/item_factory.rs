@@ -14,7 +14,7 @@ pub fn on_item_added(trigger: Trigger<OnAdd, Item>, mut commands: Commands) {
         .observe(on_lootable_item_interaction);
 }
 
-pub fn spawn_health_potion(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_health_potion(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     commands
         .spawn((
             Name::new("Health Potion"),

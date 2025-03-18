@@ -22,7 +22,7 @@ impl Mana {
             self.current_mana -= cost.0;
             return true;
         }
-        return false;
+        false
     }
 
     pub fn regenerate(&mut self, delta_time: f32) {

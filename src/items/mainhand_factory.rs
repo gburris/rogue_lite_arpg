@@ -24,7 +24,7 @@ use crate::{
 
 use super::ItemType;
 
-pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_sword(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     commands
         .spawn((
             MeleeWeapon {
@@ -38,14 +38,13 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Enti
             Name::new("Sword"),
             Equippable::default(),
             Item::new(120, ItemType::Melee),
-            Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
         ))
         .observe(on_weapon_melee)
         .id()
 }
 
-pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_axe(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     commands
         .spawn((
             MeleeWeapon {
@@ -72,8 +71,8 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
 
 pub fn spawn_fire_staff(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let fireball = ProjectileBundle {
         projectile: Projectile {
@@ -113,8 +112,8 @@ pub fn spawn_fire_staff(
 
 pub fn spawn_ice_staff(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let icicle_projectile = ProjectileBundle {
         projectile: Projectile {
@@ -157,8 +156,8 @@ pub fn spawn_ice_staff(
 
 pub fn spawn_random_mainhand_weapon(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let mut rng = thread_rng();
     let choice = rng.gen_range(0..4);
@@ -176,8 +175,8 @@ pub fn spawn_random_mainhand_weapon(
 //And make this more of a factory pattern kinda vibe
 pub fn spawn_mainhand_weapon(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
     weapon_name: &str,
 ) -> Entity {
     match weapon_name {

@@ -12,5 +12,5 @@ pub fn generate_hub_layout() -> MapLayout {
         .with_exits(0)
         .with_prefab(PrefabType::NPCHub)
         .build();
-    return MapLayout::from(map_data);
+    MapLayout::from(map_data)
 }

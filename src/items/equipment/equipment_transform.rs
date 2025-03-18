@@ -21,7 +21,7 @@ pub struct EquipmentTransform {
 
 //You wish this wasn't like this but it is
 //See std lib example here https://crates.io/crates/lazy_static
-const EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTransform>> =
+static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTransform>> =
     LazyLock::new(|| {
         let mut m = HashMap::new();
 

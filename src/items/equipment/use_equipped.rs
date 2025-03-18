@@ -154,7 +154,7 @@ pub fn on_weapon_fired(
         &mut commands,
         holder_transform,
         holder_aim.position,
-        &projectile_weapon,
+        projectile_weapon,
     );
 }
 

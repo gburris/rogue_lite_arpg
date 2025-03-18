@@ -170,7 +170,7 @@ fn merge_markers(
     for (marker_type, positions) in new_markers {
         existing_markers
             .entry(marker_type)
-            .or_insert_with(Vec::new)
+            .or_default()
             .extend(positions);
     }
 }

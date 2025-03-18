@@ -5,6 +5,8 @@ use bevy::{
     prelude::*,
 };
 
+use crate::player::systems::player_input;
+
 use super::view;
 
 pub struct DebugPlugin;
@@ -30,7 +32,7 @@ impl Plugin for DebugPlugin {
                 ..default()
             });
         })
-        .add_systems(Update, handle_debug_input);
+        .add_systems(Update, handle_debug_input.after(player_input));
     }
 }
 

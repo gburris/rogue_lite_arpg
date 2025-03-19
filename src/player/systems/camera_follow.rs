@@ -1,4 +1,6 @@
-use bevy::color::palettes::basic::RED;
+use bevy::color::palettes::css::BLUE;
+use bevy::color::palettes::tailwind::PURPLE_700;
+use bevy::color::palettes::{basic::RED, css::ORANGE};
 use bevy::prelude::*;
 
 use crate::{ai::state::AimPosition, player::components::Player};
@@ -34,18 +36,22 @@ pub fn camera_follow_system(
 #[allow(clippy::type_complexity)]
 pub fn camera_debug_system(
     pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
-    cq: Query<&Transform, (With<Camera>, Without<Player>)>,
     mut gizmos: Gizmos,
 ) {
-    let (Ok((player, aim)), Ok(camera)) = (pq.get_single(), cq.get_single()) else {
+    let Ok((player, aim)) = pq.get_single() else {
         return;
     };
 
-    let z = camera.translation.z;
-    dbg!(z);
-    let aim_pos = Vec3::new(aim.position.x, aim.position.y, camera.translation.z);
-    let player_pos = player.translation.with_z(camera.translation.z);
-    let target = player_pos.lerp(aim_pos, TARGET_BIAS);
+    let player_pos = player.translation.xy();
+    let target = player_pos.lerp(aim.position, TARGET_BIAS);
 
-    gizmos.circle_2d(target.xy(), 1.0, RED);
+    // apply a distance constraint to the camera, this keeps it close to the player
+    // restore z from camera
+    let offset = (target - player_pos).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_pos;
+
+    gizmos.circle_2d(target, 5.0, RED).resolution(64);
+    gizmos.circle_2d(offset.xy(), 10.0, BLUE).resolution(64);
+    gizmos
+        .circle_2d(player_pos, CAMERA_DISTANCE_CONSTRAINT, PURPLE_700)
+        .resolution(64);
 }

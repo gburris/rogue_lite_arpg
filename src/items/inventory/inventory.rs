@@ -29,6 +29,8 @@ impl Default for Inventory {
 }
 
 impl Inventory {
+    pub const ALL_SLOTS: [EquipmentSlot; 2] = [EquipmentSlot::Mainhand, EquipmentSlot::Offhand];
+
     pub fn builder() -> InventoryBuilder {
         InventoryBuilder::default()
     }
@@ -101,8 +103,9 @@ impl Inventory {
 
     fn remove_item_by_index(&mut self, index_to_remove: usize) -> Result<Entity, String> {
         // all equipment indicies shift
-        self.adjust_slot_index(EquipmentSlot::Mainhand, index_to_remove);
-        self.adjust_slot_index(EquipmentSlot::Offhand, index_to_remove);
+        for slot in Inventory::ALL_SLOTS {
+            self.adjust_slot_index(slot, index_to_remove);
+        }
 
         self.items
             .remove(index_to_remove)

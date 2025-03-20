@@ -4,8 +4,8 @@ use bevy::prelude::*;
 
 use crate::items::{Item, Lootable};
 
-pub fn update_lootable_items(
-    mut query: Query<(&mut Item, &mut Transform, &mut Sprite), (With<Lootable>,)>,
+pub fn glow_and_rotate_lootables(
+    mut query: Query<(&mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
     time: Res<Time>,
 ) {
     for (mut item, mut transform, mut sprite) in query.iter_mut() {

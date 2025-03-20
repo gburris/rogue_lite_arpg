@@ -18,7 +18,7 @@ impl Plugin for AnimationPlugin {
                     update_animation, //Change animation if components change that dictace updating it
                 )
                     .chain()
-                    .in_set(InGameSet::Simulation),
+                    .in_set(InGameSet::Vfx),
             )
             .insert_resource(DefaultAnimationConfig::default());
     }

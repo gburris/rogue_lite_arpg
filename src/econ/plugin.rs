@@ -11,7 +11,7 @@ impl Plugin for EconPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            handle_currency_collisions.in_set(InGameSet::Simulation),
+            handle_currency_collisions.in_set(InGameSet::Collision),
         )
         .add_observer(on_gold_drop_event);
     }

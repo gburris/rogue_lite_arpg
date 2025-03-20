@@ -30,6 +30,8 @@ impl Plugin for SchedulePlugin {
                 InGameSet::DespawnEntities,
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
+                InGameSet::Camera,
+                InGameSet::Vfx,
                 InGameSet::HudOverlay,
                 InGameSet::Physics,
                 InGameSet::Collision,

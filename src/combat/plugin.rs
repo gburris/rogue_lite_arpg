@@ -8,6 +8,8 @@ use crate::{
     labels::sets::InGameSet,
 };
 
+use super::shield::{handle_collisions::handle_projectile_reflection_collisions, shield_block::{activate_shield, update_active_shields}};
+
 pub struct CombatPlugin;
 
 impl Plugin for CombatPlugin {
@@ -20,10 +22,12 @@ impl Plugin for CombatPlugin {
                         invulnerable::handle_invulnerability,
                         mana::regenerate_mana,
                         melee::process_melee_attacks,
+                        update_active_shields,
                     )
                         .in_set(InGameSet::Simulation),
                     (
                         melee::end_melee_attacks,
+                        handle_projectile_reflection_collisions,
                         projectile::handle_projectile_collisions,
                         melee::handle_melee_collisions,
                     )
@@ -31,6 +35,7 @@ impl Plugin for CombatPlugin {
                 ),
             )
             .add_observer(health::on_healing_event)
-            .add_observer(damage::on_damage_event);
+            .add_observer(damage::on_damage_event)
+            .add_observer(activate_shield);
     }
 }

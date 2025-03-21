@@ -7,6 +7,7 @@ pub fn setup_enemy_assets(mut commands: Commands) {
     commands.insert_resource(EnemyAssets { enemy_config });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn fetch_enemy_data() -> File {
     File::open("assets/config/enemies.ron").expect("Failed to open RON file")
 }

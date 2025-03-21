@@ -7,6 +7,7 @@ pub fn setup_instance_data(mut commands: Commands) {
     let instance_config = load_instance_data();
     commands.insert_resource(InstanceAssets { instance_config });
 }
+#[cfg(not(target_arch = "wasm32"))]
 fn fetch_instance_data() -> File {
     File::open("assets/config/instances.ron").expect("Failed to open RON file")
 }

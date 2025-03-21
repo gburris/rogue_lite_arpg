@@ -48,6 +48,7 @@ impl Plugin for PlayerPlugin {
                         player_movement,
                         update_player_aim_position,
                         on_player_experience_change,
+                        camera_debug_system,
                     )
                         .in_set(InGameSet::Simulation),
                     // avian recommended ordering for camera following logic

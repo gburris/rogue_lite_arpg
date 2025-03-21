@@ -34,7 +34,7 @@ impl FacingDirection {
     }
 }
 
-/// Represents coordinate where entitiy is aiming, for player this is the cursor
+/// Represents the world coordinate where an entitiy is aiming, for player this is the cursor
 #[derive(Component, Default)]
 pub struct AimPosition {
     pub position: Vec2,

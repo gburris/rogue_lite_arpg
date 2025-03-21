@@ -48,6 +48,7 @@ impl Plugin for PlayerPlugin {
                         draw_cursor,
                         on_player_experience_change,
                         animate_level_up,
+                        camera_debug_system,
                     )
                         .before(camera_follow_system),
                     camera_follow_system.before(TransformSystem::TransformPropagate), // avian recommended ordering for camera following logic

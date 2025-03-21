@@ -3,20 +3,15 @@ use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
-    ai::state::{ActionState, AimPosition},
+    ai::state::{ActionState, AimPosition, FacingDirection},
     combat::{
-        damage::DamageSource,
-        health::AttemptHealingEvent,
-        mana::ManaCost,
-        melee::{start_melee_attack, MeleeWeapon},
-        projectile::{spawn::spawn_projectile, ProjectileWeapon},
-        Mana,
+        damage::DamageSource, health::AttemptHealingEvent, mana::ManaCost, melee::{start_melee_attack, MeleeWeapon}, projectile::{spawn::spawn_projectile, ProjectileWeapon}, shield::{shield_block::deactivate_shield, ActiveShield}, Mana
     },
     enemy::Enemy,
     items::{
-        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
+        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect, Shield,
     },
-    player::UseEquipmentInputEvent,
+    player::{StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent},
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -212,4 +207,47 @@ pub fn on_healing_tome_cast(
     commands
         .entity(fired_trigger.holder)
         .with_child(HealingTomeSpellVisualEffect);
+}
+
+pub fn on_shield_block(
+    fired_trigger: Trigger<UseEquipmentEvent>,
+    mut commands: Commands,
+    mut shield_query: Query<(Entity, &Shield)>,
+) {
+    let Ok((shield_entity, _)) = shield_query.get_mut(fired_trigger.entity()) else {
+        warn!("Tried to block with invalid shield");
+        return;
+    };
+    commands.entity(shield_entity).insert(ActiveShield {
+        projectiles_reflected: Default::default(),
+    });
+}
+
+pub fn on_equipment_deactivated(
+    fired_trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
+    mut commands: Commands,
+    holder_query: Query<(&Inventory, &FacingDirection)>,
+    mut shield_query: Query<(Entity, &mut Sprite), (With<Shield>, With<ActiveShield>)>,
+) {
+    // Get the holder's inventory
+    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.entity()) else {
+        warn!("Tried to stop blocking but entity has no inventory or no direction");
+        return;
+    };
+
+    let Some(shield_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
+        warn!("No shield equipped in offhand");
+        return;
+    };
+
+    if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
+        deactivate_shield(
+            &mut commands,
+            shield_entity,
+            *facing_direction,
+            Some(&mut shield_sprite),
+        );
+    } else {
+        warn!("Shield is equipped but doesn't have ActiveShield");
+    }
 }

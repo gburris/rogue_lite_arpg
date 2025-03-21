@@ -37,6 +37,9 @@ impl Mana {
 #[derive(Component, Clone)]
 pub struct ManaCost(pub f32);
 
+#[derive(Component, Clone)]
+pub struct ManaDrainRate(pub f32);
+
 /// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration rate
 pub fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     let delta_time = time.delta_secs();

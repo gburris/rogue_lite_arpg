@@ -16,9 +16,9 @@ pub fn on_healing_tome_visual_added(
 
     commands.entity(entity).insert((
         Sprite {
-            image: sprites.tome_of_healing_effect_sprite_sheet.clone(),
+            image: sprites.tome_of_healing_effect.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: layouts.tome_of_healing_effect.clone(),
+                layout: layouts.spell_effect.clone(),
                 index: 0,
             }),
             anchor: Anchor::Custom(Vec2::new(0.0, 0.10)),

@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::player::systems::player_input;
+use crate::{labels::sets::InGameSet, player::systems::player_input};
 
 use super::view;
 
@@ -32,7 +32,15 @@ impl Plugin for DebugPlugin {
                 ..default()
             });
         })
-        .add_systems(Update, handle_debug_input.after(player_input));
+        .add_systems(
+            Update,
+            (
+                handle_debug_input
+                    .in_set(InGameSet::PlayerInput)
+                    .after(player_input),
+                view::camera_debug_system.in_set(InGameSet::HudOverlay),
+            ),
+        );
     }
 }
 

@@ -50,10 +50,6 @@ impl Plugin for PlayerPlugin {
                         on_player_experience_change,
                     )
                         .in_set(InGameSet::Simulation),
-                    // avian recommended ordering for camera following logic
-                    camera_follow_system
-                        .in_set(InGameSet::Camera)
-                        .before(TransformSystem::TransformPropagate),
                     (draw_cursor, animate_level_up).in_set(InGameSet::Vfx),
                 ),
             )

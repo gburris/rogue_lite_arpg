@@ -31,7 +31,7 @@ impl Prefab for EmptySquare {
     }
 }
 
-fn find_dead_zone_position(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> Option<Rect> {
+fn find_dead_zone_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Option<Rect> {
     let mut rng = rand::thread_rng();
     let max_attempts = 50;
     let size = rng.gen_range(3..=10) as f32;
@@ -58,7 +58,7 @@ fn find_dead_zone_position(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> O
     None
 }
 
-fn can_place_dead_zone(map: &Vec<Vec<TileType>>, bounds: &Rect) -> bool {
+fn can_place_dead_zone(map: &[Vec<TileType>], bounds: &Rect) -> bool {
     let buffer = 2;
     for x in (bounds.min.x as isize - buffer)..=(bounds.max.x as isize + buffer) {
         for y in (bounds.min.y as isize - buffer)..=(bounds.max.y as isize + buffer) {

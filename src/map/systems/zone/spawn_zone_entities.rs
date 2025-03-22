@@ -18,7 +18,7 @@ use crate::{
 };
 
 fn convert_tiles_to_world_positions(
-    tile_positions: &Vec<Vec2>,
+    tile_positions: &[Vec2],
     world_config: &WorldSpaceConfig,
     map_layout: &MapLayout,
     z_layer: ZLayer,

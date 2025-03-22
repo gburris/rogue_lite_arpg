@@ -15,6 +15,7 @@ impl Plugin for SchedulePlugin {
             (
                 MainSet::InGame.run_if(in_state(AppState::Playing)),
                 MainSet::Menu.run_if(in_state(AppState::Paused)),
+                MainSet::Shared,
             )
                 .chain()
                 .after(LoadingStateSet(AppState::AssetLoading)), // appease the system ordering gods
@@ -29,6 +30,8 @@ impl Plugin for SchedulePlugin {
                 InGameSet::DespawnEntities,
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
+                InGameSet::Camera,
+                InGameSet::Vfx,
                 InGameSet::HudOverlay,
                 InGameSet::Physics,
                 InGameSet::Collision,

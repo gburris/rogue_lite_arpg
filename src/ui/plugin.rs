@@ -39,7 +39,6 @@ impl Plugin for UIPlugin {
                 (
                     player_overlay::update_exp_bar,
                     player_overlay::update_action_bar,
-                    player_overlay::on_cooldown_indicator_added,
                     player_overlay::update_cooldowns,
                     (
                         player_overlay::update_mana_bar,

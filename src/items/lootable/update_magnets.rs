@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{items::Magnet, player::Player};
 
-pub fn update_magnets(
+pub fn update_magnet_locations(
     time: Res<Time>,
     magnet_query: Query<(&Parent, &Magnet, &CollidingEntities)>,
     mut parent_query: Query<&mut Transform, Without<Player>>,

@@ -44,7 +44,7 @@ impl EnemyType {
         }
     }
 
-    pub fn sprite(&self, sprites: &Res<SpriteAssets>) -> Handle<Image> {
+    pub fn sprite(&self, sprites: &SpriteAssets) -> Handle<Image> {
         match self {
             Self::IceMage => sprites.ice_mage_enemy_sprite_sheet.clone(),
             Self::Warrior => sprites.warrior_enemy_sprite_sheet.clone(),
@@ -78,11 +78,11 @@ pub fn spawn_enemies(
 fn spawn_enemy(
     commands: &mut Commands,
     enemy_name: &str,
-    enemy_assets: &Res<EnemyAssets>,
+    enemy_assets: &EnemyAssets,
     spawn_data: EnemySpawnData,
-    animation_config: &Res<DefaultAnimationConfig>,
-    sprites: &Res<SpriteAssets>,
-    atlases: &Res<SpriteSheetLayouts>,
+    animation_config: &DefaultAnimationConfig,
+    sprites: &SpriteAssets,
+    atlases: &SpriteSheetLayouts,
 ) {
     if let Some(enemy_details) = enemy_assets.enemy_config.get(enemy_name) {
         let sprite = Sprite::from_atlas_image(
@@ -95,9 +95,10 @@ fn spawn_enemy(
             },
         );
 
-        let weapon = spawn_mainhand_weapon(commands, &sprites, &atlases, &enemy_details.weapon);
-        let health_potion = spawn_health_potion(commands, &sprites);
-        let starting_items = [weapon, health_potion];
+        let starting_items = [
+            spawn_mainhand_weapon(commands, sprites, atlases, &enemy_details.weapon),
+            spawn_health_potion(commands, sprites),
+        ];
 
         let enemy = commands
             .spawn((

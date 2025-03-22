@@ -1,13 +1,44 @@
-use bevy::color::palettes::css::BLUE;
-use bevy::color::palettes::tailwind::PURPLE_700;
-use bevy::color::palettes::{basic::RED, css::ORANGE};
-use bevy::prelude::*;
+use bevy::{
+    color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700},
+    prelude::*,
+    render::camera::ScalingMode,
+    window::WindowResolution,
+};
 
 use crate::{ai::state::AimPosition, player::components::Player};
 
+pub fn get_window_plugin() -> WindowPlugin {
+    WindowPlugin {
+        primary_window: Some(Window {
+            title: String::from("Baba Yaga"),
+            fit_canvas_to_parent: cfg!(target_arch = "wasm32"),
+            resolution: if cfg!(target_arch = "wasm32") {
+                Default::default() // No resolution for wasm32
+            } else {
+                WindowResolution::new(1920.0, 1080.0) // Set resolution for non-WASM
+            },
+            ..default()
+        }),
+        ..default()
+    }
+}
+
+pub fn spawn_camera(mut commands: Commands) {
+    commands.spawn((
+        Camera2d,
+        OrthographicProjection {
+            scaling_mode: ScalingMode::Fixed {
+                width: 960.0,
+                height: 540.0,
+            },
+            ..OrthographicProjection::default_2d()
+        },
+    ));
+}
+
 const DECAY_RATE: f32 = 2.9957; // f32::ln(20.0);
-const TARGET_BIAS: f32 = 0.45; // 0.5 is middle of the two positions between the player and the aim position
-const CAMERA_DISTANCE_CONSTRAINT: f32 = 300.0; // The camera will not go further than this distance from the player
+const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
+const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
 #[allow(clippy::type_complexity)]
 pub fn camera_follow_system(

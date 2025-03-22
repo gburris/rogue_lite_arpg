@@ -38,7 +38,7 @@ pub fn calculate_collider_position(
 }
 
 pub fn find_valid_position(
-    map: &Vec<Vec<TileType>>,
+    map: &[Vec<TileType>],
     map_size: TilemapSize,
     x_range: std::ops::Range<f32>,
 ) -> Option<Vec2> {
@@ -58,7 +58,7 @@ pub fn find_valid_position(
 }
 
 pub fn find_multiple_positions(
-    map: &Vec<Vec<TileType>>,
+    map: &[Vec<TileType>],
     map_size: TilemapSize,
     x_range: std::ops::Range<f32>,
     count: u32,
@@ -80,7 +80,7 @@ pub fn find_multiple_positions(
 
 const INVALID_SPAWN_TILES: [TileType; 2] = [TileType::Wall, TileType::DeadZone];
 
-pub fn is_position_valid(map: &Vec<Vec<TileType>>, x: u32, y: u32) -> bool {
+pub fn is_position_valid(map: &[Vec<TileType>], x: u32, y: u32) -> bool {
     let tile = &map[x as usize][y as usize];
     !INVALID_SPAWN_TILES.contains(tile)
 }

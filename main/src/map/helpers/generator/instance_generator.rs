@@ -19,7 +19,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
     ];
     let weights = [40, 25, 25, 10];
 
-    let dist = WeightedIndex::new(&weights).unwrap();
+    let dist = WeightedIndex::new(weights).unwrap();
     let selected_index = dist.sample(&mut rng);
     let instance_type = instance_assets
         .instance_config

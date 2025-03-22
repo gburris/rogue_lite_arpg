@@ -3,8 +3,11 @@ use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
-    window::WindowResolution,
 };
+
+use crate::{labels::sets::InGameSet, player::systems::player_input};
+
+use super::view;
 
 pub struct DebugPlugin;
 
@@ -18,7 +21,7 @@ impl Plugin for DebugPlugin {
                     filter: "wgpu=error,baba_yaga=debug".to_string(),
                     ..default()
                 })
-                .set(get_window_plugin())
+                .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(PhysicsDebugPlugin::default())
@@ -29,7 +32,15 @@ impl Plugin for DebugPlugin {
                 ..default()
             });
         })
-        .add_systems(Update, handle_debug_input);
+        .add_systems(
+            Update,
+            (
+                handle_debug_input
+                    .in_set(InGameSet::PlayerInput)
+                    .after(player_input),
+                view::camera_debug_system.in_set(InGameSet::HudOverlay),
+            ),
+        );
     }
 }
 
@@ -40,31 +51,5 @@ fn handle_debug_input(
     if keyboard_input.just_pressed(KeyCode::Comma) {
         let config = config_store.config_mut::<PhysicsGizmos>().0;
         config.enabled = !config.enabled;
-    }
-}
-
-fn get_window_plugin() -> WindowPlugin {
-    #[cfg(target_arch = "wasm32")]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Developer Mode"),
-                fit_canvas_to_parent: true,
-                ..Default::default()
-            }),
-            ..default()
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Developer Mode"),
-                resolution: WindowResolution::new(1920.0, 1080.0),
-                ..Default::default()
-            }),
-            ..default()
-        }
     }
 }

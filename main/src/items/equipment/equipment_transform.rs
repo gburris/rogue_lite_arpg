@@ -1,11 +1,14 @@
-use super::EquipmentSlot;
+use bevy::prelude::*;
+
+use std::{collections::HashMap, sync::LazyLock};
+
+use super::{EquipmentSlot, Equipped};
 use crate::{
     ai::state::{ActionState, FacingDirection},
+    combat::melee::ActiveMeleeAttack,
     items::inventory::Inventory,
     labels::layer::ZLayer,
 };
-use bevy::prelude::*;
-use std::{collections::HashMap, sync::OnceLock};
 
 // Constants for transform values
 const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
@@ -18,9 +21,8 @@ pub struct EquipmentTransform {
 
 //You wish this wasn't like this but it is
 //See std lib example here https://crates.io/crates/lazy_static
-fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransform> {
-    static TRANSFORMS: OnceLock<HashMap<FacingDirection, EquipmentTransform>> = OnceLock::new();
-    TRANSFORMS.get_or_init(|| {
+static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTransform>> =
+    LazyLock::new(|| {
         let mut m = HashMap::new();
 
         // Up direction
@@ -76,27 +78,29 @@ fn direction_transforms() -> &'static HashMap<FacingDirection, EquipmentTransfor
         );
 
         m
-    })
-}
+    });
 
 impl EquipmentTransform {
     pub fn get(direction: FacingDirection) -> Self {
-        direction_transforms().get(&direction).copied().unwrap()
+        EQUIPMENT_TRANSFORM_MAP.get(&direction).copied().unwrap()
     }
 }
 
 pub fn update_equipment_transforms(
     all_worn_equipment: Query<
-        (&Inventory, &ActionState, &FacingDirection),
-        Or<(Changed<FacingDirection>, Changed<ActionState>)>,
+        (&Inventory, &FacingDirection),
+        Or<(
+            // Update when holder changes direction
+            Changed<FacingDirection>,
+            // Update when holder stops attacking, stops casting, etc...
+            Changed<ActionState>,
+            // Update when new item is equipped
+            Changed<Inventory>,
+        )>,
     >,
-    mut transforms: Query<&mut Transform>,
+    mut transforms: Query<&mut Transform, (With<Equipped>, Without<ActiveMeleeAttack>)>,
 ) {
-    for (inventory, action_state, direction) in &all_worn_equipment {
-        if *action_state == ActionState::Attacking {
-            return;
-        }
-
+    for (inventory, direction) in &all_worn_equipment {
         let direction_transforms = EquipmentTransform::get(*direction);
 
         // Update mainhand equipment

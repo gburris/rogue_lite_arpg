@@ -20,10 +20,10 @@ impl Plugin for CombatPlugin {
                         invulnerable::handle_invulnerability,
                         mana::regenerate_mana,
                         melee::process_melee_attacks,
+                        melee::end_melee_attacks,
                     )
                         .in_set(InGameSet::Simulation),
                     (
-                        melee::end_melee_attacks,
                         projectile::handle_projectile_collisions,
                         melee::handle_melee_collisions,
                     )

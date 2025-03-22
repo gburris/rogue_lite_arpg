@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::state::FacingDirection,
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
@@ -18,35 +17,34 @@ use crate::{
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{
-        equipment::{on_weapon_fired, on_weapon_melee, EquipmentTransform, Equippable},
+        equipment::{on_weapon_fired, on_weapon_melee, Equippable},
         Item,
     },
 };
 
 use super::ItemType;
 
-pub fn spawn_sword(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_sword(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     commands
         .spawn((
             MeleeWeapon {
                 damage: (1.0, 6.0),
                 effects_list: EffectsList { effects: vec![] },
                 hitbox: Collider::rectangle(10.0, 40.0),
-                attack_type: MeleeSwingType::stab(),
-                attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
+                attack_type: MeleeSwingType::STAB,
+                attack_time: 0.2,
+                hold_distance: 15.0,
             },
             Name::new("Sword"),
             Equippable::default(),
             Item::new(120, ItemType::Melee),
-            Visibility::Hidden,
             Sprite::from_image(sprites.sword.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
 }
 
-pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+pub fn spawn_axe(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     commands
         .spawn((
             MeleeWeapon {
@@ -58,15 +56,14 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
                     }],
                 },
                 hitbox: Collider::rectangle(10.0, 40.0),
-                attack_type: MeleeSwingType::slash(),
-                attack_duration: Timer::from_seconds(0.4, TimerMode::Once),
+                attack_type: MeleeSwingType::SLASH,
+                attack_time: 0.3,
+                hold_distance: 30.0,
             },
             Name::new("Axe"),
             Equippable::default(),
             Item::new(220, ItemType::Melee),
-            Visibility::Hidden,
             Sprite::from_image(sprites.axe.clone()),
-            EquipmentTransform::get(FacingDirection::Down).mainhand,
         ))
         .observe(on_weapon_melee)
         .id()
@@ -74,8 +71,8 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity
 
 pub fn spawn_fire_staff(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let fireball = ProjectileBundle {
         projectile: Projectile {
@@ -96,8 +93,6 @@ pub fn spawn_fire_staff(
         ),
     };
 
-    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
-
     commands
         .spawn((
             ProjectileWeapon {
@@ -109,9 +104,7 @@ pub fn spawn_fire_staff(
             Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
-            Visibility::Hidden,
             Sprite::from_image(sprites.fire_staff.clone()),
-            weapon_transform,
         ))
         .observe(on_weapon_fired)
         .id()
@@ -119,8 +112,8 @@ pub fn spawn_fire_staff(
 
 pub fn spawn_ice_staff(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let icicle_projectile = ProjectileBundle {
         projectile: Projectile {
@@ -141,8 +134,6 @@ pub fn spawn_ice_staff(
         ),
     };
 
-    let weapon_transform: Transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
-
     commands
         .spawn((
             ProjectileWeapon {
@@ -157,9 +148,7 @@ pub fn spawn_ice_staff(
                 use_rate: Timer::from_seconds(0.7, TimerMode::Once),
                 ..default()
             },
-            Visibility::Hidden,
             Sprite::from_image(sprites.ice_staff.clone()),
-            weapon_transform,
         ))
         .observe(on_weapon_fired)
         .id()
@@ -167,8 +156,8 @@ pub fn spawn_ice_staff(
 
 pub fn spawn_random_mainhand_weapon(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let mut rng = thread_rng();
     let choice = rng.gen_range(0..4);
@@ -186,8 +175,8 @@ pub fn spawn_random_mainhand_weapon(
 //And make this more of a factory pattern kinda vibe
 pub fn spawn_mainhand_weapon(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
-    texture_layouts: &Res<SpriteSheetLayouts>,
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
     weapon_name: &str,
 ) -> Entity {
     match weapon_name {

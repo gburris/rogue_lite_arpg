@@ -11,7 +11,7 @@ use crate::{
     items::equipment::{EquipmentTransform, Equippable},
 };
 
-fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -> Entity {
+fn spawn_tome_of_healing(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
     let offhand_transform: Transform = EquipmentTransform::get(FacingDirection::Down).offhand;
 
     commands
@@ -23,7 +23,6 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
             HealingTome {
                 healing: (25.0, 50.0),
             },
-            Visibility::Hidden,
             Sprite::from_image(sprites.tome_of_healing.clone()),
             offhand_transform,
         ))
@@ -33,7 +32,7 @@ fn spawn_tome_of_healing(commands: &mut Commands, sprites: &Res<SpriteAssets>) -
 
 pub fn spawn_offhand(
     commands: &mut Commands,
-    sprites: &Res<SpriteAssets>,
+    sprites: &SpriteAssets,
     offhand_name: &str,
 ) -> Entity {
     match offhand_name {

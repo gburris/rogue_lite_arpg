@@ -8,6 +8,7 @@ use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration
 ///
 /// Ex.  All items can be dropped, so drop-related info can go here
 #[derive(Component)]
+#[require(Visibility(|| Visibility::Hidden))]
 pub struct Item {
     pub value: i32,
     pub item_type: ItemType,
@@ -50,9 +51,6 @@ pub enum ItemType {
 pub struct Consumable;
 
 #[derive(Component, Clone, Debug)]
-pub struct HealthPotion;
-
-#[derive(Component, Clone, Debug)]
 pub struct DropRate(pub f32);
 
 #[derive(Component)]
@@ -69,7 +67,6 @@ pub struct ItemDropEvent;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    Visibility(|| Visibility::Visible),
     LiveDuration(|| LiveDuration::new(10.0))
 )]
 pub struct Lootable;
@@ -95,7 +92,6 @@ pub struct HealingTome {
 
 #[derive(Component)]
 #[require(
-    Visibility(|| Visibility::Visible),
     LiveDuration(|| LiveDuration::new(1.0))
 )]
 pub struct HealingTomeSpellVisualEffect;

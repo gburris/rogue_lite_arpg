@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::ai::SimpleMotion;
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
+#[require(FacingDirection, AimPosition)]
 pub enum ActionState {
     Attacking,
     Defeated, //Death Animation

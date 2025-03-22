@@ -14,12 +14,12 @@ pub struct Enemy;
 //Experience granted by the enemy when player defeats it
 #[derive(Component)]
 pub struct Experience {
-    pub base_exp: u32,
+    pub base_exp: f32,
 }
 
 impl Default for Experience {
     fn default() -> Self {
-        Experience { base_exp: 10 }
+        Experience { base_exp: 10.0 }
     }
 }
 

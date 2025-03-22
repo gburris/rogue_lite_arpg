@@ -35,7 +35,7 @@ pub fn spawn_player(
 
     let player = commands
         .spawn((
-            Player,
+            Player::default(),
             Inventory::builder()
                 .items(starting_items.into())
                 .coins(0)

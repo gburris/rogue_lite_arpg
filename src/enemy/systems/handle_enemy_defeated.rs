@@ -10,17 +10,14 @@ use crate::{
     econ::gold_drop::GoldDropEvent,
     enemy::{Enemy, Experience},
     items::{inventory::inventory::Inventory, Item, ItemDropEvent},
-    player::{
-        components::{Player, PlayerExperience},
-        PlayerStats,
-    },
+    player::{components::Player, PlayerStats},
 };
 
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
     defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
-    player_query: Single<(&PlayerStats, &mut PlayerExperience), With<Player>>,
+    player_query: Single<(&PlayerStats, &mut Player)>,
     item_query: Query<&Item>,
 ) {
     let mut rng = thread_rng();
@@ -28,9 +25,9 @@ pub fn on_enemy_defeated(
     if let Ok((experience_to_gain, transform, inventory)) =
         defeated_enemy_query.get(trigger.entity())
     {
-        let (player_stats, mut experience) = player_query.into_inner();
+        let (player_stats, mut player) = player_query.into_inner();
         //Give EXP to the player
-        experience.current += experience_to_gain.base_exp;
+        player.current_experience += experience_to_gain.base_exp;
 
         if let Some(inventory) = inventory {
             for item_entity in inventory.items.iter() {

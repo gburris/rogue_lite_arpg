@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::{Binding, InputAction};
 
+<<<<<<< HEAD
 use crate::{
     items::equipment::EquipmentSlot,
     labels::states::PausedState,
@@ -9,6 +10,21 @@ use crate::{
         StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
     },
 };
+||||||| parent of e80b341 (wip)
+use crate::{
+    items::equipment::EquipmentSlot,
+    labels::states::PausedState,
+    player::{
+        interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
+        UseEquipmentInputEvent,
+    },
+};
+=======
+// Player InputActions
+#[derive(Debug, InputAction)]
+#[input_action(output = Vec2)]
+pub struct Movement;
+>>>>>>> e80b341 (wip)
 
 #[derive(Debug, InputAction)]
 #[input_action(output = Vec2)]
@@ -63,6 +79,26 @@ mod _old {
     ) {
         let player_entity = player_movement_query.into_inner();
 
+<<<<<<< HEAD
+    if buttons.just_pressed(MouseButton::Right) {
+        commands.trigger_targets(
+            UseEquipmentInputEvent {
+                slot: EquipmentSlot::Offhand,
+            },
+            player_entity,
+        );
+    }
+    if buttons.just_released(MouseButton::Right) {
+        commands.trigger_targets(
+            StopUsingHoldableEquipmentInputEvent {
+                slot: EquipmentSlot::Offhand,
+            },
+            player_entity,
+        );
+        return;
+    }
+    let mut direction = Vec2::ZERO;
+||||||| parent of e80b341 (wip)
     if buttons.pressed(MouseButton::Right) {
         commands.trigger_targets(
             UseEquipmentInputEvent {
@@ -73,6 +109,19 @@ mod _old {
     }
 
     let mut direction = Vec2::ZERO;
+=======
+        if keyboard_input.clear_just_pressed(KeyCode::Escape) {
+            commands.trigger(PauseInputEvent {
+                paused_state: Some(PausedState::MainMenu),
+            });
+            return;
+        }
+
+        if keyboard_input.clear_just_pressed(KeyCode::Space) {
+            commands.trigger(PlayerInteractionInput);
+            return;
+        }
+>>>>>>> e80b341 (wip)
 
         if buttons.pressed(MouseButton::Left) {
             commands.trigger_targets(

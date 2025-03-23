@@ -1,0 +1,4 @@
+rule:
+  - kind: if_expression
+  - all:
+      - kind: if_expression

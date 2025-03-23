@@ -14,7 +14,6 @@ accesskit = "0.17"
 avian2d = "0.2.0"
 tiled = "0.11.0"
 ldtk_rust = "0.6"
-thiserror = "1.0"
 serde_json = "1.0"
 rand = "0.8"
 log = { version = "*", features = [
@@ -23,17 +22,10 @@ log = { version = "*", features = [
 ] }
 serde = "1.0.217"
 noise = "0.9"
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = [
-  "Document",
-  "Window",
-  "Element",
-  "HtmlCanvasElement",
-] }
-console_error_panic_hook = "0.1"
 bevy-inspector-egui = { version = "0.29.1", optional = true }
 egui_plot = { version = "0.30.0", optional = true }
 egui_extras = { version = "0.30.0", optional = true }
+bevy_enhanced_input = "0.8.0"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -55,10 +47,19 @@ atlas = []
 debug = ["dep:bevy-inspector-egui", "dep:egui_plot", "dep:egui_extras"]
 trace = ["bevy/trace_tracy", "bevy/trace"]
 
-# Enable a small amount of optimization in the dev profile.
 [profile.dev]
-opt-level = 1
-
+# Enable a small amount of optimization in the dev profile.
+opt-level = 0
 # Enable a large amount of optimization in the dev profile for dependencies.
-[profile.dev.package."*"]
-opt-level = 3
+package."*" = { opt-level = 3 }
+build-override = { opt-level = 3 }
+
+[target.wasm32-unknown-unknown.dev-dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+  "Document",
+  "Window",
+  "Element",
+  "HtmlCanvasElement",
+] }
+console_error_panic_hook = "0.1"

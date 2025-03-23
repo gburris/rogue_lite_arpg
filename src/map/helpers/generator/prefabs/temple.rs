@@ -46,7 +46,7 @@ const TEMPLE_WIDTH: u32 = 7;
 const TEMPLE_HEIGHT: u32 = 7;
 const ENTRANCE_WIDTH: u32 = 3;
 
-fn find_temple_position(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> Option<Rect> {
+fn find_temple_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Option<Rect> {
     let mut rng = rand::thread_rng();
     let max_attempts = 100;
 
@@ -73,7 +73,7 @@ fn find_temple_position(map: &Vec<Vec<TileType>>, map_size: TilemapSize) -> Opti
     None
 }
 
-fn can_place_temple(map: &Vec<Vec<TileType>>, bounds: &Rect) -> bool {
+fn can_place_temple(map: &[Vec<TileType>], bounds: &Rect) -> bool {
     for x in (bounds.min.x as i32 - 1)..=(bounds.min.x + bounds.width()) as i32 + 1 {
         for y in (bounds.min.y as i32 - 1)..=(bounds.min.y + bounds.height()) as i32 + 1 {
             if x >= map.len() as i32 || y >= map[0].len() as i32 || x < 0 || y < 0 {

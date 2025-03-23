@@ -1,26 +1,28 @@
 use avian2d::prelude::*;
-use bevy::{prelude::*, window::WindowResolution};
+use bevy::prelude::*;
 
 use crate::{
     configuration::debug::DebugPlugin,
-    labels::states::{AppState, PausedState, PlayingState},
+    labels::{
+        sets::InGameSet,
+        states::{AppState, PausedState, PlayingState},
+    },
     progression::components::GameProgress,
 };
 
-#[derive(Component)]
-pub struct CursorCoordinates;
+use super::view;
 
 pub struct SetupPlugin;
 
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
-        #[cfg(all(debug_assertions))]
+        #[cfg(debug_assertions)]
         app.add_plugins(DebugPlugin);
 
         #[cfg(not(debug_assertions))]
         app.add_plugins(
             DefaultPlugins
-                .set(get_release_window_plugin())
+                .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         );
 
@@ -36,36 +38,12 @@ impl Plugin for SetupPlugin {
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()
             .add_sub_state::<PlayingState>()
-            .add_systems(Startup, setup_camera);
-    }
-}
-
-fn setup_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
-}
-
-fn get_release_window_plugin() -> WindowPlugin {
-    #[cfg(target_arch = "wasm32")]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Baba Yaga"),
-                fit_canvas_to_parent: true,
-                ..Default::default()
-            }),
-            ..default()
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        WindowPlugin {
-            primary_window: Some(Window {
-                title: String::from("Right click to cast Icebolt Left Click to Cast Fireball"),
-                resolution: WindowResolution::new(1920.0, 1080.0),
-                ..Default::default()
-            }),
-            ..default()
-        }
+            .add_systems(Startup, view::spawn_camera)
+            .add_systems(
+                Update, // avian recommended ordering for camera following logic
+                view::camera_follow_system
+                    .in_set(InGameSet::Camera)
+                    .before(TransformSystem::TransformPropagate),
+            );
     }
 }

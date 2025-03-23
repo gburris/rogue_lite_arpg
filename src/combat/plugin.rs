@@ -28,6 +28,9 @@ impl Plugin for CombatPlugin {
                     (
                         melee::end_melee_attacks,
                         handle_projectile_reflection_collisions,
+                    )
+                        .in_set(InGameSet::Simulation),
+                    (
                         projectile::handle_projectile_collisions,
                         melee::handle_melee_collisions,
                     )

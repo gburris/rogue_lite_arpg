@@ -102,7 +102,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
         }
 
         // Bottom wall
-        if max_y - wall_layer - 1 >= min_y {
+        if max_y - wall_layer > min_y {
             let start_x = min_x;
             let y = max_y - wall_layer - 1;
             let mut current_length = 0;
@@ -150,7 +150,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
         }
 
         // Right wall
-        if max_x - wall_layer - 1 >= min_x {
+        if max_x - wall_layer > min_x {
             let x = max_x - wall_layer - 1;
             let mut current_length = 0;
             let mut wall_start = min_y;

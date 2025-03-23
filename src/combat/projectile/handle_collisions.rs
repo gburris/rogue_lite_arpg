@@ -12,7 +12,8 @@ pub fn handle_projectile_collisions(
     reflector_query: Query<&ProjectileReflection>,
 ) {
     for (projectile, colliding_entities, projectile_entity) in projectile_query.iter() {
-        for &colliding_entity in colliding_entities.iter() {
+        // ignore further collisions after ANY collision with the projectile
+        if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // If the thing we collide with has health, lets try to damage it!
             if health_query.contains(colliding_entity) {
                 commands.trigger_targets(
@@ -26,9 +27,7 @@ pub fn handle_projectile_collisions(
             if reflector_query.contains(colliding_entity) {
                 continue;
             }
-            // despawn projectile and ignore further collisions after ANY collision
             commands.entity(projectile_entity).despawn_recursive();
-            return;
         }
     }
 }

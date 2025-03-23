@@ -140,7 +140,7 @@ pub fn on_display_case_updated(
     // Despawn existing slots
     slots_querys
         .iter()
-        .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(&e)))
+        .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(e)))
         .for_each(|(e, _)| commands.entity(e).despawn_recursive());
 
     // Get name and entity for each item in inventory

@@ -29,8 +29,10 @@ impl Default for Inventory {
 }
 
 impl Inventory {
+    pub const ALL_SLOTS: [EquipmentSlot; 2] = [EquipmentSlot::Mainhand, EquipmentSlot::Offhand];
+
     pub fn builder() -> InventoryBuilder {
-        InventoryBuilder::new()
+        InventoryBuilder::default()
     }
 
     /// Adds an item to the inventory if there's space
@@ -83,8 +85,7 @@ impl Inventory {
 
     pub fn get_equipped(&self, slot: EquipmentSlot) -> Option<Entity> {
         self.get_equipped_slot(slot)
-            .map(|i| self.items.get(i).cloned())
-            .flatten()
+            .and_then(|i| self.items.get(i).cloned())
     }
 
     pub fn add_coins(&mut self, amount: u32) {
@@ -102,18 +103,23 @@ impl Inventory {
 
     fn remove_item_by_index(&mut self, index_to_remove: usize) -> Result<Entity, String> {
         // all equipment indicies shift
-        // TODO - add this for offhand
-        if let Some(mainhand) = self.mainhand_index {
-            if index_to_remove < mainhand {
-                self.mainhand_index = Some(mainhand - 1);
-            } else if index_to_remove == mainhand {
-                self.mainhand_index = None;
-            }
+        for slot in Inventory::ALL_SLOTS {
+            self.adjust_slot_index(slot, index_to_remove);
         }
 
         self.items
             .remove(index_to_remove)
             .ok_or("Index was out of bounds".to_string())
+    }
+
+    fn adjust_slot_index(&mut self, slot: EquipmentSlot, index_to_remove: usize) {
+        if let Some(slot_index) = self.get_equipped_slot(slot) {
+            *self.get_equipped_slot_mut(slot) = match index_to_remove.cmp(&slot_index) {
+                std::cmp::Ordering::Less => Some(slot_index - 1),
+                std::cmp::Ordering::Equal => None,
+                std::cmp::Ordering::Greater => Some(slot_index),
+            };
+        }
     }
 
     fn find_item_by_entity(&self, item: Entity) -> Option<usize> {
@@ -142,8 +148,8 @@ pub struct InventoryBuilder {
     display_case: Option<Entity>,
 }
 
-impl InventoryBuilder {
-    pub fn new() -> Self {
+impl Default for InventoryBuilder {
+    fn default() -> Self {
         Self {
             max_capacity: 10,
             items: Vec::new(),
@@ -151,7 +157,9 @@ impl InventoryBuilder {
             display_case: None,
         }
     }
+}
 
+impl InventoryBuilder {
     pub fn max_capacity(mut self, max_capacity: usize) -> Self {
         self.max_capacity = max_capacity;
         self

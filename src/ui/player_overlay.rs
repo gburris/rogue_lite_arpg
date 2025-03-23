@@ -382,7 +382,7 @@ pub fn update_action_bar(
             if let Some(equipped_entity) = player_inventory.get_equipped(action_box.slot) {
                 if let Some(&image_entity) = children.first() {
                     if let Ok(mut image_node) = image_query.get_mut(image_entity) {
-                        if let Ok((_, item_sprite)) = item_query.get(equipped_entity) {
+                        if let Ok(item_sprite) = item_query.get(equipped_entity) {
                             let action_bar_sprite = get_action_bar_sprite(item_sprite);
 
                             image_node.image = action_bar_sprite.image.clone();

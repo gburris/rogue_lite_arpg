@@ -5,17 +5,16 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{invulnerable::HasIFrames, Mana},
-    configuration::ZLayer,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
-        GameCollisionLayer,
+        GameCollisionLayer, ZLayer,
     },
     items::{
         equipment::{on_equipment_activated, Equipped},
         inventory::Inventory,
         *,
     },
-    player::{systems::*, Player},
+    player::{interact::PlayerInteractionRadius, systems::*, Player},
     progression::GameProgress,
 };
 
@@ -70,18 +69,36 @@ pub fn spawn_player(
                 },
             ),
         ))
-        .with_child((
-            Transform::from_xyz(0.0, -20.0, 0.0),
-            Collider::circle(12.0),
-            CollisionLayers::new(
-                [GameCollisionLayer::Grounded],
-                [
-                    GameCollisionLayer::Grounded,
-                    GameCollisionLayer::HighObstacle,
-                    GameCollisionLayer::LowObstacle,
-                ],
-            ),
-        ))
+        .with_children(|spawner| {
+            // collider to bump into stuff
+            spawner.spawn((
+                Transform::from_xyz(0.0, -20.0, 0.0),
+                Collider::circle(12.0),
+                CollisionLayers::new(
+                    [GameCollisionLayer::Grounded],
+                    [
+                        GameCollisionLayer::Grounded,
+                        GameCollisionLayer::HighObstacle,
+                        GameCollisionLayer::LowObstacle,
+                    ],
+                ),
+            ));
+
+            // hitbox
+
+            // player interaction radius
+            spawner.spawn((
+                PlayerInteractionRadius,
+                Transform::from_xyz(0.0, -20.0, 0.0),
+                Collider::circle(20.0),
+                Sensor,
+                CollidingEntities::default(),
+                CollisionLayers::new(
+                    [GameCollisionLayer::Player],
+                    [GameCollisionLayer::Interaction, GameCollisionLayer::Magnet],
+                ),
+            ));
+        })
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)

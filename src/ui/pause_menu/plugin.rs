@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_enhanced_input::prelude::InputContextAppExt;
 
 use crate::{
     configuration::time_control,
@@ -16,7 +17,6 @@ impl Plugin for PauseMenuPlugin {
     fn build(&self, app: &mut App) {
         app
             // Pause Related Systems
-            .add_observer(input::on_pause_input)
             .add_systems(
                 Update,
                 (

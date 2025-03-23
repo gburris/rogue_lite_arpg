@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::player::systems::{input::Interact, PauseEvent};
+use crate::player::{plugin::Interact, systems::PauseEvent};
 
 pub fn on_shop_keeper_store_open(_: Trigger<Interact>, mut commands: Commands) {
     commands.trigger(PauseEvent::Inventory);

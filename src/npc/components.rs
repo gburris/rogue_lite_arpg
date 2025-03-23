@@ -4,7 +4,7 @@ use crate::{
     character::Character,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
-    player::interact::InteractionEvent,
+    player::{interact::InteractionEvent, plugin::Interact},
 };
 
 use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_store_open};
@@ -42,7 +42,7 @@ impl NPCType {
         }
     }
 
-    pub fn get_interaction_observer(&self) -> fn(Trigger<InteractionEvent>, Commands) {
+    pub fn get_interaction_observer(&self) -> fn(Trigger<Interact>, Commands) {
         match self {
             NPCType::Helper => on_game_guide_start,
             NPCType::Shopkeeper => on_shop_keeper_store_open,

@@ -1,6 +1,7 @@
 // In a new file, e.g., src/lib.rs or src/plugins.rs
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use bevy_enhanced_input::{prelude::*, preset::Cardinal, EnhancedInputPlugin};
 
 pub struct GamePlugins;
 
@@ -20,32 +21,72 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
+#[derive(Resource)]
+pub struct AppSettings {
+    pub input: InputSettings,
+}
+
+pub struct InputSettings {
+    pub movement: Cardinal<KeyCode>,
+    pub use_equip: EquipmentBindings,
+    pub interact: KeyCode,
+    #[allow(non_snake_case)]
+    pub pushing_P: KeyCode, // Pause menu
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct EquipmentBindings {
+    main_hand: MouseButton,
+    off_hand: MouseButton,
+}
+
+impl InputBindSet for EquipmentBindings {
+    fn bindings(self) -> impl Iterator<Item = InputBind> {
+        self.main_hand.bindings().chain(self.off_hand.bindings())
+    }
+}
+
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
-        app
-            // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
-            // Third-party plugins
-            .add_plugins((AssetLoadingPlugin, TilemapPlugin))
-            // Core systems
-            .add_plugins((
-                DespawnPlugin,
-                AIPlugin,
-                CombatPlugin,
-                ProgressionPlugin,
-                EconPlugin,
-                EquipmentPlugin,
-            ))
-            // Entity systems
-            .add_plugins((
-                MapPlugin,
-                LootablePlugin,
-                PlayerPlugin,
-                EnemyPlugin,
-                NPCPlugin,
-            ))
-            // UI
-            .add_plugins(UIPlugin);
+        app.insert_resource(AppSettings {
+            input: InputSettings {
+                movement: Cardinal::wasd_keys(),
+                use_equip: EquipmentBindings {
+                    main_hand: MouseButton::Left,
+                    off_hand: MouseButton::Right,
+                },
+                interact: KeyCode::Space,
+                pushing_P: KeyCode::Escape,
+            },
+        })
+        // Setup and configuration
+        .add_plugins((
+            SetupPlugin,
+            AnimationPlugin,
+            SchedulePlugin,
+            EnhancedInputPlugin,
+        ))
+        // Third-party plugins
+        .add_plugins((AssetLoadingPlugin, TilemapPlugin))
+        // Core systems
+        .add_plugins((
+            DespawnPlugin,
+            AIPlugin,
+            CombatPlugin,
+            ProgressionPlugin,
+            EconPlugin,
+            EquipmentPlugin,
+        ))
+        // Entity systems
+        .add_plugins((
+            MapPlugin,
+            LootablePlugin,
+            PlayerPlugin,
+            EnemyPlugin,
+            NPCPlugin,
+        ))
+        // UI
+        .add_plugins(UIPlugin);
     }
 }
 

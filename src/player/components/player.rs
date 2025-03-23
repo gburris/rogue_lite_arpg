@@ -1,12 +1,10 @@
 use avian2d::prelude::Mass;
 use bevy::prelude::*;
-use bevy_enhanced_input::prelude::Binding;
 
 use crate::{
     ai::SimpleMotion,
     character::Character,
     combat::{invulnerable::IFrames, Health},
-    player::PlayerMovementEvent,
 };
 
 /// How much more experience is required (as a multiplier) after each level up

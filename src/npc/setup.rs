@@ -101,7 +101,6 @@ pub fn spawn_npc(
                 ),
             ));
         })
-        .add_child(mainhand)
         .id();
 
     commands.entity(mainhand).insert(Equipped::new(npc));

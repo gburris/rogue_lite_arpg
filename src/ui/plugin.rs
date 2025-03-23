@@ -1,6 +1,8 @@
 use bevy::prelude::*;
+use bevy_enhanced_input::prelude::{Binding, InputContextAppExt};
 
 use crate::{
+    configuration::plugins::AppSettings,
     labels::{sets::InGameSet, states::AppState},
     ui::*,
 };
@@ -13,7 +15,8 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         // Game UI systems
-        app
+        app.add_input_context::<UIScreen>()
+            .add_observer(ui_bindings)
             //Other UI Plugins here
             .add_plugins(PauseMenuPlugin)
             .add_plugins(NPCPauseScreensPlugin)
@@ -69,4 +72,11 @@ impl Plugin for UIPlugin {
                 game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),
             );
     }
+}
+
+#[derive(Component)]
+pub struct UIScreen;
+
+fn ui_bindings(mut trigger: Trigger<Binding<UIScreen>>, settings: Res<AppSettings>) {
+    info!("making ui bindings");
 }

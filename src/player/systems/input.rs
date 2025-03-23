@@ -1,14 +1,10 @@
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::{Binding, InputAction};
 
-use crate::{
-    items::equipment::EquipmentSlot,
-    labels::states::PausedState,
-    player::{
-        interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
-    },
-};
+// Player InputActions
+#[derive(Debug, InputAction)]
+#[input_action(output = Vec2)]
+pub struct Movement;
 
 #[derive(Debug, InputAction)]
 #[input_action(output = Vec2)]
@@ -28,29 +24,6 @@ pub enum PauseEvent {
     Inventory,
     None,
     Paused,
-}
-
-#[derive(Resource)]
-struct AppSettings {
-    keyboard: KeyboardSettings,
-}
-
-struct KeyboardSettings {
-    movement: KeyCode,
-    use_equip: KeyCode,
-    interact: KeyCode,
-    #[allow(non_snake_case)]
-    pushing_P: KeyCode, // Pause menu
-}
-
-use crate::player::Player;
-pub fn player_binding(mut trigger: Trigger<Binding<Player>>, settings: Res<AppSettings>) {
-    trigger.bind::<Movement>().to(settings.keyboard.movement);
-    trigger.bind::<Interact>().to(settings.keyboard.interact);
-    trigger.bind::<UseEquip>().to(settings.keyboard.use_equip);
-    trigger
-        .bind::<PauseRequest>()
-        .to(settings.keyboard.use_equip);
 }
 
 #[cfg(any())]

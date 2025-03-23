@@ -1,7 +1,7 @@
 use crate::labels::states::AppState;
 use bevy::prelude::*;
 
-use super::constants::TITLE_FONT_SIZE;
+use super::{constants::TITLE_FONT_SIZE, plugin::UIScreen};
 
 #[derive(Component)]
 pub struct StartScreen;
@@ -16,6 +16,7 @@ pub fn spawn_start_screen(mut commands: Commands) {
     commands
         .spawn((
             StartScreen,
+            UIScreen,
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),

@@ -28,7 +28,7 @@ impl Default for WanderDirection {
 
 pub fn update_enemy_aim_position(
     mut enemy_aim_pos_query: Query<&mut AimPosition, With<Enemy>>,
-    player_transform: Single<&mut Transform, With<Player>>,
+    player_transform: Single<&Transform, With<Player>>,
 ) {
     for mut aim_position in enemy_aim_pos_query.iter_mut() {
         aim_position.position = player_transform.translation.truncate();

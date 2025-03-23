@@ -30,7 +30,7 @@ impl SimpleMotion {
     }
 
     pub fn slow(&mut self, percentage: f32) {
-        assert!(percentage >= 0.0 && percentage <= 1.0);
+        assert!((0.0..=1.0).contains(&percentage));
 
         self.slowed_percentage = percentage;
     }

@@ -10,12 +10,12 @@ use crate::{
         GameCollisionLayer,
     },
     items::{
-        equipment::{on_equipment_activated, Equipped},
+        equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
         inventory::Inventory,
         *,
     },
     labels::layer::ZLayer,
-    player::{systems::*, Player, PlayerStats},
+    player::{systems::*, Player},
     progression::GameProgress,
 };
 
@@ -34,7 +34,6 @@ pub fn spawn_player(
         spawn_offhand(&mut commands, &sprites, &texture_layouts, "knight_shield"),
     ];
 
-    let current_player_base_stats = PlayerStats::from(game_progress.base_stats);
     let player = commands
         .spawn((
             Player,
@@ -47,7 +46,7 @@ pub fn spawn_player(
             HasIFrames {
                 duration: Duration::from_secs(1),
             },
-            current_player_base_stats,
+            game_progress.base_stats.clone(),
             Collider::rectangle(40.0, 50.0),
             CollisionLayers::new(
                 [GameCollisionLayer::Player, GameCollisionLayer::Grounded],
@@ -66,6 +65,7 @@ pub fn spawn_player(
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)
+        .observe(on_equipment_deactivated)
         .id();
 
     commands

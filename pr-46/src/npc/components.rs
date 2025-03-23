@@ -39,9 +39,9 @@ impl NPCType {
         atlases: &Res<SpriteSheetLayouts>,
     ) -> Entity {
         match self {
-            NPCType::Helper => spawn_ice_staff(commands, &sprites, &atlases),
-            NPCType::Shopkeeper => spawn_axe(commands, &sprites),
-            NPCType::StatTrainer => spawn_sword(commands, &sprites),
+            NPCType::Helper => spawn_ice_staff(commands, sprites, atlases),
+            NPCType::Shopkeeper => spawn_axe(commands, sprites),
+            NPCType::StatTrainer => spawn_sword(commands, sprites),
         }
     }
 

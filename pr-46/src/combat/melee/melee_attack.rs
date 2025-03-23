@@ -2,21 +2,33 @@ use avian2d::prelude::*;
 use bevy::{prelude::*, utils::HashSet};
 
 use crate::{
-    ai::state::{ActionState, FacingDirection},
+    ai::state::ActionState,
     combat::{
         damage::{AttemptDamageEvent, Damage},
         melee::{MeleeSwingType, MeleeWeapon},
     },
-    enemy::Enemy,
-    items::equipment::EquipmentTransform,
-    player::Player,
 };
+
+use super::MELEE_WEAPON_ROTATION;
 
 #[derive(Component)]
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
+    /// Comes from the direction the entity holding the weapon is aiming
     pub initial_angle: f32,
-    pub entities_damaged: HashSet<Entity>,
+    /// Comes from "attack_speed" defined on MeleeWeapon
+    duration: Timer,
+    entities_damaged: HashSet<Entity>,
+}
+
+impl ActiveMeleeAttack {
+    pub fn new(initial_angle: f32, speed: f32) -> Self {
+        Self {
+            initial_angle,
+            duration: Timer::from_seconds(speed, TimerMode::Once),
+            entities_damaged: HashSet::new(),
+        }
+    }
 }
 
 pub fn start_melee_attack(
@@ -25,25 +37,25 @@ pub fn start_melee_attack(
     melee_weapon: &mut MeleeWeapon,
     attack_angle: f32,
 ) {
-    melee_weapon.attack_duration.reset();
-    commands.entity(weapon_entity).insert(ActiveMeleeAttack {
-        initial_angle: attack_angle,
-        entities_damaged: HashSet::new(),
-    });
+    commands
+        .entity(weapon_entity)
+        .insert(ActiveMeleeAttack::new(
+            attack_angle,
+            melee_weapon.attack_time,
+        ));
 }
 
 pub fn end_melee_attacks(
     mut commands: Commands,
-    mut query: Query<(Entity, &Parent, &MeleeWeapon, &mut Transform), With<ActiveMeleeAttack>>,
+    mut query: Query<(Entity, &Parent, &ActiveMeleeAttack)>,
     mut action_state_query: Query<&mut ActionState>,
 ) {
-    for (entity, parent, melee_weapon, mut transform) in query.iter_mut() {
-        if melee_weapon.attack_duration.just_finished() {
+    for (entity, parent, attack) in query.iter_mut() {
+        if attack.duration.just_finished() {
             if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
                 // This handles the edge case of dying mid-swing
                 if *action_state != ActionState::Defeated {
                     *action_state = ActionState::Movement;
-                    *transform = EquipmentTransform::get(FacingDirection::Down).mainhand;
                 }
                 commands.entity(entity).remove::<ActiveMeleeAttack>();
             }
@@ -53,54 +65,33 @@ pub fn end_melee_attacks(
 
 pub fn process_melee_attacks(
     time: Res<Time>,
-    mut attack_query: Query<(&mut MeleeWeapon, &mut Transform, &ActiveMeleeAttack)>,
+    mut attack_query: Query<(&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack)>,
 ) {
-    for (mut melee_weapon, mut transform, active_attack) in attack_query.iter_mut() {
-        melee_weapon.attack_duration.tick(time.delta());
+    for (melee_weapon, mut transform, mut active_attack) in attack_query.iter_mut() {
+        active_attack.duration.tick(time.delta());
+        let attack_progress = active_attack.duration.fraction();
 
         match melee_weapon.attack_type {
-            MeleeSwingType::Stab { speed, .. } => {
-                let progress = melee_weapon.attack_duration.elapsed_secs()
-                    / melee_weapon.attack_duration.duration().as_secs_f32();
+            MeleeSwingType::Stab { reach } => {
+                // Total distance of stab * time of swing gets new position each tick
+                let distance = reach * attack_progress;
 
-                let distance = 2.0 * speed * (std::f32::consts::PI * progress).sin();
+                let forward = Vec2::from_angle(active_attack.initial_angle);
+                let new_stab_position = forward * (melee_weapon.hold_distance + distance);
 
-                let attack_offset = 25.0;
-
-                let forward = Vec2::new(
-                    (active_attack.initial_angle + std::f32::consts::FRAC_PI_2).cos(),
-                    (active_attack.initial_angle + std::f32::consts::FRAC_PI_2).sin(),
-                );
-
-                let stab_start_position =
-                    Vec3::new(forward.x * attack_offset, forward.y * attack_offset, 0.0);
-
-                transform.translation = stab_start_position
-                    + Vec3::new(forward.x * distance, forward.y * distance, 0.0);
-
-                transform.rotation = Quat::from_rotation_z(active_attack.initial_angle);
+                transform.translation = new_stab_position.extend(0.0);
+                transform.rotation =
+                    Quat::from_rotation_z(active_attack.initial_angle - MELEE_WEAPON_ROTATION);
             }
-            MeleeSwingType::Slash { radius, .. } => {
-                let progress = melee_weapon.attack_duration.elapsed_secs()
-                    / melee_weapon.attack_duration.duration().as_secs_f32();
+            MeleeSwingType::Slash { arc_distance } => {
+                let start_angle = active_attack.initial_angle - (arc_distance / 2.0);
 
-                let adjusted_angle = active_attack.initial_angle + std::f32::consts::FRAC_PI_2; // Rotate by -90°
+                let current_angle = start_angle + (arc_distance * attack_progress);
 
-                let start_angle = adjusted_angle - 60f32.to_radians();
-                let end_angle = adjusted_angle + 60f32.to_radians();
+                let new_axe_position = Vec2::from_angle(current_angle) * melee_weapon.hold_distance;
 
-                let current_angle = start_angle + (end_angle - start_angle) * progress;
-
-                let axe_head_position = Vec3::new(
-                    current_angle.cos() * radius,
-                    current_angle.sin() * radius,
-                    0.0,
-                );
-
-                let blade_angle = current_angle - std::f32::consts::FRAC_PI_2;
-
-                transform.translation = axe_head_position;
-                transform.rotation = Quat::from_rotation_z(blade_angle);
+                transform.translation = new_axe_position.extend(0.0);
+                transform.rotation = Quat::from_rotation_z(current_angle - MELEE_WEAPON_ROTATION);
             }
         }
     }
@@ -114,19 +105,15 @@ pub fn handle_melee_collisions(
         &mut ActiveMeleeAttack,
         &CollidingEntities,
     )>,
-    enemy_query: Query<&Enemy>,
-    player: Single<Entity, With<Player>>,
 ) {
-    let player_entity = player.into_inner();
-
     for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities) in
         melee_query.iter_mut()
     {
         for &colliding_entity in colliding_entities.iter() {
-            if (enemy_query.contains(colliding_entity) || colliding_entity == player_entity)
-                && (!active_melee_attack
-                    .entities_damaged
-                    .contains(&colliding_entity))
+            // We only hit a given entity once per attack
+            if !active_melee_attack
+                .entities_damaged
+                .contains(&colliding_entity)
             {
                 commands.trigger_targets(
                     AttemptDamageEvent {

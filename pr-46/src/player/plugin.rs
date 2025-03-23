@@ -6,7 +6,7 @@ use crate::{
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
-    player::{resources::PlayerSize, systems::*, PlayerMovementEvent},
+    player::{systems::*, PlayerMovementEvent},
 };
 
 use super::{
@@ -31,7 +31,9 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 Update,
-                finish_death_animation.run_if(in_state(PlayingState::Death)),
+                finish_death_animation
+                    .in_set(InGameSet::Vfx)
+                    .run_if(in_state(PlayingState::Death)),
             )
             .add_systems(
                 Update,
@@ -45,20 +47,16 @@ impl Plugin for PlayerPlugin {
                     (
                         player_movement,
                         update_player_aim_position,
-                        draw_cursor,
                         on_player_experience_change,
-                        animate_level_up,
                     )
-                        .before(camera_follow_system),
-                    camera_follow_system.before(TransformSystem::TransformPropagate), // avian recommended ordering for camera following logic
-                )
-                    .in_set(InGameSet::Simulation),
+                        .in_set(InGameSet::Simulation),
+                    (draw_cursor, animate_level_up).in_set(InGameSet::Vfx),
+                ),
             )
             .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)
             .add_observer(on_player_interaction_input)
-            .add_observer(on_interaction_zone_added)
-            .insert_resource(PlayerSize { x: 256.0, y: 256.0 });
+            .add_observer(on_interaction_zone_added);
     }
 }

@@ -5,11 +5,18 @@ use super::{EquipmentSlot, Equipped};
 use crate::{
     ai::state::{ActionState, AimPosition, FacingDirection},
     combat::{
-        damage::DamageSource, health::AttemptHealingEvent, mana::ManaCost, melee::{start_melee_attack, MeleeWeapon}, projectile::{spawn::spawn_projectile, ProjectileWeapon}, shield::{shield_block::deactivate_shield, ActiveShield}, Mana
+        damage::DamageSource,
+        health::AttemptHealingEvent,
+        mana::ManaCost,
+        melee::{start_melee_attack, MeleeWeapon},
+        projectile::{spawn::spawn_projectile, ProjectileWeapon},
+        shield::{shield_block::deactivate_shield, ActiveShield},
+        Mana,
     },
     enemy::Enemy,
     items::{
-        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect, Shield,
+        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
+        Shield,
     },
     player::{StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent},
 };
@@ -149,7 +156,7 @@ pub fn on_weapon_fired(
         &mut commands,
         holder_transform,
         holder_aim.position,
-        &projectile_weapon,
+        projectile_weapon,
     );
 }
 
@@ -172,8 +179,7 @@ pub fn on_weapon_melee(
 
     let holder_pos = holder_transform.translation.truncate();
     let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
-    let mut attack_angle = aim_direction.y.atan2(aim_direction.x);
-    attack_angle -= std::f32::consts::FRAC_PI_2;
+    let attack_angle = aim_direction.y.atan2(aim_direction.x);
 
     start_melee_attack(
         &mut commands,
@@ -239,7 +245,6 @@ pub fn on_equipment_deactivated(
         warn!("No shield equipped in offhand");
         return;
     };
-
     if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
         deactivate_shield(
             &mut commands,

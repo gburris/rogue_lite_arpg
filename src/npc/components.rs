@@ -5,10 +5,7 @@ use crate::{
     ai::{state::ActionState, SimpleMotion},
     animation::AnimationTimer,
     combat::Health,
-    configuration::{
-        assets::{SpriteAssets, SpriteSheetLayouts},
-        GameCollisionLayer,
-    },
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
     player::interact::InteractionEvent,
 };
@@ -19,9 +16,7 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
 #[require(
     Health,
     SimpleMotion,
-    Collider(|| Collider::rectangle(32.0, 32.0)),
     RigidBody(|| RigidBody::Kinematic),
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded, GameCollisionLayer::InAir])),
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     ActionState,
     AnimationTimer,

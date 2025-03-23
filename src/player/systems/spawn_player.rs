@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{invulnerable::HasIFrames, Mana},
+    configuration::ZLayer,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,
@@ -14,7 +15,6 @@ use crate::{
         inventory::Inventory,
         *,
     },
-    labels::layer::ZLayer,
     player::{systems::*, Player},
     progression::GameProgress,
 };
@@ -47,26 +47,39 @@ pub fn spawn_player(
                 duration: Duration::from_secs(1),
             },
             game_progress.base_stats.clone(),
-            Collider::rectangle(40.0, 50.0),
-            CollisionLayers::new(
-                [GameCollisionLayer::Player, GameCollisionLayer::Grounded],
-                [
-                    GameCollisionLayer::Enemy,
-                    GameCollisionLayer::Interaction,
-                    GameCollisionLayer::InAir,
-                    GameCollisionLayer::Grounded,
-                    GameCollisionLayer::HighObstacle,
-                    GameCollisionLayer::LowObstacle,
-                    GameCollisionLayer::Magnet,
-                ],
-            ),
-            Transform::from_xyz(0., 0., ZLayer::Player.z()),
+            // Collider::rectangle(40.0, 50.0),
+            // Sensor,
+            // CollisionLayers::new(
+            //     [GameCollisionLayer::Player],
+            //     [
+            //         GameCollisionLayer::Enemy,
+            //         GameCollisionLayer::Interaction,
+            //         GameCollisionLayer::InAir,
+            //         GameCollisionLayer::Grounded,
+            //         GameCollisionLayer::HighObstacle,
+            //         GameCollisionLayer::LowObstacle,
+            //         GameCollisionLayer::Magnet,
+            //     ],
+            // ),
+            Transform::from_xyz(0., 0., ZLayer::OnGround.z()),
             Sprite::from_atlas_image(
                 sprites.player_sprite_sheet.clone(),
                 TextureAtlas {
                     layout: atlases.player_atlas_layout.clone(),
                     ..default()
                 },
+            ),
+        ))
+        .with_child((
+            Transform::from_xyz(0.0, -20.0, 0.0),
+            Collider::circle(12.0),
+            CollisionLayers::new(
+                [GameCollisionLayer::Grounded],
+                [
+                    GameCollisionLayer::Grounded,
+                    GameCollisionLayer::HighObstacle,
+                    GameCollisionLayer::LowObstacle,
+                ],
             ),
         ))
         .add_children(&starting_items)

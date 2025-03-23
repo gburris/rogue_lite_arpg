@@ -7,7 +7,7 @@ use crate::{
     ai::state::{ActionState, FacingDirection},
     combat::melee::ActiveMeleeAttack,
     items::inventory::Inventory,
-    labels::layer::ZLayer,
+    configuration::ZLayer,
 };
 
 // Constants for transform values

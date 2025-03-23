@@ -1,7 +1,7 @@
 use crate::{
     combat::{damage::DamageDealtEvent, health::HealedEvent},
     despawn::components::LiveDuration,
-    labels::layer::ZLayer,
+    configuration::ZLayer,
 };
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;

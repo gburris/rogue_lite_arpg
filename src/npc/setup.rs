@@ -1,9 +1,14 @@
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
     ai::SimpleMotion,
     combat::Health,
-    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    configuration::ZLayer,
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        GameCollisionLayer,
+    },
     items::{equipment::Equipped, inventory::Inventory},
     map::NPCSpawnEvent,
     npc::components::NPC,
@@ -56,7 +61,14 @@ pub fn spawn_npc(
             ),
         ))
         .observe(on_player_interaction)
-        .with_child(InteractionZone::NPC)
+        .with_children(|spawner| {
+            spawner.spawn(InteractionZone::NPC);
+            spawner.spawn((
+                Transform::from_xyz(0.0, -20.0, 0.0),
+                Collider::circle(12.0),
+                CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded]),
+            ));
+        })
         .add_child(mainhand)
         .id();
 

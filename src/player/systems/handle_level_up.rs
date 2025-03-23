@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     despawn::components::LiveDuration,
-    labels::layer::ZLayer,
+    configuration::ZLayer,
     player::{events::PlayerLevelUpEvent, Player},
 };
 

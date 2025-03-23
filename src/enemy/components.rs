@@ -4,11 +4,25 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::{ai::SimpleMotion, combat::Health};
+use crate::{
+    ai::{state::ActionState, SimpleMotion},
+    animation::AnimationTimer,
+    combat::Health,
+};
 
 //favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(Health, SimpleMotion, Collider, CollidingEntities, Experience)]
+#[require(
+    Health,
+    SimpleMotion,
+    RigidBody,
+    Collider,
+    CollidingEntities,
+    LockedAxes(|| LockedAxes::new().lock_rotation()),
+    Experience,
+    ActionState,
+    AnimationTimer
+)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it

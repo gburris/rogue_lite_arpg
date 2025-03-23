@@ -2,7 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    ai::SimpleMotion,
+    ai::{state::ActionState, SimpleMotion},
+    animation::AnimationTimer,
     combat::Health,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
@@ -20,7 +21,10 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
     SimpleMotion,
     Collider(|| Collider::rectangle(32.0, 32.0)),
     RigidBody(|| RigidBody::Kinematic),
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded, GameCollisionLayer::InAir]))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Grounded, [GameCollisionLayer::Grounded, GameCollisionLayer::InAir])),
+    LockedAxes(|| LockedAxes::new().lock_rotation()),
+    ActionState,
+    AnimationTimer,
 )]
 pub struct NPC;
 

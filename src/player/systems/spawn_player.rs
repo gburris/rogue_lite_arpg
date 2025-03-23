@@ -24,6 +24,7 @@ pub fn spawn_player(
     sprites: Res<SpriteAssets>,
     texture_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
+    atlases: Res<SpriteSheetLayouts>,
 ) {
     let starting_items = [
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
@@ -60,6 +61,13 @@ pub fn spawn_player(
                 ],
             ),
             Transform::from_xyz(0., 0., ZLayer::Player.z()),
+            Sprite::from_atlas_image(
+                sprites.player_sprite_sheet.clone(),
+                TextureAtlas {
+                    layout: atlases.player_atlas_layout.clone(),
+                    ..default()
+                },
+            ),
         ))
         .add_children(&starting_items)
         .observe(death::on_player_defeated)

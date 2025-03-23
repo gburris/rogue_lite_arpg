@@ -51,12 +51,12 @@ pub fn spawn_main_menu(
             },
             BackgroundColor::from(BACKGROUND_COLOR),
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             // Header Section
-            spawn_header(parent, "PAUSED");
+            spawn_header(ChildOf, "PAUSED");
 
-            // Body Section (transparent)
-            parent
+            // Body Section (transChildOf)
+            ChildOf
                 .spawn((Node {
                     width: Val::Percent(100.0),
                     flex_grow: 1.0,
@@ -76,7 +76,7 @@ pub fn spawn_main_menu(
                 });
 
             // Footer Section
-            parent
+            ChildOf
                 .spawn((
                     Node {
                         width: Val::Percent(100.0),
@@ -154,10 +154,10 @@ pub fn spawn_main_menu(
         });
 }
 
-fn spawn_menu_button(parent: &mut ChildBuilder, config: MenuButtonConfig) {
+fn spawn_menu_button(ChildOf: &mut ChildBuilder, config: MenuButtonConfig) {
     let (button_component, button_text) = config.to_component();
 
-    parent
+    ChildOf
         .spawn((
             button_component,
             Button,

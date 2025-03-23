@@ -13,10 +13,10 @@ const BLUE_COLOR: bevy::prelude::Color = Color::srgb(0.0, 0.0, 1.0);
 pub fn on_frozen_applied(
     trigger: Trigger<OnInsert, FrozenStatus>,
     mut commands: Commands,
-    status_query: Query<(&Parent, &LiveDuration), With<FrozenStatus>>,
-    mut parent_sprite: Query<&mut Sprite>,
+    status_query: Query<(&ChildOf, &LiveDuration), With<FrozenStatus>>,
+    mut ChildOf_sprite: Query<&mut Sprite>,
 ) {
-    let Ok((parent, duration)) = status_query.get(trigger.entity()) else {
+    let Ok((ChildOf, duration)) = status_query.get(trigger.target()) else {
         return;
     };
 
@@ -25,24 +25,24 @@ pub fn on_frozen_applied(
             status: StatusType::Stunned,
             duration: duration.0.remaining_secs(), // make sure stun lasts while frozen
         },
-        parent.get(),
+        ChildOf.get(),
     );
 
-    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
-        parent_sprite.color = BLUE_COLOR;
+    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
+        ChildOf_sprite.color = BLUE_COLOR;
     }
 }
 
 pub fn on_frozen_removed(
     trigger: Trigger<OnRemove, FrozenStatus>,
-    status_query: Query<&Parent, With<FrozenStatus>>,
-    mut parent_sprite: Query<&mut Sprite>,
+    status_query: Query<&ChildOf, With<FrozenStatus>>,
+    mut ChildOf_sprite: Query<&mut Sprite>,
 ) {
-    let Ok(parent) = status_query.get(trigger.entity()) else {
+    let Ok(ChildOf) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
-        parent_sprite.color = Color::default();
+    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
+        ChildOf_sprite.color = Color::default();
     }
 }

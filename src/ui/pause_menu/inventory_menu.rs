@@ -35,12 +35,12 @@ pub fn spawn_inventory_menu(
             },
             BackgroundColor::from(BACKGROUND_COLOR),
         ))
-        .with_children(|parent| {
-            spawn_header(parent, "INVENTORY");
+        .with_children(|ChildOf| {
+            spawn_header(ChildOf, "INVENTORY");
 
-            inventory.display_case = Some(display_case::spawn_display_case(parent));
+            inventory.display_case = Some(display_case::spawn_display_case(ChildOf));
 
-            parent
+            ChildOf
                 .spawn((
                     Node {
                         width: Val::Percent(100.0),

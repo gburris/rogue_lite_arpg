@@ -88,7 +88,7 @@ pub fn on_interaction_open_chest(
     chest_transforms: Query<&Transform, With<Chest>>,
     mut commands: Commands,
 ) {
-    let chest_entity = open_chest_trigger.entity();
+    let chest_entity = open_chest_trigger.target();
 
     commands
         .entity(chest_entity)

@@ -30,15 +30,15 @@ pub fn create(mut commands: Commands) {
             // render this above in-game UI such as player health and score
             GlobalZIndex(1),
         ))
-        .with_children(|parent| {
-            parent.spawn((
+        .with_children(|ChildOf| {
+            ChildOf.spawn((
                 Text::new("Game Over!"),
                 TextFont {
                     font_size: TITLE_FONT_SIZE,
                     ..default()
                 },
             ));
-            parent
+            ChildOf
                 .spawn((
                     Button,
                     RestartButton,
@@ -66,7 +66,7 @@ pub fn despawn_game_over_screen(
 ) {
     // Despawn game over screen
     if let Ok(entity) = game_over_screen.get_single() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 

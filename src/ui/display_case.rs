@@ -39,8 +39,8 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
             },
             BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
         ))
-        .with_children(|parent| {
-            parent
+        .with_children(|ChildOf| {
+            ChildOf
                 .spawn((
                     Node {
                         width: Val::Px(900.0),
@@ -54,13 +54,13 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                     },
                     BorderColor::from(Color::WHITE),
                 ))
-                .with_children(|parent| {
-                    parent.spawn((Node {
+                .with_children(|ChildOf| {
+                    ChildOf.spawn((Node {
                         width: Val::Px(30.0),
                         ..default()
                     },));
 
-                    parent.spawn((
+                    ChildOf.spawn((
                         Text::new("Name"),
                         TextFont {
                             font_size: 18.0,
@@ -68,12 +68,12 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                         },
                     ));
 
-                    parent.spawn((Node {
+                    ChildOf.spawn((Node {
                         flex_grow: 1.0,
                         ..default()
                     },));
 
-                    parent.spawn((
+                    ChildOf.spawn((
                         Text::new("Equip Slot"),
                         TextFont {
                             font_size: 18.0,
@@ -85,7 +85,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                         },
                     ));
 
-                    parent.spawn((
+                    ChildOf.spawn((
                         Text::new("Value"),
                         TextFont {
                             font_size: 18.0,
@@ -98,7 +98,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                     ));
                 });
 
-            scroll_container = parent
+            scroll_container = ChildOf
                 .spawn((
                     DisplayCaseContainer,
                     Node {
@@ -124,7 +124,7 @@ pub fn on_display_case_updated(
 ) {
     // Get entities inventory
     let inventory = inventory_query
-        .get(trigger.entity())
+        .get(trigger.target())
         .expect("No inventory to update!");
 
     let Some(display_case) = inventory.display_case else {
@@ -141,7 +141,7 @@ pub fn on_display_case_updated(
     slots_querys
         .iter()
         .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(e)))
-        .for_each(|(e, _)| commands.entity(e).despawn_recursive());
+        .for_each(|(e, _)| commands.entity(e).despawn());
 
     // Get name and entity for each item in inventory
     let items = inventory

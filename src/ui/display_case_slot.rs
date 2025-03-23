@@ -51,7 +51,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 ..default()
             },
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             let item_icon = match context.item.item_type {
                 ItemType::Melee => icons.melee_icon.clone(),
                 ItemType::Staff => icons.staff_icon.clone(),
@@ -59,7 +59,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 ItemType::Tome => icons.spell_book_icon.clone(),
             };
 
-            parent.spawn((
+            ChildOf.spawn((
                 ImageNode {
                     image: item_icon,
                     ..default()
@@ -75,7 +75,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 },
             ));
 
-            parent.spawn((
+            ChildOf.spawn((
                 Text::new(context.item_name),
                 TextFont {
                     font_size: 18.0,
@@ -88,7 +88,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
             ));
 
             if context.is_equipped {
-                parent.spawn((
+                ChildOf.spawn((
                     ImageNode {
                         image: icons.equip_icon.clone(),
                         ..default()
@@ -105,7 +105,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 ));
             }
 
-            parent.spawn((
+            ChildOf.spawn((
                 Node {
                     flex_grow: 1.0,
                     ..default()
@@ -120,7 +120,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 .equipment_slot
                 .map(|slot| slot.to_string())
                 .unwrap_or("-".to_string());
-            parent.spawn((
+            ChildOf.spawn((
                 Text::new(slot_string),
                 TextFont {
                     font_size: 18.0,
@@ -136,7 +136,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 },
             ));
 
-            parent.spawn((
+            ChildOf.spawn((
                 Text::new(context.item.value.to_string()),
                 TextFont {
                     font_size: 18.0,
@@ -164,7 +164,7 @@ pub fn on_slot_clicked(
     item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
     player: Single<(Entity, &Inventory), With<Player>>,
 ) {
-    let item_slot = slot_query.get(trigger.entity()).unwrap();
+    let item_slot = slot_query.get(trigger.target()).unwrap();
     let (player_entity, inventory) = player.into_inner();
     let item_entity = inventory.items[item_slot.index];
 
@@ -196,7 +196,7 @@ pub fn on_slot_hover(
     trigger: Trigger<Pointer<Over>>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
-    if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
+    if let Ok(mut background_color) = item_slot.get_mut(trigger.target()) {
         background_color.0 = HOVER_COLOR;
     }
 }
@@ -205,7 +205,7 @@ pub fn on_slot_done_hovering(
     trigger: Trigger<Pointer<Out>>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplayCaseSlot>>,
 ) {
-    if let Ok(mut background_color) = item_slot.get_mut(trigger.entity()) {
+    if let Ok(mut background_color) = item_slot.get_mut(trigger.target()) {
         background_color.0 = Color::NONE;
     }
 }

@@ -10,7 +10,7 @@ use crate::configuration::GameCollisionLayer;
 pub struct PlayerInteractionRadius;
 
 /// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
-/// this component will trigger the specified `[#InteractionEvent]` on the parent entity (ex. Open Chest, Talk to NPC, Item Pickup)
+/// this component will trigger the specified `[#InteractionEvent]` on the ChildOf entity (ex. Open Chest, Talk to NPC, Item Pickup)
 #[derive(Component)]
 #[require(
     Sensor,
@@ -77,12 +77,12 @@ pub fn on_interaction_zone_added(
     interact_query: Query<&InteractionZone>,
 ) {
     // We can unwrap since this is an OnAdd. Surely it exists right 0.o
-    let interact = interact_query.get(trigger.entity()).unwrap();
+    let interact = interact_query.get(trigger.target()).unwrap();
 
     let collider = match interact {
         InteractionZone::Circle { radius } => Collider::circle(*radius),
         InteractionZone::Square { length } => Collider::rectangle(*length, *length),
     };
 
-    commands.entity(trigger.entity()).insert((collider,));
+    commands.entity(trigger.target()).insert(collider);
 }

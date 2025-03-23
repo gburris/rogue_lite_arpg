@@ -10,29 +10,29 @@ use crate::{
 
 pub fn on_stun_applied(
     trigger: Trigger<OnInsert, StunnedStatus>,
-    status_query: Query<&Parent, With<StunnedStatus>>,
+    status_query: Query<&ChildOf, With<StunnedStatus>>,
     mut motion_query: Query<&mut SimpleMotion>,
 ) {
-    let Ok(parent) = status_query.get(trigger.entity()) else {
+    let Ok(ChildOf) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+    if let Ok(mut motion) = motion_query.get_mut(ChildOf.get()) {
         motion.stun();
     }
 }
 
 pub fn on_stun_removed(
     trigger: Trigger<OnRemove, StunnedStatus>,
-    status_query: Query<&Parent, With<StunnedStatus>>,
+    status_query: Query<&ChildOf, With<StunnedStatus>>,
     mut motion_query: Query<&mut SimpleMotion>,
     mut commands: Commands,
 ) {
-    let Ok(parent) = status_query.get(trigger.entity()) else {
+    let Ok(ChildOf) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(parent.get()) {
+    if let Ok(mut motion) = motion_query.get_mut(ChildOf.get()) {
         motion.remove_debuff();
     }
 
@@ -41,6 +41,6 @@ pub fn on_stun_removed(
             status: StatusType::Slowed(SlowedStatus::default()),
             duration: 3.0,
         },
-        parent.get(),
+        ChildOf.get(),
     );
 }

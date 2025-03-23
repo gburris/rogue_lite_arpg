@@ -31,11 +31,11 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                 },
                 BackgroundColor::from(BACKGROUND_COLOR),
             ))
-            .with_children(|parent| {
-                spawn_header(parent, "STATS");
+            .with_children(|ChildOf| {
+                spawn_header(ChildOf, "STATS");
 
                 // Stats container
-                parent
+                ChildOf
                     .spawn((
                         StatsDisplay,
                         Node {
@@ -47,27 +47,27 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                         },
                         BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                     ))
-                    .with_children(|stats_parent| {
+                    .with_children(|stats_ChildOf| {
                         spawn_stat_row(
-                            stats_parent,
+                            stats_ChildOf,
                             "Agility",
                             stats.agility,
                             "Movement speed, roll range",
                         );
                         spawn_stat_row(
-                            stats_parent,
+                            stats_ChildOf,
                             "Strength",
                             stats.strength,
                             "Melee swing damage",
                         );
                         spawn_stat_row(
-                            stats_parent,
+                            stats_ChildOf,
                             "Dexterity",
                             stats.dexterity,
                             "Critical Strike Chance",
                         );
-                        spawn_stat_row(stats_parent, "Intellect", stats.intellect, "Spell damage");
-                        spawn_stat_row(stats_parent, "Luck", stats.luck, "Drop rate");
+                        spawn_stat_row(stats_ChildOf, "Intellect", stats.intellect, "Spell damage");
+                        spawn_stat_row(stats_ChildOf, "Luck", stats.luck, "Drop rate");
                     });
             });
     }
@@ -87,9 +87,9 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
             },
             BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             // Left side: Stat name and description
-            parent
+            ChildOf
                 .spawn(Node {
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
@@ -120,7 +120,7 @@ fn spawn_stat_row(builder: &mut ChildBuilder, stat_name: &str, stat_value: u32, 
                 });
 
             // Right side: Stat value
-            parent.spawn((
+            ChildOf.spawn((
                 Text::new(format!("{}/99", stat_value)),
                 TextFont {
                     font_size: 24.0,

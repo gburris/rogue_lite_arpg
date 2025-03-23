@@ -25,9 +25,9 @@ pub fn spawn_load_screen(mut commands: Commands) {
             BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
             GlobalZIndex(1),
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             // Top gold border
-            parent.spawn((
+            ChildOf.spawn((
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),
@@ -40,7 +40,7 @@ pub fn spawn_load_screen(mut commands: Commands) {
             ));
 
             // Title Section
-            parent
+            ChildOf
                 .spawn((Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(300.0),
@@ -81,7 +81,7 @@ pub fn spawn_load_screen(mut commands: Commands) {
                 });
 
             // Center content section
-            parent
+            ChildOf
                 .spawn((Node {
                     width: Val::Percent(100.0),
                     flex_grow: 1.0,
@@ -120,7 +120,7 @@ pub fn spawn_load_screen(mut commands: Commands) {
                 });
 
             // Footer
-            parent
+            ChildOf
                 .spawn((
                     Node {
                         width: Val::Percent(100.0),
@@ -146,7 +146,7 @@ pub fn spawn_load_screen(mut commands: Commands) {
                 });
 
             // Bottom gold border
-            parent.spawn((
+            ChildOf.spawn((
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),

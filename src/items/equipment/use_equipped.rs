@@ -55,7 +55,7 @@ pub fn on_equipment_activated(
     equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     handle_equipment_activation(
-        trigger.entity(),
+        trigger.target(),
         trigger.slot,
         commands,
         holder_query,
@@ -139,7 +139,7 @@ pub fn on_weapon_fired(
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
     let mut damage_source = DamageSource::Player;
-    let Ok(projectile_weapon) = weapon_query.get(fired_trigger.entity()) else {
+    let Ok(projectile_weapon) = weapon_query.get(fired_trigger.target()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
@@ -167,7 +167,7 @@ pub fn on_weapon_melee(
     mut action_state_query: Query<&mut ActionState>,
     holder_query: Query<(&Transform, &AimPosition)>,
 ) {
-    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.entity()) else {
+    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.target()) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
@@ -198,7 +198,7 @@ pub fn on_healing_tome_cast(
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
 ) {
-    let Ok(tome) = tome_query.get(fired_trigger.entity()) else {
+    let Ok(tome) = tome_query.get(fired_trigger.target()) else {
         warn!("Tried to use a tome that does not exist");
         return;
     };

@@ -30,7 +30,7 @@ pub fn on_enemy_defeated(
     let mut rng = thread_rng();
 
     if let Ok((experience_to_gain, transform, mut motion, inventory)) =
-        defeated_enemy_query.get_mut(trigger.entity())
+        defeated_enemy_query.get_mut(trigger.target())
     {
         let (player_stats, mut player) = player_query.into_inner();
         //Give EXP to the player
@@ -57,7 +57,7 @@ pub fn on_enemy_defeated(
         }
 
         commands
-            .entity(trigger.entity())
+            .entity(trigger.target())
             .insert((LiveDuration::new(2.0), ActionState::Defeated))
             .remove::<Health>()
             .despawn_descendants();

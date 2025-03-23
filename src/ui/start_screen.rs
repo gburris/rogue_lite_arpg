@@ -25,9 +25,9 @@ pub fn spawn_start_screen(mut commands: Commands) {
             // Darker background for more contrast
             BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             // Top gold border
-            parent.spawn((
+            ChildOf.spawn((
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),
@@ -37,7 +37,7 @@ pub fn spawn_start_screen(mut commands: Commands) {
             ));
 
             // Title Section
-            parent
+            ChildOf
                 .spawn((Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(300.0),
@@ -74,7 +74,7 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 });
 
             // Center content section
-            parent
+            ChildOf
                 .spawn((Node {
                     width: Val::Percent(100.0),
                     flex_grow: 1.0,
@@ -113,7 +113,7 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 });
 
             // Footer
-            parent
+            ChildOf
                 .spawn((
                     Node {
                         width: Val::Percent(100.0),
@@ -138,7 +138,7 @@ pub fn spawn_start_screen(mut commands: Commands) {
                 });
 
             // Bottom gold border
-            parent.spawn((
+            ChildOf.spawn((
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(8.0),
@@ -155,7 +155,7 @@ pub fn despawn_start_screen(
 ) {
     debug!("despawn_start_screen called");
     for entity in start_screen_query.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 

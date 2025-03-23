@@ -16,12 +16,12 @@ pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {
 
 // TODO: Modify this to be a "DamagePerSecond" component + system since it isn't specific to burning
 pub fn while_burning(
-    status_query: Query<(&BurningStatus, &Parent)>,
+    status_query: Query<(&BurningStatus, &ChildOf)>,
     mut commands: Commands,
-    mut parent_query: Query<Entity, With<Health>>,
+    mut ChildOf_query: Query<Entity, With<Health>>,
 ) {
-    for (burn, parent) in status_query.iter() {
-        if let Ok(entity) = parent_query.get_mut(parent.get()) {
+    for (burn, ChildOf) in status_query.iter() {
+        if let Ok(entity) = ChildOf_query.get_mut(ChildOf.get()) {
             if burn.damage_frequency.just_finished() {
                 commands.trigger_targets(
                     AttemptDamageEvent {
@@ -38,28 +38,28 @@ pub fn while_burning(
 
 pub fn on_burn_applied(
     trigger: Trigger<OnInsert, BurningStatus>,
-    status_query: Query<&Parent, With<BurningStatus>>,
-    mut parent_sprite: Query<&mut Sprite>,
+    status_query: Query<&ChildOf, With<BurningStatus>>,
+    mut ChildOf_sprite: Query<&mut Sprite>,
 ) {
-    let Ok(parent) = status_query.get(trigger.entity()) else {
+    let Ok(ChildOf) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
-        parent_sprite.color = RED_COLOR;
+    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
+        ChildOf_sprite.color = RED_COLOR;
     }
 }
 
 pub fn on_burn_removed(
     trigger: Trigger<OnRemove, BurningStatus>,
-    status_query: Query<&Parent, With<BurningStatus>>,
-    mut parent_sprite: Query<&mut Sprite>,
+    status_query: Query<&ChildOf, With<BurningStatus>>,
+    mut ChildOf_sprite: Query<&mut Sprite>,
 ) {
-    let Ok(parent) = status_query.get(trigger.entity()) else {
+    let Ok(ChildOf) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut parent_sprite) = parent_sprite.get_mut(parent.get()) {
-        parent_sprite.color = Color::default();
+    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
+        ChildOf_sprite.color = Color::default();
     }
 }

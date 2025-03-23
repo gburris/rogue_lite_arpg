@@ -40,7 +40,7 @@ pub fn handle_currency_collisions(
     for (currency_entity, currency, colliding_entities) in currency_query.iter() {
         if colliding_entities.contains(&player_collider_entity) {
             player_inventory.add_coins(currency.value);
-            commands.entity(currency_entity).despawn_recursive();
+            commands.entity(currency_entity).despawn();
         }
     }
 }

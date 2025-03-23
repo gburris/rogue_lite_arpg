@@ -56,7 +56,7 @@ pub fn on_portal_entered(
     mut game_state: ResMut<NextState<AppState>>,
     portal_query: Query<&Portal>,
 ) {
-    if let Ok(portal) = portal_query.get(trigger.entity()) {
+    if let Ok(portal) = portal_query.get(trigger.target()) {
         commands.insert_resource(portal.map_layout.clone());
         game_state.set(AppState::SpawnZone);
     }

@@ -59,9 +59,9 @@ pub fn spawn(mut commands: Commands) {
                 ..default()
             },
         ))
-        .with_children(|parent| {
+        .with_children(|ChildOf| {
             // Top left container for health and mana bars
-            parent
+            ChildOf
                 .spawn(Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
@@ -86,13 +86,13 @@ pub fn spawn(mut commands: Commands) {
                     );
                 });
 
-            parent.spawn(Node {
+            ChildOf.spawn(Node {
                 flex_grow: 1.0,
                 ..default()
             });
 
             // Bottom container for EXP and Action bars, health pot stuff
-            parent
+            ChildOf
                 .spawn(Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
@@ -248,8 +248,8 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
 }
 
 /* Exp Bar Code */
-fn create_exp_bar(parent: &mut ChildBuilder) {
-    parent
+fn create_exp_bar(ChildOf: &mut ChildBuilder) {
+    ChildOf
         .spawn(Node {
             width: Val::Px(400.0),
             height: Val::Px(20.0),
@@ -330,8 +330,8 @@ const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Sem
 const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
 const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.2); // Semi-transparent red
 
-fn create_action_bar(parent: &mut ChildBuilder) {
-    parent
+fn create_action_bar(ChildOf: &mut ChildBuilder) {
+    ChildOf
         .spawn((
             ActionBar,
             Node {
@@ -414,7 +414,7 @@ pub fn on_equipment_used(
     }
 
     if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
-        if let Some((box_entity, _, box_children)) = action_box_query
+        if let Some((box_entity, _)) = action_box_query
             .iter()
             .find(|(_, action_box, _)| action_box.slot == equipmemnt.slot)
         {
@@ -450,7 +450,7 @@ pub fn on_equipment_use_failed(
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    if trigger.entity() != player.0 {
+    if trigger.target() != player.0 {
         return;
     }
 
@@ -474,6 +474,35 @@ pub fn on_equipment_use_failed(
                 ));
             });
         }
+    }
+}
+
+pub fn on_cooldown_indicator_added(
+    mut commands: Commands,
+    query: Query<(Entity, &Children), Added<CooldownIndicator>>,
+    error_flash_query: Query<Entity, With<ErrorFlash>>,
+) {
+    for (entity, children) in query.iter() {
+        for &child in children.iter() {
+            if error_flash_query.contains(child) {
+                commands.entity(child).despawn_recursive();
+            }
+        }
+
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn((
+                CooldownLine,
+                Node {
+                    width: Val::Percent(98.),
+                    height: Val::Px(ACTION_BOX_SIZE),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    ..default()
+                },
+                BackgroundColor::from(COOLDOWN_LINE_COLOR),
+            ));
+        });
     }
 }
 

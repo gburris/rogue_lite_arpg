@@ -47,7 +47,7 @@ pub fn start_melee_attack(
 
 pub fn end_melee_attacks(
     mut commands: Commands,
-    mut query: Query<(Entity, &Parent, &ActiveMeleeAttack)>,
+    mut query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
     mut action_state_query: Query<&mut ActionState>,
 ) {
     for (entity, parent, attack) in query.iter_mut() {

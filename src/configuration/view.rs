@@ -4,7 +4,6 @@ use bevy::{
     render::camera::ScalingMode,
     window::WindowResolution,
 };
-use bevy_ecs_tilemap::map::{TilemapSize, TilemapTileSize};
 
 use crate::{
     ai::state::AimPosition,
@@ -14,19 +13,19 @@ use crate::{
 
 #[derive(Component)]
 pub struct YSort {
-    z_layer: ZLayer,
+    pub z: f32,
 }
 
 impl Default for YSort {
     fn default() -> Self {
-        Self::GROUNDED
+        Self::from_z(ZLayer::OnGround)
     }
 }
 
 impl YSort {
-    const GROUNDED: Self = YSort {
-        z_layer: ZLayer::OnGround,
-    };
+    pub fn from_z(z_layer: ZLayer) -> Self {
+        Self { z: z_layer.z() }
+    }
 }
 
 pub fn ysort_transforms(
@@ -38,7 +37,7 @@ pub fn ysort_transforms(
         let relative_height_on_map =
             transform.translation.y / (map_layout.size.y as f32 * world_space_config.tile_size.y);
 
-        transform.translation.z = ysort.z_layer.z() - relative_height_on_map;
+        transform.translation.z = ysort.z - relative_height_on_map;
     }
 }
 
@@ -61,8 +60,8 @@ impl ZLayer {
             // Z layer is additive in parent/child hierarchies
             // Parent 1 + child entity weapon of 0.1 = 1.1
             // These are the relative z layers
-            ZLayer::BehindSprite => -0.5,
-            ZLayer::AboveSprite => 0.5,
+            ZLayer::BehindSprite => -0.001,
+            ZLayer::AboveSprite => 0.001,
         }
     }
 }

@@ -27,7 +27,7 @@ pub struct UpdateDisplayCaseEvent;
 #[derive(Component)]
 pub struct DisplayCaseContainer;
 
-pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
+pub fn spawn_display_case(builder: &mut ChildSpawner) -> Entity {
     let mut scroll_container = Entity::PLACEHOLDER;
 
     builder
@@ -39,8 +39,8 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
             },
             BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
         ))
-        .with_children(|ChildOf| {
-            ChildOf
+        .with_children(|parent| {
+            parent
                 .spawn((
                     Node {
                         width: Val::Px(900.0),
@@ -54,13 +54,13 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                     },
                     BorderColor::from(Color::WHITE),
                 ))
-                .with_children(|ChildOf| {
-                    ChildOf.spawn((Node {
+                .with_children(|parent| {
+                    parent.spawn((Node {
                         width: Val::Px(30.0),
                         ..default()
                     },));
 
-                    ChildOf.spawn((
+                    parent.spawn((
                         Text::new("Name"),
                         TextFont {
                             font_size: 18.0,
@@ -68,12 +68,12 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                         },
                     ));
 
-                    ChildOf.spawn((Node {
+                    parent.spawn((Node {
                         flex_grow: 1.0,
                         ..default()
                     },));
 
-                    ChildOf.spawn((
+                    parent.spawn((
                         Text::new("Equip Slot"),
                         TextFont {
                             font_size: 18.0,
@@ -85,7 +85,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                         },
                     ));
 
-                    ChildOf.spawn((
+                    parent.spawn((
                         Text::new("Value"),
                         TextFont {
                             font_size: 18.0,
@@ -98,7 +98,7 @@ pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
                     ));
                 });
 
-            scroll_container = ChildOf
+            scroll_container = parent
                 .spawn((
                     DisplayCaseContainer,
                     Node {

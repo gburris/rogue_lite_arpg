@@ -105,13 +105,13 @@ pub fn get_window_plugin() -> WindowPlugin {
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
-        OrthographicProjection {
+        Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::Fixed {
                 width: 960.0,
                 height: 540.0,
             },
             ..OrthographicProjection::default_2d()
-        },
+        }),
     ));
 }
 

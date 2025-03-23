@@ -8,7 +8,7 @@ use crate::{
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         display_case::{self, UpdateDisplayCaseEvent},
-        menu_helpers::spawn_header,
+        menu_helpers::menu_header,
     },
 };
 
@@ -36,7 +36,7 @@ pub fn spawn_inventory_menu(
             BackgroundColor::from(BACKGROUND_COLOR),
         ))
         .with_children(|ChildOf| {
-            spawn_header(ChildOf, "INVENTORY");
+            menu_header(ChildOf, "INVENTORY");
 
             inventory.display_case = Some(display_case::spawn_display_case(ChildOf));
 

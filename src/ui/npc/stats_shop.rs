@@ -3,7 +3,7 @@ use crate::{
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
-        menu_helpers::spawn_header,
+        menu_helpers::menu_header,
     },
 };
 use bevy::prelude::*;
@@ -33,51 +33,40 @@ pub fn spawn_stats_shop_menu(
 ) {
     let stats = player_stats.into_inner();
 
-    commands
-        .spawn((
-            StatShopMenu,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(20.0),
-                ..default()
-            },
-            BackgroundColor::from(BACKGROUND_COLOR),
-            GlobalZIndex(1),
-        ))
-        .with_children(|parent| {
-            // Title
-            spawn_header(parent, "STATS SHOP");
-
-            // Stats container
-            parent
-                .spawn((
-                    Node {
-                        width: Val::Px(600.0),
-                        flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(20.0)),
-                        row_gap: Val::Px(10.0),
-                        ..default()
-                    },
-                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
-                ))
-                .with_children(|container| {
-                    // Spawn each stat row
-                    for stat_type in [
-                        DisplayableStatType::Agility,
-                        DisplayableStatType::Strength,
-                        DisplayableStatType::Dexterity,
-                        DisplayableStatType::Intellect,
-                        DisplayableStatType::Luck,
-                    ] {
-                        spawn_stat_row(container, stat_type, stats);
-                    }
-                });
-
+    commands.spawn((
+        StatShopMenu,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(20.0),
+            ..default()
+        },
+        BackgroundColor::from(BACKGROUND_COLOR),
+        GlobalZIndex(1),
+        children![
+            menu_header("STATS SHOP"),
+            // stats shop body
+            (
+                Node {
+                    width: Val::Px(600.0),
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(10.0),
+                    ..default()
+                },
+                BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+                children![
+                    spawn_stat_row(DisplayableStatType::Agility, stats),
+                    spawn_stat_row(DisplayableStatType::Strength, stats),
+                    spawn_stat_row(DisplayableStatType::Dexterity, stats),
+                    spawn_stat_row(DisplayableStatType::Intellect, stats),
+                    spawn_stat_row(DisplayableStatType::Luck, stats),
+                ]
+            ),
             // Progress Points Display
-            parent.spawn((
+            (
                 Text::new(format!(
                     "Available Progress Points: {}",
                     game_progress.progress_points
@@ -86,81 +75,75 @@ pub fn spawn_stats_shop_menu(
                     font_size: 32.0,
                     ..default()
                 },
-            ));
-        });
+            )
+        ],
+    ));
 }
 
-fn spawn_stat_row(parent: &mut ChildBuilder, stat_type: DisplayableStatType, stats: &PlayerStats) {
-    parent
-        .spawn((Node {
+fn spawn_stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
+    (
+        Node {
             width: Val::Percent(100.0),
             height: Val::Px(50.0),
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
             padding: UiRect::horizontal(Val::Px(10.0)),
             ..default()
-        },))
-        .with_children(|row| {
+        },
+        children![
             // Decrease button
-            spawn_stat_shop_button(row, stat_type, false);
-
-            // Stat info
-            row.spawn((Node {
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                ..default()
-            },))
-                .with_children(|info| {
-                    info.spawn((
+            spawn_stat_shop_button(stat_type, false),
+            (
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                children![
+                    (
                         Text::new(format!("{:?}: {}", stat_type, stat_type.get_value(stats))),
                         TextFont {
                             font_size: 24.0,
                             ..default()
                         },
-                    ));
-                    info.spawn((
+                    ),
+                    (
                         Text::new(stat_type.get_description()),
                         TextFont {
                             font_size: 16.0,
                             ..default()
                         },
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
-                    ));
-                });
-
+                    )
+                ]
+            ),
             // Increase button
-            spawn_stat_shop_button(row, stat_type, true);
-        });
+            spawn_stat_shop_button(stat_type, true)
+        ],
+    )
 }
 
-fn spawn_stat_shop_button(
-    parent: &mut ChildBuilder,
-    stat_type: DisplayableStatType,
-    is_increase: bool,
-) {
-    parent
-        .spawn((
-            StatShopButton {
-                stat_type,
-                is_increase,
-            },
-            Button,
-            Node {
-                width: Val::Px(30.0),
-                height: Val::Px(30.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+fn spawn_stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl Bundle {
+    (
+        StatShopButton {
+            stat_type,
+            is_increase,
+        },
+        Button,
+        Node {
+            width: Val::Px(30.0),
+            height: Val::Px(30.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
+        children![(
+            Text::new(if is_increase { "+" } else { "-" }),
+            TextFont {
+                font_size: 24.0,
                 ..default()
             },
-            BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-        ))
-        .with_children(|button| {
-            button.spawn((
-                Text::new(if is_increase { "+" } else { "-" }),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-            ));
-        });
+        )],
+    )
 }

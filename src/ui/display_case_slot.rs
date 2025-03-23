@@ -31,7 +31,7 @@ pub struct DisplaySlotContext<'a> {
 }
 
 /// Spawns a given "slot" in a display case representing a single item in the inventory
-pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &DisplaySlotContext) {
+pub fn spawn_slot(builder: &mut ChildSpawner, icons: &GameIcons, context: &DisplaySlotContext) {
     builder
         .spawn((
             DisplayCaseSlot {
@@ -46,12 +46,12 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 ..default()
             },
             AccessibilityNode(Accessible::new(Role::ListItem)),
-            PickingBehavior {
+            Pickable {
                 should_block_lower: false,
                 ..default()
             },
         ))
-        .with_children(|ChildOf| {
+        .with_children(|parent| {
             let item_icon = match context.item.item_type {
                 ItemType::Melee => icons.melee_icon.clone(),
                 ItemType::Staff => icons.staff_icon.clone(),
@@ -59,7 +59,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 ItemType::Tome => icons.spell_book_icon.clone(),
             };
 
-            ChildOf.spawn((
+            parent.spawn((
                 ImageNode {
                     image: item_icon,
                     ..default()
@@ -69,26 +69,26 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                     height: Val::Px(30.0),
                     ..default()
                 },
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: false,
                 },
             ));
 
-            ChildOf.spawn((
+            parent.spawn((
                 Text::new(context.item_name),
                 TextFont {
                     font_size: 18.0,
                     ..default()
                 },
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: false,
                 },
             ));
 
             if context.is_equipped {
-                ChildOf.spawn((
+                parent.spawn((
                     ImageNode {
                         image: icons.equip_icon.clone(),
                         ..default()
@@ -98,19 +98,19 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                         width: Val::Px(16.0),
                         ..default()
                     },
-                    PickingBehavior {
+                    Pickable {
                         should_block_lower: false,
                         is_hoverable: false,
                     },
                 ));
             }
 
-            ChildOf.spawn((
+            parent.spawn((
                 Node {
                     flex_grow: 1.0,
                     ..default()
                 },
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: false,
                 },
@@ -120,7 +120,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                 .equipment_slot
                 .map(|slot| slot.to_string())
                 .unwrap_or("-".to_string());
-            ChildOf.spawn((
+            parent.spawn((
                 Text::new(slot_string),
                 TextFont {
                     font_size: 18.0,
@@ -130,13 +130,13 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                     width: EQUIP_SLOT_WIDTH,
                     ..default()
                 },
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: false,
                 },
             ));
 
-            ChildOf.spawn((
+            parent.spawn((
                 Text::new(context.item.value.to_string()),
                 TextFont {
                     font_size: 18.0,
@@ -146,7 +146,7 @@ pub fn spawn_slot(builder: &mut ChildBuilder, icons: &GameIcons, context: &Displ
                     width: VALUE_WIDTH,
                     ..default()
                 },
-                PickingBehavior {
+                Pickable {
                     should_block_lower: false,
                     is_hoverable: false,
                 },

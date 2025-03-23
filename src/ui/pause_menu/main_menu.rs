@@ -6,7 +6,7 @@ use crate::{
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
-        menu_helpers::spawn_header,
+        menu_helpers::menu_header,
     },
 };
 use bevy::prelude::*;
@@ -39,25 +39,21 @@ pub fn spawn_main_menu(
 ) {
     let (health, player, inventory) = player.into_inner();
 
-    commands
-        .spawn((
-            MainMenu,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                row_gap: Val::Px(20.0),
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-            BackgroundColor::from(BACKGROUND_COLOR),
-        ))
-        .with_children(|ChildOf| {
-            // Header Section
-            spawn_header(ChildOf, "PAUSED");
-
-            // Body Section (transChildOf)
-            ChildOf
-                .spawn((Node {
+    commands.spawn((
+        MainMenu,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            row_gap: Val::Px(20.0),
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        BackgroundColor::from(BACKGROUND_COLOR),
+        children![
+            menu_header("PAUSED"),
+            // Body Section
+            (
+                Node {
                     width: Val::Percent(100.0),
                     flex_grow: 1.0,
                     flex_direction: FlexDirection::Column,
@@ -65,47 +61,41 @@ pub fn spawn_main_menu(
                     align_items: AlignItems::Center,
                     row_gap: Val::Px(20.0),
                     ..default()
-                },))
-                .with_children(|body| {
-                    // Spawn all menu buttons
-                    let buttons = [MenuButtonConfig::Inventory, MenuButtonConfig::Stats];
-
-                    for button_config in buttons {
-                        spawn_menu_button(body, button_config);
-                    }
-                });
-
+                },
+                children![
+                    menu_button(MenuButtonConfig::Inventory),
+                    menu_button(MenuButtonConfig::Stats),
+                ]
+            ),
             // Footer Section
-            ChildOf
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: FOOTER_HEIGHT,
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::horizontal(Val::Px(40.0)),
-                        ..default()
-                    },
-                    BackgroundColor::from(DARK_GRAY_COLOR),
-                ))
-                .with_children(|footer| {
-                    // Player Stats
-                    footer
-                        .spawn((Node {
+            (
+                Node {
+                    width: Val::Percent(100.0),
+                    height: FOOTER_HEIGHT,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::horizontal(Val::Px(40.0)),
+                    ..default()
+                },
+                BackgroundColor::from(DARK_GRAY_COLOR),
+                children![
+                    // left side player info
+                    (
+                        Node {
                             flex_direction: FlexDirection::Row,
                             column_gap: Val::Px(20.0),
                             ..default()
-                        },))
-                        .with_children(|stats| {
-                            stats.spawn((
+                        },
+                        children![
+                            (
                                 Text::new(format!("Level: {}", player.get_level())),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
                                 },
-                            ));
-                            stats.spawn((
+                            ),
+                            (
                                 Text::new(format!(
                                     "Stat Points: {}",
                                     game_progress.progress_points,
@@ -114,15 +104,15 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                            ));
-                            stats.spawn((
+                            ),
+                            (
                                 Text::new(format!("Deaths: {}", game_progress.death_counter,)),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
                                 },
-                            ));
-                            stats.spawn((
+                            ),
+                            (
                                 Text::new(format!(
                                     "Health: {:.1} / {:.1}",
                                     health.hp, health.max_hp
@@ -131,54 +121,52 @@ pub fn spawn_main_menu(
                                     font_size: 24.0,
                                     ..default()
                                 },
-                            ));
-
-                            stats.spawn((
+                            ),
+                            (
                                 Text::new(format!("Total coins: {:.1}", inventory.coins)),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()
                                 },
-                            ));
-                        });
-
-                    // Exit Instructions
-                    footer.spawn((
+                            )
+                        ]
+                    ),
+                    // right side exit instructions
+                    (
                         Text::new("Press ESC to unpause"),
                         TextFont {
                             font_size: 24.0,
                             ..default()
                         },
-                    ));
-                });
-        });
+                    )
+                ]
+            )
+        ],
+    ));
 }
 
-fn spawn_menu_button(ChildOf: &mut ChildBuilder, config: MenuButtonConfig) {
+fn menu_button(config: MenuButtonConfig) -> impl Bundle {
     let (button_component, button_text) = config.to_component();
 
-    ChildOf
-        .spawn((
-            button_component,
-            Button,
-            Node {
-                width: Val::Px(300.0),
-                height: Val::Px(60.0),
-                border: UiRect::all(Val::Px(2.0)),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+    (
+        button_component,
+        Button,
+        Node {
+            width: Val::Px(300.0),
+            height: Val::Px(60.0),
+            border: UiRect::all(Val::Px(2.0)),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        BorderColor(Color::srgb(0.8, 0.8, 0.8)),
+        BackgroundColor(DARK_GRAY_COLOR),
+        children![(
+            Text::new(button_text),
+            TextFont {
+                font_size: 32.0,
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.8, 0.8)),
-            BackgroundColor(DARK_GRAY_COLOR),
-        ))
-        .with_children(|button| {
-            button.spawn((
-                Text::new(button_text),
-                TextFont {
-                    font_size: 32.0,
-                    ..default()
-                },
-            ));
-        });
+        )],
+    )
 }

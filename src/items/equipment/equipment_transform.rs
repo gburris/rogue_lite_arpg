@@ -6,8 +6,8 @@ use super::{EquipmentSlot, Equipped};
 use crate::{
     ai::state::{ActionState, FacingDirection},
     combat::melee::ActiveMeleeAttack,
-    items::inventory::Inventory,
     configuration::ZLayer,
+    items::inventory::Inventory,
 };
 
 // Constants for transform values
@@ -29,10 +29,10 @@ static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTrans
         m.insert(
             FacingDirection::Up,
             EquipmentTransform {
-                mainhand: Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z())
+                mainhand: Transform::from_xyz(0.0, -8.0, ZLayer::AboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(0.0, -8.0, ZLayer::WeaponAboveSprite.z())
+                offhand: Transform::from_xyz(0.0, -8.0, ZLayer::AboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
                     .with_scale(OFFHAND_SCALE),
             },
@@ -42,10 +42,10 @@ static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTrans
         m.insert(
             FacingDirection::Down,
             EquipmentTransform {
-                mainhand: Transform::from_xyz(0.0, 8.0, ZLayer::WeaponBehindSprite.z())
+                mainhand: Transform::from_xyz(0.0, 8.0, ZLayer::BehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(0.0, 8.0, ZLayer::WeaponBehindSprite.z())
+                offhand: Transform::from_xyz(0.0, 8.0, ZLayer::BehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
                     .with_scale(OFFHAND_SCALE),
             },
@@ -55,10 +55,10 @@ static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTrans
         m.insert(
             FacingDirection::Left,
             EquipmentTransform {
-                mainhand: Transform::from_xyz(-8.0, -15.0, ZLayer::WeaponBehindSprite.z())
+                mainhand: Transform::from_xyz(-8.0, -15.0, ZLayer::BehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(1.0, -15.0, ZLayer::WeaponAboveSprite.z())
+                offhand: Transform::from_xyz(1.0, -15.0, ZLayer::AboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
                     .with_scale(OFFHAND_SCALE),
             },
@@ -68,10 +68,10 @@ static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTrans
         m.insert(
             FacingDirection::Right,
             EquipmentTransform {
-                mainhand: Transform::from_xyz(8.0, -15.0, ZLayer::WeaponAboveSprite.z())
+                mainhand: Transform::from_xyz(8.0, -15.0, ZLayer::AboveSprite.z())
                     .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
                     .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(8.0, -15.0, ZLayer::WeaponBehindSprite.z())
+                offhand: Transform::from_xyz(8.0, -15.0, ZLayer::BehindSprite.z())
                     .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
                     .with_scale(OFFHAND_SCALE),
             },

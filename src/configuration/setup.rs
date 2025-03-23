@@ -40,10 +40,12 @@ impl Plugin for SetupPlugin {
             .add_sub_state::<PlayingState>()
             .add_systems(Startup, view::spawn_camera)
             .add_systems(
-                Update, // avian recommended ordering for camera following logic
+                Update,
                 view::camera_follow_system
                     .in_set(InGameSet::Camera)
+                    // avian recommendeds ordering camera following logic after transform prop
                     .before(TransformSystem::TransformPropagate),
-            );
+            )
+            .add_systems(Update, view::ysort_transforms.in_set(InGameSet::Vfx));
     }
 }

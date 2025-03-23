@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    despawn::components::LiveDuration,
     configuration::ZLayer,
+    despawn::components::LiveDuration,
     player::{events::PlayerLevelUpEvent, Player},
 };
 
@@ -42,7 +42,7 @@ pub fn on_level_up(
                 MeshMaterial2d(
                     materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7))),
                 ),
-                Transform::from_translation(Vec2::ZERO.extend(ZLayer::LevelUpEffect.z())),
+                Transform::from_translation(Vec2::ZERO.extend(ZLayer::BehindSprite.z())),
                 LiveDuration::new(LEVEL_UP_ANIMATION_DURATION),
             ));
 
@@ -55,7 +55,7 @@ pub fn on_level_up(
                     ..default()
                 },
                 TextColor::from(Color::srgb(1.0, 0.84, 0.0)),
-                Transform::from_xyz(0.0, 60.0, ZLayer::LevelUpEffect.z()),
+                Transform::from_xyz(0.0, 60.0, ZLayer::BehindSprite.z()),
                 LiveDuration::new(LEVEL_UP_ANIMATION_DURATION),
             ));
         });

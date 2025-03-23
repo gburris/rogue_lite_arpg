@@ -4,8 +4,8 @@ pub enum ZLayer {
     InAir,
     VisualEffect,
 
-    WeaponBehindSprite,
-    WeaponAboveSprite,
+    BehindSprite,
+    AboveSprite,
     LevelUpEffect,
 }
 
@@ -20,8 +20,8 @@ impl ZLayer {
             // Z layer is additive in parent/child hierarchies
             // Parent 1 + child entity weapon of 0.1 = 1.1
             // These are the reletive z layers
-            ZLayer::WeaponBehindSprite => -0.4,
-            ZLayer::WeaponAboveSprite => 0.1,
+            ZLayer::BehindSprite => -0.4,
+            ZLayer::AboveSprite => 0.1,
             ZLayer::LevelUpEffect => -0.1,
         }
     }

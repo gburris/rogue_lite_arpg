@@ -1,7 +1,7 @@
 use crate::{
     combat::{damage::DamageDealtEvent, health::HealedEvent},
-    despawn::components::LiveDuration,
     configuration::ZLayer,
+    despawn::components::LiveDuration,
 };
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
@@ -34,7 +34,7 @@ fn spawn_health_change_text(
     let text_height = (entity_height / 2.0) + HEALTH_TEXT_OFFSET;
 
     // Scale the direction vector by the desired text height to place the text above the entity
-    let text_position = (rotated_vector.normalize() * text_height).extend(ZLayer::VisualEffect.z());
+    let text_position = (rotated_vector.normalize() * text_height).extend(ZLayer::AboveSprite.z());
 
     let rounded_amount = (amount * 10.0).round() / 10.0; // Round to 1 decimal place
     let formatted_amount = if rounded_amount.fract() == 0.0 {

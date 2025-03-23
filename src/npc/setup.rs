@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use crate::{
     ai::SimpleMotion,
     combat::Health,
-    configuration::ZLayer,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer,

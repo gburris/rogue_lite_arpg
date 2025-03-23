@@ -5,7 +5,10 @@ use crate::{
     ai::{state::ActionState, SimpleMotion},
     animation::AnimationTimer,
     combat::Health,
-    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        YSort,
+    },
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
     player::interact::InteractionEvent,
 };
@@ -20,6 +23,7 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     ActionState,
     AnimationTimer,
+    YSort
 )]
 pub struct NPC;
 

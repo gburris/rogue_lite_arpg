@@ -5,11 +5,18 @@ use super::{EquipmentSlot, Equipped};
 use crate::{
     ai::state::{ActionState, AimPosition, FacingDirection},
     combat::{
-        damage::DamageSource, health::AttemptHealingEvent, mana::ManaCost, melee::{start_melee_attack, MeleeWeapon}, projectile::{spawn::spawn_projectile, ProjectileWeapon}, shield::{shield_block::deactivate_shield, ActiveShield}, Mana
+        damage::DamageSource,
+        health::AttemptHealingEvent,
+        mana::ManaCost,
+        melee::{start_melee_attack, MeleeWeapon},
+        projectile::{spawn::spawn_projectile, ProjectileWeapon},
+        shield::{shield_block::deactivate_shield, ActiveShield},
+        Mana,
     },
     enemy::Enemy,
     items::{
-        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect, Shield,
+        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
+        Shield,
     },
     player::{StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent},
 };
@@ -239,7 +246,6 @@ pub fn on_equipment_deactivated(
         warn!("No shield equipped in offhand");
         return;
     };
-
     if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
         deactivate_shield(
             &mut commands,

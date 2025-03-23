@@ -10,7 +10,7 @@ use crate::{
         GameCollisionLayer,
     },
     items::{
-        equipment::{on_equipment_activated, Equipped},
+        equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
         inventory::Inventory,
         *,
     },
@@ -66,6 +66,7 @@ pub fn spawn_player(
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)
+        .observe(on_equipment_deactivated)
         .id();
 
     commands

@@ -95,3 +95,13 @@ pub struct HealingTome {
     LiveDuration(|| LiveDuration::new(1.0))
 )]
 pub struct HealingTomeSpellVisualEffect;
+
+#[derive(Component)]
+pub struct Shield {
+    pub hitbox: Collider,
+}
+
+//This component tags items that are active continiously while being used
+//e.g. Holding right will keep a shield up
+#[derive(Component)]
+pub struct Holdable;

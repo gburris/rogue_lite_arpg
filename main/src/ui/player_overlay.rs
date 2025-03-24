@@ -383,7 +383,18 @@ pub fn update_action_bar(
                 if let Some(&image_entity) = children.first() {
                     if let Ok(mut image_node) = image_query.get_mut(image_entity) {
                         if let Ok(item_sprite) = item_query.get(equipped_entity) {
-                            image_node.image = item_sprite.image.clone();
+                            let action_bar_sprite = get_action_bar_sprite(item_sprite);
+
+                            image_node.image = action_bar_sprite.image.clone();
+
+                            if let Some(atlas) = &action_bar_sprite.texture_atlas {
+                                image_node.texture_atlas = Some(TextureAtlas {
+                                    layout: atlas.layout.clone(),
+                                    index: atlas.index,
+                                });
+                            } else {
+                                image_node.texture_atlas = None;
+                            }
                         }
                     }
                 }
@@ -474,5 +485,19 @@ pub fn update_cooldowns(
     for (mut line_node, cooldown_duration) in cooldown_query.iter_mut() {
         line_node.height =
             Val::Px(ACTION_BOX_INTERIOR_SIZE * cooldown_duration.0.fraction_remaining());
+    }
+}
+
+pub fn get_action_bar_sprite(sprite: &Sprite) -> Sprite {
+    match &sprite.texture_atlas {
+        Some(atlas) => Sprite {
+            image: sprite.image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: atlas.layout.clone(),
+                index: 0,
+            }),
+            ..sprite.clone()
+        },
+        None => sprite.clone(),
     }
 }

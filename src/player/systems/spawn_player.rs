@@ -10,7 +10,7 @@ use crate::{
         GameCollisionLayer, ZLayer,
     },
     items::{
-        equipment::{on_equipment_activated, Equipped},
+        equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
         inventory::Inventory,
         *,
     },
@@ -29,8 +29,9 @@ pub fn spawn_player(
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
         spawn_sword(&mut commands, &sprites),
-        spawn_axe(&mut commands, &sprites),
-        spawn_offhand(&mut commands, &sprites, "tome_of_healing"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "tome_of_healing"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "magic_shield"),
+        spawn_offhand(&mut commands, &sprites, &texture_layouts, "knight_shield"),
     ];
 
     let player = commands
@@ -102,6 +103,7 @@ pub fn spawn_player(
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)
+        .observe(on_equipment_deactivated)
         .id();
 
     commands

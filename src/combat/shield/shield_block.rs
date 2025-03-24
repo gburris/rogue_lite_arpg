@@ -1,11 +1,11 @@
 use crate::{
     ai::state::{AimPosition, FacingDirection},
     combat::{mana::ManaDrainRate, Mana},
+    configuration::ZLayer,
     items::{
         equipment::{EquipmentTransform, Equipped},
         Shield,
     },
-    labels::layer::ZLayer,
 };
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
@@ -63,9 +63,9 @@ pub fn update_active_shields(
             offset_distance * normalized_angle.sin(),
             -offset_distance * normalized_angle.cos(),
             if atlas_index == 0 {
-                ZLayer::WeaponAboveSprite.z()
+                ZLayer::AboveSprite.z()
             } else {
-                ZLayer::WeaponBehindSprite.z()
+                ZLayer::BehindSprite.z()
             },
         );
 

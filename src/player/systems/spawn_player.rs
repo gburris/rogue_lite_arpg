@@ -14,7 +14,7 @@ use crate::{
         inventory::Inventory,
         *,
     },
-    player::{interact::PlayerInteractionRadius, systems::*, Player},
+    player::{interact::PlayerInteractionRadius, systems::*, Player, PlayerCollider},
     progression::GameProgress,
 };
 
@@ -73,6 +73,7 @@ pub fn spawn_player(
         .with_children(|spawner| {
             // collider to bump into stuff
             spawner.spawn((
+                PlayerCollider,
                 Transform::from_xyz(0.0, -20.0, 0.0),
                 Collider::circle(12.0),
                 CollisionLayers::new(

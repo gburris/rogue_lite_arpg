@@ -62,3 +62,6 @@ impl Player {
         self.current_level
     }
 }
+
+#[derive(Component)]
+pub struct PlayerCollider;

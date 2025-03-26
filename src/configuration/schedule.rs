@@ -33,11 +33,17 @@ impl Plugin for SchedulePlugin {
                 InGameSet::Camera,
                 InGameSet::Vfx,
                 InGameSet::HudOverlay,
-                InGameSet::Physics,
                 InGameSet::Collision,
             )
                 .chain()
                 .in_set(MainSet::InGame),
+        )
+        .configure_sets(
+            FixedUpdate,
+            (
+                MainSet::InGame.run_if(in_state(AppState::Playing)),
+                InGameSet::Physics.in_set(MainSet::InGame),
+            ),
         );
     }
 }

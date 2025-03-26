@@ -1,4 +1,4 @@
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration};
@@ -75,15 +75,13 @@ pub struct Lootable;
 #[require(
     CollidingEntities,
     Sensor,
-    Collider(|| Collider::circle(150.0)),
+    Collider(|| Collider::circle(200.0)),
     CollisionLayers(|| CollisionLayers::new(
-        GameCollisionLayer::Magnet,
-        [GameCollisionLayer::Player]
+        GameCollisionLayer::Interaction,
+        [GameCollisionLayer::PlayerInteractionRadius]
     ))
 )]
-pub struct Magnet {
-    pub strength: f32,
-}
+pub struct Magnet;
 
 #[derive(Component)]
 pub struct HealingTome {

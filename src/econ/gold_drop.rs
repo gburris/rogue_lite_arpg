@@ -52,7 +52,7 @@ pub fn on_gold_drop_event(
                 Sprite::from_image(sprite_path),
                 transform,
             ))
-            .with_child(Magnet { strength: 8.0 });
+            .with_child(Magnet);
 
         remaining_gold -= value;
         entities_spawned += 1;

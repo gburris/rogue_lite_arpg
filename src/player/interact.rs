@@ -13,7 +13,7 @@ pub struct PlayerInteractionRadius;
 #[derive(Component)]
 #[require(
     Sensor,
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::Player))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::PlayerInteractionRadius))
 )]
 pub enum InteractionZone {
     Circle { radius: f32 },

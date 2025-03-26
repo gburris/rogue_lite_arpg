@@ -42,7 +42,7 @@ pub fn spawn_projectile(
         },
         AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         CollisionLayers::new(
-            GameCollisionLayer::InAir,
+            [GameCollisionLayer::InAir, GameCollisionLayer::HitBox],
             LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
         ),
     ));

@@ -23,12 +23,13 @@ pub enum DamageSource {
 impl From<DamageSource> for LayerMask {
     fn from(source: DamageSource) -> Self {
         match source {
-            DamageSource::Player => GameCollisionLayer::Enemy.to_bits(),
-            DamageSource::Enemy => GameCollisionLayer::Player.to_bits(),
-            DamageSource::NPC => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Player => GameCollisionLayer::EnemyHurtBox.to_bits(),
+            DamageSource::NPC => GameCollisionLayer::EnemyHurtBox.to_bits(),
+            DamageSource::Enemy => GameCollisionLayer::AllyHurtBox.to_bits(),
             DamageSource::Environment => {
-                // Combine both Player and Enemy layers for Environment
-                GameCollisionLayer::Enemy.to_bits() | GameCollisionLayer::Player.to_bits()
+                // Environment can affect all characters
+                GameCollisionLayer::AllyHurtBox.to_bits()
+                    | GameCollisionLayer::EnemyHurtBox.to_bits()
             }
         }
         .into()
@@ -40,6 +41,18 @@ pub enum Damage {
     Range((f32, f32)),
     Single(f32),
 }
+
+impl Damage {
+    fn to_float(self) -> f32 {
+        match self {
+            Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
+            Damage::Single(amount) => amount,
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct HurtBox;
 
 #[derive(Event)]
 pub struct AttemptDamageEvent {
@@ -62,18 +75,12 @@ pub struct DefeatedEvent;
 pub fn on_damage_event(
     damage_trigger: Trigger<AttemptDamageEvent>,
     mut commands: Commands,
-    mut damaged_query: Query<(&mut Health, Option<&HasIFrames>, Option<&Invulnerable>)>,
+    mut damaged_query: Query<(&mut Health, Option<&HasIFrames>), Without<Invulnerable>>,
     source_query: Query<&EffectsList>,
 ) {
-    if let Ok((mut health, has_iframes, invulnerable)) =
-        damaged_query.get_mut(damage_trigger.entity())
-    {
-        if invulnerable.is_some() {
-            return;
-        }
-
+    if let Ok((mut health, has_iframes)) = damaged_query.get_mut(damage_trigger.entity()) {
         // Convert `Damage` to raw damage amount
-        let damage = calculate_damage(damage_trigger.damage);
+        let damage = damage_trigger.damage.to_float();
         health.take_damage(damage);
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
@@ -100,12 +107,5 @@ pub fn on_damage_event(
                 );
             }
         }
-    }
-}
-
-fn calculate_damage(damage: Damage) -> f32 {
-    match damage {
-        Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
-        Damage::Single(amount) => amount,
     }
 }

@@ -16,7 +16,7 @@ impl Plugin for MapPlugin {
                     zone::despawn_previous_zone,
                     zone::spawn_zone_tilemap,
                     zone::spawn_zone_colliders,
-                    // zone::spawn_background,
+                    zone::spawn_background,
                     zone::spawn_zone_entities,
                     zone::finish_create_zone,
                 )

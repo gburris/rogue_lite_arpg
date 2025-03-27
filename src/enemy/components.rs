@@ -20,7 +20,7 @@ use crate::{
     Collider,
     CollidingEntities,
     LockedAxes(|| LockedAxes::new().lock_rotation()),
-    TranslationInterpolation,
+    TranslationExtrapolation,
     Experience,
     ActionState,
     AnimationTimer,

@@ -44,7 +44,7 @@ pub fn spawn_player(
                 .build(),
             Mana::new(100.0, 10.0),
             HasIFrames {
-                duration: Duration::from_secs(1),
+                duration: Duration::from_secs(2),
             },
             game_progress.base_stats.clone(),
             Transform::from_xyz(0., 0., ZLayer::OnGround.z()),

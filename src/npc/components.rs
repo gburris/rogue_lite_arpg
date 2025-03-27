@@ -7,7 +7,7 @@ use crate::{
     combat::Health,
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
-        YSort,
+        YSort, CHARACTER_FEET_POS_OFFSET,
     },
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
     player::interact::InteractionEvent,
@@ -23,7 +23,7 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     ActionState,
     AnimationTimer,
-    YSort
+    YSort(|| YSort::from_offset(CHARACTER_FEET_POS_OFFSET))
 )]
 pub struct NPC;
 

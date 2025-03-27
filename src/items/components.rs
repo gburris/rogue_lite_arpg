@@ -1,7 +1,10 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration};
+use crate::{
+    configuration::{GameCollisionLayer, YSort},
+    despawn::components::LiveDuration,
+};
 
 /// This is the base component for all items in the game. If you have a new concept that will be
 /// shared by all items, add it as a field here.
@@ -67,7 +70,8 @@ pub struct ItemDropEvent;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    LiveDuration(|| LiveDuration::new(10.0))
+    LiveDuration(|| LiveDuration::new(10.0)),
+    YSort
 )]
 pub struct Lootable;
 

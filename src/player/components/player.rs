@@ -5,7 +5,7 @@ use crate::{
     ai::{state::ActionState, SimpleMotion},
     animation::AnimationTimer,
     combat::Health,
-    configuration::YSort,
+    configuration::{YSort, CHARACTER_FEET_POS_OFFSET},
 };
 
 /// How much more experience is required (as a multiplier) after each level up
@@ -19,7 +19,7 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     ActionState,
     AnimationTimer,
-    YSort
+    YSort(|| YSort::from_offset(CHARACTER_FEET_POS_OFFSET))
 )]
 pub struct Player {
     current_level: u32,

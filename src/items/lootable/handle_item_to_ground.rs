@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    items::{equipment::Equipped, inventory::Inventory, Item, ItemDropEvent, Lootable},
     configuration::ZLayer,
+    items::{equipment::Equipped, inventory::Inventory, Item, ItemDropEvent, Lootable},
     player::interact::InteractionZone,
 };
 
@@ -42,9 +42,11 @@ pub fn handle_item_ground_transition(
     commands
         .entity(item_entity)
         .remove::<Equipped>()
-        .insert(Lootable)
-        .insert(Transform::from_translation(final_position))
-        .insert(Visibility::Visible)
+        .insert((
+            Lootable,
+            Visibility::Visible,
+            Transform::from_translation(final_position),
+        ))
         .remove_parent()
         .with_child(InteractionZone::ITEM_PICKUP);
 }

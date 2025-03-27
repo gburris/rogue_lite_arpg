@@ -4,10 +4,10 @@ use serde::Serialize;
 
 use crate::{
     ai::SimpleMotion,
-    combat::{Health, Mana},
+    combat::{damage::HurtBox, Health, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
-        GameCollisionLayer,
+        GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
@@ -94,20 +94,6 @@ fn spawn_enemy(
                 SimpleMotion::new(enemy_details.simple_motion_speed),
                 Health::new(enemy_details.health),
                 Mana::new(100.0, 10.0),
-                Collider::rectangle(enemy_details.collider_size.0, enemy_details.collider_size.1),
-                CollisionLayers::new(
-                    [
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::EnemyHurtBox,
-                    ],
-                    [
-                        GameCollisionLayer::HitBox,
-                        GameCollisionLayer::InAir,
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::HighObstacle,
-                        GameCollisionLayer::LowObstacle,
-                    ],
-                ),
                 Transform::from_translation(spawn_data.position),
                 Sprite::from_atlas_image(
                     spawn_data.enemy_type.sprite(sprites),
@@ -117,6 +103,36 @@ fn spawn_enemy(
                     },
                 ),
             ))
+            .with_children(|spawner| {
+                // collider to bump into stuff
+                spawner.spawn((
+                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
+                    Collider::circle(10.0),
+                    CollisionLayers::new(
+                        [GameCollisionLayer::Grounded],
+                        [
+                            GameCollisionLayer::Grounded,
+                            GameCollisionLayer::HighObstacle,
+                            GameCollisionLayer::LowObstacle,
+                        ],
+                    ),
+                ));
+
+                // hurtbox
+                spawner.spawn((
+                    HurtBox,
+                    Collider::rectangle(
+                        enemy_details.collider_size.0,
+                        enemy_details.collider_size.1,
+                    ),
+                    Transform::from_xyz(0.0, -8.0, 0.0),
+                    Sensor,
+                    CollisionLayers::new(
+                        [GameCollisionLayer::EnemyHurtBox],
+                        [GameCollisionLayer::HitBox],
+                    ),
+                ));
+            })
             .add_children(&starting_items)
             .observe(on_enemy_defeated)
             .observe(on_equipment_activated)

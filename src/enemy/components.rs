@@ -8,6 +8,7 @@ use crate::{
     ai::{state::ActionState, SimpleMotion},
     animation::AnimationTimer,
     combat::Health,
+    configuration::{YSort, CHARACTER_FEET_POS_OFFSET},
 };
 
 //favoring #[require] as a default approach is generally recommended.
@@ -21,7 +22,8 @@ use crate::{
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     Experience,
     ActionState,
-    AnimationTimer
+    AnimationTimer,
+    YSort(|| YSort::from_offset(CHARACTER_FEET_POS_OFFSET))
 )]
 pub struct Enemy;
 

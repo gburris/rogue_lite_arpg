@@ -92,7 +92,7 @@ pub fn on_interaction_open_chest(
     commands
         .entity(chest_entity)
         .insert(AnimationTimer(Timer::from_seconds(
-            0.2,
+            0.1,
             TimerMode::Repeating,
         )));
 

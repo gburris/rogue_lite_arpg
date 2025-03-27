@@ -21,6 +21,7 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
     SimpleMotion,
     RigidBody(|| RigidBody::Kinematic),
     LockedAxes(|| LockedAxes::new().lock_rotation()),
+    TranslationExtrapolation,
     ActionState,
     AnimationTimer,
     YSort(|| YSort::from_offset(CHARACTER_FEET_POS_OFFSET))

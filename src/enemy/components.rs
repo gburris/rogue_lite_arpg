@@ -1,31 +1,12 @@
 use std::collections::HashMap;
 
-use avian2d::prelude::*;
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::{
-    ai::{state::ActionState, SimpleMotion},
-    animation::AnimationTimer,
-    combat::Health,
-    configuration::{YSort, CHARACTER_FEET_POS_OFFSET},
-};
+use crate::character::Character;
 
-//favoring #[require] as a default approach is generally recommended.
 #[derive(Component)]
-#[require(
-    Health,
-    SimpleMotion,
-    RigidBody,
-    Collider,
-    CollidingEntities,
-    LockedAxes(|| LockedAxes::new().lock_rotation()),
-    TranslationExtrapolation,
-    Experience,
-    ActionState,
-    AnimationTimer,
-    YSort(|| YSort::from_offset(CHARACTER_FEET_POS_OFFSET))
-)]
+#[require(Character, Experience)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it

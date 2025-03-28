@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{damage::HurtBox, invulnerable::HasIFrames, Mana},
+    combat::{damage::HurtBox, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer, ZLayer, CHARACTER_FEET_POS_OFFSET,
@@ -43,9 +41,6 @@ pub fn spawn_player(
                 .max_capacity(50)
                 .build(),
             Mana::new(100.0, 10.0),
-            HasIFrames {
-                duration: Duration::from_secs(2),
-            },
             game_progress.base_stats.clone(),
             Transform::from_xyz(0., 0., ZLayer::OnGround.z()),
             Sprite::from_atlas_image(

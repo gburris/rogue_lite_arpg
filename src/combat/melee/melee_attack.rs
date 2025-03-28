@@ -117,6 +117,7 @@ pub fn handle_melee_collisions(
             {
                 commands.trigger_targets(
                     AttemptDamageEvent {
+                        ignore_invulnerable: false,
                         damage: Damage::Range(melee_weapon.damage),
                         damage_source: Some(weapon_entity),
                     },

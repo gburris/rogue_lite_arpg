@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     ai::{state::ActionState, SimpleMotion},
     animation::AnimationTimer,
-    combat::Health,
+    combat::{invulnerable::IFrames, Health},
     configuration::{YSort, CHARACTER_FEET_POS_OFFSET},
 };
 
@@ -15,6 +15,7 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 #[require(
     Health(|| Health::new(100.0)),
     SimpleMotion(|| SimpleMotion::new(150.0)),
+    IFrames,
     RigidBody,
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     TranslationExtrapolation,

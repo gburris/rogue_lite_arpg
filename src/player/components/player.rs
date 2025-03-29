@@ -13,7 +13,7 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 #[require(
     Character,
     Health(|| Health::new(100.0)),
-    SimpleMotion(|| SimpleMotion::new(150.0)),
+    SimpleMotion(|| SimpleMotion::new(250.0)),
     IFrames,
 )]
 pub struct Player {

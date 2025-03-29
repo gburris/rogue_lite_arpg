@@ -30,20 +30,16 @@ impl Plugin for SchedulePlugin {
                 InGameSet::DespawnEntities,
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
-                InGameSet::Camera,
+                InGameSet::Collision,
                 InGameSet::Vfx,
                 InGameSet::HudOverlay,
-                InGameSet::Collision,
             )
                 .chain()
                 .in_set(MainSet::InGame),
         )
         .configure_sets(
             FixedUpdate,
-            (
-                MainSet::InGame.run_if(in_state(AppState::Playing)),
-                InGameSet::Physics.in_set(MainSet::InGame),
-            ),
+            MainSet::InGame.run_if(in_state(AppState::Playing)),
         );
     }
 }

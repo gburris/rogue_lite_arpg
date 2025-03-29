@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::debug::DebugPlugin,
     labels::{
-        sets::InGameSet,
+        sets::MainSet,
         states::{AppState, PausedState, PlayingState},
     },
     progression::components::GameProgress,
@@ -39,13 +39,11 @@ impl Plugin for SetupPlugin {
             .add_sub_state::<PausedState>()
             .add_sub_state::<PlayingState>()
             .add_systems(Startup, view::spawn_camera)
+            // avian recommendeds ordering camera following logic in PostUpdate after transform prop
             .add_systems(
-                Update,
-                view::camera_follow_system
-                    .in_set(InGameSet::Camera)
-                    // avian recommendeds ordering camera following logic after transform prop
-                    .before(TransformSystem::TransformPropagate),
+                PostUpdate,
+                view::camera_follow_system.before(TransformSystem::TransformPropagate),
             )
-            .add_systems(Update, view::ysort_transforms.in_set(InGameSet::Vfx));
+            .add_systems(FixedUpdate, view::ysort_transforms.in_set(MainSet::InGame));
     }
 }

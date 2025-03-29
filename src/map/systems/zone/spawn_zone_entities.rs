@@ -4,7 +4,7 @@ use rand::{thread_rng, Rng};
 use crate::{
     configuration::assets::SpriteAssets,
     enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
-    labels::layer::ZLayer,
+    configuration::ZLayer,
     map::{
         chest::SpawnChestsEvent,
         components::{
@@ -51,7 +51,7 @@ pub fn spawn_zone_entities(
             let portal_position = Vec3::new(
                 exit_position_in_world.x,
                 exit_position_in_world.y,
-                ZLayer::Exit.z(),
+                ZLayer::OnGround.z(),
             );
 
             // Generate a unique instance layout for each portal
@@ -72,7 +72,7 @@ pub fn spawn_zone_entities(
             enemy_positions,
             &world_config,
             &map_layout,
-            ZLayer::Enemy,
+            ZLayer::OnGround,
         );
         let mut rng = thread_rng();
         let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
@@ -94,7 +94,7 @@ pub fn spawn_zone_entities(
             chest_positions,
             &world_config,
             &map_layout,
-            ZLayer::Enemy,
+            ZLayer::OnGround,
         );
         commands.trigger(SpawnChestsEvent(spawn_positions));
     }
@@ -105,7 +105,7 @@ pub fn spawn_zone_entities(
             npc_positions,
             &world_config,
             &map_layout,
-            ZLayer::Enemy,
+            ZLayer::OnGround,
         );
         commands.trigger(NPCSpawnEvent(spawn_positions));
     }
@@ -119,7 +119,7 @@ pub fn spawn_zone_entities(
             let player_spawn_position = Vec3::new(
                 spawn_position_in_world.x,
                 spawn_position_in_world.y,
-                ZLayer::Player.z(),
+                ZLayer::OnGround.z(),
             );
 
             let mut player_transform = player_query.into_inner();

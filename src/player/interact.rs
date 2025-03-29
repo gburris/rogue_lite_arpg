@@ -3,15 +3,18 @@ use bevy::prelude::*;
 
 use crate::configuration::GameCollisionLayer;
 
-use super::Player;
+/// Marker component for the sensor added to the player, which must collide with an InteractionZone for
+/// a player interaction to be possible
+#[derive(Component)]
+#[require(Collider(|| Collider::circle(16.0)), Sensor, CollidingEntities)]
+pub struct PlayerInteractionRadius;
 
 /// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
 /// this component will trigger the specified `[#InteractionEvent]` on the parent entity (ex. Open Chest, Talk to NPC, Item Pickup)
 #[derive(Component)]
 #[require(
     Sensor,
-    CollidingEntities,
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::Player))
+    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::PlayerInteractionRadius))
 )]
 pub enum InteractionZone {
     Circle { radius: f32 },
@@ -19,8 +22,8 @@ pub enum InteractionZone {
 }
 
 impl InteractionZone {
-    pub const OPEN_CHEST: Self = Self::Square { length: 50.0 };
-    pub const NPC: Self = Self::Circle { radius: 70.0 };
+    pub const OPEN_CHEST: Self = Self::Square { length: 40.0 };
+    pub const NPC: Self = Self::Circle { radius: 30.0 };
     pub const ITEM_PICKUP: Self = Self::Circle { radius: 25.0 };
 }
 
@@ -35,21 +38,24 @@ pub struct InteractionEvent {
 pub fn on_player_interaction_input(
     _: Trigger<PlayerInteractionInput>,
     mut commands: Commands,
-    interact_query: Query<(Entity, &Parent, &Transform, &CollidingEntities), With<InteractionZone>>,
-    player_query: Single<(Entity, &Transform), With<Player>>,
+    interact_query: Query<(&Parent, &Transform), With<InteractionZone>>,
+    player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
 ) {
-    let (player_entity, player_transform) = player_query.into_inner();
+    let (player_transform, interact_collisions) = player_query.into_inner();
     let player_pos = player_transform.translation.truncate();
 
-    // Go through all interaction zones colliding with something
-    let closest_interaction: Option<(Entity, Entity, f32)> = interact_query
+    // Go through all things colliding with player interaction radius
+    let closest_interaction: Option<(Entity, Entity, f32)> = interact_collisions
         .iter()
-        // Filter for interaction zones colliding with player
-        .filter(|(_, _, _, colliding)| colliding.contains(&player_entity))
-        // Compute distance between player and each colliding zone
-        .map(|(entity, parent, transform, _)| {
-            let distance = (player_pos - transform.translation.truncate()).length();
-            (entity, parent.get(), distance)
+        // Compute distance between player and each colliding interaction zone
+        .filter_map(|&interact_entity| {
+            interact_query
+                .get(interact_entity)
+                .ok()
+                .map(|(parent, transform)| {
+                    let distance = (player_pos - transform.translation.truncate()).length();
+                    (interact_entity, parent.get(), distance)
+                })
         })
         // Select colliding zone closest to player
         .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.partial_cmp(dist_b).unwrap());
@@ -78,5 +84,5 @@ pub fn on_interaction_zone_added(
         InteractionZone::Square { length } => Collider::rectangle(*length, *length),
     };
 
-    commands.entity(trigger.entity()).insert(collider);
+    commands.entity(trigger.entity()).insert((collider,));
 }

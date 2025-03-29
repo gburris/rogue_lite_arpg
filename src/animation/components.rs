@@ -2,14 +2,15 @@ use bevy::{prelude::*, utils::HashMap};
 
 use crate::ai::state::{ActionState, FacingDirection};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct AnimationIndices {
     pub first: usize,
     pub last: usize,
     pub is_one_shot: bool,
 }
 
-#[derive(Component, Deref, DerefMut)]
+#[derive(Component, Deref, DerefMut, Default)]
+#[require(AnimationIndices)]
 pub struct AnimationTimer(pub Timer);
 
 #[derive(Resource)]

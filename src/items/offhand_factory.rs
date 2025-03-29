@@ -2,11 +2,15 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use super::{
-    equipment::{on_healing_tome_cast, on_shield_block, EquipmentSlot}, HealingTome, Holdable, Item, ItemType, Shield
+    equipment::{on_healing_tome_cast, on_shield_block, EquipmentSlot},
+    HealingTome, Holdable, Item, ItemType, Shield,
 };
 use crate::{
     ai::state::FacingDirection,
-    combat::{mana::{ManaCost, ManaDrainRate}, shield::components::ProjectileReflection},
+    combat::{
+        mana::{ManaCost, ManaDrainRate},
+        shield::components::ProjectileReflection,
+    },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::equipment::{EquipmentTransform, Equippable},
 };

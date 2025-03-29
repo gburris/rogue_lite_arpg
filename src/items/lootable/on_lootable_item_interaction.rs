@@ -1,6 +1,7 @@
 use ::bevy::prelude::*;
 
 use crate::{
+    configuration::YSort,
     despawn::components::LiveDuration,
     items::{inventory::inventory::Inventory, Lootable},
     player::{interact::InteractionEvent, Player},
@@ -23,6 +24,7 @@ pub fn on_lootable_item_interaction(
             .entity(item_entity)
             .remove::<Lootable>()
             .remove::<LiveDuration>()
+            .remove::<YSort>()
             .insert(Visibility::Hidden);
 
         // Remove interaction zone once itme is picked up

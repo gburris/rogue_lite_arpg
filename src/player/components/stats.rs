@@ -16,7 +16,7 @@ impl Default for PlayerStats {
             strength: 1,
             dexterity: 1,
             intellect: 1,
-            luck: 1,
+            luck: 99,
         }
     }
 }

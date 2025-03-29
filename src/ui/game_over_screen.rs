@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone,
-    player::PlayerLevel,
+    player::Player,
 };
 
 use super::constants::TITLE_FONT_SIZE;
@@ -74,13 +74,13 @@ pub fn despawn_game_over_screen(
 pub fn handle_restart_button(
     mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<AppState>>,
-    player_level: Single<&PlayerLevel>,
+    player: Single<&Player>,
     mut commands: Commands,
 ) {
     for interaction in &mut restart_query {
         if *interaction == Interaction::Pressed {
             commands.trigger(RestartEvent {
-                player_level: player_level.current,
+                player_level: player.get_level(),
             });
             game_state.set(AppState::SpawnPlayer);
         }

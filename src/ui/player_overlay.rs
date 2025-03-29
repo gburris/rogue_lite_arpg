@@ -11,7 +11,7 @@ use crate::{
         inventory::Inventory,
         Item,
     },
-    player::{components::Player, PlayerExperience},
+    player::Player,
 };
 
 #[derive(Component)]
@@ -296,13 +296,11 @@ fn create_exp_bar(parent: &mut ChildBuilder) {
 }
 
 pub fn update_exp_bar(
-    player_exp: Option<Single<&PlayerExperience, (With<Player>, Changed<PlayerExperience>)>>,
+    player: Option<Single<&Player, Changed<Player>>>,
     mut exp_bar: Single<&mut Node, With<ExpBar>>,
 ) {
-    if let Some(player_exp) = player_exp {
-        let exp = player_exp.into_inner();
-        let progress = exp.current as f32 / exp.next_level_requirement as f32;
-        exp_bar.width = Val::Px(400.0 * progress);
+    if let Some(player) = player {
+        exp_bar.width = Val::Px(400.0 * player.get_progress_to_next_level());
     }
 }
 

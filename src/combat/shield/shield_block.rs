@@ -1,11 +1,14 @@
 use crate::{
     ai::state::{AimPosition, FacingDirection},
-    combat::{mana::ManaDrainRate, Mana},
+    combat::{
+        mana::{ManaCost, ManaDrainRate},
+        Mana,
+    },
+    configuration::ZLayer,
     items::{
         equipment::{EquipmentTransform, Equipped},
         Shield,
     },
-    labels::layer::ZLayer,
 };
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
@@ -16,29 +19,27 @@ use super::{components::ProjectileReflection, ActiveShield};
 pub fn update_active_shields(
     mut commands: Commands,
     time: Res<Time>,
-    active_shields: Query<(Entity, &ManaDrainRate, &ActiveShield)>,
-    mut sprites: Query<&mut Sprite>,
-    equipped: Query<&Equipped>,
-    holder_query: Query<(&Transform, &AimPosition, &FacingDirection)>,
-    mut mana_query: Query<&mut Mana>,
+    mut active_shield_query: Query<
+        (Entity, &ManaDrainRate, &Equipped, &mut Sprite),
+        With<ActiveShield>,
+    >,
+    mut holder_query: Query<(
+        &Transform,
+        &AimPosition,
+        &FacingDirection,
+        Option<&mut Mana>,
+    )>,
 ) {
-    for (shield_entity, mana_drain_rate, _) in active_shields.iter() {
-        let Ok(equipped_info) = equipped.get(shield_entity) else {
-            continue;
-        };
-        let holder_entity = equipped_info.get_equipped_to();
+    for (shield_entity, mana_drain_rate, equipped, mut shield_sprite) in
+        active_shield_query.iter_mut()
+    {
+        let (holder_transform, aim_pos, facing_direction, mana) = holder_query
+            .get_mut(equipped.get_equipped_to())
+            .expect("Shield holder missing necessary components");
 
-        let Ok((holder_transform, aim_pos, facing_direction)) = holder_query.get(holder_entity)
-        else {
-            continue;
-        };
         let holder_pos = holder_transform.translation.truncate();
         let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
         let block_angle = aim_direction.y.atan2(aim_direction.x) + FRAC_PI_2;
-
-        let Ok(mut shield_sprite) = sprites.get_mut(shield_entity) else {
-            continue;
-        };
 
         let normalized_angle = if block_angle < -PI {
             block_angle + 2.0 * PI
@@ -63,9 +64,9 @@ pub fn update_active_shields(
             offset_distance * normalized_angle.sin(),
             -offset_distance * normalized_angle.cos(),
             if atlas_index == 0 {
-                ZLayer::WeaponAboveSprite.z()
+                ZLayer::AboveSprite.z()
             } else {
-                ZLayer::WeaponBehindSprite.z()
+                ZLayer::BehindSprite.z()
             },
         );
 
@@ -79,17 +80,15 @@ pub fn update_active_shields(
             position_offset.z,
         ));
 
-        if let Ok(mut mana) = mana_query.get_mut(holder_entity) {
-            let drain_amount = mana_drain_rate.0 * time.delta_secs();
-            if mana.current_mana < drain_amount {
+        if let Some(mut mana) = mana {
+            let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
+            if !mana.attempt_use_mana(&drain_amount) {
                 deactivate_shield(
                     &mut commands,
                     shield_entity,
                     *facing_direction,
                     Some(&mut shield_sprite),
                 );
-            } else {
-                mana.current_mana -= drain_amount;
             }
         }
     }

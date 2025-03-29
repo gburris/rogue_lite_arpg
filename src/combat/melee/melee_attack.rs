@@ -15,7 +15,7 @@ use super::MELEE_WEAPON_ROTATION;
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming
-    pub initial_angle: f32,
+    initial_angle: f32,
     /// Comes from "attack_speed" defined on MeleeWeapon
     duration: Timer,
     entities_damaged: HashSet<Entity>,
@@ -117,6 +117,7 @@ pub fn handle_melee_collisions(
             {
                 commands.trigger_targets(
                     AttemptDamageEvent {
+                        ignore_invulnerable: false,
                         damage: Damage::Range(melee_weapon.damage),
                         damage_source: Some(weapon_entity),
                     },

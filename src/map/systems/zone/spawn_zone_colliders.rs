@@ -4,6 +4,7 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
     configuration::GameCollisionLayer,
+    configuration::ZLayer,
     map::components::{EnvironmentalType, MapLayout, Wall, WorldSpaceConfig},
 };
 
@@ -39,7 +40,7 @@ pub fn spawn_zone_colliders(
         let mut entity_commands = commands.spawn((
             RigidBody::Static,
             scaled_collider,
-            Transform::from_xyz(pos.x, pos.y, 1.0),
+            Transform::from_xyz(pos.x, pos.y, ZLayer::OnGround.z()),
             GlobalTransform::default(),
         ));
 

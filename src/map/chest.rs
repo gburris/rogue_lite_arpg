@@ -3,21 +3,25 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 use crate::animation::{AnimationIndices, AnimationTimer};
-use crate::configuration::GameCollisionLayer;
+use crate::configuration::{GameCollisionLayer, YSort};
 
 use crate::configuration::assets::{SpriteAssets, SpriteSheetLayouts};
 use crate::econ::gold_drop::GoldDropEvent;
 use crate::player::interact::{InteractionEvent, InteractionZone};
 
+/// Center of chest relative to its sprite's anchor point
+const CHEST_HEIGHT_OFFSET: f32 = -8.0;
+
 #[derive(Debug, Event)]
 pub struct SpawnChestsEvent(pub Vec<Vec3>);
 
 #[derive(Component)]
+#[require(YSort(|| YSort::from_offset(CHEST_HEIGHT_OFFSET)))]
 pub struct Chest;
 
 #[derive(Component)]
 #[require(
-    Collider(|| Collider::rectangle(24.0, 12.0)),
+    Collider(|| Collider::rectangle(26.0, 8.0)),
     RigidBody(|| RigidBody::Static),
     CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::LowObstacle, GameCollisionLayer::LOW_OBSTACLE_FILTERS))
 )]
@@ -68,12 +72,12 @@ fn spawn_chest(
         .with_children(|p| {
             p.spawn((
                 ChestCollider,
-                Transform::from_translation(Vec3::new(0.0, -8.0, 0.0)),
+                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
             ));
 
             p.spawn((
                 InteractionZone::OPEN_CHEST,
-                Transform::from_translation(Vec3::new(0.0, -12.0, 0.0)),
+                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
             ));
         });
 }
@@ -88,7 +92,7 @@ pub fn on_interaction_open_chest(
     commands
         .entity(chest_entity)
         .insert(AnimationTimer(Timer::from_seconds(
-            0.2,
+            0.1,
             TimerMode::Repeating,
         )));
 

@@ -97,7 +97,7 @@ pub fn spawn_fire_staff(
         .spawn((
             ProjectileWeapon {
                 projectile: fireball,
-                projectile_speed: 700.0,
+                projectile_speed: 600.0,
                 spread: 0.0,
             },
             Name::new("Staff of Flames"),

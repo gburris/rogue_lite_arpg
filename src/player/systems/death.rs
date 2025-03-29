@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     ai::{state::ActionState, SimpleMotion},
-    combat::{damage::DefeatedEvent, invulnerable::Invulnerable},
+    combat::{damage::DefeatedEvent, Health},
     labels::states::{AppState, PlayingState},
     map::CleanupZone,
     player::Player,
@@ -21,9 +21,12 @@ pub fn on_player_defeated(
 
     commands
         .entity(player_entity)
-        .insert(ActionState::Defeated)
-        .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
-        .insert(Invulnerable::death());
+        .insert((
+            ActionState::Defeated,
+            GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)),
+        ))
+        .remove::<Health>()
+        .despawn_descendants();
     player_motion.stop_moving();
     playing_state.set(PlayingState::Death);
 }

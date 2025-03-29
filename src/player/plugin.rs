@@ -10,7 +10,6 @@ use crate::{
 };
 
 use super::{
-    animation::animation_setup::set_starting_player_animation_and_sprite_sheet,
     interact::{on_interaction_zone_added, on_player_interaction_input},
     systems::death::finish_death_animation,
 };
@@ -22,12 +21,7 @@ impl Plugin for PlayerPlugin {
         app.add_event::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
-                (
-                    spawn_player,
-                    set_starting_player_animation_and_sprite_sheet,
-                    transition_to_create_hub,
-                )
-                    .chain(),
+                (spawn_player, transition_to_create_hub).chain(),
             )
             .add_systems(
                 Update,

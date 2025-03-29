@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    configuration::ZLayer,
     items::{equipment::Equipped, inventory::Inventory, Item, ItemDropEvent, Lootable},
-    labels::layer::ZLayer,
     player::interact::InteractionZone,
 };
 
@@ -32,7 +32,7 @@ pub fn handle_item_ground_transition(
     let mut rng = thread_rng();
     let offset = Vec2::new(rng.gen_range(-50.0..50.0), rng.gen_range(-50.0..50.0));
     let final_position =
-        (parent_transform.translation.truncate() + offset).extend(ZLayer::ItemOnGround.z());
+        (parent_transform.translation.truncate() + offset).extend(ZLayer::OnGround.z());
 
     // We don't care if item is actually found in inventory
     inventory.remove_item(item_entity).ok();
@@ -42,9 +42,11 @@ pub fn handle_item_ground_transition(
     commands
         .entity(item_entity)
         .remove::<Equipped>()
-        .insert(Lootable)
-        .insert(Transform::from_translation(final_position))
-        .insert(Visibility::Visible)
+        .insert((
+            Lootable,
+            Visibility::Visible,
+            Transform::from_translation(final_position),
+        ))
         .remove_parent()
         .with_child(InteractionZone::ITEM_PICKUP);
 }

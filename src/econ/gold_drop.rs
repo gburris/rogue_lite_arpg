@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    configuration::assets::SpriteAssets, econ::currency::Currency, items::Magnet,
-    labels::layer::ZLayer,
+    configuration::assets::SpriteAssets, configuration::ZLayer, econ::currency::Currency,
+    items::Magnet,
 };
 
 #[derive(Event)]
@@ -44,7 +44,7 @@ pub fn on_gold_drop_event(
         let mut transform = trigger.drop_location;
         transform.translation.x += offset.x;
         transform.translation.y += offset.y;
-        transform.translation.z = ZLayer::ItemOnGround.z();
+        transform.translation.z = ZLayer::OnGround.z();
 
         commands
             .spawn((
@@ -52,7 +52,7 @@ pub fn on_gold_drop_event(
                 Sprite::from_image(sprite_path),
                 transform,
             ))
-            .with_child(Magnet { strength: 8.0 });
+            .with_child(Magnet);
 
         remaining_gold -= value;
         entities_spawned += 1;

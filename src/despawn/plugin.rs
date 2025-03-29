@@ -5,6 +5,7 @@ use crate::{
     combat::projectile::components::Projectile,
     configuration::time_control::RestartEvent,
     despawn::systems::*,
+    econ::currency::Currency,
     enemy::Enemy,
     items::Lootable,
     labels::{sets::InGameSet, states::PausedState},
@@ -44,6 +45,7 @@ impl Plugin for DespawnPlugin {
         .add_observer(despawn_all::<CleanupZone, Enemy>)
         .add_observer(despawn_all::<CleanupZone, Projectile>)
         .add_observer(despawn_all::<CleanupZone, NPC>)
+        .add_observer(despawn_all::<CleanupZone, Currency>)
         .add_observer(despawn_all::<RestartEvent, Player>)
         .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
     }

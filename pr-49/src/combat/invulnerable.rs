@@ -4,63 +4,51 @@ use bevy::prelude::*;
 
 /// Component to mark whether an entity has iframes when hit
 #[derive(Component)]
-pub struct HasIFrames {
+pub struct IFrames {
     // time to be invulnerable when hit
-    pub duration: Duration,
+    pub is_invulnerable: bool,
+    invulnerable_timer: Timer,
+    flash_timer: Option<Timer>,
 }
 
-// Component to track invulnerability state and timer
-#[derive(Component)]
-pub struct Invulnerable {
-    pub total_time: Timer,
-    pub flash_timer: Timer,
-}
-
-impl Invulnerable {
-    pub fn new(iframes: &HasIFrames) -> Self {
-        Self {
-            total_time: Timer::new(iframes.duration, TimerMode::Once),
-            ..default()
-        }
-    }
-
-    pub fn death() -> Self {
-        Self {
-            total_time: Timer::new(Duration::from_secs(4), TimerMode::Once),
-            flash_timer: Timer::new(Duration::from_millis(5000), TimerMode::Repeating), //Don't flash
-        }
-    }
-}
-
-impl Default for Invulnerable {
+impl Default for IFrames {
     fn default() -> Self {
         Self {
-            total_time: Timer::new(Duration::from_secs(2), TimerMode::Once),
-            flash_timer: Timer::new(Duration::from_millis(200), TimerMode::Repeating),
+            is_invulnerable: false,
+            invulnerable_timer: Timer::new(Duration::from_millis(800), TimerMode::Once),
+            flash_timer: Some(Timer::new(Duration::from_millis(100), TimerMode::Repeating)),
         }
+    }
+}
+
+impl IFrames {
+    fn reset(&mut self) {
+        self.is_invulnerable = false;
+        self.invulnerable_timer.reset();
+
+        if let Some(flash) = &mut self.flash_timer {
+            flash.reset();
+        };
     }
 }
 
 // System to handle invulnerability duration and flashing
-pub fn handle_invulnerability(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &mut Invulnerable, &mut Sprite)>,
-) {
-    for (entity, mut invulnerable, mut sprite) in query.iter_mut() {
-        invulnerable.total_time.tick(time.delta());
-        invulnerable.flash_timer.tick(time.delta());
+pub fn handle_invulnerability(time: Res<Time>, mut query: Query<(&mut IFrames, &mut Sprite)>) {
+    for (mut iframes, mut sprite) in query.iter_mut() {
+        if iframes.is_invulnerable {
+            iframes.invulnerable_timer.tick(time.delta());
 
-        //  Alternate sprite alpha between 1.0 and 0.1 on flash timer interval
-        if invulnerable.flash_timer.just_finished() {
-            let current_alpha = sprite.color.alpha();
-            sprite.color.set_alpha(1.1 - current_alpha);
-        }
+            if iframes.invulnerable_timer.finished() {
+                iframes.reset();
+                sprite.color.set_alpha(1.0);
+            } else if let Some(flash) = &mut iframes.flash_timer {
+                flash.tick(time.delta());
 
-        // Remove invulnerability when timer is finished and ensure sprite is visible
-        if invulnerable.total_time.finished() {
-            sprite.color.set_alpha(1.0);
-            commands.entity(entity).remove::<Invulnerable>();
+                if flash.just_finished() {
+                    let current_alpha = sprite.color.alpha();
+                    sprite.color.set_alpha(1.1 - current_alpha);
+                }
+            }
         }
     }
 }

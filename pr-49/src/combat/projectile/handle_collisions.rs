@@ -20,6 +20,7 @@ pub fn handle_projectile_collisions(
             if hurt_box_query.contains(colliding_entity) {
                 commands.trigger_targets(
                     AttemptDamageEvent {
+                        ignore_invulnerable: false,
                         damage: Damage::Range(projectile.damage),
                         damage_source: Some(projectile_entity),
                     },

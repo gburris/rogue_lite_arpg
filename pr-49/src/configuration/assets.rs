@@ -45,20 +45,6 @@ pub struct SpriteSheetLayouts {
 }
 
 #[derive(AssetCollection, Resource)]
-pub struct GameIcons {
-    #[asset(path = "icons/equip_marker.png")]
-    pub equip_icon: Handle<Image>,
-    #[asset(path = "icons/potion.png")]
-    pub potion_icon: Handle<Image>,
-    #[asset(path = "icons/spell-book.png")]
-    pub spell_book_icon: Handle<Image>,
-    #[asset(path = "icons/sword-brandish.png")]
-    pub melee_icon: Handle<Image>,
-    #[asset(path = "icons/wizard-staff.png")]
-    pub staff_icon: Handle<Image>,
-}
-
-#[derive(AssetCollection, Resource)]
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
     pub gold_coin: Handle<Image>,
@@ -116,4 +102,18 @@ pub struct SpriteAssets {
     pub game_guide_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/stat_trainer.png")]
     pub stat_trainer_sprite_sheet: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct GameIcons {
+    #[asset(path = "icons/equip_marker.png")]
+    pub equip_icon: Handle<Image>,
+    #[asset(path = "icons/potion.png")]
+    pub potion_icon: Handle<Image>,
+    #[asset(path = "icons/spell-book.png")]
+    pub spell_book_icon: Handle<Image>,
+    #[asset(path = "icons/sword-brandish.png")]
+    pub melee_icon: Handle<Image>,
+    #[asset(path = "icons/wizard-staff.png")]
+    pub staff_icon: Handle<Image>,
 }

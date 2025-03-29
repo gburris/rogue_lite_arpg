@@ -29,9 +29,12 @@ pub fn handle_currency_collisions(
     mut commands: Commands,
     currency_query: Query<(Entity, &Currency, &CollidingEntities)>,
     mut player_inventory: Single<&mut Inventory, With<Player>>,
-    player_collider: Single<Entity, With<PlayerCollider>>,
+    player_collider: Query<Entity, With<PlayerCollider>>,
 ) {
-    let player_collider_entity = player_collider.into_inner();
+    let Ok(player_collider_entity) = player_collider.get_single() else {
+        return;
+    };
+
     for (currency_entity, currency, colliding_entities) in currency_query.iter() {
         if colliding_entities.contains(&player_collider_entity) {
             player_inventory.add_coins(currency.value);

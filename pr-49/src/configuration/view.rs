@@ -62,6 +62,7 @@ pub enum ZLayer {
     OnGround,
     InAir,
 
+    SpriteBackground,
     BehindSprite,
     AboveSprite,
 }
@@ -76,6 +77,7 @@ impl ZLayer {
             // Z layer is additive in parent/child hierarchies
             // Parent 1 + child entity weapon of 0.1 = 1.1
             // These are the relative z layers
+            ZLayer::SpriteBackground => -2.0,
             ZLayer::BehindSprite => -0.001,
             ZLayer::AboveSprite => 0.001,
         }
@@ -160,4 +162,19 @@ pub fn camera_debug_system(
     gizmos
         .circle_2d(player_pos, CAMERA_DISTANCE_CONSTRAINT, PURPLE_700)
         .resolution(64);
+}
+
+pub fn spawn_shadow(
+    spawner: &mut ChildBuilder,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<ColorMaterial>,
+    y_offset: f32,
+) {
+    spawner.spawn((
+        Mesh2d(meshes.add(Ellipse {
+            half_size: Vec2::new(14.0, 6.0),
+        })),
+        MeshMaterial2d(materials.add(Color::srgba(0.0, 0.0, 0.0, 0.6))),
+        Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
+    ));
 }

@@ -19,7 +19,9 @@ use crate::{
     LockedAxes(|| LockedAxes::new().lock_rotation()),
     LinearDamping(|| LinearDamping(2.0)),
     TranslationExtrapolation,
-    YSort
+    // Don't let currency move the player upon collision
+    Dominance(|| Dominance(-1)),
+    YSort,
 )]
 pub struct Currency {
     pub value: u32,

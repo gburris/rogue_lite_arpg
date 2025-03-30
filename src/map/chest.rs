@@ -11,12 +11,13 @@ use crate::player::interact::{InteractionEvent, InteractionZone};
 
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
+const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 
 #[derive(Debug, Event)]
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
-#[require(YSort(|| YSort::from_offset(CHEST_HEIGHT_OFFSET)))]
+#[require(YSort(|| YSort::from_offset(BOTTOM_OF_CHEST)))]
 pub struct Chest;
 
 #[derive(Component)]

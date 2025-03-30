@@ -71,7 +71,7 @@ pub struct ItemDropEvent;
 #[derive(Component, Clone, Debug, Default)]
 #[require(
     LiveDuration(|| LiveDuration::new(10.0)),
-    YSort
+    YSort(|| YSort::from_offset(-6.0))
 )]
 pub struct Lootable;
 

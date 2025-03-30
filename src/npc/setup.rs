@@ -35,7 +35,7 @@ pub fn spawn_npcs(
 pub fn spawn_npc(
     commands: &mut Commands,
     npc_type: NPCType,
-    spawn_position: Vec3,
+    spawn_position: Vec2,
     sprites: &Res<SpriteAssets>,
     atlases: &Res<SpriteSheetLayouts>,
 ) {
@@ -50,7 +50,7 @@ pub fn spawn_npc(
             Health::new(1000.0),
             npc_type,
             Inventory::default(),
-            Transform::from_translation(spawn_position),
+            Transform::from_translation(spawn_position.extend(0.0)),
             Sprite::from_atlas_image(
                 sprite_sheet_to_use,
                 TextureAtlas {

@@ -20,7 +20,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct EnemySpawnData {
-    pub position: Vec3,
+    pub position: Vec2,
     pub enemy_type: EnemyType,
 }
 
@@ -94,7 +94,7 @@ fn spawn_enemy(
                 SimpleMotion::new(enemy_details.simple_motion_speed),
                 Health::new(enemy_details.health),
                 Mana::new(100.0, 10.0),
-                Transform::from_translation(spawn_data.position),
+                Transform::from_translation(spawn_data.position.extend(0.0)),
                 Sprite::from_atlas_image(
                     spawn_data.enemy_type.sprite(sprites),
                     TextureAtlas {

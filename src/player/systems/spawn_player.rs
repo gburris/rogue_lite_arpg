@@ -5,7 +5,7 @@ use crate::{
     combat::{damage::HurtBox, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, ZLayer, CHARACTER_FEET_POS_OFFSET,
+        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{
         equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
@@ -44,7 +44,6 @@ pub fn spawn_player(
                 .build(),
             Mana::new(100.0, 10.0),
             game_progress.base_stats.clone(),
-            Transform::from_xyz(0., 0., ZLayer::OnGround.z()),
             Sprite::from_atlas_image(
                 sprites.player_sprite_sheet.clone(),
                 TextureAtlas {

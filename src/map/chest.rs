@@ -13,7 +13,7 @@ use crate::player::interact::{InteractionEvent, InteractionZone};
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
 
 #[derive(Debug, Event)]
-pub struct SpawnChestsEvent(pub Vec<Vec3>);
+pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
 #[require(YSort(|| YSort::from_offset(CHEST_HEIGHT_OFFSET)))]
@@ -43,7 +43,7 @@ fn spawn_chest(
     commands: &mut Commands,
     sprites: &SpriteAssets,
     layouts: &SpriteSheetLayouts,
-    spawn_position: Vec3,
+    spawn_position: Vec2,
 ) {
     commands
         .spawn((
@@ -63,7 +63,7 @@ fn spawn_chest(
                 last: 8,
             },
             Transform {
-                translation: spawn_position,
+                translation: spawn_position.extend(0.0),
                 scale: Vec3::new(2.0, 2.0, 1.0),
                 ..default()
             },

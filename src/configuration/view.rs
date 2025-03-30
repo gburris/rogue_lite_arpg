@@ -11,6 +11,8 @@ use crate::{
     player::components::Player,
 };
 
+use super::assets::Shadows;
+
 pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
 
 #[derive(Component)]
@@ -164,17 +166,10 @@ pub fn camera_debug_system(
         .resolution(64);
 }
 
-pub fn spawn_shadow(
-    spawner: &mut ChildBuilder,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<ColorMaterial>,
-    y_offset: f32,
-) {
+pub fn spawn_shadow(spawner: &mut ChildBuilder, shadows: &Shadows, y_offset: f32) {
     spawner.spawn((
-        Mesh2d(meshes.add(Ellipse {
-            half_size: Vec2::new(14.0, 6.0),
-        })),
-        MeshMaterial2d(materials.add(Color::srgba(0.0, 0.0, 0.0, 0.6))),
+        Mesh2d(shadows.character_shadow.handle.clone()),
+        MeshMaterial2d(shadows.shadow_color.handle.clone()),
         Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
     ));
 }

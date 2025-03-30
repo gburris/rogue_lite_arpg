@@ -5,7 +5,7 @@ use crate::{
     combat::{damage::HurtBox, Mana},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
-        GameCollisionLayer, ZLayer, CHARACTER_FEET_POS_OFFSET,
+        spawn_shadow, GameCollisionLayer, ZLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{
         equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
@@ -22,6 +22,8 @@ pub fn spawn_player(
     texture_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
     atlases: Res<SpriteSheetLayouts>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let starting_items = [
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
@@ -52,6 +54,13 @@ pub fn spawn_player(
             ),
         ))
         .with_children(|spawner| {
+            spawn_shadow(
+                spawner,
+                &mut meshes,
+                &mut materials,
+                CHARACTER_FEET_POS_OFFSET - 4.0,
+            );
+
             // collider to bump into stuff
             spawner.spawn((
                 PlayerCollider,

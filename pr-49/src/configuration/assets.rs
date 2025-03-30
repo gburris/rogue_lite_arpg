@@ -12,7 +12,8 @@ impl Plugin for AssetLoadingPlugin {
                 .continue_to_state(AppState::SpawnPlayer)
                 .load_collection::<SpriteAssets>()
                 .load_collection::<SpriteSheetLayouts>()
-                .load_collection::<GameIcons>(),
+                .load_collection::<GameIcons>()
+                .load_collection::<Shadows>(),
         );
     }
 }
@@ -116,4 +117,38 @@ pub struct GameIcons {
     pub melee_icon: Handle<Image>,
     #[asset(path = "icons/wizard-staff.png")]
     pub staff_icon: Handle<Image>,
+}
+
+#[derive(AssetCollection, Resource)]
+pub struct Shadows {
+    pub character_shadow: ShadowMesh<14, 6>,
+    pub shadow_color: ShadowColor,
+}
+
+pub struct ShadowMesh<const W: u16, const H: u16> {
+    pub handle: Handle<Mesh>,
+}
+
+impl<const W: u16, const H: u16> FromWorld for ShadowMesh<W, H> {
+    fn from_world(world: &mut World) -> Self {
+        let mut meshes = world.get_resource_mut::<Assets<Mesh>>().unwrap();
+        ShadowMesh {
+            handle: meshes.add(Ellipse {
+                half_size: Vec2::new(W as f32, H as f32),
+            }),
+        }
+    }
+}
+
+pub struct ShadowColor {
+    pub handle: Handle<ColorMaterial>,
+}
+
+impl FromWorld for ShadowColor {
+    fn from_world(world: &mut World) -> Self {
+        let mut colors = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        ShadowColor {
+            handle: colors.add(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+        }
+    }
 }

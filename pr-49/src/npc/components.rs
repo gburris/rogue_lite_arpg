@@ -24,8 +24,8 @@ impl NPCType {
     pub fn spawn_weapon(
         &self,
         commands: &mut Commands,
-        sprites: &Res<SpriteAssets>,
-        atlases: &Res<SpriteSheetLayouts>,
+        sprites: &SpriteAssets,
+        atlases: &SpriteSheetLayouts,
     ) -> Entity {
         match self {
             NPCType::Helper => spawn_ice_staff(commands, sprites, atlases),

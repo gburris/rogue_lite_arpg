@@ -50,7 +50,7 @@ pub fn on_enemy_defeated(
             // Enemies drop their gold based on player luck
             if rng.gen_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
                 commands.trigger(GoldDropEvent {
-                    drop_location: *transform,
+                    drop_location: transform.translation.truncate(),
                     amount: inventory.coins,
                 });
             }

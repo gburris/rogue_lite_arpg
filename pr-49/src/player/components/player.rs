@@ -1,3 +1,4 @@
+use avian2d::prelude::Dominance;
 use bevy::prelude::*;
 
 use crate::{
@@ -15,6 +16,8 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
     Health(|| Health::new(100.0)),
     SimpleMotion(|| SimpleMotion::new(250.0)),
     IFrames,
+    // Player dominates all other dynamic bodies with a dominance lower than `5` (default = 0)
+    Dominance(|| Dominance(5))
 )]
 pub struct Player {
     current_level: u32,

@@ -220,7 +220,7 @@ pub fn on_shield_block(
     mut commands: Commands,
     mut shield_query: Query<(Entity, &Shield)>,
 ) {
-    let Ok((shield_entity, _)) = shield_query.get_mut(fired_trigger.entity()) else {
+    let Ok((shield_entity, _)) = shield_query.get_mut(fired_trigger.target()) else {
         warn!("Tried to block with invalid shield");
         return;
     };
@@ -236,7 +236,7 @@ pub fn on_equipment_deactivated(
     mut shield_query: Query<(Entity, &mut Sprite), (With<Shield>, With<ActiveShield>)>,
 ) {
     // Get the holder's inventory
-    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.entity()) else {
+    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.target()) else {
         warn!("Tried to stop blocking but entity has no inventory or no direction");
         return;
     };

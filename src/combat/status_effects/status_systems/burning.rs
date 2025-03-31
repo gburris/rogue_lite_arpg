@@ -18,10 +18,10 @@ pub fn tick_burn(mut burn_query: Query<&mut BurningStatus>, time: Res<Time>) {
 pub fn while_burning(
     status_query: Query<(&BurningStatus, &ChildOf)>,
     mut commands: Commands,
-    mut ChildOf_query: Query<Entity, With<Health>>,
+    mut health_query: Query<Entity, With<Health>>,
 ) {
-    for (burn, ChildOf) in status_query.iter() {
-        if let Ok(entity) = ChildOf_query.get_mut(ChildOf.get()) {
+    for (burn, child_of) in status_query.iter() {
+        if let Ok(entity) = health_query.get_mut(child_of.parent) {
             if burn.damage_frequency.just_finished() {
                 commands.trigger_targets(
                     AttemptDamageEvent {
@@ -39,27 +39,27 @@ pub fn while_burning(
 pub fn on_burn_applied(
     trigger: Trigger<OnInsert, BurningStatus>,
     status_query: Query<&ChildOf, With<BurningStatus>>,
-    mut ChildOf_sprite: Query<&mut Sprite>,
+    mut sprite_query: Query<&mut Sprite>,
 ) {
-    let Ok(ChildOf) = status_query.get(trigger.target()) else {
+    let Ok(child_of) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
-        ChildOf_sprite.color = RED_COLOR;
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+        affected_sprite.color = RED_COLOR;
     }
 }
 
 pub fn on_burn_removed(
     trigger: Trigger<OnRemove, BurningStatus>,
     status_query: Query<&ChildOf, With<BurningStatus>>,
-    mut ChildOf_sprite: Query<&mut Sprite>,
+    mut sprite_query: Query<&mut Sprite>,
 ) {
-    let Ok(ChildOf) = status_query.get(trigger.target()) else {
+    let Ok(child_of) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
-        ChildOf_sprite.color = Color::default();
+    if let Ok(mut burnt_sprite) = sprite_query.get_mut(child_of.parent) {
+        burnt_sprite.color = Color::default();
     }
 }

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
 use crate::{
     combat::{Health, Mana},
@@ -48,103 +48,76 @@ const ATTRIBUTE_TO_PIXEL_SCALE: f32 = 4.0;
 const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 
 pub fn spawn(mut commands: Commands) {
-    commands
-        .spawn((
-            PlayerOverlay,
-            Node {
-                width: Val::Percent(100.),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(20.0)),
-                ..default()
-            },
-        ))
-        .with_children(|ChildOf| {
+    commands.spawn((
+        PlayerOverlay,
+        Node {
+            width: Val::Percent(100.),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            padding: UiRect::all(Val::Px(20.0)),
+            ..default()
+        },
+        children![
             // Top left container for health and mana bars
-            ChildOf
-                .spawn(Node {
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(10.0),
                     ..default()
-                })
-                .with_children(|bars| {
-                    create_attribute_bar(
-                        bars,
+                },
+                children![
+                    attribute_bar(
                         HealthBar,
                         HealthLostBar { previous_hp: 100.0 },
                         HEALTH_COLOR,
-                    );
-                    create_attribute_bar(
-                        bars,
+                    ),
+                    attribute_bar(
                         ManaBar,
                         ManaLostBar {
                             previous_mana: 100.0,
                         },
                         MANA_COLOR,
-                    );
-                });
-
-            ChildOf.spawn(Node {
+                    )
+                ]
+            ),
+            Node {
                 flex_grow: 1.0,
                 ..default()
-            });
-
-            // Bottom container for EXP and Action bars, health pot stuff
-            ChildOf
-                .spawn(Node {
+            },
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Auto,
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::FlexEnd,
                     ..default()
-                })
-                .with_children(|bottom_container| {
-                    bottom_container
-                        .spawn(Node {
-                            width: Val::Auto,
-                            height: Val::Auto,
-                            ..default()
-                        })
-                        .with_children(|exp_container| {
-                            create_exp_bar(exp_container);
-                        });
-
-                    bottom_container
-                        .spawn(Node {
-                            width: Val::Auto,
-                            height: Val::Auto,
-                            ..default()
-                        })
-                        .with_children(|action_container| {
-                            create_action_bar(action_container);
-                        });
-                });
-        });
+                },
+                children![experience_bar(), action_bar()]
+            )
+        ],
+    ));
 }
 
 const ATTRIBUTE_BACKGROUND_COLOR: Color = Color::srgb(0.21, 0.21, 0.21);
 const ATTRIBUTE_BAR_WIDTH: Val = Val::Px(400.0);
 
-fn create_attribute_bar(
-    child_builder: &mut ChildBuilder,
+fn attribute_bar(
     marker_component: impl Component,
     change_component: impl Component,
     bar_color: Color,
-) {
-    child_builder
-        .spawn((
-            Node {
-                width: ATTRIBUTE_BAR_WIDTH,
-                height: Val::Px(15.0),
-                ..default()
-            },
-            BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
-        ))
-        .with_children(|attribute_builder| {
-            attribute_builder.spawn((
+) -> impl Bundle {
+    (
+        Node {
+            width: ATTRIBUTE_BAR_WIDTH,
+            height: Val::Px(15.0),
+            ..default()
+        },
+        BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
+        children![
+            (
                 marker_component,
                 Node {
                     width: ATTRIBUTE_BAR_WIDTH,
@@ -152,9 +125,8 @@ fn create_attribute_bar(
                     ..default()
                 },
                 BackgroundColor::from(bar_color),
-            ));
-
-            attribute_builder.spawn((
+            ),
+            (
                 change_component,
                 Node {
                     width: Val::Px(0.0),
@@ -162,8 +134,9 @@ fn create_attribute_bar(
                     ..default()
                 },
                 BackgroundColor::from(BAR_CHANGE_COLOR),
-            ));
-        });
+            )
+        ],
+    )
 }
 
 pub fn update_health_bar(
@@ -247,10 +220,9 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
     Val::Px((current_pixels + pixel_change).max(0.0))
 }
 
-/* Exp Bar Code */
-fn create_exp_bar(ChildOf: &mut ChildBuilder) {
-    ChildOf
-        .spawn(Node {
+fn experience_bar() -> impl Bundle {
+    (
+        Node {
             width: Val::Px(400.0),
             height: Val::Px(20.0),
             justify_content: JustifyContent::FlexStart,
@@ -258,18 +230,17 @@ fn create_exp_bar(ChildOf: &mut ChildBuilder) {
             // Add overflow visibility for debugging
             overflow: Overflow::visible(),
             ..default()
-        })
-        .with_children(|bar| {
-            bar.spawn((
+        },
+        children![
+            (
                 Node {
                     width: Val::Px(400.0),
                     height: Val::Px(20.0),
                     ..default()
                 },
                 BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
-            ));
-
-            bar.spawn((
+            ),
+            (
                 ExpBar,
                 Node {
                     width: Val::Px(0.0),
@@ -279,20 +250,19 @@ fn create_exp_bar(ChildOf: &mut ChildBuilder) {
                     ..default()
                 },
                 BackgroundColor::from(EXP_COLOR),
-            ));
-
-            // Hash marks
-            for i in 1..10 {
-                bar.spawn(Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(i as f32 * 40.0),
-                    width: Val::Px(2.0),
-                    height: Val::Px(20.0),
-                    ..default()
-                })
-                .insert(BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)));
-            }
-        });
+                Children::spawn(SpawnIter((1..10).map(|i| (
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(i as f32 * 40.0),
+                        width: Val::Px(2.0),
+                        height: Val::Px(20.0),
+                        ..default()
+                    },
+                    BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)),
+                ))))
+            )
+        ],
+    )
 }
 
 pub fn update_exp_bar(
@@ -317,9 +287,7 @@ pub struct ActionBox {
 pub struct CooldownIndicator;
 
 #[derive(Component)]
-#[require(
-    LiveDuration(|| LiveDuration::new(0.1)),
-)]
+#[require(LiveDuration::new(0.1))]
 pub struct ErrorFlash;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
@@ -330,41 +298,39 @@ const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Sem
 const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
 const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.2); // Semi-transparent red
 
-fn create_action_bar(ChildOf: &mut ChildBuilder) {
-    ChildOf
-        .spawn((
-            ActionBar,
+fn action_bar() -> impl Bundle {
+    (
+        ActionBar,
+        Node {
+            flex_direction: FlexDirection::Row,
+            ..default()
+        },
+        Children::spawn(SpawnIter(
+            Inventory::ALL_SLOTS.iter().map(|slot| action_box(*slot)),
+        )),
+    )
+}
+
+fn action_box(slot: EquipmentSlot) -> impl Bundle {
+    (
+        ActionBox { slot },
+        Node {
+            width: Val::Px(ACTION_BOX_SIZE),
+            height: Val::Px(ACTION_BOX_SIZE),
+            border: UiRect::all(Val::Px(ACTION_BOX_BORDER)),
+            ..default()
+        },
+        BackgroundColor::from(ACTION_BOX_COLOR),
+        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
+        Children::spawn_one((
+            ImageNode::default(),
             Node {
-                flex_direction: FlexDirection::Row,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
             },
-        ))
-        .with_children(|action_bar| {
-            for slot in Inventory::ALL_SLOTS {
-                action_bar
-                    .spawn((
-                        ActionBox { slot },
-                        Node {
-                            width: Val::Px(ACTION_BOX_SIZE),
-                            height: Val::Px(ACTION_BOX_SIZE),
-                            border: UiRect::all(Val::Px(ACTION_BOX_BORDER)),
-                            ..default()
-                        },
-                        BackgroundColor::from(ACTION_BOX_COLOR),
-                        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
-                    ))
-                    .with_children(|action_box| {
-                        action_box.spawn((
-                            ImageNode::default(),
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Percent(100.0),
-                                ..default()
-                            },
-                        ));
-                    });
-            }
-        });
+        )),
+    )
 }
 
 pub fn update_action_bar(
@@ -413,15 +379,15 @@ pub fn on_equipment_used(
         return;
     }
 
-    if let Ok(equipmemnt) = equipment_query.get(trigger.entity()) {
-        if let Some((box_entity, _)) = action_box_query
+    if let Ok(equipmemnt) = equipment_query.get(trigger.target()) {
+        if let Some((box_entity, _, box_children)) = action_box_query
             .iter()
             .find(|(_, action_box, _)| action_box.slot == equipmemnt.slot)
         {
             // When on cooldown we don't want red error flash over action box
-            for &child in box_children.iter() {
+            for child in box_children.iter() {
                 if error_flash_query.contains(child) {
-                    commands.entity(child).despawn_recursive();
+                    commands.entity(child).despawn();
                 }
             }
 
@@ -474,35 +440,6 @@ pub fn on_equipment_use_failed(
                 ));
             });
         }
-    }
-}
-
-pub fn on_cooldown_indicator_added(
-    mut commands: Commands,
-    query: Query<(Entity, &Children), Added<CooldownIndicator>>,
-    error_flash_query: Query<Entity, With<ErrorFlash>>,
-) {
-    for (entity, children) in query.iter() {
-        for &child in children.iter() {
-            if error_flash_query.contains(child) {
-                commands.entity(child).despawn_recursive();
-            }
-        }
-
-        commands.entity(entity).with_children(|parent| {
-            parent.spawn((
-                CooldownLine,
-                Node {
-                    width: Val::Percent(98.),
-                    height: Val::Px(ACTION_BOX_SIZE),
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    ..default()
-                },
-                BackgroundColor::from(COOLDOWN_LINE_COLOR),
-            ));
-        });
     }
 }
 

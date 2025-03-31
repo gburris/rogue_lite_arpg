@@ -166,10 +166,10 @@ pub fn camera_debug_system(
         .resolution(64);
 }
 
-pub fn spawn_shadow(spawner: &mut ChildBuilder, shadows: &Shadows, y_offset: f32) {
-    spawner.spawn((
+pub fn shadow(shadows: &Shadows, y_offset: f32) -> impl Bundle {
+    (
         Mesh2d(shadows.character_shadow.handle.clone()),
         MeshMaterial2d(shadows.shadow_color.handle.clone()),
         Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
-    ));
+    )
 }

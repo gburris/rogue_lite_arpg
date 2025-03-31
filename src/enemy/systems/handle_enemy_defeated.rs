@@ -60,7 +60,7 @@ pub fn on_enemy_defeated(
             .entity(trigger.target())
             .insert((LiveDuration::new(2.0), ActionState::Defeated))
             .remove::<Health>()
-            .despawn_descendants();
+            .despawn_related::<Children>();
 
         motion.stop_moving();
     }

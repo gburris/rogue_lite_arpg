@@ -1,5 +1,4 @@
-use accesskit::{Node as Accessible, Role};
-use bevy::{a11y::AccessibilityNode, prelude::*};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
 use crate::{
     configuration::assets::GameIcons,
@@ -11,7 +10,10 @@ use crate::{
     player::{systems::ConsumeEvent, Player},
 };
 
-use super::display_case::{UpdateDisplayCaseEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH};
+use super::{
+    display_case::{UpdateDisplayCaseEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH},
+    menu_helpers::TextBuilder,
+};
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 
@@ -31,7 +33,11 @@ pub struct DisplaySlotContext<'a> {
 }
 
 /// Spawns a given "slot" in a display case representing a single item in the inventory
-pub fn spawn_slot(builder: &mut ChildSpawner, icons: &GameIcons, context: &DisplaySlotContext) {
+pub fn spawn_slot(
+    builder: &mut ChildSpawnerCommands,
+    icons: &GameIcons,
+    context: DisplaySlotContext,
+) {
     builder
         .spawn((
             DisplayCaseSlot {
@@ -45,7 +51,6 @@ pub fn spawn_slot(builder: &mut ChildSpawner, icons: &GameIcons, context: &Displ
                 align_items: AlignItems::Center,
                 ..default()
             },
-            AccessibilityNode(Accessible::new(Role::ListItem)),
             Pickable {
                 should_block_lower: false,
                 ..default()
@@ -75,17 +80,11 @@ pub fn spawn_slot(builder: &mut ChildSpawner, icons: &GameIcons, context: &Displ
                 },
             ));
 
-            parent.spawn((
-                Text::new(context.item_name),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                Pickable {
-                    should_block_lower: false,
-                    is_hoverable: false,
-                },
-            ));
+            parent.spawn(
+                TextBuilder::new(context.item_name, 18.0)
+                    .not_pickable()
+                    .build(),
+            );
 
             if context.is_equipped {
                 parent.spawn((
@@ -120,37 +119,20 @@ pub fn spawn_slot(builder: &mut ChildSpawner, icons: &GameIcons, context: &Displ
                 .equipment_slot
                 .map(|slot| slot.to_string())
                 .unwrap_or("-".to_string());
-            parent.spawn((
-                Text::new(slot_string),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                Node {
-                    width: EQUIP_SLOT_WIDTH,
-                    ..default()
-                },
-                Pickable {
-                    should_block_lower: false,
-                    is_hoverable: false,
-                },
-            ));
 
-            parent.spawn((
-                Text::new(context.item.value.to_string()),
-                TextFont {
-                    font_size: 18.0,
-                    ..default()
-                },
-                Node {
-                    width: VALUE_WIDTH,
-                    ..default()
-                },
-                Pickable {
-                    should_block_lower: false,
-                    is_hoverable: false,
-                },
-            ));
+            parent.spawn(
+                TextBuilder::new(slot_string, 18.0)
+                    .with_width(EQUIP_SLOT_WIDTH)
+                    .not_pickable()
+                    .build(),
+            );
+
+            parent.spawn(
+                TextBuilder::new(context.item.value.to_string(), 18.0)
+                    .with_width(VALUE_WIDTH)
+                    .not_pickable()
+                    .build(),
+            );
         })
         .observe(on_slot_clicked)
         .observe(on_slot_hover)

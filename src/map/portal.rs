@@ -15,21 +15,17 @@ use super::components::MapLayout;
  */
 #[derive(Component)]
 #[require(
-    RigidBody(|| RigidBody::Static),
-    Collider(|| Collider::rectangle(32.0, 64.0)),
+    RigidBody::Static,
+    Collider::rectangle(32.0, 64.0),
     CollidingEntities,
-    CollisionLayers(default_collision_layers),
+    CollisionLayers::new(
+        GameCollisionLayer::HighObstacle,
+        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
+    ),
     YSort
 )]
 pub struct Portal {
     pub map_layout: MapLayout,
-}
-
-fn default_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(
-        GameCollisionLayer::HighObstacle,
-        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
-    )
 }
 
 pub fn handle_portal_collisions(

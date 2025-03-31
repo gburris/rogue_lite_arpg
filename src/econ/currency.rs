@@ -10,17 +10,17 @@ use crate::{
 #[derive(Component)]
 #[require(
     RigidBody,
-    Collider(|| Collider::circle(10.0)),
-    CollisionLayers(|| CollisionLayers::new(
+    Collider::circle(10.0),
+    CollisionLayers::new(
         [GameCollisionLayer::Grounded],
         [GameCollisionLayer::PlayerCollider, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
-    )),
+    ),
     CollidingEntities,
-    LockedAxes(|| LockedAxes::new().lock_rotation()),
-    LinearDamping(|| LinearDamping(2.0)),
+    LockedAxes = LockedAxes::new().lock_rotation(),
+    LinearDamping(2.0),
     TranslationExtrapolation,
     // Don't let currency move the player upon collision
-    Dominance(|| Dominance(-1)),
+    Dominance(-1),
     YSort,
 )]
 pub struct Currency {
@@ -33,7 +33,7 @@ pub fn handle_currency_collisions(
     mut player_inventory: Single<&mut Inventory, With<Player>>,
     player_collider: Query<Entity, With<PlayerCollider>>,
 ) {
-    let Ok(player_collider_entity) = player_collider.get_single() else {
+    let Ok(player_collider_entity) = player_collider.single() else {
         return;
     };
 

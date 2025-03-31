@@ -12,4 +12,4 @@ pub use view::YSort;
 pub use view::ZLayer;
 pub use view::CHARACTER_FEET_POS_OFFSET;
 
-pub use view::spawn_shadow;
+pub use view::shadow;

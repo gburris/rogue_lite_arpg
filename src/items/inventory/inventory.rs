@@ -10,9 +10,6 @@ pub struct Inventory {
     pub coins: u32,
     mainhand_index: Option<usize>,
     offhand_index: Option<usize>,
-
-    /// If you want to open this inventory in a UI    
-    pub display_case: Option<Entity>,
 }
 
 impl Default for Inventory {
@@ -23,7 +20,6 @@ impl Default for Inventory {
             coins: 0,
             mainhand_index: None,
             offhand_index: None,
-            display_case: None,
         }
     }
 }
@@ -175,11 +171,6 @@ impl InventoryBuilder {
         self
     }
 
-    pub fn display_case(mut self, display_case: Option<Entity>) -> Self {
-        self.display_case = display_case;
-        self
-    }
-
     pub fn build(self) -> Inventory {
         let mut inventory = Inventory {
             max_capacity: self.max_capacity,
@@ -187,7 +178,6 @@ impl InventoryBuilder {
             coins: self.coins,
             mainhand_index: None,
             offhand_index: None,
-            display_case: self.display_case,
         };
 
         for item in self.items {

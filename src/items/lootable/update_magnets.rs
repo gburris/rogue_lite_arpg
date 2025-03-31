@@ -7,14 +7,14 @@ const MAGNETIC_FORCE: f32 = 2000000.0;
 
 pub fn update_magnet_locations(
     mut commands: Commands,
-    magnet_query: Query<(&Parent, &GlobalTransform, &CollidingEntities), With<Magnet>>,
+    magnet_query: Query<(&ChildOf, &GlobalTransform, &CollidingEntities), With<Magnet>>,
     player_query: Query<(Entity, &GlobalTransform), With<PlayerInteractionRadius>>,
 ) {
     let Ok((player_entity, player_transform)) = player_query.get_single() else {
         return;
     };
 
-    for (parent_entity, magnet_transform, colliding_entities) in magnet_query.iter() {
+    for (child_of, magnet_transform, colliding_entities) in magnet_query.iter() {
         if colliding_entities.contains(&player_entity) {
             let direction = (player_transform.translation().truncate()
                 - magnet_transform.translation().truncate())
@@ -39,7 +39,7 @@ pub fn update_magnet_locations(
 
             // Apply a new force each tick of fixed update, erasing previous force (persistence = false)
             commands
-                .entity(parent_entity.get())
+                .entity(child_of.parent)
                 .insert(ExternalForce::new(direction * magnetic_force).with_persistence(false));
         }
     }

@@ -17,14 +17,17 @@ const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
-#[require(YSort(|| YSort::from_offset(BOTTOM_OF_CHEST)))]
+#[require(YSort::from_offset(BOTTOM_OF_CHEST))]
 pub struct Chest;
 
 #[derive(Component)]
 #[require(
-    Collider(|| Collider::rectangle(26.0, 8.0)),
-    RigidBody(|| RigidBody::Static),
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::LowObstacle, GameCollisionLayer::LOW_OBSTACLE_FILTERS))
+    Collider::rectangle(26.0, 8.0),
+    RigidBody::Static,
+    CollisionLayers::new(
+        GameCollisionLayer::LowObstacle,
+        GameCollisionLayer::LOW_OBSTACLE_FILTERS
+    )
 )]
 pub struct ChestCollider;
 

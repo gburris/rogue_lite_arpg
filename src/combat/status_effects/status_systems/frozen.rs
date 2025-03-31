@@ -14,9 +14,9 @@ pub fn on_frozen_applied(
     trigger: Trigger<OnInsert, FrozenStatus>,
     mut commands: Commands,
     status_query: Query<(&ChildOf, &LiveDuration), With<FrozenStatus>>,
-    mut ChildOf_sprite: Query<&mut Sprite>,
+    mut sprite_query: Query<&mut Sprite>,
 ) {
-    let Ok((ChildOf, duration)) = status_query.get(trigger.target()) else {
+    let Ok((child_of, duration)) = status_query.get(trigger.target()) else {
         return;
     };
 
@@ -25,24 +25,24 @@ pub fn on_frozen_applied(
             status: StatusType::Stunned,
             duration: duration.0.remaining_secs(), // make sure stun lasts while frozen
         },
-        ChildOf.get(),
+        child_of.parent,
     );
 
-    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
-        ChildOf_sprite.color = BLUE_COLOR;
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+        affected_sprite.color = BLUE_COLOR;
     }
 }
 
 pub fn on_frozen_removed(
     trigger: Trigger<OnRemove, FrozenStatus>,
     status_query: Query<&ChildOf, With<FrozenStatus>>,
-    mut ChildOf_sprite: Query<&mut Sprite>,
+    mut sprite_query: Query<&mut Sprite>,
 ) {
-    let Ok(ChildOf) = status_query.get(trigger.target()) else {
+    let Ok(child_of) = status_query.get(trigger.target()) else {
         return;
     };
 
-    if let Ok(mut ChildOf_sprite) = ChildOf_sprite.get_mut(ChildOf.get()) {
-        ChildOf_sprite.color = Color::default();
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+        affected_sprite.color = Color::default();
     }
 }

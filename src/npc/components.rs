@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use crate::{
     character::Character,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    controller::plugin::Interact,
     items::{spawn_axe, spawn_ice_staff, spawn_sword},
-    player::{interact::InteractionEvent, plugin::Interact},
 };
 
 use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_store_open};

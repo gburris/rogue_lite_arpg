@@ -1,7 +1,7 @@
 // In a new file, e.g., src/lib.rs or src/plugins.rs
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use bevy_enhanced_input::{prelude::*, preset::Cardinal, EnhancedInputPlugin};
+use bevy_enhanced_input::prelude::*;
 
 pub struct GamePlugins;
 
@@ -36,14 +36,8 @@ pub struct InputSettings {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EquipmentBindings {
-    main_hand: MouseButton,
-    off_hand: MouseButton,
-}
-
-impl InputBindSet for EquipmentBindings {
-    fn bindings(self) -> impl Iterator<Item = InputBind> {
-        self.main_hand.bindings().chain(self.off_hand.bindings())
-    }
+    pub main_hand: MouseButton,
+    pub off_hand: MouseButton,
 }
 
 impl Plugin for GamePlugins {

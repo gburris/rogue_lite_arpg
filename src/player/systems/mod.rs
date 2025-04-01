@@ -8,5 +8,4 @@ pub mod spawn_player;
 pub use consume::*;
 pub use cursor::*;
 pub use handle_level_up::*;
-pub use input::*;
 pub use spawn_player::*;

@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_enhanced_input::prelude::InputContextAppExt;
 
 use crate::{
     configuration::time_control,

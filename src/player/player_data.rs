@@ -1,9 +1,10 @@
-use bevy::ecs::system::Resource;
+use bevy::{ecs::system::Resource, prelude::*};
 use serde::{Deserialize, Serialize};
 
 use super::interact::InteractionZone;
 
-#[derive(Resource, Deserialize, Serialize)]
+#[derive(Resource, Deserialize, Serialize, Reflect)]
+#[reflect(Resource, Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct PlayerData {
     /// Starting and ending size of level up ring animation
@@ -15,6 +16,13 @@ pub struct PlayerData {
     /// How much more experience is required (as a multiplier) after each level up
     pub PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32,
 }
+pub const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
+pub const MAX_RING_SCALE: f32 = LEVEL_UP_RING_SIZE.1 / LEVEL_UP_RING_SIZE.0;
+pub const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
+pub const LEVEL_UP_ANIMATION_DURATION: f32 = 1.2;
+pub const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
+pub const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
+
 impl PlayerData {
     const DEFAULT_PLAYER_DATA: PlayerData = PlayerData {
         LEVEL_UP_RING_SIZE,
@@ -31,12 +39,6 @@ impl Default for PlayerData {
         Self::DEFAULT_PLAYER_DATA
     }
 }
-pub const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
-pub const MAX_RING_SCALE: f32 = LEVEL_UP_RING_SIZE.1 / LEVEL_UP_RING_SIZE.0;
-pub const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
-pub const LEVEL_UP_ANIMATION_DURATION: f32 = 1.2;
-pub const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
-pub const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 impl InteractionZone {
     pub const OPEN_CHEST: Self = Self::Square { length: 40.0 };

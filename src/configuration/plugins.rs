@@ -21,13 +21,11 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
-use super::game_data::GameDataPlugin;
-
-pub struct Config {}
+use super::{configuration_data::ConfigurationData, game_data::GameDataPlugin};
 
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
-        app
+        app.register_type::<ConfigurationData>()
             // Setup and configuration
             .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin, GameDataPlugin))
             // Third-party plugins

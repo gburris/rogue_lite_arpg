@@ -5,7 +5,6 @@ use crate::{
 
 use bevy::prelude::*;
 
-#[allow(clippy::type_complexity)]
 pub fn update_animation(
     animation_config: Res<DefaultAnimationConfig>,
     mut query: Query<

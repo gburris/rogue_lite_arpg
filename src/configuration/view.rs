@@ -119,7 +119,6 @@ const DECAY_RATE: f32 = 2.3; // f32::ln(10.0);
 const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
-#[allow(clippy::type_complexity)]
 pub fn camera_follow_system(
     pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
     mut cq: Query<&mut Transform, (With<Camera>, Without<Player>)>,
@@ -143,7 +142,6 @@ pub fn camera_follow_system(
         .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
 }
 
-#[allow(clippy::type_complexity)]
 pub fn camera_debug_system(
     pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,

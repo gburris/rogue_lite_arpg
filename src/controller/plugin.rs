@@ -80,7 +80,7 @@ pub fn player_binding(
         .to(settings.input.use_equip.main_hand);
     trigger
         .bind::<UseEquipOffhand>()
-        .to(settings.input.use_equip.main_hand);
+        .to(settings.input.use_equip.off_hand);
 }
 
 pub fn on_movement(

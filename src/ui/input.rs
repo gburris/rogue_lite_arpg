@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
 use crate::{
-    controller::plugin::{CurrentInputContext, PauseInputEvent, PlayerInputContext},
+    controller::plugin::{CurrentInputContext, PauseInputEvent},
     labels::states::{AppState, PausedState},
 };
 
 pub fn on_pause_input_event(
     pause_event: Trigger<PauseInputEvent>,
-    mut commands: Commands,
+    commands: Commands,
     query: Single<Entity, With<CurrentInputContext>>,
     mut next_pause_state: ResMut<NextState<PausedState>>,
     state: Res<State<AppState>>,

@@ -1,11 +1,6 @@
 use bevy::prelude::*;
-use bevy_enhanced_input::prelude::*;
 
 use crate::{
-    controller::plugin::{
-        on_movement, on_movement_stop, on_pause_request, on_use_equip_main, on_use_equip_offhand,
-        player_binding, MenuInputContext, PlayerInputContext,
-    },
     labels::{
         sets::InGameSet,
         states::{AppState, PlayingState},

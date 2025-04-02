@@ -32,26 +32,16 @@ impl Plugin for InputPlugin {
                     commands.entity(*query).insert(PlayerInputContext);
                 },
             )
-            .add_systems(
-                OnEnter(AppState::Paused),
-                |mut commands: Commands, query: Single<Entity, With<CurrentInputContext>>| {
-                    commands.entity(*query).remove::<PlayerInputContext>();
-                },
-            )
-            .add_systems(
-                OnExit(AppState::Paused),
-                |mut commands: Commands, query: Single<Entity, With<CurrentInputContext>>| {
-                    commands.entity(*query).insert(PlayerInputContext);
-                },
-            )
-            .add_observer(system_binding)
-            .add_observer(on_pause_request)
+            // Player
             .add_observer(player_binding)
             .add_observer(on_movement)
             .add_observer(on_interact)
             .add_observer(on_movement_stop)
             .add_observer(on_use_equip_main)
-            .add_observer(on_use_equip_offhand);
+            .add_observer(on_use_equip_offhand)
+            // System
+            .add_observer(system_binding)
+            .add_observer(on_pause_request);
     }
 }
 
@@ -91,12 +81,6 @@ pub fn player_binding(
     trigger
         .bind::<UseEquipOffhand>()
         .to(settings.input.use_equip.main_hand);
-}
-
-pub fn system_binding(mut trigger: Trigger<Binding<MenuInputContext>>, settings: Res<AppSettings>) {
-    trigger
-        .bind::<PauseRequest>()
-        .to(settings.input.pause_request);
 }
 
 pub fn on_movement(
@@ -142,6 +126,12 @@ pub fn on_use_equip_offhand(
         },
         player_entity,
     );
+}
+
+pub fn system_binding(mut trigger: Trigger<Binding<MenuInputContext>>, settings: Res<AppSettings>) {
+    trigger
+        .bind::<PauseRequest>()
+        .to(settings.input.pause_request);
 }
 
 //UN-Pause logic, runs when App State is Paused

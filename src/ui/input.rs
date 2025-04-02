@@ -1,20 +1,22 @@
 use bevy::prelude::*;
 
 use crate::{
-    controller::plugin::PauseInputEvent,
+    controller::plugin::{CurrentInputContext, PauseInputEvent, PlayerInputContext},
     labels::states::{AppState, PausedState},
 };
 
 pub fn on_pause_input_event(
     pause_event: Trigger<PauseInputEvent>,
+    mut commands: Commands,
+    query: Single<Entity, With<CurrentInputContext>>,
     mut next_pause_state: ResMut<NextState<PausedState>>,
     state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
+    // let mut entity = commands.entity(*query);
     match state.get() {
         AppState::Paused => {
-            debug!("Currently paused, transitioning to playing");
-            next_state.set(AppState::Playing)
+            next_state.set(AppState::Playing);
         }
         _ => {
             debug!("Not currently paused, transitioning to paused");

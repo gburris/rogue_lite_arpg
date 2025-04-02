@@ -6,11 +6,6 @@ use crate::items::equipment::EquipmentSlot;
 pub struct PlayerLevelUpEvent;
 
 #[derive(Event)]
-pub struct PlayerMovementEvent {
-    pub direction: Vec2,
-}
-
-#[derive(Event)]
 pub struct PlayerStoppedEvent;
 
 #[derive(Event)]

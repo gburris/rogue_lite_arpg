@@ -14,16 +14,11 @@ pub struct PauseMenuPlugin;
 
 impl Plugin for PauseMenuPlugin {
     fn build(&self, app: &mut App) {
-        app
+        app.add_observer(input::on_pause_input_event)
             // Pause Related Systems
-            .add_observer(input::on_pause_input)
             .add_systems(
                 Update,
-                (
-                    input::handle_ui_inputs,
-                    display_case::update_scroll_position,
-                )
-                    .in_set(MainSet::Menu),
+                (display_case::update_scroll_position,).in_set(MainSet::Menu),
             )
             .add_systems(OnEnter(AppState::Paused), (time_control::pause_game,))
             .add_systems(OnExit(AppState::Paused), time_control::resume_game)

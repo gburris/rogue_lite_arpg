@@ -1,7 +1,10 @@
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{configuration::GameCollisionLayer, despawn::components::LiveDuration};
+use crate::{
+    configuration::{GameCollisionLayer, YSort},
+    despawn::components::LiveDuration,
+};
 
 /// This is the base component for all items in the game. If you have a new concept that will be
 /// shared by all items, add it as a field here.
@@ -67,7 +70,8 @@ pub struct ItemDropEvent;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    LiveDuration(|| LiveDuration::new(10.0))
+    LiveDuration(|| LiveDuration::new(10.0)),
+    YSort(|| YSort::from_offset(-6.0))
 )]
 pub struct Lootable;
 
@@ -75,15 +79,13 @@ pub struct Lootable;
 #[require(
     CollidingEntities,
     Sensor,
-    Collider(|| Collider::circle(150.0)),
+    Collider(|| Collider::circle(200.0)),
     CollisionLayers(|| CollisionLayers::new(
-        GameCollisionLayer::Magnet,
-        [GameCollisionLayer::Player]
+        GameCollisionLayer::Interaction,
+        [GameCollisionLayer::PlayerInteractionRadius]
     ))
 )]
-pub struct Magnet {
-    pub strength: f32,
-}
+pub struct Magnet;
 
 #[derive(Component)]
 pub struct HealingTome {

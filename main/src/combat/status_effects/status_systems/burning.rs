@@ -25,6 +25,7 @@ pub fn while_burning(
             if burn.damage_frequency.just_finished() {
                 commands.trigger_targets(
                     AttemptDamageEvent {
+                        ignore_invulnerable: true,
                         damage_source: None,
                         damage: Damage::Single(burn.damage),
                     },

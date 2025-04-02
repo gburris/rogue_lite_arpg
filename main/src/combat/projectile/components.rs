@@ -14,7 +14,7 @@ pub struct ProjectileBundle {
 #[require(
     LiveDuration(|| LiveDuration::new(1.0)),
     Sensor,
-    RigidBody(default_rigid_body),
+    RigidBody,
     Collider(default_collider),
     CollidingEntities,
 )]
@@ -24,8 +24,4 @@ pub struct Projectile {
 
 fn default_collider() -> Collider {
     Collider::rectangle(10.0, 10.0)
-}
-
-fn default_rigid_body() -> RigidBody {
-    RigidBody::Dynamic
 }

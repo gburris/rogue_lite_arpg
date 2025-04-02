@@ -13,13 +13,13 @@ pub fn animate_sprite(
     )>,
 ) {
     for (entity, mut indices, mut timer, mut sprite) in &mut query {
-        timer.tick(time.delta());
-        let Some(atlas) = &mut sprite.texture_atlas else {
-            continue;
-        };
-        if !timer.just_finished() {
+        if !timer.tick(time.delta()).just_finished() {
             continue;
         }
+        let atlas = sprite
+            .texture_atlas
+            .as_mut()
+            .expect("Tried to animate a sprite without a texture atlas");
         let next = match &mut *indices {
             AnimationIndices::None(_) => continue,
             AnimationIndices::Cycle(i) => i.next(),

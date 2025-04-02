@@ -12,6 +12,10 @@ impl AnimationIndices {
     pub fn start(&self) -> usize {
         match self {
             AnimationIndices::None(_) => 0,
+            // NOTE: this is not perfect, there's not easy way to access the original iterator
+            // start which is what I would want.
+            // TODO: Create helper functions to instantiate AnimationIndices types, that way it's
+            // easier to include metadata
             AnimationIndices::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
             AnimationIndices::OneShot(range_inclusive) => *range_inclusive.start(),
         }

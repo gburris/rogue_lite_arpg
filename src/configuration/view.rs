@@ -143,7 +143,6 @@ pub fn camera_follow_system(
         .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
 }
 
-#[allow(clippy::type_complexity)]
 pub fn camera_debug_system(
     pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,

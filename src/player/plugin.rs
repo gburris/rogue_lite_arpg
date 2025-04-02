@@ -44,7 +44,7 @@ impl Plugin for PlayerPlugin {
                         on_player_experience_change,
                     )
                         .in_set(InGameSet::Simulation),
-                    (draw_cursor, animate_level_up).in_set(InGameSet::Vfx),
+                    animate_level_up.in_set(InGameSet::Vfx),
                 ),
             )
             .add_observer(handle_consume_event)

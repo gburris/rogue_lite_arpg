@@ -9,6 +9,7 @@ use crate::{
     animation::AnimationPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+    console::ConsolePlugin,
     despawn::plugin::DespawnPlugin,
     econ::plugin::EconPlugin,
     enemy::plugin::EnemyPlugin,
@@ -20,11 +21,15 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
+use super::game_data::GameDataPlugin;
+
+pub struct Config {}
+
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
         app
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
+            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin, GameDataPlugin))
             // Third-party plugins
             .add_plugins((AssetLoadingPlugin, TilemapPlugin))
             // Core systems
@@ -67,7 +72,8 @@ pub struct NativePlugins;
 #[cfg(not(target_arch = "wasm32"))]
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(GamePlugins); // Add native-only plugins
+        app.add_plugins(GamePlugins).add_plugins(ConsolePlugin); // Add native-only plugins
+
         #[cfg(feature = "debug")]
         {
             use crate::debug::DebugPlugin;

@@ -34,12 +34,9 @@ impl Plugin for DebugPlugin {
         })
         .add_systems(
             Update,
-            (
-                handle_debug_input
-                    .in_set(InGameSet::PlayerInput)
-                    .after(player_input),
-                view::camera_debug_system.in_set(InGameSet::HudOverlay),
-            ),
+            (handle_debug_input
+                .in_set(InGameSet::PlayerInput)
+                .after(player_input),),
         );
     }
 }

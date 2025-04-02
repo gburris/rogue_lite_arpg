@@ -11,6 +11,7 @@ use crate::{
 
 use super::{
     interact::{on_interaction_zone_added, on_player_interaction_input},
+    player_data::PlayerData,
     systems::death::finish_death_animation,
 };
 
@@ -18,7 +19,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerMovementEvent>()
+        app.init_resource::<PlayerData>()
+            .add_event::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (spawn_player, transition_to_create_hub).chain(),

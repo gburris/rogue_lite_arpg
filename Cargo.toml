@@ -31,6 +31,9 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
+rhai = { version = "1.21.0", features = ["sync"], optional = true }
+async-channel = { version = "2.3.1" }
+anyhow = "1.0.97"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -50,6 +53,7 @@ path = "src/main.rs"
 [features]
 atlas = []
 trace = ["bevy/trace_tracy", "bevy/trace"]
+rhai = ["dep:rhai"]
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

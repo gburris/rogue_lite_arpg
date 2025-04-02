@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::ZLayer,
     despawn::components::LiveDuration,
-    player::{events::PlayerLevelUpEvent, Player},
+    player::{events::PlayerLevelUpEvent, player_data::PlayerData, Player},
 };
 
 #[derive(Component)]
@@ -11,13 +11,6 @@ pub struct LevelUpEffect;
 
 #[derive(Component)]
 pub struct LevelUpText;
-
-/// Starting and ending size of level up ring animation
-const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
-const MAX_RING_SCALE: f32 = LEVEL_UP_RING_SIZE.1 / LEVEL_UP_RING_SIZE.0;
-const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
-const LEVEL_UP_ANIMATION_DURATION: f32 = 1.2;
-const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
 
 pub fn on_player_experience_change(mut commands: Commands, mut player: Single<&mut Player>) {
     while player.attempt_level_up() {
@@ -30,8 +23,14 @@ pub fn on_level_up(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    player_data: Res<PlayerData>,
     player_entity: Single<Entity, With<Player>>,
 ) {
+    let PlayerData {
+        LEVEL_UP_RING_SIZE,
+        LEVEL_UP_ANIMATION_DURATION,
+        ..
+    } = *player_data;
     commands
         .entity(player_entity.into_inner())
         .with_children(|builder| {
@@ -70,8 +69,15 @@ pub fn animate_level_up(
         ),
         (With<LevelUpEffect>, Without<LevelUpText>),
     >,
+    player_data: Res<PlayerData>,
     mut text_query: Query<(&mut Transform, &LiveDuration), With<LevelUpText>>,
 ) {
+    let PlayerData {
+        MAX_RING_SCALE,
+        LEVEL_UP_ROTATION_SPEED,
+        LEVEL_UP_TEXT_MAX_HEIGHT,
+        ..
+    } = *player_data;
     // Animate ring effect
     for (mut transform, mut material, duration) in effect_query.iter_mut() {
         let progress = duration.0.fraction();

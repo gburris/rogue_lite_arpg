@@ -10,7 +10,7 @@ use crate::{
     progression::components::GameProgress,
 };
 
-use super::view;
+use super::{configuration_data::ConfigurationData, view};
 
 pub struct SetupPlugin;
 
@@ -32,7 +32,8 @@ impl Plugin for SetupPlugin {
             // scale of your world to the physics engine for performance optimizations
             // In this case, our tiles are currently 32 x 32 pixels so we set the scale accordingly
             .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
-            .insert_resource(GameProgress::default())
+            .init_resource::<ConfigurationData>()
+            .init_resource::<GameProgress>()
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // initialize states
             .init_state::<AppState>()

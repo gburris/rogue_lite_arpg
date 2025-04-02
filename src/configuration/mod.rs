@@ -1,6 +1,8 @@
 pub mod assets;
 mod collision_layers;
+pub mod configuration_data;
 pub mod debug;
+pub mod game_data;
 pub mod plugins;
 pub mod schedule;
 pub mod setup;

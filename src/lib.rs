@@ -4,6 +4,7 @@ pub mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
+pub mod console;
 pub mod despawn;
 pub mod econ;
 pub mod enemy;
@@ -14,9 +15,6 @@ pub mod npc;
 pub mod player;
 pub mod progression;
 pub mod ui;
-
-#[cfg(feature = "debug")]
-pub mod debug;
 
 #[cfg(target_arch = "wasm32")]
 use crate::configuration::plugins::WasmPlugins;

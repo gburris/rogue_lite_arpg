@@ -21,7 +21,6 @@ pub fn animate_sprite(
             .as_mut()
             .expect("Tried to animate a sprite without a texture atlas");
         let next = match &mut *indices {
-            AnimationIndices::None(_) => continue,
             AnimationIndices::Cycle(i) => i.next(),
             AnimationIndices::OneShot(i) => i.next(),
         };

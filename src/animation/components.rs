@@ -4,14 +4,12 @@ use crate::ai::state::{ActionState, FacingDirection};
 
 #[derive(Clone, Debug, Component)]
 pub enum AnimationIndices {
-    None(std::iter::Empty<usize>),
     Cycle(std::iter::Cycle<std::ops::RangeInclusive<usize>>),
     OneShot(std::ops::RangeInclusive<usize>),
 }
 impl AnimationIndices {
     pub fn start(&self) -> usize {
         match self {
-            AnimationIndices::None(_) => 0,
             // NOTE: this is not perfect, there's not easy way to access the original iterator
             // start which is what I would want.
             // TODO: Create helper functions to instantiate AnimationIndices types, that way it's
@@ -24,7 +22,7 @@ impl AnimationIndices {
 
 impl Default for AnimationIndices {
     fn default() -> Self {
-        Self::None(std::iter::empty())
+        Self::OneShot(0..=0)
     }
 }
 

@@ -1,51 +1,65 @@
-use avian2d::prelude::*;
+use avian2d::prelude::Mass;
 use bevy::prelude::*;
 
 use crate::{
-    ai::{
-        state::{ActionState, AimPosition, FacingDirection},
-        SimpleMotion,
-    },
-    combat::Health,
+    ai::SimpleMotion,
+    character::Character,
+    combat::{invulnerable::IFrames, Health},
 };
+
+/// How much more experience is required (as a multiplier) after each level up
+const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 #[derive(Component)]
 #[require(
+    Character,
     Health(|| Health::new(100.0)),
-    SimpleMotion(|| SimpleMotion::new(450.0)),
-    PlayerExperience,
-    PlayerLevel,
-    AimPosition,
-    RigidBody,
-    LockedAxes(|| LockedAxes::new().lock_rotation()),
-    FacingDirection,
-    ActionState,
+    SimpleMotion(|| SimpleMotion::new(250.0)),
+    // Double the mass of npcs/enemies so the player can push them around more
+    Mass(|| Mass(100.0)),
+    IFrames,
 )]
-pub struct Player;
-
-//Components for experience and leveling
-#[derive(Component)]
-pub struct PlayerExperience {
-    pub current: u32,
-    pub next_level_requirement: u32,
+pub struct Player {
+    current_level: u32,
+    // Outside systems may give the player experience, like when an enemy dies
+    pub current_experience: f32,
+    next_level_experience_req: f32,
 }
 
-impl Default for PlayerExperience {
+impl Default for Player {
     fn default() -> Self {
-        PlayerExperience {
-            current: 0,
-            next_level_requirement: 20,
+        Player {
+            current_level: 1,
+            current_experience: 0.0,
+            next_level_experience_req: 20.0,
         }
     }
 }
 
-#[derive(Component)]
-pub struct PlayerLevel {
-    pub current: u32,
-}
+impl Player {
+    /// Attempts to increase player level based on current experience and level requirement, and then
+    /// sets the new level requirement based on PLAYER_LEVEL_REQUIREMENT_MULTIPLIER
+    ///
+    /// returns whether the player leveled up
+    pub fn attempt_level_up(&mut self) -> bool {
+        if self.current_experience >= self.next_level_experience_req {
+            self.current_experience -= self.next_level_experience_req;
+            self.next_level_experience_req *= PLAYER_LEVEL_REQUIREMENT_MULTIPLIER;
+            self.current_level += 1;
+            return true;
+        }
 
-impl Default for PlayerLevel {
-    fn default() -> Self {
-        PlayerLevel { current: 1 }
+        false
+    }
+
+    pub fn get_progress_to_next_level(&self) -> f32 {
+        self.current_experience / self.next_level_experience_req
+    }
+
+    pub fn get_level(&self) -> u32 {
+        self.current_level
     }
 }
+
+#[derive(Component)]
+pub struct PlayerCollider;

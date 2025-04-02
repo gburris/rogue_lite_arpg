@@ -28,11 +28,9 @@ pub struct MeleeWeapon {
 
 impl MeleeWeapon {
     /// Gets collision layers for melee weapon based on source of damage
-    ///
-    /// This is meant to be added when the weapon is equipped.
-    /// We consider melee weapons "Grounded" so they can be used to break chests, etc... on the ground
+    /// It can either target allies or enemies
     pub fn collision_layers(damage_source: DamageSource) -> CollisionLayers {
-        CollisionLayers::new(GameCollisionLayer::Grounded, LayerMask::from(damage_source))
+        CollisionLayers::new(GameCollisionLayer::HitBox, LayerMask::from(damage_source))
     }
 }
 

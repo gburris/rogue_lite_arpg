@@ -3,8 +3,8 @@ use rand::{thread_rng, Rng};
 
 use crate::{
     configuration::assets::SpriteAssets,
+    configuration::ZLayer,
     enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
-    labels::layer::ZLayer,
     map::{
         chest::SpawnChestsEvent,
         components::{
@@ -21,15 +21,10 @@ fn convert_tiles_to_world_positions(
     tile_positions: &[Vec2],
     world_config: &WorldSpaceConfig,
     map_layout: &MapLayout,
-    z_layer: ZLayer,
-) -> Vec<Vec3> {
+) -> Vec<Vec2> {
     tile_positions
         .iter()
-        .map(|tile_position| {
-            let world_position =
-                world_config.tile_to_world(map_layout.size, tile_position.as_ivec2());
-            Vec3::new(world_position.x, world_position.y, z_layer.z())
-        })
+        .map(|tile_position| world_config.tile_to_world(map_layout.size, tile_position.as_ivec2()))
         .collect()
 }
 
@@ -51,7 +46,7 @@ pub fn spawn_zone_entities(
             let portal_position = Vec3::new(
                 exit_position_in_world.x,
                 exit_position_in_world.y,
-                ZLayer::Exit.z(),
+                ZLayer::OnGround.z(),
             );
 
             // Generate a unique instance layout for each portal
@@ -68,12 +63,8 @@ pub fn spawn_zone_entities(
     }
 
     if let Some(enemy_positions) = map_layout.markers.get_markers(MarkerType::EnemySpawns) {
-        let spawn_positions = convert_tiles_to_world_positions(
-            enemy_positions,
-            &world_config,
-            &map_layout,
-            ZLayer::Enemy,
-        );
+        let spawn_positions =
+            convert_tiles_to_world_positions(enemy_positions, &world_config, &map_layout);
         let mut rng = thread_rng();
         let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
 
@@ -90,23 +81,15 @@ pub fn spawn_zone_entities(
 
     // Spawn chests
     if let Some(chest_positions) = map_layout.markers.get_markers(MarkerType::ChestSpawns) {
-        let spawn_positions = convert_tiles_to_world_positions(
-            chest_positions,
-            &world_config,
-            &map_layout,
-            ZLayer::Enemy,
-        );
+        let spawn_positions =
+            convert_tiles_to_world_positions(chest_positions, &world_config, &map_layout);
         commands.trigger(SpawnChestsEvent(spawn_positions));
     }
 
     // Spawn NPCs
     if let Some(npc_positions) = map_layout.markers.get_markers(MarkerType::NPCSpawns) {
-        let spawn_positions = convert_tiles_to_world_positions(
-            npc_positions,
-            &world_config,
-            &map_layout,
-            ZLayer::Enemy,
-        );
+        let spawn_positions =
+            convert_tiles_to_world_positions(npc_positions, &world_config, &map_layout);
         commands.trigger(NPCSpawnEvent(spawn_positions));
     }
 
@@ -114,16 +97,12 @@ pub fn spawn_zone_entities(
     if let Some(spawn_positions) = map_layout.markers.get_markers(MarkerType::PlayerSpawns) {
         // Use first spawn position if multiple exist
         if let Some(spawn_position) = spawn_positions.first() {
-            let spawn_position_in_world =
+            let player_spawn_position =
                 world_config.tile_to_world(map_layout.size, spawn_position.as_ivec2());
-            let player_spawn_position = Vec3::new(
-                spawn_position_in_world.x,
-                spawn_position_in_world.y,
-                ZLayer::Player.z(),
-            );
 
             let mut player_transform = player_query.into_inner();
-            player_transform.translation = player_spawn_position;
+            player_transform.translation =
+                player_spawn_position.extend(player_transform.translation.z);
         }
     } else {
         warn!("Player spawn marker not found in map layout.");

@@ -4,8 +4,10 @@ use bevy::prelude::*;
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     combat::{damage::DamageSource, projectile::projectile_weapon::ProjectileWeapon},
-    configuration::GameCollisionLayer,
+    configuration::{GameCollisionLayer, ZLayer},
 };
+
+const PROJECTILE_SPAWN_OFFSET: f32 = 25.0;
 
 pub fn spawn_projectile(
     damage_source: DamageSource, //Player, enemy, NPC, Party Member
@@ -14,24 +16,24 @@ pub fn spawn_projectile(
     caster_aim_position: Vec2,
     weapon: &ProjectileWeapon,
 ) {
-    let mut transform = Transform {
-        translation: caster_transform.translation,
-        ..default()
-    };
-
     let caster_direction = caster_transform.local_x().truncate();
-    let aim_direction = caster_aim_position - caster_transform.translation.truncate();
+    let aim_direction = (caster_aim_position - caster_transform.translation.truncate()).normalize();
     let angle = caster_direction.angle_to(aim_direction);
 
-    transform.rotate_z(angle);
+    let velocity = aim_direction * weapon.projectile_speed;
 
-    let velocity = aim_direction.normalize() * weapon.projectile_speed;
+    let starting_positon =
+        caster_transform.translation.truncate() + (PROJECTILE_SPAWN_OFFSET * aim_direction);
 
     trace!("Spawning projectile w/ velocity: {}", velocity);
 
     commands.spawn((
         weapon.projectile.clone(),
-        transform,
+        Transform {
+            translation: starting_positon.extend(ZLayer::InAir.z()),
+            rotation: Quat::from_rotation_z(angle),
+            ..default()
+        },
         LinearVelocity(velocity),
         AnimationIndices {
             first: 0,
@@ -40,7 +42,7 @@ pub fn spawn_projectile(
         },
         AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         CollisionLayers::new(
-            GameCollisionLayer::InAir,
+            [GameCollisionLayer::InAir, GameCollisionLayer::HitBox],
             LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
         ),
     ));

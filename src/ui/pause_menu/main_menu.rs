@@ -2,7 +2,7 @@ use crate::{
     combat::Health,
     items::inventory::Inventory,
     labels::states::PausedState,
-    player::{Player, PlayerLevel},
+    player::Player,
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
@@ -34,10 +34,10 @@ impl MenuButtonConfig {
 
 pub fn spawn_main_menu(
     mut commands: Commands,
-    player: Single<(&Health, &PlayerLevel, &Inventory), With<Player>>,
+    player: Single<(&Health, &Player, &Inventory)>,
     game_progress: Res<GameProgress>,
 ) {
-    let (health, level, inventory) = player.into_inner();
+    let (health, player, inventory) = player.into_inner();
 
     commands
         .spawn((
@@ -99,7 +99,7 @@ pub fn spawn_main_menu(
                         },))
                         .with_children(|stats| {
                             stats.spawn((
-                                Text::new(format!("Level: {}", level.current)),
+                                Text::new(format!("Level: {}", player.get_level())),
                                 TextFont {
                                     font_size: 24.0,
                                     ..default()

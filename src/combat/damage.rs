@@ -6,7 +6,7 @@ use rand::Rng;
 use crate::{
     combat::{
         health::Health,
-        invulnerable::{HasIFrames, Invulnerable},
+        invulnerable::IFrames,
         status_effects::{components::EffectsList, events::ApplyEffect},
     },
     configuration::GameCollisionLayer,
@@ -23,12 +23,13 @@ pub enum DamageSource {
 impl From<DamageSource> for LayerMask {
     fn from(source: DamageSource) -> Self {
         match source {
-            DamageSource::Player => GameCollisionLayer::Enemy.to_bits(),
-            DamageSource::Enemy => GameCollisionLayer::Player.to_bits(),
-            DamageSource::NPC => GameCollisionLayer::Enemy.to_bits(),
+            DamageSource::Player => GameCollisionLayer::EnemyHurtBox.to_bits(),
+            DamageSource::NPC => GameCollisionLayer::EnemyHurtBox.to_bits(),
+            DamageSource::Enemy => GameCollisionLayer::AllyHurtBox.to_bits(),
             DamageSource::Environment => {
-                // Combine both Player and Enemy layers for Environment
-                GameCollisionLayer::Enemy.to_bits() | GameCollisionLayer::Player.to_bits()
+                // Environment can affect all characters
+                GameCollisionLayer::AllyHurtBox.to_bits()
+                    | GameCollisionLayer::EnemyHurtBox.to_bits()
             }
         }
         .into()
@@ -41,8 +42,22 @@ pub enum Damage {
     Single(f32),
 }
 
+impl Damage {
+    fn to_float(self) -> f32 {
+        match self {
+            Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
+            Damage::Single(amount) => amount,
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct HurtBox;
+
 #[derive(Event)]
 pub struct AttemptDamageEvent {
+    /// Not all damage gets blocked by invulnerable (ex: burn from status effect)
+    pub ignore_invulnerable: bool,
     /// We treat damage as a range with RNG determining which value is dealt
     pub damage: Damage,
     /// Not all damage has a "Source" entity, like environmental damage or damage-over-time effects
@@ -62,33 +77,39 @@ pub struct DefeatedEvent;
 pub fn on_damage_event(
     damage_trigger: Trigger<AttemptDamageEvent>,
     mut commands: Commands,
-    mut damaged_query: Query<(&mut Health, Option<&HasIFrames>, Option<&Invulnerable>)>,
+    hurt_box_query: Query<&Parent, With<HurtBox>>,
+    mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&EffectsList>,
 ) {
-    if let Ok((mut health, has_iframes, invulnerable)) =
-        damaged_query.get_mut(damage_trigger.entity())
-    {
-        if invulnerable.is_some() {
-            return;
+    // Damage can be applied to an entities hurtbox, or to the entity directly
+    let damaged_entity = if let Ok(hurt_box_parent) = hurt_box_query.get(damage_trigger.entity()) {
+        hurt_box_parent.get()
+    } else if damaged_query.contains(damage_trigger.entity()) {
+        damage_trigger.entity()
+    } else {
+        return;
+    };
+
+    if let Ok((mut health, has_iframes)) = damaged_query.get_mut(damaged_entity) {
+        // Entities have to "opt-in" to having iframes. Right now that is only the player
+        if let Some(mut iframes) = has_iframes {
+            if iframes.is_invulnerable && !damage_trigger.ignore_invulnerable {
+                return;
+            }
+
+            iframes.is_invulnerable = true;
         }
 
         // Convert `Damage` to raw damage amount
-        let damage = calculate_damage(damage_trigger.damage);
+        let damage = damage_trigger.damage.to_float();
         health.take_damage(damage);
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
-        commands.trigger_targets(DamageDealtEvent { damage }, damage_trigger.entity());
-
-        // Entities have to "opt-in" to having iframes. Right now that is only the player
-        if let Some(iframes) = has_iframes {
-            commands
-                .entity(damage_trigger.entity())
-                .insert(Invulnerable::new(iframes));
-        }
+        commands.trigger_targets(DamageDealtEvent { damage }, damaged_entity);
 
         if health.hp == 0.0 {
-            commands.trigger_targets(DefeatedEvent, damage_trigger.entity());
+            commands.trigger_targets(DefeatedEvent, damaged_entity);
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects_list) = source_query.get(source_entity) {
@@ -96,16 +117,9 @@ pub fn on_damage_event(
                     ApplyEffect {
                         effect: effects_list.effects.clone(),
                     },
-                    damage_trigger.entity(),
+                    damaged_entity,
                 );
             }
         }
-    }
-}
-
-fn calculate_damage(damage: Damage) -> f32 {
-    match damage {
-        Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
-        Damage::Single(amount) => amount,
     }
 }

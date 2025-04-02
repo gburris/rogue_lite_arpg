@@ -21,7 +21,7 @@ pub struct SpawnZoneEvent;
 pub struct CleanupZone;
 
 #[derive(Event)]
-pub struct NPCSpawnEvent(pub Vec<Vec3>);
+pub struct NPCSpawnEvent(pub Vec<Vec2>);
 
 #[derive(Debug, Event)]
 pub struct EnemiesSpawnEvent(pub Vec<EnemySpawnData>);

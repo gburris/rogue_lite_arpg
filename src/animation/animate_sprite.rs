@@ -1,4 +1,3 @@
-
 use bevy::prelude::*;
 
 use super::{AnimationIndices, AnimationTimer};
@@ -21,20 +20,15 @@ pub fn animate_sprite(
         if !timer.just_finished() {
             continue;
         }
-        match &mut *indices {
-            AnimationIndices::None(i) => {}
-            AnimationIndices::Cycle(i) => {
-                if let Some(index) = i.next() {
-                    atlas.index = index
-                };
-            }
-            AnimationIndices::OneShot(i) => {
-                match i.next() {
-                    Some(index) => atlas.index = index,
-                    None => {
-                        commands.entity(entity).remove::<AnimationTimer>();
-                    }
-                };
+        let next = match &mut *indices {
+            AnimationIndices::None(_) => continue,
+            AnimationIndices::Cycle(i) => i.next(),
+            AnimationIndices::OneShot(i) => i.next(),
+        };
+        match next {
+            Some(index) => atlas.index = index,
+            None => {
+                commands.entity(entity).remove::<AnimationTimer>();
             }
         };
     }

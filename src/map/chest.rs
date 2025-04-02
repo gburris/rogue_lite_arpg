@@ -58,11 +58,7 @@ fn spawn_chest(
                 anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),
                 ..default()
             },
-            AnimationIndices {
-                is_one_shot: true,
-                first: 0,
-                last: 8,
-            },
+            AnimationIndices::OneShot(0..=8),
             Transform {
                 translation: spawn_position.extend(0.0),
                 scale: Vec3::new(2.0, 2.0, 1.0),

@@ -22,6 +22,17 @@ pub fn menu_header(title: &str) -> impl Bundle {
     )
 }
 
+pub fn gold_border() -> impl Bundle {
+    (
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Px(8.0),
+            ..default()
+        },
+        BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),
+    )
+}
+
 pub struct TextBuilder {
     message: String,
     font_size: f32,
@@ -61,7 +72,7 @@ impl TextBuilder {
         )
     }
 
-    pub fn with_width(mut self, width: f32) -> Self {
+    pub fn width(mut self, width: f32) -> Self {
         self.width = Some(width);
         self
     }
@@ -72,6 +83,6 @@ impl TextBuilder {
     }
 }
 
-pub fn text(message: &str, font_size: f32) -> impl Bundle {
+pub fn text(message: impl Into<String>, font_size: f32) -> impl Bundle {
     TextBuilder::new(message, font_size).build()
 }

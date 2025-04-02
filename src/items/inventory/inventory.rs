@@ -141,7 +141,6 @@ pub struct InventoryBuilder {
     max_capacity: usize,
     items: Vec<Entity>,
     coins: u32,
-    display_case: Option<Entity>,
 }
 
 impl Default for InventoryBuilder {
@@ -150,7 +149,6 @@ impl Default for InventoryBuilder {
             max_capacity: 10,
             items: Vec::new(),
             coins: 0,
-            display_case: None,
         }
     }
 }

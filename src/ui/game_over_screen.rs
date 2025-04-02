@@ -5,7 +5,7 @@ use crate::{
     player::Player,
 };
 
-use super::constants::TITLE_FONT_SIZE;
+use super::{constants::TITLE_FONT_SIZE, primitives::text};
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -14,60 +14,50 @@ pub struct GameOverScreen;
 pub struct RestartButton;
 
 pub fn create(mut commands: Commands) {
-    commands
-        .spawn((
-            GameOverScreen,
-            Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                padding: UiRect::top(Val::Px(200.0)),
-                row_gap: Val::Px(20.),
-                ..default()
-            },
-            BackgroundColor::from(Color::BLACK.with_alpha(1.0)), // want to allow game to be seen in background
-            // render this above in-game UI such as player health and score
-            GlobalZIndex(1),
-        ))
-        .with_children(|ChildOf| {
-            ChildOf.spawn((
-                Text::new("Game Over!"),
-                TextFont {
-                    font_size: TITLE_FONT_SIZE,
+    commands.spawn((
+        GameOverScreen,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            padding: UiRect::top(Val::Px(200.0)),
+            row_gap: Val::Px(20.),
+            ..default()
+        },
+        BackgroundColor::from(Color::BLACK.with_alpha(1.0)), // want to allow game to be seen in background
+        // render this above in-game UI such as player health and score
+        GlobalZIndex(1),
+        children![
+            text("Game Over!", TITLE_FONT_SIZE),
+            (
+                Button,
+                RestartButton,
+                Node {
+                    width: Val::Px(150.0),
+                    height: Val::Px(65.0),
+                    border: UiRect::all(Val::Px(5.0)),
+                    // horizontally center child text
+                    justify_content: JustifyContent::Center,
+                    // vertically center child text
+                    align_items: AlignItems::Center,
                     ..default()
                 },
-            ));
-            ChildOf
-                .spawn((
-                    Button,
-                    RestartButton,
-                    Node {
-                        width: Val::Px(150.0),
-                        height: Val::Px(65.0),
-                        border: UiRect::all(Val::Px(5.0)),
-                        // horizontally center child text
-                        justify_content: JustifyContent::Center,
-                        // vertically center child text
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BorderColor(Color::BLACK),
-                    BorderRadius::MAX,
-                    BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
-                ))
-                .with_child((Text::new("Restart"),));
-        });
+                BorderColor(Color::BLACK),
+                BorderRadius::MAX,
+                BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                children![Text::new("Restart")]
+            )
+        ],
+    ));
 }
 
 pub fn despawn_game_over_screen(
     mut commands: Commands,
-    game_over_screen: Query<Entity, With<GameOverScreen>>,
+    game_over_screen: Single<Entity, With<GameOverScreen>>,
 ) {
     // Despawn game over screen
-    if let Ok(entity) = game_over_screen.get_single() {
-        commands.entity(entity).despawn();
-    }
+    commands.entity(*game_over_screen).despawn();
 }
 
 //Query the player level, add it to the restart event

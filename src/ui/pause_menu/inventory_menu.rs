@@ -8,7 +8,7 @@ use crate::{
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         display_case::{self, UpdateDisplayCaseEvent},
-        menu_helpers::menu_header,
+        primitives::{menu_header, text},
     },
 };
 
@@ -47,39 +47,15 @@ pub fn spawn_inventory_menu(
                 },
                 BackgroundColor::from(DARK_GRAY_COLOR),
                 children![
-                    (
-                        Text::new("Left click to equip/consume"),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    ),
-                    (
-                        Text::new("Right click to drop"),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    ),
-                    (
-                        Text::new(format!("Total coins: {:.1}", player.1.coins)),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    ),
+                    text("Left click to equip/consume", 24.0),
+                    text("Right click to drop", 24.0),
+                    text(format!("Total coins: {:.1}", player.1.coins), 24.0),
                     // Spacer between left and right side of footer
                     Node {
                         flex_grow: 1.0,
                         ..default()
                     },
-                    (
-                        Text::new("Press ESC to unpause"),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    )
+                    text("Press ESC to unpause", 24.0)
                 ],
             )
         ],

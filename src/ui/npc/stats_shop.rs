@@ -3,7 +3,7 @@ use crate::{
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
-        menu_helpers::menu_header,
+        primitives::{menu_header, text, TextBuilder},
     },
 };
 use bevy::prelude::*;
@@ -58,11 +58,11 @@ pub fn spawn_stats_shop_menu(
                 },
                 BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                 children![
-                    spawn_stat_row(DisplayableStatType::Agility, stats),
-                    spawn_stat_row(DisplayableStatType::Strength, stats),
-                    spawn_stat_row(DisplayableStatType::Dexterity, stats),
-                    spawn_stat_row(DisplayableStatType::Intellect, stats),
-                    spawn_stat_row(DisplayableStatType::Luck, stats),
+                    stat_row(DisplayableStatType::Agility, stats),
+                    stat_row(DisplayableStatType::Strength, stats),
+                    stat_row(DisplayableStatType::Dexterity, stats),
+                    stat_row(DisplayableStatType::Intellect, stats),
+                    stat_row(DisplayableStatType::Luck, stats),
                 ]
             ),
             // Progress Points Display
@@ -80,7 +80,7 @@ pub fn spawn_stats_shop_menu(
     ));
 }
 
-fn spawn_stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
+fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
     (
         Node {
             width: Val::Percent(100.0),
@@ -92,7 +92,7 @@ fn spawn_stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl B
         },
         children![
             // Decrease button
-            spawn_stat_shop_button(stat_type, false),
+            stat_shop_button(stat_type, false),
             (
                 Node {
                     flex_direction: FlexDirection::Column,
@@ -100,13 +100,11 @@ fn spawn_stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl B
                     ..default()
                 },
                 children![
-                    (
-                        Text::new(format!("{:?}: {}", stat_type, stat_type.get_value(stats))),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    ),
+                    TextBuilder::new(
+                        format!("{:?}: {}", stat_type, stat_type.get_value(stats)),
+                        24.0
+                    )
+                    .build(),
                     (
                         Text::new(stat_type.get_description()),
                         TextFont {
@@ -118,12 +116,12 @@ fn spawn_stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl B
                 ]
             ),
             // Increase button
-            spawn_stat_shop_button(stat_type, true)
+            stat_shop_button(stat_type, true)
         ],
     )
 }
 
-fn spawn_stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl Bundle {
+fn stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl Bundle {
     (
         StatShopButton {
             stat_type,
@@ -138,12 +136,6 @@ fn spawn_stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> 
             ..default()
         },
         BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-        children![(
-            Text::new(if is_increase { "+" } else { "-" }),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
-        )],
+        children![text(if is_increase { "+" } else { "-" }, 24.0)],
     )
 }

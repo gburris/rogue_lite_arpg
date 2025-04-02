@@ -1,4 +1,4 @@
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     configuration::assets::GameIcons,
@@ -12,7 +12,7 @@ use crate::{
 
 use super::{
     display_case::{UpdateDisplayCaseEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH},
-    menu_helpers::TextBuilder,
+    primitives::TextBuilder,
 };
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
@@ -122,14 +122,14 @@ pub fn spawn_slot(
 
             parent.spawn(
                 TextBuilder::new(slot_string, 18.0)
-                    .with_width(EQUIP_SLOT_WIDTH)
+                    .width(EQUIP_SLOT_WIDTH)
                     .not_pickable()
                     .build(),
             );
 
             parent.spawn(
                 TextBuilder::new(context.item.value.to_string(), 18.0)
-                    .with_width(VALUE_WIDTH)
+                    .width(VALUE_WIDTH)
                     .not_pickable()
                     .build(),
             );

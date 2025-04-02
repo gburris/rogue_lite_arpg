@@ -4,7 +4,7 @@ use crate::{
     player::PlayerStats,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
-        menu_helpers::menu_header,
+        primitives::menu_header,
     },
 };
 

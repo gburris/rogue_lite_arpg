@@ -17,7 +17,7 @@ use crate::{
 use super::{
     constants::DARK_GRAY_ALPHA_COLOR,
     display_case_slot::DisplaySlotContext,
-    menu_helpers::{text, TextBuilder},
+    primitives::{text, TextBuilder},
 };
 
 pub const VALUE_WIDTH: f32 = 60.0;
@@ -69,11 +69,9 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
                         ..default()
                     },
                     TextBuilder::new("Equip Slot", 18.0)
-                        .with_width(EQUIP_SLOT_WIDTH)
+                        .width(EQUIP_SLOT_WIDTH)
                         .build(),
-                    TextBuilder::new("Value", 18.0)
-                        .with_width(VALUE_WIDTH)
-                        .build(),
+                    TextBuilder::new("Value", 18.0).width(VALUE_WIDTH).build(),
                 ]
             ),
             // Container for items in inventory

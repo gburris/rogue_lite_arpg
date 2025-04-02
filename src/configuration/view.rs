@@ -121,13 +121,11 @@ const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further
 
 #[allow(clippy::type_complexity)]
 pub fn camera_follow_system(
-    pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
-    mut cq: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
 ) {
-    let (Ok((player, aim)), Ok(mut camera)) = (pq.get_single(), cq.get_single_mut()) else {
-        return;
-    };
+    let (player, aim) = player.into_inner();
 
     let z = camera.translation.z;
     let aim_pos = Vec3::new(aim.position.x, aim.position.y, z);
@@ -145,12 +143,10 @@ pub fn camera_follow_system(
 
 #[allow(clippy::type_complexity)]
 pub fn camera_debug_system(
-    pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {
-    let Ok((player, aim)) = pq.get_single() else {
-        return;
-    };
+    let (player, aim) = player.into_inner();
 
     let player_pos = player.translation.xy();
     let target = player_pos.lerp(aim.position, TARGET_BIAS);

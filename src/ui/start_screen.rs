@@ -1,7 +1,7 @@
 use crate::labels::states::AppState;
 use bevy::prelude::*;
 
-use super::constants::TITLE_FONT_SIZE;
+use super::{constants::TITLE_FONT_SIZE, primitives::gold_border};
 
 #[derive(Component)]
 pub struct StartScreen;
@@ -13,147 +13,122 @@ pub struct StartScreenButton;
 pub struct AnimatedText;
 
 pub fn spawn_start_screen(mut commands: Commands) {
-    commands
-        .spawn((
-            StartScreen,
+    commands.spawn((
+        StartScreen,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        // Darker background for more contrast
+        BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
+        children![
+            gold_border(),
+            start_screen_title(),
+            start_screen_body(),
+            start_screen_footer(),
+            gold_border(),
+        ],
+    ));
+}
+
+fn start_screen_title() -> impl Bundle {
+    (
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Px(300.0),
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        children![(
             Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
+                width: Val::Auto,
+                height: Val::Auto,
+                border: UiRect::all(Val::Px(2.0)),
+                padding: UiRect::horizontal(Val::Px(40.0)),
                 ..default()
             },
-            // Darker background for more contrast
-            BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
-        ))
-        .with_children(|ChildOf| {
-            // Top gold border
-            ChildOf.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(8.0),
+            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
+            children![(
+                Text::new("Baba Yaga"),
+                TextFont {
+                    font_size: TITLE_FONT_SIZE,
                     ..default()
                 },
-                BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),
-            ));
+                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
+                AnimatedText,
+            )]
+        ),],
+    )
+}
 
-            // Title Section
-            ChildOf
-                .spawn((Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(300.0),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },))
-                .with_children(|header| {
-                    // Title container with border
-                    header
-                        .spawn((
-                            Node {
-                                width: Val::Auto,
-                                height: Val::Auto,
-                                border: UiRect::all(Val::Px(2.0)),
-                                padding: UiRect::horizontal(Val::Px(40.0)),
-                                ..default()
-                            },
-                            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
-                            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
-                        ))
-                        .with_children(|title_container| {
-                            title_container.spawn((
-                                Text::new("Baba Yaga"),
-                                TextFont {
-                                    font_size: TITLE_FONT_SIZE,
-                                    ..default()
-                                },
-                                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
-                                AnimatedText,
-                            ));
-                        });
-                });
-
-            // Center content section
-            ChildOf
-                .spawn((Node {
-                    width: Val::Percent(100.0),
-                    flex_grow: 1.0,
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },))
-                .with_children(|body| {
-                    // Begin button
-                    body.spawn((
-                        StartScreenButton,
-                        Button,
-                        Node {
-                            width: Val::Px(300.0),
-                            height: Val::Px(80.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            margin: UiRect::all(Val::Px(20.0)),
-                            ..default()
-                        },
-                        BorderColor(Color::srgb(0.8, 0.6, 0.2)),
-                        BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
-                    ))
-                    .with_children(|button| {
-                        button.spawn((
-                            Text::new("BEGIN"),
-                            TextFont {
-                                font_size: 48.0,
-                                ..default()
-                            },
-                            TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
-                        ));
-                    });
-                });
-
-            // Footer
-            ChildOf
-                .spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(120.0),
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::all(Val::Px(20.0)),
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
-                ))
-                .with_children(|footer| {
-                    footer.spawn((
-                        Text::new("She is a mysterious witch and ogress from Slavic folklore"),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                        TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
-                    ));
-                });
-
-            // Bottom gold border
-            ChildOf.spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Px(8.0),
+fn start_screen_body() -> impl Bundle {
+    (
+        Node {
+            width: Val::Percent(100.0),
+            flex_grow: 1.0,
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        children![(
+            StartScreenButton,
+            Button,
+            Node {
+                width: Val::Px(300.0),
+                height: Val::Px(80.0),
+                border: UiRect::all(Val::Px(2.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                margin: UiRect::all(Val::Px(20.0)),
+                ..default()
+            },
+            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            children![(
+                Text::new("BEGIN"),
+                TextFont {
+                    font_size: 48.0,
                     ..default()
                 },
-                BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),
-            ));
-        });
+                TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
+            )]
+        )],
+    )
+}
+
+fn start_screen_footer() -> impl Bundle {
+    (
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Px(120.0),
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            padding: UiRect::all(Val::Px(20.0)),
+            ..default()
+        },
+        BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+        children![(
+            Text::new("She is a mysterious witch and ogress from Slavic folklore"),
+            TextFont {
+                font_size: 24.0,
+                ..default()
+            },
+            TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
+        )],
+    )
 }
 
 pub fn despawn_start_screen(
     mut commands: Commands,
     start_screen_query: Query<Entity, With<StartScreen>>,
 ) {
-    debug!("despawn_start_screen called");
     for entity in start_screen_query.iter() {
         commands.entity(entity).despawn();
     }

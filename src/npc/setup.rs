@@ -69,9 +69,8 @@ pub fn spawn_npc(
             ),
         ))
         .observe(on_player_interaction)
-        .with_child(on_player_interaction)
         .with_children(|spawner| {
-            spawn_shadow(spawner, &shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
+            spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
 
             spawner.spawn((
                 InteractionZone::NPC,

@@ -2,7 +2,6 @@ pub mod consume;
 pub mod cursor;
 pub mod death;
 pub mod handle_level_up;
-pub mod input;
 pub mod spawn_player;
 
 pub use consume::*;

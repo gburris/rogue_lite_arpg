@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    controller::plugin::PauseEvent,
+    controller::plugin::PauseInputEvent,
     labels::states::{AppState, PausedState},
 };
 
-pub fn on_pause_input(
-    pe: Trigger<PauseEvent>,
+pub fn on_pause_input_event(
+    pause_event: Trigger<PauseInputEvent>,
     mut next_pause_state: ResMut<NextState<PausedState>>,
     state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -19,8 +19,8 @@ pub fn on_pause_input(
         _ => {
             debug!("Not currently paused, transitioning to paused");
             next_state.set(AppState::Paused);
-            if pe != PauseEvent::None {
-                next_pause_state.set(PausedState::Inventory);
+            if let PauseInputEvent(Some(state)) = *pause_event {
+                next_pause_state.set(state);
             }
         }
     }

@@ -10,6 +10,7 @@ use crate::{
     animation::AnimationPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+    controller::plugin::InputPlugin,
     despawn::plugin::DespawnPlugin,
     econ::plugin::EconPlugin,
     enemy::plugin::EnemyPlugin,
@@ -30,8 +31,7 @@ pub struct InputSettings {
     pub movement: Cardinal<KeyCode>,
     pub use_equip: EquipmentBindings,
     pub interact: KeyCode,
-    #[allow(non_snake_case)]
-    pub pushing_P: KeyCode, // Pause menu
+    pub pause_request: KeyCode, // Pause menu
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -50,16 +50,11 @@ impl Plugin for GamePlugins {
                     off_hand: MouseButton::Right,
                 },
                 interact: KeyCode::Space,
-                pushing_P: KeyCode::Escape,
+                pause_request: KeyCode::Escape,
             },
         })
         // Setup and configuration
-        .add_plugins((
-            SetupPlugin,
-            AnimationPlugin,
-            SchedulePlugin,
-            EnhancedInputPlugin,
-        ))
+        .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin, InputPlugin))
         // Third-party plugins
         .add_plugins((AssetLoadingPlugin, TilemapPlugin))
         // Core systems

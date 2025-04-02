@@ -5,17 +5,53 @@ use crate::{
     ai::SimpleMotion,
     configuration::plugins::AppSettings,
     items::equipment::EquipmentSlot,
-    labels::states::PausedState,
-    player::{Player, UseEquipmentInputEvent},
+    labels::states::{AppState, PausedState},
+    player::{interact::PlayerInteractionInput, Player, UseEquipmentInputEvent},
 };
+
+#[derive(Component)]
+pub struct CurrentInputContext;
+#[derive(Component)]
+pub struct PlayerInputContext;
+#[derive(Component)]
+pub struct MenuInputContext;
 
 pub struct InputPlugin;
 
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(EnhancedInputPlugin)
-            .add_input_context::<Node>()
-            .add_input_context::<Player>();
+            .add_input_context::<PlayerInputContext>()
+            .add_input_context::<MenuInputContext>()
+            .add_systems(Startup, |mut commands: Commands| {
+                commands.spawn((CurrentInputContext, MenuInputContext));
+            })
+            .add_systems(
+                OnEnter(AppState::SpawnPlayer),
+                |mut commands: Commands, query: Single<Entity, With<CurrentInputContext>>| {
+                    commands.entity(*query).insert(PlayerInputContext);
+                },
+            )
+            .add_systems(
+                OnEnter(AppState::Paused),
+                |mut commands: Commands, query: Single<Entity, With<CurrentInputContext>>| {
+                    commands.entity(*query).remove::<PlayerInputContext>();
+                },
+            )
+            .add_systems(
+                OnExit(AppState::Paused),
+                |mut commands: Commands, query: Single<Entity, With<CurrentInputContext>>| {
+                    commands.entity(*query).insert(PlayerInputContext);
+                },
+            )
+            .add_observer(system_binding)
+            .add_observer(on_pause_request)
+            .add_observer(player_binding)
+            .add_observer(on_movement)
+            .add_observer(on_interact)
+            .add_observer(on_movement_stop)
+            .add_observer(on_use_equip_main)
+            .add_observer(on_use_equip_offhand);
     }
 }
 
@@ -32,9 +68,6 @@ pub struct Interact;
 #[input_action(output = bool)]
 pub struct PauseRequest;
 
-#[derive(Debug, Event)]
-pub struct PauseEvent(pub Option<PausedState>);
-
 #[derive(Debug, InputAction)]
 #[input_action(output = bool)]
 pub struct UseEquipMain;
@@ -43,16 +76,27 @@ pub struct UseEquipMain;
 #[input_action(output = bool)]
 pub struct UseEquipOffhand;
 
-pub fn player_binding(mut trigger: Trigger<Binding<Player>>, settings: Res<AppSettings>) {
+#[derive(Debug, Event)]
+pub struct PauseInputEvent(pub Option<PausedState>);
+
+pub fn player_binding(
+    mut trigger: Trigger<Binding<PlayerInputContext>>,
+    settings: Res<AppSettings>,
+) {
     trigger.bind::<Movement>().to(settings.input.movement);
     trigger.bind::<Interact>().to(settings.input.interact);
-    trigger.bind::<PauseRequest>().to(settings.input.pushing_P);
     trigger
         .bind::<UseEquipMain>()
         .to(settings.input.use_equip.main_hand);
     trigger
         .bind::<UseEquipOffhand>()
         .to(settings.input.use_equip.main_hand);
+}
+
+pub fn system_binding(mut trigger: Trigger<Binding<MenuInputContext>>, settings: Res<AppSettings>) {
+    trigger
+        .bind::<PauseRequest>()
+        .to(settings.input.pause_request);
 }
 
 pub fn on_movement(
@@ -69,12 +113,15 @@ pub fn on_movement_stop(
     player_motion.stop_moving();
 }
 
+pub fn on_interact(_: Trigger<Started<Interact>>, mut commands: Commands) {
+    commands.trigger(PlayerInteractionInput);
+}
+
 pub fn on_use_equip_main(
-    equip: Trigger<Fired<UseEquipMain>>,
+    _: Trigger<Fired<UseEquipMain>>,
     mut commands: Commands,
     player_movement_query: Single<Entity, With<Player>>,
 ) {
-    debug!("UseEquip triggered: {:?}", equip.value);
     let player_entity = player_movement_query.into_inner();
     commands.trigger_targets(
         UseEquipmentInputEvent {
@@ -84,11 +131,10 @@ pub fn on_use_equip_main(
     );
 }
 pub fn on_use_equip_offhand(
-    equip: Trigger<Fired<UseEquipOffhand>>,
+    _: Trigger<Fired<UseEquipOffhand>>,
     mut commands: Commands,
     player_movement_query: Single<Entity, With<Player>>,
 ) {
-    debug!("UseEquip triggered: {:?}", equip.value);
     let player_entity = player_movement_query.into_inner();
     commands.trigger_targets(
         UseEquipmentInputEvent {
@@ -99,7 +145,11 @@ pub fn on_use_equip_offhand(
 }
 
 //UN-Pause logic, runs when App State is Paused
-pub fn on_system_menu(_: Trigger<Started<PauseRequest>>, mut commands: Commands) {
+pub fn on_pause_request(
+    _: Trigger<Started<PauseRequest>>,
+    _: Res<State<AppState>>,
+    mut commands: Commands,
+) {
     debug!("ui_inputs, enter");
-    commands.trigger(PauseEvent(None));
+    commands.trigger(PauseInputEvent(Some(PausedState::MainMenu)));
 }

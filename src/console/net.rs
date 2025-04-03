@@ -72,8 +72,8 @@ impl NetCommand {
 pub enum NetCommandResult {
     Get(String),
     EntityCount(usize),
-    Resources(Vec<(String, String)>),
-    Archetypes(Vec<(usize, usize, Vec<(String, usize)>)>),
+    Resources(Vec<(String, String, usize)>),
+    Archetypes(Vec<(usize, Vec<(String, usize)>, usize, usize, String)>),
     Help(String),
     OK,
 }
@@ -140,20 +140,25 @@ fn cmd_set(world: &mut World, ty: &str, args: &str) -> Result<NetCommandResult> 
 
 /// Dumps a list of resources, including their short type paths, names, and sizes.
 fn cmd_resources(world: &mut World) -> Result<NetCommandResult> {
-    fn process_resource((info, _data): (&ComponentInfo, Ptr<'_>), registry: &TypeRegistry) -> Option<(String, String)> {
+    fn process_resource(
+        (info, _data): (&ComponentInfo, Ptr<'_>),
+        registry: &TypeRegistry,
+    ) -> Option<(String, String, usize)> {
         info.type_id().and_then(|i| registry.get_type_info(i)).map(|tinfo| {
             (
                 tinfo.type_path_table().short_path().to_string(),
                 format_size(info.layout().size(), DECIMAL),
+                info.layout().size(),
             )
         })
     }
 
     let registry = world.resource::<AppTypeRegistry>().read();
-    let info = world
+    let mut info = world
         .iter_resources()
         .filter_map(|resource| process_resource(resource, &registry))
         .collect::<Vec<_>>();
+    info.sort_by_key(|(_, _, key)| *key);
     Ok(NetCommandResult::Resources(info))
 }
 
@@ -185,7 +190,14 @@ fn cmd_archetypes(world: &mut World) -> Result<NetCommandResult> {
             .collect::<Vec<_>>();
         let ron = ron::ser::to_string_pretty(&component_info, PrettyConfig::default())?;
         debug!("{:?} = {}\n{}", a.id(), a.len(), ron);
-        archetype_info.push((a.id().index(), a.len(), component_info));
+        let sum_archetype: usize = component_info.iter().map(|(_, size)| size).sum();
+        archetype_info.push((
+            a.id().index(),
+            component_info,
+            sum_archetype,
+            a.len(),
+            format_size(sum_archetype * a.len(), DECIMAL),
+        ));
     }
     Ok(NetCommandResult::Archetypes(archetype_info))
 }

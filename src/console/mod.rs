@@ -2,9 +2,12 @@ mod net;
 mod plugin;
 use anyhow::anyhow;
 use anyhow::Result;
+use bevy::utils::tracing;
+use bevy::utils::tracing::Instrument;
 use net::NetCommand;
 use net::NetCommandResult;
 pub use plugin::ConsolePlugin;
+use std::error::Error;
 use std::{
     io::{BufRead, Write},
     net::TcpListener,
@@ -30,6 +33,16 @@ pub enum NetResponseMsg {
     Ron(NetCommandResult),
     Reply(String),
     OK,
+}
+impl From<NetCommandResult> for NetResponseMsg {
+    fn from(value: NetCommandResult) -> Self {
+        Self::Ron(value)
+    }
+}
+impl<T: Error> From<T> for NetResponseMsg {
+    fn from(value: T) -> Self {
+        Self::Reply(value.to_string())
+    }
 }
 
 #[derive(Resource)]
@@ -95,6 +108,7 @@ fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>)
     IoTaskPool::get().spawn(async move { tx.send(reply).await }).detach();
 }
 
+#[tracing::instrument(level = "info", skip_all)]
 async fn handle_stream(
     mut stream: std::net::TcpStream,
     tx_command: async_channel::Sender<NetRequestMsg>,

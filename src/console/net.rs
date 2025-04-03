@@ -68,7 +68,7 @@ impl NetCommand {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum NetCommandResult {
     Get(String),
     EntityCount(usize),

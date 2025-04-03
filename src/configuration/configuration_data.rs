@@ -2,7 +2,7 @@ use bevy::{ecs::system::Resource, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deserialize, Serialize, Reflect)]
-#[reflect(Resource, Deserialize, Serialize)]
+#[reflect(Resource, Serialize)]
 #[allow(non_snake_case)]
 pub struct ConfigurationData {
     /// f32::ln(10.0);

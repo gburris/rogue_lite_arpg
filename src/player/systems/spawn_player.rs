@@ -5,14 +5,14 @@ use crate::{
     combat::{damage::HurtBox, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        spawn_shadow, GameCollisionLayer,
     },
     items::{
         equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
         inventory::Inventory,
         *,
     },
-    player::{interact::PlayerInteractionRadius, systems::*, Player, PlayerCollider},
+    player::{interact::PlayerInteractionRadius, player_data::PlayerData, systems::*, Player, PlayerCollider},
     progression::GameProgress,
 };
 
@@ -23,7 +23,12 @@ pub fn spawn_player(
     game_progress: Res<GameProgress>,
     atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
+    player_data: Res<PlayerData>,
 ) {
+    let PlayerData {
+        CHARACTER_FEET_POS_OFFSET,
+        ..
+    } = *player_data;
     let starting_items = [
         spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
         spawn_health_potion(&mut commands, &sprites),
@@ -60,10 +65,7 @@ pub fn spawn_player(
                 Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
                 Collider::circle(10.0),
                 CollisionLayers::new(
-                    [
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::PlayerCollider,
-                    ],
+                    [GameCollisionLayer::Grounded, GameCollisionLayer::PlayerCollider],
                     [
                         GameCollisionLayer::Grounded,
                         GameCollisionLayer::HighObstacle,
@@ -78,10 +80,7 @@ pub fn spawn_player(
                 Collider::rectangle(26.0, 42.0),
                 Transform::from_xyz(0.0, -8.0, 0.0),
                 Sensor,
-                CollisionLayers::new(
-                    [GameCollisionLayer::AllyHurtBox],
-                    [GameCollisionLayer::HitBox],
-                ),
+                CollisionLayers::new([GameCollisionLayer::AllyHurtBox], [GameCollisionLayer::HitBox]),
             ));
 
             // player interaction radius
@@ -100,9 +99,7 @@ pub fn spawn_player(
         .observe(on_equipment_deactivated)
         .id();
 
-    commands
-        .entity(starting_items[0])
-        .insert(Equipped::new(player));
+    commands.entity(starting_items[0]).insert(Equipped::new(player));
 
     info!("Player spawned: {}", player);
 }

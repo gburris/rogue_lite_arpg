@@ -13,8 +13,6 @@ use crate::{
 
 use super::{assets::Shadows, configuration_data::ConfigurationData};
 
-pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
-
 #[derive(Component)]
 pub struct YSort {
     /// z layer of sprite, only sprites on the same layer will be y-sorted correctly
@@ -148,9 +146,7 @@ pub fn camera_follow_system(
     let offset = (target - player_pos).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_pos;
     gizmos.circle_2d(offset.xy(), 10.0, BLUE).resolution(64);
 
-    camera
-        .translation
-        .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
+    camera.translation.smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
 }
 
 pub fn spawn_shadow(spawner: &mut ChildBuilder, shadows: &Shadows, y_offset: f32) {

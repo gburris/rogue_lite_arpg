@@ -19,7 +19,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<PlayerData>()
+        app.register_type::<PlayerData>()
+            .init_resource::<PlayerData>()
             .add_event::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
@@ -40,11 +41,7 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 (
-                    (
-                        player_movement,
-                        update_player_aim_position,
-                        on_player_experience_change,
-                    )
+                    (player_movement, update_player_aim_position, on_player_experience_change)
                         .in_set(InGameSet::Simulation),
                     animate_level_up.in_set(InGameSet::Vfx),
                 ),

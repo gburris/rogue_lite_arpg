@@ -3,10 +3,11 @@ mod plugin;
 use anyhow::anyhow;
 use anyhow::Result;
 use bevy::utils::tracing;
-use bevy::utils::tracing::Instrument;
-use net::NetCommand;
+pub use net::NetCommand;
 use net::NetCommandResult;
 pub use plugin::ConsolePlugin;
+use serde::Deserialize;
+use serde::Serialize;
 use std::error::Error;
 use std::{
     io::{BufRead, Write},
@@ -23,12 +24,14 @@ use bevy::{
 
 /// A command message sent from a connection handler to the Bevy world.
 /// Each message carries its own reply sender.
-struct NetRequestMsg {
-    request: NetCommand,
-    reply: Sender<NetResponseMsg>,
+#[derive(Clone, Debug)]
+pub struct NetRequestMsg {
+    pub request: NetCommand,
+    pub reply: Sender<NetResponseMsg>,
 }
 
 /// Messages we send to our netcode task
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NetResponseMsg {
     Ron(NetCommandResult),
     Reply(String),
@@ -62,9 +65,10 @@ fn setup_console(mut commands: Commands) {
         .detach()
 }
 
+const ADDR: &str = "127.0.0.1:8080";
 async fn net_listener(tx_command: async_channel::Sender<NetRequestMsg>) {
     info!("setting up net listener");
-    let listener = match TcpListener::bind("127.0.0.1:8080") {
+    let listener = match TcpListener::bind(ADDR) {
         Ok(listener) => listener,
         Err(e) => {
             warn!("unable to setup listener: {e}");

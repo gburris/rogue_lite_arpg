@@ -15,7 +15,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 /// The command types available.
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NetCommand {
     Get(String),
     Set(String, String),
@@ -68,7 +68,7 @@ impl NetCommand {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NetCommandResult {
     Get(String),
     EntityCount(usize),

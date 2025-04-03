@@ -5,7 +5,7 @@ pub mod character;
 pub mod combat;
 pub mod configuration;
 pub mod despawn;
-pub mod econ;
+pub mod economy;
 pub mod enemy;
 pub mod items;
 pub mod labels;

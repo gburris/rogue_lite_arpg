@@ -2,6 +2,7 @@
 name = "baba_yaga"
 version = "0.1.0"
 edition = "2021"
+default-run = "baba_yaga"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
@@ -34,7 +35,7 @@ console_error_panic_hook = "0.1"
 rhai = { version = "1.21.0", features = ["sync"], optional = true }
 async-channel = "2.3.1"
 humansize = "2.1.3"
-color-eyre = "0.6.3"
+anyhow = "1.0.97"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -47,9 +48,6 @@ thiserror = { version = "1.0" }
 name = "baba_yaga"              # for wasm stuff
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "baba_yaga_bin" # for local build stuff
-path = "src/main.rs"
 
 [features]
 atlas = []

@@ -1,14 +1,11 @@
-use bevy::reflect::serde::ReflectDeserializer;
+mod plugin;
+use anyhow::anyhow;
+use anyhow::Result;
 use bevy::reflect::serde::ReflectSerializer;
-use bevy::reflect::serde::TypedReflectDeserializer;
-use bevy::reflect::DynamicStruct;
 use bevy::reflect::ReflectFromPtr;
-use color_eyre::eyre::eyre;
-use color_eyre::Result;
 use humansize::format_size;
 use humansize::DECIMAL;
-use serde::de::DeserializeSeed;
-use std::any::TypeId;
+pub use plugin::ConsolePlugin;
 use std::{
     io::{BufRead, Write},
     net::TcpListener,
@@ -22,15 +19,6 @@ use bevy::{
     tasks::{block_on, poll_once, IoTaskPool},
 };
 
-pub struct ConsolePlugin;
-
-impl Plugin for ConsolePlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_console)
-            .add_systems(Update, update_console);
-    }
-}
-
 /// A command message sent from a connection handler to the Bevy world.
 /// Each message carries its own reply sender.
 struct NetCommandMsg {
@@ -42,7 +30,7 @@ struct NetCommandMsg {
 #[derive(Debug)]
 enum NetCommand {
     Get(String),
-    Set(String),
+    Set(String, String),
     DumpResources,
     EntityCount,
     Help,
@@ -110,7 +98,7 @@ fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>)
         NetCommand::Get(arg) => cmd_get(world, &arg),
         NetCommand::DumpResources => cmd_resources(world),
         NetCommand::EntityCount => cmd_entity_count(world),
-        NetCommand::Set(value) => cmd_set(world, &value),
+        NetCommand::Set(ty, value) => cmd_set(world, &ty, &value),
         NetCommand::Help => Ok(NetReplyMsg::Reply(
             "Available commands: resources, get [resource], entity_count, set [value], help".into(),
         )),
@@ -135,21 +123,21 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
 
     let type_data = type_registry
         .get_with_short_type_path(arg)
-        .ok_or_else(|| eyre!("Type '{}' not found in registry", arg))?;
+        .ok_or_else(|| anyhow!("Type '{}' not found in registry", arg))?;
 
     let type_info = type_data.type_info();
 
     let cid = components
         .get_resource_id(type_info.type_id())
-        .ok_or_else(|| eyre!("No resource ID found for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| anyhow!("No resource ID found for type '{}'", type_info.type_path()))?;
 
     let resource_data = world
         .get_resource_by_id(cid)
-        .ok_or_else(|| eyre!("Resource data not found for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| anyhow!("Resource data not found for type '{}'", type_info.type_path()))?;
 
     let reflect_data = type_data
         .data::<ReflectFromPtr>()
-        .ok_or_else(|| eyre!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
 
     // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
     let value = unsafe { reflect_data.as_reflect(resource_data) };
@@ -160,40 +148,61 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
     Ok(NetReplyMsg::Reply(ron))
 }
 
-fn cmd_set(world: &mut World, partial: &str) -> Result<NetReplyMsg> {
+fn cmd_set(world: &mut World, ty: &str, partial: &str) -> Result<NetReplyMsg> {
     let registry = world.resource::<AppTypeRegistry>().read();
     let components = world.components();
 
-    let dynamic = registry
-        .get(TypeId::of::<DynamicStruct>())
-        .ok_or_else(|| eyre!("Type 'DynamicStruct' not found in registry"))?;
+    let type_data = registry
+        .get_with_short_type_path(ty)
+        .ok_or_else(|| anyhow!("Type '{}' not found in registry", ty))?;
 
-    let mut deser = ron::de::Deserializer::from_str(partial)?;
-    let refde = TypedReflectDeserializer::new(dynamic, &registry);
-    let output: Box<dyn PartialReflect> = refde.deserialize(&mut deser)?;
-    dbg!(output);
+    let type_info = type_data.type_info();
+
+    let cid = components
+        .get_resource_id(type_info.type_id())
+        .ok_or_else(|| anyhow!("No resource ID found for type '{}'", type_info.type_path()))?;
+
+    let resource_data = world
+        .get_resource_by_id(cid)
+        .ok_or_else(|| anyhow!("Resource data not found for type '{}'", type_info.type_path()))?;
+
+    let reflect_data = type_data
+        .data::<ReflectFromPtr>()
+        .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+
+    // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
+    let value = unsafe { reflect_data.as_reflect(resource_data) };
+
+    // let dynamic = registry
+    //     .get(TypeId::of::<DynamicStruct>())
+    //     .ok_or_else(|| anyhow!("Type 'DynamicStruct' not found in registry"))?;
+    //
+    // let mut deser = ron::de::Deserializer::from_str(partial)?;
+    // let refde = ReflectDeserializer::new(&registry);
+    // let output: Box<dyn PartialReflect> = refde.deserialize(&mut deser)?;
+    // dbg!(output);
     // let type_data = type_registry
     //     .get_with_short_type_path(ty)
-    //     .ok_or_else(|| eyre!("Type '{}' not found in registry", ty))?;
+    //     .ok_or_else(|| anyhow!("Type '{}' not found in registry", ty))?;
     //
     // let type_info = type_data.type_info();
     //
     // let cid = components
     //     .get_resource_id(type_info.type_id())
-    //     .ok_or_else(|| eyre!("No resource ID found for type '{}'", type_info.type_path()))?;
+    //     .ok_or_else(|| anyhow!("No resource ID found for type '{}'", type_info.type_path()))?;
     //
     // let resource_data = world
     //     .get_resource_by_id(cid)
-    //     .ok_or_else(|| eyre!("Resource data not found for type '{}'", type_info.type_path()))?;
+    //     .ok_or_else(|| anyhow!("Resource data not found for type '{}'", type_info.type_path()))?;
     //
     // let reflect_data = type_data
     //     .data::<ReflectFromPtr>()
-    //     .ok_or_else(|| eyre!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+    //     .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
     //
     // // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
     // let resource_value = unsafe { reflect_data.as_reflect(resource_data) };
 
-    Ok(NetReplyMsg::Reply(format!("Set command received",)))
+    Ok(NetReplyMsg::OK)
 }
 
 /// Dumps a list of resources, including their short type paths, names, and sizes.
@@ -218,7 +227,47 @@ fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
 /// Counts the number of entities in the world.
 fn cmd_entity_count(world: &mut World) -> Result<NetReplyMsg> {
     let count = world.iter_entities().count();
-    Ok(NetReplyMsg::Reply(format!("Entity count: {}", count)))
+    Ok(NetReplyMsg::Reply(format!("entity count: {}", count)))
+}
+
+async fn handle_stream(
+    mut stream: std::net::TcpStream,
+    tx_command: async_channel::Sender<NetCommandMsg>,
+) -> Result<()> {
+    let mut rdr = stream.try_clone()?;
+    let mut reader = std::io::BufReader::new(&mut rdr);
+
+    loop {
+        let mut msg_input = String::new();
+        let bytes_read = reader.read_line(&mut msg_input)?;
+        if bytes_read == 0 {
+            // End-of-stream, connection closed.
+            return Ok(());
+        }
+        info!("received input: {msg_input}");
+
+        // Create a one-shot channel for the reply.
+        let (reply_tx, reply_rx) = async_channel::bounded(1);
+        let cmd = match parse(&msg_input) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                let err_msg = format!("Error parsing command: {e}\n");
+                stream.write_all(err_msg.as_bytes())?;
+                return Err(anyhow!("{err_msg}"));
+            }
+        };
+
+        // Send the command to the Bevy system.
+        let net_msg = NetCommandMsg {
+            request: cmd,
+            reply: reply_tx,
+        };
+        tx_command.send(net_msg).await?;
+        match reply_rx.recv().await? {
+            NetReplyMsg::Reply(result_msg) => stream.write_all(result_msg.as_bytes())?,
+            NetReplyMsg::OK => stream.write_all(b"OK")?,
+        };
+    }
 }
 
 /// Parses an input string into a command.
@@ -226,55 +275,24 @@ fn cmd_entity_count(world: &mut World) -> Result<NetReplyMsg> {
 /// - get [resource]
 /// - resources
 /// - entity_count
-/// - set [variable] [value]
+/// - set [value]
 /// - help
 fn parse(expr: &str) -> Result<NetCommand> {
     let mut parts = expr.split_whitespace();
     match parts.next() {
         Some("get") => {
-            let arg = parts.next().ok_or_else(|| eyre!("Missing argument for 'get'"))?;
+            let arg = parts.next().ok_or_else(|| anyhow!("Missing argument for 'get'"))?;
             Ok(NetCommand::Get(arg.to_string()))
         }
         Some("resources") => Ok(NetCommand::DumpResources),
         Some("entity_count") => Ok(NetCommand::EntityCount),
         Some("set") => {
-            let value = parts.next().ok_or_else(|| eyre!("Missing value for 'set'"))?;
-            Ok(NetCommand::Set(value.to_string()))
+            let ty = parts.next().ok_or_else(|| anyhow!("Missing type for 'set'"))?;
+            let value = parts.collect::<Vec<_>>().join(" ");
+            Ok(NetCommand::Set(ty.to_string(), value))
         }
         Some("help") => Ok(NetCommand::Help),
-        Some(cmd) => Err(eyre!("Unknown command: {}", cmd)),
-        None => Err(eyre!("Empty input")),
+        Some(cmd) => Err(anyhow!("Unknown command: {}", cmd)),
+        None => Err(anyhow!("Empty input")),
     }
-}
-
-async fn handle_stream(
-    mut stream: std::net::TcpStream,
-    tx_command: async_channel::Sender<NetCommandMsg>,
-) -> color_eyre::Result<()> {
-    let mut msg_input = String::new();
-
-    let mut reader = std::io::BufReader::new(&mut stream);
-    reader.read_line(&mut msg_input)?;
-    info!("received input: {msg_input}");
-    // Create a one-shot channel for the reply.
-    let (reply_tx, reply_rx) = async_channel::bounded(1);
-    let cmd = match parse(&msg_input) {
-        Ok(cmd) => cmd,
-        Err(e) => {
-            let err_msg = format!("Error parsing command: {e}\n");
-            stream.write_all(err_msg.as_bytes())?;
-            return Err(eyre!("{err_msg}"));
-        }
-    };
-    // Send the command to the Bevy system.
-    let net_msg = NetCommandMsg {
-        request: cmd,
-        reply: reply_tx,
-    };
-    tx_command.send(net_msg).await?;
-    match reply_rx.recv().await? {
-        NetReplyMsg::Reply(result_msg) => stream.write_all(result_msg.as_bytes())?,
-        NetReplyMsg::OK => stream.write_all(b"OK")?,
-    };
-    Ok(())
 }

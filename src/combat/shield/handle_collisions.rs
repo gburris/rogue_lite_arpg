@@ -43,7 +43,7 @@ pub fn handle_projectile_reflection_collisions(
                 transform.rotation = Quat::from_rotation_z(linear_velocity.0.to_angle());
 
                 *collision_layers = CollisionLayers::new(
-                    GameCollisionLayer::InAir,
+                    GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
                     LayerMask::from(new_damage_source) | GameCollisionLayer::HighObstacle,
                 );
                 shield.projectiles_reflected.insert(colliding_entity);

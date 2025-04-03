@@ -51,7 +51,6 @@ enum NetReplyMsg {
 
 #[derive(Resource)]
 pub struct NetChannels {
-    tx_command: Sender<NetCommandMsg>,
     rx_command: Receiver<NetCommandMsg>,
 }
 
@@ -60,10 +59,7 @@ pub struct DebugConsole;
 
 fn setup_console(mut commands: Commands) {
     let (tx_command, rx_command) = async_channel::unbounded();
-    commands.insert_resource(NetChannels {
-        tx_command: tx_command.clone(),
-        rx_command,
-    });
+    commands.insert_resource(NetChannels { rx_command });
 
     IoTaskPool::get()
         .spawn(async move { net_listener(tx_command).await })
@@ -96,7 +92,6 @@ async fn net_listener(tx_command: async_channel::Sender<NetCommandMsg>) {
 
 fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>) {
     let net_channels = params.get(world);
-
     let Some(Ok(NetCommandMsg {
         request: cmd,
         reply: tx,
@@ -108,21 +103,27 @@ fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>)
 
     let reply = match cmd {
         NetCommand::Get(arg) => cmd_get(world, &arg),
-        NetCommand::Set(key, val) => cmd_set(world, &key, &val),
         NetCommand::DumpResources => cmd_resources(world),
-        NetCommand::Help => Ok(NetReplyMsg::Reply("Available: resources, get [resource], help".into())),
-        NetCommand::EntityCount => todo!(),
+        NetCommand::EntityCount => cmd_entity_count(world),
+        NetCommand::Set(var, value) => cmd_set(world, &var, &value),
+        NetCommand::Help => Ok(NetReplyMsg::Reply(
+            "Available commands: resources, get [resource], entity_count, set [var] [value], help".into(),
+        )),
     };
+
     let reply = match reply {
-        Ok(r) => r,
+        Ok(msg) => msg,
         Err(e) => {
             warn!("err: {e}");
             NetReplyMsg::Reply(e.to_string())
         }
     };
-
     IoTaskPool::get().spawn(async move { tx.send(reply).await }).detach();
 }
+
+/// Retrieves a resource by name using Bevy’s reflection system.
+/// The unsafe block is justified because we know that the resource data is valid for the lifetime
+/// of the call and Bevy’s API ensures that the reflection is sound.
 fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
     let type_registry = world.resource::<AppTypeRegistry>().read();
     let components = world.components();
@@ -144,6 +145,7 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
         .data::<ReflectFromPtr>()
         .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
 
+    // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
     let value = unsafe { reflect_data.as_reflect(resource_data) };
 
     let refser = ReflectSerializer::new(value, &type_registry);
@@ -151,10 +153,11 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
 
     Ok(NetReplyMsg::Reply(ron))
 }
-fn cmd_set(world: &mut World, arg: &str, val: &str) -> Result<NetReplyMsg> {
-    Ok(NetReplyMsg::OK)
+fn cmd_set(world: &mut World, var: &str, value: &str) -> Result<NetReplyMsg> {
+    Ok(NetReplyMsg::Reply(format!("Set command received: {} = {}", var, value)))
 }
 
+/// Dumps a list of resources, including their short type paths, names, and sizes.
 fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
     let registry = world.resource::<AppTypeRegistry>().read();
     let info = world
@@ -163,7 +166,6 @@ fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
             info.type_id().and_then(|i| registry.get_type_info(i)).map(|tinfo| {
                 (
                     tinfo.type_path_table().short_path(),
-                    //                    info.name(),
                     format_size(info.layout().size(), DECIMAL),
                 )
             })
@@ -173,27 +175,35 @@ fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
     Ok(NetReplyMsg::Reply(ron))
 }
 
+/// Counts the number of entities in the world.
+fn cmd_entity_count(world: &mut World) -> Result<NetReplyMsg> {
+    let count = world.iter_entities().count();
+    Ok(NetReplyMsg::Reply(format!("Entity count: {}", count)))
+}
+
+/// Parses an input string into a command.
+/// Expected syntax:
+/// - get [resource]
+/// - resources
+/// - entity_count
+/// - set [variable] [value]
+/// - help
 fn parse(expr: &str) -> Result<NetCommand> {
     let mut parts = expr.split_whitespace();
     match parts.next() {
         Some("get") => {
-            let Some(parts) = parts.next() else {
-                return Err(anyhow!("missing argument"));
-            };
-            Ok(NetCommand::Get(parts.to_string()))
-        }
-        Some("set") => {
-            let Some(key) = parts.next() else {
-                return Err(anyhow!("missing argument"));
-            };
-            let Some(value) = parts.next() else {
-                return Err(anyhow!("missing argument"));
-            };
-            Ok(NetCommand::Set(key.to_string(), value.to_string()))
+            let arg = parts.next().ok_or_else(|| anyhow!("missing argument for 'get'"))?;
+            Ok(NetCommand::Get(arg.to_string()))
         }
         Some("resources") => Ok(NetCommand::DumpResources),
+        Some("entity_count") => Ok(NetCommand::EntityCount),
+        Some("set") => {
+            let var = parts.next().ok_or_else(|| anyhow!("missing variable for 'set'"))?;
+            let value = parts.next().ok_or_else(|| anyhow!("missing value for 'set'"))?;
+            Ok(NetCommand::Set(var.to_string(), value.to_string()))
+        }
         Some("help") => Ok(NetCommand::Help),
-        Some(cmd) => Err(anyhow!("Unknown command: {cmd}")),
+        Some(cmd) => Err(anyhow!("Unknown command: {}", cmd)),
         None => Err(anyhow!("Empty input")),
     }
 }

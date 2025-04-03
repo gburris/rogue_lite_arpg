@@ -40,13 +40,7 @@ impl Plugin for GamePlugins {
                 EquipmentPlugin,
             ))
             // Entity systems
-            .add_plugins((
-                MapPlugin,
-                LootablePlugin,
-                PlayerPlugin,
-                EnemyPlugin,
-                NPCPlugin,
-            ))
+            .add_plugins((MapPlugin, LootablePlugin, PlayerPlugin, EnemyPlugin, NPCPlugin))
             // UI
             .add_plugins(UIPlugin);
     }
@@ -71,11 +65,5 @@ pub struct NativePlugins;
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(GamePlugins).add_plugins(ConsolePlugin); // Add native-only plugins
-
-        #[cfg(feature = "debug")]
-        {
-            use crate::debug::DebugPlugin;
-            app.add_plugins(DebugPlugin);
-        }
     }
 }

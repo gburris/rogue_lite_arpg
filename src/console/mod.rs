@@ -1,9 +1,14 @@
-use anyhow::anyhow;
-use anyhow::Result;
+use bevy::reflect::serde::ReflectDeserializer;
 use bevy::reflect::serde::ReflectSerializer;
+use bevy::reflect::serde::TypedReflectDeserializer;
+use bevy::reflect::DynamicStruct;
 use bevy::reflect::ReflectFromPtr;
+use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use humansize::format_size;
 use humansize::DECIMAL;
+use serde::de::DeserializeSeed;
+use std::any::TypeId;
 use std::{
     io::{BufRead, Write},
     net::TcpListener,
@@ -37,7 +42,7 @@ struct NetCommandMsg {
 #[derive(Debug)]
 enum NetCommand {
     Get(String),
-    Set(String, String),
+    Set(String),
     DumpResources,
     EntityCount,
     Help,
@@ -105,16 +110,16 @@ fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>)
         NetCommand::Get(arg) => cmd_get(world, &arg),
         NetCommand::DumpResources => cmd_resources(world),
         NetCommand::EntityCount => cmd_entity_count(world),
-        NetCommand::Set(var, value) => cmd_set(world, &var, &value),
+        NetCommand::Set(value) => cmd_set(world, &value),
         NetCommand::Help => Ok(NetReplyMsg::Reply(
-            "Available commands: resources, get [resource], entity_count, set [var] [value], help".into(),
+            "Available commands: resources, get [resource], entity_count, set [value], help".into(),
         )),
     };
 
     let reply = match reply {
         Ok(msg) => msg,
         Err(e) => {
-            warn!("err: {e}");
+            warn!("Command error: {e}");
             NetReplyMsg::Reply(e.to_string())
         }
     };
@@ -130,20 +135,21 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
 
     let type_data = type_registry
         .get_with_short_type_path(arg)
-        .ok_or_else(|| anyhow!("Type '{}' not found in registry", arg))?;
+        .ok_or_else(|| eyre!("Type '{}' not found in registry", arg))?;
 
     let type_info = type_data.type_info();
+
     let cid = components
         .get_resource_id(type_info.type_id())
-        .ok_or_else(|| anyhow!("No resource ID found for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| eyre!("No resource ID found for type '{}'", type_info.type_path()))?;
 
     let resource_data = world
         .get_resource_by_id(cid)
-        .ok_or_else(|| anyhow!("Resource data not found for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| eyre!("Resource data not found for type '{}'", type_info.type_path()))?;
 
     let reflect_data = type_data
         .data::<ReflectFromPtr>()
-        .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+        .ok_or_else(|| eyre!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
 
     // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
     let value = unsafe { reflect_data.as_reflect(resource_data) };
@@ -153,8 +159,41 @@ fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
 
     Ok(NetReplyMsg::Reply(ron))
 }
-fn cmd_set(world: &mut World, var: &str, value: &str) -> Result<NetReplyMsg> {
-    Ok(NetReplyMsg::Reply(format!("Set command received: {} = {}", var, value)))
+
+fn cmd_set(world: &mut World, partial: &str) -> Result<NetReplyMsg> {
+    let registry = world.resource::<AppTypeRegistry>().read();
+    let components = world.components();
+
+    let dynamic = registry
+        .get(TypeId::of::<DynamicStruct>())
+        .ok_or_else(|| eyre!("Type 'DynamicStruct' not found in registry"))?;
+
+    let mut deser = ron::de::Deserializer::from_str(partial)?;
+    let refde = TypedReflectDeserializer::new(dynamic, &registry);
+    let output: Box<dyn PartialReflect> = refde.deserialize(&mut deser)?;
+    dbg!(output);
+    // let type_data = type_registry
+    //     .get_with_short_type_path(ty)
+    //     .ok_or_else(|| eyre!("Type '{}' not found in registry", ty))?;
+    //
+    // let type_info = type_data.type_info();
+    //
+    // let cid = components
+    //     .get_resource_id(type_info.type_id())
+    //     .ok_or_else(|| eyre!("No resource ID found for type '{}'", type_info.type_path()))?;
+    //
+    // let resource_data = world
+    //     .get_resource_by_id(cid)
+    //     .ok_or_else(|| eyre!("Resource data not found for type '{}'", type_info.type_path()))?;
+    //
+    // let reflect_data = type_data
+    //     .data::<ReflectFromPtr>()
+    //     .ok_or_else(|| eyre!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+    //
+    // // SAFETY: We rely on Bevy’s guarantees that the resource’s lifetime is managed and valid.
+    // let resource_value = unsafe { reflect_data.as_reflect(resource_data) };
+
+    Ok(NetReplyMsg::Reply(format!("Set command received",)))
 }
 
 /// Dumps a list of resources, including their short type paths, names, and sizes.
@@ -165,6 +204,7 @@ fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
         .filter_map(|(info, _data)| {
             info.type_id().and_then(|i| registry.get_type_info(i)).map(|tinfo| {
                 (
+                    tinfo.type_path_table().path(),
                     tinfo.type_path_table().short_path(),
                     format_size(info.layout().size(), DECIMAL),
                 )
@@ -192,39 +232,38 @@ fn parse(expr: &str) -> Result<NetCommand> {
     let mut parts = expr.split_whitespace();
     match parts.next() {
         Some("get") => {
-            let arg = parts.next().ok_or_else(|| anyhow!("missing argument for 'get'"))?;
+            let arg = parts.next().ok_or_else(|| eyre!("Missing argument for 'get'"))?;
             Ok(NetCommand::Get(arg.to_string()))
         }
         Some("resources") => Ok(NetCommand::DumpResources),
         Some("entity_count") => Ok(NetCommand::EntityCount),
         Some("set") => {
-            let var = parts.next().ok_or_else(|| anyhow!("missing variable for 'set'"))?;
-            let value = parts.next().ok_or_else(|| anyhow!("missing value for 'set'"))?;
-            Ok(NetCommand::Set(var.to_string(), value.to_string()))
+            let value = parts.next().ok_or_else(|| eyre!("Missing value for 'set'"))?;
+            Ok(NetCommand::Set(value.to_string()))
         }
         Some("help") => Ok(NetCommand::Help),
-        Some(cmd) => Err(anyhow!("Unknown command: {}", cmd)),
-        None => Err(anyhow!("Empty input")),
+        Some(cmd) => Err(eyre!("Unknown command: {}", cmd)),
+        None => Err(eyre!("Empty input")),
     }
 }
 
 async fn handle_stream(
     mut stream: std::net::TcpStream,
     tx_command: async_channel::Sender<NetCommandMsg>,
-) -> anyhow::Result<()> {
+) -> color_eyre::Result<()> {
     let mut msg_input = String::new();
 
     let mut reader = std::io::BufReader::new(&mut stream);
     reader.read_line(&mut msg_input)?;
-    info!("read input: {msg_input}");
+    info!("received input: {msg_input}");
     // Create a one-shot channel for the reply.
     let (reply_tx, reply_rx) = async_channel::bounded(1);
     let cmd = match parse(&msg_input) {
         Ok(cmd) => cmd,
         Err(e) => {
-            let err_msg = format!("error parsing command: {e}\n");
+            let err_msg = format!("Error parsing command: {e}\n");
             stream.write_all(err_msg.as_bytes())?;
-            return Err(anyhow!("{err_msg}"));
+            return Err(eyre!("{err_msg}"));
         }
     };
     // Send the command to the Bevy system.

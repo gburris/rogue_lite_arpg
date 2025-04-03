@@ -82,10 +82,6 @@ impl App {
         }
     }
     pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        {
-            self.sanity_check().await?;
-        }
-
         let mut events = EventStream::new();
         let rx_update = self.rx_update.clone();
         let mut tick = async_io::Timer::interval_at(Instant::now(), Duration::from_secs_f32(1. / 2.));
@@ -114,21 +110,6 @@ impl App {
                 .await?;
             terminal.draw(|frame| self.draw(frame))?;
         }
-        Ok(())
-    }
-
-    #[expect(unused)]
-    async fn sanity_check(&mut self) -> Result<()> {
-        // TODO:
-        warn!("delete me later🤯🤯🤯🤯🤯🤯");
-        info!("test msg to our async loop from the main thread");
-        self.tx_command
-            .send(Io::Game(NetRequestMsg {
-                request: NetCommand::Help,
-                reply: self.tx_update.clone(),
-            }))
-            .await?;
-        debug!("{:?}", self.rx_update.recv().await?);
         Ok(())
     }
 

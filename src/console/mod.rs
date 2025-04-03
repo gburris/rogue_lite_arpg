@@ -3,7 +3,6 @@ mod plugin;
 use anyhow::anyhow;
 use anyhow::Result;
 use bevy::utils::tracing;
-use bevy::utils::tracing::Instrument;
 use net::NetCommand;
 use net::NetCommandResult;
 pub use plugin::ConsolePlugin;

@@ -10,7 +10,7 @@ use crate::{
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     despawn::plugin::DespawnPlugin,
-    econ::plugin::EconPlugin,
+    economy::EconomyPlugin,
     enemy::plugin::EnemyPlugin,
     items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
     map::plugin::MapPlugin,
@@ -33,7 +33,7 @@ impl Plugin for GamePlugins {
                 AIPlugin,
                 CombatPlugin,
                 ProgressionPlugin,
-                EconPlugin,
+                EconomyPlugin,
                 EquipmentPlugin,
             ))
             // Entity systems

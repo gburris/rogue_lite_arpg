@@ -2,12 +2,15 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use crate::animation::{AnimationIndices, AnimationTimer};
-use crate::configuration::{GameCollisionLayer, YSort};
-
-use crate::configuration::assets::{SpriteAssets, SpriteSheetLayouts};
-use crate::econ::gold_drop::GoldDropEvent;
-use crate::player::interact::{InteractionEvent, InteractionZone};
+use crate::{
+    animation::{AnimationIndices, AnimationTimer},
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        GameCollisionLayer, YSort,
+    },
+    economy::GoldDropEvent,
+    player::interact::{InteractionEvent, InteractionZone},
+};
 
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;

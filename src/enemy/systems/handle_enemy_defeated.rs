@@ -6,7 +6,7 @@ use crate::{
     ai::{state::ActionState, SimpleMotion},
     combat::{damage::DefeatedEvent, Health},
     despawn::components::LiveDuration,
-    econ::gold_drop::GoldDropEvent,
+    economy::GoldDropEvent,
     enemy::{Enemy, Experience},
     items::{inventory::inventory::Inventory, Item, ItemDropEvent},
     player::{components::Player, PlayerStats},

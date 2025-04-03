@@ -1,5 +1,9 @@
 use anyhow::anyhow;
 use anyhow::Result;
+use bevy::reflect::serde::ReflectSerializer;
+use bevy::reflect::ReflectFromPtr;
+use humansize::format_size;
+use humansize::DECIMAL;
 use std::{
     io::{BufRead, Write},
     net::TcpListener,
@@ -22,48 +26,51 @@ impl Plugin for ConsolePlugin {
     }
 }
 
+/// A command message sent from a connection handler to the Bevy world.
+/// Each message carries its own reply sender.
+struct NetCommandMsg {
+    request: NetCommand,
+    reply: Sender<NetReplyMsg>,
+}
+
+/// The command types available.
+#[derive(Debug)]
 enum NetCommand {
-    Query(String),
+    Get(String),
+    Set(String, String),
     DumpResources,
     EntityCount,
     Help,
 }
 
 /// Messages we send to our netcode task
-enum NetControlMsg {
+enum NetReplyMsg {
     Reply(String),
+    OK,
 }
 
-/// Messages we receive from our netcode task
-enum NetUpdateMsg {
-    Request(String),
-}
 #[derive(Resource)]
 pub struct NetChannels {
-    tx_control: Sender<NetControlMsg>,
-    rx_updates: Receiver<NetUpdateMsg>,
+    tx_command: Sender<NetCommandMsg>,
+    rx_command: Receiver<NetCommandMsg>,
 }
 
 #[derive(Component)]
 pub struct DebugConsole;
 
 fn setup_console(mut commands: Commands) {
-    let (tx_control, rx_control) = async_channel::unbounded();
-    let (tx_updates, rx_updates) = async_channel::unbounded();
+    let (tx_command, rx_command) = async_channel::unbounded();
     commands.insert_resource(NetChannels {
-        tx_control,
-        rx_updates,
+        tx_command: tx_command.clone(),
+        rx_command,
     });
 
     IoTaskPool::get()
-        .spawn(async move { net_listener(rx_control, tx_updates).await })
+        .spawn(async move { net_listener(tx_command).await })
         .detach()
 }
 
-async fn net_listener(
-    rx_control: async_channel::Receiver<NetControlMsg>,
-    tx_updates: async_channel::Sender<NetUpdateMsg>,
-) {
+async fn net_listener(tx_command: async_channel::Sender<NetCommandMsg>) {
     info!("setting up net listener");
     let listener = match TcpListener::bind("127.0.0.1:8080") {
         Ok(listener) => listener,
@@ -76,8 +83,7 @@ async fn net_listener(
         info!("got stream");
         match stream {
             Ok(stream) => {
-                if let Err(e) = handle_stream(stream, rx_control.clone(), tx_updates.clone()).await
-                {
+                if let Err(e) = handle_stream(stream, tx_command.clone()).await {
                     warn!("stream error: {e}");
                 }
             }
@@ -91,55 +97,99 @@ async fn net_listener(
 fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>) {
     let net_channels = params.get(world);
 
-    let Some(Ok(NetUpdateMsg::Request(expr_msg))) =
-        block_on(poll_once(net_channels.rx_updates.recv()))
+    let Some(Ok(NetCommandMsg {
+        request: cmd,
+        reply: tx,
+    })) = block_on(poll_once(net_channels.rx_command.recv()))
     else {
         return;
     };
+    info!("Received net command: {cmd:?}");
 
-    info!("Received net command: {expr_msg}");
-    let tx = net_channels.tx_control.clone();
-
-    let reply = parse(&expr_msg).and_then(|cmd| match cmd {
-        NetCommand::Query(arg) => cmd_query(world, &arg),
+    let reply = match cmd {
+        NetCommand::Get(arg) => cmd_get(world, &arg),
+        NetCommand::Set(key, val) => cmd_set(world, &key, &val),
         NetCommand::DumpResources => cmd_resources(world),
-        NetCommand::Help => Ok(NetControlMsg::Reply(
-            "Available: resources, query [filter], help".into(),
-        )),
+        NetCommand::Help => Ok(NetReplyMsg::Reply("Available: resources, get [resource], help".into())),
         NetCommand::EntityCount => todo!(),
-    });
+    };
     let reply = match reply {
         Ok(r) => r,
         Err(e) => {
             warn!("err: {e}");
-            return;
+            NetReplyMsg::Reply(e.to_string())
         }
     };
 
-    IoTaskPool::get()
-        .spawn(async move { tx.send(reply).await })
-        .detach();
+    IoTaskPool::get().spawn(async move { tx.send(reply).await }).detach();
 }
-fn cmd_query(world: &mut World, arg: &str) -> Result<NetControlMsg> {
-    Ok(NetControlMsg::Reply("todo".to_string()))
+fn cmd_get(world: &mut World, arg: &str) -> Result<NetReplyMsg> {
+    let type_registry = world.resource::<AppTypeRegistry>().read();
+    let components = world.components();
+
+    let type_data = type_registry
+        .get_with_short_type_path(arg)
+        .ok_or_else(|| anyhow!("Type '{}' not found in registry", arg))?;
+
+    let type_info = type_data.type_info();
+    let cid = components
+        .get_resource_id(type_info.type_id())
+        .ok_or_else(|| anyhow!("No resource ID found for type '{}'", type_info.type_path()))?;
+
+    let resource_data = world
+        .get_resource_by_id(cid)
+        .ok_or_else(|| anyhow!("Resource data not found for type '{}'", type_info.type_path()))?;
+
+    let reflect_data = type_data
+        .data::<ReflectFromPtr>()
+        .ok_or_else(|| anyhow!("ReflectFromPtr missing for type '{}'", type_info.type_path()))?;
+
+    let value = unsafe { reflect_data.as_reflect(resource_data) };
+
+    let refser = ReflectSerializer::new(value, &type_registry);
+    let ron = ron::ser::to_string_pretty(&refser, PrettyConfig::new())?;
+
+    Ok(NetReplyMsg::Reply(ron))
 }
-fn cmd_resources(world: &mut World) -> Result<NetControlMsg> {
+fn cmd_set(world: &mut World, arg: &str, val: &str) -> Result<NetReplyMsg> {
+    Ok(NetReplyMsg::OK)
+}
+
+fn cmd_resources(world: &mut World) -> Result<NetReplyMsg> {
+    let registry = world.resource::<AppTypeRegistry>().read();
     let info = world
         .iter_resources()
-        .map(|(info, _)| (info.name().to_string(), info.layout().size()))
+        .filter_map(|(info, _data)| {
+            info.type_id().and_then(|i| registry.get_type_info(i)).map(|tinfo| {
+                (
+                    tinfo.type_path_table().short_path(),
+                    //                    info.name(),
+                    format_size(info.layout().size(), DECIMAL),
+                )
+            })
+        })
         .collect::<Vec<_>>();
     let ron = ron::ser::to_string_pretty(&info, PrettyConfig::default())?;
-    Ok(NetControlMsg::Reply(ron))
+    Ok(NetReplyMsg::Reply(ron))
 }
 
 fn parse(expr: &str) -> Result<NetCommand> {
     let mut parts = expr.split_whitespace();
     match parts.next() {
-        Some("query") => {
+        Some("get") => {
             let Some(parts) = parts.next() else {
                 return Err(anyhow!("missing argument"));
             };
-            Ok(NetCommand::Query(parts.to_string()))
+            Ok(NetCommand::Get(parts.to_string()))
+        }
+        Some("set") => {
+            let Some(key) = parts.next() else {
+                return Err(anyhow!("missing argument"));
+            };
+            let Some(value) = parts.next() else {
+                return Err(anyhow!("missing argument"));
+            };
+            Ok(NetCommand::Set(key.to_string(), value.to_string()))
         }
         Some("resources") => Ok(NetCommand::DumpResources),
         Some("help") => Ok(NetCommand::Help),
@@ -150,17 +200,32 @@ fn parse(expr: &str) -> Result<NetCommand> {
 
 async fn handle_stream(
     mut stream: std::net::TcpStream,
-    rx_control: async_channel::Receiver<NetControlMsg>,
-    tx_updates: async_channel::Sender<NetUpdateMsg>,
+    tx_command: async_channel::Sender<NetCommandMsg>,
 ) -> anyhow::Result<()> {
     let mut msg_input = String::new();
 
     let mut reader = std::io::BufReader::new(&mut stream);
     reader.read_line(&mut msg_input)?;
     info!("read input: {msg_input}");
-    tx_updates.send(NetUpdateMsg::Request(msg_input)).await?;
-    match rx_control.recv().await? {
-        NetControlMsg::Reply(result_msg) => stream.write_all(result_msg.as_bytes())?,
+    // Create a one-shot channel for the reply.
+    let (reply_tx, reply_rx) = async_channel::bounded(1);
+    let cmd = match parse(&msg_input) {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            let err_msg = format!("error parsing command: {e}\n");
+            stream.write_all(err_msg.as_bytes())?;
+            return Err(anyhow!("{err_msg}"));
+        }
+    };
+    // Send the command to the Bevy system.
+    let net_msg = NetCommandMsg {
+        request: cmd,
+        reply: reply_tx,
+    };
+    tx_command.send(net_msg).await?;
+    match reply_rx.recv().await? {
+        NetReplyMsg::Reply(result_msg) => stream.write_all(result_msg.as_bytes())?,
+        NetReplyMsg::OK => stream.write_all(b"OK")?,
     };
     Ok(())
 }

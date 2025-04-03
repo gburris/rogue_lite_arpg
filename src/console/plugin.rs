@@ -1,9 +1,4 @@
-use bevy::{
-    ecs::system::SystemState,
-    prelude::*,
-    scene::ron::{self, ser::PrettyConfig},
-    tasks::{block_on, poll_once, IoTaskPool},
-};
+use bevy::prelude::*;
 
 use super::{setup_console, update_console};
 

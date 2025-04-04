@@ -1,18 +1,19 @@
+mod event;
 mod log;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_channel::{Receiver, Sender};
 use baba_yaga::console::NetResponseMsg;
+use event::Events;
+use event::StreamEvent;
 use futures_concurrency::prelude::*;
-use futures_lite::{future, FutureExt, StreamExt};
-use std::io;
+use futures_lite::{future, StreamExt};
 use std::time::Duration;
 use std::time::Instant;
 use tracing::*;
-use tracing_subscriber::field::debug;
 
-use baba_yaga::console::{NetCommand, NetRequestMsg};
-use crossterm::event::{self, Event, EventStream, KeyCode, KeyEvent, KeyEventKind};
+use baba_yaga::console::NetRequestMsg;
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
@@ -23,25 +24,22 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-#[derive(Debug)]
-pub enum Io {
-    Game(NetRequestMsg),
-}
-
 fn main() -> Result<()> {
     log::init()?;
     future::block_on(_main(async_executor::Executor::new()))
 }
+pub struct Game(NetRequestMsg);
 
 async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
-    let (tx_command, rx_command) = async_channel::unbounded::<Io>();
+    let (tx_command, rx_command) = async_channel::unbounded::<Game>();
     let (tx_update, rx_update) = async_channel::unbounded::<NetResponseMsg>();
+
     // Spawn a dedicated task loop for network calls
     ex.spawn(async move {
         info!("init");
         loop {
             info!("waiting for app request");
-            let Ok(Io::Game(NetRequestMsg { request, reply })) = rx_command.recv().await else {
+            let Ok(Game(NetRequestMsg { request, reply })) = rx_command.recv().await else {
                 return;
             };
             // main TCP listener here
@@ -54,6 +52,7 @@ async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
     })
     .detach();
 
+    // Block main as the UI thread
     future::block_on(ex.run(async {
         let mut terminal = ratatui::init();
         let app_result = App::new(tx_command, tx_update, rx_update).run(&mut terminal).await;
@@ -64,59 +63,67 @@ async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
 
 #[derive(Debug)]
 pub struct App {
-    tx_command: Sender<Io>,
+    tx_command: Sender<Game>,
     tx_update: Sender<NetResponseMsg>,
     rx_update: Receiver<NetResponseMsg>,
-    counter: usize,
+    buffer: String,
     exit: bool,
 }
 
 impl App {
-    pub fn new(tx_command: Sender<Io>, tx_update: Sender<NetResponseMsg>, rx_update: Receiver<NetResponseMsg>) -> Self {
+    pub fn new(
+        tx_command: Sender<Game>,
+        tx_update: Sender<NetResponseMsg>,
+        rx_update: Receiver<NetResponseMsg>,
+    ) -> Self {
         Self {
             tx_command,
             tx_update,
             rx_update,
-            counter: 0,
+            buffer: String::new(),
             exit: false,
         }
     }
     pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        let mut events = EventStream::new();
+        let stream = EventStream::new();
         let rx_update = self.rx_update.clone();
-        let mut tick = async_io::Timer::interval_at(Instant::now(), Duration::from_secs_f32(1. / 2.));
+        let frame_tick = async_io::Timer::interval_at(Instant::now(), Duration::from_secs_f32(1. / 2.));
 
+        let mut events = Events::new(rx_update, stream, frame_tick);
+
+        // poll, update, render. standard app loop
         while !self.exit {
-            (
-                async {
-                    let Some(event) = events.next().await.transpose()? else {
-                        return Err(anyhow!("event stream was closed"));
-                    };
+            match events.next().await {
+                Some(StreamEvent::Crossterm(event)) => {
                     debug!("event in app loop: {event:?}");
                     self.handle_events(event)
-                },
-                async {
-                    let msg = rx_update.recv().await?;
+                }
+                Some(StreamEvent::Io(msg)) => {
                     debug!("msg in app loop: {msg:?}");
                     anyhow::Ok(())
-                },
-                async {
-                    let _ = tick.next().await;
+                }
+                Some(StreamEvent::Tick) => {
                     debug!("t");
                     anyhow::Ok(())
-                },
-            )
-                .race()
-                .await?;
+                }
+                Some(StreamEvent::Error) => {
+                    unimplemented!();
+                }
+                None => {
+                    unimplemented!();
+                }
+            }?;
+            self.update()?;
             terminal.draw(|frame| self.draw(frame))?;
         }
         Ok(())
     }
 
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
+    fn update(&self) -> Result<()> {
+        Ok(())
     }
 
+    //**Handlers**
     /// updates the application's state based on user input
     fn handle_events(&mut self, event: crossterm::event::Event) -> Result<()> {
         match event {
@@ -130,23 +137,24 @@ impl App {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            KeyCode::Left => self.decrement_counter(),
-            KeyCode::Right => self.increment_counter(),
+            KeyCode::Char(k) => self.add_buffer(k),
+            KeyCode::Tab => self.switch(),
             _ => {}
         }
     }
 
-    fn exit(&mut self) {
-        self.exit = true;
+    //**Render**
+    fn draw(&self, frame: &mut Frame) {
+        frame.render_widget(self, frame.area());
     }
 
-    fn increment_counter(&mut self) {
-        self.counter += 1;
+    //**Helpers**
+    fn add_buffer(&mut self, k: char) {
+        self.buffer.push(k);
     }
 
-    fn decrement_counter(&mut self) {
-        self.counter -= 1;
+    fn switch(&mut self) {
+        // TODO:
     }
 }
 
@@ -166,10 +174,7 @@ impl Widget for &App {
             .title_bottom(instructions.centered())
             .border_set(border::THICK);
 
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Value: ".into(),
-            self.counter.to_string().yellow(),
-        ])]);
+        let counter_text = Text::from(vec![Line::from(vec!["Value: ".into(), self.buffer.clone().into()])]);
 
         Paragraph::new(counter_text).centered().block(block).render(area, buf);
     }

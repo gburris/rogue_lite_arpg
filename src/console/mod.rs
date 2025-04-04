@@ -6,6 +6,8 @@ use bevy::utils::tracing;
 pub use net::NetCommand;
 use net::NetCommandResult;
 pub use plugin::ConsolePlugin;
+use serde::Deserialize;
+use serde::Serialize;
 use std::error::Error;
 use std::{
     io::{BufRead, Write},
@@ -22,14 +24,14 @@ use bevy::{
 
 /// A command message sent from a connection handler to the Bevy world.
 /// Each message carries its own reply sender.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NetRequestMsg {
     pub request: NetCommand,
     pub reply: Sender<NetResponseMsg>,
 }
 
 /// Messages we send to our netcode task
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NetResponseMsg {
     Ron(NetCommandResult),
     Reply(String),

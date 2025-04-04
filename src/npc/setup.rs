@@ -6,12 +6,12 @@ use crate::{
     combat::{damage::HurtBox, Health},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        spawn_shadow, GameCollisionLayer,
     },
     items::{equipment::Equipped, inventory::Inventory},
     map::NPCSpawnEvent,
     npc::components::NPC,
-    player::interact::InteractionZone,
+    player::{interact::InteractionZone, player_data::CHARACTER_FEET_POS_OFFSET},
 };
 
 use super::components::NPCType;
@@ -29,14 +29,7 @@ pub fn spawn_npcs(
 
     // Zip the positions with NPC types and spawn them
     for (spawn_position, &npc_type) in npc_spawn_positions.iter().zip(npc_types.iter()) {
-        spawn_npc(
-            &mut commands,
-            npc_type,
-            *spawn_position,
-            &sprites,
-            &atlases,
-            &shadows,
-        );
+        spawn_npc(&mut commands, npc_type, *spawn_position, &sprites, &atlases, &shadows);
     }
 }
 
@@ -70,7 +63,7 @@ pub fn spawn_npc(
         ))
         .observe(on_player_interaction)
         .with_children(|spawner| {
-            spawn_shadow(spawner, &shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
+            spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
 
             spawner.spawn((
                 InteractionZone::NPC,
@@ -82,10 +75,7 @@ pub fn spawn_npc(
                 Collider::rectangle(26.0, 42.0),
                 Transform::from_xyz(0.0, -8.0, 0.0),
                 Sensor,
-                CollisionLayers::new(
-                    [GameCollisionLayer::AllyHurtBox],
-                    [GameCollisionLayer::HitBox],
-                ),
+                CollisionLayers::new([GameCollisionLayer::AllyHurtBox], [GameCollisionLayer::HitBox]),
             ));
 
             spawner.spawn((

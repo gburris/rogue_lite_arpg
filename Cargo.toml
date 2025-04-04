@@ -2,6 +2,7 @@
 name = "baba_yaga"
 version = "0.1.0"
 edition = "2021"
+default-run = "baba_yaga"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
@@ -31,9 +32,10 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
-bevy-inspector-egui = { version = "0.29.1", optional = true }
-egui_plot = { version = "0.30.0", optional = true }
-egui_extras = { version = "0.30.0", optional = true }
+rhai = { version = "1.21.0", features = ["sync"], optional = true }
+async-channel = "2.3.1"
+humansize = "2.1.3"
+anyhow = "1.0.97"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }
@@ -46,14 +48,11 @@ thiserror = { version = "1.0" }
 name = "baba_yaga"              # for wasm stuff
 crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "baba_yaga_bin" # for local build stuff
-path = "src/main.rs"
 
 [features]
 atlas = []
-debug = ["dep:bevy-inspector-egui", "dep:egui_plot", "dep:egui_extras"]
 trace = ["bevy/trace_tracy", "bevy/trace"]
+rhai = ["dep:rhai"]
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
@@ -62,3 +61,6 @@ opt-level = 1
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]
 opt-level = 3
+
+[lints.clippy]
+type_complexity = "allow"

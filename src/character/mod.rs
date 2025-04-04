@@ -2,9 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    ai::state::ActionState,
-    animation::AnimationTimer,
-    configuration::{YSort, CHARACTER_FEET_POS_OFFSET},
+    ai::state::ActionState, animation::AnimationTimer, configuration::YSort,
+    player::player_data::CHARACTER_FEET_POS_OFFSET,
 };
 
 #[derive(Component, Default)]

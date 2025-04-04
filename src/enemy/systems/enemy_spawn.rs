@@ -107,7 +107,7 @@ fn spawn_enemy(
                 ),
             ))
             .with_children(|spawner| {
-                spawn_shadow(spawner, &shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
+                spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
 
                 // collider to bump into stuff
                 spawner.spawn((

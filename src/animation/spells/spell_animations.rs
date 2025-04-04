@@ -24,11 +24,7 @@ pub fn on_healing_tome_visual_added(
             anchor: Anchor::Custom(Vec2::new(0.0, 0.10)),
             ..default()
         },
-        AnimationIndices {
-            is_one_shot: true,
-            first: 0,
-            last: 9,
-        },
+        AnimationIndices::OneShot(0..=9),
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));
 }

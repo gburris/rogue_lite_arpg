@@ -15,7 +15,6 @@ accesskit = "0.17"
 avian2d = "0.2.1"
 tiled = "0.11.2"
 ldtk_rust = "0.6"
-thiserror = "1.0"
 serde_json = "1.0"
 rand = "0.8"
 log = { version = "*", features = [
@@ -32,17 +31,10 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
-async-channel = "2.3.1"
-humansize = "2.1.3"
-anyhow = "1.0.97"
-crossterm = { version = "0.28.1", features = ["event-stream"] }
-ratatui = "0.29.0"
-async-executor = "1.13.1"
+
+[workspace.dependencies]
 tracing = "0.1.41"
-futures-lite = "2.6.0"
 tracing-subscriber = "0.3.19"
-futures-concurrency = "7.6.3"
-async-io = "2.4.0"
 
 [dev-dependencies]
 ldtk_rust = { version = "0.6" }

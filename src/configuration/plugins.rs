@@ -9,7 +9,6 @@ use crate::{
     animation::AnimationPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
-    console::ConsolePlugin,
     despawn::plugin::DespawnPlugin,
     econ::plugin::EconPlugin,
     enemy::plugin::EnemyPlugin,
@@ -64,6 +63,6 @@ pub struct NativePlugins;
 #[cfg(not(target_arch = "wasm32"))]
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(GamePlugins).add_plugins(ConsolePlugin); // Add native-only plugins
+        app.add_plugins(GamePlugins); // Add native-only plugins
     }
 }

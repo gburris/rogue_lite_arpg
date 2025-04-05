@@ -9,7 +9,6 @@ use crate::{
     animation::AnimationPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
-    console::ConsolePlugin,
     despawn::plugin::DespawnPlugin,
     econ::plugin::EconPlugin,
     enemy::plugin::EnemyPlugin,
@@ -21,15 +20,22 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
-use super::{configuration_data::ConfigurationData, game_data::GameDataPlugin};
+use super::configuration_data::ConfigurationData;
 
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
         app.register_type::<ConfigurationData>()
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin, GameDataPlugin))
+            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
             // Third-party plugins
-            .add_plugins((AssetLoadingPlugin, TilemapPlugin))
+            .add_plugins((
+                AssetLoadingPlugin,
+                TilemapPlugin,
+                #[cfg(feature = "nc")]
+                {
+                    bevy_nc::NetConsolePlugin
+                },
+            ))
             // Core systems
             .add_plugins((
                 DespawnPlugin,
@@ -64,6 +70,6 @@ pub struct NativePlugins;
 #[cfg(not(target_arch = "wasm32"))]
 impl Plugin for NativePlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(GamePlugins).add_plugins(ConsolePlugin); // Add native-only plugins
+        app.add_plugins(GamePlugins); // Add native-only plugins
     }
 }

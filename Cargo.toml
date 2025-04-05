@@ -13,9 +13,6 @@ bevy_ecs_tilemap = "0.15.0"
 bevy_asset_loader = { version = "0.22.0", features = ["2d"] }
 accesskit = "0.17"
 avian2d = "0.2.1"
-tiled = "0.11.2"
-ldtk_rust = "0.6"
-thiserror = "1.0"
 serde_json = "1.0"
 rand = "0.8"
 log = { version = "*", features = [
@@ -23,7 +20,6 @@ log = { version = "*", features = [
   "release_max_level_warn",
 ] }
 serde = "1.0.219"
-noise = "0.9"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
   "Document",
@@ -32,21 +28,9 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
-rhai = { version = "1.21.0", features = ["sync"], optional = true }
-async-channel = "2.3.1"
-humansize = "2.1.3"
-anyhow = "1.0.97"
-crossterm = { version = "0.28.1", features = ["event-stream"] }
-ratatui = "0.29.0"
-async-executor = "1.13.1"
-tracing = "0.1.41"
-futures-lite = "2.6.0"
-tracing-subscriber = "0.3.19"
-futures-concurrency = "7.6.3"
-async-io = "2.4.0"
+bevy_nc = { path = "crates/bevy_nc", optional = true, version = "0.1.0" }
 
 [dev-dependencies]
-ldtk_rust = { version = "0.6" }
 rand = "0.8"
 serde_json = { version = "1.0" }
 tiled = { version = "0.11.2", default-features = false }
@@ -60,7 +44,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 atlas = []
 trace = ["bevy/trace_tracy", "bevy/trace"]
-rhai = ["dep:rhai"]
+nc = ["dep:bevy_nc"]
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
@@ -72,3 +56,6 @@ opt-level = 3
 
 [lints.clippy]
 type_complexity = "allow"
+
+[workspace]
+members = ["crates/bevy_nc"]

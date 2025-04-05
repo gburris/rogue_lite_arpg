@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
 use async_channel::Receiver;
-use baba_yaga::console::NetResponseMsg;
+use bevy_nc::nc;
 use crossterm::event::{Event as CrosstermEvent, *};
 use futures_concurrency::stream::{IntoStream, Merge};
 use futures_lite::{Stream, StreamExt};
@@ -10,13 +10,13 @@ pub struct Events(Pin<Box<dyn Stream<Item = StreamEvent>>>);
 
 #[derive(Clone, Debug)]
 pub enum StreamEvent {
-    Io(NetResponseMsg),
+    Io(nc::Response),
     Crossterm(CrosstermEvent),
     Tick,
     Error,
 }
 impl Events {
-    pub fn new(rx_command: Receiver<NetResponseMsg>, crossterm: EventStream, tick: async_io::Timer) -> Self {
+    pub fn new(rx_command: Receiver<nc::Response>, crossterm: EventStream, tick: async_io::Timer) -> Self {
         let streams = [
             netcmd_stream(rx_command),
             crossterm_stream(crossterm),
@@ -30,7 +30,7 @@ impl Events {
         self.0.next().await
     }
 }
-fn netcmd_stream(rx_command: Receiver<NetResponseMsg>) -> Pin<Box<dyn Stream<Item = StreamEvent>>> {
+fn netcmd_stream(rx_command: Receiver<nc::Response>) -> Pin<Box<dyn Stream<Item = StreamEvent>>> {
     Box::pin(rx_command.into_stream().map(StreamEvent::Io))
 }
 

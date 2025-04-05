@@ -4,7 +4,6 @@ pub mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
-pub mod console;
 pub mod despawn;
 pub mod econ;
 pub mod enemy;

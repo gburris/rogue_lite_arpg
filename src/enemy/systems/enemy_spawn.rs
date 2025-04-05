@@ -7,7 +7,7 @@ use crate::{
     combat::{damage::HurtBox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        spawn_shadow, GameCollisionLayer,
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
@@ -16,6 +16,7 @@ use crate::{
         spawn_health_potion, spawn_mainhand_weapon,
     },
     map::EnemiesSpawnEvent,
+    player::player_data::CHARACTER_FEET_POS_OFFSET,
 };
 
 #[derive(Debug, Clone)]
@@ -107,7 +108,7 @@ fn spawn_enemy(
                 ),
             ))
             .with_children(|spawner| {
-                spawn_shadow(spawner, &shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
+                spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
 
                 // collider to bump into stuff
                 spawner.spawn((
@@ -126,16 +127,10 @@ fn spawn_enemy(
                 // hurtbox
                 spawner.spawn((
                     HurtBox,
-                    Collider::rectangle(
-                        enemy_details.collider_size.0,
-                        enemy_details.collider_size.1,
-                    ),
+                    Collider::rectangle(enemy_details.collider_size.0, enemy_details.collider_size.1),
                     Transform::from_xyz(0.0, -8.0, 0.0),
                     Sensor,
-                    CollisionLayers::new(
-                        [GameCollisionLayer::EnemyHurtBox],
-                        [GameCollisionLayer::HitBox],
-                    ),
+                    CollisionLayers::new([GameCollisionLayer::EnemyHurtBox], [GameCollisionLayer::HitBox]),
                 ));
             })
             .add_children(&starting_items)
@@ -143,9 +138,7 @@ fn spawn_enemy(
             .observe(on_equipment_activated)
             .id();
 
-        commands
-            .entity(starting_items[0])
-            .insert(Equipped::new(enemy));
+        commands.entity(starting_items[0]).insert(Equipped::new(enemy));
     } else {
         warn!("Enemy {} not found in enemy config.", enemy_name);
     }

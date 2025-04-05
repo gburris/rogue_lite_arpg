@@ -21,12 +21,6 @@ pub enum InteractionZone {
     Square { length: f32 },
 }
 
-impl InteractionZone {
-    pub const OPEN_CHEST: Self = Self::Square { length: 40.0 };
-    pub const NPC: Self = Self::Circle { radius: 30.0 };
-    pub const ITEM_PICKUP: Self = Self::Circle { radius: 25.0 };
-}
-
 #[derive(Event)]
 pub struct PlayerInteractionInput;
 

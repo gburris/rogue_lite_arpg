@@ -15,9 +15,6 @@ pub mod player;
 pub mod progression;
 pub mod ui;
 
-#[cfg(feature = "debug")]
-pub mod debug;
-
 #[cfg(target_arch = "wasm32")]
 use crate::configuration::plugins::WasmPlugins;
 

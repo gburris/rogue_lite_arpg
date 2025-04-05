@@ -5,10 +5,8 @@ use crate::{
     ai::SimpleMotion,
     character::Character,
     combat::{invulnerable::IFrames, Health},
+    player::player_data::PLAYER_LEVEL_REQUIREMENT_MULTIPLIER,
 };
-
-/// How much more experience is required (as a multiplier) after each level up
-const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 #[derive(Component)]
 #[require(

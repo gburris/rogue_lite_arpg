@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
 use async_channel::Receiver;
-use baba_yaga::console::NetResponseMsg;
+use bevy_nc::net::NetResponseMsg;
 use crossterm::event::{Event as CrosstermEvent, *};
 use futures_concurrency::stream::{IntoStream, Merge};
 use futures_lite::{Stream, StreamExt};

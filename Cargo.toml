@@ -13,8 +13,6 @@ bevy_ecs_tilemap = "0.15.0"
 bevy_asset_loader = { version = "0.22.0", features = ["2d"] }
 accesskit = "0.17"
 avian2d = "0.2.1"
-tiled = "0.11.2"
-ldtk_rust = "0.6"
 serde_json = "1.0"
 rand = "0.8"
 log = { version = "*", features = [
@@ -22,7 +20,6 @@ log = { version = "*", features = [
   "release_max_level_warn",
 ] }
 serde = "1.0.219"
-noise = "0.9"
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
   "Document",
@@ -31,13 +28,9 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
-
-[workspace.dependencies]
-tracing = "0.1.41"
-tracing-subscriber = "0.3.19"
+bevy_nc = { path = "crates/bevy_nc", optional = true }
 
 [dev-dependencies]
-ldtk_rust = { version = "0.6" }
 rand = "0.8"
 serde_json = { version = "1.0" }
 tiled = { version = "0.11.2", default-features = false }
@@ -51,6 +44,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 atlas = []
 trace = ["bevy/trace_tracy", "bevy/trace"]
+nc = ["dep:bevy_nc"]
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

@@ -1,52 +1,23 @@
-mod net;
-mod plugin;
-use anyhow::anyhow;
+use crate::net::NetCommand;
+use crate::net::{NetRequestMsg, NetResponseMsg};
 use anyhow::Result;
-use bevy::utils::tracing;
-pub use net::NetCommand;
-use net::NetCommandResult;
-pub use plugin::ConsolePlugin;
-use serde::Deserialize;
-use serde::Serialize;
-use std::error::Error;
+use anyhow::anyhow;
+use bevy::prelude::*;
+use bevy::utils::tracing::{info, warn};
+use bevy_asset::ron;
+use bevy_asset::ron::ser::PrettyConfig;
 use std::{
     io::{BufRead, Write},
     net::TcpListener,
 };
 
-use async_channel::{Receiver, Sender};
+use async_channel::Receiver;
 use bevy::{
     ecs::system::SystemState,
-    prelude::*,
-    scene::ron::{self, ser::PrettyConfig},
-    tasks::{block_on, poll_once, IoTaskPool},
+    tasks::{IoTaskPool, block_on, poll_once},
 };
 
-/// A command message sent from a connection handler to the Bevy world.
-/// Each message carries its own reply sender.
-#[derive(Clone, Debug)]
-pub struct NetRequestMsg {
-    pub request: NetCommand,
-    pub reply: Sender<NetResponseMsg>,
-}
-
-/// Messages we send to our netcode task
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum NetResponseMsg {
-    Ron(NetCommandResult),
-    Reply(String),
-    OK,
-}
-impl From<NetCommandResult> for NetResponseMsg {
-    fn from(value: NetCommandResult) -> Self {
-        Self::Ron(value)
-    }
-}
-impl<T: Error> From<T> for NetResponseMsg {
-    fn from(value: T) -> Self {
-        Self::Reply(value.to_string())
-    }
-}
+use crate::bevy;
 
 #[derive(Resource)]
 pub struct NetChannels {
@@ -55,15 +26,6 @@ pub struct NetChannels {
 
 #[derive(Component)]
 pub struct DebugConsole;
-
-fn setup_console(mut commands: Commands) {
-    let (tx_command, rx_command) = async_channel::unbounded();
-    commands.insert_resource(NetChannels { rx_command });
-
-    IoTaskPool::get()
-        .spawn(async move { net_listener(tx_command).await })
-        .detach()
-}
 
 const ADDR: &str = "127.0.0.1:8080";
 async fn net_listener(tx_command: async_channel::Sender<NetRequestMsg>) {
@@ -90,7 +52,16 @@ async fn net_listener(tx_command: async_channel::Sender<NetRequestMsg>) {
     }
 }
 
-fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>) {
+pub fn setup_console(mut commands: Commands) {
+    let (tx_command, rx_command) = async_channel::unbounded();
+    commands.insert_resource(NetChannels { rx_command });
+
+    IoTaskPool::get()
+        .spawn(async move { net_listener(tx_command).await })
+        .detach()
+}
+
+pub fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>) {
     let net_channels = params.get(world);
     let Some(Ok(NetRequestMsg {
         request: cmd,
@@ -112,7 +83,6 @@ fn update_console(world: &mut World, params: &mut SystemState<Res<NetChannels>>)
     IoTaskPool::get().spawn(async move { tx.send(reply).await }).detach();
 }
 
-#[tracing::instrument(level = "info", skip_all)]
 async fn handle_stream(
     mut stream: std::net::TcpStream,
     tx_command: async_channel::Sender<NetRequestMsg>,
@@ -149,7 +119,7 @@ async fn handle_stream(
         match reply_rx.recv().await? {
             NetResponseMsg::Reply(result_msg) => stream.write_all(result_msg.as_bytes())?,
             NetResponseMsg::OK => stream.write_all(b"OK")?,
-            NetResponseMsg::Ron(ron_msg) => ron::ser::to_writer_pretty(&stream, &ron_msg, PrettyConfig::default())?,
+            NetResponseMsg::Ron(ron_msg) => ron::ser::to_writer_pretty(&mut stream, &ron_msg, PrettyConfig::default())?,
         };
     }
 }

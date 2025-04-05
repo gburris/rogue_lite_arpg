@@ -1,27 +1,25 @@
 mod event;
 mod log;
-use anyhow::anyhow;
 use anyhow::Result;
 use async_channel::{Receiver, Sender};
-use baba_yaga::console::NetResponseMsg;
+use bevy_nc::net::NetResponseMsg;
 use event::Events;
 use event::StreamEvent;
-use futures_concurrency::prelude::*;
-use futures_lite::{future, StreamExt};
+use futures_lite::{StreamExt, future};
 use std::time::Duration;
 use std::time::Instant;
 use tracing::*;
 
-use baba_yaga::console::NetRequestMsg;
+use bevy_nc::net::NetRequestMsg;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
+    DefaultTerminal, Frame,
     buffer::Buffer,
     layout::Rect,
     style::Stylize,
     symbols::border,
     text::{Line, Text},
     widgets::{Block, Paragraph, Widget},
-    DefaultTerminal, Frame,
 };
 
 fn main() -> Result<()> {
@@ -44,7 +42,7 @@ async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
             };
             // main TCP listener here
             debug!("{:?}", request);
-            match reply.send(baba_yaga::console::NetResponseMsg::OK).await {
+            match reply.send(NetResponseMsg::OK).await {
                 Ok(_) => {}
                 Err(e) => error!("{}", e.to_string()),
             };

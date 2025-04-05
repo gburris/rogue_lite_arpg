@@ -1,5 +1,5 @@
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt, Layer};
+use tracing_subscriber::{self, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub fn init() -> anyhow::Result<()> {
     let log_file = std::fs::OpenOptions::new().create(true).append(true).open("cli.log")?;

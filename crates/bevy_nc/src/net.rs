@@ -1,18 +1,49 @@
-use anyhow::anyhow;
+use std::error::Error;
+
+use crate::bevy;
 use anyhow::Result;
+use anyhow::anyhow;
+use async_channel::Sender;
 use bevy::ecs::component::ComponentInfo;
 use bevy::prelude::*;
 use bevy::ptr::Ptr;
+use bevy::reflect::TypeRegistry;
 use bevy::reflect::serde::ReflectSerializer;
 use bevy::reflect::serde::TypedReflectDeserializer;
-use bevy::reflect::TypeRegistry;
-use bevy::scene::ron;
-use bevy::scene::ron::ser::PrettyConfig;
-use humansize::format_size;
+use bevy_asset::ron;
+use bevy_asset::ron::ser::PrettyConfig;
+use bevy_utils::tracing::debug;
 use humansize::DECIMAL;
-use serde::de::DeserializeSeed;
+use humansize::format_size;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de::DeserializeSeed;
+
+/// A command message sent from a connection handler to the Bevy world.
+/// Each message carries its own reply sender.
+#[derive(Clone, Debug)]
+pub struct NetRequestMsg {
+    pub request: NetCommand,
+    pub reply: Sender<NetResponseMsg>,
+}
+
+/// Messages we send to our netcode task
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum NetResponseMsg {
+    Ron(NetCommandResult),
+    Reply(String),
+    OK,
+}
+impl From<NetCommandResult> for NetResponseMsg {
+    fn from(value: NetCommandResult) -> Self {
+        Self::Ron(value)
+    }
+}
+impl<T: Error> From<T> for NetResponseMsg {
+    fn from(value: T) -> Self {
+        Self::Reply(value.to_string())
+    }
+}
 
 /// The command types available.
 #[derive(Clone, Debug, Serialize, Deserialize)]

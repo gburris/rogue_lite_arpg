@@ -1,3 +1,12 @@
+//! 4 basic message types
+//!
+//! These messages are exchanged between client and server, over network:
+//! - [`Request`]
+//! - [`Response`]
+//!
+//! These messages are exchanged between the server and the bevy engine:
+//! - [`Command`]
+//! - [`CommandResult`]
 use std::error::Error;
 
 use crate::bevy;
@@ -22,24 +31,24 @@ use serde::de::DeserializeSeed;
 /// A command message sent from a connection handler to the Bevy world.
 /// Each message carries its own reply sender.
 #[derive(Clone, Debug)]
-pub struct NetRequestMsg {
-    pub request: NetCommand,
-    pub reply: Sender<NetResponseMsg>,
+pub struct Request {
+    pub request: Command,
+    pub reply: Sender<Response>,
 }
 
 /// Messages we send to our netcode task
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum NetResponseMsg {
-    Ron(NetCommandResult),
+pub enum Response {
+    Ron(CommandResult),
     Reply(String),
     OK,
 }
-impl From<NetCommandResult> for NetResponseMsg {
-    fn from(value: NetCommandResult) -> Self {
+impl From<CommandResult> for Response {
+    fn from(value: CommandResult) -> Self {
         Self::Ron(value)
     }
 }
-impl<T: Error> From<T> for NetResponseMsg {
+impl<T: Error> From<T> for Response {
     fn from(value: T) -> Self {
         Self::Reply(value.to_string())
     }
@@ -47,7 +56,7 @@ impl<T: Error> From<T> for NetResponseMsg {
 
 /// The command types available.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum NetCommand {
+pub enum Command {
     Get(String),
     Set(String, String),
     DumpResources,
@@ -56,7 +65,7 @@ pub enum NetCommand {
     Help,
 }
 
-impl NetCommand {
+impl Command {
     /// Parses an input string into a command.
     /// Expected syntax:
     /// - get [resource]
@@ -64,43 +73,43 @@ impl NetCommand {
     /// - entity_count
     /// - set [value]
     /// - help
-    pub fn parse(expr: &str) -> Result<NetCommand> {
+    pub fn parse(expr: &str) -> Result<Command> {
         let mut parts = expr.split_whitespace();
         match parts.next() {
             Some("get") => {
                 let arg = parts.next().ok_or_else(|| anyhow!("Missing argument for 'get'"))?;
-                Ok(NetCommand::Get(arg.to_string()))
+                Ok(Command::Get(arg.to_string()))
             }
-            Some("resources") => Ok(NetCommand::DumpResources),
-            Some("archetypes") => Ok(NetCommand::Archetypes),
-            Some("entity_count") => Ok(NetCommand::EntityCount),
+            Some("resources") => Ok(Command::DumpResources),
+            Some("archetypes") => Ok(Command::Archetypes),
+            Some("entity_count") => Ok(Command::EntityCount),
             Some("set") => {
                 let ty = parts.next().ok_or_else(|| anyhow!("Missing type for 'set'"))?;
                 let value = parts.collect::<Vec<_>>().join(" ");
-                Ok(NetCommand::Set(ty.to_string(), value))
+                Ok(Command::Set(ty.to_string(), value))
             }
-            Some("help") => Ok(NetCommand::Help),
+            Some("help") => Ok(Command::Help),
             Some(cmd) => Err(anyhow!("Unknown command: {}", cmd)),
             None => Err(anyhow!("Empty input")),
         }
     }
 
-    pub fn exec(&self, world: &mut World) -> Result<NetCommandResult> {
+    pub fn exec(&self, world: &mut World) -> Result<CommandResult> {
         match self {
-            NetCommand::Get(arg) => cmd_get(world, arg),
-            NetCommand::DumpResources => cmd_resources(world),
-            NetCommand::EntityCount => cmd_entity_count(world),
-            NetCommand::Set(ty, value) => cmd_set(world, ty, value),
-            NetCommand::Help => Ok(NetCommandResult::Help(
+            Command::Get(arg) => cmd_get(world, arg),
+            Command::DumpResources => cmd_resources(world),
+            Command::EntityCount => cmd_entity_count(world),
+            Command::Set(ty, value) => cmd_set(world, ty, value),
+            Command::Help => Ok(CommandResult::Help(
                 "Available commands: resources, get [resource], entity_count, set [value], help".into(),
             )),
-            NetCommand::Archetypes => cmd_archetypes(world),
+            Command::Archetypes => cmd_archetypes(world),
         }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum NetCommandResult {
+pub enum CommandResult {
     Get(String),
     EntityCount(usize),
     Resources(Vec<(String, String, usize)>),
@@ -112,7 +121,7 @@ pub enum NetCommandResult {
 /// Retrieves a resource by name using Bevy’s reflection system.
 /// The unsafe block is justified because we know that the resource data is valid for the lifetime
 /// of the call and Bevy’s API ensures that the reflection is sound.
-fn cmd_get(world: &mut World, ty: &str) -> Result<NetCommandResult> {
+fn cmd_get(world: &mut World, ty: &str) -> Result<CommandResult> {
     let registry = world.resource::<AppTypeRegistry>().read();
 
     let registration = registry
@@ -136,12 +145,12 @@ fn cmd_get(world: &mut World, ty: &str) -> Result<NetCommandResult> {
     let refser = ReflectSerializer::new(value, &registry);
     let ron = ron::ser::to_string_pretty(&refser, PrettyConfig::new())?;
 
-    Ok(NetCommandResult::Get(ron))
+    Ok(CommandResult::Get(ron))
 }
 
-fn cmd_set(world: &mut World, ty: &str, args: &str) -> Result<NetCommandResult> {
+fn cmd_set(world: &mut World, ty: &str, args: &str) -> Result<CommandResult> {
     world.resource_scope(
-        |world: &mut World, registry: Mut<AppTypeRegistry>| -> Result<NetCommandResult> {
+        |world: &mut World, registry: Mut<AppTypeRegistry>| -> Result<CommandResult> {
             let registry = registry.read();
             let registration = registry
                 .get_with_short_type_path(ty)
@@ -164,13 +173,13 @@ fn cmd_set(world: &mut World, ty: &str, args: &str) -> Result<NetCommandResult> 
             let reflect_deserializer = TypedReflectDeserializer::new(registration, &registry);
             let result = reflect_deserializer.deserialize(&mut deserializer)?;
             value.apply(&*result);
-            Ok(NetCommandResult::OK)
+            Ok(CommandResult::OK)
         },
     )
 }
 
 /// Dumps a list of resources, including their short type paths, names, and sizes.
-fn cmd_resources(world: &mut World) -> Result<NetCommandResult> {
+fn cmd_resources(world: &mut World) -> Result<CommandResult> {
     fn process_resource(
         (info, _data): (&ComponentInfo, Ptr<'_>),
         registry: &TypeRegistry,
@@ -190,16 +199,16 @@ fn cmd_resources(world: &mut World) -> Result<NetCommandResult> {
         .filter_map(|resource| process_resource(resource, &registry))
         .collect::<Vec<_>>();
     info.sort_by_key(|(_, _, key)| *key);
-    Ok(NetCommandResult::Resources(info))
+    Ok(CommandResult::Resources(info))
 }
 
 /// Counts the number of entities in the world.
-fn cmd_entity_count(world: &mut World) -> Result<NetCommandResult> {
+fn cmd_entity_count(world: &mut World) -> Result<CommandResult> {
     let count = world.iter_entities().count();
-    Ok(NetCommandResult::EntityCount(count))
+    Ok(CommandResult::EntityCount(count))
 }
 
-fn cmd_archetypes(world: &mut World) -> Result<NetCommandResult> {
+fn cmd_archetypes(world: &mut World) -> Result<CommandResult> {
     let registry = world.resource::<AppTypeRegistry>().read();
     let components = world.components();
     let mut archetypes = world.archetypes().iter().collect::<Vec<_>>();
@@ -230,5 +239,5 @@ fn cmd_archetypes(world: &mut World) -> Result<NetCommandResult> {
             format_size(sum_archetype * a.len(), DECIMAL),
         ));
     }
-    Ok(NetCommandResult::Archetypes(archetype_info))
+    Ok(CommandResult::Archetypes(archetype_info))
 }

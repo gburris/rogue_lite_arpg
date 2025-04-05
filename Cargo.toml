@@ -28,7 +28,7 @@ web-sys = { version = "0.3", features = [
   "HtmlCanvasElement",
 ] }
 console_error_panic_hook = "0.1"
-bevy_nc = { path = "crates/bevy_nc", optional = true }
+bevy_nc = { path = "crates/bevy_nc", optional = true, version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.8"

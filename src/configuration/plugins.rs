@@ -20,15 +20,22 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
-use super::{configuration_data::ConfigurationData, game_data::GameDataPlugin};
+use super::configuration_data::ConfigurationData;
 
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
         app.register_type::<ConfigurationData>()
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin, GameDataPlugin))
+            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
             // Third-party plugins
-            .add_plugins((AssetLoadingPlugin, TilemapPlugin))
+            .add_plugins((
+                AssetLoadingPlugin,
+                TilemapPlugin,
+                #[cfg(feature = "nc")]
+                {
+                    bevy_nc::NetConsolePlugin
+                },
+            ))
             // Core systems
             .add_plugins((
                 DespawnPlugin,

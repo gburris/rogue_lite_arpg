@@ -1,13 +1,15 @@
+//! [`handlers`]
 mod handlers;
-use bevy_app::App;
+mod tcp;
+use handlers::HostConsoleAddr;
 
-use crate::bevy::prelude::{FixedUpdate, Plugin, Startup};
+use crate::bevy::prelude::*;
 
-pub struct ConsolePlugin;
-
-impl Plugin for ConsolePlugin {
+pub struct NetConsolePlugin;
+impl Plugin for NetConsolePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, handlers::setup_console)
-            .add_systems(FixedUpdate, handlers::update_console);
+        app.init_resource::<HostConsoleAddr>()
+            .add_systems(Startup, handlers::setup_host_console)
+            .add_systems(FixedUpdate, handlers::update_host_console);
     }
 }

@@ -1,48 +1,31 @@
-mod event;
-mod log;
-use anyhow::Result;
-use async_channel::{Receiver, Sender};
-use bevy_nc::net::NetResponseMsg;
-use event::Events;
-use event::StreamEvent;
-use futures_lite::{StreamExt, future};
-use std::time::Duration;
-use std::time::Instant;
-use tracing::*;
+mod app;
 
-use bevy_nc::net::NetRequestMsg;
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{
-    DefaultTerminal, Frame,
-    buffer::Buffer,
-    layout::Rect,
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
-};
+use anyhow::Result;
+use app::App;
+use bevy_nc::nc;
+use futures_lite::future;
+use tracing::*;
 
 fn main() -> Result<()> {
     log::init()?;
     future::block_on(_main(async_executor::Executor::new()))
 }
-pub struct Game(NetRequestMsg);
 
 async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
-    let (tx_command, rx_command) = async_channel::unbounded::<Game>();
-    let (tx_update, rx_update) = async_channel::unbounded::<NetResponseMsg>();
+    let (tx_command, rx_command) = async_channel::unbounded::<app::ClientMsg>();
+    let (tx_update, rx_update) = async_channel::unbounded::<nc::Response>();
 
     // Spawn a dedicated task loop for network calls
     ex.spawn(async move {
         info!("init");
         loop {
             info!("waiting for app request");
-            let Ok(Game(NetRequestMsg { request, reply })) = rx_command.recv().await else {
+            let Ok(app::ClientMsg(nc::Request { request, reply })) = rx_command.recv().await else {
                 return;
             };
             // main TCP listener here
             debug!("{:?}", request);
-            match reply.send(NetResponseMsg::OK).await {
+            match reply.send(nc::Response::OK).await {
                 Ok(_) => {}
                 Err(e) => error!("{}", e.to_string()),
             };
@@ -59,121 +42,24 @@ async fn _main(ex: async_executor::Executor<'_>) -> Result<()> {
     }))
 }
 
-#[derive(Debug)]
-pub struct App {
-    tx_command: Sender<Game>,
-    tx_update: Sender<NetResponseMsg>,
-    rx_update: Receiver<NetResponseMsg>,
-    buffer: String,
-    exit: bool,
-}
+mod log {
+    use tracing::level_filters::LevelFilter;
+    use tracing_subscriber::{self, Layer, layer::SubscriberExt, util::SubscriberInitExt};
 
-impl App {
-    pub fn new(
-        tx_command: Sender<Game>,
-        tx_update: Sender<NetResponseMsg>,
-        rx_update: Receiver<NetResponseMsg>,
-    ) -> Self {
-        Self {
-            tx_command,
-            tx_update,
-            rx_update,
-            buffer: String::new(),
-            exit: false,
-        }
-    }
-    pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
-        let stream = EventStream::new();
-        let rx_update = self.rx_update.clone();
-        let frame_tick = async_io::Timer::interval_at(Instant::now(), Duration::from_secs_f32(1. / 2.));
-
-        let mut events = Events::new(rx_update, stream, frame_tick);
-
-        // poll, update, render. standard app loop
-        while !self.exit {
-            match events.next().await {
-                Some(StreamEvent::Crossterm(event)) => {
-                    debug!("event in app loop: {event:?}");
-                    self.handle_events(event)
-                }
-                Some(StreamEvent::Io(msg)) => {
-                    debug!("msg in app loop: {msg:?}");
-                    anyhow::Ok(())
-                }
-                Some(StreamEvent::Tick) => {
-                    debug!("t");
-                    anyhow::Ok(())
-                }
-                Some(StreamEvent::Error) => {
-                    unimplemented!();
-                }
-                None => {
-                    unimplemented!();
-                }
-            }?;
-            self.update()?;
-            terminal.draw(|frame| self.draw(frame))?;
-        }
+    pub fn init() -> anyhow::Result<()> {
+        let log_file = std::fs::OpenOptions::new().create(true).append(true).open("cli.log")?;
+        let file_subscriber = tracing_subscriber::fmt::layer()
+            .with_file(true)
+            .with_line_number(true)
+            .with_writer(log_file)
+            .with_target(false)
+            .with_ansi(false)
+            .with_filter(
+                tracing_subscriber::filter::EnvFilter::builder()
+                    .with_default_directive(LevelFilter::DEBUG.into())
+                    .from_env_lossy(),
+            );
+        tracing_subscriber::registry().with(file_subscriber).init();
         Ok(())
-    }
-
-    fn update(&self) -> Result<()> {
-        Ok(())
-    }
-
-    //**Handlers**
-    /// updates the application's state based on user input
-    fn handle_events(&mut self, event: crossterm::event::Event) -> Result<()> {
-        match event {
-            // it's important to check that the event is a key press event as
-            // crossterm also emits key release and repeat events on Windows.
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => self.handle_key_event(key_event),
-            _ => {}
-        };
-        Ok(())
-    }
-
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char(k) => self.add_buffer(k),
-            KeyCode::Tab => self.switch(),
-            _ => {}
-        }
-    }
-
-    //**Render**
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
-    }
-
-    //**Helpers**
-    fn add_buffer(&mut self, k: char) {
-        self.buffer.push(k);
-    }
-
-    fn switch(&mut self) {
-        // TODO:
-    }
-}
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Counter App Tutorial ".bold());
-        let instructions = Line::from(vec![
-            " Decrement ".into(),
-            "<Left>".blue().bold(),
-            " Increment ".into(),
-            "<Right>".blue().bold(),
-            " Quit ".into(),
-            "<Q> ".blue().bold(),
-        ]);
-        let block = Block::bordered()
-            .title(title.centered())
-            .title_bottom(instructions.centered())
-            .border_set(border::THICK);
-
-        let counter_text = Text::from(vec![Line::from(vec!["Value: ".into(), self.buffer.clone().into()])]);
-
-        Paragraph::new(counter_text).centered().block(block).render(area, buf);
     }
 }

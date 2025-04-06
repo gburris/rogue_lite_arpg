@@ -35,14 +35,10 @@ pub fn spawn_projectile(
             ..default()
         },
         LinearVelocity(velocity),
-        AnimationIndices {
-            first: 0,
-            last: 4,
-            is_one_shot: false,
-        },
+        AnimationIndices::Cycle((0..=4).cycle()),
         AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         CollisionLayers::new(
-            [GameCollisionLayer::InAir, GameCollisionLayer::HitBox],
+            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
             LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
         ),
     ));

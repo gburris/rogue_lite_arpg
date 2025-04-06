@@ -1,0 +1,52 @@
+2025-04-05T21:07:12.226118Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:12.226413Z  INFO crates/bevy_nc/cli/main.rs:37: init
+2025-04-05T21:07:12.226423Z  INFO crates/bevy_nc/cli/main.rs:39: waiting for app request
+2025-04-05T21:07:12.727037Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:13.073534Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Char('q'), modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:13.226728Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:13.726685Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:13.832089Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Backspace, modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:14.226562Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:14.387174Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Backspace, modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:14.553894Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Backspace, modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:14.726440Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:14.897417Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Backspace, modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:15.226520Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:15.726237Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:15.827912Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Resize(74, 40)
+2025-04-05T21:07:16.226073Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:16.726029Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:17.190401Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Char('d'), modifiers: KeyModifiers(CONTROL), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:17.225152Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:17.546064Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Char('d'), modifiers: KeyModifiers(CONTROL), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:17.725838Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:18.225740Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:18.725651Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:19.225568Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:19.584594Z DEBUG crates/bevy_nc/cli/main.rs:96: event in app loop: Key(KeyEvent { code: Char('q'), modifiers: KeyModifiers(0x0), kind: Press, state: KeyEventState(0x0) })
+2025-04-05T21:07:19.725516Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:20.224411Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:20.725325Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:21.225252Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:21.725147Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:22.224893Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:22.725031Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:23.224978Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:23.724546Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:24.224830Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:24.724128Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:25.224684Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:25.724706Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:26.224648Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:26.724584Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:27.224551Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:27.724516Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:28.224241Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:28.724407Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:29.224362Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:29.723480Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:30.224294Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:30.724256Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:31.224190Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:31.724178Z DEBUG crates/bevy_nc/cli/main.rs:104: t
+2025-04-05T21:07:32.223403Z DEBUG crates/bevy_nc/cli/main.rs:104: t

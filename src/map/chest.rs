@@ -2,12 +2,15 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use crate::animation::{AnimationIndices, AnimationTimer};
-use crate::configuration::{GameCollisionLayer, YSort};
-
-use crate::configuration::assets::{SpriteAssets, SpriteSheetLayouts};
-use crate::econ::gold_drop::GoldDropEvent;
-use crate::player::interact::{InteractionEvent, InteractionZone};
+use crate::{
+    animation::{AnimationIndices, AnimationTimer},
+    configuration::{
+        assets::{SpriteAssets, SpriteSheetLayouts},
+        GameCollisionLayer, YSort,
+    },
+    economy::GoldDropEvent,
+    player::interact::{InteractionEvent, InteractionZone},
+};
 
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
@@ -61,11 +64,7 @@ fn spawn_chest(
                 anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),
                 ..default()
             },
-            AnimationIndices {
-                is_one_shot: true,
-                first: 0,
-                last: 8,
-            },
+            AnimationIndices::OneShot(0..=8),
             Transform {
                 translation: spawn_position.extend(0.0),
                 scale: Vec3::new(2.0, 2.0, 1.0),

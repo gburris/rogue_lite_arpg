@@ -1,7 +1,47 @@
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{configuration::assets::SpriteAssets, econ::currency::Currency, items::Magnet};
+use crate::{
+    configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
+    items::{inventory::Inventory, Magnet},
+    player::{Player, PlayerCollider},
+};
+
+#[derive(Component)]
+#[require(
+    RigidBody,
+    Collider::circle(10.0),
+    CollisionLayers::new(
+        [GameCollisionLayer::Grounded],
+        [GameCollisionLayer::PlayerCollider, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
+    ),
+    CollidingEntities,
+    LockedAxes = LockedAxes::new().lock_rotation(),
+    LinearDamping(2.0),
+    TranslationExtrapolation,
+    // Don't let gold move the player upon collision
+    Dominance(-1),
+    YSort,
+)]
+pub struct Gold {
+    pub value: u32,
+}
+
+pub fn handle_gold_collisions(
+    mut commands: Commands,
+    gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
+    mut player_inventory: Single<&mut Inventory, With<Player>>,
+    player_collider_entity: Single<Entity, With<PlayerCollider>>,
+) {
+    let pe = player_collider_entity.into_inner();
+    for (gold_entity, gold, colliding_entities) in gold_query.iter() {
+        if colliding_entities.contains(&pe) {
+            player_inventory.add_coins(gold.value);
+            commands.entity(gold_entity).despawn();
+        }
+    }
+}
 
 #[derive(Event)]
 pub struct GoldDropEvent {
@@ -30,7 +70,7 @@ pub fn on_gold_drop_event(
             _ => (sprites.gold_coin.clone(), 1),
         };
 
-        // If we are spawning the last currency entity, include remaining gold
+        // If we are spawning the last gold entity, include remaining gold
         if entities_spawned == MAX_COINS_TO_SPAWN - 1 {
             value = remaining_gold;
         }
@@ -42,7 +82,7 @@ pub fn on_gold_drop_event(
 
         commands
             .spawn((
-                Currency { value },
+                Gold { value },
                 Sprite::from_image(gold_image),
                 Transform::from_translation((trigger.drop_location + offset).extend(0.0)),
             ))

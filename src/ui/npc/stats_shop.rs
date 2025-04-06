@@ -3,7 +3,7 @@ use crate::{
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
-        primitives::{menu_header, text, TextBuilder},
+        primitives::{menu_header, text},
     },
 };
 use bevy::prelude::*;
@@ -66,15 +66,12 @@ pub fn spawn_stats_shop_menu(
                 ]
             ),
             // Progress Points Display
-            (
-                Text::new(format!(
+            text(
+                format!(
                     "Available Progress Points: {}",
                     game_progress.progress_points
-                )),
-                TextFont {
-                    font_size: 32.0,
-                    ..default()
-                },
+                ),
+                32.0
             )
         ],
     ));
@@ -100,17 +97,12 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
                     ..default()
                 },
                 children![
-                    TextBuilder::new(
+                    text(
                         format!("{:?}: {}", stat_type, stat_type.get_value(stats)),
                         24.0
-                    )
-                    .build(),
+                    ),
                     (
-                        Text::new(stat_type.get_description()),
-                        TextFont {
-                            font_size: 16.0,
-                            ..default()
-                        },
+                        text(stat_type.get_description(), 16.0),
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
                     )
                 ]

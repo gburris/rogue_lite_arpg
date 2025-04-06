@@ -12,7 +12,7 @@ use super::ActiveShield;
 
 pub fn handle_projectile_reflection_collisions(
     mut shield_query: Query<
-        (&mut ActiveShield, &CollidingEntities, &Parent),
+        (&mut ActiveShield, &CollidingEntities, &ChildOf),
         With<ProjectileReflection>,
     >,
     mut projectile_query: Query<
@@ -21,7 +21,7 @@ pub fn handle_projectile_reflection_collisions(
     >,
     enemy_query: Query<&Enemy>,
 ) {
-    for (mut shield, colliding_entities, holder) in shield_query.iter_mut() {
+    for (mut shield, colliding_entities, child_of) in shield_query.iter_mut() {
         for &colliding_entity in colliding_entities.iter() {
             if shield.projectiles_reflected.contains(&colliding_entity) {
                 continue;
@@ -30,7 +30,7 @@ pub fn handle_projectile_reflection_collisions(
                 projectile_query.get_mut(colliding_entity)
             {
                 // If holder is enemy and it is reflected, it can now hurt the player!
-                let new_damage_source = if enemy_query.contains(holder.get()) {
+                let new_damage_source = if enemy_query.contains(child_of.parent) {
                     DamageSource::Enemy
                 } else {
                     DamageSource::Player

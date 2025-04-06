@@ -6,15 +6,18 @@ use crate::configuration::GameCollisionLayer;
 /// Marker component for the sensor added to the player, which must collide with an InteractionZone for
 /// a player interaction to be possible
 #[derive(Component)]
-#[require(Collider(|| Collider::circle(16.0)), Sensor, CollidingEntities)]
+#[require(Collider::circle(16.0), Sensor, CollidingEntities)]
 pub struct PlayerInteractionRadius;
 
 /// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
-/// this component will trigger the specified `[#InteractionEvent]` on the parent entity (ex. Open Chest, Talk to NPC, Item Pickup)
+/// this component will trigger the specified `[#InteractionEvent]` on the ChildOf entity (ex. Open Chest, Talk to NPC, Item Pickup)
 #[derive(Component)]
 #[require(
     Sensor,
-    CollisionLayers(|| CollisionLayers::new(GameCollisionLayer::Interaction, GameCollisionLayer::PlayerInteractionRadius))
+    CollisionLayers::new(
+        GameCollisionLayer::Interaction,
+        GameCollisionLayer::PlayerInteractionRadius
+    )
 )]
 pub enum InteractionZone {
     Circle { radius: f32 },
@@ -38,7 +41,7 @@ pub struct InteractionEvent {
 pub fn on_player_interaction_input(
     _: Trigger<PlayerInteractionInput>,
     mut commands: Commands,
-    interact_query: Query<(&Parent, &Transform), With<InteractionZone>>,
+    interact_query: Query<(&ChildOf, &Transform), With<InteractionZone>>,
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
 ) {
     let (player_transform, interact_collisions) = player_query.into_inner();
@@ -52,9 +55,9 @@ pub fn on_player_interaction_input(
             interact_query
                 .get(interact_entity)
                 .ok()
-                .map(|(parent, transform)| {
+                .map(|(child_of, transform)| {
                     let distance = (player_pos - transform.translation.truncate()).length();
-                    (interact_entity, parent.get(), distance)
+                    (interact_entity, child_of.parent, distance)
                 })
         })
         // Select colliding zone closest to player
@@ -77,12 +80,12 @@ pub fn on_interaction_zone_added(
     interact_query: Query<&InteractionZone>,
 ) {
     // We can unwrap since this is an OnAdd. Surely it exists right 0.o
-    let interact = interact_query.get(trigger.entity()).unwrap();
+    let interact = interact_query.get(trigger.target()).unwrap();
 
     let collider = match interact {
         InteractionZone::Circle { radius } => Collider::circle(*radius),
         InteractionZone::Square { length } => Collider::rectangle(*length, *length),
     };
 
-    commands.entity(trigger.entity()).insert((collider,));
+    commands.entity(trigger.target()).insert(collider);
 }

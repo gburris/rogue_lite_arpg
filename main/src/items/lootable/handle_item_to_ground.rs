@@ -14,17 +14,17 @@ use crate::{
 pub fn handle_item_ground_transition(
     trigger: Trigger<ItemDropEvent>,
     mut commands: Commands,
-    item_query: Query<&Parent, With<Item>>,
+    item_query: Query<&ChildOf, With<Item>>,
     mut parent_query: Query<(&Transform, &mut Inventory)>,
 ) {
-    let item_entity = trigger.entity();
+    let item_entity = trigger.target();
 
-    let Ok(parent) = item_query.get(item_entity) else {
+    let Ok(child_of) = item_query.get(item_entity) else {
         warn!("Lootable item missing parent");
         return;
     };
 
-    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(parent.get()) else {
+    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(child_of.parent) else {
         error!("Why does the parent not have a transform or inventory on drop");
         return;
     };
@@ -47,6 +47,6 @@ pub fn handle_item_ground_transition(
             Visibility::Visible,
             Transform::from_translation(final_position),
         ))
-        .remove_parent()
+        .remove::<ChildOf>()
         .with_child(InteractionZone::ITEM_PICKUP);
 }

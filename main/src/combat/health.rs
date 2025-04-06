@@ -52,17 +52,17 @@ pub fn on_healing_event(
     mut commands: Commands,
     mut healed_query: Query<&mut Health>,
 ) {
-    if let Ok(mut health) = healed_query.get_mut(healing_trigger.entity()) {
+    if let Ok(mut health) = healed_query.get_mut(healing_trigger.target()) {
         let actual_amount = health.add_health(healing_trigger.amount);
         commands.trigger_targets(
             HealedEvent {
                 amount: actual_amount,
             },
-            healing_trigger.entity(),
+            healing_trigger.target(),
         );
         info!(
             "Entity {} healed by {:.2} points",
-            healing_trigger.entity(),
+            healing_trigger.target(),
             actual_amount,
         );
     }

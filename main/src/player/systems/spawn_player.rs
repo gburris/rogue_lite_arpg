@@ -5,7 +5,7 @@ use crate::{
     combat::{damage::HurtBox, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{
         equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
@@ -50,10 +50,9 @@ pub fn spawn_player(
                     ..default()
                 },
             ),
+            children![shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0)],
         ))
         .with_children(|spawner| {
-            spawn_shadow(spawner, &shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
-
             // collider to bump into stuff
             spawner.spawn((
                 PlayerCollider,

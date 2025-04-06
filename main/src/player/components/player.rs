@@ -13,10 +13,10 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 #[derive(Component)]
 #[require(
     Character,
-    Health(|| Health::new(100.0)),
-    SimpleMotion(|| SimpleMotion::new(250.0)),
+    Health::new(100.0),
+    SimpleMotion::new(250.0),
     // Double the mass of npcs/enemies so the player can push them around more
-    Mass(|| Mass(100.0)),
+    Mass(100.0),
     IFrames,
 )]
 pub struct Player {

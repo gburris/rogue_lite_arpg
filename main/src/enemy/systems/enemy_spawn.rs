@@ -7,7 +7,7 @@ use crate::{
     combat::{damage::HurtBox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
@@ -105,10 +105,9 @@ fn spawn_enemy(
                         ..default()
                     },
                 ),
+                children![shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0)],
             ))
             .with_children(|spawner| {
-                spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
-
                 // collider to bump into stuff
                 spawner.spawn((
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),

@@ -5,11 +5,11 @@ mod display_case_slot;
 mod game_over_screen;
 mod input;
 mod loading;
-mod menu_helpers;
 mod npc;
 mod pause_menu;
 mod player_overlay;
 pub mod plugin;
+mod primitives;
 mod start_screen;
 
 // Be intentional about what we expose outside the module

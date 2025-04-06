@@ -10,7 +10,7 @@ use super::{lootable::on_lootable_item_interaction::on_lootable_item_interaction
 pub fn on_item_added(trigger: Trigger<OnAdd, Item>, mut commands: Commands) {
     // We do this to avoid having to manually add this observer to every item we create
     commands
-        .entity(trigger.entity())
+        .entity(trigger.target())
         .observe(on_lootable_item_interaction);
 }
 

@@ -13,7 +13,7 @@ pub fn handle_stat_button_interaction(
     game_progress: Res<GameProgress>,
     player_stats: Query<&PlayerStats>,
 ) {
-    let stats = player_stats.single();
+    let stats = player_stats.single().expect("Player stats not found");
 
     for (interaction, button, mut background_color) in &mut interaction_query {
         match *interaction {
@@ -48,7 +48,7 @@ pub fn handle_player_stat_change(
     mut game_progress: ResMut<GameProgress>,
     mut commands: Commands,
 ) {
-    let mut stats = player_stats.single_mut();
+    let mut stats = player_stats.single_mut().expect("Player stats not found");
 
     match (trigger.stat_type, trigger.is_increase) {
         (stat_type, true) if game_progress.progress_points > 0 => {
@@ -93,7 +93,7 @@ pub fn handle_stats_shop_ui_update(
 
     // Despawn existing menu
     for entity in stats_menu_query.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     // Respawn with updated values

@@ -15,35 +15,27 @@ use super::components::MapLayout;
  */
 #[derive(Component)]
 #[require(
-    RigidBody(|| RigidBody::Static),
-    Collider(|| Collider::rectangle(32.0, 64.0)),
+    RigidBody::Static,
+    Collider::rectangle(32.0, 64.0),
     CollidingEntities,
-    CollisionLayers(default_collision_layers),
+    CollisionLayers::new(
+        GameCollisionLayer::HighObstacle,
+        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
+    ),
     YSort
 )]
 pub struct Portal {
     pub map_layout: MapLayout,
 }
 
-fn default_collision_layers() -> CollisionLayers {
-    CollisionLayers::new(
-        GameCollisionLayer::HighObstacle,
-        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
-    )
-}
-
 pub fn handle_portal_collisions(
     mut commands: Commands,
     portal_query: Query<(Entity, &CollidingEntities), With<Portal>>,
-    player_collider: Query<Entity, With<PlayerCollider>>,
+    player_collider: Single<Entity, With<PlayerCollider>>,
 ) {
-    let Ok(player_collider_entity) = player_collider.get_single() else {
-        return;
-    };
-
     for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
-            if colliding_entity == player_collider_entity {
+            if colliding_entity == *player_collider {
                 commands.trigger_targets(SpawnZoneEvent, entity);
             }
         }
@@ -56,7 +48,7 @@ pub fn on_portal_entered(
     mut game_state: ResMut<NextState<AppState>>,
     portal_query: Query<&Portal>,
 ) {
-    if let Ok(portal) = portal_query.get(trigger.entity()) {
+    if let Ok(portal) = portal_query.get(trigger.target()) {
         commands.insert_resource(portal.map_layout.clone());
         game_state.set(AppState::SpawnZone);
     }

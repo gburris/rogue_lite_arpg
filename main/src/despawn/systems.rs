@@ -11,7 +11,7 @@ pub fn despawn_expired_entities(
         duration.0.tick(time.delta());
 
         if duration.0.finished() {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -26,7 +26,7 @@ pub fn despawn_all<T: Event, C: Component>(
 ) {
     for e in query.iter() {
         // debug!("Despawning entity: {}", e);
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }
 
@@ -35,5 +35,5 @@ pub fn despawn_all<T: Event, C: Component>(
  */
 pub fn despawn_single<C: Component>(mut commands: Commands, entity: Single<Entity, With<C>>) {
     // debug!("Despawning single entity: {}", *entity);
-    commands.entity(*entity).despawn_recursive();
+    commands.entity(*entity).despawn();
 }

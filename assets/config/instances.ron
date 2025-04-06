@@ -39,5 +39,15 @@ InstanceConfig(
             prefabs: [],
             floor_type: "Cobblestone",
         ),
+        "ShopKeepersRoom": InstanceType(
+            size_x_range: (25.0, 25.0),
+            size_y_range: (25.0, 25.0),
+            number_of_enemies_range: (0.0, 0.0),
+            num_exits: 1,
+            chest_range: (0.0, 0.0),
+            prefabs: [],
+            floor_type: "Cobblestone",
+            allowed_npcs: Some([Shopkeeper]),
+        ),
     }
 )

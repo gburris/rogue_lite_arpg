@@ -16,8 +16,10 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         "SwampWithALotOfEmptySquares",
         "LongHallway",
         "TreasureRoom",
+        "ShopKeepersRoom",
     ];
-    let weights = [40, 25, 25, 10];
+    //Fat weight on shop keepers room to show it off
+    let weights = [40, 25, 25, 10, 50];
 
     let dist = WeightedIndex::new(weights).unwrap();
     let selected_index = dist.sample(&mut rng);
@@ -57,7 +59,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         let prefab = match prefab_str.as_str() {
             "Temple" => PrefabType::Temple,
             "EmptySquare" => PrefabType::EmptySquare,
-            "NPCHub" => PrefabType::NPCHub, // Added since you mentioned it
+            "NPCHub" => PrefabType::NPCHub,
             _ => {
                 eprintln!("Unknown prefab type: {}", prefab_str);
                 continue;
@@ -73,6 +75,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .with_exits(instance_type.num_exits)
         .with_enemies(num_enemies)
         .with_enemy_types(instance_type.allowed_enemies.clone())
+        .with_npc_types(instance_type.allowed_npcs.clone())
         .build();
 
     MapLayout::from(map_data)

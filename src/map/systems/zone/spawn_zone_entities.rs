@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    configuration::assets::SpriteAssets,
-    configuration::ZLayer,
-    enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
-    map::{
+    configuration::{assets::SpriteAssets, ZLayer}, enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType}, map::{
         chest::SpawnChestsEvent,
         components::{
             EnemiesSpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent,
@@ -13,8 +10,7 @@ use crate::{
         },
         helpers::generator::generate_instance_layout,
         portal::Portal,
-    },
-    player::Player,
+    }, npc::components::NPCSpawnData, player::Player
 };
 
 fn convert_tiles_to_world_positions(
@@ -105,11 +101,33 @@ pub fn spawn_zone_entities(
         commands.trigger(SpawnChestsEvent(spawn_positions));
     }
 
-    // Spawn NPCs
     if let Some(npc_positions) = map_layout.markers.get_markers(MarkerType::NPCSpawns) {
         let spawn_positions =
             convert_tiles_to_world_positions(npc_positions, &world_config, &map_layout);
-        commands.trigger(NPCSpawnEvent(spawn_positions));
+
+        // Only spawn NPCs if valid types are provided and not empty
+        if let Some(types) = &map_layout.valid_npc_types {
+            if !types.is_empty() {
+                let npc_spawn_data_list = spawn_positions
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, pos)| {
+                        // Use modulo to cycle through the available types
+                        let npc_type = types[index % types.len()].clone();
+                        NPCSpawnData {
+                            position: pos,
+                            npc_type,
+                        }
+                    })
+                    .collect();
+
+                commands.trigger(NPCSpawnEvent(npc_spawn_data_list));
+            } else {
+                warn!("No NPCs will spawn: valid_npc_types is empty.");
+            }
+        } else {
+            warn!("No NPCs will spawn: valid_npc_types is None.");
+        }
     }
 
     // Handle player spawn

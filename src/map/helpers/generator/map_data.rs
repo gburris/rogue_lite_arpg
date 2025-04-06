@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 
+use crate::enemy::systems::enemy_spawn::EnemyType;
 use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
 
 use super::{
@@ -20,6 +21,7 @@ pub struct MapData {
     pub tiles: Vec<Vec<TileType>>,
     pub colliders: Vec<EnvironmentalMapCollider>,
     pub markers: HashMap<MarkerType, Vec<Vec2>>,
+    pub valid_enemy_types: Option<Vec<EnemyType>>,
 }
 
 impl MapData {
@@ -29,6 +31,7 @@ impl MapData {
             tiles: vec![vec![floor_type; size.y as usize]; size.x as usize],
             colliders: Vec::new(),
             markers: HashMap::new(),
+            valid_enemy_types: None, //None here means "All types are valid"
         }
     }
 
@@ -72,6 +75,7 @@ pub struct MapDataBuilder {
     num_enemies: Option<u32>,
     num_exits: u32,
     num_chests: Option<u32>,
+    enemy_types: Option<Vec<EnemyType>>,
 }
 
 impl MapDataBuilder {
@@ -83,6 +87,7 @@ impl MapDataBuilder {
             num_enemies: None,
             num_chests: None,
             num_exits: 0,
+            enemy_types: None,
         }
     }
 
@@ -98,6 +103,12 @@ impl MapDataBuilder {
 
     pub fn with_enemies(mut self, count: u32) -> Self {
         self.num_enemies = Some(count);
+        self
+    }
+
+    pub fn with_enemy_types(mut self, allowed_types: Option<Vec<EnemyType>>) -> Self {
+        warn!("Setting allowed types to {:?}", allowed_types);
+        self.enemy_types = allowed_types;
         self
     }
 
@@ -158,7 +169,8 @@ impl MapDataBuilder {
         //Add all other map markers
         let random_markers = self.generate_random_markers();
         merge_markers(&mut self.map_data.markers, random_markers);
-
+        //Add any special fields (what is going on - this feels really dumb - but do it so it works)
+        self.map_data.valid_enemy_types = self.enemy_types;
         self.map_data
     }
 }

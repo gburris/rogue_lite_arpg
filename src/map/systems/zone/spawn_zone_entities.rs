@@ -66,13 +66,32 @@ pub fn spawn_zone_entities(
         let spawn_positions =
             convert_tiles_to_world_positions(enemy_positions, &world_config, &map_layout);
         let mut rng = thread_rng();
-        let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
 
-        let enemy_spawn_data_list = spawn_positions
+        let default_enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
+        warn!(
+            "Setting allowed types to 2 {:?}",
+            map_layout.valid_enemy_types
+        );
+        let enemy_spawn_data_list: Vec<EnemySpawnData> = spawn_positions
             .into_iter()
-            .map(|pos| EnemySpawnData {
-                position: pos,
-                enemy_type: enemy_types[rng.gen_range(0..3)],
+            .map(|pos| {
+                let enemy_type = match &map_layout.valid_enemy_types {
+                    Some(types) if !types.is_empty() => {
+                        // Use the provided types if available and non-empty
+                        let index = rng.gen_range(0..types.len());
+                        types[index].clone()
+                    }
+                    _ => {
+                        // Fall back to defaults if None or empty
+                        let index = rng.gen_range(0..default_enemy_types.len());
+                        default_enemy_types[index].clone()
+                    }
+                };
+
+                EnemySpawnData {
+                    position: pos,
+                    enemy_type,
+                }
             })
             .collect();
 

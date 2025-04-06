@@ -4,7 +4,7 @@ use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
 use rand::Rng;
 
-use crate::map::components::{InstanceAssets, MapLayout, TileType};
+use crate::map::components::{InstanceAssets, MapLayout, TileType}; // Import your EnemyType enum
 
 use super::map_data::{MapDataBuilder, PrefabType};
 
@@ -72,6 +72,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .with_chests(num_chests)
         .with_exits(instance_type.num_exits)
         .with_enemies(num_enemies)
+        .with_enemy_types(instance_type.allowed_enemies.clone())
         .build();
 
     MapLayout::from(map_data)

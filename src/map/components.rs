@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::enemy::systems::enemy_spawn::EnemySpawnData;
+use crate::enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType};
 
 use super::helpers::generator::MapData;
 
@@ -83,6 +83,7 @@ pub struct MapLayout {
     pub tiles: Vec<Vec<TileType>>,
     pub markers: MapMarkers,
     pub environmental_colliders: Vec<EnvironmentalMapCollider>,
+    pub valid_enemy_types: Option<Vec<EnemyType>>,
 }
 
 impl From<MapData> for MapLayout {
@@ -93,6 +94,7 @@ impl From<MapData> for MapLayout {
             markers: MapMarkers {
                 markers: map_data.markers,
             },
+            valid_enemy_types: map_data.valid_enemy_types,
             environmental_colliders: map_data.colliders,
         }
     }
@@ -181,6 +183,7 @@ pub struct InstanceType {
     pub chest_range: (f32, f32),
     pub prefabs: Vec<String>,
     pub floor_type: String,
+    pub allowed_enemies: Option<Vec<EnemyType>>,
 }
 
 #[derive(Resource)]

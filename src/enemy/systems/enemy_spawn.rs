@@ -1,6 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     ai::SimpleMotion,
@@ -24,7 +24,7 @@ pub struct EnemySpawnData {
     pub enemy_type: EnemyType,
 }
 
-#[derive(Debug, Clone, Serialize, Component, Copy)]
+#[derive(Debug, Clone, Serialize, Component, Deserialize, Copy)]
 pub enum EnemyType {
     IceMage,
     Warrior,

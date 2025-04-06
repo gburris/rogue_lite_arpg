@@ -13,9 +13,10 @@ pub struct GameOverScreen;
 #[derive(Component)]
 pub struct RestartButton;
 
-pub fn create(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
+        StateScoped(AppState::GameOver),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -46,35 +47,23 @@ pub fn create(mut commands: Commands) {
                 BorderColor(Color::BLACK),
                 BorderRadius::MAX,
                 BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
-                children![Text::new("Restart")]
+                children![Text::new("Restart"), Observer::new(on_restart_clicked)]
             )
         ],
     ));
 }
 
-pub fn despawn_game_over_screen(
+/// Passes players current level to the next instance of the game, despawns everything and starts again
+fn on_restart_clicked(
+    _: Trigger<Pointer<Click>>,
     mut commands: Commands,
-    game_over_screen: Single<Entity, With<GameOverScreen>>,
-) {
-    // Despawn game over screen
-    commands.entity(*game_over_screen).despawn();
-}
-
-//Query the player level, add it to the restart event
-pub fn handle_restart_button(
-    mut restart_query: Query<&Interaction, (Changed<Interaction>, With<RestartButton>)>,
     mut game_state: ResMut<NextState<AppState>>,
     player: Single<&Player>,
-    mut commands: Commands,
 ) {
-    for interaction in &mut restart_query {
-        if *interaction == Interaction::Pressed {
-            commands.trigger(RestartEvent {
-                player_level: player.get_level(),
-            });
-            game_state.set(AppState::SpawnPlayer);
-        }
-    }
+    commands.trigger(RestartEvent {
+        player_level: player.get_level(),
+    });
+    game_state.set(AppState::SpawnPlayer);
 }
 
 pub fn on_restart_event_cleanup_zone(_: Trigger<RestartEvent>, mut commands: Commands) {

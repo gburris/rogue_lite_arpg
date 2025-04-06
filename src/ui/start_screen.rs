@@ -1,7 +1,10 @@
 use crate::labels::states::AppState;
 use bevy::prelude::*;
 
-use super::{constants::TITLE_FONT_SIZE, primitives::gold_border};
+use super::{
+    constants::TITLE_FONT_SIZE,
+    primitives::{gold_border, text},
+};
 
 #[derive(Component)]
 pub struct StartScreen;
@@ -12,9 +15,10 @@ pub struct StartScreenButton;
 #[derive(Component)]
 pub struct AnimatedText;
 
-pub fn spawn_start_screen(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     commands.spawn((
         StartScreen,
+        StateScoped(AppState::StartScreen),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -54,11 +58,7 @@ fn start_screen_title() -> impl Bundle {
             BorderColor(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
             children![(
-                Text::new("Baba Yaga"),
-                TextFont {
-                    font_size: TITLE_FONT_SIZE,
-                    ..default()
-                },
+                text("Baba Yaga", TITLE_FONT_SIZE),
                 TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
                 AnimatedText,
             )]
@@ -91,11 +91,7 @@ fn start_screen_body() -> impl Bundle {
             BorderColor(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
-                Text::new("BEGIN"),
-                TextFont {
-                    font_size: 48.0,
-                    ..default()
-                },
+                text("BEGIN", 48.0),
                 TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
             )]
         )],
@@ -115,23 +111,13 @@ fn start_screen_footer() -> impl Bundle {
         },
         BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
         children![(
-            Text::new("She is a mysterious witch and ogress from Slavic folklore"),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
+            text(
+                "She is a mysterious witch and ogress from Slavic folklore",
+                24.0
+            ),
             TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
         )],
     )
-}
-
-pub fn despawn_start_screen(
-    mut commands: Commands,
-    start_screen_query: Query<Entity, With<StartScreen>>,
-) {
-    for entity in start_screen_query.iter() {
-        commands.entity(entity).despawn();
-    }
 }
 
 // Enhanced button system with more dramatic hover effects

@@ -88,13 +88,7 @@ fn menu_button(config: MenuButtonConfig) -> impl Bundle {
         },
         BorderColor(Color::srgb(0.8, 0.8, 0.8)),
         BackgroundColor(DARK_GRAY_COLOR),
-        children![(
-            Text::new(button_text),
-            TextFont {
-                font_size: 32.0,
-                ..default()
-            },
-        )],
+        children![text(button_text, 32.0)],
     )
 }
 

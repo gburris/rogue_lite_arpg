@@ -3,7 +3,7 @@ use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{
     combat::projectile::components::Projectile,
-    configuration::time_control::RestartEvent,
+    configuration::time::RestartEvent,
     despawn::systems::*,
     economy::Gold,
     enemy::Enemy,

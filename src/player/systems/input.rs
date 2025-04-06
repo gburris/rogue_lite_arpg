@@ -78,7 +78,7 @@ pub fn player_input(
     }
 
     if direction.length() > 0.0 {
-        event_writer.send(PlayerMovementEvent { direction });
+        event_writer.write(PlayerMovementEvent { direction });
     } else {
         commands.trigger(PlayerStoppedEvent);
     }

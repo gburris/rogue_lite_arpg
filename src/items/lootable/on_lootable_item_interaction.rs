@@ -12,7 +12,7 @@ pub fn on_lootable_item_interaction(
     mut commands: Commands,
     player: Single<(Entity, &mut Inventory), With<Player>>,
 ) {
-    let item_entity = trigger.entity();
+    let item_entity = trigger.target();
 
     let (player_entity, mut inventory) = player.into_inner();
 

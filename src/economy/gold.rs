@@ -11,17 +11,17 @@ use crate::{
 #[derive(Component)]
 #[require(
     RigidBody,
-    Collider(|| Collider::circle(10.0)),
-    CollisionLayers(|| CollisionLayers::new(
+    Collider::circle(10.0),
+    CollisionLayers::new(
         [GameCollisionLayer::Grounded],
         [GameCollisionLayer::PlayerCollider, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
-    )),
+    ),
     CollidingEntities,
-    LockedAxes(|| LockedAxes::new().lock_rotation()),
-    LinearDamping(|| LinearDamping(2.0)),
+    LockedAxes = LockedAxes::new().lock_rotation(),
+    LinearDamping(2.0),
     TranslationExtrapolation,
     // Don't let gold move the player upon collision
-    Dominance(|| Dominance(-1)),
+    Dominance(-1),
     YSort,
 )]
 pub struct Gold {
@@ -32,16 +32,13 @@ pub fn handle_gold_collisions(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
     mut player_inventory: Single<&mut Inventory, With<Player>>,
-    player_collider: Query<Entity, With<PlayerCollider>>,
+    player_collider_entity: Single<Entity, With<PlayerCollider>>,
 ) {
-    let Ok(player_collider_entity) = player_collider.get_single() else {
-        return;
-    };
-
+    let pe = player_collider_entity.into_inner();
     for (gold_entity, gold, colliding_entities) in gold_query.iter() {
-        if colliding_entities.contains(&player_collider_entity) {
+        if colliding_entities.contains(&pe) {
             player_inventory.add_coins(gold.value);
-            commands.entity(gold_entity).despawn_recursive();
+            commands.entity(gold_entity).despawn();
         }
     }
 }

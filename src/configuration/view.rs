@@ -105,13 +105,13 @@ pub fn get_window_plugin() -> WindowPlugin {
 pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
-        OrthographicProjection {
+        Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::Fixed {
                 width: 960.0,
                 height: 540.0,
             },
             ..OrthographicProjection::default_2d()
-        },
+        }),
     ));
 }
 
@@ -120,13 +120,11 @@ const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
 pub fn camera_follow_system(
-    pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
-    mut cq: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
 ) {
-    let (Ok((player, aim)), Ok(mut camera)) = (pq.get_single(), cq.get_single_mut()) else {
-        return;
-    };
+    let (player, aim) = player.into_inner();
 
     let z = camera.translation.z;
     let aim_pos = Vec3::new(aim.position.x, aim.position.y, z);
@@ -143,12 +141,10 @@ pub fn camera_follow_system(
 }
 
 pub fn camera_debug_system(
-    pq: Query<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {
-    let Ok((player, aim)) = pq.get_single() else {
-        return;
-    };
+    let (player, aim) = player.into_inner();
 
     let player_pos = player.translation.xy();
     let target = player_pos.lerp(aim.position, TARGET_BIAS);
@@ -164,10 +160,10 @@ pub fn camera_debug_system(
         .resolution(64);
 }
 
-pub fn spawn_shadow(spawner: &mut ChildBuilder, shadows: &Shadows, y_offset: f32) {
-    spawner.spawn((
+pub fn shadow(shadows: &Shadows, y_offset: f32) -> impl Bundle {
+    (
         Mesh2d(shadows.character_shadow.handle.clone()),
         MeshMaterial2d(shadows.shadow_color.handle.clone()),
         Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
-    ));
+    )
 }

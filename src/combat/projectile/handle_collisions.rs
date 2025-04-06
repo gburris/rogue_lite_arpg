@@ -30,7 +30,7 @@ pub fn handle_projectile_collisions(
             if reflector_query.contains(colliding_entity) {
                 continue;
             }
-            commands.entity(projectile_entity).despawn_recursive();
+            commands.entity(projectile_entity).despawn();
         }
     }
 }

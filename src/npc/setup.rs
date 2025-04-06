@@ -6,7 +6,7 @@ use crate::{
     combat::{damage::HurtBox, Health},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        spawn_shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{equipment::Equipped, inventory::Inventory},
     map::NPCSpawnEvent,
@@ -67,11 +67,10 @@ pub fn spawn_npc(
                     ..default()
                 },
             ),
+            children![shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0)],
         ))
         .observe(on_player_interaction)
         .with_children(|spawner| {
-            spawn_shadow(spawner, shadows, CHARACTER_FEET_POS_OFFSET - 4.0);
-
             spawner.spawn((
                 InteractionZone::NPC,
                 Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),

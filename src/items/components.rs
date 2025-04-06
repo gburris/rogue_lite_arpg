@@ -11,7 +11,7 @@ use crate::{
 ///
 /// Ex.  All items can be dropped, so drop-related info can go here
 #[derive(Component)]
-#[require(Visibility(|| Visibility::Hidden))]
+#[require(Visibility::Hidden)]
 pub struct Item {
     pub value: i32,
     pub item_type: ItemType,
@@ -70,8 +70,8 @@ pub struct ItemDropEvent;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    LiveDuration(|| LiveDuration::new(10.0)),
-    YSort(|| YSort::from_offset(-6.0))
+    LiveDuration::new(10.0),
+    YSort::from_offset(-6.0)
 )]
 pub struct Lootable;
 
@@ -79,11 +79,11 @@ pub struct Lootable;
 #[require(
     CollidingEntities,
     Sensor,
-    Collider(|| Collider::circle(200.0)),
-    CollisionLayers(|| CollisionLayers::new(
+    Collider::circle(200.0),
+     CollisionLayers::new(
         GameCollisionLayer::Interaction,
         [GameCollisionLayer::PlayerInteractionRadius]
-    ))
+    )
 )]
 pub struct Magnet;
 
@@ -93,9 +93,7 @@ pub struct HealingTome {
 }
 
 #[derive(Component)]
-#[require(
-    LiveDuration(|| LiveDuration::new(1.0))
-)]
+#[require(LiveDuration::new(1.0))]
 pub struct HealingTomeSpellVisualEffect;
 
 #[derive(Component)]

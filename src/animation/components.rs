@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform_support::collections::HashMap, prelude::*};
 
 use crate::ai::state::{ActionState, FacingDirection};
 
@@ -47,7 +47,7 @@ pub struct AnimationData {
 
 impl Default for DefaultAnimationConfig {
     fn default() -> Self {
-        let mut animations = HashMap::new();
+        let mut animations = HashMap::default();
 
         // Define all animations
         animations.insert(

@@ -12,16 +12,12 @@ pub struct ProjectileBundle {
 
 #[derive(Component, Clone)]
 #[require(
-    LiveDuration(|| LiveDuration::new(1.0)),
+    LiveDuration::new(1.0),
     Sensor,
     RigidBody,
-    Collider(default_collider),
-    CollidingEntities,
+    Collider::rectangle(10.0, 10.0),
+    CollidingEntities
 )]
 pub struct Projectile {
     pub damage: (f32, f32),
-}
-
-fn default_collider() -> Collider {
-    Collider::rectangle(10.0, 10.0)
 }

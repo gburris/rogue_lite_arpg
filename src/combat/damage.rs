@@ -77,15 +77,15 @@ pub struct DefeatedEvent;
 pub fn on_damage_event(
     damage_trigger: Trigger<AttemptDamageEvent>,
     mut commands: Commands,
-    hurt_box_query: Query<&Parent, With<HurtBox>>,
+    hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&EffectsList>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
-    let damaged_entity = if let Ok(hurt_box_parent) = hurt_box_query.get(damage_trigger.entity()) {
-        hurt_box_parent.get()
-    } else if damaged_query.contains(damage_trigger.entity()) {
-        damage_trigger.entity()
+    let damaged_entity = if let Ok(child_of) = hurt_box_query.get(damage_trigger.target()) {
+        child_of.parent
+    } else if damaged_query.contains(damage_trigger.target()) {
+        damage_trigger.target()
     } else {
         return;
     };

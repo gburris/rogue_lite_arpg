@@ -12,7 +12,7 @@ pub fn on_healing_tome_visual_added(
     sprites: Res<SpriteAssets>,
     layouts: Res<SpriteSheetLayouts>,
 ) {
-    let entity = trigger.entity();
+    let entity = trigger.target();
 
     commands.entity(entity).insert((
         Sprite {

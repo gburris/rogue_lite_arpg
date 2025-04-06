@@ -26,7 +26,7 @@ pub fn on_player_defeated(
             GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)),
         ))
         .remove::<Health>()
-        .despawn_descendants();
+        .despawn_related::<Children>();
     player_motion.stop_moving();
     playing_state.set(PlayingState::Death);
 }

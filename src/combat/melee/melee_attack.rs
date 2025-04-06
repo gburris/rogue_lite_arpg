@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{prelude::*, utils::HashSet};
+use bevy::{platform_support::collections::HashSet, prelude::*};
 
 use crate::{
     ai::state::ActionState,
@@ -26,7 +26,7 @@ impl ActiveMeleeAttack {
         Self {
             initial_angle,
             duration: Timer::from_seconds(speed, TimerMode::Once),
-            entities_damaged: HashSet::new(),
+            entities_damaged: HashSet::default(),
         }
     }
 }
@@ -47,12 +47,12 @@ pub fn start_melee_attack(
 
 pub fn end_melee_attacks(
     mut commands: Commands,
-    mut query: Query<(Entity, &Parent, &ActiveMeleeAttack)>,
+    mut query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
     mut action_state_query: Query<&mut ActionState>,
 ) {
-    for (entity, parent, attack) in query.iter_mut() {
+    for (entity, child_of, attack) in query.iter_mut() {
         if attack.duration.just_finished() {
-            if let Ok(mut action_state) = action_state_query.get_mut(parent.get()) {
+            if let Ok(mut action_state) = action_state_query.get_mut(child_of.parent) {
                 // This handles the edge case of dying mid-swing
                 if *action_state != ActionState::Defeated {
                     *action_state = ActionState::Movement;

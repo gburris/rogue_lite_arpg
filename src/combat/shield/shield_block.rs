@@ -117,9 +117,9 @@ pub fn activate_shield(
     mut commands: Commands,
     shield_query: Query<&Shield>,
 ) {
-    if let Ok(activated_shield) = shield_query.get(trigger.entity()) {
+    if let Ok(activated_shield) = shield_query.get(trigger.target()) {
         commands
-            .entity(trigger.entity())
+            .entity(trigger.target())
             .insert(activated_shield.hitbox.clone())
             .insert(ProjectileReflection::collision_layers());
     } else {

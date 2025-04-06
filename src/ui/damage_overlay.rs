@@ -64,7 +64,7 @@ pub fn on_damage_overlay_amount(
 ) {
     spawn_health_change_text(
         &mut commands,
-        damage_trigger.entity(),
+        damage_trigger.target(),
         damage_trigger.damage,
         RED_COLOR,
         &damaged_query,
@@ -78,7 +78,7 @@ pub fn on_healing_overlay_amount(
 ) {
     spawn_health_change_text(
         &mut commands,
-        healing_trigger.entity(),
+        healing_trigger.target(),
         healing_trigger.amount,
         GREEN_COLOR,
         &healed_query,

@@ -1,6 +1,6 @@
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
-    picking::focus::HoverMap,
+    picking::hover::HoverMap,
     prelude::*,
 };
 
@@ -14,134 +14,98 @@ use crate::{
     ui::display_case_slot::{spawn_slot, DisplayCaseSlot},
 };
 
-use super::{constants::DARK_GRAY_ALPHA_COLOR, display_case_slot::DisplaySlotContext};
+use super::{
+    constants::DARK_GRAY_ALPHA_COLOR,
+    display_case_slot::DisplaySlotContext,
+    primitives::{text, width},
+};
 
-pub const VALUE_WIDTH: Val = Val::Px(60.0);
-pub const EQUIP_SLOT_WIDTH: Val = Val::Px(150.0);
+pub const VALUE_WIDTH: f32 = 60.0;
+pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
+
+/// Div that wraps all display slots, but not top level component
+#[derive(Component)]
+#[relationship(relationship_target = DisplayedBy)]
+pub struct DisplayCaseOf(Entity);
+
+#[derive(Component)]
+#[relationship_target(relationship = DisplayCaseOf)]
+pub struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
 #[derive(Event)]
 pub struct UpdateDisplayCaseEvent;
 
-/// Div that wraps all display slots, but not top level component
-#[derive(Component)]
-pub struct DisplayCaseContainer;
-
-pub fn spawn_display_case(builder: &mut ChildBuilder) -> Entity {
-    let mut scroll_container = Entity::PLACEHOLDER;
-
-    builder
-        .spawn((
-            Node {
-                height: Val::Px(800.0),
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-            BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
-        ))
-        .with_children(|parent| {
-            parent
-                .spawn((
+pub fn display_case(inventory_owner: Entity) -> impl Bundle {
+    (
+        Node {
+            height: Val::Px(800.0),
+            flex_direction: FlexDirection::Column,
+            ..default()
+        },
+        BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+        children![
+            // inventory header
+            (
+                Node {
+                    width: Val::Px(900.0),
+                    height: Val::Px(35.0),
+                    border: UiRect::vertical(Val::Px(2.0)),
+                    margin: UiRect::top(Val::Px(5.0)),
+                    padding: UiRect::all(Val::Px(5.0)),
+                    column_gap: Val::Px(5.0),
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                BorderColor::from(Color::WHITE),
+                children![
+                    width(30.0),
+                    text("Name", 18.0),
                     Node {
-                        width: Val::Px(900.0),
-                        height: Val::Px(35.0),
-                        border: UiRect::vertical(Val::Px(2.0)),
-                        margin: UiRect::top(Val::Px(5.0)),
-                        padding: UiRect::all(Val::Px(5.0)),
-                        column_gap: Val::Px(5.0),
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BorderColor::from(Color::WHITE),
-                ))
-                .with_children(|parent| {
-                    parent.spawn((Node {
-                        width: Val::Px(30.0),
-                        ..default()
-                    },));
-
-                    parent.spawn((
-                        Text::new("Name"),
-                        TextFont {
-                            font_size: 18.0,
-                            ..default()
-                        },
-                    ));
-
-                    parent.spawn((Node {
                         flex_grow: 1.0,
                         ..default()
-                    },));
-
-                    parent.spawn((
-                        Text::new("Equip Slot"),
-                        TextFont {
-                            font_size: 18.0,
-                            ..default()
-                        },
-                        Node {
-                            width: EQUIP_SLOT_WIDTH,
-                            ..default()
-                        },
-                    ));
-
-                    parent.spawn((
-                        Text::new("Value"),
-                        TextFont {
-                            font_size: 18.0,
-                            ..default()
-                        },
-                        Node {
-                            width: VALUE_WIDTH,
-                            ..default()
-                        },
-                    ));
-                });
-
-            scroll_container = parent
-                .spawn((
-                    DisplayCaseContainer,
-                    Node {
-                        overflow: Overflow::scroll_y(),
-                        flex_direction: FlexDirection::Column,
-                        ..default()
                     },
-                ))
-                .id();
-        });
-
-    scroll_container
+                    (text("Equip Slot", 18.0), width(EQUIP_SLOT_WIDTH)),
+                    (text("Value", 18.0), width(VALUE_WIDTH)),
+                ]
+            ),
+            // Container for items in inventory
+            (
+                DisplayCaseOf(inventory_owner),
+                Node {
+                    overflow: Overflow::scroll_y(),
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+            )
+        ],
+    )
 }
 
 pub fn on_display_case_updated(
     trigger: Trigger<UpdateDisplayCaseEvent>,
     mut commands: Commands,
     icons: Res<GameIcons>,
-    slot_container_query: Query<Option<&Children>, With<DisplayCaseContainer>>,
+    slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
     slots_querys: Query<(Entity, &DisplayCaseSlot)>,
-    inventory_query: Query<&Inventory>,
+    inventory_query: Query<(&Inventory, &DisplayedBy)>,
     items_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
 ) {
     // Get entities inventory
-    let inventory = inventory_query
-        .get(trigger.entity())
+    let (inventory, displayed_by) = inventory_query
+        .get(trigger.target())
         .expect("No inventory to update!");
 
-    let Some(display_case) = inventory.display_case else {
-        warn!("No display case attached to updated inventory");
-        return;
-    };
-
-    // Get children entities of DisplayCaseContainer which should all have a DisplayCaseSlot
+    // Get children entities of DisplayCaseOf which should all have a DisplayCaseSlot
     let display_case_children = slot_container_query
-        .get(display_case)
+        .get(displayed_by.0)
         .expect("Display case on inventory missing DisplayCaseContainer");
 
     // Despawn existing slots
     slots_querys
         .iter()
         .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(e)))
-        .for_each(|(e, _)| commands.entity(e).despawn_recursive());
+        .for_each(|(e, _)| commands.entity(e).despawn());
 
     // Get name and entity for each item in inventory
     let items = inventory
@@ -159,9 +123,9 @@ pub fn on_display_case_updated(
             },
         );
 
-    commands.entity(display_case).with_children(|builder| {
+    commands.entity(displayed_by.0).with_children(|builder| {
         for slot_context in items {
-            spawn_slot(builder, &icons, &slot_context);
+            spawn_slot(builder, &icons, slot_context);
         }
     });
 }

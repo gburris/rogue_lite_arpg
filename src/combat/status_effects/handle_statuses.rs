@@ -15,15 +15,15 @@ use super::{
  */
 pub fn on_effect_apply(trigger: Trigger<ApplyEffect>, mut commands: Commands) {
     for status in trigger.effect.clone() {
-        commands.trigger_targets(status, trigger.entity());
+        commands.trigger_targets(status, trigger.target());
     }
 }
 
 pub fn on_status_apply(trigger: Trigger<ApplyStatus>, mut commands: Commands) {
     let child = commands.spawn_empty().id();
 
-    // Attach status to parent
-    commands.entity(trigger.entity()).add_child(child);
+    // Attach status to ChildOf
+    commands.entity(trigger.target()).add_child(child);
 
     let mut child_commands = commands.entity(child);
 

@@ -9,17 +9,17 @@ use crate::{
 pub fn on_item_unequipped(
     trigger: Trigger<OnRemove, Equipped>,
     mut commands: Commands,
-    mut item_query: Query<(&Equippable, &Parent, &mut Visibility)>,
+    mut item_query: Query<(&Equippable, &ChildOf, &mut Visibility)>,
     mut holder_query: Query<(&ActionState, &mut Inventory)>,
 ) {
-    let item_entity = trigger.entity();
+    let item_entity = trigger.target();
 
-    let Ok((equippable, holder, mut visibility)) = item_query.get_mut(item_entity) else {
+    let Ok((equippable, child_of, mut visibility)) = item_query.get_mut(item_entity) else {
         info!("Item was despawned prior to unequip");
         return;
     };
 
-    let Ok((action_state, mut inventory)) = holder_query.get_mut(holder.get()) else {
+    let Ok((action_state, mut inventory)) = holder_query.get_mut(child_of.parent) else {
         info!("Holder was despawned prior to unequip");
         return;
     };

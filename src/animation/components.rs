@@ -2,11 +2,28 @@ use bevy::{prelude::*, utils::HashMap};
 
 use crate::ai::state::{ActionState, FacingDirection};
 
-#[derive(Component, Default)]
-pub struct AnimationIndices {
-    pub first: usize,
-    pub last: usize,
-    pub is_one_shot: bool,
+#[derive(Clone, Debug, Component)]
+pub enum AnimationIndices {
+    Cycle(std::iter::Cycle<std::ops::RangeInclusive<usize>>),
+    OneShot(std::ops::RangeInclusive<usize>),
+}
+impl AnimationIndices {
+    pub fn start(&self) -> usize {
+        match self {
+            // NOTE: this is not perfect, there's not easy way to access the original iterator
+            // start which is what I would want.
+            // TODO: Create helper functions to instantiate AnimationIndices types, that way it's
+            // easier to include metadata
+            AnimationIndices::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
+            AnimationIndices::OneShot(range_inclusive) => *range_inclusive.start(),
+        }
+    }
+}
+
+impl Default for AnimationIndices {
+    fn default() -> Self {
+        Self::OneShot(0..=0)
+    }
 }
 
 #[derive(Component, Deref, DerefMut, Default)]
@@ -198,11 +215,8 @@ impl DefaultAnimationConfig {
     pub fn get_indices(&self, state: ActionState, direction: FacingDirection) -> AnimationIndices {
         let animation = self.get_animation(state, direction);
         let first = animation.row * self.columns;
-        AnimationIndices {
-            first,
-            last: first + animation.frame_count - 1,
-            is_one_shot: false,
-        }
+        let last = first + animation.frame_count - 1;
+        AnimationIndices::Cycle((first..=last).cycle())
     }
 
     pub fn get_timer(&self, state: ActionState, direction: FacingDirection) -> Timer {

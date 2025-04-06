@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use serde::Deserialize;
 
 use crate::{
     character::Character,
@@ -13,7 +14,7 @@ use super::{on_game_guide_start, on_shop_keeper_store_open, on_stat_trainer_stor
 #[require(Character)]
 pub struct NPC;
 
-#[derive(Debug, Clone, Component, Copy)]
+#[derive(Debug, Clone, Deserialize, Component, Copy)]
 pub enum NPCType {
     Helper,
     Shopkeeper,
@@ -49,4 +50,10 @@ impl NPCType {
             NPCType::StatTrainer => on_stat_trainer_store_open,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NPCSpawnData {
+    pub position: Vec2,
+    pub npc_type: NPCType,
 }

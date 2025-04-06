@@ -23,16 +23,11 @@ pub fn spawn_npcs(
     atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
-    // Define the NPC types we want to spawn in order
-    let npc_types = [NPCType::Helper, NPCType::Shopkeeper, NPCType::StatTrainer];
-    let npc_spawn_positions = npc_spawn_trigger.0.clone();
-
-    // Zip the positions with NPC types and spawn them
-    for (spawn_position, &npc_type) in npc_spawn_positions.iter().zip(npc_types.iter()) {
+    for npc_data in npc_spawn_trigger.0.clone() {
         spawn_npc(
             &mut commands,
-            npc_type,
-            *spawn_position,
+            npc_data.npc_type,
+            npc_data.position,
             &sprites,
             &atlases,
             &shadows,

@@ -1,0 +1,25 @@
+EnemiesConfig(
+    enemies: {
+        "FireMage": EnemyDetails(
+            health: 20.0,
+            simple_motion_speed: 150.0,
+            sprite_path: "enemies/basic_enemy_sprite_sheet.png",
+            collider_size: (26.0, 42.0),
+            weapon: "fire_staff"
+        ),
+        "Warrior": EnemyDetails(
+            health: 40.0,
+            simple_motion_speed: 200.0,
+            sprite_path: "enemies/basic_enemy_sprite_sheet.png",
+            collider_size: (26.0, 42.0),
+            weapon: "sword"
+        ),
+        "IceMage": EnemyDetails(
+            health: 20.0,
+            simple_motion_speed: 100.0,
+            sprite_path: "enemies/basic_enemy_sprite_sheet.png",
+            collider_size: (26.0, 42.0),
+            weapon: "ice_staff"
+        )
+    }
+)

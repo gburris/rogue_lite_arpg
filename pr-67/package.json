@@ -1,0 +1,15 @@
+{
+  "name": "baba_yaga",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "baba_yaga_bg.wasm",
+    "baba_yaga.js",
+    "baba_yaga.d.ts"
+  ],
+  "main": "baba_yaga.js",
+  "types": "baba_yaga.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

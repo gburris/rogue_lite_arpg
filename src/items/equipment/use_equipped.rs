@@ -9,7 +9,7 @@ use crate::{
         health::AttemptHealingEvent,
         mana::ManaCost,
         melee::{start_melee_attack, MeleeWeapon},
-        projectile::{spawn::spawn_projectile, ProjectileWeapon},
+        projectile::{self, ProjectileWeapon},
         shield::{shield_block::deactivate_shield, ActiveShield},
         Mana,
     },
@@ -151,7 +151,7 @@ pub fn on_weapon_fired(
         return;
     };
 
-    spawn_projectile(
+    projectile::spawn(
         damage_source,
         &mut commands,
         holder_transform,

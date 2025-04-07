@@ -6,10 +6,7 @@ use crate::{
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
-        projectile::{
-            components::{Projectile, ProjectileBundle},
-            ProjectileWeapon,
-        },
+        projectile::{Projectile, ProjectileBundle, ProjectileWeapon},
         status_effects::{
             components::{BurningStatus, EffectsList, StatusType},
             events::ApplyStatus,

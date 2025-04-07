@@ -8,7 +8,10 @@ use crate::{
     labels::sets::InGameSet,
 };
 
-use super::shield::{handle_collisions::handle_projectile_reflection_collisions, shield_block::{activate_shield, update_active_shields}};
+use super::shield::{
+    handle_collisions::handle_projectile_reflection_collisions,
+    shield_block::{activate_shield, update_active_shields},
+};
 
 pub struct CombatPlugin;
 
@@ -31,7 +34,7 @@ impl Plugin for CombatPlugin {
                     )
                         .in_set(InGameSet::Simulation),
                     (
-                        projectile::handle_projectile_collisions,
+                        projectile::handle_collisions,
                         melee::handle_melee_collisions,
                     )
                         .in_set(InGameSet::Collision),

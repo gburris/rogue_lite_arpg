@@ -167,10 +167,6 @@ impl WorldSpaceConfig {
             + offset
     }
 }
-#[derive(Deserialize, Debug)]
-pub struct InstanceConfig {
-    pub instances: HashMap<String, InstanceType>,
-}
 
 #[derive(Deserialize, Debug)]
 pub struct InstanceType {

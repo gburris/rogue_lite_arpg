@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use baba_yaga::configuration::RuntimePlugin;
+use baba_yaga::configuration::AppRuntimePlugin;
 
 fn main() {
-    App::new().add_plugins(RuntimePlugin).run();
+    App::new().add_plugins(AppRuntimePlugin).run();
 }

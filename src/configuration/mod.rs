@@ -22,6 +22,7 @@ use crate::{
     ui::plugin::UIPlugin,
 };
 
+mod properties;
 // Re-export essential components/constants
 pub mod assets;
 pub mod collision;
@@ -33,7 +34,6 @@ pub use view::{shadow, YSort, ZLayer, CHARACTER_FEET_POS_OFFSET};
 
 // Setup plugin - primary configuration plugin
 pub struct SetupPlugin;
-
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(debug_assertions)]
@@ -74,7 +74,6 @@ impl Plugin for SetupPlugin {
 
 // Schedule plugin - configures system sets and ordering
 pub struct SchedulePlugin;
-
 impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
@@ -91,9 +90,9 @@ impl Plugin for SchedulePlugin {
         // Despawn Entitites -> Handle Input -> Simulation -> Update HUD / overlay UI -> Physics -> Collision
         .configure_sets(
             Update,
+            // since 0.13, apply_deferred is automatically applied when a command is run in a system
+            // this ensures entities are always despawned before this frames simulation runs
             (
-                // Since 0.13, apply_deferred is automatically applied when a command is run in a system
-                // This ensures entities are always despawned before this frames simulation runs
                 InGameSet::DespawnEntities,
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
@@ -148,25 +147,24 @@ impl Plugin for GamePlugins {
 //
 // We use apprt as the shared module name, and conditionally compile platform-specific code.
 // And now we only have to declare the cfg once at the top of the module.
-pub use apprt::RuntimePlugin;
+pub struct AppRuntimePlugin;
 
 #[cfg(target_arch = "wasm32")]
 mod apprt {
     use super::*;
-    pub struct WasmPlugins;
-    impl Plugin for WasmPlugins {
+    impl Plugin for AppRuntimePlugin {
+        // Add any WASM-specific plugins here
         fn build(&self, app: &mut App) {
             app.add_plugins(GamePlugins);
-            // Add any WASM-specific plugins here
         }
     }
 }
 mod apprt {
     use super::*;
-    pub struct RuntimePlugin;
-    impl Plugin for RuntimePlugin {
+    impl Plugin for AppRuntimePlugin {
+        // Add native-only plugins
         fn build(&self, app: &mut App) {
-            app.add_plugins(GamePlugins); // Add native-only plugins
+            app.add_plugins(GamePlugins);
         }
     }
 }

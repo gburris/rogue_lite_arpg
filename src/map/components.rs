@@ -167,10 +167,6 @@ impl WorldSpaceConfig {
             + offset
     }
 }
-#[derive(Deserialize, Debug)]
-pub struct InstanceConfig {
-    pub instances: HashMap<String, InstanceType>,
-}
 
 #[derive(Deserialize, Debug)]
 pub struct InstanceType {
@@ -183,7 +179,7 @@ pub struct InstanceType {
     pub floor_type: String,
 }
 
-#[derive(Resource)]
+#[derive(Deserialize, Resource)]
 pub struct InstanceAssets {
     pub instance_config: HashMap<String, InstanceType>,
 }

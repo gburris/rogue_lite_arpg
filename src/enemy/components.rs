@@ -15,16 +15,6 @@ pub struct Experience {
     pub base_exp: f32,
 }
 
-impl Default for Experience {
-    fn default() -> Self {
-        Experience { base_exp: 10.0 }
-    }
-}
-
-#[derive(Deserialize, Debug)]
-pub struct EnemiesConfig {
-    pub enemies: HashMap<String, EnemyDetails>,
-}
 #[derive(Deserialize, Debug)]
 pub struct EnemyDetails {
     pub simple_motion_speed: f32,
@@ -34,7 +24,7 @@ pub struct EnemyDetails {
     pub weapon: String,
 }
 
-#[derive(Resource)]
+#[derive(Deserialize, Resource)]
 pub struct EnemyAssets {
     pub enemy_config: HashMap<String, EnemyDetails>,
 }

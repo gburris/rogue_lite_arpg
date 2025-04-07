@@ -2,6 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use properties::PropertiesPlugin;
 
 use crate::{
     ai::AIPlugin,
@@ -18,10 +19,11 @@ use crate::{
     map::plugin::MapPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
-    progression::{components::GameProgress, plugin::ProgressionPlugin},
+    progression::plugin::ProgressionPlugin,
     ui::plugin::UIPlugin,
 };
 
+mod properties;
 // Re-export essential components/constants
 pub mod assets;
 pub mod collision;
@@ -33,7 +35,6 @@ pub use view::{shadow, YSort, ZLayer, CHARACTER_FEET_POS_OFFSET};
 
 // Setup plugin - primary configuration plugin
 pub struct SetupPlugin;
-
 impl Plugin for SetupPlugin {
     fn build(&self, app: &mut App) {
         #[cfg(debug_assertions)]
@@ -51,13 +52,6 @@ impl Plugin for SetupPlugin {
         );
 
         app
-            // setup avian physics (used for forces, collision, etc...)
-            // length unit here represents "pixels per meter" and is a way to indicate the
-            // scale of your world to the physics engine for performance optimizations
-            // In this case, our tiles are currently 32 x 32 pixels so we set the scale accordingly
-            .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
-            .insert_resource(GameProgress::default())
-            .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // initialize states
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()
@@ -74,7 +68,6 @@ impl Plugin for SetupPlugin {
 
 // Schedule plugin - configures system sets and ordering
 pub struct SchedulePlugin;
-
 impl Plugin for SchedulePlugin {
     fn build(&self, app: &mut App) {
         app.configure_sets(
@@ -91,9 +84,9 @@ impl Plugin for SchedulePlugin {
         // Despawn Entitites -> Handle Input -> Simulation -> Update HUD / overlay UI -> Physics -> Collision
         .configure_sets(
             Update,
+            // since 0.13, apply_deferred is automatically applied when a command is run in a system
+            // this ensures entities are always despawned before this frames simulation runs
             (
-                // Since 0.13, apply_deferred is automatically applied when a command is run in a system
-                // This ensures entities are always despawned before this frames simulation runs
                 InGameSet::DespawnEntities,
                 InGameSet::PlayerInput,
                 InGameSet::Simulation,
@@ -116,13 +109,19 @@ pub struct GamePlugins;
 
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
-        app
+        app.insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
+            .add_plugins((
+                PropertiesPlugin,
+                SetupPlugin,
+                AnimationPlugin,
+                SchedulePlugin,
+            ))
             // Third-party plugins
             .add_plugins((assets::AssetLoadingPlugin, TilemapPlugin))
             // Core systems
             .add_plugins((
+                PhysicsPlugins::default().with_length_unit(32.0), // 32 pixels per meter
                 DespawnPlugin,
                 AIPlugin,
                 CombatPlugin,
@@ -148,25 +147,24 @@ impl Plugin for GamePlugins {
 //
 // We use apprt as the shared module name, and conditionally compile platform-specific code.
 // And now we only have to declare the cfg once at the top of the module.
-pub use apprt::RuntimePlugin;
+pub struct AppRuntimePlugin;
 
 #[cfg(target_arch = "wasm32")]
 mod apprt {
     use super::*;
-    pub struct WasmPlugins;
-    impl Plugin for WasmPlugins {
+    impl Plugin for AppRuntimePlugin {
+        // Add any WASM-specific plugins here
         fn build(&self, app: &mut App) {
             app.add_plugins(GamePlugins);
-            // Add any WASM-specific plugins here
         }
     }
 }
 mod apprt {
     use super::*;
-    pub struct RuntimePlugin;
-    impl Plugin for RuntimePlugin {
+    impl Plugin for AppRuntimePlugin {
+        // Add native-only plugins
         fn build(&self, app: &mut App) {
-            app.add_plugins(GamePlugins); // Add native-only plugins
+            app.add_plugins(GamePlugins);
         }
     }
 }

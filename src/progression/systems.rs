@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::configuration::time_control::RestartEvent;
+use crate::configuration::time::RestartEvent;
 
 use super::GameProgress;
 

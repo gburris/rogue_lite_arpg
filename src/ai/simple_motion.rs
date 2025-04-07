@@ -62,12 +62,6 @@ impl SimpleMotion {
     }
 }
 
-impl Default for SimpleMotion {
-    fn default() -> Self {
-        SimpleMotion::new(10.0)
-    }
-}
-
 /// Converts simulation motion into physics "real" motion (using avian linear velocity)
 pub fn to_velocity(mut query: Query<(&SimpleMotion, &mut LinearVelocity)>) {
     for (motion, mut velocity) in query.iter_mut() {

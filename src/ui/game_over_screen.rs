@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone,
+    configuration::time::RestartEvent, labels::states::AppState, map::CleanupZone,
     player::Player,
 };
 

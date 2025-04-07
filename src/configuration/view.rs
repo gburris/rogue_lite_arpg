@@ -63,14 +63,13 @@ pub enum ZLayer {
     Ground,
     OnGround,
     InAir,
-
     SpriteBackground,
     BehindSprite,
     AboveSprite,
 }
 
 impl ZLayer {
-    pub fn z(&self) -> f32 {
+    pub const fn z(&self) -> f32 {
         match self {
             ZLayer::Ground => 0.0,
             ZLayer::OnGround => 5.0,

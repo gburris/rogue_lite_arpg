@@ -2,6 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use properties::PropertiesPlugin;
 
 use crate::{
     ai::AIPlugin,
@@ -18,7 +19,7 @@ use crate::{
     map::plugin::MapPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
-    progression::{components::GameProgress, plugin::ProgressionPlugin},
+    progression::plugin::ProgressionPlugin,
     ui::plugin::UIPlugin,
 };
 
@@ -51,13 +52,6 @@ impl Plugin for SetupPlugin {
         );
 
         app
-            // setup avian physics (used for forces, collision, etc...)
-            // length unit here represents "pixels per meter" and is a way to indicate the
-            // scale of your world to the physics engine for performance optimizations
-            // In this case, our tiles are currently 32 x 32 pixels so we set the scale accordingly
-            .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
-            .insert_resource(GameProgress::default())
-            .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // initialize states
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()
@@ -115,13 +109,19 @@ pub struct GamePlugins;
 
 impl Plugin for GamePlugins {
     fn build(&self, app: &mut App) {
-        app
+        app.insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
+            .add_plugins((
+                PropertiesPlugin,
+                SetupPlugin,
+                AnimationPlugin,
+                SchedulePlugin,
+            ))
             // Third-party plugins
             .add_plugins((assets::AssetLoadingPlugin, TilemapPlugin))
             // Core systems
             .add_plugins((
+                PhysicsPlugins::default().with_length_unit(32.0), // 32 pixels per meter
                 DespawnPlugin,
                 AIPlugin,
                 CombatPlugin,

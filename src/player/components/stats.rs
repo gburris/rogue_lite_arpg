@@ -9,18 +9,6 @@ pub struct PlayerStats {
     pub luck: u32,      //Drop rate
 }
 
-impl Default for PlayerStats {
-    fn default() -> Self {
-        PlayerStats {
-            agility: 1,
-            strength: 1,
-            dexterity: 1,
-            intellect: 1,
-            luck: 99,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum DisplayableStatType {
     Agility,

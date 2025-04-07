@@ -179,7 +179,7 @@ pub struct InstanceType {
     pub floor_type: String,
 }
 
-#[derive(Resource)]
+#[derive(Deserialize, Resource)]
 pub struct InstanceAssets {
     pub instance_config: HashMap<String, InstanceType>,
 }

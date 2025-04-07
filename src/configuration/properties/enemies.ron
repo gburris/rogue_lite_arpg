@@ -1,5 +1,5 @@
-EnemiesConfig(
-    enemies: {
+EnemyAssets(
+    enemy_config: {
         "FireMage": EnemyDetails(
             health: 20.0,
             simple_motion_speed: 150.0,

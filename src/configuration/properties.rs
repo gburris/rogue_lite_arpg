@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bevy::{
     prelude::*,
     scene::ron::{self},
@@ -7,49 +5,64 @@ use bevy::{
 use serde::Deserialize;
 
 use crate::{
-    enemy::{EnemyAssets, EnemyDetails},
-    map::components::{InstanceAssets, InstanceType},
+    enemy::{EnemyAssets, Experience},
+    map::components::InstanceAssets,
+    player::PlayerStats,
+    progression::GameProgress,
 };
 
 pub struct PropertiesPlugin;
 
 impl Plugin for PropertiesPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<InstanceAssets>()
-            .init_resource::<EnemyAssets>();
+        app.insert_ron::<InstanceAssets>(include_bytes!("properties/instances.ron"))
+            .insert_ron::<EnemyAssets>(include_bytes!("properties/enemies.ron"));
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct EnemiesConfig {
-    pub enemies: HashMap<String, EnemyDetails>,
-}
-fn load_enemy_data() -> EnemiesConfig {
-    ron::de::from_bytes(include_bytes!("properties/enemies.ron"))
-        .expect("Failed to load enemy properties from provided path")
-}
-impl Default for EnemyAssets {
+impl Default for GameProgress {
     fn default() -> Self {
-        let enemy_config: EnemiesConfig = load_enemy_data();
-        Self {
-            enemy_config: enemy_config.enemies,
+        GameProgress {
+            game_completed_counter: 0,
+            death_counter: 0,
+            total_career_level: 0,
+            progress_points: 5,
+            base_stats: PlayerStats::default(),
         }
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct InstanceConfig {
-    pub instances: HashMap<String, InstanceType>,
-}
-impl Default for InstanceAssets {
+impl Default for PlayerStats {
     fn default() -> Self {
-        let instance_config: InstanceConfig = load_instance_config();
-        Self {
-            instance_config: instance_config.instances,
+        PlayerStats {
+            agility: 1,
+            strength: 1,
+            dexterity: 1,
+            intellect: 1,
+            luck: 99,
         }
     }
 }
-fn load_instance_config() -> InstanceConfig {
-    ron::de::from_bytes(include_bytes!("properties/instances.ron"))
-        .expect("Failed to load enemy properties from provided path")
+
+impl Default for Experience {
+    fn default() -> Self {
+        Experience { base_exp: 10.0 }
+    }
+}
+
+trait RonResourceExt {
+    fn insert_ron<'de, T>(&mut self, data: &'static [u8]) -> &mut Self
+    where
+        T: Deserialize<'de> + Resource;
+}
+impl RonResourceExt for App {
+    fn insert_ron<'de, T>(&mut self, data: &'static [u8]) -> &mut Self
+    where
+        T: Deserialize<'de> + Resource,
+    {
+        let data =
+            ron::de::from_bytes::<T>(data).expect("failed to load properties from provided path");
+        self.insert_resource(data);
+        self
+    }
 }

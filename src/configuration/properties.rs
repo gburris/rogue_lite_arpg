@@ -5,6 +5,7 @@ use bevy::{
 use serde::Deserialize;
 
 use crate::{
+    ai::SimpleMotion,
     enemy::{EnemyAssets, Experience},
     map::components::InstanceAssets,
     player::PlayerStats,
@@ -47,6 +48,12 @@ impl Default for PlayerStats {
 impl Default for Experience {
     fn default() -> Self {
         Experience { base_exp: 10.0 }
+    }
+}
+
+impl Default for SimpleMotion {
+    fn default() -> Self {
+        SimpleMotion::new(10.0)
     }
 }
 

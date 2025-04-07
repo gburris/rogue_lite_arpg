@@ -50,6 +50,8 @@ impl Default for Experience {
     }
 }
 
+/// This trait is used to load properties from a RON file.
+/// The RON file is included in the binary using the `include_bytes!` macro.
 trait RonResourceExt {
     fn insert_ron<'de, T>(&mut self, data: &'static [u8]) -> &mut Self
     where
@@ -62,6 +64,33 @@ impl RonResourceExt for App {
     {
         let data =
             ron::de::from_bytes::<T>(data).expect("failed to load properties from provided path");
+        self.insert_resource(data);
+        self
+    }
+}
+
+// NOTE: Alternative way to load from RON is to have `impl RonData` for each struct
+// and use `ron::de::from_bytes::<T>(T::DATA)` instead of `include_bytes!`.
+#[allow(dead_code)]
+trait RonData {
+    #[allow(non_snake_case)]
+    const DATA: &'static [u8];
+}
+
+#[allow(dead_code)]
+trait InitRonResourceExt {
+    fn init_ron<'de, T>(&mut self) -> &mut Self
+    where
+        T: Deserialize<'de> + Resource + RonData;
+}
+
+impl InitRonResourceExt for App {
+    fn init_ron<'de, T>(&mut self) -> &mut Self
+    where
+        T: Deserialize<'de> + Resource + RonData,
+    {
+        let data = ron::de::from_bytes::<T>(T::DATA)
+            .expect("failed to load properties from provided path");
         self.insert_resource(data);
         self
     }

@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::ui::{constants::TITLE_FONT_SIZE, primitives::gold_border};
+use crate::ui::{
+    constants::TITLE_FONT_SIZE,
+    primitives::{gold_border, text},
+};
 
 #[derive(Component)]
 pub struct LoadScreen;
@@ -58,11 +61,7 @@ fn title_section() -> impl Bundle {
             BorderColor(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
             children![(
-                Text::new("Loading Instance"),
-                TextFont {
-                    font_size: TITLE_FONT_SIZE,
-                    ..default()
-                },
+                text("Loading Instance", TITLE_FONT_SIZE),
                 TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
                 AnimatedText,
             )]
@@ -95,11 +94,7 @@ fn body_section() -> impl Bundle {
             BorderColor(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
-                Text::new("Loading Instance"),
-                TextFont {
-                    font_size: 48.0,
-                    ..default()
-                },
+                text("Loading Instance", 48.0),
                 TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
             )]
         )],
@@ -120,11 +115,7 @@ fn footer_section() -> impl Bundle {
         },
         BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
         children![(
-            Text::new("I'm loading"),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
+            text("I'm loading", 24.0),
             TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
         )],
     )

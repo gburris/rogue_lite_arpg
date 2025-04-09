@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 #[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
+#[states(scoped_entities)]
 pub enum AppState {
     #[default]
     StartScreen,

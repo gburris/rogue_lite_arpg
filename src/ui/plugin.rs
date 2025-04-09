@@ -19,14 +19,7 @@ impl Plugin for UIPlugin {
             .add_plugins(NPCPauseScreensPlugin)
             .add_plugins(LoadingUIPlugin)
             //Start screen
-            .add_systems(
-                OnEnter(AppState::StartScreen),
-                start_screen::spawn_start_screen,
-            )
-            .add_systems(
-                OnExit(AppState::StartScreen),
-                start_screen::despawn_start_screen,
-            )
+            .add_systems(OnEnter(AppState::StartScreen), start_screen::spawn)
             .add_systems(
                 Update,
                 (start_screen::button_system, start_screen::animate_text)
@@ -56,17 +49,9 @@ impl Plugin for UIPlugin {
             .add_observer(damage_overlay::on_damage_overlay_amount)
             .add_observer(damage_overlay::on_healing_overlay_amount)
             // Game over systems
-            .add_systems(OnEnter(AppState::GameOver), game_over_screen::create)
-            .add_systems(
-                OnExit(AppState::GameOver),
-                game_over_screen::despawn_game_over_screen,
-            )
+            .add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn)
             .add_observer(game_over_screen::on_restart_event_cleanup_zone)
             .add_observer(player_overlay::on_equipment_used)
-            .add_observer(player_overlay::on_equipment_use_failed)
-            .add_systems(
-                Update,
-                game_over_screen::handle_restart_button.run_if(in_state(AppState::GameOver)),
-            );
+            .add_observer(player_overlay::on_equipment_use_failed);
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     player::PlayerStats,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
-        primitives::menu_header,
+        primitives::{menu_header, text},
     },
 };
 
@@ -15,8 +15,6 @@ pub struct StatsMenu;
 pub struct StatsDisplay;
 
 pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
-    debug!("spawn_stats_menu called");
-
     if let Ok(stats) = player_stats.single() {
         commands.spawn((
             StatsMenu,
@@ -42,11 +40,11 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                     },
                     BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                     children![
-                        spawn_stat_row("Agility", stats.agility, "Movement speed, roll range"),
-                        spawn_stat_row("Strength", stats.strength, "Melee swing damage"),
-                        spawn_stat_row("Dexterity", stats.dexterity, "Critical Strike Chance"),
-                        spawn_stat_row("Intellect", stats.intellect, "Spell damage"),
-                        spawn_stat_row("Luck", stats.luck, "Drop rate"),
+                        stat_row("Agility", stats.agility, "Movement speed, roll range"),
+                        stat_row("Strength", stats.strength, "Melee swing damage"),
+                        stat_row("Dexterity", stats.dexterity, "Critical Strike Chance"),
+                        stat_row("Intellect", stats.intellect, "Spell damage"),
+                        stat_row("Luck", stats.luck, "Drop rate"),
                     ],
                 )
             ],
@@ -54,7 +52,11 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
     }
 }
 
-fn spawn_stat_row(stat_name: &str, stat_value: u32, description: &str) -> impl Bundle {
+fn stat_row(
+    stat_name: impl Into<String>,
+    stat_value: u32,
+    description: impl Into<String>,
+) -> impl Bundle {
     (
         Node {
             width: Val::Percent(100.0),
@@ -75,19 +77,9 @@ fn spawn_stat_row(stat_name: &str, stat_value: u32, description: &str) -> impl B
                     ..default()
                 },
                 children![
+                    text(stat_name, 24.0),
                     (
-                        Text::new(stat_name),
-                        TextFont {
-                            font_size: 24.0,
-                            ..default()
-                        },
-                    ),
-                    (
-                        Text::new(description),
-                        TextFont {
-                            font_size: 16.0,
-                            ..default()
-                        },
+                        text(description, 16.0),
                         Node {
                             margin: UiRect::top(Val::Px(4.0)),
                             ..default()
@@ -96,13 +88,7 @@ fn spawn_stat_row(stat_name: &str, stat_value: u32, description: &str) -> impl B
                 ]
             ),
             // right side
-            (
-                Text::new(format!("{}/99", stat_value)),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
-            )
+            text(format!("{}/99", stat_value), 24.0)
         ],
     )
 }

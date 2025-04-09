@@ -425,20 +425,18 @@ pub fn on_equipment_use_failed(
         .find(|(_, action_box)| action_box.slot == trigger.slot)
     {
         if trigger.reason == EquipmentUseFailure::OutOfMana {
-            commands.entity(box_entity).with_children(|parent| {
-                parent.spawn((
-                    ErrorFlash,
-                    Node {
-                        width: Val::Px(ACTION_BOX_INTERIOR_SIZE),
-                        height: Val::Px(ACTION_BOX_INTERIOR_SIZE),
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        top: Val::Px(0.0),
-                        ..default()
-                    },
-                    BackgroundColor::from(ERROR_FLASH_COLOR),
-                ));
-            });
+            commands.entity(box_entity).with_child((
+                ErrorFlash,
+                Node {
+                    width: Val::Px(ACTION_BOX_INTERIOR_SIZE),
+                    height: Val::Px(ACTION_BOX_INTERIOR_SIZE),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(0.0),
+                    top: Val::Px(0.0),
+                    ..default()
+                },
+                BackgroundColor::from(ERROR_FLASH_COLOR),
+            ));
         }
     }
 }
@@ -452,7 +450,7 @@ pub fn update_cooldowns(
     }
 }
 
-pub fn get_action_bar_sprite(sprite: &Sprite) -> Sprite {
+fn get_action_bar_sprite(sprite: &Sprite) -> Sprite {
     match &sprite.texture_atlas {
         Some(atlas) => Sprite {
             image: sprite.image.clone(),

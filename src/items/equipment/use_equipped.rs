@@ -8,7 +8,7 @@ use crate::{
         health::AttemptHealingEvent,
         mana::ManaCost,
         melee::{start_melee_attack, MeleeWeapon},
-        projectile::{self, ProjectileWeapon},
+        projectile::{self, Projectiles},
         shield::{shield_block::deactivate_shield, ActiveShield},
         Mana,
     },
@@ -143,15 +143,17 @@ fn handle_equipment_activation(
 pub fn on_weapon_fired(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    weapon_query: Query<&ProjectileWeapon>,
-    holder_query: Query<(&Transform, &Vision)>,
+    weapon_query: Query<&Projectiles>,
+    holder_query: Query<(&Transform, &AimPosition)>,
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
     let mut damage_source = DamageSource::Player;
-    let Ok(projectile_weapon) = weapon_query.get(fired_trigger.target()) else {
+    let Ok(projectiles) = weapon_query.get(fired_trigger.target()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
+    info!("Firing weapon");
+
     if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
         damage_source = DamageSource::Enemy;
     }
@@ -160,13 +162,22 @@ pub fn on_weapon_fired(
         return;
     };
 
-    projectile::spawn(
-        damage_source,
-        &mut commands,
-        holder_transform,
-        holder_vision.aim_direction,
-        projectile_weapon,
-    );
+    info!("Spawning projectile");
+
+    let projectile = projectiles.iter().next().unwrap();
+
+    commands
+        .entity(fired_trigger.target())
+        .remove::<Projectiles>();
+
+    commands.entity(projectile).clone_and_spawn();
+    // projectile::spawn(
+    //     damage_source,
+    //     &mut commands,
+    //     holder_transform,
+    //     holder_aim.position,
+    //     projectiles,
+    // );
 }
 
 pub fn on_weapon_melee(

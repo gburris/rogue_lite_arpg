@@ -12,7 +12,7 @@ use crate::{
     configuration::GameCollisionLayer,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum DamageSource {
     Player,
     Enemy,
@@ -38,8 +38,8 @@ impl From<DamageSource> for LayerMask {
 
 #[derive(Copy, Clone)]
 pub enum Damage {
-    Range((f32, f32)),
     Single(f32),
+    Range((f32, f32)),
 }
 
 impl Damage {
@@ -48,6 +48,12 @@ impl Damage {
             Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
             Damage::Single(amount) => amount,
         }
+    }
+}
+
+impl Default for Damage {
+    fn default() -> Self {
+        Self::Single(0.0)
     }
 }
 

@@ -6,9 +6,9 @@ use crate::{
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
-        projectile::{Projectile, ProjectileBundle, ProjectileWeapon},
+        projectile::{fireball, icicle, Projectiles},
         status_effects::{
-            components::{BurningStatus, EffectsList, StatusType},
+            components::{EffectsList, StatusType},
             events::ApplyStatus,
         },
     },
@@ -71,33 +71,10 @@ pub fn spawn_fire_staff(
     sprites: &SpriteAssets,
     texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
-    let fireball = ProjectileBundle {
-        projectile: Projectile {
-            damage: (5.0, 10.0),
-        },
-        effects_list: EffectsList {
-            effects: vec![ApplyStatus {
-                status: StatusType::Burning(BurningStatus::default()),
-                duration: 2.0,
-            }],
-        },
-        sprite: Sprite::from_atlas_image(
-            sprites.fire_ball.clone(),
-            TextureAtlas {
-                layout: texture_layouts.fireball_layout.clone(),
-                index: 0,
-            },
-        ),
-    };
-
     commands
         .spawn((
-            ProjectileWeapon {
-                projectile: fireball,
-                projectile_speed: 600.0,
-                spread: 0.0,
-            },
             Name::new("Staff of Flames"),
+            Projectiles::spawn_one(fireball(sprites, texture_layouts)),
             Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
@@ -112,33 +89,10 @@ pub fn spawn_ice_staff(
     sprites: &SpriteAssets,
     texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
-    let icicle_projectile = ProjectileBundle {
-        projectile: Projectile {
-            damage: (12.0, 25.0),
-        }, // big damage
-        effects_list: EffectsList {
-            effects: vec![ApplyStatus {
-                status: StatusType::Frozen,
-                duration: 2.0,
-            }],
-        },
-        sprite: Sprite::from_atlas_image(
-            sprites.ice_bolt.clone(),
-            TextureAtlas {
-                layout: texture_layouts.ice_bolt_layout.clone(),
-                index: 0,
-            },
-        ),
-    };
-
     commands
         .spawn((
-            ProjectileWeapon {
-                projectile: icicle_projectile,
-                projectile_speed: 500.0,
-                spread: 0.0,
-            },
             Name::new("Staff of Ice"),
+            Projectiles::spawn_one(icicle(sprites, texture_layouts)),
             Item::new(2050, ItemType::Staff),
             ManaCost(20.0), // big mana cost
             Equippable {

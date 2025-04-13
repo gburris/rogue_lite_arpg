@@ -4,7 +4,9 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 
+use crate::enemy::systems::enemy_spawn::EnemyType;
 use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
+use crate::npc::components::NPCType;
 
 use super::{
     prefabs::{prefab::Prefab, EmptySquare, Hub, Temple},
@@ -20,6 +22,8 @@ pub struct MapData {
     pub tiles: Vec<Vec<TileType>>,
     pub colliders: Vec<EnvironmentalMapCollider>,
     pub markers: HashMap<MarkerType, Vec<Vec2>>,
+    pub valid_enemy_types: Option<Vec<EnemyType>>,
+    pub valid_npc_types: Option<Vec<NPCType>>,
 }
 
 impl MapData {
@@ -29,6 +33,8 @@ impl MapData {
             tiles: vec![vec![floor_type; size.y as usize]; size.x as usize],
             colliders: Vec::new(),
             markers: HashMap::new(),
+            valid_enemy_types: None, //None here means "All types are valid"
+            valid_npc_types: None,   //None here means "no NPCs"
         }
     }
 
@@ -72,6 +78,8 @@ pub struct MapDataBuilder {
     num_enemies: Option<u32>,
     num_exits: u32,
     num_chests: Option<u32>,
+    enemy_types: Option<Vec<EnemyType>>,
+    npc_types: Option<Vec<NPCType>>,
 }
 
 impl MapDataBuilder {
@@ -83,6 +91,8 @@ impl MapDataBuilder {
             num_enemies: None,
             num_chests: None,
             num_exits: 0,
+            enemy_types: None,
+            npc_types: None,
         }
     }
 
@@ -98,6 +108,16 @@ impl MapDataBuilder {
 
     pub fn with_enemies(mut self, count: u32) -> Self {
         self.num_enemies = Some(count);
+        self
+    }
+
+    pub fn with_enemy_types(mut self, allowed_types: Option<Vec<EnemyType>>) -> Self {
+        self.enemy_types = allowed_types;
+        self
+    }
+
+    pub fn with_npc_types(mut self, allowed_types: Option<Vec<NPCType>>) -> Self {
+        self.npc_types = allowed_types;
         self
     }
 
@@ -131,6 +151,16 @@ impl MapDataBuilder {
             markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
+        if let Some(npc_types) = &self.npc_types {
+            if !npc_types.is_empty() {
+                // Calculate one position per NPC type
+                let num_npcs = npc_types.len() as u32;
+                let npc_positions =
+                    find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_npcs);
+                markers.insert(MarkerType::NPCSpawns, npc_positions);
+            }
+        }
+
         // Always generate entrance/exit positions for random layouts
         let (player_pos, exit_positions) =
             generate_entrance_exit_positions(self.size, self.num_exits);
@@ -158,7 +188,9 @@ impl MapDataBuilder {
         //Add all other map markers
         let random_markers = self.generate_random_markers();
         merge_markers(&mut self.map_data.markers, random_markers);
-
+        //Add any special fields (what is going on - this feels really dumb - but do it so it works)
+        self.map_data.valid_enemy_types = self.enemy_types;
+        self.map_data.valid_npc_types = self.npc_types;
         self.map_data
     }
 }

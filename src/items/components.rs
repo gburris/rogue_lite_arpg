@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::{GameCollisionLayer, YSort},
-    despawn::components::LiveDuration,
+    utility::Lifespan,
 };
 
 /// This is the base component for all items in the game. If you have a new concept that will be
@@ -70,7 +70,7 @@ pub struct ItemDropEvent;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
-    LiveDuration::new(10.0),
+    Lifespan::new(10.0),
     YSort::from_offset(-6.0)
 )]
 pub struct Lootable;
@@ -93,7 +93,7 @@ pub struct HealingTome {
 }
 
 #[derive(Component)]
-#[require(LiveDuration::new(1.0))]
+#[require(Lifespan::new(1.0))]
 pub struct HealingTomeSpellVisualEffect;
 
 #[derive(Component)]

@@ -1,9 +1,9 @@
-use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
     ai::SimpleMotion,
-    combat::{damage::HurtBox, Health},
+    character::physical_collider,
+    combat::{damage::hurtbox, Health},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
@@ -67,39 +67,17 @@ pub fn spawn_npc(
                     ..default()
                 },
             ),
-            children![shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0)],
+            children![
+                shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+                (
+                    InteractionZone::NPC,
+                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
+                ),
+                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+                physical_collider()
+            ],
         ))
         .observe(on_player_interaction)
-        .with_children(|spawner| {
-            spawner.spawn((
-                InteractionZone::NPC,
-                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-            ));
-
-            spawner.spawn((
-                HurtBox,
-                Collider::rectangle(26.0, 42.0),
-                Transform::from_xyz(0.0, -8.0, 0.0),
-                Sensor,
-                CollisionLayers::new(
-                    [GameCollisionLayer::AllyHurtBox],
-                    [GameCollisionLayer::HitBox],
-                ),
-            ));
-
-            spawner.spawn((
-                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                Collider::circle(10.0),
-                CollisionLayers::new(
-                    [GameCollisionLayer::Grounded],
-                    [
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::HighObstacle,
-                        GameCollisionLayer::LowObstacle,
-                    ],
-                ),
-            ));
-        })
         .add_child(mainhand)
         .id();
 

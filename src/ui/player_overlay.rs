@@ -2,7 +2,7 @@ use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
 use crate::{
     combat::{Health, Mana},
-    despawn::components::LiveDuration,
+    utility::Lifespan,
     items::{
         equipment::{
             EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable, Equipped,
@@ -287,7 +287,7 @@ pub struct ActionBox {
 pub struct CooldownIndicator;
 
 #[derive(Component)]
-#[require(LiveDuration::new(0.1))]
+#[require(Lifespan::new(0.1))]
 pub struct ErrorFlash;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
@@ -402,7 +402,7 @@ pub fn on_equipment_used(
                         top: Val::Px(0.0),
                         ..default()
                     },
-                    LiveDuration::new(equipmemnt.use_rate.remaining_secs()),
+                    Lifespan::new(equipmemnt.use_rate.remaining_secs()),
                     BackgroundColor::from(COOLDOWN_LINE_COLOR),
                 ));
             });
@@ -442,7 +442,7 @@ pub fn on_equipment_use_failed(
 }
 
 pub fn update_cooldowns(
-    mut cooldown_query: Query<(&mut Node, &LiveDuration), With<CooldownIndicator>>,
+    mut cooldown_query: Query<(&mut Node, &Lifespan), With<CooldownIndicator>>,
 ) {
     for (mut line_node, cooldown_duration) in cooldown_query.iter_mut() {
         line_node.height =

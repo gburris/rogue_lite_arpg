@@ -5,28 +5,34 @@ use crate::{
     ui::*,
 };
 
-use super::{loading::plugin::LoadingUIPlugin, npc::plugin::NPCPauseScreensPlugin};
+use super::{npc::plugin::NPCPauseScreensPlugin, pause_menu::plugin::PauseMenuPlugin};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        // Game UI systems
-        app
-            //Other UI Plugins here
-            .add_plugins(PauseMenuPlugin)
-            .add_plugins(NPCPauseScreensPlugin)
-            .add_plugins(LoadingUIPlugin)
-            //Start screen
-            .add_systems(OnEnter(AppState::StartScreen), start_screen::spawn)
+        // sub UI plugins
+        app.add_plugins(PauseMenuPlugin)
+            .add_plugins(NPCPauseScreensPlugin);
+
+        // Loading screen
+        app.add_systems(OnEnter(AppState::SpawnZone), load_screen::spawn)
+            .add_systems(
+                Update,
+                (load_screen::animate_text).run_if(in_state(AppState::SpawnZone)),
+            );
+
+        // Start screen
+        app.add_systems(OnEnter(AppState::StartScreen), start_screen::spawn)
             .add_systems(
                 Update,
                 (start_screen::button_system, start_screen::animate_text)
                     .run_if(in_state(AppState::StartScreen)),
-            )
-            // Core game overlay (HUD)
-            .add_systems(OnEnter(AppState::SpawnPlayer), player_overlay::spawn)
+            );
+
+        // Core game overlay (HUD)
+        app.add_systems(OnEnter(AppState::SpawnPlayer), player_overlay::spawn)
             .add_systems(
                 Update,
                 (
@@ -48,10 +54,11 @@ impl Plugin for UIPlugin {
             )
             .add_observer(damage_overlay::on_damage_overlay_amount)
             .add_observer(damage_overlay::on_healing_overlay_amount)
-            // Game over systems
-            .add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn)
-            .add_observer(game_over_screen::on_restart_event_cleanup_zone)
             .add_observer(player_overlay::on_equipment_used)
             .add_observer(player_overlay::on_equipment_use_failed);
+
+        // Game over systems
+        app.add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn)
+            .add_observer(game_over_screen::on_restart_event_cleanup_zone);
     }
 }

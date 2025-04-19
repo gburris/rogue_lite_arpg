@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     configuration::{GameCollisionLayer, ZLayer},
-    despawn::components::LiveDuration,
+    utility::Lifespan,
 };
 
 use super::{
@@ -15,7 +15,7 @@ use super::{
 
 #[derive(Component, Clone)]
 #[require(
-    LiveDuration::new(1.0),
+    Lifespan::new(1.0),
     Sensor,
     RigidBody,
     Collider::rectangle(10.0, 10.0),

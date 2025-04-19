@@ -5,7 +5,7 @@ use crate::{
         components::{FrozenStatus, StatusType},
         events::ApplyStatus,
     },
-    despawn::components::LiveDuration,
+    utility::Lifespan,
 };
 
 const BLUE_COLOR: bevy::prelude::Color = Color::srgb(0.0, 0.0, 1.0);
@@ -13,7 +13,7 @@ const BLUE_COLOR: bevy::prelude::Color = Color::srgb(0.0, 0.0, 1.0);
 pub fn on_frozen_applied(
     trigger: Trigger<OnInsert, FrozenStatus>,
     mut commands: Commands,
-    status_query: Query<(&ChildOf, &LiveDuration), With<FrozenStatus>>,
+    status_query: Query<(&ChildOf, &Lifespan), With<FrozenStatus>>,
     mut sprite_query: Query<&mut Sprite>,
 ) {
     let Ok((child_of, duration)) = status_query.get(trigger.target()) else {

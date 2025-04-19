@@ -2,8 +2,9 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::ZLayer,
-    despawn::components::LiveDuration,
     player::{events::PlayerLevelUpEvent, Player},
+    ui::primitives::text,
+    utility::Lifespan,
 };
 
 #[derive(Component)]
@@ -43,20 +44,16 @@ pub fn on_level_up(
                     materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7))),
                 ),
                 Transform::from_translation(Vec2::ZERO.extend(ZLayer::BehindSprite.z())),
-                LiveDuration::new(LEVEL_UP_ANIMATION_DURATION),
+                Lifespan::new(LEVEL_UP_ANIMATION_DURATION),
             ));
 
             // Level up text above player's head
             builder.spawn((
                 LevelUpText,
-                Text2d::new("Level up!"),
-                TextFont {
-                    font_size: 24.0,
-                    ..default()
-                },
+                text("Level up!", 24.0),
                 TextColor::from(Color::srgb(1.0, 0.84, 0.0)),
                 Transform::from_xyz(0.0, 60.0, ZLayer::BehindSprite.z()),
-                LiveDuration::new(LEVEL_UP_ANIMATION_DURATION),
+                Lifespan::new(LEVEL_UP_ANIMATION_DURATION),
             ));
         });
 }
@@ -66,11 +63,11 @@ pub fn animate_level_up(
         (
             &mut Transform,
             &mut MeshMaterial2d<ColorMaterial>,
-            &LiveDuration,
+            &Lifespan,
         ),
         (With<LevelUpEffect>, Without<LevelUpText>),
     >,
-    mut text_query: Query<(&mut Transform, &LiveDuration), With<LevelUpText>>,
+    mut text_query: Query<(&mut Transform, &Lifespan), With<LevelUpText>>,
 ) {
     // Animate ring effect
     for (mut transform, mut material, duration) in effect_query.iter_mut() {

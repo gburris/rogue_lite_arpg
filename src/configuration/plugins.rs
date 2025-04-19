@@ -5,11 +5,10 @@ use bevy_ecs_tilemap::prelude::*;
 pub struct GamePlugins;
 
 use crate::{
-    ai::AIPlugin,
+    ai,
     animation::AnimationPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
-    despawn::plugin::DespawnPlugin,
     economy::EconomyPlugin,
     enemy::plugin::EnemyPlugin,
     items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
@@ -18,6 +17,7 @@ use crate::{
     player::plugin::PlayerPlugin,
     progression::plugin::ProgressionPlugin,
     ui::plugin::UIPlugin,
+    utility,
 };
 
 impl Plugin for GamePlugins {
@@ -29,8 +29,8 @@ impl Plugin for GamePlugins {
             .add_plugins((AssetLoadingPlugin, TilemapPlugin))
             // Core systems
             .add_plugins((
-                DespawnPlugin,
-                AIPlugin,
+                utility::plugin,
+                ai::plugin,
                 CombatPlugin,
                 ProgressionPlugin,
                 EconomyPlugin,

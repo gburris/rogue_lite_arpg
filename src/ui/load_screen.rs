@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 
-use crate::ui::{
-    constants::TITLE_FONT_SIZE,
-    primitives::{gold_border, text},
+use crate::{
+    labels::states::AppState,
+    ui::{
+        constants::TITLE_FONT_SIZE,
+        primitives::{gold_border, text},
+    },
 };
 
 #[derive(Component)]
@@ -11,9 +14,10 @@ pub struct LoadScreen;
 #[derive(Component)]
 pub struct AnimatedText;
 
-pub fn spawn_load_screen(mut commands: Commands) {
+pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
+        StateScoped(AppState::SpawnZone),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

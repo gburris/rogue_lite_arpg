@@ -41,6 +41,7 @@ pub fn spawn_main_menu(
 
     commands.spawn((
         MainMenu,
+        StateScoped(PausedState::MainMenu),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

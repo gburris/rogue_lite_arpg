@@ -2,7 +2,7 @@ use ::bevy::prelude::*;
 
 use crate::{
     configuration::YSort,
-    despawn::components::LiveDuration,
+    utility::Lifespan,
     items::{inventory::inventory::Inventory, Lootable},
     player::{interact::InteractionEvent, Player},
 };
@@ -23,7 +23,7 @@ pub fn on_lootable_item_interaction(
         commands
             .entity(item_entity)
             .remove::<Lootable>()
-            .remove::<LiveDuration>()
+            .remove::<Lifespan>()
             .remove::<YSort>()
             .insert(Visibility::Hidden);
 

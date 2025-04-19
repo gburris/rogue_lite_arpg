@@ -4,7 +4,6 @@ pub mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
-pub mod despawn;
 pub mod economy;
 pub mod enemy;
 pub mod items;
@@ -14,6 +13,7 @@ pub mod npc;
 pub mod player;
 pub mod progression;
 pub mod ui;
+pub mod utility;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::wasm_bindgen;

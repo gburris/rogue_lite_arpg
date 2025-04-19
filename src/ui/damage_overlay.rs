@@ -1,7 +1,7 @@
 use crate::{
     combat::{damage::DamageDealtEvent, health::HealedEvent},
     configuration::ZLayer,
-    despawn::components::LiveDuration,
+    utility::Lifespan,
 };
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
@@ -46,7 +46,7 @@ fn spawn_health_change_text(
     commands.entity(entity).with_child((
         Text2d::new(formatted_amount),
         TextColor::from(color),
-        LiveDuration::new(0.4),
+        Lifespan::new(0.4),
         Transform::from_translation(text_position),
     ));
 }

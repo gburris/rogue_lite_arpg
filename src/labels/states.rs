@@ -16,13 +16,13 @@ pub enum AppState {
 
 #[derive(SubStates, Eq, Default, Hash, Clone, Copy, Debug, PartialEq)]
 #[source(AppState = AppState::Paused)]
+#[states(scoped_entities)]
 pub enum PausedState {
     #[default]
     MainMenu,
     Inventory,
     StatsShop,
     ItemsShop,
-    Equipment,
     Stats,
 }
 

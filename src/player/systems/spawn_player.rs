@@ -2,7 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    combat::{damage::HurtBox, Mana},
+    character::physical_collider,
+    combat::{damage::hurtbox, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
@@ -12,7 +13,7 @@ use crate::{
         inventory::Inventory,
         *,
     },
-    player::{interact::PlayerInteractionRadius, systems::*, Player, PlayerCollider},
+    player::{interact::PlayerInteractionRadius, systems::*, Player},
     progression::GameProgress,
 };
 
@@ -50,49 +51,20 @@ pub fn spawn_player(
                     ..default()
                 },
             ),
-            children![shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0)],
+            children![
+                shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+                physical_collider(),
+                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+                (
+                    PlayerInteractionRadius,
+                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
+                    CollisionLayers::new(
+                        [GameCollisionLayer::PlayerInteractionRadius],
+                        [GameCollisionLayer::Interaction],
+                    ),
+                )
+            ],
         ))
-        .with_children(|spawner| {
-            // collider to bump into stuff
-            spawner.spawn((
-                PlayerCollider,
-                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                Collider::circle(10.0),
-                CollisionLayers::new(
-                    [
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::PlayerCollider,
-                    ],
-                    [
-                        GameCollisionLayer::Grounded,
-                        GameCollisionLayer::HighObstacle,
-                        GameCollisionLayer::LowObstacle,
-                    ],
-                ),
-            ));
-
-            // hurtbox
-            spawner.spawn((
-                HurtBox,
-                Collider::rectangle(26.0, 42.0),
-                Transform::from_xyz(0.0, -8.0, 0.0),
-                Sensor,
-                CollisionLayers::new(
-                    [GameCollisionLayer::AllyHurtBox],
-                    [GameCollisionLayer::HitBox],
-                ),
-            ));
-
-            // player interaction radius
-            spawner.spawn((
-                PlayerInteractionRadius,
-                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                CollisionLayers::new(
-                    [GameCollisionLayer::PlayerInteractionRadius],
-                    [GameCollisionLayer::Interaction],
-                ),
-            ));
-        })
         .add_children(&starting_items)
         .observe(death::on_player_defeated)
         .observe(on_equipment_activated)

@@ -1,35 +1,28 @@
+use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::{state::ActionState, SimpleMotion},
+    ai::state::ActionState,
     combat::{damage::DefeatedEvent, Health},
-    despawn::components::LiveDuration,
     economy::GoldDropEvent,
     enemy::{Enemy, Experience},
     items::{inventory::inventory::Inventory, Item, ItemDropEvent},
     player::{components::Player, PlayerStats},
+    utility::Lifespan,
 };
 
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
-    mut defeated_enemy_query: Query<
-        (
-            &Experience,
-            &Transform,
-            &mut SimpleMotion,
-            Option<&Inventory>,
-        ),
-        With<Enemy>,
-    >,
+    mut defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
     player_query: Single<(&PlayerStats, &mut Player)>,
     item_query: Query<&Item>,
 ) {
     let mut rng = thread_rng();
 
-    if let Ok((experience_to_gain, transform, mut motion, inventory)) =
+    if let Ok((experience_to_gain, transform, inventory)) =
         defeated_enemy_query.get_mut(trigger.target())
     {
         let (player_stats, mut player) = player_query.into_inner();
@@ -58,10 +51,8 @@ pub fn on_enemy_defeated(
 
         commands
             .entity(trigger.target())
-            .insert((LiveDuration::new(2.0), ActionState::Defeated))
-            .remove::<Health>()
+            .insert((Lifespan::new(2.0), ActionState::Defeated))
+            .remove::<(Health, RigidBody)>()
             .despawn_related::<Children>();
-
-        motion.stop_moving();
     }
 }

@@ -1,4 +1,5 @@
 use crate::{
+    labels::states::PausedState,
     player::{DisplayableStatType, PlayerStats},
     progression::GameProgress,
     ui::{
@@ -35,6 +36,7 @@ pub fn spawn_stats_shop_menu(
 
     commands.spawn((
         StatShopMenu,
+        StateScoped(PausedState::StatsShop),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

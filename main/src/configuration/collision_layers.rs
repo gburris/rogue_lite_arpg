@@ -15,7 +15,6 @@ pub enum GameCollisionLayer {
     HighObstacle, // Obstacle that stops all movement
     Grounded,    // Marks entities that get stopped by all obstacles
     InAir,       // Marks entity as able to go over low obstacle (projectile, )
-    PlayerCollider,
     EnemyCollider,
     NPCCollider,
 

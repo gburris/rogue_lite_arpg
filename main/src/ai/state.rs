@@ -53,8 +53,8 @@ pub fn update_state_on_simple_motion_change(
             motion.direction,
         ));
 
-        // Defeated and Attacking state take priority over walking / idle
-        if *action_state == ActionState::Attacking || *action_state == ActionState::Defeated {
+        // Attacking state take priority over walking / idle, locking facing direction
+        if *action_state == ActionState::Attacking {
             continue;
         }
 

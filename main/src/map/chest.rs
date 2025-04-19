@@ -30,7 +30,8 @@ pub struct Chest;
     CollisionLayers::new(
         GameCollisionLayer::LowObstacle,
         GameCollisionLayer::LOW_OBSTACLE_FILTERS
-    )
+    ),
+    Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0))
 )]
 pub struct ChestCollider;
 
@@ -70,19 +71,15 @@ fn spawn_chest(
                 scale: Vec3::new(2.0, 2.0, 1.0),
                 ..default()
             },
-        ))
-        .observe(on_interaction_open_chest)
-        .with_children(|p| {
-            p.spawn((
+            children![
                 ChestCollider,
-                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
-            ));
-
-            p.spawn((
-                InteractionZone::OPEN_CHEST,
-                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
-            ));
-        });
+                (
+                    InteractionZone::OPEN_CHEST,
+                    Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
+                )
+            ],
+        ))
+        .observe(on_interaction_open_chest);
 }
 
 pub fn on_interaction_open_chest(

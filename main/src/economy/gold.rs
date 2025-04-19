@@ -5,7 +5,7 @@ use rand::Rng;
 use crate::{
     configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
     items::{inventory::Inventory, Magnet},
-    player::{Player, PlayerCollider},
+    player::{interact::PlayerInteractionRadius, Player},
 };
 
 #[derive(Component)]
@@ -13,8 +13,8 @@ use crate::{
     RigidBody,
     Collider::circle(10.0),
     CollisionLayers::new(
-        [GameCollisionLayer::Grounded],
-        [GameCollisionLayer::PlayerCollider, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
+        [GameCollisionLayer::Grounded, GameCollisionLayer::Interaction],
+        [GameCollisionLayer::PlayerInteractionRadius, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
     ),
     CollidingEntities,
     LockedAxes = LockedAxes::new().lock_rotation(),
@@ -32,7 +32,7 @@ pub fn handle_gold_collisions(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
     mut player_inventory: Single<&mut Inventory, With<Player>>,
-    player_collider_entity: Single<Entity, With<PlayerCollider>>,
+    player_collider_entity: Single<Entity, With<PlayerInteractionRadius>>,
 ) {
     let pe = player_collider_entity.into_inner();
     for (gold_entity, gold, colliding_entities) in gold_query.iter() {

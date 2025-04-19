@@ -5,22 +5,20 @@ use crate::{
     configuration::{GameCollisionLayer, YSort},
     labels::states::AppState,
     map::components::SpawnZoneEvent,
-    player::PlayerCollider,
+    player::interact::PlayerInteractionRadius,
 };
 
 use super::components::MapLayout;
 
-/**
- * Portals represent any "warping device" in the game, currently spawning a new zone when entered
- */
+/// Portals represent any "warping device" in the game, currently spawning a new zone when entered
 #[derive(Component)]
 #[require(
     RigidBody::Static,
     Collider::rectangle(32.0, 64.0),
     CollidingEntities,
     CollisionLayers::new(
-        GameCollisionLayer::HighObstacle,
-        GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
+        GameCollisionLayer::Interaction,
+        GameCollisionLayer::PlayerInteractionRadius
     ),
     YSort
 )]
@@ -31,7 +29,7 @@ pub struct Portal {
 pub fn handle_portal_collisions(
     mut commands: Commands,
     portal_query: Query<(Entity, &CollidingEntities), With<Portal>>,
-    player_collider: Single<Entity, With<PlayerCollider>>,
+    player_collider: Single<Entity, With<PlayerInteractionRadius>>,
 ) {
     for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {

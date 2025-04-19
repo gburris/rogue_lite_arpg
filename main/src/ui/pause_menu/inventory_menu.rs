@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::{
     enemy::Enemy,
     items::inventory::*,
+    labels::states::PausedState,
     npc::NPC,
     player::Player,
     ui::{
@@ -21,6 +22,7 @@ pub fn spawn_inventory_menu(
 ) {
     commands.spawn((
         InventoryMenu,
+        StateScoped(PausedState::Inventory),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

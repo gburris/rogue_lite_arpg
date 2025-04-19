@@ -52,7 +52,17 @@ impl Damage {
 }
 
 #[derive(Component)]
+#[require(Sensor)]
 pub struct HurtBox;
+
+pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
+    (
+        HurtBox,
+        Collider::rectangle(size.x, size.y),
+        Transform::from_xyz(0.0, -8.0, 0.0),
+        CollisionLayers::new(membership, [GameCollisionLayer::HitBox]),
+    )
+}
 
 #[derive(Event)]
 pub struct AttemptDamageEvent {

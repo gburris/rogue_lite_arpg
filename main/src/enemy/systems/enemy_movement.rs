@@ -2,10 +2,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::{
-        state::{ActionState, AimPosition},
-        SimpleMotion,
-    },
+    ai::{state::AimPosition, SimpleMotion},
     combat::Health,
     enemy::Enemy,
     items::equipment::EquipmentSlot,
@@ -44,7 +41,6 @@ pub fn move_enemies_toward_player(
             &Health,
             &Transform,
             &mut SimpleMotion,
-            &ActionState,
             Option<&mut WanderDirection>,
         ),
         (With<Enemy>, Without<NPC>),
@@ -55,11 +51,7 @@ pub fn move_enemies_toward_player(
 
     let player_pos = player_transform.translation;
 
-    for (entity, health, enemy_transform, mut motion, state, wander) in enemy_query.iter_mut() {
-        if *state == ActionState::Defeated {
-            motion.stop_moving();
-            continue;
-        }
+    for (entity, health, enemy_transform, mut motion, wander) in enemy_query.iter_mut() {
         let distance_to_player = player_pos.distance(enemy_transform.translation);
 
         if distance_to_player <= CHASE_DISTANCE || health.hp < health.max_hp {

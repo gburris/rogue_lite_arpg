@@ -5,9 +5,10 @@ use crate::{
     items::{
         equipment::{EquipmentSlot, Equippable, Equipped},
         inventory::Inventory,
-        Consumable, Item, ItemDropEvent, ItemType,
+        lootable::ItemDropEvent,
+        Consumable, ConsumeEvent, Item, ItemType,
     },
-    player::{systems::ConsumeEvent, Player},
+    player::Player,
 };
 
 use super::{

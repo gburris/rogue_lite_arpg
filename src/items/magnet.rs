@@ -1,9 +1,21 @@
-use avian2d::prelude::{CollidingEntities, ExternalForce};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{items::Magnet, player::interact::PlayerInteractionRadius};
+use crate::{configuration::GameCollisionLayer, player::interact::PlayerInteractionRadius};
 
 const MAGNETIC_FORCE: f32 = 2000000.0;
+
+#[derive(Component)]
+#[require(
+    CollidingEntities,
+    Sensor,
+    Collider::circle(200.0),
+     CollisionLayers::new(
+        GameCollisionLayer::Interaction,
+        [GameCollisionLayer::PlayerInteractionRadius]
+    )
+)]
+pub struct Magnet;
 
 pub fn update_magnet_locations(
     mut commands: Commands,

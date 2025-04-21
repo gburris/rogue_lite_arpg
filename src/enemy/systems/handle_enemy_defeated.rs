@@ -8,7 +8,7 @@ use crate::{
     combat::{damage::DefeatedEvent, Health},
     economy::GoldDropEvent,
     enemy::{Enemy, Experience},
-    items::{inventory::inventory::Inventory, Item, ItemDropEvent},
+    items::{inventory::inventory::Inventory, lootable::ItemDropEvent, Item},
     player::{components::Player, PlayerStats},
     utility::Lifespan,
 };

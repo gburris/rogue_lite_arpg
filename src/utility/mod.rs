@@ -11,7 +11,7 @@ use crate::{
     configuration::time_control::RestartEvent,
     economy::Gold,
     enemy::Enemy,
-    items::Lootable,
+    items::lootable::Lootable,
     labels::sets::InGameSet,
     map::{portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Wall, Water},
     npc::NPC,

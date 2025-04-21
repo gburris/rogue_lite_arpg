@@ -11,7 +11,7 @@ use crate::{
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     economy::EconomyPlugin,
     enemy::plugin::EnemyPlugin,
-    items::{equipment::EquipmentPlugin, lootable::plugin::LootablePlugin},
+    items,
     map::plugin::MapPlugin,
     npc::NPCPlugin,
     player::plugin::PlayerPlugin,
@@ -34,12 +34,11 @@ impl Plugin for GamePlugins {
                 CombatPlugin,
                 ProgressionPlugin,
                 EconomyPlugin,
-                EquipmentPlugin,
             ))
             // Entity systems
             .add_plugins((
                 MapPlugin,
-                LootablePlugin,
+                items::plugin,
                 PlayerPlugin,
                 EnemyPlugin,
                 NPCPlugin,

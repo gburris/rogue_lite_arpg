@@ -47,7 +47,6 @@ impl Plugin for PlayerPlugin {
                     (draw_cursor, animate_level_up).in_set(InGameSet::Vfx),
                 ),
             )
-            .add_observer(handle_consume_event)
             .add_observer(on_level_up)
             .add_observer(on_player_stopped)
             .add_observer(on_player_interaction_input)

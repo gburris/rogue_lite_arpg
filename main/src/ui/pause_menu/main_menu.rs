@@ -2,7 +2,7 @@ use crate::{
     combat::Health,
     items::inventory::Inventory,
     labels::states::PausedState,
-    player::Player,
+    prelude::Player,
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},

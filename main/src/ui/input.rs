@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
+    character::player::PauseInputEvent,
     labels::states::{AppState, PausedState},
-    player::systems::PauseInputEvent,
 };
 
 //UN-Pause logic, runs when App State is Paused

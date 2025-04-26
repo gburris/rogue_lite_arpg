@@ -2,9 +2,8 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    configuration::assets::SpriteAssets,
-    configuration::ZLayer,
-    enemy::systems::enemy_spawn::{EnemySpawnData, EnemyType},
+    character::enemy::{EnemySpawnData, EnemyType},
+    configuration::{assets::SpriteAssets, ZLayer},
     map::{
         chest::SpawnChestsEvent,
         components::{
@@ -14,7 +13,7 @@ use crate::{
         helpers::generator::generate_instance_layout,
         portal::Portal,
     },
-    player::Player,
+    prelude::Player,
 };
 
 fn convert_tiles_to_world_positions(

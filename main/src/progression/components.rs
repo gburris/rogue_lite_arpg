@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::player::PlayerStats;
+use crate::character::player::PlayerStats;
 
 #[derive(Resource)]
 pub struct GameProgress {

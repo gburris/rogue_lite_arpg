@@ -1,7 +1,7 @@
 use crate::{
     combat::{damage::DamageSource, shield::components::ProjectileReflection, Projectile},
     configuration::GameCollisionLayer,
-    enemy::Enemy,
+    prelude::Enemy,
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;

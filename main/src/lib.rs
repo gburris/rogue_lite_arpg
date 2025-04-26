@@ -5,15 +5,16 @@ pub mod character;
 pub mod combat;
 pub mod configuration;
 pub mod economy;
-pub mod enemy;
 pub mod items;
 pub mod labels;
 pub mod map;
-pub mod npc;
-pub mod player;
 pub mod progression;
 pub mod ui;
 pub mod utility;
+
+pub mod prelude {
+    pub use crate::character::prelude::*;
+}
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::wasm_bindgen;

@@ -10,12 +10,10 @@ use crate::{
     combat::Projectile,
     configuration::time_control::RestartEvent,
     economy::Gold,
-    enemy::Enemy,
     items::lootable::Lootable,
     labels::sets::InGameSet,
     map::{portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Wall, Water},
-    npc::NPC,
-    player::Player,
+    prelude::{Enemy, Player, NPC},
     ui::PlayerOverlay,
 };
 

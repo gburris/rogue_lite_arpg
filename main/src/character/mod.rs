@@ -1,11 +1,33 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use enemy::EnemyPlugin;
+use npc::NPCPlugin;
+use player::PlayerPlugin;
 
 use crate::{
     ai::state::ActionState,
     animation::AnimationTimer,
     configuration::{GameCollisionLayer, YSort, CHARACTER_FEET_POS_OFFSET},
 };
+
+pub mod enemy;
+pub mod npc;
+pub mod player;
+
+pub mod prelude {
+    pub use crate::character::enemy::Enemy;
+    pub use crate::character::npc::NPC;
+    pub use crate::character::player::interact::PlayerInteractionRadius;
+    pub use crate::character::player::Player;
+}
+
+pub struct CharacterPlugin;
+
+impl Plugin for CharacterPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((PlayerPlugin, EnemyPlugin, NPCPlugin));
+    }
+}
 
 #[derive(Component, Default)]
 #[require(RigidBody,

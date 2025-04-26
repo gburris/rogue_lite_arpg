@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{configuration::GameCollisionLayer, player::interact::PlayerInteractionRadius};
+use crate::{configuration::GameCollisionLayer, prelude::PlayerInteractionRadius};
 
 const MAGNETIC_FORCE: f32 = 2000000.0;
 

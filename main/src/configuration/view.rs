@@ -8,7 +8,7 @@ use bevy::{
 use crate::{
     ai::state::AimPosition,
     map::components::{MapLayout, WorldSpaceConfig},
-    player::components::Player,
+    prelude::Player,
 };
 
 use super::assets::Shadows;

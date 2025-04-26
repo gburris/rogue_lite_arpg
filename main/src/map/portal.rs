@@ -5,7 +5,7 @@ use crate::{
     configuration::{GameCollisionLayer, YSort},
     labels::states::AppState,
     map::components::SpawnZoneEvent,
-    player::interact::PlayerInteractionRadius,
+    prelude::PlayerInteractionRadius,
 };
 
 use super::components::MapLayout;

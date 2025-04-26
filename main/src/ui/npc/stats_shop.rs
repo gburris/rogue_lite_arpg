@@ -1,6 +1,6 @@
 use crate::{
+    character::player::{DisplayableStatType, PlayerStats},
     labels::states::PausedState,
-    player::{DisplayableStatType, PlayerStats},
     progression::GameProgress,
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},

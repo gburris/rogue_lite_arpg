@@ -7,14 +7,12 @@ pub struct GamePlugins;
 use crate::{
     ai,
     animation::AnimationPlugin,
+    character::CharacterPlugin,
     combat::plugin::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     economy::EconomyPlugin,
-    enemy::plugin::EnemyPlugin,
     items,
     map::plugin::MapPlugin,
-    npc::NPCPlugin,
-    player::plugin::PlayerPlugin,
     progression::plugin::ProgressionPlugin,
     ui::plugin::UIPlugin,
     utility,
@@ -36,13 +34,7 @@ impl Plugin for GamePlugins {
                 EconomyPlugin,
             ))
             // Entity systems
-            .add_plugins((
-                MapPlugin,
-                items::plugin,
-                PlayerPlugin,
-                EnemyPlugin,
-                NPCPlugin,
-            ))
+            .add_plugins((MapPlugin, items::plugin, CharacterPlugin))
             // UI
             .add_plugins(UIPlugin);
     }

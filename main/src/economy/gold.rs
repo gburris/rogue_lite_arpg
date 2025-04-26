@@ -3,9 +3,10 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
+    character::player::interact::PlayerInteractionRadius,
     configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
     items::{inventory::Inventory, Magnet},
-    player::{interact::PlayerInteractionRadius, Player},
+    prelude::Player,
 };
 
 #[derive(Component)]

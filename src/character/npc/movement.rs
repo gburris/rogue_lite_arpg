@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::{ai::SimpleMotion, enemy::Enemy, npc::components::NPC};
+use crate::{ai::SimpleMotion, prelude::Enemy, prelude::NPC};
 
 #[derive(Component)]
 pub struct NPCWanderState {

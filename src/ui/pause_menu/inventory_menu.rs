@@ -1,11 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    enemy::Enemy,
     items::inventory::*,
     labels::states::PausedState,
-    npc::NPC,
-    player::Player,
+    prelude::{Enemy, Player, NPC},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         display_case::{self, UpdateDisplayCaseEvent},

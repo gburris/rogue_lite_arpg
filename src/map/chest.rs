@@ -4,12 +4,12 @@ use bevy::sprite::Anchor;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
+    character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{
         assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer, YSort,
     },
     economy::GoldDropEvent,
-    player::interact::{InteractionEvent, InteractionZone},
 };
 
 /// Center of chest relative to its sprite's anchor point

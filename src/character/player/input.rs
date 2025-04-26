@@ -1,12 +1,16 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::equipment::EquipmentSlot,
-    labels::states::PausedState,
-    player::{
-        interact::PlayerInteractionInput, Player, PlayerMovementEvent, PlayerStoppedEvent,
-        StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
+    items::equipment::{
+        EquipmentSlot, StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
     },
+    labels::states::PausedState,
+};
+
+use super::{
+    interact::PlayerInteractionInput,
+    movement::{PlayerMovementEvent, PlayerStoppedEvent},
+    Player,
 };
 
 #[derive(Event)]

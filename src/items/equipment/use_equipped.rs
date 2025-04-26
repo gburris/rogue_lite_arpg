@@ -13,12 +13,11 @@ use crate::{
         shield::{shield_block::deactivate_shield, ActiveShield},
         Mana,
     },
-    enemy::Enemy,
     items::{
         equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
         Shield,
     },
-    player::{StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent},
+    prelude::Enemy,
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -26,6 +25,16 @@ use crate::{
 #[derive(Event)]
 pub struct UseEquipmentEvent {
     pub holder: Entity,
+}
+
+#[derive(Event)]
+pub struct UseEquipmentInputEvent {
+    pub slot: EquipmentSlot,
+}
+
+#[derive(Event)]
+pub struct StopUsingHoldableEquipmentInputEvent {
+    pub slot: EquipmentSlot,
 }
 
 #[derive(PartialEq)]

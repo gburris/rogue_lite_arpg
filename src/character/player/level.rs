@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use crate::{
-    configuration::ZLayer,
-    player::{events::PlayerLevelUpEvent, Player},
-    ui::primitives::text,
-    utility::Lifespan,
-};
+use crate::{configuration::ZLayer, ui::primitives::text, utility::Lifespan};
+
+use super::Player;
+
+#[derive(Event)]
+pub struct PlayerLevelUpEvent;
 
 #[derive(Component)]
 pub struct LevelUpEffect;

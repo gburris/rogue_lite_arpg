@@ -2,10 +2,18 @@ use bevy::prelude::*;
 
 use crate::{
     ai::SimpleMotion,
-    enemy::Enemy,
-    npc::NPC,
-    player::{Player, PlayerMovementEvent, PlayerStoppedEvent},
+    prelude::{Enemy, NPC},
 };
+
+use super::Player;
+
+#[derive(Event)]
+pub struct PlayerMovementEvent {
+    pub direction: Vec2,
+}
+
+#[derive(Event)]
+pub struct PlayerStoppedEvent;
 
 pub fn player_movement(
     player_motion_query: Single<&mut SimpleMotion, With<Player>>,

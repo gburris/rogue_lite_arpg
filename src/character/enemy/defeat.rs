@@ -5,13 +5,15 @@ use rand::{thread_rng, Rng};
 
 use crate::{
     ai::state::ActionState,
+    character::player::PlayerStats,
     combat::{damage::DefeatedEvent, Health},
     economy::GoldDropEvent,
-    enemy::{Enemy, Experience},
     items::{inventory::inventory::Inventory, lootable::ItemDropEvent, Item},
-    player::{components::Player, PlayerStats},
+    prelude::Player,
     utility::Lifespan,
 };
+
+use super::{Enemy, Experience};
 
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,

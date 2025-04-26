@@ -1,22 +1,60 @@
 use bevy::prelude::*;
+use data_loader::EnemyAssets;
 use serde::Serialize;
+
+mod data_loader;
+mod defeat;
+mod movement;
 
 use crate::{
     ai::SimpleMotion,
-    character::physical_collider,
+    character::{physical_collider, Character},
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
-    enemy::{systems::on_enemy_defeated, Enemy, EnemyAssets},
     items::{
         equipment::{on_equipment_activated, Equipped},
         inventory::Inventory,
         spawn_health_potion, spawn_mainhand_weapon,
     },
+    labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
 };
+
+pub struct EnemyPlugin;
+
+impl Plugin for EnemyPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, data_loader::setup_enemy_assets)
+            .add_observer(spawn_enemies)
+            .add_systems(
+                Update,
+                (
+                    movement::move_enemies_toward_player,
+                    movement::update_enemy_aim_position,
+                )
+                    .in_set(InGameSet::Simulation),
+            );
+    }
+}
+
+#[derive(Component)]
+#[require(Character, Experience)]
+pub struct Enemy;
+
+//Experience granted by the enemy when player defeats it
+#[derive(Component)]
+pub struct Experience {
+    pub base_exp: f32,
+}
+
+impl Default for Experience {
+    fn default() -> Self {
+        Experience { base_exp: 10.0 }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct EnemySpawnData {
@@ -49,7 +87,7 @@ impl EnemyType {
     }
 }
 
-pub fn spawn_enemies(
+fn spawn_enemies(
     enemy_trigger: Trigger<EnemiesSpawnEvent>,
     mut commands: Commands,
     enemy_assets: Res<EnemyAssets>,
@@ -115,7 +153,7 @@ fn spawn_enemy(
                 ],
             ))
             .add_children(&starting_items)
-            .observe(on_enemy_defeated)
+            .observe(defeat::on_enemy_defeated)
             .observe(on_equipment_activated)
             .id();
 

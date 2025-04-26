@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
+    character::player::{interact::InteractionEvent, PauseInputEvent},
     labels::states::PausedState,
-    player::{interact::InteractionEvent, systems::PauseInputEvent},
 };
 
 pub fn on_shop_keeper_store_open(_: Trigger<InteractionEvent>, mut commands: Commands) {

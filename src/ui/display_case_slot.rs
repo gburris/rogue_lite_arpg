@@ -8,7 +8,7 @@ use crate::{
         lootable::ItemDropEvent,
         Consumable, ConsumeEvent, Item, ItemType,
     },
-    player::Player,
+    prelude::Player,
 };
 
 use super::{

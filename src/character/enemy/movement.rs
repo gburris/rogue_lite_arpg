@@ -4,10 +4,8 @@ use rand::{thread_rng, Rng};
 use crate::{
     ai::{state::AimPosition, SimpleMotion},
     combat::Health,
-    enemy::Enemy,
-    items::equipment::EquipmentSlot,
-    npc::NPC,
-    player::{Player, UseEquipmentInputEvent},
+    items::equipment::{EquipmentSlot, UseEquipmentInputEvent},
+    prelude::{Enemy, Player, NPC},
 };
 
 #[derive(Component)]

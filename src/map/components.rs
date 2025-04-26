@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::enemy::systems::enemy_spawn::EnemySpawnData;
+use crate::character::enemy::EnemySpawnData;
 
 use super::helpers::generator::MapData;
 

@@ -4,12 +4,10 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
+    character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
     items::equipment::Equipped,
-    player::{
-        interact::{InteractionEvent, InteractionZone},
-        Player,
-    },
+    prelude::Player,
     utility::Lifespan,
 };
 

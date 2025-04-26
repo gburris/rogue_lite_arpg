@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::ai::state::AimPosition;
-use crate::player::Player;
+use crate::character::player::Player;
 
 pub fn update_player_aim_position(
     mut player_aim_pos: Single<&mut AimPosition, With<Player>>,

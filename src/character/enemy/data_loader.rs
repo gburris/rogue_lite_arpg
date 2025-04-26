@@ -1,7 +1,24 @@
-use crate::enemy::{EnemiesConfig, EnemyAssets, EnemyDetails};
-use bevy::{prelude::Commands, scene::ron::de::from_reader};
+use bevy::{prelude::*, scene::ron::de::from_reader};
+use serde::Deserialize;
 use std::{collections::HashMap, fs::File, io::BufReader};
 
+#[derive(Deserialize, Debug)]
+pub struct EnemiesConfig {
+    pub enemies: HashMap<String, EnemyDetails>,
+}
+#[derive(Deserialize, Debug)]
+pub struct EnemyDetails {
+    pub simple_motion_speed: f32,
+    pub health: f32,
+    pub sprite_path: String,
+    pub collider_size: (f32, f32),
+    pub weapon: String,
+}
+
+#[derive(Resource)]
+pub struct EnemyAssets {
+    pub enemy_config: HashMap<String, EnemyDetails>,
+}
 pub fn setup_enemy_assets(mut commands: Commands) {
     let enemy_config = load_enemy_data();
     commands.insert_resource(EnemyAssets { enemy_config });

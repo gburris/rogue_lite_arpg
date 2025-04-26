@@ -1,22 +1,77 @@
 use bevy::prelude::*;
 
+mod interaction;
+mod movement;
+
 use crate::{
     ai::SimpleMotion,
-    character::physical_collider,
+    character::{
+        physical_collider,
+        player::interact::{InteractionEvent, InteractionZone},
+        Character,
+    },
     combat::{damage::hurtbox, Health},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
-    items::{equipment::Equipped, inventory::Inventory},
+    items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
+    labels::sets::InGameSet,
     map::NPCSpawnEvent,
-    npc::components::NPC,
-    player::interact::InteractionZone,
 };
 
-use super::components::NPCType;
+pub struct NPCPlugin;
 
-pub fn spawn_npcs(
+impl Plugin for NPCPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(spawn_npcs)
+            .add_systems(Update, (movement::move_npcs).in_set(InGameSet::Simulation));
+    }
+}
+
+#[derive(Component)]
+#[require(Character)]
+pub struct NPC;
+
+#[derive(Debug, Clone, Component, Copy)]
+pub enum NPCType {
+    Helper,
+    Shopkeeper,
+    StatTrainer,
+}
+
+impl NPCType {
+    pub fn spawn_weapon(
+        &self,
+        commands: &mut Commands,
+        sprites: &SpriteAssets,
+        atlases: &SpriteSheetLayouts,
+    ) -> Entity {
+        match self {
+            NPCType::Helper => spawn_ice_staff(commands, sprites, atlases),
+            NPCType::Shopkeeper => spawn_axe(commands, sprites),
+            NPCType::StatTrainer => spawn_sword(commands, sprites),
+        }
+    }
+
+    pub fn get_sprite_sheet(&self, sprites: &SpriteAssets) -> Handle<Image> {
+        match self {
+            NPCType::Helper => sprites.game_guide_sprite_sheet.clone(),
+            NPCType::Shopkeeper => sprites.shop_keeper_sprite_sheet.clone(),
+            NPCType::StatTrainer => sprites.stat_trainer_sprite_sheet.clone(),
+        }
+    }
+
+    pub fn get_interaction_observer(&self) -> fn(Trigger<InteractionEvent>, Commands) {
+        match self {
+            NPCType::Helper => interaction::on_game_guide_start,
+            NPCType::Shopkeeper => interaction::on_shop_keeper_store_open,
+            NPCType::StatTrainer => interaction::on_stat_trainer_store_open,
+        }
+    }
+}
+
+fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -40,7 +95,7 @@ pub fn spawn_npcs(
     }
 }
 
-pub fn spawn_npc(
+fn spawn_npc(
     commands: &mut Commands,
     npc_type: NPCType,
     spawn_position: Vec2,

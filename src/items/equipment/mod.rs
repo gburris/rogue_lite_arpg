@@ -16,7 +16,9 @@ pub use equippable::Equipped;
 // Equipment events to "get shit done"
 pub use use_equipped::EquipmentUseFailedEvent;
 pub use use_equipped::EquipmentUseFailure;
+pub use use_equipped::StopUsingHoldableEquipmentInputEvent;
 pub use use_equipped::UseEquipmentEvent;
+pub use use_equipped::UseEquipmentInputEvent;
 
 // Observers to be added to respective equipment/weapons that want this functionality
 pub use use_equipped::on_equipment_activated;

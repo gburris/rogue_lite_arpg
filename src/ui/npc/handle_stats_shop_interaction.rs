@@ -1,11 +1,13 @@
+use bevy::prelude::*;
+
+use crate::{
+    character::player::{DisplayableStatType, PlayerStats},
+    progression::GameProgress,
+};
+
 use super::stats_shop::{
     spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent,
 };
-use crate::{
-    player::{DisplayableStatType, PlayerStats},
-    progression::GameProgress,
-};
-use bevy::prelude::*;
 
 pub fn handle_stat_button_interaction(
     mut interaction_query: Query<(&Interaction, &StatShopButton, &mut BackgroundColor)>,

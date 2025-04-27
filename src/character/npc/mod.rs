@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 
 mod interaction;
-mod movement;
 
 use crate::{
-    ai::SimpleMotion,
+    ai::{Behaviors, SimpleMotion, Wander},
     character::{
         physical_collider,
         player::interact::{InteractionEvent, InteractionZone},
@@ -16,7 +15,6 @@ use crate::{
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
-    labels::sets::InGameSet,
     map::NPCSpawnEvent,
 };
 
@@ -24,8 +22,7 @@ pub struct NPCPlugin;
 
 impl Plugin for NPCPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(spawn_npcs)
-            .add_systems(Update, (movement::move_npcs).in_set(InGameSet::Simulation));
+        app.add_observer(spawn_npcs);
     }
 }
 
@@ -70,6 +67,9 @@ impl NPCType {
         }
     }
 }
+
+const TILE_SIZE: f32 = 32.0;
+const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
@@ -121,6 +121,12 @@ fn spawn_npc(
                     layout: atlases.enemy_atlas_layout.clone(),
                     ..default()
                 },
+            ),
+            related!(
+                Behaviors[Wander::builder()
+                    .move_timer_range(1.0..2.5)
+                    .idle_timer_range(1.0..4.0)
+                    .anchor(spawn_position, WANDER_RADIUS)]
             ),
             children![
                 shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),

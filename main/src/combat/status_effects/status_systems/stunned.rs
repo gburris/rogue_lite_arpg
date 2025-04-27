@@ -17,7 +17,7 @@ pub fn on_stun_applied(
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(child_of.parent) {
+    if let Ok(mut motion) = motion_query.get_mut(child_of.parent()) {
         motion.stun();
     }
 }
@@ -32,7 +32,7 @@ pub fn on_stun_removed(
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(child_of.parent) {
+    if let Ok(mut motion) = motion_query.get_mut(child_of.parent()) {
         motion.remove_debuff();
     }
 
@@ -41,6 +41,6 @@ pub fn on_stun_removed(
             status: StatusType::Slowed(SlowedStatus::default()),
             duration: 3.0,
         },
-        child_of.parent,
+        child_of.parent(),
     );
 }

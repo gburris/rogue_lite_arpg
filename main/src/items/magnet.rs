@@ -49,7 +49,7 @@ pub fn update_magnet_locations(
 
             // Apply a new force each tick of fixed update, erasing previous force (persistence = false)
             commands
-                .entity(child_of.parent)
+                .entity(child_of.parent())
                 .insert(ExternalForce::new(direction * magnetic_force).with_persistence(false));
         }
     }

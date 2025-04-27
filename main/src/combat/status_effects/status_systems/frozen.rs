@@ -25,10 +25,10 @@ pub fn on_frozen_applied(
             status: StatusType::Stunned,
             duration: duration.0.remaining_secs(), // make sure stun lasts while frozen
         },
-        child_of.parent,
+        child_of.parent(),
     );
 
-    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent()) {
         affected_sprite.color = BLUE_COLOR;
     }
 }
@@ -42,7 +42,7 @@ pub fn on_frozen_removed(
         return;
     };
 
-    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent()) {
         affected_sprite.color = Color::default();
     }
 }

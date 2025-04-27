@@ -19,9 +19,20 @@ pub fn spawn_zone_colliders(
     let grid_size = TilemapGridSize::new(tile_size.x, tile_size.y);
     let map_type = TilemapType::Square;
 
-    let low = TilePos::new(0, 0).center_in_world(&grid_size, &map_type);
-    let high =
-        TilePos::new(map_layout.size.x, map_layout.size.y).center_in_world(&grid_size, &map_type);
+    let low = TilePos::new(0, 0).center_in_world(
+        &map_layout.size,
+        &grid_size,
+        &tile_size,
+        &map_type,
+        &TilemapAnchor::Center,
+    );
+    let high = TilePos::new(map_layout.size.x, map_layout.size.y).center_in_world(
+        &map_layout.size,
+        &grid_size,
+        &tile_size,
+        &map_type,
+        &TilemapAnchor::Center,
+    );
     let diff = high - low;
     let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
 

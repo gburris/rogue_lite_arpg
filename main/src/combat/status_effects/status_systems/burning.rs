@@ -21,7 +21,7 @@ pub fn while_burning(
     mut health_query: Query<Entity, With<Health>>,
 ) {
     for (burn, child_of) in status_query.iter() {
-        if let Ok(entity) = health_query.get_mut(child_of.parent) {
+        if let Ok(entity) = health_query.get_mut(child_of.parent()) {
             if burn.damage_frequency.just_finished() {
                 commands.trigger_targets(
                     AttemptDamageEvent {
@@ -45,7 +45,7 @@ pub fn on_burn_applied(
         return;
     };
 
-    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent) {
+    if let Ok(mut affected_sprite) = sprite_query.get_mut(child_of.parent()) {
         affected_sprite.color = RED_COLOR;
     }
 }
@@ -59,7 +59,7 @@ pub fn on_burn_removed(
         return;
     };
 
-    if let Ok(mut burnt_sprite) = sprite_query.get_mut(child_of.parent) {
+    if let Ok(mut burnt_sprite) = sprite_query.get_mut(child_of.parent()) {
         burnt_sprite.color = Color::default();
     }
 }

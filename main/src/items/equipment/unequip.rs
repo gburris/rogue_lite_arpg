@@ -19,7 +19,7 @@ pub fn on_item_unequipped(
         return;
     };
 
-    let Ok((action_state, mut inventory)) = holder_query.get_mut(child_of.parent) else {
+    let Ok((action_state, mut inventory)) = holder_query.get_mut(child_of.parent()) else {
         info!("Holder was despawned prior to unequip");
         return;
     };

@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{platform_support::collections::HashSet, prelude::*};
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::combat::{
     damage::{AttemptDamageEvent, Damage},

@@ -11,7 +11,7 @@ pub fn on_slow_applied(
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(child_of.parent) {
+    if let Ok(mut motion) = motion_query.get_mut(child_of.parent()) {
         motion.slow(slowed.slow_percentage);
     }
 }
@@ -25,7 +25,7 @@ pub fn on_slow_removed(
         return;
     };
 
-    if let Ok(mut motion) = motion_query.get_mut(child_of.parent) {
+    if let Ok(mut motion) = motion_query.get_mut(child_of.parent()) {
         motion.remove_debuff();
     }
 }

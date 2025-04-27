@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::{
+    anchor::TilemapAnchor,
     map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
     tiles::TilePos,
 };
@@ -152,9 +153,20 @@ impl WorldSpaceConfig {
         // Calculate the offset to center the tilemap
         let grid_size = TilemapGridSize::new(self.tile_size.x, self.tile_size.y);
         let map_type = TilemapType::Square;
-        let low = TilePos::new(0, 0).center_in_world(&grid_size, &map_type);
-        let high = TilePos::new(map_size_in_tiles.x, map_size_in_tiles.y)
-            .center_in_world(&grid_size, &map_type);
+        let low = TilePos::new(0, 0).center_in_world(
+            &map_size_in_tiles,
+            &grid_size,
+            &self.tile_size,
+            &map_type,
+            &TilemapAnchor::Center,
+        );
+        let high = TilePos::new(map_size_in_tiles.x, map_size_in_tiles.y).center_in_world(
+            &map_size_in_tiles,
+            &grid_size,
+            &self.tile_size,
+            &map_type,
+            &TilemapAnchor::Center,
+        );
         let diff = high - low;
         let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
 

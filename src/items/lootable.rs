@@ -40,7 +40,7 @@ pub fn on_drop_event(
         return;
     };
 
-    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(child_of.parent) else {
+    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(child_of.parent()) else {
         error!("Why does the parent not have a transform or inventory on drop");
         return;
     };

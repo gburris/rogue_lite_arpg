@@ -28,7 +28,7 @@ pub fn handle_projectile_reflection_collisions(
                 projectile_query.get_mut(colliding_entity)
             {
                 // If holder is enemy and it is reflected, it can now hurt the player!
-                let new_damage_source = if enemy_query.contains(child_of.parent) {
+                let new_damage_source = if enemy_query.contains(child_of.parent()) {
                     DamageSource::Enemy
                 } else {
                     DamageSource::Player

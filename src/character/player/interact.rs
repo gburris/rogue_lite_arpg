@@ -57,7 +57,7 @@ pub fn on_player_interaction_input(
                 .ok()
                 .map(|(child_of, transform)| {
                     let distance = (player_pos - transform.translation.truncate()).length();
-                    (interact_entity, child_of.parent, distance)
+                    (interact_entity, child_of.parent(), distance)
                 })
         })
         // Select colliding zone closest to player

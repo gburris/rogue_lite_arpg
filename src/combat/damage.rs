@@ -93,7 +93,7 @@ pub fn on_damage_event(
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
     let damaged_entity = if let Ok(child_of) = hurt_box_query.get(damage_trigger.target()) {
-        child_of.parent
+        child_of.parent()
     } else if damaged_query.contains(damage_trigger.target()) {
         damage_trigger.target()
     } else {

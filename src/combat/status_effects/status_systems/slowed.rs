@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{ai::SimpleMotion, combat::status_effects::components::SlowedStatus};
+use crate::{combat::status_effects::components::SlowedStatus, prelude::*};
 
 pub fn on_slow_applied(
     trigger: Trigger<OnInsert, SlowedStatus>,

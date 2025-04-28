@@ -1,31 +1,52 @@
-use avian2d::prelude::*;
-use bevy::prelude::*;
-use enemy::EnemyPlugin;
-use npc::NPCPlugin;
-use player::PlayerPlugin;
-
-use crate::{
-    ai::state::ActionState,
-    animation::AnimationTimer,
-    configuration::{GameCollisionLayer, YSort, CHARACTER_FEET_POS_OFFSET},
-};
-
+mod behavior;
 pub mod enemy;
 pub mod npc;
 pub mod player;
+mod simple_motion;
+mod state;
 
 pub mod prelude {
     pub use crate::character::enemy::Enemy;
     pub use crate::character::npc::NPC;
     pub use crate::character::player::interact::PlayerInteractionRadius;
     pub use crate::character::player::Player;
+    pub use crate::character::simple_motion::SimpleMotion;
+    pub use crate::character::state::*;
 }
+
+use avian2d::prelude::*;
+use bevy::prelude::*;
+
+use crate::{
+    animation::AnimationTimer,
+    configuration::{GameCollisionLayer, YSort, CHARACTER_FEET_POS_OFFSET},
+    labels::sets::{InGameSet, MainSet},
+};
+
+use enemy::EnemyPlugin;
+use npc::NPCPlugin;
+use player::PlayerPlugin;
+use state::ActionState;
 
 pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((PlayerPlugin, EnemyPlugin, NPCPlugin));
+
+        app.add_systems(
+            FixedUpdate,
+            simple_motion::to_velocity.in_set(MainSet::InGame),
+        );
+
+        app.add_systems(
+            Update,
+            (
+                state::update_state_on_simple_motion_change,
+                behavior::run_wander,
+            )
+                .in_set(InGameSet::Simulation),
+        );
     }
 }
 

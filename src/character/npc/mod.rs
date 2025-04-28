@@ -3,7 +3,6 @@ use bevy::prelude::*;
 mod interaction;
 
 use crate::{
-    ai::{Behaviors, SimpleMotion, Wander},
     character::{
         physical_collider,
         player::interact::{InteractionEvent, InteractionZone},
@@ -16,7 +15,10 @@ use crate::{
     },
     items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
     map::NPCSpawnEvent,
+    prelude::*,
 };
+
+use super::behavior::{Behaviors, Wander};
 
 pub struct NPCPlugin;
 

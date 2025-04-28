@@ -12,7 +12,6 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    ai::SimpleMotion,
     character::{physical_collider, player::interact::PlayerInteractionRadius, Character},
     combat::{damage::hurtbox, invulnerable::IFrames, Health, Mana},
     configuration::{
@@ -29,6 +28,7 @@ use crate::{
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
+    prelude::*,
     progression::GameProgress,
 };
 

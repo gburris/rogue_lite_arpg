@@ -1,26 +1,9 @@
+use rand::{thread_rng, Rng};
 use std::ops::Range;
 
-use bevy::ecs::entity::EntityHashSet;
-pub use bevy::prelude::*;
+use bevy::{ecs::entity::EntityHashSet, prelude::*};
 
-mod simple_motion;
-pub mod state;
-
-use rand::{thread_rng, Rng};
-pub use simple_motion::SimpleMotion;
-
-use crate::labels::sets::{InGameSet, MainSet};
-
-pub fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        (state::update_state_on_simple_motion_change, run_wander).in_set(InGameSet::Simulation),
-    )
-    .add_systems(
-        FixedUpdate,
-        simple_motion::to_velocity.in_set(MainSet::InGame),
-    );
-}
+use crate::prelude::*;
 
 #[derive(Component)]
 #[relationship(relationship_target = Behaviors)]
@@ -80,7 +63,7 @@ impl Wander {
     }
 }
 
-fn run_wander(
+pub fn run_wander(
     time: Res<Time>,
     mut wander_query: Query<(&BehaviorOf, &mut Wander)>,
     mut motion_query: Query<(&mut SimpleMotion, &Transform)>,

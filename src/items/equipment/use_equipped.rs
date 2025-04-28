@@ -3,7 +3,6 @@ use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
-    ai::state::{ActionState, AimPosition, FacingDirection},
     combat::{
         damage::DamageSource,
         health::AttemptHealingEvent,
@@ -18,6 +17,7 @@ use crate::{
         Shield,
     },
     prelude::Enemy,
+    prelude::*,
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc

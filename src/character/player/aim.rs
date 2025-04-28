@@ -1,9 +1,6 @@
-use bevy::color::palettes::basic::WHITE;
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
+use bevy::{color::palettes::basic::WHITE, prelude::*, window::PrimaryWindow};
 
-use crate::ai::state::AimPosition;
-use crate::character::player::Player;
+use crate::{character::state::AimPosition, prelude::*};
 
 pub fn update_player_aim_position(
     mut player_aim_pos: Single<&mut AimPosition, With<Player>>,

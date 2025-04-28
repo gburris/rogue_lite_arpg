@@ -7,7 +7,6 @@ mod defeat;
 mod movement;
 
 use crate::{
-    ai::SimpleMotion,
     character::{physical_collider, Character},
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
@@ -21,6 +20,7 @@ use crate::{
     },
     labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
+    prelude::*,
 };
 
 pub struct EnemyPlugin;

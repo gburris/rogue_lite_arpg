@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::{state::AimPosition, SimpleMotion},
+    character::state::AimPosition,
     combat::Health,
     items::equipment::{EquipmentSlot, UseEquipmentInputEvent},
-    prelude::{Enemy, Player, NPC},
+    prelude::*,
 };
 
 #[derive(Component)]

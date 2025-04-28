@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::ai::SimpleMotion;
+use crate::prelude::*;
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
 #[require(FacingDirection, AimPosition)]

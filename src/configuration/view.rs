@@ -1,6 +1,5 @@
 use bevy::{
     color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700},
-    math::VectorSpace,
     prelude::*,
     render::camera::ScalingMode,
     window::WindowResolution,

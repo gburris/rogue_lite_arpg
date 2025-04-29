@@ -1,7 +1,7 @@
+use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy_behave::prelude::*;
 use data_loader::EnemyAssets;
-use rand::{thread_rng, Rng};
 use serde::Serialize;
 
 mod brain;
@@ -10,7 +10,7 @@ mod defeat;
 
 use crate::{
     character::{
-        behavior::{Chase, Idle, WaitUntilPlayerInSight},
+        behavior::{Chase, Idle},
         physical_collider, Character,
     },
     combat::{damage::hurtbox, Health, Mana},
@@ -38,7 +38,7 @@ impl Plugin for EnemyPlugin {
             .add_observer(spawn_enemies)
             .add_systems(
                 Update,
-                (brain::update_enemy_aim_position, brain::is_player_in_sight)
+                (brain::update_enemy_vision, brain::is_player_in_sight)
                     .in_set(InGameSet::Simulation),
             );
     }
@@ -131,17 +131,13 @@ fn spawn_enemy(
         let enemy_behavior = behave! {
             Behave::Forever => {
                 Behave::Fallback => {
-                    // Priority 1: Chase if player is visible
-                    Behave::Sequence => {
-                        Behave::spawn_named("Chase", Chase)
-                    },
-                    // Priority 2: Short wander bursts with frequent checks
                     Behave::Sequence => {
                         Behave::spawn_named("Wander", Wander::builder()
                             .anchor(spawn_data.position, 128.0)
                             .timer_range(1.0..2.0)),
                         Behave::spawn_named("Idle", Idle::default().timer_range(0.5..1.0)),
-                    }
+                    },
+                    Behave::spawn_named("Chase", Chase),
                 }
             }
         };
@@ -165,6 +161,14 @@ fn spawn_enemy(
                         ..default()
                     },
                 ),
+                // enemy vision distance
+                RayCaster::default()
+                    .with_max_distance(300.0)
+                    .with_query_filter(SpatialQueryFilter::from_mask([
+                        GameCollisionLayer::AllyHurtBox,
+                        GameCollisionLayer::HighObstacle,
+                    ]))
+                    .with_max_hits(1),
                 children![
                     shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                     physical_collider(),

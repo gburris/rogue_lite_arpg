@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use bevy::prelude::*;
 
-use crate::{combat::Health, prelude::*};
+use crate::prelude::*;
 
 #[derive(Component, Clone)]
 pub struct Idle {
@@ -42,12 +42,12 @@ pub fn while_idling(
     mut commands: Commands,
     time: Res<Time>,
     mut idle_query: Query<(&BehaveCtx, &mut Idle)>,
-    target_query: Query<&Vision>,
+    target_query: Query<&Aim>,
 ) {
     idle_query.iter_mut().for_each(|(ctx, mut idle)| {
-        let vision = target_query.get(ctx.target_entity()).unwrap();
+        let aim = target_query.get(ctx.target_entity()).unwrap();
 
-        if vision.has_target {
+        if aim.has_target() {
             commands.trigger(ctx.failure());
         } else if idle.timer.tick(time.delta()).just_finished() {
             commands.trigger(ctx.success());
@@ -99,11 +99,10 @@ impl Wander {
 
 pub fn on_wander_start(
     trigger: Trigger<OnAdd, Wander>,
-    time: Res<Time>,
-    mut wander_query: Query<(&BehaveCtx, &mut Wander)>,
+    wander_query: Query<(&BehaveCtx, &Wander)>,
     mut target_query: Query<(&mut SimpleMotion, &Transform)>,
 ) {
-    let (ctx, mut wander) = wander_query.get(trigger.target()).unwrap();
+    let (ctx, wander) = wander_query.get(trigger.target()).unwrap();
 
     let (mut motion, transform) = target_query.get_mut(ctx.target_entity()).unwrap();
 
@@ -121,12 +120,12 @@ pub fn while_wandering(
     mut commands: Commands,
     time: Res<Time>,
     mut idle_query: Query<(&BehaveCtx, &mut Wander)>,
-    target_query: Query<&Vision>,
+    target_query: Query<&Aim>,
 ) {
     idle_query.iter_mut().for_each(|(ctx, mut wander)| {
-        let vision = target_query.get(ctx.target_entity()).unwrap();
+        let aim = target_query.get(ctx.target_entity()).unwrap();
 
-        if vision.has_target {
+        if aim.has_target() {
             commands.trigger(ctx.failure());
         } else if wander.timer.tick(time.delta()).just_finished() {
             commands.trigger(ctx.success());
@@ -140,7 +139,7 @@ pub struct Chase;
 pub fn run_chase(
     mut commands: Commands,
     mut chase_query: Query<(&BehaveCtx, &mut Chase)>,
-    mut target_query: Query<(&mut SimpleMotion, &Transform, &Vision)>,
+    mut target_query: Query<(&mut SimpleMotion, &Transform, &Aim)>,
     player_transform: Single<&Transform, With<Player>>,
 ) {
     chase_query.iter_mut().for_each(|(ctx, _chase)| {
@@ -160,34 +159,7 @@ pub fn run_chase(
 
         if distance_to_player < 10.0 {
             commands.trigger(ctx.success());
-        } else if !vision.has_target {
-            commands.trigger(ctx.failure());
-        }
-    });
-}
-
-#[derive(Component, Clone)]
-pub struct WaitUntilPlayerInSight;
-
-pub fn is_player_in_sight(
-    mut commands: Commands,
-    behave_query: Query<&BehaveCtx, With<WaitUntilPlayerInSight>>,
-    mut enemy_query: Query<(&Health, &Transform), (With<Enemy>, Without<NPC>)>,
-    player_transform: Single<&Transform, With<Player>>,
-) {
-    const VISION_DISTANCE: f32 = 150.0;
-
-    behave_query.iter().for_each(|ctx| {
-        let (target_health, target_transform) = enemy_query.get_mut(ctx.target_entity()).unwrap();
-
-        let distance_to_player = player_transform
-            .translation
-            .xy()
-            .distance(target_transform.translation.xy());
-
-        if distance_to_player <= VISION_DISTANCE || target_health.hp < target_health.max_hp {
-            commands.trigger(ctx.success());
-        } else {
+        } else if !vision.has_target() {
             commands.trigger(ctx.failure());
         }
     });

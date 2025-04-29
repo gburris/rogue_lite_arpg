@@ -1,5 +1,6 @@
 use bevy::{
     color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700},
+    math::VectorSpace,
     prelude::*,
     render::camera::ScalingMode,
     window::WindowResolution,
@@ -119,16 +120,16 @@ const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
 pub fn camera_follow_system(
-    player: Single<(&Transform, &Vision), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &Aim), (With<Player>, Without<Camera>)>,
     mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
 ) {
     let (player, aim) = player.into_inner();
 
     let z = camera.translation.z;
-    let aim_pos = Vec3::new(aim.position.x, aim.position.y, z);
+    let aim = Vec3::new(aim.position.x, aim.position.y, z);
     let player_pos = player.translation.with_z(z);
-    let target = player_pos.lerp(aim_pos, TARGET_BIAS);
+    let target = player_pos.lerp(aim, TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera
@@ -140,7 +141,7 @@ pub fn camera_follow_system(
 }
 
 pub fn camera_debug_system(
-    player: Single<(&Transform, &Vision), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &Aim), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {
     let (player, aim) = player.into_inner();

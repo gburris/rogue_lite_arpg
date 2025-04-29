@@ -61,7 +61,7 @@ impl Plugin for PlayerPlugin {
                 (
                     (
                         movement::player_movement,
-                        aim::update_player_aim_position,
+                        aim::update_player_aim,
                         level::on_player_experience_change,
                     )
                         .in_set(InGameSet::Simulation),

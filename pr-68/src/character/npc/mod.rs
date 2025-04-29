@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bevy_behave::prelude::*;
-use rand::{thread_rng, Rng};
 
 mod interaction;
 

@@ -1,7 +1,7 @@
 use avian2d::prelude::{RayCaster, RayHits};
 use bevy::prelude::*;
 
-use crate::{character::state::Aim, prelude::*};
+use crate::{character::state::Aim, combat::damage::DamageDealtEvent, prelude::*};
 
 /// The enemies RayCast represents it's "vision". Here we update where the raycast faces based on player position
 pub fn update_enemy_vision(
@@ -35,7 +35,9 @@ pub fn is_player_in_sight(
     let (player_children, player_transform, player) = player.into_inner();
     enemy_query.par_iter_mut().for_each(|(mut aim, ray_hits)| {
         // Default to no target
-        aim.target = None;
+        if aim.target_lock_timer.is_none() {
+            aim.target = None;
+        }
 
         // Check all hits (we don't need to sort since we only have max hit of 1)
         for hit in ray_hits.iter() {
@@ -44,6 +46,32 @@ pub fn is_player_in_sight(
                 aim.target = Some(player);
                 break; // Found player, no need to check further hits
             }
+        }
+    });
+}
+
+pub fn on_damage_agro(
+    damage_trigger: Trigger<DamageDealtEvent>,
+    mut enemy_query: Query<&mut Aim, With<Enemy>>,
+) {
+    if let (Ok(mut aim), Some(source)) = (
+        enemy_query.get_mut(damage_trigger.target()),
+        damage_trigger.damage_source,
+    ) {
+        aim.lock_target(source);
+    }
+}
+
+pub fn handle_target_lock(time: Res<Time>, mut aim_query: Query<&mut Aim>) {
+    aim_query.par_iter_mut().for_each(|mut aim| {
+        let timer_finished = aim
+            .target_lock_timer
+            .as_mut()
+            .map(|t| t.tick(time.delta()).finished())
+            .unwrap_or(false);
+
+        if timer_finished {
+            aim.target_lock_timer = None;
         }
     });
 }

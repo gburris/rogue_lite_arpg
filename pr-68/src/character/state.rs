@@ -45,13 +45,32 @@ impl FacingDirection {
 }
 
 /// Represents the world coordinate where an entitiy is aiming, for player this is the cursor
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct Aim {
     pub position: Vec2,
     pub target: Option<Entity>,
+    pub target_lock_timer: Option<Timer>,
+    lock_duration: f32,
+}
+
+impl Default for Aim {
+    fn default() -> Self {
+        Self {
+            position: Vec2::ZERO,
+            target: None,
+            target_lock_timer: None,
+            // enemies chase for 6 seconds when damaged by default
+            lock_duration: 6.0,
+        }
+    }
 }
 
 impl Aim {
+    pub fn lock_target(&mut self, target: Entity) {
+        self.target_lock_timer = Some(Timer::from_seconds(self.lock_duration, TimerMode::Once));
+        self.target = Some(target);
+    }
+
     pub fn has_target(&self) -> bool {
         self.target.is_some()
     }

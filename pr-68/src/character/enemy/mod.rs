@@ -38,7 +38,12 @@ impl Plugin for EnemyPlugin {
             .add_observer(spawn_enemies)
             .add_systems(
                 Update,
-                (brain::update_enemy_vision, brain::is_player_in_sight)
+                (
+                    brain::update_enemy_vision,
+                    brain::handle_target_lock,
+                    brain::is_player_in_sight,
+                )
+                    .chain()
                     .in_set(InGameSet::Simulation),
             );
     }
@@ -135,7 +140,7 @@ fn spawn_enemy(
                         Behave::spawn_named("Wander", Wander::builder()
                             .anchor(spawn_data.position, 128.0)
                             .timer_range(1.0..2.0)),
-                        Behave::spawn_named("Idle", Idle::default().timer_range(0.5..1.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
                     },
                     Behave::spawn_named("Chase", Chase),
                 }
@@ -163,7 +168,7 @@ fn spawn_enemy(
                 ),
                 // enemy vision distance
                 RayCaster::default()
-                    .with_max_distance(300.0)
+                    .with_max_distance(350.0)
                     .with_query_filter(SpatialQueryFilter::from_mask([
                         GameCollisionLayer::AllyHurtBox,
                         GameCollisionLayer::HighObstacle,
@@ -182,6 +187,7 @@ fn spawn_enemy(
             .add_children(&starting_items)
             .observe(defeat::on_enemy_defeated)
             .observe(on_equipment_activated)
+            .observe(brain::on_damage_agro)
             .id();
 
         commands

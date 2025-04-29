@@ -119,7 +119,7 @@ const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
 pub fn camera_follow_system(
-    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &Vision), (With<Player>, Without<Camera>)>,
     mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
 ) {
@@ -140,7 +140,7 @@ pub fn camera_follow_system(
 }
 
 pub fn camera_debug_system(
-    player: Single<(&Transform, &AimPosition), (With<Player>, Without<Camera>)>,
+    player: Single<(&Transform, &Vision), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {
     let (player, aim) = player.into_inner();

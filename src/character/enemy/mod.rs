@@ -1,13 +1,18 @@
 use bevy::prelude::*;
+use bevy_behave::prelude::*;
 use data_loader::EnemyAssets;
+use rand::{thread_rng, Rng};
 use serde::Serialize;
 
+mod brain;
 mod data_loader;
 mod defeat;
-mod movement;
 
 use crate::{
-    character::{physical_collider, Character},
+    character::{
+        behavior::{Chase, Idle, WaitUntilPlayerInSight},
+        physical_collider, Character,
+    },
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
@@ -23,6 +28,8 @@ use crate::{
     prelude::*,
 };
 
+use super::behavior::Wander;
+
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
@@ -31,10 +38,7 @@ impl Plugin for EnemyPlugin {
             .add_observer(spawn_enemies)
             .add_systems(
                 Update,
-                (
-                    movement::move_enemies_toward_player,
-                    movement::update_enemy_aim_position,
-                )
+                (brain::update_enemy_aim_position, brain::is_player_in_sight)
                     .in_set(InGameSet::Simulation),
             );
     }
@@ -124,6 +128,24 @@ fn spawn_enemy(
             spawn_health_potion(commands, sprites),
         ];
 
+        let enemy_behavior = behave! {
+            Behave::Forever => {
+                Behave::Fallback => {
+                    // Priority 1: Chase if player is visible
+                    Behave::Sequence => {
+                        Behave::spawn_named("Chase", Chase)
+                    },
+                    // Priority 2: Short wander bursts with frequent checks
+                    Behave::Sequence => {
+                        Behave::spawn_named("Wander", Wander::builder()
+                            .anchor(spawn_data.position, 128.0)
+                            .timer_range(1.0..2.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(0.5..1.0)),
+                    }
+                }
+            }
+        };
+
         let enemy = commands
             .spawn((
                 Enemy,
@@ -149,7 +171,8 @@ fn spawn_enemy(
                     hurtbox(
                         enemy_details.collider_size.into(),
                         GameCollisionLayer::EnemyHurtBox
-                    )
+                    ),
+                    BehaveTree::new(enemy_behavior.clone()),
                 ],
             ))
             .add_children(&starting_items)

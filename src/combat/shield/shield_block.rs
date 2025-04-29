@@ -23,12 +23,7 @@ pub fn update_active_shields(
         (Entity, &ManaDrainRate, &Equipped, &mut Sprite),
         With<ActiveShield>,
     >,
-    mut holder_query: Query<(
-        &Transform,
-        &AimPosition,
-        &FacingDirection,
-        Option<&mut Mana>,
-    )>,
+    mut holder_query: Query<(&Transform, &Vision, &FacingDirection, Option<&mut Mana>)>,
 ) {
     for (shield_entity, mana_drain_rate, equipped, mut shield_sprite) in
         active_shield_query.iter_mut()

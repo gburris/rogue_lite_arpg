@@ -43,10 +43,14 @@ impl Plugin for CharacterPlugin {
             Update,
             (
                 state::update_state_on_simple_motion_change,
-                behavior::run_wander,
+                behavior::run_chase,
+                behavior::while_idling,
+                behavior::while_wandering,
             )
                 .in_set(InGameSet::Simulation),
-        );
+        )
+        .add_observer(behavior::on_idle_start)
+        .add_observer(behavior::on_wander_start);
     }
 }
 

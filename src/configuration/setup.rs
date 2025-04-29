@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_behave::prelude::BehavePlugin;
 
 use crate::{
     configuration::debug::DebugPlugin,
@@ -34,6 +35,7 @@ impl Plugin for SetupPlugin {
             .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
             .insert_resource(GameProgress::default())
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
+            .add_plugins(BehavePlugin::default())
             // initialize states
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()

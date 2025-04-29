@@ -1,9 +1,12 @@
 use bevy::prelude::*;
+use bevy_behave::prelude::*;
+use rand::{thread_rng, Rng};
 
 mod interaction;
 
 use crate::{
     character::{
+        behavior::Idle,
         physical_collider,
         player::interact::{InteractionEvent, InteractionZone},
         Character,
@@ -18,7 +21,7 @@ use crate::{
     prelude::*,
 };
 
-use super::behavior::{Behaviors, Wander};
+use super::behavior::Wander;
 
 pub struct NPCPlugin;
 
@@ -109,6 +112,18 @@ fn spawn_npc(
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
     let on_player_interaction = npc_type.get_interaction_observer();
 
+    let npc_behavior = behave! {
+        Behave::Forever => {
+            Behave::Sequence => {
+                Behave::spawn_named("Wander", Wander::builder()
+                    .timer_range(1.0..2.5)  // Shorter wander bursts
+                    .anchor(spawn_position, WANDER_RADIUS)),
+                Behave::spawn_named("Idle", Idle::default()
+                    .timer_range(1.0..4.0)),
+            }
+        }
+    };
+
     let npc = commands
         .spawn((
             NPC,
@@ -124,12 +139,6 @@ fn spawn_npc(
                     ..default()
                 },
             ),
-            related!(
-                Behaviors[Wander::builder()
-                    .move_timer_range(1.0..2.5)
-                    .idle_timer_range(1.0..4.0)
-                    .anchor(spawn_position, WANDER_RADIUS)]
-            ),
             children![
                 shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                 (
@@ -137,7 +146,8 @@ fn spawn_npc(
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
                 ),
                 hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
-                physical_collider()
+                physical_collider(),
+                BehaveTree::new(npc_behavior.clone()),
             ],
         ))
         .observe(on_player_interaction)

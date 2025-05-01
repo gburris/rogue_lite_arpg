@@ -10,7 +10,7 @@ mod defeat;
 
 use crate::{
     character::{
-        behavior::{Chase, Idle},
+        behavior::{Chase, Idle, Retreat},
         physical_collider, Character,
     },
     combat::{damage::hurtbox, Health, Mana},
@@ -28,7 +28,10 @@ use crate::{
     prelude::*,
 };
 
-use super::behavior::Wander;
+use super::{
+    behavior::{Anchor, Wander},
+    Agro,
+};
 
 pub struct EnemyPlugin;
 
@@ -39,8 +42,10 @@ impl Plugin for EnemyPlugin {
             .add_systems(
                 Update,
                 (
-                    brain::update_enemy_vision,
-                    brain::handle_target_lock,
+                    brain::point_raycast_to_player,
+                    brain::update_aim_position,
+                    brain::should_agro_player,
+                    brain::tick_agro_target_lock,
                     brain::is_player_in_sight,
                 )
                     .chain()
@@ -50,7 +55,7 @@ impl Plugin for EnemyPlugin {
 }
 
 #[derive(Component)]
-#[require(Character, Experience)]
+#[require(Character, Experience, Agro)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -137,11 +142,10 @@ fn spawn_enemy(
             Behave::Forever => {
                 Behave::Fallback => {
                     Behave::Sequence => {
-                        Behave::spawn_named("Wander", Wander::builder()
-                            .anchor(spawn_data.position, 128.0)
-                            .timer_range(1.0..2.0)),
+                        Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
                         Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
                     },
+                    Behave::spawn_named("Retreat", Retreat),
                     Behave::spawn_named("Chase", Chase),
                 }
             }
@@ -150,6 +154,7 @@ fn spawn_enemy(
         let enemy = commands
             .spawn((
                 Enemy,
+                Anchor::new(spawn_data.position, 256.0), // 8 tile radius
                 Inventory::builder()
                     .items(starting_items.into())
                     .coins(99)

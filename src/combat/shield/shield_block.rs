@@ -23,7 +23,7 @@ pub fn update_active_shields(
         (Entity, &ManaDrainRate, &Equipped, &mut Sprite),
         With<ActiveShield>,
     >,
-    mut holder_query: Query<(&Transform, &Aim, &FacingDirection, Option<&mut Mana>)>,
+    mut holder_query: Query<(&Transform, &Vision, &FacingDirection, Option<&mut Mana>)>,
 ) {
     for (shield_entity, mana_drain_rate, equipped, mut shield_sprite) in
         active_shield_query.iter_mut()
@@ -33,7 +33,7 @@ pub fn update_active_shields(
             .expect("Shield holder missing necessary components");
 
         let holder_pos = holder_transform.translation.truncate();
-        let aim_direction: Vec2 = (aim.position - holder_pos).normalize();
+        let aim_direction: Vec2 = (aim.aim_position - holder_pos).normalize();
         let block_angle = aim_direction.y.atan2(aim_direction.x) + FRAC_PI_2;
 
         let normalized_angle = if block_angle < -PI {

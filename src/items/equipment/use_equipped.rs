@@ -144,7 +144,7 @@ pub fn on_weapon_fired(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     weapon_query: Query<&ProjectileWeapon>,
-    holder_query: Query<(&Transform, &Aim)>,
+    holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
     let mut damage_source = DamageSource::Player;
@@ -164,7 +164,7 @@ pub fn on_weapon_fired(
         damage_source,
         &mut commands,
         holder_transform,
-        holder_aim.position,
+        holder_aim.aim_position,
         projectile_weapon,
     );
 }
@@ -174,7 +174,7 @@ pub fn on_weapon_melee(
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
-    holder_query: Query<(&Transform, &Aim)>,
+    holder_query: Query<(&Transform, &Vision)>,
 ) {
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.target()) else {
         warn!("Tried to melee attack with invalid weapon");
@@ -187,7 +187,7 @@ pub fn on_weapon_melee(
     };
 
     let holder_pos = holder_transform.translation.truncate();
-    let aim_direction: Vec2 = (aim.position - holder_pos).normalize();
+    let aim_direction: Vec2 = (aim.aim_position - holder_pos).normalize();
     let attack_angle = aim_direction.y.atan2(aim_direction.x);
 
     start_melee_attack(

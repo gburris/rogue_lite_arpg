@@ -1,9 +1,9 @@
 use bevy::{color::palettes::basic::WHITE, prelude::*, window::PrimaryWindow};
 
-use crate::{character::state::Aim, prelude::*};
+use crate::prelude::*;
 
 pub fn update_player_aim(
-    mut player_aim: Single<&mut Aim, With<Player>>,
+    mut player_aim: Single<&mut Vision, With<Player>>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
 ) {
@@ -18,9 +18,9 @@ pub fn update_player_aim(
         return;
     };
 
-    player_aim.position = cursor_pos_in_world;
+    player_aim.aim_position = cursor_pos_in_world;
 }
 
-pub fn draw_cursor(player_aim: Single<&Aim, With<Player>>, mut gizmos: Gizmos) {
-    gizmos.circle_2d(player_aim.position, 10., WHITE);
+pub fn draw_cursor(player_aim: Single<&Vision, With<Player>>, mut gizmos: Gizmos) {
+    gizmos.circle_2d(player_aim.aim_position, 10., WHITE);
 }

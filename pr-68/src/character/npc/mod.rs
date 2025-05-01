@@ -5,7 +5,7 @@ mod interaction;
 
 use crate::{
     character::{
-        behavior::Idle,
+        behavior::{Idle, Retreat},
         physical_collider,
         player::interact::{InteractionEvent, InteractionZone},
         Character,
@@ -20,7 +20,7 @@ use crate::{
     prelude::*,
 };
 
-use super::behavior::Wander;
+use super::behavior::{Anchor, Wander};
 
 pub struct NPCPlugin;
 
@@ -113,12 +113,12 @@ fn spawn_npc(
 
     let npc_behavior = behave! {
         Behave::Forever => {
-            Behave::Sequence => {
-                Behave::spawn_named("Wander", Wander::builder()
-                    .timer_range(1.0..2.5)  // Shorter wander bursts
-                    .anchor(spawn_position, WANDER_RADIUS)),
-                Behave::spawn_named("Idle", Idle::default()
-                    .timer_range(1.0..4.0)),
+            Behave::Fallback => {
+                Behave::Sequence => {
+                    Behave::spawn_named("Idle", Idle::default().timer_range(1.0..4.0)),
+                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.5)),
+                },
+                Behave::spawn_named("Retreat", Retreat),
             }
         }
     };
@@ -126,6 +126,7 @@ fn spawn_npc(
     let npc = commands
         .spawn((
             NPC,
+            Anchor::new(spawn_position, WANDER_RADIUS),
             SimpleMotion::new(100.0),
             Health::new(1000.0),
             npc_type,

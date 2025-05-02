@@ -337,6 +337,7 @@ dependencies = [
  "avian2d",
  "bevy",
  "bevy_asset_loader",
+ "bevy_behave",
  "bevy_ecs_tilemap",
  "console_error_panic_hook",
  "log",
@@ -529,6 +530,17 @@ dependencies = [
  "cpal",
  "rodio",
  "tracing",
+]
+
+[[package]]
+name = "bevy_behave"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9de12a97caa9447f28127d1366ea42c43ab174f8b6b67275c2f7112d3f5499a4"
+dependencies = [
+ "bevy",
+ "dyn-clone",
+ "ego-tree",
 ]
 
 [[package]]
@@ -1987,6 +1999,18 @@ name = "dpi"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f25c0e292a7ca6d6498557ff1df68f32c99850012b6ea401cf8daf771f22ff53"
+
+[[package]]
+name = "dyn-clone"
+version = "1.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c7a8fb8a9fbf66c1f703fe16184d10ca0ee9d23be5b4436400408ba54a95005"
+
+[[package]]
+name = "ego-tree"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2972feb8dffe7bc8c5463b1dacda1b0dfbed3710e50f977d965429692d74cd8"
 
 [[package]]
 name = "either"

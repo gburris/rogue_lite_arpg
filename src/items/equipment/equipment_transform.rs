@@ -4,10 +4,8 @@ use std::{collections::HashMap, sync::LazyLock};
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
-    ai::state::{ActionState, FacingDirection},
-    combat::melee::ActiveMeleeAttack,
-    configuration::ZLayer,
-    items::inventory::Inventory,
+    combat::melee::ActiveMeleeAttack, configuration::ZLayer, items::inventory::Inventory,
+    prelude::*,
 };
 
 // Constants for transform values

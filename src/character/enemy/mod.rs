@@ -1,14 +1,18 @@
+use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
+use bevy_behave::prelude::*;
 use data_loader::EnemyAssets;
 use serde::Serialize;
 
+mod brain;
 mod data_loader;
 mod defeat;
-mod movement;
 
 use crate::{
-    ai::SimpleMotion,
-    character::{physical_collider, Character},
+    character::{
+        behavior::{Chase, Idle, Retreat},
+        physical_collider, Character,
+    },
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
@@ -21,6 +25,12 @@ use crate::{
     },
     labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
+    prelude::*,
+};
+
+use super::{
+    behavior::{Anchor, Wander},
+    Agro,
 };
 
 pub struct EnemyPlugin;
@@ -32,16 +42,21 @@ impl Plugin for EnemyPlugin {
             .add_systems(
                 Update,
                 (
-                    movement::move_enemies_toward_player,
-                    movement::update_enemy_aim_position,
+                    brain::point_raycast_to_player,
+                    brain::update_aim_position,
+                    brain::should_agro_player,
+                    brain::tick_agro_target_lock,
+                    brain::is_player_in_sight,
+                    brain::debug_vision,
                 )
+                    .chain()
                     .in_set(InGameSet::Simulation),
             );
     }
 }
 
 #[derive(Component)]
-#[require(Character, Experience)]
+#[require(Character, Experience, Agro)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -124,9 +139,23 @@ fn spawn_enemy(
             spawn_health_potion(commands, sprites),
         ];
 
+        let enemy_behavior = behave! {
+            Behave::Forever => {
+                Behave::Fallback => {
+                    Behave::Sequence => {
+                        Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
+                    },
+                    Behave::spawn_named("Retreat", Retreat),
+                    Behave::spawn_named("Chase", Chase),
+                }
+            }
+        };
+
         let enemy = commands
             .spawn((
                 Enemy,
+                Anchor::new(spawn_data.position, 256.0), // 8 tile radius
                 Inventory::builder()
                     .items(starting_items.into())
                     .coins(99)
@@ -143,18 +172,28 @@ fn spawn_enemy(
                         ..default()
                     },
                 ),
+                // enemy vision distance
+                RayCaster::default()
+                    .with_max_distance(350.0)
+                    .with_query_filter(SpatialQueryFilter::from_mask([
+                        GameCollisionLayer::AllyHurtBox,
+                        GameCollisionLayer::HighObstacle,
+                    ]))
+                    .with_max_hits(1),
                 children![
                     shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                     physical_collider(),
                     hurtbox(
                         enemy_details.collider_size.into(),
                         GameCollisionLayer::EnemyHurtBox
-                    )
+                    ),
+                    BehaveTree::new(enemy_behavior.clone()),
                 ],
             ))
             .add_children(&starting_items)
             .observe(defeat::on_enemy_defeated)
             .observe(on_equipment_activated)
+            .observe(brain::on_damage_agro)
             .id();
 
         commands

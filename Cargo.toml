@@ -18,6 +18,7 @@ path = "src/main.rs"
 bevy = { version = "0.16.0", features = ["dynamic_linking"] }
 bevy_ecs_tilemap = {git = "https://github.com/miketwenty1/bevy_ecs_tilemap.git", branch = "update-bevy-16.0-release" }
 bevy_asset_loader = { git = "https://github.com/NiklasEi/bevy_asset_loader.git", features = ["2d"], branch = "bevy_main" }
+bevy_behave = { version = "0.3" }
 accesskit = "0.17"
 avian2d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
 rand = "0.8"

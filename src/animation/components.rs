@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
-use crate::ai::state::{ActionState, FacingDirection};
+use crate::prelude::*;
 
 #[derive(Clone, Debug, Component)]
 pub enum AnimationIndices {

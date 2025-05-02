@@ -85,6 +85,7 @@ impl Plugin for PlayerPlugin {
     IFrames,
 )]
 pub struct Player {
+    pub aim_position: Vec2, // tracks the cursor
     current_level: u32,
     // Outside systems may give the player experience, like when an enemy dies
     pub current_experience: f32,
@@ -94,6 +95,7 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Player {
+            aim_position: Vec2::ZERO,
             current_level: 1,
             current_experience: 0.0,
             next_level_experience_req: 20.0,

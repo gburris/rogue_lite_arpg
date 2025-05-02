@@ -1,5 +1,8 @@
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::prelude::*;
+use bevy::{
+    color::palettes::css::{GREEN, YELLOW},
+    prelude::*,
+};
 
 use crate::{character::Agro, combat::damage::DamageDealtEvent, prelude::*};
 
@@ -40,32 +43,70 @@ pub fn should_agro_player(
     player: Single<(&Transform, Entity), With<Player>>,
 ) {
     let (player_transform, player) = player.into_inner();
+
     enemy_query
         .par_iter_mut()
         .for_each(|(mut agro, vision, transform)| {
-            let to_player: Vec2 = player_transform.translation.xy() - transform.translation.xy();
+            let player_dir = (player_transform.translation.xy() - transform.translation.xy())
+                .normalize_or_zero();
 
-            // Only agro player if relatively in front (within 90 degrees of facing direction)
-            if agro.line_of_sight && to_player.normalize_or_zero().dot(vision.aim_position) > 0.0 {
+            // Calculate dot product: only agro if player is within 45° each side
+            let in_vision_cone = player_dir.dot(vision.aim_direction) > 0.707;
+
+            // Update agro based on conditions
+            if agro.line_of_sight && in_vision_cone {
                 agro.target = Some(player);
-            } else if agro.line_of_sight || agro.target_lock_timer.is_none() {
+            } else if !agro.line_of_sight || agro.target_lock_timer.is_none() {
                 agro.target = None;
             }
         });
 }
 
-pub fn update_aim_position(
-    mut character_query: Query<(&mut Vision, Option<&Agro>, &FacingDirection), Without<Player>>,
-    target_query: Query<&Transform>,
-) {
-    for (mut vision, agro, facing_direction) in character_query.iter_mut() {
-        vision.aim_position = agro
-            .and_then(|a| a.target)
-            .and_then(|target_entity| target_query.get(target_entity).ok())
-            .map(|target_transform| target_transform.translation.xy())
-            .unwrap_or_else(|| facing_direction.to_vec2());
+pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
+    for (transform, vision) in &query {
+        // Draw vision cone
+        gizmos.arrow_2d(
+            transform.translation.xy(),
+            transform.translation.xy() + (64.0 * vision.aim_direction),
+            GREEN,
+        );
+
+        // Draw vision cone angles
+        let forward = vision.aim_direction;
+        let left = forward.rotate(Vec2::from_angle(45f32.to_radians()));
+        let right = forward.rotate(Vec2::from_angle(-45f32.to_radians()));
+
+        gizmos.line_2d(
+            transform.translation.xy(),
+            transform.translation.xy() + left * 64.0,
+            YELLOW,
+        );
+        gizmos.line_2d(
+            transform.translation.xy(),
+            transform.translation.xy() + right * 64.0,
+            YELLOW,
+        );
     }
 }
+
+pub fn update_aim_position(
+    mut character_query: Query<
+        (&mut Vision, Option<&Agro>, &FacingDirection, &Transform),
+        Without<Player>,
+    >,
+    target_query: Query<&Transform>,
+) {
+    for (mut vision, agro, facing_dir, transform) in character_query.iter_mut() {
+        vision.aim_direction = agro
+            .and_then(|a| a.target)
+            .and_then(|target_entity| target_query.get(target_entity).ok())
+            .map(|target_transform| {
+                (target_transform.translation.xy() - transform.translation.xy()).normalize_or_zero()
+            })
+            .unwrap_or_else(|| facing_dir.to_vec2());
+    }
+}
+
 pub fn on_damage_agro(damage_trigger: Trigger<DamageDealtEvent>, mut agro_query: Query<&mut Agro>) {
     if let (Ok(mut agro), Some(source)) = (
         agro_query.get_mut(damage_trigger.target()),

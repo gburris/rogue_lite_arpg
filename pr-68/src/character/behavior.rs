@@ -198,8 +198,10 @@ pub fn while_chasing(
         motion.start_moving(towards_player_direction);
 
         if distance_to_player < 10.0 {
+            info!("We chased and succeeded!");
             commands.trigger(ctx.success());
         } else if !agro.has_target() {
+            info!("We chased and failed!");
             commands.trigger(ctx.failure());
         }
     });

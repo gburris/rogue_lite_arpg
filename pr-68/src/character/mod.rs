@@ -72,13 +72,13 @@ pub struct Character;
 /// Represents the world coordinate where an entitiy is aiming, for player this is the cursor
 #[derive(Component)]
 pub struct Vision {
-    pub aim_position: Vec2,
+    pub aim_direction: Vec2,
 }
 
 impl Default for Vision {
     fn default() -> Self {
         Self {
-            aim_position: Vec2::ZERO,
+            aim_direction: Vec2::ZERO,
         }
     }
 }

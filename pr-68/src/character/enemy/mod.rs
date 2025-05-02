@@ -47,6 +47,7 @@ impl Plugin for EnemyPlugin {
                     brain::should_agro_player,
                     brain::tick_agro_target_lock,
                     brain::is_player_in_sight,
+                    brain::debug_vision,
                 )
                     .chain()
                     .in_set(InGameSet::Simulation),

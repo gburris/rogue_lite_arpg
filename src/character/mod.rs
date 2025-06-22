@@ -4,6 +4,7 @@ pub mod npc;
 pub mod player;
 mod simple_motion;
 mod state;
+mod vision;
 
 pub mod prelude {
     pub use crate::character::enemy::Enemy;
@@ -12,7 +13,7 @@ pub mod prelude {
     pub use crate::character::player::Player;
     pub use crate::character::simple_motion::SimpleMotion;
     pub use crate::character::state::*;
-    pub use crate::character::Vision;
+    pub use crate::character::vision::Vision;
 }
 
 use avian2d::prelude::*;
@@ -44,7 +45,7 @@ impl Plugin for CharacterPlugin {
             Update,
             (
                 state::update_state_on_simple_motion_change,
-                behavior::check_for_target_interrupt,
+                vision::check_for_target_interrupt,
                 behavior::while_chasing,
                 behavior::while_idling,
                 behavior::while_wandering,
@@ -68,51 +69,6 @@ impl Plugin for CharacterPlugin {
     AnimationTimer,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]
 pub struct Character;
-
-/// Represents the world coordinate where an entitiy is aiming, for player this is the cursor
-#[derive(Component)]
-pub struct Vision {
-    pub aim_direction: Vec2,
-}
-
-impl Default for Vision {
-    fn default() -> Self {
-        Self {
-            aim_direction: Vec2::ZERO,
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct Agro {
-    pub target: Option<Entity>,
-    pub line_of_sight: bool,
-    pub target_lock_timer: Option<Timer>,
-    lock_duration: f32,
-}
-
-impl Default for Agro {
-    fn default() -> Self {
-        Self {
-            target: None,
-            line_of_sight: false,
-            target_lock_timer: None,
-            // enemies chase for 6 seconds when damaged by default
-            lock_duration: 6.0,
-        }
-    }
-}
-
-impl Agro {
-    pub fn lock_target(&mut self, target: Entity) {
-        self.target_lock_timer = Some(Timer::from_seconds(self.lock_duration, TimerMode::Once));
-        self.target = Some(target);
-    }
-
-    pub fn has_target(&self) -> bool {
-        self.target.is_some()
-    }
-}
 
 pub fn physical_collider() -> impl Bundle {
     (

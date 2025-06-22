@@ -10,8 +10,10 @@ mod defeat;
 
 use crate::{
     character::{
-        behavior::{Chase, Idle, Retreat},
-        physical_collider, Character,
+        behavior::{Anchor, Chase, Idle, Retreat, Wander},
+        physical_collider,
+        vision::Agro,
+        Character,
     },
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
@@ -26,11 +28,6 @@ use crate::{
     labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
     prelude::*,
-};
-
-use super::{
-    behavior::{Anchor, Wander},
-    Agro,
 };
 
 pub struct EnemyPlugin;

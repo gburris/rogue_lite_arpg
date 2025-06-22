@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    ai::{state::ActionState, SimpleMotion},
     character::prelude::Player,
     combat::{damage::DefeatedEvent, Health},
     labels::states::{AppState, PlayingState},
     map::CleanupZone,
+    prelude::*,
 };
 
 #[derive(Component)]

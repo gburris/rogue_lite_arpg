@@ -4,12 +4,11 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::{
-    ai::state::ActionState,
     character::player::PlayerStats,
     combat::{damage::DefeatedEvent, Health},
     economy::GoldDropEvent,
     items::{inventory::inventory::Inventory, lootable::ItemDropEvent, Item},
-    prelude::Player,
+    prelude::*,
     utility::Lifespan,
 };
 

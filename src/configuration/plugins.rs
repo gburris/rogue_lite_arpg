@@ -5,7 +5,6 @@ use bevy_ecs_tilemap::prelude::*;
 pub struct GamePlugins;
 
 use crate::{
-    ai,
     animation::AnimationPlugin,
     character::CharacterPlugin,
     combat::plugin::CombatPlugin,
@@ -28,7 +27,6 @@ impl Plugin for GamePlugins {
             // Core systems
             .add_plugins((
                 utility::plugin,
-                ai::plugin,
                 CombatPlugin,
                 ProgressionPlugin,
                 EconomyPlugin,

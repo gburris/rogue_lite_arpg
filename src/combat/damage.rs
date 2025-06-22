@@ -79,6 +79,7 @@ pub struct AttemptDamageEvent {
 #[derive(Event)]
 pub struct DamageDealtEvent {
     pub damage: f32,
+    pub damage_source: Option<Entity>,
 }
 
 #[derive(Event)]
@@ -116,7 +117,13 @@ pub fn on_damage_event(
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
-        commands.trigger_targets(DamageDealtEvent { damage }, damaged_entity);
+        commands.trigger_targets(
+            DamageDealtEvent {
+                damage,
+                damage_source: damage_trigger.damage_source,
+            },
+            damaged_entity,
+        );
 
         if health.hp == 0.0 {
             commands.trigger_targets(DefeatedEvent, damaged_entity);

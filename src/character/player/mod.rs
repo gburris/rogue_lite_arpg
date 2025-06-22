@@ -12,7 +12,6 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    ai::SimpleMotion,
     character::{physical_collider, player::interact::PlayerInteractionRadius, Character},
     combat::{damage::hurtbox, invulnerable::IFrames, Health, Mana},
     configuration::{
@@ -29,6 +28,7 @@ use crate::{
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
+    prelude::*,
     progression::GameProgress,
 };
 
@@ -61,7 +61,7 @@ impl Plugin for PlayerPlugin {
                 (
                     (
                         movement::player_movement,
-                        aim::update_player_aim_position,
+                        aim::update_player_aim,
                         level::on_player_experience_change,
                     )
                         .in_set(InGameSet::Simulation),
@@ -85,6 +85,7 @@ impl Plugin for PlayerPlugin {
     IFrames,
 )]
 pub struct Player {
+    pub aim_position: Vec2, // tracks the cursor
     current_level: u32,
     // Outside systems may give the player experience, like when an enemy dies
     pub current_experience: f32,
@@ -94,6 +95,7 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Player {
+            aim_position: Vec2::ZERO,
             current_level: 1,
             current_experience: 0.0,
             next_level_experience_req: 20.0,

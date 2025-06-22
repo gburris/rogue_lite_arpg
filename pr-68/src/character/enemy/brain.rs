@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{character::Agro, combat::damage::DamageDealtEvent, prelude::*};
+use crate::{character::vision::Agro, combat::damage::DamageDealtEvent, prelude::*};
 
 /// The enemies RayCast represents it's "vision". Here we update where the raycast faces based on player position
 pub fn point_raycast_to_player(

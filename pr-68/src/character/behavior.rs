@@ -6,10 +6,10 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-use super::{Agro, Character};
+use super::vision::{Agro, AgroInterrupts};
 
 #[derive(Component, Clone)]
-#[require(CanBeInterrupted)]
+#[require(AgroInterrupts)]
 pub struct Idle {
     timer: Timer,
 }
@@ -76,7 +76,7 @@ impl Anchor {
 
 /// Moves in a random direction
 #[derive(Component, Clone)]
-#[require(CanBeInterrupted)]
+#[require(AgroInterrupts)]
 pub struct Wander {
     /// How long to move in direction for
     timer: Timer,
@@ -130,28 +130,9 @@ pub fn while_wandering(
     });
 }
 
-/// Spawn this with a behavior if receiving a target can kick you out of the state
-#[derive(Component, Clone, Default)]
-pub struct CanBeInterrupted;
-
-pub fn check_for_target_interrupt(
-    mut commands: Commands,
-    behavior_query: Query<&BehaveCtx, With<CanBeInterrupted>>,
-    target_query: Query<Option<&Agro>, With<Character>>,
-) {
-    behavior_query.iter().for_each(|ctx| {
-        let agro = target_query.get(ctx.target_entity()).unwrap();
-
-        if agro.is_some_and(|a| a.has_target()) {
-            info!("Interrupting, target found");
-            commands.trigger(ctx.failure());
-        }
-    });
-}
-
 /// When a character is not agroed and too far from home, return to origin
 #[derive(Component, Clone)]
-#[require(CanBeInterrupted)]
+#[require(AgroInterrupts)]
 pub struct Retreat;
 
 pub fn while_retreating(

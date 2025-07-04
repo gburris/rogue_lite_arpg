@@ -6,13 +6,13 @@ use super::{
     HealingTome, Holdable, Item, ItemType, Shield,
 };
 use crate::{
-    ai::state::FacingDirection,
     combat::{
         mana::{ManaCost, ManaDrainRate},
         shield::components::ProjectileReflection,
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::equipment::{EquipmentTransform, Equippable},
+    prelude::*,
 };
 
 fn spawn_tome_of_healing(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {

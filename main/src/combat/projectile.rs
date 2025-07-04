@@ -45,11 +45,10 @@ pub fn spawn(
     damage_source: DamageSource, //Player, enemy, NPC, Party Member
     commands: &mut Commands,
     caster_transform: &Transform,
-    caster_aim_position: Vec2,
+    aim_direction: Vec2,
     weapon: &ProjectileWeapon,
 ) {
     let caster_direction = caster_transform.local_x().truncate();
-    let aim_direction = (caster_aim_position - caster_transform.translation.truncate()).normalize();
     let angle = caster_direction.angle_to(aim_direction);
 
     let velocity = aim_direction * weapon.projectile_speed;

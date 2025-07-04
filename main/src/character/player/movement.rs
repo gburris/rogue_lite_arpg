@@ -1,11 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    ai::SimpleMotion,
-    prelude::{Enemy, NPC},
-};
-
-use super::Player;
+use crate::prelude::*;
 
 #[derive(Event)]
 pub struct PlayerMovementEvent {

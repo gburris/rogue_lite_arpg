@@ -1,9 +1,4 @@
-use std::any::TypeId;
-
-use bevy::{
-    ecs::component::{ComponentId, Components},
-    prelude::*,
-};
+use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapId;
 
 use crate::{

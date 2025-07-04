@@ -6,11 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{
-    combat::damage::DamageDealtEvent,
-    prelude::*,
-    utility::{schedule_component_removal, Lifespan},
-};
+use crate::{combat::damage::DamageDealtEvent, prelude::*, utility::schedule_component_removal};
 
 /// Represents the current direction an entity is aiming toward (e.g., cursor for player, target for AI).
 /// This is decoupled from movement-facing direction.
@@ -217,18 +213,24 @@ pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
 
 /// Handles auto-targeting when an entity is attacked.
 /// Ignores line of sight or cone checks — instant rage response.
+/// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
+/// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
 pub fn on_damage_aggro(
     damage_trigger: Trigger<DamageDealtEvent>,
     mut commands: Commands,
-    child_of: Query<&ChildOf>,
+    target_query: Query<&Watching>,
 ) {
-    if let Some(source) = damage_trigger.damage_source {
-        info!("I've been hit, attack! {}", damage_trigger.target());
+    if let Ok(watching) = target_query.get(damage_trigger.target()) {
+        debug!(
+            "I've been hit: {}, attacking: {}",
+            damage_trigger.target(),
+            watching.0
+        );
         commands
             .entity(damage_trigger.target())
-            .insert((TargetLock, Targeting(source)));
+            .insert((TargetLock, Targeting(watching.0)));
 
-        //schedule_component_removal::<TargetLock>(&mut commands, damage_trigger.target(), 6.0);
+        schedule_component_removal::<TargetLock>(&mut commands, damage_trigger.target(), 6.0);
     }
 }
 
@@ -241,7 +243,6 @@ pub fn should_target_watched(
         .iter()
         .for_each(|(target_info, watching, entity)| {
             if target_info.line_of_sight && target_info.in_vision_cone {
-                info!("Watched spotted, attack!");
                 commands.entity(entity).insert(Targeting(watching.0));
             }
         });
@@ -256,7 +257,6 @@ pub fn should_stop_targeting(
         .iter()
         .for_each(|(target_info, has_lock, entity)| {
             if !target_info.line_of_sight && !has_lock {
-                info!("I've lost sight of them, disengage");
                 commands.entity(entity).remove::<Targeting>();
             }
         });

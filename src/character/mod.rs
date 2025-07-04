@@ -49,6 +49,7 @@ impl Plugin for CharacterPlugin {
                 behavior::while_idling,
                 behavior::while_wandering,
                 behavior::while_retreating,
+                behavior::while_keeping_distance_and_firing,
                 // Vision + Perception
                 vision::update_aim_position,
                 vision::update_target_info,

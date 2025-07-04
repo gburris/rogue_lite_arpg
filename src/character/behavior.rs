@@ -210,3 +210,36 @@ pub fn on_attempt_melee(trigger: Trigger<BehaveTrigger<AttemptMelee>>, mut comma
     );
     commands.trigger(ctx.success());
 }
+
+#[derive(Component, Clone)]
+pub struct KeepDistanceAndFire;
+
+pub fn while_keeping_distance_and_firing(
+    mut commands: Commands,
+    mut behave_query: Query<&BehaveCtx, With<KeepDistanceAndFire>>,
+    mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
+) {
+    behave_query.iter_mut().for_each(|ctx| {
+        let (mut motion, target_info, has_target) =
+            target_query.get_mut(ctx.target_entity()).unwrap();
+
+        if !has_target {
+            commands.trigger(ctx.failure());
+        } else {
+            commands.trigger_targets(
+                UseEquipmentInputEvent {
+                    slot: EquipmentSlot::Mainhand,
+                },
+                ctx.target_entity(),
+            );
+
+            if target_info.distance < 200.0 {
+                // If target is too close we try to move away
+                // TODO: Make this a variable on a component
+                motion.start_moving(-target_info.direction);
+            } else if target_info.distance > 300.0 {
+                motion.start_moving(target_info.direction);
+            }
+        }
+    });
+}

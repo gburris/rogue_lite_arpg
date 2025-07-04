@@ -9,7 +9,7 @@ mod defeat;
 
 use crate::{
     character::{
-        behavior::{Anchor, AttemptMelee, Chase, Idle, Retreat, Wander},
+        behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
         Character,
@@ -150,6 +150,7 @@ fn spawn_enemy(
                         Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
                     },
                     Behave::spawn_named("Retreat", Retreat),
+                    Behave::spawn_named("Keep distance and fire", KeepDistanceAndFire)
                 }
             }
         };

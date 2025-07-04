@@ -4,7 +4,6 @@ use bevy_behave::prelude::*;
 use data_loader::EnemyAssets;
 use serde::Serialize;
 
-mod brain;
 mod data_loader;
 mod defeat;
 
@@ -12,7 +11,7 @@ use crate::{
     character::{
         behavior::{Anchor, Chase, Idle, Retreat, Wander},
         physical_collider,
-        vision::Agro,
+        vision::{VisionCapabilities, Watching},
         Character,
     },
     combat::{damage::hurtbox, Health, Mana},
@@ -25,7 +24,6 @@ use crate::{
         inventory::Inventory,
         spawn_health_potion, spawn_mainhand_weapon,
     },
-    labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
     prelude::*,
 };
@@ -35,25 +33,12 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, data_loader::setup_enemy_assets)
-            .add_observer(spawn_enemies)
-            .add_systems(
-                Update,
-                (
-                    brain::point_raycast_to_player,
-                    brain::update_aim_position,
-                    brain::should_agro_player,
-                    brain::tick_agro_target_lock,
-                    brain::is_player_in_sight,
-                    brain::debug_vision,
-                )
-                    .chain()
-                    .in_set(InGameSet::Simulation),
-            );
+            .add_observer(spawn_enemies);
     }
 }
 
 #[derive(Component)]
-#[require(Character, Experience, Agro)]
+#[require(Character, Experience, VisionCapabilities)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -106,6 +91,7 @@ fn spawn_enemies(
     sprites: Res<SpriteAssets>,
     atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
+    player: Single<Entity, With<Player>>,
 ) {
     for spawn_data in enemy_trigger.0.clone() {
         let enemy_name = spawn_data.enemy_type.name();
@@ -117,6 +103,7 @@ fn spawn_enemies(
             &sprites,
             &atlases,
             &shadows,
+            player.entity(),
         );
     }
 }
@@ -129,6 +116,7 @@ fn spawn_enemy(
     sprites: &SpriteAssets,
     atlases: &SpriteSheetLayouts,
     shadows: &Shadows,
+    player: Entity,
 ) {
     if let Some(enemy_details) = enemy_assets.enemy_config.get(enemy_name) {
         let starting_items = [
@@ -177,6 +165,7 @@ fn spawn_enemy(
                         GameCollisionLayer::HighObstacle,
                     ]))
                     .with_max_hits(1),
+                Watching(player),
                 children![
                     shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                     physical_collider(),
@@ -190,7 +179,6 @@ fn spawn_enemy(
             .add_children(&starting_items)
             .observe(defeat::on_enemy_defeated)
             .observe(on_equipment_activated)
-            .observe(brain::on_damage_agro)
             .id();
 
         commands

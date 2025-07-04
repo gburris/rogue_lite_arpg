@@ -82,6 +82,10 @@ pub struct DamageDealtEvent {
     pub damage_source: Option<Entity>,
 }
 
+/// This is the character holding the weapon that dealt damage
+#[derive(Component)]
+pub struct Damager(pub Entity);
+
 #[derive(Event)]
 pub struct DefeatedEvent;
 

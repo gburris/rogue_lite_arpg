@@ -62,6 +62,7 @@ impl Plugin for CharacterPlugin {
         )
         .add_observer(behavior::on_idle_start)
         .add_observer(behavior::on_wander_start)
+        .add_observer(behavior::on_attempt_melee)
         .add_observer(vision::on_damage_aggro);
     }
 }

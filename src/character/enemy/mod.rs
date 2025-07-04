@@ -9,7 +9,7 @@ mod defeat;
 
 use crate::{
     character::{
-        behavior::{Anchor, Chase, Idle, Retreat, Wander},
+        behavior::{Anchor, AttemptMelee, Chase, Idle, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
         Character,
@@ -59,7 +59,7 @@ pub struct EnemySpawnData {
     pub enemy_type: EnemyType,
 }
 
-#[derive(Debug, Clone, Serialize, Component, Copy)]
+#[derive(Debug, Clone, Serialize, Component, Copy, PartialEq)]
 pub enum EnemyType {
     IceMage,
     Warrior,
@@ -94,10 +94,8 @@ fn spawn_enemies(
     player: Single<Entity, With<Player>>,
 ) {
     for spawn_data in enemy_trigger.0.clone() {
-        let enemy_name = spawn_data.enemy_type.name();
         spawn_enemy(
             &mut commands,
-            &enemy_name,
             &enemy_assets,
             spawn_data,
             &sprites,
@@ -110,7 +108,6 @@ fn spawn_enemies(
 
 fn spawn_enemy(
     commands: &mut Commands,
-    enemy_name: &str,
     enemy_assets: &EnemyAssets,
     spawn_data: EnemySpawnData,
     sprites: &SpriteAssets,
@@ -118,13 +115,21 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
+    let enemy_name = &spawn_data.enemy_type.name();
     if let Some(enemy_details) = enemy_assets.enemy_config.get(enemy_name) {
         let starting_items = [
             spawn_mainhand_weapon(commands, sprites, atlases, &enemy_details.weapon),
             spawn_health_potion(commands, sprites),
         ];
 
-        let enemy_behavior = behave! {
+        let chase_behavior = behave! {
+            Behave::While => {
+                Behave::spawn_named("Chase", Chase),
+                Behave::trigger(AttemptMelee)
+            }
+        };
+
+        let melee_enemy_behavior = behave! {
             Behave::Forever => {
                 Behave::Fallback => {
                     Behave::Sequence => {
@@ -132,9 +137,27 @@ fn spawn_enemy(
                         Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
                     },
                     Behave::spawn_named("Retreat", Retreat),
-                    Behave::spawn_named("Chase", Chase),
+                    @chase_behavior
                 }
             }
+        };
+
+        let ranged_enemy_behavior = behave! {
+            Behave::Forever => {
+                Behave::Fallback => {
+                    Behave::Sequence => {
+                        Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
+                    },
+                    Behave::spawn_named("Retreat", Retreat),
+                }
+            }
+        };
+
+        let enemy_behavior = if spawn_data.enemy_type == EnemyType::Warrior {
+            melee_enemy_behavior
+        } else {
+            ranged_enemy_behavior
         };
 
         let enemy = commands

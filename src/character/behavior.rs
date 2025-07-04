@@ -1,4 +1,4 @@
-use bevy_behave::prelude::BehaveCtx;
+use bevy_behave::prelude::{BehaveCtx, BehaveTrigger};
 use rand::{thread_rng, Rng};
 use std::ops::Range;
 
@@ -6,6 +6,8 @@ use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
+    combat::melee::{ActiveMeleeAttack, MeleeWeapon},
+    items::equipment::{EquipmentSlot, Equippable, UseEquipmentInputEvent},
     prelude::*,
 };
 
@@ -175,13 +177,13 @@ pub fn while_chasing(
             target_query.get_mut(ctx.target_entity()).unwrap();
 
         if !has_target {
-            info!("We chased and failed!");
+            debug!("We chased and failed!");
             commands.trigger(ctx.failure());
         } else {
             motion.start_moving(target_info.direction);
 
-            if target_info.distance < 10.0 {
-                info!("We chased and succeeded!");
+            if target_info.distance < 64.0 {
+                debug!("We chased and succeeded!");
                 commands.trigger(ctx.success());
             }
         }
@@ -194,5 +196,17 @@ fn random_direction() -> Vec2 {
     Vec2::new(angle.cos(), angle.sin())
 }
 
-#[derive(Component, Clone)]
-pub struct AttackWhenInRange;
+#[derive(Clone)]
+pub struct AttemptMelee;
+
+pub fn on_attempt_melee(trigger: Trigger<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
+    let ctx = trigger.ctx();
+
+    commands.trigger_targets(
+        UseEquipmentInputEvent {
+            slot: EquipmentSlot::Mainhand,
+        },
+        ctx.target_entity(),
+    );
+    commands.trigger(ctx.success());
+}

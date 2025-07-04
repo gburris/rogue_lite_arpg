@@ -1,11 +1,11 @@
 use bevy::prelude::*;
+use bevy_behave::prelude::*;
 
 mod interaction;
-mod movement;
 
 use crate::{
-    ai::SimpleMotion,
     character::{
+        behavior::{Idle, Retreat},
         physical_collider,
         player::interact::{InteractionEvent, InteractionZone},
         Character,
@@ -16,16 +16,17 @@ use crate::{
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
     items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
-    labels::sets::InGameSet,
     map::NPCSpawnEvent,
+    prelude::*,
 };
+
+use super::behavior::{Anchor, Wander};
 
 pub struct NPCPlugin;
 
 impl Plugin for NPCPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(spawn_npcs)
-            .add_systems(Update, (movement::move_npcs).in_set(InGameSet::Simulation));
+        app.add_observer(spawn_npcs);
     }
 }
 
@@ -71,6 +72,9 @@ impl NPCType {
     }
 }
 
+const TILE_SIZE: f32 = 32.0;
+const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
+
 fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
     mut commands: Commands,
@@ -107,9 +111,22 @@ fn spawn_npc(
     let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
     let on_player_interaction = npc_type.get_interaction_observer();
 
+    let npc_behavior = behave! {
+        Behave::Forever => {
+            Behave::Fallback => {
+                Behave::Sequence => {
+                    Behave::spawn_named("Idle", Idle::default().timer_range(1.0..4.0)),
+                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.5)),
+                },
+                Behave::spawn_named("Retreat", Retreat),
+            }
+        }
+    };
+
     let npc = commands
         .spawn((
             NPC,
+            Anchor::new(spawn_position, WANDER_RADIUS),
             SimpleMotion::new(100.0),
             Health::new(1000.0),
             npc_type,
@@ -129,7 +146,8 @@ fn spawn_npc(
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
                 ),
                 hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
-                physical_collider()
+                physical_collider(),
+                BehaveTree::new(npc_behavior.clone()),
             ],
         ))
         .observe(on_player_interaction)

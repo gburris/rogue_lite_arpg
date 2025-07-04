@@ -1,9 +1,12 @@
 use avian2d::prelude::*;
 use bevy::{platform::collections::HashSet, prelude::*};
 
-use crate::combat::{
-    damage::{AttemptDamageEvent, Damage},
-    melee::{MeleeSwingType, MeleeWeapon},
+use crate::{
+    combat::{
+        damage::{AttemptDamageEvent, Damage},
+        melee::{MeleeSwingType, MeleeWeapon},
+    },
+    prelude::ActionState,
 };
 
 use super::MELEE_WEAPON_ROTATION;
@@ -42,9 +45,16 @@ pub fn start_melee_attack(
         ));
 }
 
-pub fn end_melee_attacks(mut commands: Commands, mut query: Query<(Entity, &ActiveMeleeAttack)>) {
-    for (entity, attack) in query.iter_mut() {
+pub fn end_melee_attacks(
+    mut commands: Commands,
+    mut query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
+    mut action_state_query: Query<&mut ActionState>,
+) {
+    for (entity, child_of, attack) in query.iter_mut() {
         if attack.duration.just_finished() {
+            if let Ok(mut action_state) = action_state_query.get_mut(child_of.parent()) {
+                *action_state = ActionState::Movement;
+            }
             commands.entity(entity).remove::<ActiveMeleeAttack>();
         }
     }

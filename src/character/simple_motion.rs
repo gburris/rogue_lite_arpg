@@ -1,7 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use crate::ai::state::FacingDirection;
+use crate::prelude::*;
 
 /// Simple motion has no acceleration and assumes all entities move at max speed unless altered by slowed_percentage
 /// by Movement

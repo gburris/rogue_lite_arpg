@@ -3,7 +3,6 @@ use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
 use crate::{
-    ai::state::{ActionState, AimPosition, FacingDirection},
     combat::{
         damage::DamageSource,
         health::AttemptHealingEvent,
@@ -18,6 +17,7 @@ use crate::{
         Shield,
     },
     prelude::Enemy,
+    prelude::*,
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -144,7 +144,7 @@ pub fn on_weapon_fired(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     weapon_query: Query<&ProjectileWeapon>,
-    holder_query: Query<(&Transform, &AimPosition)>,
+    holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
 ) {
     let mut damage_source = DamageSource::Player;
@@ -155,7 +155,7 @@ pub fn on_weapon_fired(
     if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
         damage_source = DamageSource::Enemy;
     }
-    let Ok((holder_transform, holder_aim)) = holder_query.get(fired_trigger.holder) else {
+    let Ok((holder_transform, holder_vision)) = holder_query.get(fired_trigger.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };
@@ -164,7 +164,7 @@ pub fn on_weapon_fired(
         damage_source,
         &mut commands,
         holder_transform,
-        holder_aim.position,
+        holder_vision.aim_direction,
         projectile_weapon,
     );
 }
@@ -174,21 +174,19 @@ pub fn on_weapon_melee(
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
-    holder_query: Query<(&Transform, &AimPosition)>,
+    holder_query: Query<&Vision>,
 ) {
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.target()) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok((holder_transform, aim_pos)) = holder_query.get(fired_trigger.holder) else {
+    let Ok(vision) = holder_query.get(fired_trigger.holder) else {
         warn!("Holder missing required components");
         return;
     };
 
-    let holder_pos = holder_transform.translation.truncate();
-    let aim_direction: Vec2 = (aim_pos.position - holder_pos).normalize();
-    let attack_angle = aim_direction.y.atan2(aim_direction.x);
+    let attack_angle = vision.aim_direction.to_angle();
 
     start_melee_attack(
         &mut commands,

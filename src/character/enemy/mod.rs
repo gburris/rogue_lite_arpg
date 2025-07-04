@@ -1,14 +1,19 @@
+use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
+use bevy_behave::prelude::*;
 use data_loader::EnemyAssets;
 use serde::Serialize;
 
 mod data_loader;
 mod defeat;
-mod movement;
 
 use crate::{
-    ai::SimpleMotion,
-    character::{physical_collider, Character},
+    character::{
+        behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
+        physical_collider,
+        vision::{VisionCapabilities, Watching},
+        Character,
+    },
     combat::{damage::hurtbox, Health, Mana},
     configuration::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
@@ -19,8 +24,8 @@ use crate::{
         inventory::Inventory,
         spawn_health_potion, spawn_mainhand_weapon,
     },
-    labels::sets::InGameSet,
     map::EnemiesSpawnEvent,
+    prelude::*,
 };
 
 pub struct EnemyPlugin;
@@ -28,20 +33,12 @@ pub struct EnemyPlugin;
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, data_loader::setup_enemy_assets)
-            .add_observer(spawn_enemies)
-            .add_systems(
-                Update,
-                (
-                    movement::move_enemies_toward_player,
-                    movement::update_enemy_aim_position,
-                )
-                    .in_set(InGameSet::Simulation),
-            );
+            .add_observer(spawn_enemies);
     }
 }
 
 #[derive(Component)]
-#[require(Character, Experience)]
+#[require(Character, Experience, VisionCapabilities)]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -62,7 +59,7 @@ pub struct EnemySpawnData {
     pub enemy_type: EnemyType,
 }
 
-#[derive(Debug, Clone, Serialize, Component, Copy)]
+#[derive(Debug, Clone, Serialize, Component, Copy, PartialEq)]
 pub enum EnemyType {
     IceMage,
     Warrior,
@@ -94,39 +91,80 @@ fn spawn_enemies(
     sprites: Res<SpriteAssets>,
     atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
+    player: Single<Entity, With<Player>>,
 ) {
     for spawn_data in enemy_trigger.0.clone() {
-        let enemy_name = spawn_data.enemy_type.name();
         spawn_enemy(
             &mut commands,
-            &enemy_name,
             &enemy_assets,
             spawn_data,
             &sprites,
             &atlases,
             &shadows,
+            player.entity(),
         );
     }
 }
 
 fn spawn_enemy(
     commands: &mut Commands,
-    enemy_name: &str,
     enemy_assets: &EnemyAssets,
     spawn_data: EnemySpawnData,
     sprites: &SpriteAssets,
     atlases: &SpriteSheetLayouts,
     shadows: &Shadows,
+    player: Entity,
 ) {
+    let enemy_name = &spawn_data.enemy_type.name();
     if let Some(enemy_details) = enemy_assets.enemy_config.get(enemy_name) {
         let starting_items = [
             spawn_mainhand_weapon(commands, sprites, atlases, &enemy_details.weapon),
             spawn_health_potion(commands, sprites),
         ];
 
+        let chase_behavior = behave! {
+            Behave::While => {
+                Behave::spawn_named("Chase", Chase),
+                Behave::trigger(AttemptMelee)
+            }
+        };
+
+        let melee_enemy_behavior = behave! {
+            Behave::Forever => {
+                Behave::Fallback => {
+                    Behave::Sequence => {
+                        Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
+                    },
+                    Behave::spawn_named("Retreat", Retreat),
+                    @chase_behavior
+                }
+            }
+        };
+
+        let ranged_enemy_behavior = behave! {
+            Behave::Forever => {
+                Behave::Fallback => {
+                    Behave::Sequence => {
+                        Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
+                        Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
+                    },
+                    Behave::spawn_named("Retreat", Retreat),
+                    Behave::spawn_named("Keep distance and fire", KeepDistanceAndFire)
+                }
+            }
+        };
+
+        let enemy_behavior = if spawn_data.enemy_type == EnemyType::Warrior {
+            melee_enemy_behavior
+        } else {
+            ranged_enemy_behavior
+        };
+
         let enemy = commands
             .spawn((
                 Enemy,
+                Anchor::new(spawn_data.position, 256.0), // 8 tile radius
                 Inventory::builder()
                     .items(starting_items.into())
                     .coins(99)
@@ -143,13 +181,23 @@ fn spawn_enemy(
                         ..default()
                     },
                 ),
+                // enemy vision distance
+                RayCaster::default()
+                    .with_max_distance(350.0)
+                    .with_query_filter(SpatialQueryFilter::from_mask([
+                        GameCollisionLayer::AllyHurtBox,
+                        GameCollisionLayer::HighObstacle,
+                    ]))
+                    .with_max_hits(1),
+                Watching(player),
                 children![
                     shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                     physical_collider(),
                     hurtbox(
                         enemy_details.collider_size.into(),
                         GameCollisionLayer::EnemyHurtBox
-                    )
+                    ),
+                    BehaveTree::new(enemy_behavior.clone()),
                 ],
             ))
             .add_children(&starting_items)

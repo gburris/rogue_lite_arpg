@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use crate::ai::SimpleMotion;
+use crate::prelude::*;
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
-#[require(FacingDirection, AimPosition)]
+#[require(FacingDirection, Vision)]
 pub enum ActionState {
     Attacking,
     Defeated, //Death Animation
@@ -33,12 +33,15 @@ impl FacingDirection {
             _ => *self,
         }
     }
-}
 
-/// Represents the world coordinate where an entitiy is aiming, for player this is the cursor
-#[derive(Component, Default)]
-pub struct AimPosition {
-    pub position: Vec2,
+    pub fn to_vec2(&self) -> Vec2 {
+        match self {
+            FacingDirection::Up => Vec2::new(0.0, 1.0),
+            FacingDirection::Down => Vec2::new(0.0, -1.0),
+            FacingDirection::Left => Vec2::new(-1.0, 0.0),
+            FacingDirection::Right => Vec2::new(1.0, 0.0),
+        }
+    }
 }
 
 pub fn update_state_on_simple_motion_change(

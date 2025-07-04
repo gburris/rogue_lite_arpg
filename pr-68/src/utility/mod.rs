@@ -20,7 +20,8 @@ use crate::{
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (despawn_expired_entities).in_set(InGameSet::DespawnEntities),
+        (despawn_expired_entities, generic_remove_component_system)
+            .in_set(InGameSet::DespawnEntities),
     )
     .add_observer(despawn_all::<CleanupZone, Portal>)
     .add_observer(despawn_all::<CleanupZone, TilemapId>)
@@ -81,7 +82,7 @@ pub fn despawn_all<T: Event, C: Component>(
 #[derive(Component)]
 pub struct RemoveComponent {
     pub timer: Timer,
-    pub component_id: ComponentId,
+    pub remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
 }
 
 pub fn generic_remove_component_system(
@@ -92,10 +93,11 @@ pub fn generic_remove_component_system(
     for (entity, mut remove_component) in query.iter_mut() {
         remove_component.timer.tick(time.delta());
         if remove_component.timer.finished() {
-            commands
-                .entity(entity)
-                .remove_by_id(remove_component.component_id)
-                .remove::<RemoveComponent>();
+            if let Some(remover) = remove_component.remover.take() {
+                let mut entity_cmds = commands.entity(entity);
+                remover(&mut entity_cmds);
+                entity_cmds.remove::<RemoveComponent>();
+            }
         }
     }
 }
@@ -104,14 +106,13 @@ pub fn schedule_component_removal<C: Component>(
     commands: &mut Commands,
     entity: Entity,
     seconds: f32,
-    components: &Components,
 ) {
-    let component_id = components
-        .get_id(TypeId::of::<C>())
-        .expect("No component of type T registered");
+    let remover = Box::new(|entity_cmds: &mut EntityCommands| {
+        entity_cmds.remove::<C>();
+    });
 
     commands.entity(entity).insert(RemoveComponent {
         timer: Timer::from_seconds(seconds, TimerMode::Once),
-        component_id,
+        remover: Some(remover),
     });
 }

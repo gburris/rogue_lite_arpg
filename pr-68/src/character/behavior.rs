@@ -4,12 +4,12 @@ use std::ops::Range;
 
 use bevy::prelude::*;
 
-use crate::prelude::*;
-
-use super::vision::{Agro, AgroInterrupts};
+use crate::{
+    character::vision::{TargetInfo, Targeting},
+    prelude::*,
+};
 
 #[derive(Component, Clone)]
-#[require(AgroInterrupts)]
 pub struct Idle {
     timer: Timer,
 }
@@ -45,9 +45,13 @@ pub fn while_idling(
     mut commands: Commands,
     time: Res<Time>,
     mut idle_query: Query<(&BehaveCtx, &mut Idle)>,
+    target_query: Query<&Targeting>,
 ) {
     idle_query.iter_mut().for_each(|(ctx, mut idle)| {
-        if idle.timer.tick(time.delta()).just_finished() {
+        if let Ok(_) = target_query.get(ctx.target_entity()) {
+            info!("{} Got target while idling", ctx.target_entity());
+            commands.trigger(ctx.failure());
+        } else if idle.timer.tick(time.delta()).just_finished() {
             commands.trigger(ctx.success());
         }
     });
@@ -76,7 +80,6 @@ impl Anchor {
 
 /// Moves in a random direction
 #[derive(Component, Clone)]
-#[require(AgroInterrupts)]
 pub struct Wander {
     /// How long to move in direction for
     timer: Timer,
@@ -122,9 +125,13 @@ pub fn while_wandering(
     time: Res<Time>,
     mut commands: Commands,
     mut wander_query: Query<(&BehaveCtx, &mut Wander)>,
+    target_query: Query<&Targeting>,
 ) {
     wander_query.iter_mut().for_each(|(ctx, mut wander)| {
-        if wander.timer.tick(time.delta()).just_finished() {
+        if let Ok(_) = target_query.get(ctx.target_entity()) {
+            info!("{} Got target while wandering", ctx.target_entity());
+            commands.trigger(ctx.failure());
+        } else if wander.timer.tick(time.delta()).just_finished() {
             commands.trigger(ctx.success());
         }
     });
@@ -132,19 +139,20 @@ pub fn while_wandering(
 
 /// When a character is not agroed and too far from home, return to origin
 #[derive(Component, Clone)]
-#[require(AgroInterrupts)]
 pub struct Retreat;
 
 pub fn while_retreating(
     mut commands: Commands,
     mut retreat_query: Query<&BehaveCtx, With<Retreat>>,
-    mut target_query: Query<(&mut SimpleMotion, &Transform, &Anchor)>,
+    mut target_query: Query<(&mut SimpleMotion, &Transform, &Anchor, Has<Targeting>)>,
 ) {
     retreat_query.iter_mut().for_each(|ctx| {
-        let (mut motion, transform, anchor) = target_query.get_mut(ctx.target_entity()).unwrap();
-
-        // within half a tile, we can stop retreating
-        if anchor.distance_from(transform) < 16.0 {
+        let (mut motion, transform, anchor, has_target) =
+            target_query.get_mut(ctx.target_entity()).unwrap();
+        if has_target {
+            commands.trigger(ctx.failure());
+            // within half a tile, we can stop retreating
+        } else if anchor.distance_from(transform) < 16.0 {
             commands.trigger(ctx.success());
         } else {
             let direction = (anchor.origin - transform.translation.xy()).normalize_or_zero();
@@ -159,31 +167,23 @@ pub struct Chase;
 
 pub fn while_chasing(
     mut commands: Commands,
-    mut chase_query: Query<(&BehaveCtx, &mut Chase)>,
-    mut target_query: Query<(&mut SimpleMotion, &Transform, &Agro)>,
-    player_transform: Single<&Transform, With<Player>>,
+    mut chase_query: Query<&BehaveCtx, With<Chase>>,
+    mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
 ) {
-    chase_query.iter_mut().for_each(|(ctx, _chase)| {
-        let (mut motion, target_transform, agro) =
+    chase_query.iter_mut().for_each(|ctx| {
+        let (mut motion, target_info, has_target) =
             target_query.get_mut(ctx.target_entity()).unwrap();
 
-        let distance_to_player = player_transform
-            .translation
-            .xy()
-            .distance(target_transform.translation.xy());
-
-        let towards_player_direction = (player_transform.translation.xy()
-            - target_transform.translation.xy())
-        .normalize_or_zero();
-
-        motion.start_moving(towards_player_direction);
-
-        if distance_to_player < 10.0 {
-            info!("We chased and succeeded!");
-            commands.trigger(ctx.success());
-        } else if !agro.has_target() {
+        if !has_target {
             info!("We chased and failed!");
             commands.trigger(ctx.failure());
+        } else {
+            motion.start_moving(target_info.direction);
+
+            if target_info.distance < 10.0 {
+                info!("We chased and succeeded!");
+                commands.trigger(ctx.success());
+            }
         }
     });
 }
@@ -193,3 +193,6 @@ fn random_direction() -> Vec2 {
     let angle = rng.gen_range(0.0..std::f32::consts::TAU);
     Vec2::new(angle.cos(), angle.sin())
 }
+
+#[derive(Component, Clone)]
+pub struct AttackWhenInRange;

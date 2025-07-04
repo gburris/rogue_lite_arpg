@@ -45,16 +45,24 @@ impl Plugin for CharacterPlugin {
             Update,
             (
                 state::update_state_on_simple_motion_change,
-                vision::check_for_target_interrupt,
                 behavior::while_chasing,
                 behavior::while_idling,
                 behavior::while_wandering,
                 behavior::while_retreating,
+                // Vision + Perception
+                vision::update_aim_position,
+                vision::update_target_info,
+                vision::is_target_in_sight,
+                vision::debug_vision,
+                // Targeting
+                vision::should_target_watched,
+                vision::should_stop_targeting,
             )
                 .in_set(InGameSet::Simulation),
         )
         .add_observer(behavior::on_idle_start)
-        .add_observer(behavior::on_wander_start);
+        .add_observer(behavior::on_wander_start)
+        .add_observer(vision::on_damage_aggro);
     }
 }
 

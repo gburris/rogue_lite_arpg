@@ -1,4 +1,5 @@
-use bevy::prelude::*;
+use avian2d::prelude::*;
+use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
@@ -8,16 +9,16 @@ use crate::{
         health::AttemptHealingEvent,
         mana::ManaCost,
         melee::{start_melee_attack, MeleeWeapon},
-        projectile::{self, Projectiles},
+        projectile::{ProjectileOf, Projectiles},
         shield::{shield_block::deactivate_shield, ActiveShield},
-        Mana,
+        Mana, Projectile,
     },
+    configuration::{GameCollisionLayer, ZLayer},
     items::{
         equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
         Shield,
     },
-    prelude::Enemy,
-    prelude::*,
+    prelude::{Enemy, *},
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -144,40 +145,52 @@ pub fn on_weapon_fired(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
     weapon_query: Query<&Projectiles>,
-    holder_query: Query<(&Transform, &AimPosition)>,
+    holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
+    projectile_query: Query<&Projectile, With<Disabled>>,
 ) {
-    let mut damage_source = DamageSource::Player;
     let Ok(projectiles) = weapon_query.get(fired_trigger.target()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
-    info!("Firing weapon");
 
-    if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
-        damage_source = DamageSource::Enemy;
-    }
+    let damage_source = if enemy_query.get(fired_trigger.holder).is_ok() {
+        DamageSource::Enemy
+    } else {
+        DamageSource::Player
+    };
+
     let Ok((holder_transform, holder_vision)) = holder_query.get(fired_trigger.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };
 
-    info!("Spawning projectile");
+    let caster_direction = holder_transform.local_x().truncate();
+    let angle = caster_direction.angle_to(holder_vision.aim_direction);
 
-    let projectile = projectiles.iter().next().unwrap();
+    let starting_positon =
+        holder_transform.translation.truncate() + (25.0 * holder_vision.aim_direction);
 
-    commands
-        .entity(fired_trigger.target())
-        .remove::<Projectiles>();
-
-    commands.entity(projectile).clone_and_spawn();
-    // projectile::spawn(
-    //     damage_source,
-    //     &mut commands,
-    //     holder_transform,
-    //     holder_aim.position,
-    //     projectiles,
-    // );
+    for projectile_entity in projectiles.iter() {
+        if let Ok(projectie) = projectile_query.get(projectile_entity) {
+            commands
+                .entity(projectile_entity)
+                .clone_and_spawn()
+                .remove::<(Disabled, ProjectileOf)>()
+                .insert((
+                    Transform {
+                        translation: starting_positon.extend(ZLayer::InAir.z()),
+                        rotation: Quat::from_rotation_z(angle),
+                        ..default()
+                    },
+                    LinearVelocity(holder_vision.aim_direction * projectie.speed),
+                    CollisionLayers::new(
+                        GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+                        LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
+                    ),
+                ));
+        }
+    }
 }
 
 pub fn on_weapon_melee(

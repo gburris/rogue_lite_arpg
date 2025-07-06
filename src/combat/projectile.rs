@@ -3,36 +3,44 @@ use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    configuration::{
-        assets::{SpriteAssets, SpriteSheetLayouts},
-        GameCollisionLayer, ZLayer,
-    },
-    despawn::components::LiveDuration,
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    utility::Lifespan,
 };
 
 use super::{
-    damage::{AttemptDamageEvent, Damage, DamageSource, HurtBox},
+    damage::{AttemptDamageEvent, Damage, HurtBox},
     shield::components::ProjectileReflection,
     status_effects::{
-        components::{BurningStatus, EffectsList, StatusType},
+        components::{EffectsList, StatusType},
         events::ApplyStatus,
     },
 };
 
 #[derive(Component, Clone)]
 #[require(
-    // LiveDuration::new(1.0),
-    // Sensor,
-    // RigidBody,
-    // Collider::rectangle(10.0, 10.0),
-    // CollidingEntities,
-    // AnimationIndices::Cycle((0..=4).cycle()),
-    // AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+    Lifespan::new(1.0),
+    Sensor,
+    RigidBody,
+    Collider::rectangle(10.0, 10.0),
+    CollidingEntities,
+    AnimationIndices::Cycle((0..=4).cycle()),
+    AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
     Disabled
 )]
 pub struct Projectile {
     pub damage: Damage,
     pub speed: f32,
+    pub spawn_offset: f32,
+}
+
+impl Default for Projectile {
+    fn default() -> Self {
+        Self {
+            damage: Damage::Range((5.0, 10.0)),
+            speed: 600.0,
+            spawn_offset: 25.0,
+        }
+    }
 }
 
 #[derive(Component)]
@@ -42,64 +50,6 @@ pub struct ProjectileOf(Entity);
 #[derive(Component)]
 #[relationship_target(relationship = ProjectileOf)]
 pub struct Projectiles(Vec<Entity>);
-
-const PROJECTILE_SPAWN_OFFSET: f32 = 25.0;
-
-pub fn spawn(
-    damage_source: DamageSource, //Player, enemy, NPC, Party Member
-    commands: &mut Commands,
-    caster_transform: &Transform,
-    caster_aim_position: Vec2,
-    projectiles: &Projectiles,
-) {
-    let caster_direction = caster_transform.local_x().truncate();
-    let angle = caster_direction.angle_to(aim_direction);
-
-    // let velocity = aim_direction * projectiles.projectile_speed;
-
-    let starting_positon =
-        caster_transform.translation.truncate() + (PROJECTILE_SPAWN_OFFSET * aim_direction);
-
-    // trace!("Spawning projectiles w/ velocity: {}", velocity);
-
-    info!("cloning from relationship");
-
-    for projectile in projectiles.iter() {
-        commands.entity(projectile).clone_and_spawn();
-
-        info!("CLONED");
-
-        //cloned.remove::<Disabled>();
-
-        info!("CLONE NOT DISABLED");
-
-        // cloned.insert((
-        //     Transform {
-        //         translation: starting_positon.extend(ZLayer::InAir.z()),
-        //         rotation: Quat::from_rotation_z(angle),
-        //         ..default()
-        //     },
-        //     CollisionLayers::new(
-        //         GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-        //         LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
-        //     ),
-        // ));
-    }
-}
-
-pub fn on_projectile_spawn(
-    trigger: Trigger<OnAdd, Projectile>,
-    mut commands: Commands,
-    projectile_query: Query<(&Projectile, &Transform)>,
-) {
-    info!("bruh moment 1");
-
-    if let Ok((projectie, transform)) = projectile_query.get(trigger.target()) {
-        commands.entity(trigger.target()).insert(LinearVelocity(
-            Vec2::from_angle(transform.rotation.to_axis_angle().1) * projectie.speed,
-        ));
-    }
-}
 
 pub fn handle_collisions(
     mut commands: Commands,
@@ -131,10 +81,7 @@ pub fn handle_collisions(
 
 pub fn fireball(sprites: &SpriteAssets, texture_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
-        Projectile {
-            damage: Damage::Range((5.0, 10.0)),
-            speed: 600.0,
-        },
+        Projectile::default(),
         // EffectsList {
         //     effects: vec![ApplyStatus {
         //         status: StatusType::Burning(BurningStatus::default()),
@@ -156,6 +103,7 @@ pub fn icicle(sprites: &SpriteAssets, texture_layouts: &SpriteSheetLayouts) -> i
         Projectile {
             damage: Damage::Range((12.0, 25.0)),
             speed: 500.0,
+            spawn_offset: 25.0,
         },
         EffectsList {
             effects: vec![ApplyStatus {

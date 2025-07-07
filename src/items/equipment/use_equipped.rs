@@ -165,25 +165,26 @@ pub fn on_weapon_fired(
         return;
     };
 
-    let caster_direction = holder_transform.local_x().truncate();
-    let angle = caster_direction.angle_to(holder_vision.aim_direction);
-
-    let starting_positon =
-        holder_transform.translation.truncate() + (25.0 * holder_vision.aim_direction);
-
     for projectile_entity in projectiles.iter() {
-        if let Ok(projectie) = projectile_query.get(projectile_entity) {
+        if let Ok(projectile) = projectile_query.get(projectile_entity) {
+            // Rotate the aim direction by the projectile’s angle offset
+            let rotated_direction = holder_vision
+                .aim_direction
+                .rotate(Vec2::from_angle(projectile.angle_offset));
+            let starting_position = holder_transform.translation.truncate()
+                + (projectile.forward_offset * rotated_direction);
+
             commands
                 .entity(projectile_entity)
                 .clone_and_spawn()
                 .remove::<(Disabled, ProjectileOf)>()
                 .insert((
                     Transform {
-                        translation: starting_positon.extend(ZLayer::InAir.z()),
-                        rotation: Quat::from_rotation_z(angle),
+                        translation: starting_position.extend(ZLayer::InAir.z()),
+                        rotation: Quat::from_rotation_z(rotated_direction.to_angle()),
                         ..default()
                     },
-                    LinearVelocity(holder_vision.aim_direction * projectie.speed),
+                    LinearVelocity(rotated_direction * projectile.speed),
                     CollisionLayers::new(
                         GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
                         LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,

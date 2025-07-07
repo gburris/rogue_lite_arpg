@@ -1,3 +1,5 @@
+use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
+
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
@@ -6,7 +8,7 @@ use crate::{
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
-        projectile::{fireball, icicle, Projectiles},
+        projectile::{BulletSprite, ProjectileBuilder, Projectiles},
         status_effects::{
             components::{EffectsList, StatusType},
             events::ApplyStatus,
@@ -71,10 +73,18 @@ pub fn spawn_fire_staff(
     sprites: &SpriteAssets,
     texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
+    let fireball_builder = ProjectileBuilder::new(BulletSprite::Fireball, sprites, texture_layouts);
+
     commands
         .spawn((
             Name::new("Staff of Flames"),
-            Projectiles::spawn_one(fireball(sprites, texture_layouts)),
+            related!(
+                Projectiles [
+                    fireball_builder.clone().with_angle_offset(-FRAC_PI_8).build(),
+                    fireball_builder.clone().build(),
+                    fireball_builder.clone().with_angle_offset(FRAC_PI_8).build(),
+                ]
+            ),
             Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
@@ -92,7 +102,9 @@ pub fn spawn_ice_staff(
     commands
         .spawn((
             Name::new("Staff of Ice"),
-            Projectiles::spawn_one(icicle(sprites, texture_layouts)),
+            Projectiles::spawn_one(
+                ProjectileBuilder::new(BulletSprite::IceBolt, sprites, texture_layouts).build(),
+            ),
             Item::new(2050, ItemType::Staff),
             ManaCost(20.0), // big mana cost
             Equippable {

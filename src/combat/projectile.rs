@@ -1,8 +1,11 @@
+use std::f32::consts::FRAC_PI_4;
+
 use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
+    combat::status_effects::components::BurningStatus,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     utility::Lifespan,
 };
@@ -30,7 +33,8 @@ use super::{
 pub struct Projectile {
     pub damage: Damage,
     pub speed: f32,
-    pub spawn_offset: f32,
+    pub forward_offset: f32,
+    pub angle_offset: f32,
 }
 
 impl Default for Projectile {
@@ -38,7 +42,8 @@ impl Default for Projectile {
         Self {
             damage: Damage::Range((5.0, 10.0)),
             speed: 600.0,
-            spawn_offset: 25.0,
+            forward_offset: 25.0,
+            angle_offset: 0.0,
         }
     }
 }
@@ -50,6 +55,87 @@ pub struct ProjectileOf(Entity);
 #[derive(Component)]
 #[relationship_target(relationship = ProjectileOf)]
 pub struct Projectiles(Vec<Entity>);
+
+pub enum BulletSprite {
+    Fireball,
+    IceBolt,
+}
+
+#[derive(Clone)]
+pub struct ProjectileBuilder {
+    sprite: Sprite,
+    damage: Damage,
+    speed: f32,
+    angle_offset: f32,
+}
+
+impl Default for ProjectileBuilder {
+    fn default() -> Self {
+        Self {
+            sprite: Default::default(),
+            damage: Damage::Range((5.0, 10.0)),
+            speed: 600.0,
+            angle_offset: 0.0,
+        }
+    }
+}
+
+impl ProjectileBuilder {
+    pub fn new(
+        bullet: BulletSprite,
+        sprites: &SpriteAssets,
+        texture_layouts: &SpriteSheetLayouts,
+    ) -> Self {
+        let (image, layout) = match bullet {
+            BulletSprite::Fireball => (
+                sprites.fire_ball.clone(),
+                texture_layouts.fireball_layout.clone(),
+            ),
+            BulletSprite::IceBolt => (
+                sprites.ice_bolt.clone(),
+                texture_layouts.ice_bolt_layout.clone(),
+            ),
+        };
+
+        ProjectileBuilder {
+            sprite: Sprite::from_atlas_image(
+                image,
+                TextureAtlas {
+                    layout: layout,
+                    index: 0,
+                },
+            ),
+            ..default()
+        }
+    }
+
+    pub fn with_damage(mut self, damage: Damage) -> Self {
+        self.damage = damage;
+        self
+    }
+
+    pub fn with_speed(mut self, speed: f32) -> Self {
+        self.speed = speed;
+        self
+    }
+
+    pub fn with_angle_offset(mut self, offset: f32) -> Self {
+        self.angle_offset = offset;
+        self
+    }
+
+    pub fn build(self) -> impl Bundle {
+        (
+            Projectile {
+                damage: self.damage,
+                speed: self.speed,
+                forward_offset: 25.0,
+                angle_offset: self.angle_offset,
+            },
+            self.sprite,
+        )
+    }
+}
 
 pub fn handle_collisions(
     mut commands: Commands,
@@ -77,46 +163,4 @@ pub fn handle_collisions(
             commands.entity(projectile_entity).despawn();
         }
     }
-}
-
-pub fn fireball(sprites: &SpriteAssets, texture_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Projectile::default(),
-        // EffectsList {
-        //     effects: vec![ApplyStatus {
-        //         status: StatusType::Burning(BurningStatus::default()),
-        //         duration: 2.0,
-        //     }],
-        // },
-        Sprite::from_atlas_image(
-            sprites.fire_ball.clone(),
-            TextureAtlas {
-                layout: texture_layouts.fireball_layout.clone(),
-                index: 0,
-            },
-        ),
-    )
-}
-
-pub fn icicle(sprites: &SpriteAssets, texture_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Projectile {
-            damage: Damage::Range((12.0, 25.0)),
-            speed: 500.0,
-            spawn_offset: 25.0,
-        },
-        EffectsList {
-            effects: vec![ApplyStatus {
-                status: StatusType::Frozen,
-                duration: 2.0,
-            }],
-        },
-        Sprite::from_atlas_image(
-            sprites.ice_bolt.clone(),
-            TextureAtlas {
-                layout: texture_layouts.ice_bolt_layout.clone(),
-                index: 0,
-            },
-        ),
-    )
 }

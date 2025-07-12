@@ -1,4 +1,4 @@
-use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
+use std::f32::consts::FRAC_PI_8;
 
 use avian2d::prelude::Collider;
 use bevy::prelude::*;

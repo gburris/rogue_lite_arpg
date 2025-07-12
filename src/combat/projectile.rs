@@ -1,11 +1,8 @@
-use std::f32::consts::FRAC_PI_4;
-
 use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::status_effects::components::BurningStatus,
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     utility::Lifespan,
 };
@@ -13,10 +10,6 @@ use crate::{
 use super::{
     damage::{AttemptDamageEvent, Damage, HurtBox},
     shield::components::ProjectileReflection,
-    status_effects::{
-        components::{EffectsList, StatusType},
-        events::ApplyStatus,
-    },
 };
 
 #[derive(Component, Clone)]

@@ -189,7 +189,7 @@ fn spawn_player(
     shadows: Res<Shadows>,
 ) {
     let starting_items = [
-        items::spawn_fire_staff(&mut commands, &sprites, &texture_layouts),
+        items::spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
         items::spawn_health_potion(&mut commands, &sprites),
         items::spawn_sword(&mut commands, &sprites),
         items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "tome_of_healing"),

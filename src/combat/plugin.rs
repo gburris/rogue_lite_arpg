@@ -2,8 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     combat::{
-        damage, health, invulnerable, mana, melee, projectile,
-        status_effects::plugin::StatusEffectPlugin,
+        damage, health, invulnerable, mana, melee, projectile, status_effects::StatusEffectPlugin,
     },
     labels::sets::InGameSet,
 };

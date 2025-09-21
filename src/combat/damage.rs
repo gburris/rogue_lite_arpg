@@ -1,18 +1,18 @@
 use avian2d::prelude::*;
 
-use bevy::prelude::*;
+use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 use rand::Rng;
 
 use crate::{
     combat::{
         health::Health,
         invulnerable::IFrames,
-        status_effects::{components::EffectsList, events::ApplyEffect},
+        status_effects::{EffectOf, Effects, StatusOf},
     },
     configuration::GameCollisionLayer,
 };
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum DamageSource {
     Player,
     Enemy,
@@ -38,8 +38,8 @@ impl From<DamageSource> for LayerMask {
 
 #[derive(Copy, Clone)]
 pub enum Damage {
-    Range((f32, f32)),
     Single(f32),
+    Range((f32, f32)),
 }
 
 impl Damage {
@@ -48,6 +48,12 @@ impl Damage {
             Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
             Damage::Single(amount) => amount,
         }
+    }
+}
+
+impl Default for Damage {
+    fn default() -> Self {
+        Self::Single(0.0)
     }
 }
 
@@ -94,7 +100,7 @@ pub fn on_damage_event(
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
-    source_query: Query<&EffectsList>,
+    source_query: Query<&Effects>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
     let damaged_entity = if let Ok(child_of) = hurt_box_query.get(damage_trigger.target()) {
@@ -133,13 +139,15 @@ pub fn on_damage_event(
             commands.trigger_targets(DefeatedEvent, damaged_entity);
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
-            if let Ok(effects_list) = source_query.get(source_entity) {
-                commands.trigger_targets(
-                    ApplyEffect {
-                        effect: effects_list.effects.clone(),
-                    },
-                    damaged_entity,
-                );
+            if let Ok(effects) = source_query.get(source_entity) {
+                trace!("Applying effects: {:?}", effects);
+                effects.iter().for_each(|e| {
+                    commands
+                        .entity(e)
+                        .clone_and_spawn()
+                        .remove::<(Disabled, EffectOf)>()
+                        .insert(StatusOf(damaged_entity));
+                });
             }
         }
     }

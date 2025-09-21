@@ -1,16 +1,16 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    configuration::{GameCollisionLayer, ZLayer},
+    combat::status_effects::{Burning, Effects, Frozen},
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     utility::Lifespan,
 };
 
 use super::{
-    damage::{AttemptDamageEvent, Damage, DamageSource, HurtBox},
+    damage::{AttemptDamageEvent, Damage, HurtBox},
     shield::components::ProjectileReflection,
-    status_effects::components::EffectsList,
 };
 
 #[derive(Component, Clone)]
@@ -19,60 +19,81 @@ use super::{
     Sensor,
     RigidBody,
     Collider::rectangle(10.0, 10.0),
-    CollidingEntities
+    CollidingEntities,
+    AnimationIndices::Cycle((0..=4).cycle()),
+    AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+    Disabled
 )]
 pub struct Projectile {
-    pub damage: (f32, f32),
+    pub damage: Damage,
+    pub speed: f32,
+    pub forward_offset: f32,
+    pub angle_offset: f32,
 }
 
-#[derive(Bundle, Clone)]
-pub struct ProjectileBundle {
-    pub projectile: Projectile,
-    pub sprite: Sprite,
-    pub effects_list: EffectsList,
+impl Default for Projectile {
+    fn default() -> Self {
+        Self {
+            damage: Damage::Range((5.0, 10.0)),
+            speed: 600.0,
+            forward_offset: 25.0,
+            angle_offset: 0.0,
+        }
+    }
 }
 
-#[derive(Component)]
-pub struct ProjectileWeapon {
-    pub projectile: ProjectileBundle,
-    pub projectile_speed: f32,
-    pub spread: f32,
-}
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Projectiles)]
+pub struct ProjectileOf(Entity);
 
-const PROJECTILE_SPAWN_OFFSET: f32 = 25.0;
+#[derive(Component, Clone)]
+#[relationship_target(relationship = ProjectileOf, linked_spawn)]
+pub struct Projectiles(Vec<Entity>);
 
-pub fn spawn(
-    damage_source: DamageSource, //Player, enemy, NPC, Party Member
-    commands: &mut Commands,
-    caster_transform: &Transform,
-    aim_direction: Vec2,
-    weapon: &ProjectileWeapon,
-) {
-    let caster_direction = caster_transform.local_x().truncate();
-    let angle = caster_direction.angle_to(aim_direction);
-
-    let velocity = aim_direction * weapon.projectile_speed;
-
-    let starting_positon =
-        caster_transform.translation.truncate() + (PROJECTILE_SPAWN_OFFSET * aim_direction);
-
-    trace!("Spawning projectile w/ velocity: {}", velocity);
-
-    commands.spawn((
-        weapon.projectile.clone(),
-        Transform {
-            translation: starting_positon.extend(ZLayer::InAir.z()),
-            rotation: Quat::from_rotation_z(angle),
-            ..default()
+pub fn fireball(
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
+    angle_offset: f32,
+) -> impl Bundle {
+    (
+        Projectile {
+            damage: Damage::Single(3.0),
+            speed: 600.0,
+            forward_offset: 25.0,
+            angle_offset,
         },
-        LinearVelocity(velocity),
-        AnimationIndices::Cycle((0..=4).cycle()),
-        AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-        CollisionLayers::new(
-            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-            LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
+        Sprite::from_atlas_image(
+            sprites.fire_ball.clone(),
+            TextureAtlas {
+                layout: texture_layouts.fireball_layout.clone(),
+                index: 0,
+            },
         ),
-    ));
+        related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
+    )
+}
+
+pub fn icebolt(
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
+    angle_offset: f32,
+) -> impl Bundle {
+    (
+        Projectile {
+            damage: Damage::Range((10.0, 20.0)),
+            speed: 500.0,
+            forward_offset: 25.0,
+            angle_offset,
+        },
+        Sprite::from_atlas_image(
+            sprites.ice_bolt.clone(),
+            TextureAtlas {
+                layout: texture_layouts.ice_bolt_layout.clone(),
+                index: 0,
+            },
+        ),
+        related!(Effects[(Frozen, Lifespan::new(0.7))]),
+    )
 }
 
 pub fn handle_collisions(
@@ -89,7 +110,7 @@ pub fn handle_collisions(
                 commands.trigger_targets(
                     AttemptDamageEvent {
                         ignore_invulnerable: false,
-                        damage: Damage::Range(projectile.damage),
+                        damage: projectile.damage,
                         damage_source: Some(projectile_entity),
                     },
                     colliding_entity,

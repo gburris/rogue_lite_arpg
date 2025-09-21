@@ -34,7 +34,7 @@ pub fn plugin(app: &mut App) {
 }
 
 /// Represents an entity that will be despawned after time elapsed
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Lifespan(pub Timer);
 
 impl Lifespan {

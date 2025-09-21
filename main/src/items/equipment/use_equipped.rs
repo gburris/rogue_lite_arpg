@@ -1,4 +1,8 @@
-use bevy::prelude::*;
+use avian2d::prelude::*;
+use bevy::{
+    ecs::{entity::EntityCloner, entity_disabling::Disabled},
+    prelude::*,
+};
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
@@ -8,16 +12,17 @@ use crate::{
         health::AttemptHealingEvent,
         mana::ManaCost,
         melee::{start_melee_attack, MeleeWeapon},
-        projectile::{self, ProjectileWeapon},
+        projectile::{ProjectileOf, Projectiles},
         shield::{shield_block::deactivate_shield, ActiveShield},
-        Mana,
+        status_effects::Effects,
+        Mana, Projectile,
     },
+    configuration::{GameCollisionLayer, ZLayer},
     items::{
         equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
         Shield,
     },
-    prelude::Enemy,
-    prelude::*,
+    prelude::{Enemy, *},
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -117,7 +122,7 @@ fn handle_equipment_activation(
         // Check mana next
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
-                warn!("Not enough mana!");
+                debug!("Not enough mana!");
                 commands.trigger_targets(
                     EquipmentUseFailedEvent {
                         holder: entity,
@@ -143,30 +148,58 @@ fn handle_equipment_activation(
 pub fn on_weapon_fired(
     fired_trigger: Trigger<UseEquipmentEvent>,
     mut commands: Commands,
-    weapon_query: Query<&ProjectileWeapon>,
+    weapon_query: Query<&Projectiles>,
     holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
+    projectile_query: Query<(&Projectile, Option<&Effects>), With<Disabled>>,
 ) {
-    let mut damage_source = DamageSource::Player;
-    let Ok(projectile_weapon) = weapon_query.get(fired_trigger.target()) else {
+    let Ok(projectiles) = weapon_query.get(fired_trigger.target()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
-    if let Ok(_enemy) = enemy_query.get(fired_trigger.holder) {
-        damage_source = DamageSource::Enemy;
-    }
+
+    let damage_source = if enemy_query.get(fired_trigger.holder).is_ok() {
+        DamageSource::Enemy
+    } else {
+        DamageSource::Player
+    };
+
     let Ok((holder_transform, holder_vision)) = holder_query.get(fired_trigger.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };
 
-    projectile::spawn(
-        damage_source,
-        &mut commands,
-        holder_transform,
-        holder_vision.aim_direction,
-        projectile_weapon,
-    );
+    for projectile_entity in projectiles.iter() {
+        if let Ok((projectile, effects)) = projectile_query.get(projectile_entity) {
+            info!("Spawning projectile with effects: {:?}", effects);
+
+            // Rotate the aim direction by the projectile’s angle offset
+            let rotated_direction = holder_vision
+                .aim_direction
+                .rotate(Vec2::from_angle(projectile.angle_offset));
+            let starting_position = holder_transform.translation.truncate()
+                + (projectile.forward_offset * rotated_direction);
+
+            commands
+                .entity(projectile_entity)
+                .clone_and_spawn_with(|builder| {
+                    builder.linked_cloning(true);
+                })
+                .remove::<(Disabled, ProjectileOf)>()
+                .insert((
+                    Transform {
+                        translation: starting_position.extend(ZLayer::InAir.z()),
+                        rotation: Quat::from_rotation_z(rotated_direction.to_angle()),
+                        ..default()
+                    },
+                    LinearVelocity(rotated_direction * projectile.speed),
+                    CollisionLayers::new(
+                        GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+                        LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,
+                    ),
+                ));
+        }
+    }
 }
 
 pub fn on_weapon_melee(

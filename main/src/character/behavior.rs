@@ -6,8 +6,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    combat::melee::{ActiveMeleeAttack, MeleeWeapon},
-    items::equipment::{EquipmentSlot, Equippable, UseEquipmentInputEvent},
+    items::equipment::{EquipmentSlot, UseEquipmentInputEvent},
     prelude::*,
 };
 

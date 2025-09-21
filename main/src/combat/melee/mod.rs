@@ -1,10 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{
-    combat::{damage::DamageSource, status_effects::components::EffectsList},
-    configuration::GameCollisionLayer,
-};
+use crate::{combat::damage::DamageSource, configuration::GameCollisionLayer};
 
 mod melee_attack;
 
@@ -21,7 +18,6 @@ pub struct MeleeWeapon {
     pub attack_time: f32,
     pub damage: (f32, f32),
     pub hitbox: Collider,
-    pub effects_list: EffectsList,
     pub attack_type: MeleeSwingType,
     pub hold_distance: f32,
 }

@@ -18,12 +18,10 @@ impl Plugin for StatusEffectPlugin {
             Update,
             (
                 burn::apply_burning,
-                burn::tick_burn,
-                burn::while_burning,
+                (burn::tick_burn, burn::while_burning).chain(),
                 freeze::apply_frozen,
                 slow::apply_slowed,
             )
-                .chain()
                 .in_set(InGameSet::Simulation),
         )
         .add_observer(burn::on_burn_removed)

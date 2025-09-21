@@ -140,7 +140,7 @@ pub fn on_damage_event(
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {
-                info!("Applying effects: {:?}", effects);
+                trace!("Applying effects: {:?}", effects);
                 effects.iter().for_each(|e| {
                     commands
                         .entity(e)

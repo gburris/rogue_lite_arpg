@@ -3,6 +3,7 @@ use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
+    combat::status_effects::{Burning, Effects, Frozen},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     utility::Lifespan,
 };
@@ -49,85 +50,50 @@ pub struct ProjectileOf(Entity);
 #[relationship_target(relationship = ProjectileOf, linked_spawn)]
 pub struct Projectiles(Vec<Entity>);
 
-pub enum BulletSprite {
-    Fireball,
-    IceBolt,
-}
-
-#[derive(Clone)]
-pub struct ProjectileBuilder {
-    sprite: Sprite,
-    damage: Damage,
-    speed: f32,
+pub fn fireball(
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
-}
-
-impl Default for ProjectileBuilder {
-    fn default() -> Self {
-        Self {
-            sprite: Default::default(),
-            damage: Damage::Range((5.0, 10.0)),
+) -> impl Bundle {
+    (
+        Projectile {
+            damage: Damage::Single(3.0),
             speed: 600.0,
-            angle_offset: 0.0,
-        }
-    }
+            forward_offset: 25.0,
+            angle_offset,
+        },
+        Sprite::from_atlas_image(
+            sprites.fire_ball.clone(),
+            TextureAtlas {
+                layout: texture_layouts.fireball_layout.clone(),
+                index: 0,
+            },
+        ),
+        related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
+    )
 }
 
-impl ProjectileBuilder {
-    pub fn new(
-        bullet: BulletSprite,
-        sprites: &SpriteAssets,
-        texture_layouts: &SpriteSheetLayouts,
-    ) -> Self {
-        let (image, layout) = match bullet {
-            BulletSprite::Fireball => (
-                sprites.fire_ball.clone(),
-                texture_layouts.fireball_layout.clone(),
-            ),
-            BulletSprite::IceBolt => (
-                sprites.ice_bolt.clone(),
-                texture_layouts.ice_bolt_layout.clone(),
-            ),
-        };
-
-        ProjectileBuilder {
-            sprite: Sprite::from_atlas_image(
-                image,
-                TextureAtlas {
-                    layout: layout,
-                    index: 0,
-                },
-            ),
-            ..default()
-        }
-    }
-
-    pub fn with_damage(mut self, damage: Damage) -> Self {
-        self.damage = damage;
-        self
-    }
-
-    pub fn with_speed(mut self, speed: f32) -> Self {
-        self.speed = speed;
-        self
-    }
-
-    pub fn with_angle_offset(mut self, offset: f32) -> Self {
-        self.angle_offset = offset;
-        self
-    }
-
-    pub fn build(self) -> impl Bundle {
-        (
-            Projectile {
-                damage: self.damage,
-                speed: self.speed,
-                forward_offset: 25.0,
-                angle_offset: self.angle_offset,
+pub fn icebolt(
+    sprites: &SpriteAssets,
+    texture_layouts: &SpriteSheetLayouts,
+    angle_offset: f32,
+) -> impl Bundle {
+    (
+        Projectile {
+            damage: Damage::Range((10.0, 20.0)),
+            speed: 500.0,
+            forward_offset: 25.0,
+            angle_offset,
+        },
+        Sprite::from_atlas_image(
+            sprites.ice_bolt.clone(),
+            TextureAtlas {
+                layout: texture_layouts.ice_bolt_layout.clone(),
+                index: 0,
             },
-            self.sprite,
-        )
-    }
+        ),
+        related!(Effects[(Frozen, Lifespan::new(0.7))]),
+    )
 }
 
 pub fn handle_collisions(

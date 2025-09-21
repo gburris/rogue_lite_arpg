@@ -9,16 +9,14 @@ use crate::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
         projectile::{BulletSprite, ProjectileBuilder, Projectiles},
-        status_effects::{
-            components::{EffectsList, StatusType},
-            events::ApplyStatus,
-        },
+        status_effects::{Burning, Effects, Frozen},
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{
         equipment::{on_weapon_fired, on_weapon_melee, Equippable},
         Item,
     },
+    utility::Lifespan,
 };
 
 use super::ItemType;
@@ -28,7 +26,6 @@ pub fn spawn_sword(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
         .spawn((
             MeleeWeapon {
                 damage: (1.0, 6.0),
-                effects_list: EffectsList { effects: vec![] },
                 hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::STAB,
                 attack_time: 0.2,
@@ -48,12 +45,6 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
         .spawn((
             MeleeWeapon {
                 damage: (2.0, 12.0),
-                effects_list: EffectsList {
-                    effects: vec![ApplyStatus {
-                        status: StatusType::Frozen,
-                        duration: 2.0,
-                    }],
-                },
                 hitbox: Collider::rectangle(10.0, 40.0),
                 attack_type: MeleeSwingType::SLASH,
                 attack_time: 0.3,
@@ -63,6 +54,7 @@ pub fn spawn_axe(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
             Equippable::default(),
             Item::new(220, ItemType::Melee),
             Sprite::from_image(sprites.axe.clone()),
+            related!(Effects[(Frozen, Lifespan::new(2.0))]),
         ))
         .observe(on_weapon_melee)
         .id()
@@ -74,21 +66,22 @@ pub fn spawn_fire_staff(
     texture_layouts: &SpriteSheetLayouts,
 ) -> Entity {
     let fireball_builder = ProjectileBuilder::new(BulletSprite::Fireball, sprites, texture_layouts);
+    let burning = (Burning::default(), Lifespan::new(1.2));
 
     commands
         .spawn((
             Name::new("Staff of Flames"),
-            related!(
-                Projectiles [
-                    fireball_builder.clone().with_angle_offset(-FRAC_PI_8).build(),
-                    fireball_builder.clone().build(),
-                    fireball_builder.clone().with_angle_offset(FRAC_PI_8).build(),
-                ]
-            ),
             Item::new(1340, ItemType::Staff),
             Equippable::default(),
             ManaCost(6.0),
             Sprite::from_image(sprites.fire_staff.clone()),
+            related!(
+                Projectiles [
+                    (fireball_builder.clone().with_angle_offset(-FRAC_PI_8).build(), related!(Effects[burning.clone()])),
+                    (fireball_builder.clone().build(), related!(Effects[burning.clone()])),
+                    (fireball_builder.clone().with_angle_offset(FRAC_PI_8).build(), related!(Effects[burning.clone()])),
+                ]
+            ),
         ))
         .observe(on_weapon_fired)
         .id()
@@ -102,9 +95,6 @@ pub fn spawn_ice_staff(
     commands
         .spawn((
             Name::new("Staff of Ice"),
-            Projectiles::spawn_one(
-                ProjectileBuilder::new(BulletSprite::IceBolt, sprites, texture_layouts).build(),
-            ),
             Item::new(2050, ItemType::Staff),
             ManaCost(20.0), // big mana cost
             Equippable {
@@ -112,6 +102,10 @@ pub fn spawn_ice_staff(
                 ..default()
             },
             Sprite::from_image(sprites.ice_staff.clone()),
+            Projectiles::spawn_one((
+                ProjectileBuilder::new(BulletSprite::IceBolt, sprites, texture_layouts).build(),
+                related!(Effects[(Frozen, Lifespan::new(2.0))]),
+            )),
         ))
         .observe(on_weapon_fired)
         .id()

@@ -41,12 +41,12 @@ impl Default for Projectile {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[relationship(relationship_target = Projectiles)]
 pub struct ProjectileOf(Entity);
 
-#[derive(Component)]
-#[relationship_target(relationship = ProjectileOf)]
+#[derive(Component, Clone)]
+#[relationship_target(relationship = ProjectileOf, linked_spawn)]
 pub struct Projectiles(Vec<Entity>);
 
 pub enum BulletSprite {

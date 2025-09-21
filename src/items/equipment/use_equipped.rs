@@ -1,5 +1,8 @@
 use avian2d::prelude::*;
-use bevy::{ecs::entity_disabling::Disabled, prelude::*};
+use bevy::{
+    ecs::{entity::EntityCloner, entity_disabling::Disabled},
+    prelude::*,
+};
 use rand::Rng;
 
 use super::{EquipmentSlot, Equipped};
@@ -11,6 +14,7 @@ use crate::{
         melee::{start_melee_attack, MeleeWeapon},
         projectile::{ProjectileOf, Projectiles},
         shield::{shield_block::deactivate_shield, ActiveShield},
+        status_effects::Effects,
         Mana, Projectile,
     },
     configuration::{GameCollisionLayer, ZLayer},
@@ -118,7 +122,7 @@ fn handle_equipment_activation(
         // Check mana next
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
-                warn!("Not enough mana!");
+                debug!("Not enough mana!");
                 commands.trigger_targets(
                     EquipmentUseFailedEvent {
                         holder: entity,
@@ -147,7 +151,7 @@ pub fn on_weapon_fired(
     weapon_query: Query<&Projectiles>,
     holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
-    projectile_query: Query<&Projectile, With<Disabled>>,
+    projectile_query: Query<(&Projectile, Option<&Effects>), With<Disabled>>,
 ) {
     let Ok(projectiles) = weapon_query.get(fired_trigger.target()) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
@@ -166,7 +170,9 @@ pub fn on_weapon_fired(
     };
 
     for projectile_entity in projectiles.iter() {
-        if let Ok(projectile) = projectile_query.get(projectile_entity) {
+        if let Ok((projectile, effects)) = projectile_query.get(projectile_entity) {
+            info!("Spawning projectile with effects: {:?}", effects);
+
             // Rotate the aim direction by the projectile’s angle offset
             let rotated_direction = holder_vision
                 .aim_direction
@@ -176,7 +182,9 @@ pub fn on_weapon_fired(
 
             commands
                 .entity(projectile_entity)
-                .clone_and_spawn()
+                .clone_and_spawn_with(|builder| {
+                    builder.linked_cloning(true);
+                })
                 .remove::<(Disabled, ProjectileOf)>()
                 .insert((
                     Transform {

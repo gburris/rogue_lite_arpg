@@ -1,9 +1,14 @@
-pub mod components;
-mod status_systems;
+mod burn;
+mod freeze;
+mod slow;
 
-use bevy::prelude::*;
+pub use burn::Burning;
+pub use freeze::Frozen;
+pub use slow::Slowed;
 
-use crate::{combat::status_effects::status_systems::*, labels::sets::InGameSet};
+use bevy::{ecs::entity_disabling::Disabled, prelude::*};
+
+use crate::{labels::sets::InGameSet, utility::Lifespan};
 
 pub struct StatusEffectPlugin;
 
@@ -11,31 +16,42 @@ impl Plugin for StatusEffectPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (burning::tick_burn, burning::while_burning)
+            (
+                burn::apply_burning,
+                burn::tick_burn,
+                burn::while_burning,
+                freeze::apply_frozen,
+                slow::apply_slowed,
+            )
                 .chain()
                 .in_set(InGameSet::Simulation),
         )
-        .add_observer(burning::on_burn_applied)
-        .add_observer(burning::on_burn_removed)
-        .add_observer(frozen::on_frozen_applied)
-        .add_observer(frozen::on_frozen_removed)
-        .add_observer(slowed::on_slow_applied)
-        .add_observer(slowed::on_slow_removed);
+        .add_observer(burn::on_burn_removed)
+        .add_observer(freeze::on_frozen_removed)
+        .add_observer(slow::on_slow_removed);
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
+#[require(Lifespan)]
+pub struct Status;
+
+#[derive(Component, Clone)]
+#[require(Disabled)]
 #[relationship(relationship_target = Effects)]
 pub struct EffectOf(pub Entity);
 
-#[derive(Component)]
-#[relationship_target(relationship = EffectOf)]
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = EffectOf, linked_spawn)]
 pub struct Effects(Vec<Entity>);
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[relationship(relationship_target = Statuses)]
 pub struct StatusOf(pub Entity);
 
-#[derive(Component)]
-#[relationship_target(relationship = StatusOf)]
+#[derive(Component, Clone)]
+#[relationship_target(relationship = StatusOf, linked_spawn)]
 pub struct Statuses(Vec<Entity>);
+
+#[derive(Component, Clone)]
+pub struct StatusApplied;

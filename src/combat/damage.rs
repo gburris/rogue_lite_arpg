@@ -140,20 +140,14 @@ pub fn on_damage_event(
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {
-                let statuses: Vec<Entity> = effects
-                    .iter()
-                    .map(|e| {
-                        commands
-                            .entity(e)
-                            .clone_and_spawn()
-                            .remove::<(Disabled, EffectOf)>()
-                            .id()
-                    })
-                    .collect();
-
-                commands
-                    .entity(damaged_entity)
-                    .add_related::<StatusOf>(&statuses);
+                info!("Applying effects: {:?}", effects);
+                effects.iter().for_each(|e| {
+                    commands
+                        .entity(e)
+                        .clone_and_spawn()
+                        .remove::<(Disabled, EffectOf)>()
+                        .insert(StatusOf(damaged_entity));
+                });
             }
         }
     }

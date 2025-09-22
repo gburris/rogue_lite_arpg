@@ -20,7 +20,7 @@ bevy_ecs_tilemap = { version = "0.16" }
 bevy_asset_loader = { version = "0.23", features = ["2d"] }
 bevy_behave = { version = "0.3" }
 accesskit = "0.17"
-avian2d = { git = "https://github.com/Jondolf/avian.git", branch = "main" }
+avian2d = "0.3"
 rand = "0.8"
 log = { version = "*", features = [
   "max_level_debug",

@@ -14,11 +14,10 @@ mod magnet;
 mod mainhand_factory;
 mod offhand_factory;
 
-pub use consumable::{spawn_health_potion, Consumable, ConsumeEvent};
+pub use consumable::{health_potion, Consumable, ConsumeEvent};
 pub use magnet::Magnet;
 pub use mainhand_factory::*;
-
-pub use offhand_factory::spawn_offhand;
+pub use offhand_factory::*;
 
 pub fn plugin(app: &mut App) {
     app.add_plugins(equipment::EquipmentPlugin);

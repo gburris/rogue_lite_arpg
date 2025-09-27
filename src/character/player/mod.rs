@@ -183,18 +183,24 @@ impl DisplayableStatType {
 fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    texture_layouts: Res<SpriteSheetLayouts>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
     atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
     let starting_items = [
-        items::spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
-        items::spawn_health_potion(&mut commands, &sprites),
-        items::spawn_sword(&mut commands, &sprites),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "tome_of_healing"),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "magic_shield"),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "knight_shield"),
+        commands
+            .spawn(items::ice_staff(&sprites, &sprite_layouts))
+            .id(),
+        commands.spawn(items::health_potion(&sprites)).id(),
+        commands.spawn(items::sword(&sprites)).id(),
+        commands.spawn(items::tome_of_healing(&sprites)).id(),
+        commands
+            .spawn(items::magic_shield(&sprites, &sprite_layouts))
+            .id(),
+        commands
+            .spawn(items::knight_shield(&sprites, &sprite_layouts))
+            .id(),
     ];
 
     let player = commands

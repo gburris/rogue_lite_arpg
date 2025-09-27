@@ -3,6 +3,14 @@ use std::collections::VecDeque;
 
 use crate::items::equipment::EquipmentSlot;
 
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Items)]
+pub struct ItemOf(pub Entity);
+
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = ItemOf, linked_spawn)]
+pub struct Items(Vec<Entity>);
+
 #[derive(Component)]
 pub struct Inventory {
     pub max_capacity: usize,

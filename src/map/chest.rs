@@ -50,7 +50,7 @@ pub fn on_spawn_chests_event(
 fn spawn_chest(
     commands: &mut Commands,
     sprites: &SpriteAssets,
-    layouts: &SpriteSheetLayouts,
+    sprite_layouts: &SpriteSheetLayouts,
     spawn_position: Vec2,
 ) {
     commands
@@ -59,7 +59,7 @@ fn spawn_chest(
             Sprite {
                 image: sprites.chests_sprite_sheet.clone(),
                 texture_atlas: Some(TextureAtlas {
-                    layout: layouts.chest_layout.clone(),
+                    layout: sprite_layouts.chest_layout.clone(),
                     index: 0,
                 }),
                 anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),

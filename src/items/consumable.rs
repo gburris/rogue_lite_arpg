@@ -1,6 +1,6 @@
 use crate::{
     combat::health::AttemptHealingEvent, configuration::assets::SpriteAssets,
-    items::inventory::inventory::Inventory,
+    items::inventory::Inventory,
 };
 use bevy::prelude::*;
 
@@ -20,17 +20,15 @@ pub struct ConsumeEvent {
     pub item_entity: Entity,
 }
 
-pub fn spawn_health_potion(commands: &mut Commands, sprites: &SpriteAssets) -> Entity {
-    commands
-        .spawn((
-            Name::new("Health Potion"),
-            Item::new(40, ItemType::Potion),
-            Consumable {
-                effect: ConsumableType::Heal(50.0), // Heals 50 HP
-            },
-            Sprite::from_image(sprites.health_potion.clone()),
-        ))
-        .id()
+pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
+    (
+        Name::new("Health Potion"),
+        Item::new(40, ItemType::Potion),
+        Consumable {
+            effect: ConsumableType::Heal(50.0), // Heals 50 HP
+        },
+        Sprite::from_image(sprites.health_potion.clone()),
+    )
 }
 
 pub fn on_consume_event(

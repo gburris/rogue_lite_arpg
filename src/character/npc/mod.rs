@@ -15,7 +15,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
-    items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
+    items::{axe, equipment::Equipped, ice_staff, inventory::Inventory, sword},
     map::NPCSpawnEvent,
     prelude::*,
 };
@@ -49,9 +49,9 @@ impl NPCType {
         atlases: &SpriteSheetLayouts,
     ) -> Entity {
         match self {
-            NPCType::Helper => spawn_ice_staff(commands, sprites, atlases),
-            NPCType::Shopkeeper => spawn_axe(commands, sprites),
-            NPCType::StatTrainer => spawn_sword(commands, sprites),
+            NPCType::Helper => commands.spawn(ice_staff(sprites, atlases)).id(),
+            NPCType::Shopkeeper => commands.spawn(axe(sprites)).id(),
+            NPCType::StatTrainer => commands.spawn(sword(sprites)).id(),
         }
     }
 

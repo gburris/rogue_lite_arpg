@@ -15,7 +15,6 @@ pub struct Items(Vec<Entity>);
 pub struct Inventory {
     pub max_capacity: usize,
     pub items: VecDeque<Entity>,
-    pub coins: u32,
     mainhand_index: Option<usize>,
     offhand_index: Option<usize>,
 }
@@ -23,9 +22,8 @@ pub struct Inventory {
 impl Default for Inventory {
     fn default() -> Self {
         Self {
-            max_capacity: 10,
             items: VecDeque::new(),
-            coins: 0,
+            max_capacity: 10,
             mainhand_index: None,
             offhand_index: None,
         }
@@ -92,19 +90,6 @@ impl Inventory {
             .and_then(|i| self.items.get(i).cloned())
     }
 
-    pub fn add_coins(&mut self, amount: u32) {
-        self.coins += amount;
-    }
-
-    pub fn remove_coins(&mut self, amount: u32) -> Result<u32, String> {
-        if self.coins >= amount {
-            self.coins -= amount;
-            Ok(self.coins)
-        } else {
-            Err("Not enough coins!".to_string())
-        }
-    }
-
     fn remove_item_by_index(&mut self, index_to_remove: usize) -> Result<Entity, String> {
         // all equipment indicies shift
         for slot in Inventory::ALL_SLOTS {
@@ -148,7 +133,6 @@ impl Inventory {
 pub struct InventoryBuilder {
     max_capacity: usize,
     items: Vec<Entity>,
-    coins: u32,
 }
 
 impl Default for InventoryBuilder {
@@ -156,7 +140,6 @@ impl Default for InventoryBuilder {
         Self {
             max_capacity: 10,
             items: Vec::new(),
-            coins: 0,
         }
     }
 }
@@ -172,16 +155,10 @@ impl InventoryBuilder {
         self
     }
 
-    pub fn coins(mut self, coins: u32) -> Self {
-        self.coins = coins;
-        self
-    }
-
     pub fn build(self) -> Inventory {
         let mut inventory = Inventory {
             max_capacity: self.max_capacity,
             items: VecDeque::new(),
-            coins: self.coins,
             mainhand_index: None,
             offhand_index: None,
         };

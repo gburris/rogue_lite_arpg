@@ -18,6 +18,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
+    economy::Purse,
     items::{
         self,
         equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
@@ -83,6 +84,7 @@ impl Plugin for PlayerPlugin {
     // Double the mass of npcs/enemies so the player can push them around more
     Mass(100.0),
     IFrames,
+    Purse
 )]
 pub struct Player {
     pub aim_position: Vec2, // tracks the cursor
@@ -208,7 +210,6 @@ fn spawn_player(
             Player::default(),
             Inventory::builder()
                 .items(starting_items.into())
-                .coins(0)
                 .max_capacity(50)
                 .build(),
             Mana::new(100.0, 10.0),

@@ -18,6 +18,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
+    economy::Purse,
     items::{
         equipment::{on_equipment_activated, Equipped},
         fire_staff, health_potion,
@@ -36,7 +37,7 @@ impl Plugin for EnemyPlugin {
 }
 
 #[derive(Component)]
-#[require(Character, Experience, VisionCapabilities)]
+#[require(Character, Experience, VisionCapabilities, Purse { amount: 50 })]
 pub struct Enemy;
 
 //Experience granted by the enemy when player defeats it
@@ -110,7 +111,6 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
-    let enemy_name = &spawn_data.enemy_type.name();
     let starting_items = [
         commands.spawn(fire_staff(sprites, sprite_layouts)).id(),
         commands.spawn(health_potion(sprites)).id(),
@@ -177,7 +177,6 @@ fn base_enemy(position: Vec2, starting_items: Vec<Entity>, player: Entity) -> im
         Mana::new(100.0, 10.0),
         Inventory::builder()
             .items(starting_items)
-            .coins(99)
             .max_capacity(10)
             .build(),
         // enemy vision distance

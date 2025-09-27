@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 use crate::{
     character::player::PlayerStats,
     combat::{damage::DefeatedEvent, Health},
-    economy::GoldDropEvent,
+    economy::{GoldDropEvent, Purse},
     items::{inventory::Inventory, lootable::ItemDropEvent, Item},
     prelude::*,
     utility::Lifespan,
@@ -17,13 +17,16 @@ use super::{Enemy, Experience};
 pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
-    mut defeated_enemy_query: Query<(&Experience, &Transform, Option<&Inventory>), With<Enemy>>,
+    mut defeated_enemy_query: Query<
+        (&Experience, &Transform, Option<&Inventory>, Option<&Purse>),
+        With<Enemy>,
+    >,
     player_query: Single<(&PlayerStats, &mut Player)>,
     item_query: Query<&Item>,
 ) {
     let mut rng = thread_rng();
 
-    if let Ok((experience_to_gain, transform, inventory)) =
+    if let Ok((experience_to_gain, transform, inventory, purse)) =
         defeated_enemy_query.get_mut(trigger.target())
     {
         let (player_stats, mut player) = player_query.into_inner();
@@ -40,12 +43,14 @@ pub fn on_enemy_defeated(
                     }
                 }
             }
+        }
 
+        if let Some(purse) = purse {
             // Enemies drop their gold based on player luck
             if rng.gen_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
                 commands.trigger(GoldDropEvent {
                     drop_location: transform.translation.truncate(),
-                    amount: inventory.coins,
+                    amount: purse.amount,
                 });
             }
         }

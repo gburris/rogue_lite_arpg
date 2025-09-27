@@ -12,8 +12,7 @@ use crate::{
         shield::components::ProjectileReflection,
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::equipment::{EquipmentTransform, Equippable},
-    prelude::*,
+    items::equipment::Equippable,
 };
 
 pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {

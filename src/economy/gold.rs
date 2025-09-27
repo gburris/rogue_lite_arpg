@@ -5,7 +5,8 @@ use rand::Rng;
 use crate::{
     character::player::interact::PlayerInteractionRadius,
     configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
-    items::{inventory::Inventory, Magnet},
+    economy::Purse,
+    items::Magnet,
     prelude::Player,
 };
 
@@ -32,13 +33,13 @@ pub struct Gold {
 pub fn handle_gold_collisions(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
-    mut player_inventory: Single<&mut Inventory, With<Player>>,
+    mut player_purse: Single<&mut Purse, With<Player>>,
     player_collider_entity: Single<Entity, With<PlayerInteractionRadius>>,
 ) {
     let pe = player_collider_entity.into_inner();
     for (gold_entity, gold, colliding_entities) in gold_query.iter() {
         if colliding_entities.contains(&pe) {
-            player_inventory.add_coins(gold.value);
+            player_purse.add(gold.value);
             commands.entity(gold_entity).despawn();
         }
     }

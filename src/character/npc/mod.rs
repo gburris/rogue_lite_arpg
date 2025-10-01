@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_behave::prelude::*;
+use bevy_bundled_observers::observers;
 
 mod interaction;
 
@@ -15,7 +16,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
-    items::{axe, equipment::Equipped, ice_staff, inventory::Inventory, sword},
+    items::{axe, equipment::EquipmentOf, ice_staff, sword},
     map::NPCSpawnEvent,
     prelude::*,
 };
@@ -123,14 +124,13 @@ fn spawn_npc(
         }
     };
 
-    let npc = commands
+    commands
         .spawn((
             NPC,
             Anchor::new(spawn_position, WANDER_RADIUS),
             SimpleMotion::new(100.0),
             Health::new(1000.0),
             npc_type,
-            Inventory::default(),
             Transform::from_translation(spawn_position.extend(0.0)),
             Sprite::from_atlas_image(
                 sprite_sheet_to_use,
@@ -149,10 +149,7 @@ fn spawn_npc(
                 physical_collider(),
                 BehaveTree::new(npc_behavior.clone()),
             ],
+            observers![on_player_interaction],
         ))
-        .observe(on_player_interaction)
-        .add_child(mainhand)
-        .id();
-
-    commands.entity(mainhand).insert(Equipped::new(npc));
+        .add_one_related::<EquipmentOf>(mainhand);
 }

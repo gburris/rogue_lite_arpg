@@ -4,10 +4,9 @@ use crate::{
     combat::{Health, Mana},
     items::{
         equipment::{
-            EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable, Equipped,
-            UseEquipmentEvent,
+            EquipmentOf, EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable,
+            Mainhand, Offhand, UseEquipmentEvent,
         },
-        inventory::Inventory,
         Item,
     },
     prelude::Player,
@@ -306,7 +305,9 @@ fn action_bar() -> impl Bundle {
             ..default()
         },
         Children::spawn(SpawnIter(
-            Inventory::ALL_SLOTS.iter().map(|slot| action_box(*slot)),
+            [EquipmentSlot::Mainhand, EquipmentSlot::Offhand]
+                .iter()
+                .map(|slot| action_box(*slot)),
         )),
     )
 }
@@ -336,14 +337,24 @@ fn action_box(slot: EquipmentSlot) -> impl Bundle {
 pub fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
-    inventory_query: Option<Single<&Inventory, (Changed<Inventory>, With<Player>)>>,
+    equipment_query: Option<
+        Single<
+            (Option<&Mainhand>, Option<&Offhand>),
+            (Or<(Changed<Mainhand>, Changed<Offhand>)>, With<Player>),
+        >,
+    >,
     item_query: Query<&Sprite, With<Item>>,
 ) {
-    if let Some(player_inventory_result) = inventory_query {
-        let player_inventory = player_inventory_result.into_inner();
+    if let Some(player_inventory_result) = equipment_query {
+        let (mainhand, offhand) = player_inventory_result.into_inner();
 
         for (action_box, children) in action_box_query.iter() {
-            if let Some(equipped_entity) = player_inventory.get_equipped(action_box.slot) {
+            let equipment: Option<Entity> = match action_box.slot {
+                EquipmentSlot::Mainhand => mainhand.map(|m| m.get()),
+                EquipmentSlot::Offhand => offhand.map(|o| o.get()),
+            };
+
+            if let Some(equipped_entity) = equipment {
                 if let Some(&image_entity) = children.first() {
                     if let Ok(mut image_node) = image_query.get_mut(image_entity) {
                         if let Ok(item_sprite) = item_query.get(equipped_entity) {
@@ -372,7 +383,7 @@ pub fn on_equipment_used(
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,
-    equipment_query: Query<&Equippable, With<Equipped>>,
+    equipment_query: Query<&Equippable, With<EquipmentOf>>,
     error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
     if trigger.holder != player.0 {

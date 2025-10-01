@@ -8,7 +8,6 @@ use crate::{
 
 mod consumable;
 pub mod equipment;
-pub mod inventory;
 pub mod lootable;
 mod magnet;
 mod mainhand_factory;
@@ -68,6 +67,14 @@ impl Default for Item {
         }
     }
 }
+
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Items)]
+pub struct ItemOf(pub Entity);
+
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = ItemOf, linked_spawn)]
+pub struct Items(Vec<Entity>);
 
 impl Item {
     pub fn new(value: i32, item_type: ItemType) -> Self {

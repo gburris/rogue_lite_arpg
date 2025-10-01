@@ -20,9 +20,8 @@ use crate::{
     },
     economy::Purse,
     items::{
-        equipment::{on_equipment_activated, Equipped},
-        fire_staff, health_potion,
-        inventory::Inventory,
+        equipment::{on_equipment_activated, Equipment},
+        fire_staff, health_potion, Items,
     },
     map::EnemiesSpawnEvent,
     prelude::*,
@@ -111,11 +110,6 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
-    let starting_items = [
-        commands.spawn(fire_staff(sprites, sprite_layouts)).id(),
-        commands.spawn(health_potion(sprites)).id(),
-    ];
-
     let chase_behavior = behave! {
         Behave::While => {
             Behave::spawn_named("Chase", Chase),
@@ -155,30 +149,19 @@ fn spawn_enemy(
         ranged_enemy_behavior
     };
 
-    let enemy = commands
-        .spawn((
-            base_enemy(spawn_data.position, starting_items.into(), player),
-            fire_mage(sprites, sprite_layouts),
-            enemy_children(enemy_behavior, &shadows),
-        ))
-        .add_children(&starting_items)
-        .id();
-
-    commands
-        .entity(starting_items[0])
-        .insert(Equipped::new(enemy));
+    commands.spawn((
+        base_enemy(spawn_data.position, player),
+        fire_mage(sprites, sprite_layouts),
+        enemy_children(enemy_behavior, &shadows),
+    ));
 }
 
-fn base_enemy(position: Vec2, starting_items: Vec<Entity>, player: Entity) -> impl Bundle {
+fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
         Transform::from_translation(position.extend(0.0)),
         Anchor::new(position, 256.0), // 8 tile radius
         Mana::new(100.0, 10.0),
-        Inventory::builder()
-            .items(starting_items)
-            .max_capacity(10)
-            .build(),
         // enemy vision distance
         RayCaster::default()
             .with_max_distance(350.0)
@@ -212,5 +195,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
                 ..default()
             },
         ),
+        related!(Equipment[fire_staff(sprites, sprite_layouts)]),
+        related!(Items[health_potion(sprites)]),
     )
 }

@@ -12,40 +12,26 @@ pub fn add_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {
 }
 
 fn add_horizontal_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {
+    add_wall_section(map_data, true, 0..map_size.x as usize, 0, 0);
 
     add_wall_section(
         map_data,
         true,
-        0..map_size.x as usize, 
-        0,                     
-        0,                     
-    );
-
-    add_wall_section(
-        map_data,
-        true,
-        0..map_size.x as usize,  
+        0..map_size.x as usize,
         map_size.y as usize - 1,
-        map_size.y - 1,        
+        map_size.y - 1,
     );
 }
 
 fn add_vertical_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {
-
-    add_wall_section(
-        map_data,
-        false,
-        0..map_size.y as usize, 
-        0,                     
-        0,                      
-    );
+    add_wall_section(map_data, false, 0..map_size.y as usize, 0, 0);
 
     add_wall_section(
         map_data,
         false,
         0..map_size.y as usize,
-        map_size.x as usize - 1, 
-        map_size.x - 1,         
+        map_size.x as usize - 1,
+        map_size.x - 1,
     );
 }
 

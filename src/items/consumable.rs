@@ -1,7 +1,4 @@
-use crate::{
-    combat::health::AttemptHealingEvent, configuration::assets::SpriteAssets,
-    items::inventory::Inventory,
-};
+use crate::{combat::health::AttemptHealingEvent, configuration::assets::SpriteAssets};
 use bevy::prelude::*;
 
 use super::{Item, ItemType};
@@ -35,25 +32,18 @@ pub fn on_consume_event(
     consume_trigger: Trigger<ConsumeEvent>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,
-    mut to_heal_query: Query<&mut Inventory>,
 ) {
     let item_entity = consume_trigger.item_entity;
 
     if let Ok(consumable) = consumable_query.get(item_entity) {
-        if let Ok(mut inventory) = to_heal_query.get_mut(consume_trigger.target()) {
-            match &consumable.effect {
-                ConsumableType::Heal(amount) => {
-                    commands.trigger_targets(
-                        AttemptHealingEvent { amount: *amount },
-                        consume_trigger.target(),
-                    );
-                }
+        match &consumable.effect {
+            ConsumableType::Heal(amount) => {
+                commands.trigger_targets(
+                    AttemptHealingEvent { amount: *amount },
+                    consume_trigger.target(),
+                );
             }
-            // Once we are here we know the item was consumed, so we remove it from inventory and despawn it
-            inventory
-                .remove_item(item_entity)
-                .expect("Went to consume item and it was not in inventory!");
-            commands.entity(item_entity).despawn();
         }
+        commands.entity(item_entity).despawn();
     }
 }

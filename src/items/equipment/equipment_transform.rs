@@ -2,9 +2,11 @@ use bevy::prelude::*;
 
 use std::{collections::HashMap, sync::LazyLock};
 
-use super::{EquipmentSlot, Equipped};
+use super::EquipmentOf;
 use crate::{
-    combat::melee::ActiveMeleeAttack, configuration::ZLayer, items::inventory::Inventory,
+    combat::melee::ActiveMeleeAttack,
+    configuration::ZLayer,
+    items::equipment::{Equipment, Mainhand, Offhand},
     prelude::*,
 };
 
@@ -86,31 +88,34 @@ impl EquipmentTransform {
 
 pub fn update_equipment_transforms(
     all_worn_equipment: Query<
-        (&Inventory, &FacingDirection),
-        Or<(
-            // Update when holder changes direction
-            Changed<FacingDirection>,
-            // Update when holder stops attacking, stops casting, etc...
-            Changed<ActionState>,
-            // Update when new item is equipped
-            Changed<Inventory>,
-        )>,
+        (Option<&Mainhand>, Option<&Offhand>, &FacingDirection),
+        (
+            Or<(
+                // Update when holder changes direction
+                Changed<FacingDirection>,
+                // Update when holder stops attacking, stops casting, etc...
+                Changed<ActionState>,
+                // Update when new item is equipped
+                Changed<Equipment>,
+            )>,
+            With<Equipment>,
+        ),
     >,
-    mut transforms: Query<&mut Transform, (With<Equipped>, Without<ActiveMeleeAttack>)>,
+    mut transforms: Query<&mut Transform, (With<EquipmentOf>, Without<ActiveMeleeAttack>)>,
 ) {
-    for (inventory, direction) in &all_worn_equipment {
+    for (mainhand, offhand, direction) in &all_worn_equipment {
         let direction_transforms = EquipmentTransform::get(*direction);
 
         // Update mainhand equipment
-        if let Some(entity) = inventory.get_equipped(EquipmentSlot::Mainhand) {
-            if let Ok(mut transform) = transforms.get_mut(entity) {
+        if let Some(Mainhand(mainhand)) = mainhand {
+            if let Ok(mut transform) = transforms.get_mut(*mainhand) {
                 *transform = direction_transforms.mainhand;
             }
         }
 
         // Update offhand equipment
-        if let Some(entity) = inventory.get_equipped(EquipmentSlot::Offhand) {
-            if let Ok(mut transform) = transforms.get_mut(entity) {
+        if let Some(Offhand(offhand)) = offhand {
+            if let Ok(mut transform) = transforms.get_mut(*offhand) {
                 *transform = direction_transforms.offhand;
             }
         }

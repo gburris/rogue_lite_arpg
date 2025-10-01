@@ -1,7 +1,6 @@
 use crate::{
     combat::Health,
     economy::Purse,
-    items::inventory::Inventory,
     labels::states::PausedState,
     prelude::Player,
     progression::GameProgress,

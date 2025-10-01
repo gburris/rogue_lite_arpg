@@ -7,7 +7,7 @@ use crate::{
     character::player::PlayerStats,
     combat::{damage::DefeatedEvent, Health},
     economy::{GoldDropEvent, Purse},
-    items::{inventory::Inventory, lootable::ItemDropEvent, Item},
+    items::{lootable::ItemDropEvent, Item, Items},
     prelude::*,
     utility::Lifespan,
 };
@@ -18,7 +18,7 @@ pub fn on_enemy_defeated(
     trigger: Trigger<DefeatedEvent>,
     mut commands: Commands,
     mut defeated_enemy_query: Query<
-        (&Experience, &Transform, Option<&Inventory>, Option<&Purse>),
+        (&Experience, &Transform, Option<&Items>, Option<&Purse>),
         With<Enemy>,
     >,
     player_query: Single<(&PlayerStats, &mut Player)>,
@@ -26,20 +26,20 @@ pub fn on_enemy_defeated(
 ) {
     let mut rng = thread_rng();
 
-    if let Ok((experience_to_gain, transform, inventory, purse)) =
+    if let Ok((experience_to_gain, transform, items, purse)) =
         defeated_enemy_query.get_mut(trigger.target())
     {
         let (player_stats, mut player) = player_query.into_inner();
         //Give EXP to the player
         player.current_experience += experience_to_gain.base_exp;
 
-        if let Some(inventory) = inventory {
-            for item_entity in inventory.items.iter() {
+        if let Some(items) = items {
+            for item_entity in items.iter() {
                 // Enemies drop their items based on drop rate
-                if let Ok(item_result) = item_query.get(*item_entity) {
+                if let Ok(item_result) = item_query.get(item_entity) {
                     let roll = rng.gen_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger_targets(ItemDropEvent, *item_entity);
+                        commands.trigger_targets(ItemDropEvent, item_entity);
                     }
                 }
             }

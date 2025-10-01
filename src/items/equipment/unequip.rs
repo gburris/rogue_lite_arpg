@@ -35,14 +35,12 @@ pub fn on_item_unequipped(
     commands
         .entity(item_entity)
         .remove::<(Collider, ActiveMeleeAttack, MainhandOf, OffhandOf)>();
-
-    info!("Item Unequipped!");
 }
 
+/// Hold up invariant, if you are no longer Mainhand or Offhand, you ain't equipped!!
 pub fn on_equip_slot_removed(
     trigger: Trigger<OnRemove, (MainhandOf, OffhandOf)>, // this is an OR on these
     mut commands: Commands,
 ) {
-    // Hold up invariant, if you are no longer Mainhand or Offhand, you ain't equipped!!
     commands.entity(trigger.target()).remove::<EquipmentOf>();
 }

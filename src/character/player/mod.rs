@@ -202,14 +202,15 @@ fn spawn_player(
                 ..default()
             },
         ),
-        related!(Equipment[items::fire_staff(&sprites, &sprite_layouts), items::tome_of_healing(&sprites)]),
+        related!(Equipment[items::fire_staff(&sprites, &sprite_layouts)]),
         related!(Items[
             items::ice_staff(&sprites, &sprite_layouts),
             items::sword(&sprites),
             items::axe(&sprites),
             items::magic_shield(&sprites, &sprite_layouts),
             items::knight_shield(&sprites, &sprite_layouts),
-            items::health_potion(&sprites)
+            items::health_potion(&sprites),
+            items::tome_of_healing(&sprites)
         ]),
         observers![
             death::on_player_defeated,

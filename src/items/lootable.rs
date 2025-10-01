@@ -8,7 +8,7 @@ use crate::{
     configuration::{YSort, ZLayer},
     items::{
         equipment::{Equipment, EquipmentOf},
-        ItemOf,
+        ItemOf, Items,
     },
     prelude::Player,
     utility::Lifespan,
@@ -34,7 +34,7 @@ pub fn on_drop_event(
     trigger: Trigger<ItemDropEvent>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
-    mut holder_query: Query<&Transform, With<Equipment>>,
+    mut holder_query: Query<&Transform, With<Items>>,
 ) {
     let item_entity = trigger.target();
 
@@ -44,7 +44,7 @@ pub fn on_drop_event(
     };
 
     let Ok(parent_transform) = holder_query.get_mut(*holder_entity) else {
-        error!("Why does the parent not have a transform or equipment on drop");
+        error!("Why does the parent not have a transform or items on drop");
         return;
     };
 

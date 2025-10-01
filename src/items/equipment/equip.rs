@@ -16,29 +16,36 @@ pub fn on_item_equipped(
     trigger: Trigger<OnAdd, EquipmentOf>,
     mut commands: Commands,
     mut item_query: Query<(
+        Has<ItemOf>,
         &Equippable,
         &EquipmentOf,
         &mut Visibility,
         Option<&MeleeWeapon>,
     )>,
-    mut holder_query: Query<Option<&Enemy>, With<Character>>,
+    mut holder_query: Query<Has<Enemy>, With<Character>>,
 ) {
     let equipped_entity = trigger.target();
-    let (equippable, equipment_of, mut visibility, melee_weapon) = item_query
+    let (is_in_inventory, equippable, equipment_of, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");
 
-    let (enemy) = holder_query
+    let is_enemy = holder_query
         .get_mut(equipment_of.0)
         .expect("Added Equipped to item with holder that is missing an inventory");
 
+    if !is_in_inventory {
+        commands
+            .entity(equipped_entity)
+            .insert(ItemOf(equipment_of.0));
+    }
+
     commands
         .entity(equipped_entity)
-        .insert((ItemOf(equipment_of.0), ChildOf(equipment_of.0)));
+        .insert(ChildOf(equipment_of.0));
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
-            // remove bevy 0.17
+            // remove in bevy 0.17
             commands.entity(equipment_of.0).remove::<Mainhand>();
 
             commands
@@ -46,6 +53,7 @@ pub fn on_item_equipped(
                 .insert(MainhandOf(equipment_of.0));
         }
         EquipmentSlot::Offhand => {
+            // remove in bevy 0.17
             commands.entity(equipment_of.0).remove::<Offhand>();
 
             commands
@@ -60,7 +68,7 @@ pub fn on_item_equipped(
     }
 
     if let Some(melee_weapon) = melee_weapon {
-        let damage_source = if enemy.is_some() {
+        let damage_source = if is_enemy {
             DamageSource::Enemy
         } else {
             DamageSource::Player

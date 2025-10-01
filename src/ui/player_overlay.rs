@@ -4,8 +4,8 @@ use crate::{
     combat::{Health, Mana},
     items::{
         equipment::{
-            EquipmentOf, EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable,
-            Mainhand, Offhand, UseEquipmentEvent,
+            Equipment, EquipmentOf, EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure,
+            Equippable, Mainhand, Offhand, UseEquipmentEvent,
         },
         Item,
     },
@@ -338,10 +338,7 @@ pub fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     equipment_query: Option<
-        Single<
-            (Option<&Mainhand>, Option<&Offhand>),
-            (Or<(Changed<Mainhand>, Changed<Offhand>)>, With<Player>),
-        >,
+        Single<(Option<&Mainhand>, Option<&Offhand>), (Changed<Equipment>, With<Player>)>,
     >,
     item_query: Query<&Sprite, With<Item>>,
 ) {
@@ -354,9 +351,9 @@ pub fn update_action_bar(
                 EquipmentSlot::Offhand => offhand.map(|o| o.get()),
             };
 
-            if let Some(equipped_entity) = equipment {
-                if let Some(&image_entity) = children.first() {
-                    if let Ok(mut image_node) = image_query.get_mut(image_entity) {
+            if let Some(&image_entity) = children.first() {
+                if let Ok(mut image_node) = image_query.get_mut(image_entity) {
+                    if let Some(equipped_entity) = equipment {
                         if let Ok(item_sprite) = item_query.get(equipped_entity) {
                             let action_bar_sprite = get_action_bar_sprite(item_sprite);
 

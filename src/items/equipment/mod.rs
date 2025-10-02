@@ -42,10 +42,6 @@ impl Plugin for EquipmentPlugin {
                 use_equipped::tick_equippable_use_rate.in_set(InGameSet::Simulation),
             ),
         )
-        // .add_systems(
-        //     FixedUpdate,
-        //     update_equipped_transforms.in_set(MainSet::InGame),
-        // )
         .add_observer(equip::on_item_equipped)
         .add_observer(unequip::on_item_unequipped)
         .add_observer(unequip::on_equip_slot_removed);

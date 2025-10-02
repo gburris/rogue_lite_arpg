@@ -1,4 +1,4 @@
-use bevy::{prelude::*, state::commands};
+use bevy::prelude::*;
 
 use crate::{
     character::Character,
@@ -31,7 +31,7 @@ pub fn on_item_equipped(
 
     let is_enemy = holder_query
         .get_mut(equipment_of.0)
-        .expect("Added Equipped to item with holder that is missing an inventory");
+        .expect("Added Equipment to holder that is not a character");
 
     if !is_in_inventory {
         commands

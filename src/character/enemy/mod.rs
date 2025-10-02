@@ -2,7 +2,6 @@ use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy_behave::prelude::*;
 use bevy_bundled_observers::observers;
-use serde::Serialize;
 
 mod defeat;
 
@@ -21,7 +20,7 @@ use crate::{
     economy::Purse,
     items::{
         equipment::{on_equipment_activated, Equipment},
-        fire_staff, health_potion, Items,
+        fire_staff, health_potion, ice_staff, sword, Items,
     },
     map::EnemiesSpawnEvent,
     prelude::*,
@@ -57,29 +56,11 @@ pub struct EnemySpawnData {
     pub enemy_type: EnemyType,
 }
 
-#[derive(Debug, Clone, Serialize, Component, Copy, PartialEq)]
+#[derive(Component, PartialEq, Clone, Debug)]
 pub enum EnemyType {
-    IceMage,
     Warrior,
+    IceMage,
     FireMage,
-}
-
-impl EnemyType {
-    pub fn name(&self) -> String {
-        match self {
-            Self::IceMage => "IceMage".to_owned(),
-            Self::Warrior => "Warrior".to_owned(),
-            Self::FireMage => "FireMage".to_owned(),
-        }
-    }
-
-    pub fn sprite(&self, sprites: &SpriteAssets) -> Handle<Image> {
-        match self {
-            Self::IceMage => sprites.ice_mage_enemy_sprite_sheet.clone(),
-            Self::Warrior => sprites.warrior_enemy_sprite_sheet.clone(),
-            Self::FireMage => sprites.fire_mage_enemy_sprite_sheet.clone(),
-        }
-    }
 }
 
 fn spawn_enemies(
@@ -143,17 +124,25 @@ fn spawn_enemy(
         }
     };
 
-    let enemy_behavior = if spawn_data.enemy_type == EnemyType::Warrior {
-        melee_enemy_behavior
-    } else {
-        ranged_enemy_behavior
-    };
+    match spawn_data.enemy_type {
+        EnemyType::Warrior => commands.spawn((
+            warrior(sprites, sprite_layouts),
+            base_enemy(spawn_data.position, player),
+            enemy_children(melee_enemy_behavior, &shadows),
+        )),
 
-    commands.spawn((
-        base_enemy(spawn_data.position, player),
-        fire_mage(sprites, sprite_layouts),
-        enemy_children(enemy_behavior, &shadows),
-    ));
+        EnemyType::IceMage => commands.spawn((
+            ice_mage(sprites, sprite_layouts),
+            base_enemy(spawn_data.position, player),
+            enemy_children(ranged_enemy_behavior, &shadows),
+        )),
+
+        EnemyType::FireMage => commands.spawn((
+            fire_mage(sprites, sprite_layouts),
+            base_enemy(spawn_data.position, player),
+            enemy_children(ranged_enemy_behavior, &shadows),
+        )),
+    };
 }
 
 fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
@@ -182,6 +171,38 @@ fn enemy_children(behavior: Tree<Behave>, shadows: &Shadows) -> impl Bundle {
         hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
         BehaveTree::new(behavior.clone()),
     ]
+}
+
+fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        SimpleMotion::new(200.0),
+        Health::new(40.0),
+        Sprite::from_atlas_image(
+            sprites.warrior_enemy_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        related!(Equipment[sword(sprites)]),
+        related!(Items[health_potion(sprites)]),
+    )
+}
+
+fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        SimpleMotion::new(100.0),
+        Health::new(20.0),
+        Sprite::from_atlas_image(
+            sprites.ice_mage_enemy_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
+        related!(Items[health_potion(sprites)]),
+    )
 }
 
 fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {

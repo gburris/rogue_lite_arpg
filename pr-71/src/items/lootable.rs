@@ -6,10 +6,7 @@ use rand::{thread_rng, Rng};
 use crate::{
     character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::{
-        equipment::{Equipment, EquipmentOf},
-        ItemOf, Items,
-    },
+    items::{equipment::EquipmentOf, ItemOf, Items},
     prelude::Player,
     utility::Lifespan,
 };

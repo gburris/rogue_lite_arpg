@@ -1,6 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use bevy_bundled_observers::observers;
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
@@ -53,33 +54,32 @@ fn spawn_chest(
     sprite_layouts: &SpriteSheetLayouts,
     spawn_position: Vec2,
 ) {
-    commands
-        .spawn((
-            Chest,
-            Sprite {
-                image: sprites.chests_sprite_sheet.clone(),
-                texture_atlas: Some(TextureAtlas {
-                    layout: sprite_layouts.chest_layout.clone(),
-                    index: 0,
-                }),
-                anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),
-                ..default()
-            },
-            AnimationIndices::OneShot(0..=8),
-            Transform {
-                translation: spawn_position.extend(0.0),
-                scale: Vec3::new(2.0, 2.0, 1.0),
-                ..default()
-            },
-            children![
-                ChestCollider,
-                (
-                    InteractionZone::OPEN_CHEST,
-                    Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
-                )
-            ],
-        ))
-        .observe(on_interaction_open_chest);
+    commands.spawn((
+        Chest,
+        Sprite {
+            image: sprites.chests_sprite_sheet.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: sprite_layouts.chest_layout.clone(),
+                index: 0,
+            }),
+            anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),
+            ..default()
+        },
+        AnimationIndices::OneShot(0..=8),
+        Transform {
+            translation: spawn_position.extend(0.0),
+            scale: Vec3::new(2.0, 2.0, 1.0),
+            ..default()
+        },
+        children![
+            ChestCollider,
+            (
+                InteractionZone::OPEN_CHEST,
+                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
+            )
+        ],
+        observers![on_interaction_open_chest],
+    ));
 }
 
 pub fn on_interaction_open_chest(

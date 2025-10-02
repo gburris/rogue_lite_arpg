@@ -25,12 +25,11 @@ pub fn plugin(app: &mut App) {
         FixedUpdate,
         magnet::update_magnet_locations.in_set(MainSet::InGame),
     )
-    .add_observer(on_item_added);
-
-    app.add_systems(
+    .add_systems(
         Update,
         (lootable::glow_and_rotate_lootables.in_set(InGameSet::Vfx),),
     )
+    .add_observer(on_item_added)
     .add_observer(lootable::on_drop_event)
     .add_observer(consumable::on_consume_event);
 }
@@ -49,7 +48,7 @@ fn on_item_added(trigger: Trigger<OnAdd, Item>, mut commands: Commands) {
 #[derive(Component)]
 #[require(Visibility::Hidden)]
 pub struct Item {
-    pub value: i32,
+    pub value: u32,
     pub item_type: ItemType,
     pub drop_glow_effect: f32,
     pub drop_rotation_timer: f32,
@@ -77,7 +76,7 @@ pub struct ItemOf(pub Entity);
 pub struct Items(Vec<Entity>);
 
 impl Item {
-    pub fn new(value: i32, item_type: ItemType) -> Self {
+    pub fn new(value: u32, item_type: ItemType) -> Self {
         Item {
             value,
             item_type,
@@ -87,6 +86,7 @@ impl Item {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum ItemType {
     Melee,
     Staff,

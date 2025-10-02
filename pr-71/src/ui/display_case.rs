@@ -10,7 +10,7 @@ use crate::{
         equipment::{EquipmentOf, Equippable},
         Item, Items,
     },
-    ui::display_case_slot::{spawn_slot, DisplaySlotOf},
+    ui::display_case_slot::{display_slot, DisplaySlotOf},
 };
 
 use super::{
@@ -114,16 +114,17 @@ pub fn on_display_case_updated(
     let items = items.iter().map(|e| (e, item_query.get(e).unwrap())).map(
         |(item_entity, (name, item, equippable, is_equipped))| DisplaySlotContext {
             item_entity,
-            item_name: name,
-            item,
+            item_name: name.to_string(),
+            item_type: item.item_type,
+            item_value: item.value,
             equipment_slot: equippable.map(|e| e.slot),
             is_equipped,
         },
     );
 
-    commands.entity(displayed_by.0).with_children(|builder| {
+    commands.entity(displayed_by.0).with_children(|parent| {
         for slot_context in items {
-            spawn_slot(builder, &icons, slot_context);
+            parent.spawn(display_slot(&icons, slot_context));
         }
     });
 }

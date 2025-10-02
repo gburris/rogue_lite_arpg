@@ -1,4 +1,5 @@
 use bevy::{ecs::spawn::SpawnWith, prelude::*};
+use bevy_bundled_observers::observers;
 
 use crate::{
     configuration::assets::GameIcons,
@@ -26,20 +27,17 @@ pub struct DisplaySlotOf(Entity);
 pub struct ItemDisplayed(Entity);
 
 /// Makes building display slots easier
-pub struct DisplaySlotContext<'a> {
+pub struct DisplaySlotContext {
     pub item_entity: Entity,
-    pub item_name: &'a str,
-    pub item: &'a Item,
+    pub item_name: String,   // Owned string
+    pub item_type: ItemType, // Just store what you need
+    pub item_value: u32,     // Just store what you need
     pub equipment_slot: Option<EquipmentSlot>,
     pub is_equipped: bool,
 }
 
 /// Spawns a given "slot" in a display case representing a single item in the inventory
-pub fn spawn_slot(
-    builder: &mut ChildSpawnerCommands,
-    icons: &GameIcons,
-    context: DisplaySlotContext,
-) {
+pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bundle {
     let equip_slot_string = context
         .equipment_slot
         .map(|slot| slot.to_string())
@@ -48,73 +46,70 @@ pub fn spawn_slot(
     let equipped_icon = icons.equip_icon.clone();
     let is_equipped = context.is_equipped;
 
-    builder
-        .spawn((
-            DisplaySlotOf(context.item_entity),
-            Node {
-                width: Val::Px(900.0),
-                height: Val::Px(32.0),
-                padding: UiRect::all(Val::Px(5.0)),
-                column_gap: Val::Px(5.0),
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            Pickable {
-                should_block_lower: false,
-                ..default()
-            },
-            Children::spawn((
-                Spawn((
-                    ImageNode {
-                        image: match context.item.item_type {
-                            ItemType::Melee => icons.melee_icon.clone(),
-                            ItemType::Staff => icons.staff_icon.clone(),
-                            ItemType::Potion => icons.potion_icon.clone(),
-                            ItemType::Tome => icons.spell_book_icon.clone(),
-                        },
-                        ..default()
+    (
+        DisplaySlotOf(context.item_entity),
+        Node {
+            width: Val::Px(900.0),
+            height: Val::Px(32.0),
+            padding: UiRect::all(Val::Px(5.0)),
+            column_gap: Val::Px(5.0),
+            align_items: AlignItems::Center,
+            ..default()
+        },
+        Pickable {
+            should_block_lower: false,
+            ..default()
+        },
+        Children::spawn((
+            Spawn((
+                ImageNode {
+                    image: match context.item_type {
+                        ItemType::Melee => icons.melee_icon.clone(),
+                        ItemType::Staff => icons.staff_icon.clone(),
+                        ItemType::Potion => icons.potion_icon.clone(),
+                        ItemType::Tome => icons.spell_book_icon.clone(),
                     },
-                    Node {
-                        width: Val::Px(30.0),
-                        height: Val::Px(30.0),
-                        ..default()
-                    },
-                    Pickable::IGNORE,
-                )),
-                Spawn((text(context.item_name, 18.0), Pickable::IGNORE)),
-                SpawnWith(move |parent: &mut ChildSpawner| {
-                    if is_equipped {
-                        spawn_equip_icon(parent, equipped_icon);
-                    }
-                }),
-                Spawn((
-                    Node {
-                        flex_grow: 1.0,
-                        ..default()
-                    },
-                    Pickable::IGNORE,
-                )),
-                Spawn((
-                    text(equip_slot_string, 18.0),
-                    width(EQUIP_SLOT_WIDTH),
-                    Pickable::IGNORE,
-                )),
-                Spawn((
-                    text(context.item.value.to_string(), 18.0),
-                    width(VALUE_WIDTH),
-                    Pickable::IGNORE,
-                )),
+                    ..default()
+                },
+                Node {
+                    width: Val::Px(30.0),
+                    height: Val::Px(30.0),
+                    ..default()
+                },
+                Pickable::IGNORE,
             )),
-        ))
-        .observe(on_slot_clicked)
-        .observe(on_slot_hover)
-        .observe(on_slot_done_hovering);
+            Spawn((text(context.item_name, 18.0), Pickable::IGNORE)),
+            SpawnWith(move |parent: &mut ChildSpawner| {
+                if is_equipped {
+                    spawn_equip_icon(parent, equipped_icon);
+                }
+            }),
+            Spawn((
+                Node {
+                    flex_grow: 1.0,
+                    ..default()
+                },
+                Pickable::IGNORE,
+            )),
+            Spawn((
+                text(equip_slot_string, 18.0),
+                width(EQUIP_SLOT_WIDTH),
+                Pickable::IGNORE,
+            )),
+            Spawn((
+                text(context.item_value.to_string(), 18.0),
+                width(VALUE_WIDTH),
+                Pickable::IGNORE,
+            )),
+        )),
+        observers![on_slot_clicked, on_slot_hover, on_slot_done_hovering],
+    )
 }
 
-fn spawn_equip_icon(parent: &mut ChildSpawner, equip_icon: Handle<Image>) {
+fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
     parent.spawn((
         ImageNode {
-            image: equip_icon,
+            image: equipped_icon,
             ..default()
         },
         Node {

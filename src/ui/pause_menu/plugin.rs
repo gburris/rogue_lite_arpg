@@ -35,12 +35,6 @@ impl Plugin for PauseMenuPlugin {
                     .run_if(in_state(PausedState::MainMenu))
                     .in_set(MainSet::Menu),
             )
-            // .add_systems(
-            //     Update,
-            //     display_case::on_display_case_updated
-            //         .run_if(in_state(PausedState::Inventory))
-            //         .in_set(MainSet::Menu),
-            // )
             // Inventory menu systems
             .add_observer(display_case::on_display_case_updated)
             .add_systems(

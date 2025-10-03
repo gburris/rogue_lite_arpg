@@ -14,7 +14,7 @@ use crate::map::{
 use super::prefab::Prefab;
 
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;
-const LEVEL_EXIT_Y_OFFSET: f32 = 23.0;
+const LEVEL_EXIT_Y_OFFSET: f32 = 24.0;
 const NPC_OFFSET: f32 = 5.0;
 const HUB_WIDTH: u32 = 25; // Reduced size for better control
 const HUB_HEIGHT: u32 = 25;
@@ -74,7 +74,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
     let max_x = bounds.max.x as i32;
     let min_y = bounds.min.y as i32;
     let max_y = bounds.max.y as i32;
-    let wall_thickness = 3;
+    let wall_thickness = 2;
 
     // Add horizontal walls (top and bottom)
     for wall_layer in 0..wall_thickness {

@@ -22,6 +22,7 @@ bevy_behave = { version = "0.3" }
 accesskit = "0.17"
 avian2d = "0.3"
 rand = "0.8"
+bevy_bundled_observers = "0.2"
 log = { version = "*", features = [
   "max_level_debug",
   "release_max_level_warn",

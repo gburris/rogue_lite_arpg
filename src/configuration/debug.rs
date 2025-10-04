@@ -25,6 +25,13 @@ impl Plugin for DebugPlugin {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugins(PhysicsDebugPlugin::default())
+        .insert_gizmo_config(
+            PhysicsGizmos::default(),
+            GizmoConfig {
+                enabled: false,
+                ..default()
+            },
+        )
         // Enable system ambiguity detection
         .edit_schedule(Update, |schedule| {
             schedule.set_build_settings(ScheduleBuildSettings {
@@ -38,17 +45,29 @@ impl Plugin for DebugPlugin {
                 handle_debug_input
                     .in_set(InGameSet::PlayerInput)
                     .ambiguous_with_all(),
-                view::camera_debug_system.in_set(InGameSet::HudOverlay),
+                view::camera_debug_system
+                    .in_set(InGameSet::HudOverlay)
+                    .run_if(resource_exists::<DebugRenderEnabled>),
             ),
         );
     }
 }
 
+#[derive(Resource)]
+pub struct DebugRenderEnabled;
+
 fn handle_debug_input(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut config_store: ResMut<GizmoConfigStore>,
+    debug_enabled: Option<Res<DebugRenderEnabled>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Comma) {
+        if debug_enabled.is_some() {
+            commands.remove_resource::<DebugRenderEnabled>();
+        } else {
+            commands.insert_resource(DebugRenderEnabled);
+        }
         let config = config_store.config_mut::<PhysicsGizmos>().0;
         config.enabled = !config.enabled;
     }

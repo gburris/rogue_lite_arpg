@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::inventory::*,
+    economy::Purse,
     labels::states::PausedState,
     prelude::{Enemy, Player, NPC},
     ui::{
@@ -16,7 +16,7 @@ pub struct InventoryMenu;
 
 pub fn spawn_inventory_menu(
     mut commands: Commands,
-    player: Single<(Entity, &Inventory), (With<Player>, Without<Enemy>, Without<NPC>)>,
+    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
     commands.spawn((
         InventoryMenu,
@@ -49,7 +49,7 @@ pub fn spawn_inventory_menu(
                 children![
                     text("Left click to equip/consume", 24.0),
                     text("Right click to drop", 24.0),
-                    text(format!("Total coins: {:.1}", player.1.coins), 24.0),
+                    text(format!("Total coins: {:.1}", player.1.amount), 24.0),
                     // Spacer between left and right side of footer
                     Node {
                         flex_grow: 1.0,

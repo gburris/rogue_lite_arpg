@@ -341,6 +341,7 @@ dependencies = [
  "bevy",
  "bevy_asset_loader",
  "bevy_behave",
+ "bevy_bundled_observers",
  "bevy_ecs_tilemap",
  "console_error_panic_hook",
  "log",
@@ -546,6 +547,15 @@ dependencies = [
  "bevy",
  "dyn-clone",
  "ego-tree",
+]
+
+[[package]]
+name = "bevy_bundled_observers"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fcfa0526f450c6db3be3bccdd85d89be8ae6b8fbeb61c2b67e01ec94d597d62"
+dependencies = [
+ "bevy_ecs",
 ]
 
 [[package]]

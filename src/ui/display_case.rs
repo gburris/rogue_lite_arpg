@@ -7,11 +7,10 @@ use bevy::{
 use crate::{
     configuration::assets::GameIcons,
     items::{
-        equipment::{Equippable, Equipped},
-        inventory::Inventory,
-        Item,
+        equipment::{EquipmentOf, Equippable},
+        Item, Items,
     },
-    ui::display_case_slot::{spawn_slot, DisplayCaseSlot},
+    ui::display_case_slot::{display_slot, DisplaySlotOf},
 };
 
 use super::{
@@ -87,14 +86,14 @@ pub fn on_display_case_updated(
     mut commands: Commands,
     icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
-    slots_querys: Query<(Entity, &DisplayCaseSlot)>,
-    inventory_query: Query<(&Inventory, &DisplayedBy)>,
-    items_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
+    slots_querys: Query<(Entity, &DisplaySlotOf)>,
+    items_query: Query<(Option<&Items>, &DisplayedBy)>,
+    item_query: Query<(&Name, &Item, Option<&Equippable>, Has<EquipmentOf>)>,
 ) {
     // Get entities inventory
-    let (inventory, displayed_by) = inventory_query
+    let (items, displayed_by) = items_query
         .get(trigger.target())
-        .expect("No inventory to update!");
+        .expect("Item holder is not displayed by anything");
 
     // Get children entities of DisplayCaseOf which should all have a DisplayCaseSlot
     let display_case_children = slot_container_query
@@ -107,25 +106,25 @@ pub fn on_display_case_updated(
         .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(e)))
         .for_each(|(e, _)| commands.entity(e).despawn());
 
-    // Get name and entity for each item in inventory
-    let items = inventory
-        .items
-        .iter()
-        .enumerate()
-        .map(|(index, &e)| (index, e, items_query.get(e).unwrap()))
-        .map(
-            |(index, _, (name, item, equippable, is_equipped))| DisplaySlotContext {
-                index,
-                item_name: name,
-                item,
-                equipment_slot: equippable.map(|e| e.slot),
-                is_equipped,
-            },
-        );
+    let Some(items) = items else {
+        return;
+    };
 
-    commands.entity(displayed_by.0).with_children(|builder| {
+    // Get name and entity for each item in inventory
+    let items = items.iter().map(|e| (e, item_query.get(e).unwrap())).map(
+        |(item_entity, (name, item, equippable, is_equipped))| DisplaySlotContext {
+            item_entity,
+            item_name: name.to_string(),
+            item_type: item.item_type,
+            item_value: item.value,
+            equipment_slot: equippable.map(|e| e.slot),
+            is_equipped,
+        },
+    );
+
+    commands.entity(displayed_by.0).with_children(|parent| {
         for slot_context in items {
-            spawn_slot(builder, &icons, slot_context);
+            parent.spawn(display_slot(&icons, slot_context));
         }
     });
 }

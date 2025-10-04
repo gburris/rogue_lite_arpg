@@ -6,12 +6,12 @@ use rand::{thread_rng, Rng};
 use crate::{
     character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::equipment::Equipped,
+    items::{equipment::EquipmentOf, ItemOf, Items},
     prelude::Player,
     utility::Lifespan,
 };
 
-use super::{inventory::Inventory, Item};
+use super::Item;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
@@ -30,34 +30,32 @@ pub struct ItemDropEvent;
 pub fn on_drop_event(
     trigger: Trigger<ItemDropEvent>,
     mut commands: Commands,
-    item_query: Query<&ChildOf, With<Item>>,
-    mut parent_query: Query<(&Transform, &mut Inventory)>,
+    item_query: Query<&ItemOf>,
+    mut holder_query: Query<&Transform, With<Items>>,
 ) {
     let item_entity = trigger.target();
 
-    let Ok(child_of) = item_query.get(item_entity) else {
+    let Ok(ItemOf(holder_entity)) = item_query.get(item_entity) else {
         warn!("Lootable item missing parent");
         return;
     };
 
-    let Ok((parent_transform, mut inventory)) = parent_query.get_mut(child_of.parent()) else {
-        error!("Why does the parent not have a transform or inventory on drop");
+    let Ok(parent_transform) = holder_query.get_mut(*holder_entity) else {
+        error!("Why does the parent not have a transform or items on drop");
         return;
     };
 
+    // TODO: Make sure we don't drop items out of bounds
     let mut rng = thread_rng();
     let offset = Vec2::new(rng.gen_range(-50.0..50.0), rng.gen_range(-50.0..50.0));
     let final_position =
         (parent_transform.translation.truncate() + offset).extend(ZLayer::OnGround.z());
 
-    // We don't care if item is actually found in inventory
-    inventory.remove_item(item_entity).ok();
-
     trace!("Dropping item at {}", offset);
 
     commands
         .entity(item_entity)
-        .remove::<Equipped>()
+        .remove::<(EquipmentOf, ItemOf)>()
         .insert((
             Lootable,
             Visibility::Visible,
@@ -70,28 +68,18 @@ pub fn on_drop_event(
 pub fn on_lootable_item_interaction(
     trigger: Trigger<InteractionEvent>,
     mut commands: Commands,
-    player: Single<(Entity, &mut Inventory), With<Player>>,
+    player: Single<Entity, With<Player>>,
 ) {
     let item_entity = trigger.target();
 
-    let (player_entity, mut inventory) = player.into_inner();
+    // Make sure item doesn't despawn and is hidden (since its in inventory)
+    commands
+        .entity(item_entity)
+        .remove::<(YSort, Lifespan, Lootable)>()
+        .insert((ItemOf(*player), Visibility::Hidden));
 
-    if inventory.add_item(item_entity).is_ok() {
-        commands.entity(player_entity).add_child(item_entity);
-
-        // Make sure item doesn't despawn and is hidden (since its in inventory)
-        commands
-            .entity(item_entity)
-            .remove::<Lootable>()
-            .remove::<Lifespan>()
-            .remove::<YSort>()
-            .insert(Visibility::Hidden);
-
-        // Remove interaction zone once itme is picked up
-        commands.entity(trigger.interaction_zone_entity).despawn();
-    } else {
-        warn!("Inventory is full!")
-    }
+    // Remove interaction zone once itme is picked up
+    commands.entity(trigger.interaction_zone_entity).despawn();
 }
 
 pub fn glow_and_rotate_lootables(

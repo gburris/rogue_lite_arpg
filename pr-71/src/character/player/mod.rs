@@ -188,7 +188,6 @@ fn spawn_player(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
-    atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
     commands.spawn((
@@ -198,7 +197,7 @@ fn spawn_player(
         Sprite::from_atlas_image(
             sprites.player_sprite_sheet.clone(),
             TextureAtlas {
-                layout: atlases.player_atlas_layout.clone(),
+                layout: sprite_layouts.player_atlas_layout.clone(),
                 ..default()
             },
         ),

@@ -4,8 +4,7 @@ use rand::Rng;
 use std::{collections::HashMap, sync::OnceLock};
 
 use crate::{
-    configuration::assets::SpriteAssets,
-    configuration::ZLayer,
+    configuration::{assets::SpriteAssets, ZLayer},
     map::components::{MapLayout, TileType, WorldSpaceConfig},
 };
 
@@ -82,7 +81,7 @@ pub fn spawn_zone_tilemap(
                                 position: tile_pos,
                                 tilemap_id: TilemapId(*tilemap_entity),
                                 texture_index: TileTextureIndex(texture_index),
-                                ..Default::default()
+                                ..default()
                             },
                         ))
                         .id();
@@ -102,13 +101,9 @@ pub fn spawn_zone_tilemap(
                 map_type,
                 texture: TilemapTexture::Single(texture_handle.clone()),
                 tile_size,
-                transform: get_tilemap_center_transform(
-                    &map_size,
-                    &grid_size,
-                    &map_type,
-                    ZLayer::Ground.z(),
-                ),
-                ..Default::default()
+                anchor: TilemapAnchor::Center,
+                transform: Transform::from_xyz(0.0, 0.0, ZLayer::Ground.z()),
+                ..default()
             });
         }
     }

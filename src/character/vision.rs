@@ -21,8 +21,6 @@ pub struct Vision {
 #[component(immutable)]
 #[require(Vision, TargetInfo)]
 pub struct VisionCapabilities {
-    /// Distance at which the entity forgets its target if out of range.
-    pub lose_aggro_distance: f32,
     /// Half-angle of the entity's field of view, in **radians**.
     ///
     /// For example:
@@ -34,7 +32,6 @@ pub struct VisionCapabilities {
 impl Default for VisionCapabilities {
     fn default() -> Self {
         Self {
-            lose_aggro_distance: 1000.0,
             vision_cone_radius: FRAC_PI_4,
         }
     }

@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{
+    dev_tools::fps_overlay::FpsOverlayPlugin,
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
@@ -24,7 +25,7 @@ impl Plugin for DebugPlugin {
                 .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins((FpsOverlayPlugin::default(), PhysicsDebugPlugin::default()))
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {

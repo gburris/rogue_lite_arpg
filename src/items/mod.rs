@@ -2,6 +2,7 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use crate::{
+    items::lootable::ItemDropEvent,
     labels::sets::{InGameSet, MainSet},
     utility::Lifespan,
 };
@@ -30,6 +31,7 @@ pub fn plugin(app: &mut App) {
         (lootable::glow_and_rotate_lootables.in_set(InGameSet::Vfx),),
     )
     .add_observer(on_item_added)
+    .add_observer(on_item_added_to_inventory)
     .add_observer(lootable::on_drop_event)
     .add_observer(consumable::on_consume_event);
 }
@@ -67,14 +69,6 @@ impl Default for Item {
     }
 }
 
-#[derive(Component, Clone)]
-#[relationship(relationship_target = Items)]
-pub struct ItemOf(pub Entity);
-
-#[derive(Component, Clone, Debug)]
-#[relationship_target(relationship = ItemOf, linked_spawn)]
-pub struct Items(Vec<Entity>);
-
 impl Item {
     pub fn new(value: u32, item_type: ItemType) -> Self {
         Item {
@@ -86,12 +80,42 @@ impl Item {
     }
 }
 
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Items)]
+pub struct ItemOf(pub Entity);
+
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = ItemOf, linked_spawn)]
+pub struct Items(Vec<Entity>);
+
 #[derive(Clone, Copy)]
 pub enum ItemType {
     Melee,
     Staff,
     Potion,
     Tome,
+}
+
+#[derive(Component)]
+pub struct ItemCapacity(pub usize);
+
+fn on_item_added_to_inventory(
+    trigger: Trigger<OnAdd, ItemOf>,
+    mut commands: Commands,
+    item_query: Query<&ItemOf>,
+    holder_query: Query<(Option<&Items>, &ItemCapacity)>,
+) {
+    let holder_entity = item_query
+        .get(trigger.target())
+        .expect("ItemOf Missing HOWWWW");
+
+    let (items, ItemCapacity(item_capacity)) = holder_query
+        .get(holder_entity.0)
+        .expect("Missing item capacity");
+
+    if items.map(|items| items.len()).unwrap_or(0) >= *item_capacity {
+        commands.trigger_targets(ItemDropEvent, trigger.target());
+    }
 }
 
 #[derive(Component)]

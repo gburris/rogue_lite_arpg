@@ -49,7 +49,7 @@ fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    atlases: Res<SpriteSheetLayouts>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
     // Define the NPC types we want to spawn in order
@@ -63,7 +63,7 @@ fn spawn_npcs(
             npc_type,
             *spawn_position,
             &sprites,
-            &atlases,
+            &sprite_layouts,
             &shadows,
         );
     }
@@ -74,24 +74,24 @@ fn spawn_npc(
     npc_type: NPCType,
     spawn_position: Vec2,
     sprites: &SpriteAssets,
-    atlases: &SpriteSheetLayouts,
+    sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
     match npc_type {
         NPCType::Helper => commands.spawn((
             npc_type,
             base_npc(spawn_position, shadows),
-            helper(sprites, atlases),
+            helper(sprites, sprite_layouts),
         )),
         NPCType::Shopkeeper => commands.spawn((
             npc_type,
             base_npc(spawn_position, shadows),
-            shopkeeper(sprites, atlases),
+            shopkeeper(sprites, sprite_layouts),
         )),
         NPCType::StatTrainer => commands.spawn((
             npc_type,
             base_npc(spawn_position, shadows),
-            stat_trainer(sprites, atlases),
+            stat_trainer(sprites, sprite_layouts),
         )),
     };
 }
@@ -116,26 +116,26 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
     )
 }
 
-fn helper(sprites: &SpriteAssets, atlases: &SpriteSheetLayouts) -> impl Bundle {
+fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Sprite::from_atlas_image(
             sprites.game_guide_sprite_sheet.clone(),
             TextureAtlas {
-                layout: atlases.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
                 ..default()
             },
         ),
         observers![interaction::on_game_guide_start],
-        related!(Equipment[ice_staff(sprites, atlases)]),
+        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
     )
 }
 
-fn shopkeeper(sprites: &SpriteAssets, atlases: &SpriteSheetLayouts) -> impl Bundle {
+fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Sprite::from_atlas_image(
             sprites.shop_keeper_sprite_sheet.clone(),
             TextureAtlas {
-                layout: atlases.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
                 ..default()
             },
         ),
@@ -144,12 +144,12 @@ fn shopkeeper(sprites: &SpriteAssets, atlases: &SpriteSheetLayouts) -> impl Bund
     )
 }
 
-fn stat_trainer(sprites: &SpriteAssets, atlases: &SpriteSheetLayouts) -> impl Bundle {
+fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Sprite::from_atlas_image(
             sprites.stat_trainer_sprite_sheet.clone(),
             TextureAtlas {
-                layout: atlases.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
                 ..default()
             },
         ),

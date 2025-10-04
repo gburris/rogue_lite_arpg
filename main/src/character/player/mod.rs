@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_bundled_observers::observers;
 use movement::PlayerMovementEvent;
 
 mod aim;
@@ -18,10 +19,11 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
+    economy::Purse,
     items::{
         self,
-        equipment::{on_equipment_activated, on_equipment_deactivated, Equipped},
-        inventory::Inventory,
+        equipment::{on_equipment_activated, on_equipment_deactivated, Equipment},
+        Items,
     },
     labels::{
         sets::InGameSet,
@@ -83,6 +85,7 @@ impl Plugin for PlayerPlugin {
     // Double the mass of npcs/enemies so the player can push them around more
     Mass(100.0),
     IFrames,
+    Purse
 )]
 pub struct Player {
     pub aim_position: Vec2, // tracks the cursor
@@ -183,60 +186,48 @@ impl DisplayableStatType {
 fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    texture_layouts: Res<SpriteSheetLayouts>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
-    atlases: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
-    let starting_items = [
-        items::spawn_ice_staff(&mut commands, &sprites, &texture_layouts),
-        items::spawn_health_potion(&mut commands, &sprites),
-        items::spawn_sword(&mut commands, &sprites),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "tome_of_healing"),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "magic_shield"),
-        items::spawn_offhand(&mut commands, &sprites, &texture_layouts, "knight_shield"),
-    ];
-
-    let player = commands
-        .spawn((
-            Player::default(),
-            Inventory::builder()
-                .items(starting_items.into())
-                .coins(0)
-                .max_capacity(50)
-                .build(),
-            Mana::new(100.0, 10.0),
-            game_progress.base_stats.clone(),
-            Sprite::from_atlas_image(
-                sprites.player_sprite_sheet.clone(),
-                TextureAtlas {
-                    layout: atlases.player_atlas_layout.clone(),
-                    ..default()
-                },
-            ),
-            children![
-                shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
-                physical_collider(),
-                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
-                (
-                    PlayerInteractionRadius,
-                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                    CollisionLayers::new(
-                        [GameCollisionLayer::PlayerInteractionRadius],
-                        [GameCollisionLayer::Interaction],
-                    ),
-                )
-            ],
-        ))
-        .add_children(&starting_items)
-        .observe(death::on_player_defeated)
-        .observe(on_equipment_activated)
-        .observe(on_equipment_deactivated)
-        .id();
-
-    commands
-        .entity(starting_items[0])
-        .insert(Equipped::new(player));
-
-    info!("Player spawned: {}", player);
+    commands.spawn((
+        Player::default(),
+        Mana::new(100.0, 10.0),
+        game_progress.base_stats.clone(),
+        Sprite::from_atlas_image(
+            sprites.player_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.player_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        related!(Equipment[items::fire_staff(&sprites, &sprite_layouts)]),
+        related!(Items[
+            items::ice_staff(&sprites, &sprite_layouts),
+            items::sword(&sprites),
+            items::axe(&sprites),
+            items::magic_shield(&sprites, &sprite_layouts),
+            items::knight_shield(&sprites, &sprite_layouts),
+            items::health_potion(&sprites),
+            items::tome_of_healing(&sprites)
+        ]),
+        observers![
+            death::on_player_defeated,
+            on_equipment_activated,
+            on_equipment_deactivated
+        ],
+        children![
+            shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+            physical_collider(),
+            hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+            (
+                PlayerInteractionRadius,
+                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
+                CollisionLayers::new(
+                    [GameCollisionLayer::PlayerInteractionRadius],
+                    [GameCollisionLayer::Interaction],
+                ),
+            )
+        ],
+    ));
 }

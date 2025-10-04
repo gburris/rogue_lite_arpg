@@ -1,6 +1,6 @@
 use crate::{
     combat::Health,
-    items::inventory::Inventory,
+    economy::Purse,
     labels::states::PausedState,
     prelude::Player,
     progression::GameProgress,
@@ -34,10 +34,10 @@ impl MenuButtonConfig {
 
 pub fn spawn_main_menu(
     mut commands: Commands,
-    player: Single<(&Health, &Player, &Inventory)>,
+    player: Single<(&Health, &Player, &Purse)>,
     game_progress: Res<GameProgress>,
 ) {
-    let (health, player, inventory) = player.into_inner();
+    let (health, player, purse) = player.into_inner();
 
     commands.spawn((
         MainMenu,
@@ -68,7 +68,7 @@ pub fn spawn_main_menu(
                     menu_button(MenuButtonConfig::Stats),
                 ]
             ),
-            main_menu_footer(player.get_level(), health, inventory.coins, &game_progress),
+            main_menu_footer(player.get_level(), health, purse.amount, &game_progress),
         ],
     ));
 }

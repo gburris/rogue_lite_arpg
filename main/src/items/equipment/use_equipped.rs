@@ -1,11 +1,8 @@
 use avian2d::prelude::*;
-use bevy::{
-    ecs::{entity::EntityCloner, entity_disabling::Disabled},
-    prelude::*,
-};
+use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 use rand::Rng;
 
-use super::{EquipmentSlot, Equipped};
+use super::{EquipmentOf, EquipmentSlot};
 use crate::{
     combat::{
         damage::DamageSource,
@@ -19,8 +16,8 @@ use crate::{
     },
     configuration::{GameCollisionLayer, ZLayer},
     items::{
-        equipment::Equippable, inventory::Inventory, HealingTome, HealingTomeSpellVisualEffect,
-        Shield,
+        equipment::{Equipment, Equippable, Mainhand, Offhand},
+        HealingTome, HealingTomeSpellVisualEffect, Shield,
     },
     prelude::{Enemy, *},
 };
@@ -65,8 +62,8 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
 pub fn on_equipment_activated(
     trigger: Trigger<UseEquipmentInputEvent>,
     commands: Commands,
-    holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+    holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Equipment>>,
+    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<EquipmentOf>>,
 ) {
     handle_equipment_activation(
         trigger.target(),
@@ -81,18 +78,23 @@ fn handle_equipment_activation(
     entity: Entity,
     slot: EquipmentSlot,
     mut commands: Commands,
-    mut holder_query: Query<(&Inventory, Option<&mut Mana>)>,
-    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
+    mut holder_query: Query<
+        (Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>),
+        With<Equipment>,
+    >,
+    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<EquipmentOf>>,
 ) {
-    let Ok((inventory, mut holder_mana)) = holder_query.get_mut(entity) else {
-        error!(
-            "Entity: {} tried to use equipment, but is missing inventory",
-            entity
-        );
+    let Ok((mut holder_mana, mainhand, offhand)) = holder_query.get_mut(entity) else {
+        error!("Entity: {} tried to use equipment, but has none", entity);
         return;
     };
 
-    let Some(equipment_entity) = inventory.get_equipped(slot) else {
+    let equipment_entity: Option<Entity> = match slot {
+        EquipmentSlot::Mainhand => mainhand.map(|m| m.0),
+        EquipmentSlot::Offhand => offhand.map(|o| o.0),
+    };
+
+    let Some(equipment_entity) = equipment_entity else {
         warn!("{:?} is empty!", slot);
         commands.trigger_targets(
             EquipmentUseFailedEvent {
@@ -171,7 +173,7 @@ pub fn on_weapon_fired(
 
     for projectile_entity in projectiles.iter() {
         if let Ok((projectile, effects)) = projectile_query.get(projectile_entity) {
-            info!("Spawning projectile with effects: {:?}", effects);
+            trace!("Spawning projectile with effects: {:?}", effects);
 
             // Rotate the aim direction by the projectile’s angle offset
             let rotated_direction = holder_vision
@@ -270,29 +272,25 @@ pub fn on_shield_block(
 }
 
 pub fn on_equipment_deactivated(
-    fired_trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
+    trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
     mut commands: Commands,
-    holder_query: Query<(&Inventory, &FacingDirection)>,
-    mut shield_query: Query<(Entity, &mut Sprite), (With<Shield>, With<ActiveShield>)>,
+    holder_query: Query<(&Offhand, &FacingDirection)>,
+    mut shield_query: Query<&mut Sprite, (With<Shield>, With<ActiveShield>)>,
 ) {
     // Get the holder's inventory
-    let Ok((inventory, facing_direction)) = holder_query.get(fired_trigger.target()) else {
-        warn!("Tried to stop blocking but entity has no inventory or no direction");
+    let Ok((Offhand(shield_entity), facing_direction)) = holder_query.get(trigger.target()) else {
+        warn!("Tried to stop blocking but entity has no offhand or no direction");
         return;
     };
 
-    let Some(shield_entity) = inventory.get_equipped(EquipmentSlot::Offhand) else {
-        warn!("No shield equipped in offhand");
-        return;
-    };
-    if let Ok((shield_entity, mut shield_sprite)) = shield_query.get_mut(shield_entity) {
+    if let Ok(mut shield_sprite) = shield_query.get_mut(*shield_entity) {
         deactivate_shield(
             &mut commands,
-            shield_entity,
+            *shield_entity,
             *facing_direction,
-            Some(&mut shield_sprite),
+            &mut shield_sprite,
         );
     } else {
-        warn!("Shield is equipped but doesn't have ActiveShield");
+        warn!("Offhand missing Shield or ActiveShield");
     }
 }

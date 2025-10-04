@@ -1,39 +1,66 @@
 use bevy::prelude::*;
 
 use crate::{
+    character::Character,
     combat::{damage::DamageSource, melee::MeleeWeapon},
+    items::{
+        equipment::{EquipmentOf, Mainhand, MainhandOf, Offhand, OffhandOf},
+        ItemOf,
+    },
     prelude::Enemy,
-    items::inventory::Inventory,
 };
 
-use super::{equippable::Equipped, EquipmentSlot, Equippable};
+use super::{EquipmentSlot, Equippable};
 
 pub fn on_item_equipped(
-    trigger: Trigger<OnAdd, Equipped>,
+    trigger: Trigger<OnAdd, EquipmentOf>,
     mut commands: Commands,
     mut item_query: Query<(
+        Has<ItemOf>,
         &Equippable,
-        &Equipped,
+        &EquipmentOf,
         &mut Visibility,
         Option<&MeleeWeapon>,
     )>,
-    mut holder_query: Query<(&mut Inventory, Option<&Enemy>)>,
+    mut holder_query: Query<Has<Enemy>, With<Character>>,
 ) {
     let equipped_entity = trigger.target();
-    let (equippable, equipped, mut visibility, melee_weapon) = item_query
+    let (is_in_inventory, equippable, equipment_of, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");
 
-    let (mut inventory, enemy) = holder_query
-        .get_mut(equipped.get_equipped_to())
-        .expect("Added Equipped to item with holder that is missing an inventory");
+    let is_enemy = holder_query
+        .get_mut(equipment_of.0)
+        .expect("Added Equipment to holder that is not a character");
 
-    // If previously equipped, must handle it!
-    if let Some(previous) = inventory.get_equipped(equippable.slot) {
-        commands.entity(previous).remove::<Equipped>();
+    if !is_in_inventory {
+        commands
+            .entity(equipped_entity)
+            .insert(ItemOf(equipment_of.0));
     }
 
-    inventory.equip(equipped_entity, equippable.slot);
+    commands
+        .entity(equipped_entity)
+        .insert(ChildOf(equipment_of.0));
+
+    match equippable.slot {
+        EquipmentSlot::Mainhand => {
+            // remove in bevy 0.17
+            commands.entity(equipment_of.0).remove::<Mainhand>();
+
+            commands
+                .entity(equipped_entity)
+                .insert(MainhandOf(equipment_of.0));
+        }
+        EquipmentSlot::Offhand => {
+            // remove in bevy 0.17
+            commands.entity(equipment_of.0).remove::<Offhand>();
+
+            commands
+                .entity(equipped_entity)
+                .insert(OffhandOf(equipment_of.0));
+        }
+    }
 
     if equippable.slot == EquipmentSlot::Mainhand || equippable.slot == EquipmentSlot::Offhand {
         // Make sure item is now visible, since it is hidden while in inventory
@@ -41,7 +68,7 @@ pub fn on_item_equipped(
     }
 
     if let Some(melee_weapon) = melee_weapon {
-        let damage_source = if enemy.is_some() {
+        let damage_source = if is_enemy {
             DamageSource::Enemy
         } else {
             DamageSource::Player

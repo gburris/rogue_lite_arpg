@@ -71,7 +71,7 @@ pub fn spawn_zone_entities(
             .into_iter()
             .map(|pos| EnemySpawnData {
                 position: pos,
-                enemy_type: enemy_types[rng.gen_range(0..3)],
+                enemy_type: enemy_types[rng.gen_range(0..3)].clone(),
             })
             .collect();
 

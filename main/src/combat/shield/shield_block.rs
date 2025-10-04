@@ -5,8 +5,8 @@ use crate::{
     },
     configuration::ZLayer,
     items::{
-        equipment::{EquipmentTransform, Equipped},
-        Shield,
+        equipment::{EquipmentOf, EquipmentTransform},
+        ItemOf, Shield,
     },
     prelude::*,
 };
@@ -20,16 +20,16 @@ pub fn update_active_shields(
     mut commands: Commands,
     time: Res<Time>,
     mut active_shield_query: Query<
-        (Entity, &ManaDrainRate, &Equipped, &mut Sprite),
-        With<ActiveShield>,
+        (Entity, &ManaDrainRate, &ItemOf, &mut Sprite),
+        (With<ActiveShield>, With<EquipmentOf>),
     >,
     mut holder_query: Query<(&Vision, &FacingDirection, Option<&mut Mana>)>,
 ) {
-    for (shield_entity, mana_drain_rate, equipped, mut shield_sprite) in
+    for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in
         active_shield_query.iter_mut()
     {
         let (vision, facing_direction, mana) = holder_query
-            .get_mut(equipped.get_equipped_to())
+            .get_mut(item_of.0)
             .expect("Shield holder missing necessary components");
 
         let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
@@ -80,7 +80,7 @@ pub fn update_active_shields(
                     &mut commands,
                     shield_entity,
                     *facing_direction,
-                    Some(&mut shield_sprite),
+                    &mut shield_sprite,
                 );
             }
         }
@@ -91,20 +91,18 @@ pub fn deactivate_shield(
     commands: &mut Commands,
     shield_entity: Entity,
     facing_direction: FacingDirection,
-    shield_sprite: Option<&mut Sprite>,
+    shield_sprite: &mut Sprite,
 ) {
     commands
         .entity(shield_entity)
-        .remove::<ActiveShield>()
-        .remove::<Collider>()
+        .remove::<(ActiveShield, Collider)>()
         .insert(EquipmentTransform::get(facing_direction).offhand);
 
-    if let Some(sprite) = shield_sprite {
-        if let Some(atlas) = &mut sprite.texture_atlas {
-            atlas.index = 0;
-        }
+    if let Some(atlas) = &mut shield_sprite.texture_atlas {
+        atlas.index = 0;
     }
 }
+
 pub fn activate_shield(
     trigger: Trigger<OnAdd, ActiveShield>,
     mut commands: Commands,

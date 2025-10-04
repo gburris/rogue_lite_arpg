@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_behave::prelude::*;
+use bevy_bundled_observers::observers;
 
 mod interaction;
 
@@ -7,7 +8,7 @@ use crate::{
     character::{
         behavior::{Idle, Retreat},
         physical_collider,
-        player::interact::{InteractionEvent, InteractionZone},
+        player::interact::InteractionZone,
         Character,
     },
     combat::{damage::hurtbox, Health},
@@ -15,7 +16,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
     },
-    items::{equipment::Equipped, inventory::Inventory, spawn_axe, spawn_ice_staff, spawn_sword},
+    items::{axe, equipment::Equipment, ice_staff, sword},
     map::NPCSpawnEvent,
     prelude::*,
 };
@@ -34,42 +35,11 @@ impl Plugin for NPCPlugin {
 #[require(Character)]
 pub struct NPC;
 
-#[derive(Debug, Clone, Component, Copy)]
+#[derive(Component, Clone, Copy, Debug)]
 pub enum NPCType {
     Helper,
     Shopkeeper,
     StatTrainer,
-}
-
-impl NPCType {
-    pub fn spawn_weapon(
-        &self,
-        commands: &mut Commands,
-        sprites: &SpriteAssets,
-        atlases: &SpriteSheetLayouts,
-    ) -> Entity {
-        match self {
-            NPCType::Helper => spawn_ice_staff(commands, sprites, atlases),
-            NPCType::Shopkeeper => spawn_axe(commands, sprites),
-            NPCType::StatTrainer => spawn_sword(commands, sprites),
-        }
-    }
-
-    pub fn get_sprite_sheet(&self, sprites: &SpriteAssets) -> Handle<Image> {
-        match self {
-            NPCType::Helper => sprites.game_guide_sprite_sheet.clone(),
-            NPCType::Shopkeeper => sprites.shop_keeper_sprite_sheet.clone(),
-            NPCType::StatTrainer => sprites.stat_trainer_sprite_sheet.clone(),
-        }
-    }
-
-    pub fn get_interaction_observer(&self) -> fn(Trigger<InteractionEvent>, Commands) {
-        match self {
-            NPCType::Helper => interaction::on_game_guide_start,
-            NPCType::Shopkeeper => interaction::on_shop_keeper_store_open,
-            NPCType::StatTrainer => interaction::on_stat_trainer_store_open,
-        }
-    }
 }
 
 const TILE_SIZE: f32 = 32.0;
@@ -79,7 +49,7 @@ fn spawn_npcs(
     npc_spawn_trigger: Trigger<NPCSpawnEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
-    atlases: Res<SpriteSheetLayouts>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
     // Define the NPC types we want to spawn in order
@@ -93,7 +63,7 @@ fn spawn_npcs(
             npc_type,
             *spawn_position,
             &sprites,
-            &atlases,
+            &sprite_layouts,
             &shadows,
         );
     }
@@ -104,14 +74,92 @@ fn spawn_npc(
     npc_type: NPCType,
     spawn_position: Vec2,
     sprites: &SpriteAssets,
-    atlases: &SpriteSheetLayouts,
+    sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let mainhand = npc_type.spawn_weapon(commands, sprites, atlases);
-    let sprite_sheet_to_use = npc_type.get_sprite_sheet(sprites);
-    let on_player_interaction = npc_type.get_interaction_observer();
+    match npc_type {
+        NPCType::Helper => commands.spawn((
+            npc_type,
+            base_npc(spawn_position, shadows),
+            helper(sprites, sprite_layouts),
+        )),
+        NPCType::Shopkeeper => commands.spawn((
+            npc_type,
+            base_npc(spawn_position, shadows),
+            shopkeeper(sprites, sprite_layouts),
+        )),
+        NPCType::StatTrainer => commands.spawn((
+            npc_type,
+            base_npc(spawn_position, shadows),
+            stat_trainer(sprites, sprite_layouts),
+        )),
+    };
+}
 
-    let npc_behavior = behave! {
+fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
+    (
+        NPC,
+        Anchor::new(spawn_position, WANDER_RADIUS),
+        SimpleMotion::new(100.0),
+        Health::new(1000.0),
+        Transform::from_translation(spawn_position.extend(0.0)),
+        children![
+            shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+            (
+                InteractionZone::NPC,
+                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
+            ),
+            hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+            physical_collider(),
+            BehaveTree::new(wander_and_retreat_behavior()),
+        ],
+    )
+}
+
+fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        Sprite::from_atlas_image(
+            sprites.game_guide_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        observers![interaction::on_game_guide_start],
+        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
+    )
+}
+
+fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        Sprite::from_atlas_image(
+            sprites.shop_keeper_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        observers![interaction::on_shop_keeper_store_open],
+        related!(Equipment[axe(sprites)]),
+    )
+}
+
+fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        Sprite::from_atlas_image(
+            sprites.stat_trainer_sprite_sheet.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        observers![interaction::on_stat_trainer_store_open],
+        related!(Equipment[sword(sprites)]),
+    )
+}
+
+fn wander_and_retreat_behavior() -> Tree<Behave> {
+    behave! {
         Behave::Forever => {
             Behave::Fallback => {
                 Behave::Sequence => {
@@ -121,38 +169,5 @@ fn spawn_npc(
                 Behave::spawn_named("Retreat", Retreat),
             }
         }
-    };
-
-    let npc = commands
-        .spawn((
-            NPC,
-            Anchor::new(spawn_position, WANDER_RADIUS),
-            SimpleMotion::new(100.0),
-            Health::new(1000.0),
-            npc_type,
-            Inventory::default(),
-            Transform::from_translation(spawn_position.extend(0.0)),
-            Sprite::from_atlas_image(
-                sprite_sheet_to_use,
-                TextureAtlas {
-                    layout: atlases.enemy_atlas_layout.clone(),
-                    ..default()
-                },
-            ),
-            children![
-                shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
-                (
-                    InteractionZone::NPC,
-                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                ),
-                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
-                physical_collider(),
-                BehaveTree::new(npc_behavior.clone()),
-            ],
-        ))
-        .observe(on_player_interaction)
-        .add_child(mainhand)
-        .id();
-
-    commands.entity(mainhand).insert(Equipped::new(npc));
+    }
 }

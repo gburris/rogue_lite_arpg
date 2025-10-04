@@ -131,7 +131,7 @@ impl MapDataBuilder {
             markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
-        // Always generate entrance/exit positions for random layouts
+        // Always generate entrance/exit positions for random sprite_layouts
         let (player_pos, exit_positions) =
             generate_entrance_exit_positions(self.size, self.num_exits);
         markers.insert(MarkerType::PlayerSpawns, player_pos);

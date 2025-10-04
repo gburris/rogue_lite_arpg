@@ -52,7 +52,7 @@ pub struct Projectiles(Vec<Entity>);
 
 pub fn fireball(
     sprites: &SpriteAssets,
-    texture_layouts: &SpriteSheetLayouts,
+    sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
 ) -> impl Bundle {
     (
@@ -65,7 +65,7 @@ pub fn fireball(
         Sprite::from_atlas_image(
             sprites.fire_ball.clone(),
             TextureAtlas {
-                layout: texture_layouts.fireball_layout.clone(),
+                layout: sprite_layouts.fireball_layout.clone(),
                 index: 0,
             },
         ),
@@ -75,7 +75,7 @@ pub fn fireball(
 
 pub fn icebolt(
     sprites: &SpriteAssets,
-    texture_layouts: &SpriteSheetLayouts,
+    sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
 ) -> impl Bundle {
     (
@@ -88,7 +88,7 @@ pub fn icebolt(
         Sprite::from_atlas_image(
             sprites.ice_bolt.clone(),
             TextureAtlas {
-                layout: texture_layouts.ice_bolt_layout.clone(),
+                layout: sprite_layouts.ice_bolt_layout.clone(),
                 index: 0,
             },
         ),

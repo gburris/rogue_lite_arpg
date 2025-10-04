@@ -22,6 +22,7 @@ use bevy::prelude::*;
 use crate::{
     animation::AnimationTimer,
     configuration::{GameCollisionLayer, YSort, CHARACTER_FEET_POS_OFFSET},
+    items::ItemCapacity,
     labels::sets::{InGameSet, MainSet},
 };
 
@@ -76,6 +77,7 @@ impl Plugin for CharacterPlugin {
     Mass(50.0),
     NoAutoMass,
     ActionState,
+    ItemCapacity(10),
     AnimationTimer,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]
 pub struct Character;

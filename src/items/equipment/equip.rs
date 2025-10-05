@@ -4,8 +4,8 @@ use crate::{
     character::Character,
     combat::{damage::DamageSource, melee::MeleeWeapon},
     items::{
-        equipment::{EquipmentOf, Mainhand, MainhandOf, Offhand, OffhandOf},
         ItemOf,
+        equipment::{EquipmentOf, Mainhand, MainhandOf, Offhand, OffhandOf},
     },
     prelude::Enemy,
 };
@@ -13,7 +13,7 @@ use crate::{
 use super::{EquipmentSlot, Equippable};
 
 pub fn on_item_equipped(
-    trigger: Trigger<OnAdd, EquipmentOf>,
+    trigger: On<Add, EquipmentOf>,
     mut commands: Commands,
     mut item_query: Query<(
         Has<ItemOf>,
@@ -24,7 +24,7 @@ pub fn on_item_equipped(
     )>,
     mut holder_query: Query<Has<Enemy>, With<Character>>,
 ) {
-    let equipped_entity = trigger.target();
+    let equipped_entity = trigger.event().entity;
     let (is_in_inventory, equippable, equipment_of, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");

@@ -1,7 +1,7 @@
 use bevy::{
+    camera::ScalingMode,
     color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700},
     prelude::*,
-    render::camera::ScalingMode,
     window::WindowResolution,
 };
 
@@ -93,7 +93,7 @@ pub fn get_window_plugin() -> WindowPlugin {
             resolution: if cfg!(target_arch = "wasm32") {
                 Default::default() // No resolution for wasm32
             } else {
-                WindowResolution::new(1920.0, 1080.0) // Set resolution for non-WASM
+                WindowResolution::new(1920, 1080) // Set resolution for non-WASM
             },
             ..default()
         }),

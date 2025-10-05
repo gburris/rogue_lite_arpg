@@ -12,7 +12,7 @@ use crate::{
 pub struct GameOverTimer(pub Timer);
 
 pub fn on_player_defeated(
-    _: Trigger<DefeatedEvent>,
+    _: On<DefeatedEvent>,
     player: Single<(Entity, &mut SimpleMotion), With<Player>>,
     mut commands: Commands,
     mut playing_state: ResMut<NextState<PlayingState>>,

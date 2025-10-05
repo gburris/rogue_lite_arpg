@@ -15,8 +15,10 @@ use super::helpers::generator::MapData;
 MAP EVENTS - Should be the only part of map exposed to other crates
 */
 
-#[derive(Event)]
-pub struct SpawnZoneEvent;
+#[derive(EntityEvent)]
+pub struct SpawnZoneEvent {
+    pub entity: Entity,
+}
 
 #[derive(Event)]
 pub struct CleanupZone;

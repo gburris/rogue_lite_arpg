@@ -7,10 +7,10 @@ use bevy::{
 use crate::{
     configuration::assets::GameIcons,
     items::{
-        equipment::{EquipmentOf, Equippable},
         Item, Items,
+        equipment::{EquipmentOf, Equippable},
     },
-    ui::display_case_slot::{display_slot, DisplaySlotOf},
+    ui::display_case_slot::{DisplaySlotOf, display_slot},
 };
 
 use super::{
@@ -32,8 +32,10 @@ pub struct DisplayCaseOf(Entity);
 pub struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
-#[derive(Event)]
-pub struct UpdateDisplayCaseEvent;
+#[derive(EntityEvent)]
+pub struct UpdateDisplayCaseEvent {
+    pub entity: Entity,
+}
 
 pub fn display_case(inventory_owner: Entity) -> impl Bundle {
     (
@@ -82,7 +84,7 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
 }
 
 pub fn on_display_case_updated(
-    trigger: Trigger<UpdateDisplayCaseEvent>,
+    trigger: On<UpdateDisplayCaseEvent>,
     mut commands: Commands,
     icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
@@ -133,20 +135,20 @@ const LINE_HEIGHT: f32 = 35.;
 
 /// Updates the scroll position of scrollable nodes in response to mouse input
 pub fn update_scroll_position(
-    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut mouse_wheel_messages: MessageReader<MouseWheel>,
     hover_map: Res<HoverMap>,
     mut scrolled_node_query: Query<&mut ScrollPosition>,
 ) {
-    for mouse_wheel_event in mouse_wheel_events.read() {
-        let dy = match mouse_wheel_event.unit {
-            MouseScrollUnit::Line => mouse_wheel_event.y * LINE_HEIGHT,
-            MouseScrollUnit::Pixel => mouse_wheel_event.y,
+    for mouse_wheel_message in mouse_wheel_messages.read() {
+        let dy = match mouse_wheel_message.unit {
+            MouseScrollUnit::Line => mouse_wheel_message.y * LINE_HEIGHT,
+            MouseScrollUnit::Pixel => mouse_wheel_message.y,
         };
 
         for (_pointer, pointer_map) in hover_map.iter() {
             for (entity, _hit) in pointer_map.iter() {
                 if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
-                    scroll_position.offset_y -= dy;
+                    scroll_position.y -= dy;
                 }
             }
         }

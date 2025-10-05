@@ -45,7 +45,7 @@ pub enum Damage {
 impl Damage {
     fn to_float(self) -> f32 {
         match self {
-            Damage::Range((min, max)) => rand::thread_rng().gen_range(min..max),
+            Damage::Range((min, max)) => rand::rng().random_range(min..max),
             Damage::Single(amount) => amount,
         }
     }
@@ -70,8 +70,9 @@ pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
     )
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct AttemptDamageEvent {
+    pub entity: Entity,
     /// Not all damage gets blocked by invulnerable (ex: burn from status effect)
     pub ignore_invulnerable: bool,
     /// We treat damage as a range with RNG determining which value is dealt
@@ -82,8 +83,9 @@ pub struct AttemptDamageEvent {
 
 /// While AttemptDamageEvent is sent any time a damage source interacts with an entity,
 ///this event represents when that damage attempt succeeds
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct DamageDealtEvent {
+    pub entity: Entity,
     pub damage: f32,
     pub damage_source: Option<Entity>,
 }
@@ -92,11 +94,13 @@ pub struct DamageDealtEvent {
 #[derive(Component)]
 pub struct Damager(pub Entity);
 
-#[derive(Event)]
-pub struct DefeatedEvent;
+#[derive(EntityEvent)]
+pub struct DefeatedEvent {
+    pub entity: Entity,
+}
 
 pub fn on_damage_event(
-    damage_trigger: Trigger<AttemptDamageEvent>,
+    damage_trigger: On<AttemptDamageEvent>,
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
@@ -127,16 +131,16 @@ pub fn on_damage_event(
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
-        commands.trigger_targets(
-            DamageDealtEvent {
-                damage,
-                damage_source: damage_trigger.damage_source,
-            },
-            damaged_entity,
-        );
+        commands.trigger(DamageDealtEvent {
+            entity: damaged_entity,
+            damage,
+            damage_source: damage_trigger.damage_source,
+        });
 
         if health.hp == 0.0 {
-            commands.trigger_targets(DefeatedEvent, damaged_entity);
+            commands.trigger(DefeatedEvent {
+                entity: damaged_entity,
+            });
         } else if let Some(source_entity) = damage_trigger.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {

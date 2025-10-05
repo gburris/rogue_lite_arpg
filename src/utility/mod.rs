@@ -7,8 +7,8 @@ use crate::{
     economy::Gold,
     items::lootable::Lootable,
     labels::sets::InGameSet,
-    map::{portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Wall, Water},
-    prelude::{Enemy, Player, NPC},
+    map::{Chest, CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
+    prelude::{Enemy, NPC, Player},
     ui::PlayerOverlay,
 };
 
@@ -65,7 +65,7 @@ pub fn despawn_expired_entities(
 
 /// Despawn all entities with the specific component
 pub fn despawn_all<T: Event, C: Component>(
-    _: Trigger<T>,
+    _: On<T>,
     mut commands: Commands,
     query: Query<Entity, With<C>>,
 ) {

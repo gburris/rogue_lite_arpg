@@ -12,8 +12,9 @@ pub enum ConsumableType {
     Heal(f32), // Heal player for a specific amount
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct ConsumeEvent {
+    pub entity: Entity,
     pub item_entity: Entity,
 }
 
@@ -29,7 +30,7 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
 }
 
 pub fn on_consume_event(
-    consume_trigger: Trigger<ConsumeEvent>,
+    consume_trigger: On<ConsumeEvent>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,
 ) {
@@ -38,10 +39,10 @@ pub fn on_consume_event(
     if let Ok(consumable) = consumable_query.get(item_entity) {
         match &consumable.effect {
             ConsumableType::Heal(amount) => {
-                commands.trigger_targets(
-                    AttemptHealingEvent { amount: *amount },
-                    consume_trigger.target(),
-                );
+                commands.trigger(AttemptHealingEvent {
+                    entity: consume_trigger.target(),
+                    amount: *amount,
+                });
             }
         }
         commands.entity(item_entity).despawn();

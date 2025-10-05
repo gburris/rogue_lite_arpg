@@ -17,7 +17,7 @@ pub struct AnimatedText;
 pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
-        StateScoped(AppState::SpawnZone),
+        DespawnOnExit(AppState::SpawnZone),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -62,7 +62,7 @@ fn title_section() -> impl Bundle {
                 margin: UiRect::all(Val::Px(0.0)),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
             children![(
                 text("Loading Instance", TITLE_FONT_SIZE),
@@ -95,7 +95,7 @@ fn body_section() -> impl Bundle {
                 margin: UiRect::all(Val::Px(20.0)),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
                 text("Loading Instance", 48.0),

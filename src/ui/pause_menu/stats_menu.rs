@@ -19,7 +19,7 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
     if let Ok(stats) = player_stats.single() {
         commands.spawn((
             StatsMenu,
-            StateScoped(PausedState::Stats),
+            DespawnOnExit(PausedState::Stats),
             Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),

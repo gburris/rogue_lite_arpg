@@ -1,12 +1,12 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 
 use crate::{
     character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::{equipment::EquipmentOf, ItemOf, Items},
+    items::{ItemOf, Items, equipment::EquipmentOf},
     prelude::Player,
     utility::Lifespan,
 };
@@ -20,15 +20,17 @@ use super::Item;
 )]
 pub struct Lootable;
 
-#[derive(Event)]
-pub struct ItemDropEvent;
+#[derive(EntityEvent)]
+pub struct ItemDropEvent {
+    pub entity: Entity,
+}
 
 /// Notes:
 /// 1. ItemDropEvent is for items only!
 /// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
 /// 3. Needs parent to be holder for position, then removes parent
 pub fn on_drop_event(
-    trigger: Trigger<ItemDropEvent>,
+    trigger: On<ItemDropEvent>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
     mut holder_query: Query<&Transform, With<Items>>,
@@ -46,8 +48,8 @@ pub fn on_drop_event(
     };
 
     // TODO: Make sure we don't drop items out of bounds
-    let mut rng = thread_rng();
-    let offset = Vec2::new(rng.gen_range(-50.0..50.0), rng.gen_range(-50.0..50.0));
+    let mut rng = rng();
+    let offset = Vec2::new(rng.random_range(-50.0..50.0), rng.random_range(-50.0..50.0));
     let final_position =
         (parent_transform.translation.truncate() + offset).extend(ZLayer::OnGround.z());
 
@@ -66,11 +68,11 @@ pub fn on_drop_event(
 }
 
 pub fn on_lootable_item_interaction(
-    trigger: Trigger<InteractionEvent>,
+    interaction: On<InteractionEvent>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
 ) {
-    let item_entity = trigger.target();
+    let item_entity = interaction.event().entity;
 
     // Make sure item doesn't despawn and is hidden (since its in inventory)
     commands
@@ -79,7 +81,9 @@ pub fn on_lootable_item_interaction(
         .insert((ItemOf(*player), Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up
-    commands.entity(trigger.interaction_zone_entity).despawn();
+    commands
+        .entity(interaction.event().interaction_zone_entity)
+        .despawn();
 }
 
 pub fn glow_and_rotate_lootables(

@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub fn on_healing_tome_visual_added(
-    trigger: Trigger<OnAdd, HealingTomeSpellVisualEffect>,
+    trigger: On<Add, HealingTomeSpellVisualEffect>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -21,9 +21,9 @@ pub fn on_healing_tome_visual_added(
                 layout: sprite_layouts.spell_effect.clone(),
                 index: 0,
             }),
-            anchor: Anchor::Custom(Vec2::new(0.0, 0.10)),
             ..default()
         },
+        Anchor(Vec2::new(0.0, 0.10)),
         AnimationIndices::OneShot(0..=9),
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
     ));

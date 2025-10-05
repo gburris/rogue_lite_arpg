@@ -18,7 +18,7 @@ pub struct AnimatedText;
 pub fn spawn(mut commands: Commands) {
     commands.spawn((
         StartScreen,
-        StateScoped(AppState::StartScreen),
+        DespawnOnExit(AppState::StartScreen),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -55,7 +55,7 @@ fn start_screen_title() -> impl Bundle {
                 padding: UiRect::horizontal(Val::Px(40.0)),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
             children![(
                 text("Baba Yaga", TITLE_FONT_SIZE),
@@ -88,7 +88,7 @@ fn start_screen_body() -> impl Bundle {
                 margin: UiRect::all(Val::Px(20.0)),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
                 text("BEGIN", 48.0),

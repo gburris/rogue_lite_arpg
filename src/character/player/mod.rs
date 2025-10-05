@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
-use bevy_bundled_observers::observers;
+use bevy::{prelude::*, ui_widgets::observe};
 use movement::PlayerMovementEvent;
 
 mod aim;
@@ -13,17 +12,17 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    character::{physical_collider, player::interact::PlayerInteractionRadius, Character},
-    combat::{damage::hurtbox, invulnerable::IFrames, Health, Mana},
+    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
     economy::Purse,
     items::{
-        self,
-        equipment::{on_equipment_activated, on_equipment_deactivated, Equipment},
-        Items,
+        self, Items,
+        equipment::{Equipment, on_equipment_activated, on_equipment_deactivated},
     },
     labels::{
         sets::InGameSet,
@@ -41,7 +40,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerMovementEvent>()
+        app.add_message::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (spawn_player, transition_to_create_hub).chain(),
@@ -211,11 +210,9 @@ fn spawn_player(
             items::health_potion(&sprites),
             items::tome_of_healing(&sprites)
         ]),
-        observers![
-            death::on_player_defeated,
-            on_equipment_activated,
-            on_equipment_deactivated
-        ],
+        observe(death::on_player_defeated),
+        observe(on_equipment_activated),
+        observe(on_equipment_deactivated),
         children![
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),

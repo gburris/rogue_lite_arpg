@@ -44,7 +44,7 @@ impl Plugin for SetupPlugin {
             // avian recommendeds ordering camera following logic in PostUpdate after transform prop
             .add_systems(
                 PostUpdate,
-                view::camera_follow_system.before(TransformSystem::TransformPropagate),
+                view::camera_follow_system.before(TransformSystems::Propagate),
             )
             .add_systems(FixedUpdate, view::ysort_transforms.in_set(MainSet::InGame));
     }

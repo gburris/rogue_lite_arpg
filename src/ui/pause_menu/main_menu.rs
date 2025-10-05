@@ -41,7 +41,7 @@ pub fn spawn_main_menu(
 
     commands.spawn((
         MainMenu,
-        StateScoped(PausedState::MainMenu),
+        DespawnOnExit(PausedState::MainMenu),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -87,7 +87,7 @@ fn menu_button(config: MenuButtonConfig) -> impl Bundle {
             align_items: AlignItems::Center,
             ..default()
         },
-        BorderColor(Color::srgb(0.8, 0.8, 0.8)),
+        BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
         BackgroundColor(DARK_GRAY_COLOR),
         children![text(button_text, 32.0)],
     )

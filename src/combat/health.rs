@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct AttemptHealingEvent {
+    pub entity: Entity,
     pub amount: f32,
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct HealedEvent {
+    pub entity: Entity,
     pub amount: f32,
 }
 
@@ -48,18 +50,16 @@ impl Default for Health {
 }
 
 pub fn on_healing_event(
-    healing_trigger: Trigger<AttemptHealingEvent>,
+    healing_trigger: On<AttemptHealingEvent>,
     mut commands: Commands,
     mut healed_query: Query<&mut Health>,
 ) {
     if let Ok(mut health) = healed_query.get_mut(healing_trigger.target()) {
         let actual_amount = health.add_health(healing_trigger.amount);
-        commands.trigger_targets(
-            HealedEvent {
-                amount: actual_amount,
-            },
-            healing_trigger.target(),
-        );
+        commands.trigger(HealedEvent {
+            entity: healing_trigger.target(),
+            amount: actual_amount,
+        });
         info!(
             "Entity {} healed by {:.2} points",
             healing_trigger.target(),

@@ -6,7 +6,7 @@ use super::GameProgress;
 
 /// Triggers when restart is clicked after death in a run
 pub fn handle_restart_trigger(
-    restart_event_trigger: Trigger<RestartEvent>,
+    restart_event_trigger: On<RestartEvent>,
     mut game_progress: ResMut<GameProgress>,
 ) {
     game_progress.death_counter += 1;

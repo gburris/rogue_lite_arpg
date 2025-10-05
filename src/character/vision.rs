@@ -213,7 +213,7 @@ pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
 /// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
 /// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
 pub fn on_damage_aggro(
-    damage_trigger: Trigger<DamageDealtEvent>,
+    damage_trigger: On<DamageDealtEvent>,
     mut commands: Commands,
     target_query: Query<&Watching>,
 ) {

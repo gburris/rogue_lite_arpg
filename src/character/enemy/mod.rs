@@ -1,26 +1,27 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::observe};
 use bevy_behave::prelude::*;
-use bevy_bundled_observers::observers;
 
 mod defeat;
 
 use crate::{
     character::{
+        Character,
         behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
-        Character,
     },
-    combat::{damage::hurtbox, Health, Mana},
+    combat::{Health, Mana, damage::hurtbox},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
     economy::Purse,
     items::{
-        equipment::{on_equipment_activated, Equipment},
-        fire_staff, health_potion, ice_staff, sword, Items,
+        Items,
+        equipment::{Equipment, on_equipment_activated},
+        fire_staff, health_potion, ice_staff, sword,
     },
     map::EnemiesSpawnEvent,
     prelude::*,
@@ -64,7 +65,7 @@ pub enum EnemyType {
 }
 
 fn spawn_enemies(
-    enemy_trigger: Trigger<EnemiesSpawnEvent>,
+    enemy_trigger: On<EnemiesSpawnEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -160,7 +161,8 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
             ]))
             .with_max_hits(1),
         Watching(player),
-        observers![defeat::on_enemy_defeated, on_equipment_activated],
+        observe(defeat::on_enemy_defeated),
+        observe(on_equipment_activated),
     )
 }
 

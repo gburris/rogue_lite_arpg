@@ -8,9 +8,9 @@ use crate::{
 };
 
 use super::{
+    Player,
     interact::PlayerInteractionInput,
     movement::{PlayerMovementEvent, PlayerStoppedEvent},
-    Player,
 };
 
 #[derive(Event)]
@@ -40,29 +40,23 @@ pub fn player_input(
     }
 
     if buttons.pressed(MouseButton::Left) {
-        commands.trigger_targets(
-            UseEquipmentInputEvent {
-                slot: EquipmentSlot::Mainhand,
-            },
-            player_entity,
-        );
+        commands.trigger(UseEquipmentInputEvent {
+            entity: player_entity,
+            slot: EquipmentSlot::Mainhand,
+        });
     }
 
     if buttons.just_pressed(MouseButton::Right) {
-        commands.trigger_targets(
-            UseEquipmentInputEvent {
-                slot: EquipmentSlot::Offhand,
-            },
-            player_entity,
-        );
+        commands.trigger(UseEquipmentInputEvent {
+            entity: player_entity,
+            slot: EquipmentSlot::Offhand,
+        });
     }
     if buttons.just_released(MouseButton::Right) {
-        commands.trigger_targets(
-            StopUsingHoldableEquipmentInputEvent {
-                slot: EquipmentSlot::Offhand,
-            },
-            player_entity,
-        );
+        commands.trigger(StopUsingHoldableEquipmentInputEvent {
+            entity: player_entity,
+            slot: EquipmentSlot::Offhand,
+        });
         return;
     }
     let mut direction = Vec2::ZERO;

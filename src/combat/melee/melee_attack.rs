@@ -112,14 +112,12 @@ pub fn handle_melee_collisions(
                 .entities_damaged
                 .contains(&colliding_entity)
             {
-                commands.trigger_targets(
-                    AttemptDamageEvent {
-                        ignore_invulnerable: false,
-                        damage: Damage::Range(melee_weapon.damage),
-                        damage_source: Some(weapon_entity),
-                    },
-                    colliding_entity,
-                );
+                commands.trigger(AttemptDamageEvent {
+                    entity: colliding_entity,
+                    ignore_invulnerable: false,
+                    damage: Damage::Range(melee_weapon.damage),
+                    damage_source: Some(weapon_entity),
+                });
                 active_melee_attack
                     .entities_damaged
                     .insert(colliding_entity);

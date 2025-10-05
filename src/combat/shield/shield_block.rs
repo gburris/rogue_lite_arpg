@@ -104,7 +104,7 @@ pub fn deactivate_shield(
 }
 
 pub fn activate_shield(
-    trigger: Trigger<OnAdd, ActiveShield>,
+    trigger: On<Add, ActiveShield>,
     mut commands: Commands,
     shield_query: Query<&Shield>,
 ) {

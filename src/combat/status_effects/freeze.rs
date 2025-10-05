@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::status_effects::{slow::Slowed, Status, StatusApplied, StatusOf},
+    combat::status_effects::{Status, StatusApplied, StatusOf, slow::Slowed},
     utility::Lifespan,
 };
 
@@ -43,7 +43,7 @@ pub fn apply_frozen(
 }
 
 pub fn on_frozen_removed(
-    trigger: Trigger<OnRemove, Frozen>,
+    trigger: On<Remove, Frozen>,
     status_query: Query<&StatusOf, With<Frozen>>,
     mut sprite_query: Query<&mut Sprite>,
 ) {

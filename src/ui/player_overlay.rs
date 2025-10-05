@@ -3,11 +3,11 @@ use bevy::{ecs::spawn::SpawnIter, prelude::*};
 use crate::{
     combat::{Health, Mana},
     items::{
+        Item,
         equipment::{
             Equipment, EquipmentOf, EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure,
             Equippable, Mainhand, Offhand, UseEquipmentEvent,
         },
-        Item,
     },
     prelude::Player,
     utility::Lifespan,
@@ -376,7 +376,7 @@ pub fn update_action_bar(
 }
 
 pub fn on_equipment_used(
-    trigger: Trigger<UseEquipmentEvent>,
+    trigger: On<UseEquipmentEvent>,
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,
@@ -419,7 +419,7 @@ pub fn on_equipment_used(
 }
 
 pub fn on_equipment_use_failed(
-    trigger: Trigger<EquipmentUseFailedEvent>,
+    trigger: On<EquipmentUseFailedEvent>,
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,

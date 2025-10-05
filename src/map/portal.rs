@@ -34,14 +34,14 @@ pub fn handle_portal_collisions(
     for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == *player_collider {
-                commands.trigger_targets(SpawnZoneEvent, entity);
+                commands.trigger(SpawnZoneEvent { entity });
             }
         }
     }
 }
 
 pub fn on_portal_entered(
-    trigger: Trigger<SpawnZoneEvent>,
+    trigger: On<SpawnZoneEvent>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     portal_query: Query<&Portal>,

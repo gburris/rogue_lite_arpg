@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub fn on_item_unequipped(
-    trigger: Trigger<OnRemove, EquipmentOf>,
+    trigger: On<Remove, EquipmentOf>,
     mut commands: Commands,
     mut item_query: Query<(&EquipmentOf, &mut Visibility), With<Equippable>>,
     mut holder_query: Query<&ActionState>,
@@ -39,7 +39,7 @@ pub fn on_item_unequipped(
 
 /// Hold up invariant, if you are no longer Mainhand or Offhand, you ain't equipped!!
 pub fn on_equip_slot_removed(
-    trigger: Trigger<OnRemove, (MainhandOf, OffhandOf)>, // this is an OR on these
+    trigger: On<Remove, (MainhandOf, OffhandOf)>, // this is an OR on these
     mut commands: Commands,
 ) {
     commands.entity(trigger.target()).remove::<EquipmentOf>();

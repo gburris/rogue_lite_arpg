@@ -1,20 +1,20 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::observe};
 use bevy_behave::prelude::*;
-use bevy_bundled_observers::observers;
 
 mod interaction;
 
 use crate::{
     character::{
+        Character,
         behavior::{Idle, Retreat},
         physical_collider,
         player::interact::InteractionZone,
-        Character,
     },
-    combat::{damage::hurtbox, Health},
+    combat::{Health, damage::hurtbox},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
     items::{axe, equipment::Equipment, ice_staff, sword},
     map::NPCSpawnEvent,
@@ -46,7 +46,7 @@ const TILE_SIZE: f32 = 32.0;
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 fn spawn_npcs(
-    npc_spawn_trigger: Trigger<NPCSpawnEvent>,
+    npc_spawn_trigger: On<NPCSpawnEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -125,7 +125,7 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
                 ..default()
             },
         ),
-        observers![interaction::on_game_guide_start],
+        observe(interaction::on_game_guide_start),
         related!(Equipment[ice_staff(sprites, sprite_layouts)]),
     )
 }
@@ -139,7 +139,7 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
                 ..default()
             },
         ),
-        observers![interaction::on_shop_keeper_store_open],
+        observe(interaction::on_shop_keeper_store_open),
         related!(Equipment[axe(sprites)]),
     )
 }
@@ -153,7 +153,7 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
                 ..default()
             },
         ),
-        observers![interaction::on_stat_trainer_store_open],
+        observe(interaction::on_stat_trainer_store_open),
         related!(Equipment[sword(sprites)]),
     )
 }

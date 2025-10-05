@@ -36,7 +36,7 @@ pub fn spawn_stats_shop_menu(
 
     commands.spawn((
         StatShopMenu,
-        StateScoped(PausedState::StatsShop),
+        DespawnOnExit(PausedState::StatsShop),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

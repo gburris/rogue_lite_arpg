@@ -4,7 +4,7 @@ use rand::Rng;
 use std::{collections::HashMap, sync::OnceLock};
 
 use crate::{
-    configuration::{assets::SpriteAssets, ZLayer},
+    configuration::{ZLayer, assets::SpriteAssets},
     map::components::{MapLayout, TileType, WorldSpaceConfig},
 };
 
@@ -70,7 +70,7 @@ pub fn spawn_zone_tilemap(
             if let Some((tilemap_entity, storage)) = storages.get_mut(&tile_type) {
                 if let Some(index_type) = tile_configurations().get(&tile_type) {
                     let texture_index = match index_type {
-                        TileIndexType::Random(max) => rand::thread_rng().gen_range(0..*max),
+                        TileIndexType::Random(max) => rand::rng().random_range(0..*max),
                         TileIndexType::Fixed(index) => *index,
                     };
 

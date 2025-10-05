@@ -5,37 +5,40 @@ use rand::Rng;
 use super::{EquipmentOf, EquipmentSlot};
 use crate::{
     combat::{
+        Mana, Projectile,
         damage::DamageSource,
         health::AttemptHealingEvent,
         mana::ManaCost,
-        melee::{start_melee_attack, MeleeWeapon},
+        melee::{MeleeWeapon, start_melee_attack},
         projectile::{ProjectileOf, Projectiles},
-        shield::{shield_block::deactivate_shield, ActiveShield},
+        shield::{ActiveShield, shield_block::deactivate_shield},
         status_effects::Effects,
-        Mana, Projectile,
     },
     configuration::{GameCollisionLayer, ZLayer},
     items::{
-        equipment::{Equipment, Equippable, Mainhand, Offhand},
         HealingTome, HealingTomeSpellVisualEffect, Shield,
+        equipment::{Equipment, Equippable, Mainhand, Offhand},
     },
     prelude::{Enemy, *},
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct UseEquipmentEvent {
+    pub entity: Entity,
     pub holder: Entity,
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct UseEquipmentInputEvent {
+    pub entity: Entity,
     pub slot: EquipmentSlot,
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub struct StopUsingHoldableEquipmentInputEvent {
+    pub entity: Entity,
     pub slot: EquipmentSlot,
 }
 
@@ -46,10 +49,10 @@ pub enum EquipmentUseFailure {
     NoneEquipped,
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 
 pub struct EquipmentUseFailedEvent {
-    pub holder: Entity,
+    pub entity: Entity,
     pub slot: EquipmentSlot,
     pub reason: EquipmentUseFailure,
 }
@@ -60,7 +63,7 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
     }
 }
 pub fn on_equipment_activated(
-    trigger: Trigger<UseEquipmentInputEvent>,
+    trigger: On<UseEquipmentInputEvent>,
     commands: Commands,
     holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Equipment>>,
     equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<EquipmentOf>>,
@@ -96,28 +99,22 @@ fn handle_equipment_activation(
 
     let Some(equipment_entity) = equipment_entity else {
         warn!("{:?} is empty!", slot);
-        commands.trigger_targets(
-            EquipmentUseFailedEvent {
-                holder: entity,
-                slot,
-                reason: EquipmentUseFailure::NoneEquipped,
-            },
+        commands.trigger(EquipmentUseFailedEvent {
             entity,
-        );
+            slot,
+            reason: EquipmentUseFailure::NoneEquipped,
+        });
         return;
     };
 
     if let Ok((mut equippable, mana_cost)) = equippable_query.get_mut(equipment_entity) {
         // Check cooldown first
-        if !equippable.use_rate.finished() {
-            commands.trigger_targets(
-                EquipmentUseFailedEvent {
-                    holder: entity,
-                    slot,
-                    reason: EquipmentUseFailure::OnCooldown,
-                },
+        if !equippable.use_rate.is_finished() {
+            commands.trigger(EquipmentUseFailedEvent {
                 entity,
-            );
+                slot,
+                reason: EquipmentUseFailure::OnCooldown,
+            });
             return;
         }
 
@@ -125,14 +122,11 @@ fn handle_equipment_activation(
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
                 debug!("Not enough mana!");
-                commands.trigger_targets(
-                    EquipmentUseFailedEvent {
-                        holder: entity,
-                        slot,
-                        reason: EquipmentUseFailure::OutOfMana,
-                    },
+                commands.trigger(EquipmentUseFailedEvent {
                     entity,
-                );
+                    slot,
+                    reason: EquipmentUseFailure::OutOfMana,
+                });
                 return;
             }
         } else if holder_mana.is_none() && mana_cost.is_some() {
@@ -141,14 +135,17 @@ fn handle_equipment_activation(
         }
 
         // Success path - trigger equipment use and reset cooldown
-        commands.trigger_targets(UseEquipmentEvent { holder: entity }, equipment_entity);
+        commands.trigger(UseEquipmentEvent {
+            entity: equipment_entity,
+            holder: entity,
+        });
         equippable.use_rate.reset();
     }
 }
 
 // "fired" implies this is a projectile weapon
 pub fn on_weapon_fired(
-    fired_trigger: Trigger<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipmentEvent>,
     mut commands: Commands,
     weapon_query: Query<&Projectiles>,
     holder_query: Query<(&Transform, &Vision)>,
@@ -184,7 +181,7 @@ pub fn on_weapon_fired(
 
             commands
                 .entity(projectile_entity)
-                .clone_and_spawn_with(|builder| {
+                .clone_and_spawn_with_opt_out(|builder| {
                     builder.linked_cloning(true);
                 })
                 .remove::<(Disabled, ProjectileOf)>()
@@ -205,7 +202,7 @@ pub fn on_weapon_fired(
 }
 
 pub fn on_weapon_melee(
-    fired_trigger: Trigger<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipmentEvent>,
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
@@ -236,7 +233,7 @@ pub fn on_weapon_melee(
 }
 
 pub fn on_healing_tome_cast(
-    fired_trigger: Trigger<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipmentEvent>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
 ) {
@@ -245,20 +242,19 @@ pub fn on_healing_tome_cast(
         return;
     };
 
-    let health_to_add = rand::thread_rng().gen_range(tome.healing.0..tome.healing.1);
-    commands.trigger_targets(
-        AttemptHealingEvent {
-            amount: health_to_add,
-        },
-        fired_trigger.holder,
-    );
+    let health_to_add = rand::rng().random_range(tome.healing.0..tome.healing.1);
+    commands.trigger(AttemptHealingEvent {
+        entity: fired_trigger.holder,
+
+        amount: health_to_add,
+    });
     commands
         .entity(fired_trigger.holder)
         .with_child(HealingTomeSpellVisualEffect);
 }
 
 pub fn on_shield_block(
-    fired_trigger: Trigger<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipmentEvent>,
     mut commands: Commands,
     mut shield_query: Query<(Entity, &Shield)>,
 ) {
@@ -272,7 +268,7 @@ pub fn on_shield_block(
 }
 
 pub fn on_equipment_deactivated(
-    trigger: Trigger<StopUsingHoldableEquipmentInputEvent>,
+    trigger: On<StopUsingHoldableEquipmentInputEvent>,
     mut commands: Commands,
     holder_query: Query<(&Offhand, &FacingDirection)>,
     mut shield_query: Query<&mut Sprite, (With<Shield>, With<ActiveShield>)>,

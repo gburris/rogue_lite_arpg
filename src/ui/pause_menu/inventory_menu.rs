@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     economy::Purse,
     labels::states::PausedState,
-    prelude::{Enemy, Player, NPC},
+    prelude::{Enemy, NPC, Player},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         display_case::{self, UpdateDisplayCaseEvent},
@@ -20,7 +20,7 @@ pub fn spawn_inventory_menu(
 ) {
     commands.spawn((
         InventoryMenu,
-        StateScoped(PausedState::Inventory),
+        DespawnOnExit(PausedState::Inventory),
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -62,5 +62,5 @@ pub fn spawn_inventory_menu(
     ));
 
     // We spawned base inventory UI, now lets update it with items
-    commands.trigger_targets(UpdateDisplayCaseEvent, player.0);
+    commands.trigger(UpdateDisplayCaseEvent { entity: player.0 });
 }

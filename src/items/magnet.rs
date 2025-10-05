@@ -18,9 +18,9 @@ const MAGNETIC_FORCE: f32 = 2000000.0;
 pub struct Magnet;
 
 pub fn update_magnet_locations(
-    mut commands: Commands,
     magnet_query: Query<(&ChildOf, &GlobalTransform, &CollidingEntities), With<Magnet>>,
     player_query: Single<(Entity, &GlobalTransform), With<PlayerInteractionRadius>>,
+    mut forces: Query<Forces>,
 ) {
     let (player_entity, player_transform) = player_query.into_inner();
 
@@ -43,14 +43,14 @@ pub fn update_magnet_locations(
 
             trace!(
                 "Magnetic force applied: {} from distance: {}",
-                magnetic_force,
-                distance
+                magnetic_force, distance
             );
 
             // Apply a new force each tick of fixed update, erasing previous force (persistence = false)
-            commands
-                .entity(child_of.parent())
-                .insert(ExternalForce::new(direction * magnetic_force).with_persistence(false));
+            forces
+                .get_mut(child_of.parent())
+                .expect("Magnet parent missing or has no forces")
+                .apply_force(direction * magnetic_force);
         }
     }
 }

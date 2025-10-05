@@ -53,12 +53,12 @@ fn spawn_health_change_text(
 
 // Generate a random angle between -angle_range and angle_range degrees (convert to radians)
 fn random_angle(angle_range: f32) -> f32 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(-angle_range..angle_range).to_radians()
+    let mut rng = rand::rng();
+    rng.random_range(-angle_range..angle_range).to_radians()
 }
 
 pub fn on_damage_overlay_amount(
-    damage_trigger: Trigger<DamageDealtEvent>,
+    damage_trigger: On<DamageDealtEvent>,
     mut commands: Commands,
     damaged_query: Query<&ColliderAabb>,
 ) {
@@ -72,7 +72,7 @@ pub fn on_damage_overlay_amount(
 }
 
 pub fn on_healing_overlay_amount(
-    healing_trigger: Trigger<HealedEvent>,
+    healing_trigger: On<HealedEvent>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,
 ) {

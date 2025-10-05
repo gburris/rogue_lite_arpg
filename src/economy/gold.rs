@@ -54,11 +54,11 @@ pub struct GoldDropEvent {
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
 pub fn on_gold_drop_event(
-    trigger: Trigger<GoldDropEvent>,
+    trigger: On<GoldDropEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = trigger.amount;
     //TODO: Give each visual representation of money quantity
@@ -78,8 +78,8 @@ pub fn on_gold_drop_event(
         }
 
         // Random position within radius
-        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-        let distance = rng.gen_range(20.0..70.0);
+        let angle = rng.random_range(0.0..std::f32::consts::TAU);
+        let distance = rng.random_range(20.0..70.0);
         let offset = Vec2::from_angle(angle) * distance;
 
         commands

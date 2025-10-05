@@ -42,13 +42,13 @@ pub fn find_valid_position(
     map_size: TilemapSize,
     x_range: std::ops::Range<f32>,
 ) -> Option<Vec2> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let x_start = (map_size.x as f32 * x_range.start) as u32;
     let x_end = (map_size.x as f32 * x_range.end) as u32;
 
     for _ in 0..100 {
-        let x = rng.gen_range(x_start..x_end);
-        let y = rng.gen_range(1..map_size.y - 1); // Avoid spawning in exterior walls
+        let x = rng.random_range(x_start..x_end);
+        let y = rng.random_range(1..map_size.y - 1); // Avoid spawning in exterior walls
 
         if is_position_valid(map, x, y) {
             return Some(Vec2::new(x as f32, y as f32));
@@ -101,25 +101,25 @@ pub fn generate_entrance_exit_positions(
     map_size: TilemapSize,
     num_exits: u32,
 ) -> (Vec<Vec2>, Vec<Vec2>) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let player_spawn = match determine_map_orientation(map_size) {
         MapOrientation::Horizontal => {
             // For horizontal maps: left to right
             let player_x = 1.0; // One tile in from left wall
-            let player_y = rng.gen_range(1..map_size.y - 1) as f32;
+            let player_y = rng.random_range(1..map_size.y - 1) as f32;
             vec![Vec2::new(player_x, player_y)]
         }
         MapOrientation::Vertical => {
             // For vertical maps: top to bottom
             let player_y = map_size.y as f32 - 2.0; // One tile down from top wall
-            let player_x = rng.gen_range(1..map_size.x - 1) as f32;
+            let player_x = rng.random_range(1..map_size.x - 1) as f32;
             vec![Vec2::new(player_x, player_y)]
         }
         MapOrientation::Square => {
             // For square maps: default to left to right
             let player_x = 1.0;
-            let player_y = rng.gen_range(1..map_size.y - 1) as f32;
+            let player_y = rng.random_range(1..map_size.y - 1) as f32;
             vec![Vec2::new(player_x, player_y)]
         }
     };
@@ -128,22 +128,22 @@ pub fn generate_entrance_exit_positions(
         MapOrientation::Horizontal => {
             // Two exits on the right side
             let exit_x = map_size.x as f32 - 1.0;
-            let exit_y1 = rng.gen_range(1..map_size.y / 2) as f32;
-            let exit_y2 = rng.gen_range(map_size.y / 2..map_size.y - 1) as f32;
+            let exit_y1 = rng.random_range(1..map_size.y / 2) as f32;
+            let exit_y2 = rng.random_range(map_size.y / 2..map_size.y - 1) as f32;
             vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
         }
         MapOrientation::Vertical => {
             // Two exits at the bottom
             let exit_y = 1.0;
-            let exit_x1 = rng.gen_range(1..map_size.x / 2) as f32;
-            let exit_x2 = rng.gen_range(map_size.x / 2..map_size.x - 1) as f32;
+            let exit_x1 = rng.random_range(1..map_size.x / 2) as f32;
+            let exit_x2 = rng.random_range(map_size.x / 2..map_size.x - 1) as f32;
             vec![Vec2::new(exit_x1, exit_y), Vec2::new(exit_x2, exit_y)]
         }
         MapOrientation::Square => {
             // Two exits on the right side for square maps
             let exit_x = map_size.x as f32 - 1.0;
-            let exit_y1 = rng.gen_range(1..map_size.y / 2) as f32;
-            let exit_y2 = rng.gen_range(map_size.y / 2..map_size.y - 1) as f32;
+            let exit_y1 = rng.random_range(1..map_size.y / 2) as f32;
+            let exit_y2 = rng.random_range(map_size.y / 2..map_size.y - 1) as f32;
             vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
         }
     };

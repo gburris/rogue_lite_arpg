@@ -1,9 +1,9 @@
 use bevy::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 
 use crate::{
     character::enemy::{EnemySpawnData, EnemyType},
-    configuration::{assets::SpriteAssets, ZLayer},
+    configuration::{ZLayer, assets::SpriteAssets},
     map::{
         chest::SpawnChestsEvent,
         components::{
@@ -64,14 +64,14 @@ pub fn spawn_zone_entities(
     if let Some(enemy_positions) = map_layout.markers.get_markers(MarkerType::EnemySpawns) {
         let spawn_positions =
             convert_tiles_to_world_positions(enemy_positions, &world_config, &map_layout);
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let enemy_types = [EnemyType::FireMage, EnemyType::IceMage, EnemyType::Warrior];
 
         let enemy_spawn_data_list = spawn_positions
             .into_iter()
             .map(|pos| EnemySpawnData {
                 position: pos,
-                enemy_type: enemy_types[rng.gen_range(0..3)].clone(),
+                enemy_type: enemy_types[rng.random_range(0..3)].clone(),
             })
             .collect();
 

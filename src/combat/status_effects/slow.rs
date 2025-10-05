@@ -32,7 +32,7 @@ pub fn apply_slowed(
 }
 
 pub fn on_slow_removed(
-    trigger: Trigger<OnRemove, Slowed>,
+    trigger: On<Remove, Slowed>,
     status_query: Query<&StatusOf, With<Slowed>>,
     mut motion_query: Query<&mut SimpleMotion>,
 ) {

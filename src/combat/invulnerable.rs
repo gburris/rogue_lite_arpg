@@ -38,7 +38,7 @@ pub fn handle_invulnerability(time: Res<Time>, mut query: Query<(&mut IFrames, &
         if iframes.is_invulnerable {
             iframes.invulnerable_timer.tick(time.delta());
 
-            if iframes.invulnerable_timer.finished() {
+            if iframes.invulnerable_timer.is_finished() {
                 iframes.reset();
                 sprite.color.set_alpha(1.0);
             } else if let Some(flash) = &mut iframes.flash_timer {

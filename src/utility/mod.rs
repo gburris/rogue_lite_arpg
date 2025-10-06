@@ -57,7 +57,7 @@ pub fn despawn_expired_entities(
     for (entity, mut duration) in duration_query.iter_mut() {
         duration.0.tick(time.delta());
 
-        if duration.0.finished() {
+        if duration.0.is_finished() {
             commands.entity(entity).despawn();
         }
     }
@@ -87,7 +87,7 @@ pub fn generic_remove_component_system(
 ) {
     for (entity, mut remove_component) in query.iter_mut() {
         remove_component.timer.tick(time.delta());
-        if remove_component.timer.finished() {
+        if remove_component.timer.is_finished() {
             if let Some(remover) = remove_component.remover.take() {
                 let mut entity_cmds = commands.entity(entity);
                 remover(&mut entity_cmds);

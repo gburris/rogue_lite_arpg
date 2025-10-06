@@ -3,10 +3,10 @@ use bevy::{ecs::spawn::SpawnIter, prelude::*};
 use crate::{
     combat::{Health, Mana},
     items::{
-        Item,
+        Item, Items,
         equipment::{
-            Equipment, EquipmentOf, EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure,
-            Equippable, Mainhand, Offhand, UseEquipmentEvent,
+            EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable, Equipped,
+            Mainhand, Offhand, UseEquipmentEvent,
         },
     },
     prelude::Player,
@@ -338,7 +338,7 @@ pub fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     equipment_query: Option<
-        Single<(Option<&Mainhand>, Option<&Offhand>), (Changed<Equipment>, With<Player>)>,
+        Single<(Option<&Mainhand>, Option<&Offhand>), (Changed<Items>, With<Player>)>,
     >,
     item_query: Query<&Sprite, With<Item>>,
 ) {
@@ -380,7 +380,7 @@ pub fn on_equipment_used(
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,
-    equipment_query: Query<&Equippable, With<EquipmentOf>>,
+    equipment_query: Query<&Equippable, With<Equipped>>,
     error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
     if trigger.holder != player.0 {

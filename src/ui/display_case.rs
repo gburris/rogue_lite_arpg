@@ -8,7 +8,7 @@ use crate::{
     configuration::assets::GameIcons,
     items::{
         Item, Items,
-        equipment::{EquipmentOf, Equippable},
+        equipment::{Equippable, Equipped},
     },
     ui::display_case_slot::{DisplaySlotOf, display_slot},
 };
@@ -90,7 +90,7 @@ pub fn on_display_case_updated(
     slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
     slots_querys: Query<(Entity, &DisplaySlotOf)>,
     items_query: Query<(Option<&Items>, &DisplayedBy)>,
-    item_query: Query<(&Name, &Item, Option<&Equippable>, Has<EquipmentOf>)>,
+    item_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
 ) {
     // Get entities inventory
     let (items, displayed_by) = items_query

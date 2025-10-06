@@ -15,7 +15,7 @@ name = "baba_yaga_bin" # for local build stuff
 path = "src/main.rs"
 
 [dependencies]
-bevy = { version = "0.17.0", features = ["dynamic_linking", "bevy_dev_tools", "experimental_bevy_feathers"] }
+bevy = { version = "0.17.0", features = ["dynamic_linking", "bevy_dev_tools", "experimental_bevy_feathers", "track_location"] }
 bevy_ecs_tilemap = { git = "https://github.com/ChristopherBiscardi/bevy_ecs_tilemap", branch = "bevy-0.17" }
 bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
 bevy_behave = { git = "https://github.com/HazelTheWitch/bevy_behave", branch = "main" }

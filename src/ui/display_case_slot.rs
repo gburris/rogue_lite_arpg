@@ -4,7 +4,7 @@ use crate::{
     configuration::assets::GameIcons,
     items::{
         Consumable, ConsumeEvent, Item, ItemType,
-        equipment::{EquipmentOf, EquipmentSlot, Equippable},
+        equipment::{EquipmentSlot, Equippable, Equipped},
         lootable::ItemDropEvent,
     },
     prelude::Player,
@@ -126,7 +126,7 @@ pub fn on_slot_clicked(
     trigger: On<Pointer<Click>>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
-    item_query: Query<(Has<Equippable>, Has<EquipmentOf>, Has<Consumable>), With<Item>>,
+    item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
 ) {
     let item_entity = slot_query.get(trigger.event().entity).unwrap().0;
@@ -136,11 +136,9 @@ pub fn on_slot_clicked(
         if trigger.event().button == PointerButton::Primary {
             if equippable {
                 if is_equipped {
-                    commands.entity(item_entity).remove::<EquipmentOf>();
+                    commands.entity(item_entity).remove::<Equipped>();
                 } else {
-                    commands
-                        .entity(*player)
-                        .add_one_related::<EquipmentOf>(item_entity);
+                    commands.entity(item_entity).insert(Equipped);
                 }
             } else if consumable {
                 commands.trigger(ConsumeEvent {

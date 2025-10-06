@@ -5,7 +5,7 @@ use crate::{
     combat::{damage::DamageSource, melee::MeleeWeapon},
     items::{
         ItemOf,
-        equipment::{EquipmentOf, Mainhand, MainhandOf, Offhand, OffhandOf},
+        equipment::{Equipped, MainhandOf, OffhandOf},
     },
     prelude::Enemy,
 };
@@ -13,52 +13,39 @@ use crate::{
 use super::{EquipmentSlot, Equippable};
 
 pub fn on_item_equipped(
-    trigger: On<Add, EquipmentOf>,
+    trigger: On<Add, Equipped>,
     mut commands: Commands,
-    mut item_query: Query<(
-        Has<ItemOf>,
-        &Equippable,
-        &EquipmentOf,
-        &mut Visibility,
-        Option<&MeleeWeapon>,
-    )>,
+    mut item_query: Query<
+        (&ItemOf, &Equippable, &mut Visibility, Option<&MeleeWeapon>),
+        With<Equipped>,
+    >,
     mut holder_query: Query<Has<Enemy>, With<Character>>,
 ) {
     let equipped_entity = trigger.event().entity;
-    let (is_in_inventory, equippable, equipment_of, mut visibility, melee_weapon) = item_query
+    let (item_of, equippable, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");
 
-    let is_enemy = holder_query
-        .get_mut(equipment_of.0)
-        .expect("Added Equipment to holder that is not a character");
+    let holder_entity = item_of.0;
 
-    if !is_in_inventory {
-        commands
-            .entity(equipped_entity)
-            .insert(ItemOf(equipment_of.0));
-    }
+    let is_enemy = holder_query
+        .get_mut(holder_entity)
+        .expect("Added Equipment to holder that is not a character");
 
     commands
         .entity(equipped_entity)
-        .insert(ChildOf(equipment_of.0));
+        .insert(ChildOf(holder_entity));
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
-            // remove in bevy 0.17
-            commands.entity(equipment_of.0).remove::<Mainhand>();
-
             commands
                 .entity(equipped_entity)
-                .insert(MainhandOf(equipment_of.0));
+                .insert(MainhandOf(holder_entity));
         }
         EquipmentSlot::Offhand => {
-            // remove in bevy 0.17
-            commands.entity(equipment_of.0).remove::<Offhand>();
-
             commands
                 .entity(equipped_entity)
-                .insert(OffhandOf(equipment_of.0));
+                .insert(OffhandOf(holder_entity));
         }
     }
 

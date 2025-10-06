@@ -6,7 +6,7 @@ use rand::{Rng, rng};
 use crate::{
     character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::{ItemOf, Items, equipment::EquipmentOf},
+    items::{ItemOf, Items, equipment::Equipped},
     prelude::Player,
     utility::Lifespan,
 };
@@ -57,7 +57,7 @@ pub fn on_drop_event(
 
     commands
         .entity(item_entity)
-        .remove::<(EquipmentOf, ItemOf)>()
+        .remove::<(Equipped, ItemOf)>()
         .insert((
             Lootable,
             Visibility::Visible,

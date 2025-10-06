@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 use rand::Rng;
 
-use super::{EquipmentOf, EquipmentSlot};
+use super::EquipmentSlot;
 use crate::{
     combat::{
         Mana, Projectile,
@@ -16,8 +16,8 @@ use crate::{
     },
     configuration::{GameCollisionLayer, ZLayer},
     items::{
-        HealingTome, HealingTomeSpellVisualEffect, Shield,
-        equipment::{Equipment, Equippable, Mainhand, Offhand},
+        HealingTome, HealingTomeSpellVisualEffect, Items, Shield,
+        equipment::{Equippable, Equipped, Mainhand, Offhand},
     },
     prelude::{Enemy, *},
 };
@@ -65,8 +65,8 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
 pub fn on_equipment_activated(
     trigger: On<UseEquipmentInputEvent>,
     commands: Commands,
-    holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Equipment>>,
-    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<EquipmentOf>>,
+    holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Items>>,
+    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     handle_equipment_activation(
         trigger.target(),
@@ -81,11 +81,8 @@ fn handle_equipment_activation(
     entity: Entity,
     slot: EquipmentSlot,
     mut commands: Commands,
-    mut holder_query: Query<
-        (Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>),
-        With<Equipment>,
-    >,
-    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<EquipmentOf>>,
+    mut holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Items>>,
+    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     let Ok((mut holder_mana, mainhand, offhand)) = holder_query.get_mut(entity) else {
         error!("Entity: {} tried to use equipment, but has none", entity);

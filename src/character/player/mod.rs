@@ -22,7 +22,7 @@ use crate::{
     economy::Purse,
     items::{
         self, Items,
-        equipment::{Equipment, on_equipment_activated, on_equipment_deactivated},
+        equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
     labels::{
         sets::InGameSet,
@@ -200,8 +200,8 @@ fn spawn_player(
                 ..default()
             },
         ),
-        related!(Equipment[items::fire_staff(&sprites, &sprite_layouts)]),
         related!(Items[
+            (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
             items::ice_staff(&sprites, &sprite_layouts),
             items::sword(&sprites),
             items::axe(&sprites),

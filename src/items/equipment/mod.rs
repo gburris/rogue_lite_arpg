@@ -48,7 +48,7 @@ impl Plugin for EquipmentPlugin {
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
@@ -94,13 +94,8 @@ impl fmt::Display for EquipmentSlot {
     }
 }
 
-#[derive(Component, Clone)]
-#[relationship(relationship_target = Equipment)]
-pub struct EquipmentOf(Entity);
-
 #[derive(Component, Clone, Debug)]
-#[relationship_target(relationship = EquipmentOf)]
-pub struct Equipment(Vec<Entity>);
+pub struct Equipped;
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]

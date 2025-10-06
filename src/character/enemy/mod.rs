@@ -20,7 +20,7 @@ use crate::{
     economy::Purse,
     items::{
         Items,
-        equipment::{Equipment, on_equipment_activated},
+        equipment::{Equipped, on_equipment_activated},
         fire_staff, health_potion, ice_staff, sword,
     },
     map::EnemiesSpawnEvent,
@@ -186,8 +186,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
                 ..default()
             },
         ),
-        related!(Equipment[sword(sprites)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, sword(sprites)), health_potion(sprites)]),
     )
 }
 
@@ -202,8 +201,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
                 ..default()
             },
         ),
-        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts)), health_potion(sprites)]),
     )
 }
 
@@ -218,7 +216,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
                 ..default()
             },
         ),
-        related!(Equipment[fire_staff(sprites, sprite_layouts)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, fire_staff(sprites, sprite_layouts)), health_potion(sprites)]),
     )
 }

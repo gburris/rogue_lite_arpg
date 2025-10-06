@@ -4,14 +4,17 @@ use bevy::prelude::*;
 use super::Equippable;
 use crate::{
     combat::melee::ActiveMeleeAttack,
-    items::equipment::{EquipmentOf, MainhandOf, OffhandOf},
+    items::{
+        equipment::{Equipped, MainhandOf, OffhandOf},
+        ItemOf,
+    },
     prelude::*,
 };
 
 pub fn on_item_unequipped(
-    trigger: On<Remove, EquipmentOf>,
+    trigger: On<Remove, Equipped>,
     mut commands: Commands,
-    mut item_query: Query<(&EquipmentOf, &mut Visibility), With<Equippable>>,
+    mut item_query: Query<(&ItemOf, &mut Visibility), With<Equipped>>,
     mut holder_query: Query<&ActionState>,
 ) {
     let item_entity = trigger.target();
@@ -42,5 +45,5 @@ pub fn on_equip_slot_removed(
     trigger: On<Remove, (MainhandOf, OffhandOf)>, // this is an OR on these
     mut commands: Commands,
 ) {
-    commands.entity(trigger.target()).remove::<EquipmentOf>();
+    commands.entity(trigger.target()).remove::<Equipped>();
 }

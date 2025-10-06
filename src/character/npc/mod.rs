@@ -16,7 +16,7 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow,
     },
-    items::{axe, equipment::Equipment, ice_staff, sword},
+    items::{Items, axe, equipment::Equipped, ice_staff, sword},
     map::NPCSpawnEvent,
     prelude::*,
 };
@@ -126,7 +126,7 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
             },
         ),
         observe(interaction::on_game_guide_start),
-        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
+        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts))]),
     )
 }
 
@@ -140,7 +140,7 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
             },
         ),
         observe(interaction::on_shop_keeper_store_open),
-        related!(Equipment[axe(sprites)]),
+        related!(Items[(Equipped, axe(sprites))]),
     )
 }
 
@@ -154,7 +154,7 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
             },
         ),
         observe(interaction::on_stat_trainer_store_open),
-        related!(Equipment[sword(sprites)]),
+        related!(Items[(Equipped, sword(sprites))]),
     )
 }
 

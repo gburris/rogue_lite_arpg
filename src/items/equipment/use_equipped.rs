@@ -179,10 +179,13 @@ pub fn on_weapon_fired(
             commands
                 .entity(projectile_entity)
                 .clone_and_spawn_with_opt_out(|builder| {
+                    //builder.deny::<(Position, Rotation)>();
                     builder.linked_cloning(true);
                 })
-                .remove::<(Disabled, ProjectileOf)>()
+                .remove::<(ProjectileOf, Disabled)>()
                 .insert((
+                    Position(starting_position),
+                    Rotation::radians(rotated_direction.to_angle()),
                     Transform {
                         translation: starting_position.extend(ZLayer::InAir.z()),
                         rotation: Quat::from_rotation_z(rotated_direction.to_angle()),

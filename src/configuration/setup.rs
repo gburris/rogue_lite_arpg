@@ -32,7 +32,12 @@ impl Plugin for SetupPlugin {
             // length unit here represents "pixels per meter" and is a way to indicate the
             // scale of your world to the physics engine for performance optimizations
             // In this case, our tiles are currently 32 x 32 pixels so we set the scale accordingly
-            .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
+            .add_plugins(
+                PhysicsPlugins::default()
+                    .with_length_unit(32.0)
+                    .build()
+                    .disable::<IslandPlugin>(), // TODO: Re-enable once Avian bugs are fixed
+            )
             .insert_resource(GameProgress::default())
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             .add_plugins(BehavePlugin::default())

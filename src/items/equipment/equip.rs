@@ -5,7 +5,7 @@ use crate::{
     combat::{damage::DamageSource, melee::MeleeWeapon},
     items::{
         ItemOf,
-        equipment::{Equipped, MainhandOf, OffhandOf},
+        equipment::{Equipped, Mainhand, MainhandOf, Offhand, OffhandOf, unequip::Unequip},
     },
     prelude::Enemy,
 };
@@ -19,7 +19,7 @@ pub fn on_item_equipped(
         (&ItemOf, &Equippable, &mut Visibility, Option<&MeleeWeapon>),
         With<Equipped>,
     >,
-    mut holder_query: Query<Has<Enemy>, With<Character>>,
+    mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>, Has<Enemy>), With<Character>>,
 ) {
     let equipped_entity = trigger.event().entity;
     let (item_of, equippable, mut visibility, melee_weapon) = item_query
@@ -28,7 +28,7 @@ pub fn on_item_equipped(
 
     let holder_entity = item_of.0;
 
-    let is_enemy = holder_query
+    let (mainhand, offhand, is_enemy) = holder_query
         .get_mut(holder_entity)
         .expect("Added Equipment to holder that is not a character");
 
@@ -38,11 +38,19 @@ pub fn on_item_equipped(
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
+            if let Some(mainhand) = mainhand {
+                commands.trigger(Unequip { entity: mainhand.0 })
+            }
+
             commands
                 .entity(equipped_entity)
                 .insert(MainhandOf(holder_entity));
         }
         EquipmentSlot::Offhand => {
+            if let Some(offhand) = offhand {
+                commands.trigger(Unequip { entity: offhand.0 })
+            }
+
             commands
                 .entity(equipped_entity)
                 .insert(OffhandOf(holder_entity));

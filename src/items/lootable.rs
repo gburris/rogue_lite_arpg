@@ -6,7 +6,7 @@ use rand::{Rng, rng};
 use crate::{
     character::player::interact::{InteractionEvent, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::{ItemOf, Items, equipment::Equipped},
+    items::{ItemOf, Items, equipment::Unequip},
     prelude::Player,
     utility::Lifespan,
 };
@@ -55,15 +55,18 @@ pub fn on_drop_event(
 
     trace!("Dropping item at {}", offset);
 
+    commands.trigger(Unequip {
+        entity: item_entity,
+    });
+
     commands
         .entity(item_entity)
-        .remove::<(Equipped, ItemOf)>()
+        .remove::<ItemOf>()
         .insert((
             Lootable,
             Visibility::Visible,
             Transform::from_translation(final_position),
         ))
-        .remove::<ChildOf>()
         .with_child(InteractionZone::ITEM_PICKUP);
 }
 

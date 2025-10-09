@@ -4,7 +4,7 @@ use crate::{
     configuration::assets::GameIcons,
     items::{
         Consumable, ConsumeEvent, Item, ItemType,
-        equipment::{EquipmentSlot, Equippable, Equipped},
+        equipment::{EquipmentSlot, Equippable, Equipped, Unequip},
         lootable::ItemDropEvent,
     },
     prelude::Player,
@@ -136,7 +136,9 @@ pub fn on_slot_clicked(
         if trigger.event().button == PointerButton::Primary {
             if equippable {
                 if is_equipped {
-                    commands.entity(item_entity).remove::<Equipped>();
+                    commands.trigger(Unequip {
+                        entity: item_entity,
+                    });
                 } else {
                     commands.entity(item_entity).insert(Equipped);
                 }

@@ -27,6 +27,8 @@ pub use use_equipped::on_shield_block;
 pub use use_equipped::on_weapon_fired;
 pub use use_equipped::on_weapon_melee;
 
+pub use unequip::Unequip;
+
 use crate::labels::sets::InGameSet;
 use crate::labels::sets::MainSet;
 
@@ -43,8 +45,7 @@ impl Plugin for EquipmentPlugin {
             ),
         )
         .add_observer(equip::on_item_equipped)
-        .add_observer(unequip::on_item_unequipped)
-        .add_observer(unequip::on_equip_slot_removed);
+        .add_observer(unequip::on_item_unequipped);
     }
 }
 

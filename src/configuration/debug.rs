@@ -25,7 +25,7 @@ impl Plugin for DebugPlugin {
                 .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins((FpsOverlayPlugin::default(), PhysicsDebugPlugin::default()))
+        .add_plugins((PhysicsDebugPlugin::default()))
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {

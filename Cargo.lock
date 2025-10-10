@@ -367,13 +367,10 @@ dependencies = [
  "bevy_asset_loader",
  "bevy_behave",
  "bevy_ecs_tilemap",
- "console_error_panic_hook",
  "getrandom",
  "rand",
  "serde",
  "tracing",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -390,7 +387,6 @@ checksum = "342f7e9335416dc98642d5747c4ed8a6ad9f7244a36d5b2b7a1b7910e4d8f524"
 dependencies = [
  "bevy_dylib",
  "bevy_internal",
- "tracing",
 ]
 
 [[package]]
@@ -499,7 +495,6 @@ dependencies = [
  "downcast-rs 2.0.2",
  "log",
  "thiserror 2.0.17",
- "tracing",
  "variadics_please",
  "wasm-bindgen",
  "web-sys",
@@ -533,6 +528,7 @@ dependencies = [
  "futures-io",
  "futures-lite",
  "js-sys",
+ "notify-debouncer-full",
  "parking_lot",
  "ron",
  "serde",
@@ -779,7 +775,6 @@ dependencies = [
  "slotmap",
  "smallvec",
  "thiserror 2.0.17",
- "tracing",
  "variadics_please",
 ]
 
@@ -1095,11 +1090,9 @@ dependencies = [
  "bevy_platform",
  "bevy_utils",
  "tracing",
- "tracing-error",
  "tracing-log",
  "tracing-oslog",
  "tracing-subscriber",
- "tracing-tracy",
  "tracing-wasm",
 ]
 
@@ -1365,12 +1358,10 @@ dependencies = [
  "naga",
  "nonmax",
  "offset-allocator",
- "profiling",
  "send_wrapper",
  "smallvec",
  "thiserror 2.0.17",
  "tracing",
- "tracy-client",
  "variadics_please",
  "wasm-bindgen",
  "web-sys",
@@ -2451,6 +2442,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "file-id"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bc904b9bbefcadbd8e3a9fb0d464a9b979de6324c03b3c663e8994f46a5be36"
+dependencies = [
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "filetime"
+version = "0.2.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35c0522e981e68cbfa8c3f978441a5f34b30b96e146b33cd3359176b50fe8586"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "libredox",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2550,6 +2562,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
+name = "fsevent-sys"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2584,20 +2605,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "generator"
-version = "0.8.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "605183a538e3e2a9c1038635cc5c2d194e2ee8fd0d1b66b8349fad7dbacce5a2"
-dependencies = [
- "cc",
- "cfg-if",
- "libc",
- "log",
- "rustversion",
- "windows 0.61.3",
-]
-
-[[package]]
 name = "gethostname"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2617,7 +2624,7 @@ dependencies = [
  "js-sys",
  "libc",
  "r-efi",
- "wasi",
+ "wasi 0.14.7+wasi-0.2.4",
  "wasm-bindgen",
 ]
 
@@ -3138,6 +3145,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
+name = "kqueue"
+version = "1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7447f1ca1b7b563588a205fe93dea8df60fd981423a768bc1c0ded35ed147d0c"
+dependencies = [
+ "kqueue-sys",
+ "libc",
+]
+
+[[package]]
+name = "kqueue-sys"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed9625ffda8729b85e45cf04090035ac368927b8cebc34898e7c120f52e4838b"
+dependencies = [
+ "bitflags 1.3.2",
+ "libc",
+]
+
+[[package]]
 name = "ktx2"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3240,19 +3267,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
-name = "loom"
-version = "0.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "419e0dc8046cb947daa77eb95ae174acfbddb7673b4151f56d1eed8e93fbfaca"
-dependencies = [
- "cfg-if",
- "generator",
- "scoped-tls",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "mach2"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3333,6 +3347,18 @@ checksum = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316"
 dependencies = [
  "adler2",
  "simd-adler32",
+]
+
+[[package]]
+name = "mio"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2886843bf800fba2e3377cff24abf6379b4c4d5c6681eaf9ea5b0d15090450bd"
+dependencies = [
+ "libc",
+ "log",
+ "wasi 0.11.1+wasi-snapshot-preview1",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3512,6 +3538,44 @@ name = "nonmax"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
+
+[[package]]
+name = "notify"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fee8403b3d66ac7b26aee6e40a897d85dc5ce26f44da36b8b73e987cc52e943"
+dependencies = [
+ "bitflags 2.9.4",
+ "filetime",
+ "fsevent-sys",
+ "inotify",
+ "kqueue",
+ "libc",
+ "log",
+ "mio",
+ "notify-types",
+ "walkdir",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "notify-debouncer-full"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2d88b1a7538054351c8258338df7c931a590513fb3745e8c15eb9ff4199b8d1"
+dependencies = [
+ "file-id",
+ "log",
+ "notify",
+ "notify-types",
+ "walkdir",
+]
+
+[[package]]
+name = "notify-types"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e0826a989adedc2a244799e823aece04662b66609d96af8dff7ac6df9a8925d"
 
 [[package]]
 name = "ntapi"
@@ -4196,20 +4260,6 @@ name = "profiling"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
-dependencies = [
- "profiling-procmacros",
- "tracing",
-]
-
-[[package]]
-name = "profiling-procmacros"
-version = "1.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52717f9a02b6965224f95ca2a81e2e0c5c43baacd28ca057577988930b6c3d5b"
-dependencies = [
- "quote",
- "syn",
-]
 
 [[package]]
 name = "pxfm"
@@ -4988,16 +5038,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-error"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b1581020d7a273442f5b45074a6a57d5757ad0a47dac0e9f0bd57b81936f3db"
-dependencies = [
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "tracing-log"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5039,17 +5079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-tracy"
-version = "0.11.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eaa1852afa96e0fe9e44caa53dc0bd2d9d05e0f2611ce09f97f8677af56e4ba"
-dependencies = [
- "tracing-core",
- "tracing-subscriber",
- "tracy-client",
-]
-
-[[package]]
 name = "tracing-wasm"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5058,27 +5087,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "tracy-client"
-version = "0.18.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef54005d3d760186fd662dad4b7bb27ecd5531cdef54d1573ebd3f20a9205ed7"
-dependencies = [
- "loom",
- "once_cell",
- "tracy-client-sys",
-]
-
-[[package]]
-name = "tracy-client-sys"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "319c70195101a93f56db4c74733e272d720768e13471f400c78406a326b172b0"
-dependencies = [
- "cc",
- "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -5233,6 +5241,12 @@ dependencies = [
  "same-file",
  "winapi-util",
 ]
+
+[[package]]
+name = "wasi"
+version = "0.11.1+wasi-snapshot-preview1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasi"

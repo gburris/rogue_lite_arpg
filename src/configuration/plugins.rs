@@ -1,4 +1,8 @@
-// In a new file, e.g., src/lib.rs or src/plugins.rs
+// Support configuring Bevy lints within code.
+#![cfg_attr(bevy_lint, feature(register_tool), register_tool(bevy))]
+// Disable console on Windows for non-dev builds.
+#![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
+
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
@@ -35,27 +39,5 @@ impl Plugin for GamePlugins {
             .add_plugins((MapPlugin, items::plugin, CharacterPlugin))
             // UI
             .add_plugins(UIPlugin);
-    }
-}
-
-// Optional: Create specialized plugin sets for different builds
-#[cfg(target_arch = "wasm32")]
-pub struct WasmPlugins;
-
-#[cfg(target_arch = "wasm32")]
-impl Plugin for WasmPlugins {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(GamePlugins);
-        // Add any WASM-specific plugins here
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub struct NativePlugins;
-
-#[cfg(not(target_arch = "wasm32"))]
-impl Plugin for NativePlugins {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(GamePlugins); // Add native-only plugins
     }
 }

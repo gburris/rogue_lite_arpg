@@ -43,9 +43,9 @@ pub fn spawn_main_menu(
         MainMenu,
         DespawnOnExit(PausedState::MainMenu),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            row_gap: Val::Px(20.0),
+            width: percent(100.0),
+            height: percent(100.0),
+            row_gap: px(20.0),
             flex_direction: FlexDirection::Column,
             ..default()
         },
@@ -55,12 +55,12 @@ pub fn spawn_main_menu(
             // Body Section
             (
                 Node {
-                    width: Val::Percent(100.0),
+                    width: percent(100.0),
                     flex_grow: 1.0,
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
-                    row_gap: Val::Px(20.0),
+                    row_gap: px(20.0),
                     ..default()
                 },
                 children![
@@ -80,9 +80,9 @@ fn menu_button(config: MenuButtonConfig) -> impl Bundle {
         button_component,
         Button,
         Node {
-            width: Val::Px(300.0),
-            height: Val::Px(60.0),
-            border: UiRect::all(Val::Px(2.0)),
+            width: px(300.0),
+            height: px(60.0),
+            border: px(2.0).all(),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
@@ -102,12 +102,12 @@ fn main_menu_footer(
     // Footer Section
     (
         Node {
-            width: Val::Percent(100.0),
+            width: percent(100.0),
             height: FOOTER_HEIGHT,
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
-            padding: UiRect::horizontal(Val::Px(40.0)),
+            padding: px(40.0).horizontal(),
             ..default()
         },
         BackgroundColor::from(DARK_GRAY_COLOR),
@@ -116,7 +116,7 @@ fn main_menu_footer(
             (
                 Node {
                     flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(20.0),
+                    column_gap: px(20.0),
                     ..default()
                 },
                 children![

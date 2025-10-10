@@ -48,10 +48,10 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
     (
         DisplaySlotOf(context.item_entity),
         Node {
-            width: Val::Px(900.0),
-            height: Val::Px(32.0),
-            padding: UiRect::all(Val::Px(5.0)),
-            column_gap: Val::Px(5.0),
+            width: px(900.0),
+            height: px(32.0),
+            padding: px(5.0).all(),
+            column_gap: px(5.0),
             align_items: AlignItems::Center,
             ..default()
         },
@@ -71,8 +71,8 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                     ..default()
                 },
                 Node {
-                    width: Val::Px(30.0),
-                    height: Val::Px(30.0),
+                    width: px(30.0),
+                    height: px(30.0),
                     ..default()
                 },
                 Pickable::IGNORE,
@@ -114,8 +114,8 @@ fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
             ..default()
         },
         Node {
-            height: Val::Px(16.0),
-            width: Val::Px(16.0),
+            height: px(16.0),
+            width: px(16.0),
             ..default()
         },
         Pickable::IGNORE,

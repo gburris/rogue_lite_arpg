@@ -20,8 +20,8 @@ pub fn spawn(mut commands: Commands) {
         StartScreen,
         DespawnOnExit(AppState::StartScreen),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
+            width: percent(100.0),
+            height: percent(100.0),
             flex_direction: FlexDirection::Column,
             ..default()
         },
@@ -40,8 +40,8 @@ pub fn spawn(mut commands: Commands) {
 fn start_screen_title() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(300.0),
+            width: percent(100.0),
+            height: px(300.0),
             flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
@@ -49,10 +49,10 @@ fn start_screen_title() -> impl Bundle {
         },
         children![(
             Node {
-                width: Val::Auto,
-                height: Val::Auto,
-                border: UiRect::all(Val::Px(2.0)),
-                padding: UiRect::horizontal(Val::Px(40.0)),
+                width: auto(),
+                height: auto(),
+                border: px(2.0).all(),
+                padding: px(40.0).all(),
                 ..default()
             },
             BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
@@ -69,7 +69,7 @@ fn start_screen_title() -> impl Bundle {
 fn start_screen_body() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
+            width: percent(100.0),
             flex_grow: 1.0,
             flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
@@ -80,12 +80,12 @@ fn start_screen_body() -> impl Bundle {
             StartScreenButton,
             Button,
             Node {
-                width: Val::Px(300.0),
-                height: Val::Px(80.0),
-                border: UiRect::all(Val::Px(2.0)),
+                width: px(300.0),
+                height: px(80.0),
+                border: px(2.0).all(),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                margin: UiRect::all(Val::Px(20.0)),
+                margin: px(20.0).all(),
                 ..default()
             },
             BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
@@ -101,12 +101,12 @@ fn start_screen_body() -> impl Bundle {
 fn start_screen_footer() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(120.0),
+            width: percent(100.0),
+            height: px(120.0),
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
-            padding: UiRect::all(Val::Px(20.0)),
+            padding: px(20.0).all(),
             ..default()
         },
         BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),

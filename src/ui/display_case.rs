@@ -40,7 +40,7 @@ pub struct UpdateDisplayCase {
 pub fn display_case(inventory_owner: Entity) -> impl Bundle {
     (
         Node {
-            height: Val::Px(800.0),
+            height: px(800.0),
             flex_direction: FlexDirection::Column,
             ..default()
         },
@@ -49,12 +49,12 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
             // inventory header
             (
                 Node {
-                    width: Val::Px(900.0),
-                    height: Val::Px(35.0),
-                    border: UiRect::vertical(Val::Px(2.0)),
-                    margin: UiRect::top(Val::Px(5.0)),
-                    padding: UiRect::all(Val::Px(5.0)),
-                    column_gap: Val::Px(5.0),
+                    width: px(900.0),
+                    height: px(35.0),
+                    border: px(2.0).vertical(),
+                    margin: px(5.0).top(),
+                    padding: px(5.0).all(),
+                    column_gap: px(5.0),
                     align_items: AlignItems::Center,
                     ..default()
                 },

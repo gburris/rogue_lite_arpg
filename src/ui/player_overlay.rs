@@ -50,20 +50,20 @@ pub fn spawn(mut commands: Commands) {
     commands.spawn((
         PlayerOverlay,
         Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.0),
+            width: percent(100.),
+            height: percent(100.0),
             flex_direction: FlexDirection::Column,
-            padding: UiRect::all(Val::Px(20.0)),
+            padding: px(20.0).all(),
             ..default()
         },
         children![
             // Top left container for health and mana bars
             (
                 Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Auto,
+                    width: percent(100.0),
+                    height: auto(),
                     flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(10.0),
+                    row_gap: px(10.0),
                     ..default()
                 },
                 children![
@@ -87,8 +87,8 @@ pub fn spawn(mut commands: Commands) {
             },
             (
                 Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Auto,
+                    width: percent(100.0),
+                    height: auto(),
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::FlexEnd,
@@ -111,7 +111,7 @@ fn attribute_bar(
     (
         Node {
             width: ATTRIBUTE_BAR_WIDTH,
-            height: Val::Px(15.0),
+            height: px(15.0),
             ..default()
         },
         BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
@@ -120,7 +120,7 @@ fn attribute_bar(
                 marker_component,
                 Node {
                     width: ATTRIBUTE_BAR_WIDTH,
-                    height: Val::Px(15.0),
+                    height: px(15.0),
                     ..default()
                 },
                 BackgroundColor::from(bar_color),
@@ -128,8 +128,8 @@ fn attribute_bar(
             (
                 change_component,
                 Node {
-                    width: Val::Px(0.0),
-                    height: Val::Px(15.0),
+                    width: px(0.0),
+                    height: px(15.0),
                     ..default()
                 },
                 BackgroundColor::from(BAR_CHANGE_COLOR),
@@ -185,7 +185,7 @@ pub fn update_lost_mana_bar(
     };
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
-    mana_lost_node.width = Val::Px((current_pixel - amount_to_remove).max(0.0));
+    mana_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
 }
 
 pub fn update_lost_health_bar(
@@ -197,17 +197,17 @@ pub fn update_lost_health_bar(
     };
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
-    health_lost_node.width = Val::Px((current_pixel - amount_to_remove).max(0.0));
+    health_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
 }
 
-// Gets length in Val::Px of bar representing amount of mana or health left
+// Gets length in px of bar representing amount of mana or health left
 fn get_amount_left_in_pixels(current_amount: f32, max_amount: f32) -> Val {
     let max_bar_length = max_amount * ATTRIBUTE_TO_PIXEL_SCALE;
     let ratio_remaining = current_amount / max_amount;
-    Val::Px(ratio_remaining * max_bar_length)
+    px(ratio_remaining * max_bar_length)
 }
 
-// Gets length in Val::Px of yellow bar representing amount of mana or health lost
+// Gets length in px of yellow bar representing amount of mana or health lost
 fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_width: Val) -> Val {
     let pixel_change = (previous_amount - current_amount) * ATTRIBUTE_TO_PIXEL_SCALE;
 
@@ -216,14 +216,14 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
     };
 
     // Negative pixel values arne't allowed
-    Val::Px((current_pixels + pixel_change).max(0.0))
+    px((current_pixels + pixel_change).max(0.0))
 }
 
 fn experience_bar() -> impl Bundle {
     (
         Node {
-            width: Val::Px(400.0),
-            height: Val::Px(20.0),
+            width: px(400.0),
+            height: px(20.0),
             justify_content: JustifyContent::FlexStart,
             align_items: AlignItems::FlexStart,
             // Add overflow visibility for debugging
@@ -233,8 +233,8 @@ fn experience_bar() -> impl Bundle {
         children![
             (
                 Node {
-                    width: Val::Px(400.0),
-                    height: Val::Px(20.0),
+                    width: px(400.0),
+                    height: px(20.0),
                     ..default()
                 },
                 BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
@@ -242,19 +242,19 @@ fn experience_bar() -> impl Bundle {
             (
                 ExpBar,
                 Node {
-                    width: Val::Px(0.0),
-                    height: Val::Px(20.0),
+                    width: px(0.0),
+                    height: px(20.0),
                     position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
+                    left: px(0.0),
                     ..default()
                 },
                 BackgroundColor::from(EXP_COLOR),
                 Children::spawn(SpawnIter((1..10).map(|i| (
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(i as f32 * 40.0),
-                        width: Val::Px(2.0),
-                        height: Val::Px(20.0),
+                        left: px(i as f32 * 40.0),
+                        width: px(2.0),
+                        height: px(20.0),
                         ..default()
                     },
                     BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)),
@@ -269,7 +269,7 @@ pub fn update_exp_bar(
     mut exp_bar: Single<&mut Node, With<ExpBar>>,
 ) {
     if let Some(player) = player {
-        exp_bar.width = Val::Px(400.0 * player.get_progress_to_next_level());
+        exp_bar.width = px(400.0 * player.get_progress_to_next_level());
     }
 }
 
@@ -316,9 +316,9 @@ fn action_box(slot: EquipmentSlot) -> impl Bundle {
     (
         ActionBox { slot },
         Node {
-            width: Val::Px(ACTION_BOX_SIZE),
-            height: Val::Px(ACTION_BOX_SIZE),
-            border: UiRect::all(Val::Px(ACTION_BOX_BORDER)),
+            width: px(ACTION_BOX_SIZE),
+            height: px(ACTION_BOX_SIZE),
+            border: px(ACTION_BOX_BORDER).all(),
             ..default()
         },
         BackgroundColor::from(ACTION_BOX_COLOR),
@@ -326,8 +326,8 @@ fn action_box(slot: EquipmentSlot) -> impl Bundle {
         Children::spawn_one((
             ImageNode::default(),
             Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+                width: percent(100.0),
+                height: percent(100.0),
                 ..default()
             },
         )),
@@ -403,11 +403,11 @@ pub fn on_equipment_used(
                 parent.spawn((
                     CooldownIndicator,
                     Node {
-                        width: Val::Px(ACTION_BOX_INTERIOR_SIZE),
-                        height: Val::Px(ACTION_BOX_INTERIOR_SIZE),
+                        width: px(ACTION_BOX_INTERIOR_SIZE),
+                        height: px(ACTION_BOX_INTERIOR_SIZE),
                         position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        top: Val::Px(0.0),
+                        left: px(0.0),
+                        top: px(0.0),
                         ..default()
                     },
                     Lifespan::new(equipmemnt.use_rate.remaining_secs()),
@@ -436,11 +436,11 @@ pub fn on_equipment_use_failed(
             commands.entity(box_entity).with_child((
                 ErrorFlash,
                 Node {
-                    width: Val::Px(ACTION_BOX_INTERIOR_SIZE),
-                    height: Val::Px(ACTION_BOX_INTERIOR_SIZE),
+                    width: px(ACTION_BOX_INTERIOR_SIZE),
+                    height: px(ACTION_BOX_INTERIOR_SIZE),
                     position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
+                    left: px(0.0),
+                    top: px(0.0),
                     ..default()
                 },
                 BackgroundColor::from(ERROR_FLASH_COLOR),
@@ -453,8 +453,7 @@ pub fn update_cooldowns(
     mut cooldown_query: Query<(&mut Node, &Lifespan), With<CooldownIndicator>>,
 ) {
     for (mut line_node, cooldown_duration) in cooldown_query.iter_mut() {
-        line_node.height =
-            Val::Px(ACTION_BOX_INTERIOR_SIZE * cooldown_duration.0.fraction_remaining());
+        line_node.height = px(ACTION_BOX_INTERIOR_SIZE * cooldown_duration.0.fraction_remaining());
     }
 }
 

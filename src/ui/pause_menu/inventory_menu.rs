@@ -22,12 +22,12 @@ pub fn spawn_inventory_menu(
         InventoryMenu,
         DespawnOnExit(PausedState::Inventory),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
+            width: percent(100.0),
+            height: percent(100.0),
             align_items: AlignItems::Center,
             justify_content: JustifyContent::SpaceBetween,
             flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(20.0), // space between header and item list
+            row_gap: px(20.0), // space between header and item list
             ..default()
         },
         BackgroundColor::from(BACKGROUND_COLOR),
@@ -36,13 +36,13 @@ pub fn spawn_inventory_menu(
             display_case::display_case(player.0),
             (
                 Node {
-                    width: Val::Percent(100.0),
+                    width: percent(100.0),
                     height: FOOTER_HEIGHT,
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::Center,
-                    padding: UiRect::horizontal(Val::Px(40.0)),
-                    column_gap: Val::Px(20.0),
+                    padding: px(40.0).horizontal(),
+                    column_gap: px(20.0),
                     ..default()
                 },
                 BackgroundColor::from(DARK_GRAY_COLOR),

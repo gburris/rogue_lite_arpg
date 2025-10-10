@@ -38,11 +38,11 @@ pub fn spawn_stats_shop_menu(
         StatShopMenu,
         DespawnOnExit(PausedState::StatsShop),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
+            width: percent(100.0),
+            height: percent(100.0),
             align_items: AlignItems::Center,
             flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(20.0),
+            row_gap: px(20.0),
             ..default()
         },
         BackgroundColor::from(BACKGROUND_COLOR),
@@ -52,10 +52,10 @@ pub fn spawn_stats_shop_menu(
             // stats shop body
             (
                 Node {
-                    width: Val::Px(600.0),
+                    width: px(600.0),
                     flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
-                    row_gap: Val::Px(10.0),
+                    padding: px(20.0).all(),
+                    row_gap: px(10.0),
                     ..default()
                 },
                 BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
@@ -82,11 +82,11 @@ pub fn spawn_stats_shop_menu(
 fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(50.0),
+            width: percent(100.0),
+            height: px(50.0),
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
-            padding: UiRect::horizontal(Val::Px(10.0)),
+            padding: px(10.0).horizontal(),
             ..default()
         },
         children![
@@ -123,8 +123,8 @@ fn stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl B
         },
         Button,
         Node {
-            width: Val::Px(30.0),
-            height: Val::Px(30.0),
+            width: px(30.0),
+            height: px(30.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()

@@ -71,7 +71,7 @@ pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
 }
 
 #[derive(EntityEvent)]
-pub struct AttemptDamageEvent {
+pub struct AttemptDamage {
     pub entity: Entity,
     /// Not all damage gets blocked by invulnerable (ex: burn from status effect)
     pub ignore_invulnerable: bool,
@@ -84,7 +84,7 @@ pub struct AttemptDamageEvent {
 /// While AttemptDamageEvent is sent any time a damage source interacts with an entity,
 ///this event represents when that damage attempt succeeds
 #[derive(EntityEvent)]
-pub struct DamageDealtEvent {
+pub struct DamageDealt {
     pub entity: Entity,
     pub damage: f32,
     pub damage_source: Option<Entity>,
@@ -95,22 +95,22 @@ pub struct DamageDealtEvent {
 pub struct Damager(pub Entity);
 
 #[derive(EntityEvent)]
-pub struct DefeatedEvent {
+pub struct Defeated {
     pub entity: Entity,
 }
 
 pub fn on_damage_event(
-    damage_trigger: On<AttemptDamageEvent>,
+    attempt_damage: On<AttemptDamage>,
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&Effects>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
-    let damaged_entity = if let Ok(child_of) = hurt_box_query.get(damage_trigger.target()) {
+    let damaged_entity = if let Ok(child_of) = hurt_box_query.get(attempt_damage.entity) {
         child_of.parent()
-    } else if damaged_query.contains(damage_trigger.target()) {
-        damage_trigger.target()
+    } else if damaged_query.contains(attempt_damage.entity) {
+        attempt_damage.entity
     } else {
         return;
     };
@@ -118,7 +118,7 @@ pub fn on_damage_event(
     if let Ok((mut health, has_iframes)) = damaged_query.get_mut(damaged_entity) {
         // Entities have to "opt-in" to having iframes. Right now that is only the player
         if let Some(mut iframes) = has_iframes {
-            if iframes.is_invulnerable && !damage_trigger.ignore_invulnerable {
+            if iframes.is_invulnerable && !attempt_damage.ignore_invulnerable {
                 return;
             }
 
@@ -126,22 +126,22 @@ pub fn on_damage_event(
         }
 
         // Convert `Damage` to raw damage amount
-        let damage = damage_trigger.damage.to_float();
+        let damage = attempt_damage.damage.to_float();
         health.take_damage(damage);
 
         // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
-        commands.trigger(DamageDealtEvent {
+        commands.trigger(DamageDealt {
             entity: damaged_entity,
             damage,
-            damage_source: damage_trigger.damage_source,
+            damage_source: attempt_damage.damage_source,
         });
 
         if health.hp == 0.0 {
-            commands.trigger(DefeatedEvent {
+            commands.trigger(Defeated {
                 entity: damaged_entity,
             });
-        } else if let Some(source_entity) = damage_trigger.damage_source {
+        } else if let Some(source_entity) = attempt_damage.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {
                 trace!("Applying effects: {:?}", effects);

@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     character::player::interact::PlayerInteractionRadius,
-    configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
+    configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
     economy::Purse,
     items::Magnet,
     prelude::Player,
@@ -46,7 +46,7 @@ pub fn handle_gold_collisions(
 }
 
 #[derive(Event)]
-pub struct GoldDropEvent {
+pub struct GoldDrop {
     pub drop_location: Vec2,
     pub amount: u32,
 }
@@ -54,7 +54,7 @@ pub struct GoldDropEvent {
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
 pub fn on_gold_drop_event(
-    trigger: On<GoldDropEvent>,
+    trigger: On<GoldDrop>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
 ) {

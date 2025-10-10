@@ -6,7 +6,7 @@ use crate::{
     prelude::{Enemy, NPC, Player},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
-        display_case::{self, UpdateDisplayCaseEvent},
+        display_case::{self, UpdateDisplayCase},
         primitives::{menu_header, text},
     },
 };
@@ -62,5 +62,5 @@ pub fn spawn_inventory_menu(
     ));
 
     // We spawned base inventory UI, now lets update it with items
-    commands.trigger(UpdateDisplayCaseEvent { entity: player.0 });
+    commands.trigger(UpdateDisplayCase { entity: player.0 });
 }

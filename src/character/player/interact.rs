@@ -34,7 +34,7 @@ impl InteractionZone {
 pub struct PlayerInteractionInput;
 
 #[derive(EntityEvent)]
-pub struct InteractionEvent {
+pub struct Interaction {
     pub entity: Entity,
     pub interaction_zone_entity: Entity,
 }
@@ -65,7 +65,7 @@ pub fn on_player_interaction_input(
         .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.partial_cmp(dist_b).unwrap());
 
     if let Some((interaction_zone_entity, interactable_entity, _)) = closest_interaction {
-        commands.trigger(InteractionEvent {
+        commands.trigger(Interaction {
             entity: interactable_entity,
             interaction_zone_entity,
         });
@@ -74,17 +74,19 @@ pub fn on_player_interaction_input(
 
 /// This method acts as a constructor, adding a collider to the InteractionZone based the variant chosen
 pub fn on_interaction_zone_added(
-    trigger: On<Add, InteractionZone>,
+    interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,
     interact_query: Query<&InteractionZone>,
 ) {
+    let interaction_zone = interaction_zone_added.entity;
+
     // We can unwrap since this is an Add. Surely it exists right 0.o
-    let interact = interact_query.get(trigger.target()).unwrap();
+    let interact = interact_query.get(interaction_zone).unwrap();
 
     let collider = match interact {
         InteractionZone::Circle { radius } => Collider::circle(*radius),
         InteractionZone::Square { length } => Collider::rectangle(*length, *length),
     };
 
-    commands.entity(trigger.target()).insert(collider);
+    commands.entity(interaction_zone).insert(collider);
 }

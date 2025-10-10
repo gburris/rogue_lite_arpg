@@ -33,7 +33,7 @@ pub struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
 #[derive(EntityEvent)]
-pub struct UpdateDisplayCaseEvent {
+pub struct UpdateDisplayCase {
     pub entity: Entity,
 }
 
@@ -84,7 +84,7 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
 }
 
 pub fn on_display_case_updated(
-    trigger: On<UpdateDisplayCaseEvent>,
+    update_display_case: On<UpdateDisplayCase>,
     mut commands: Commands,
     icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
@@ -94,7 +94,7 @@ pub fn on_display_case_updated(
 ) {
     // Get entities inventory
     let (items, displayed_by) = items_query
-        .get(trigger.target())
+        .get(update_display_case.entity)
         .expect("Item holder is not displayed by anything");
 
     // Get children entities of DisplayCaseOf which should all have a DisplayCaseSlot

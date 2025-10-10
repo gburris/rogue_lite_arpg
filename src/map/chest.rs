@@ -4,12 +4,12 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    character::player::interact::{InteractionEvent, InteractionZone},
+    character::player::interact::{Interaction, InteractionZone},
     configuration::{
         GameCollisionLayer, YSort,
         assets::{SpriteAssets, SpriteSheetLayouts},
     },
-    economy::GoldDropEvent,
+    economy::GoldDrop,
 };
 
 /// Center of chest relative to its sprite's anchor point
@@ -82,11 +82,11 @@ fn spawn_chest(
 }
 
 pub fn on_interaction_open_chest(
-    open_chest_trigger: On<InteractionEvent>,
+    chest_opened: On<Interaction>,
     chest_transforms: Query<&Transform, With<Chest>>,
     mut commands: Commands,
 ) {
-    let chest_entity = open_chest_trigger.target();
+    let chest_entity = chest_opened.entity;
 
     commands
         .entity(chest_entity)
@@ -96,11 +96,11 @@ pub fn on_interaction_open_chest(
         )));
 
     commands
-        .entity(open_chest_trigger.interaction_zone_entity)
+        .entity(chest_opened.interaction_zone_entity)
         .despawn();
 
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
-        commands.trigger(GoldDropEvent {
+        commands.trigger(GoldDrop {
             amount: 999,
             drop_location: chest_transform.translation.truncate(),
         });

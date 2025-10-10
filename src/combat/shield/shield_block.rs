@@ -104,15 +104,15 @@ pub fn deactivate_shield(
 }
 
 pub fn activate_shield(
-    trigger: On<Add, ActiveShield>,
+    active_shield: On<Add, ActiveShield>,
     mut commands: Commands,
     shield_query: Query<&Shield>,
 ) {
-    if let Ok(activated_shield) = shield_query.get(trigger.target()) {
-        commands
-            .entity(trigger.target())
-            .insert(activated_shield.hitbox.clone())
-            .insert(ProjectileReflection::collision_layers());
+    if let Ok(activated_shield) = shield_query.get(active_shield.entity) {
+        commands.entity(active_shield.entity).insert((
+            activated_shield.hitbox.clone(),
+            ProjectileReflection::collision_layers(),
+        ));
     } else {
         warn!("Active Shield added to something that isn't a shield");
     }

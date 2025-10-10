@@ -50,20 +50,19 @@ impl Default for Health {
 }
 
 pub fn on_healing_event(
-    healing_trigger: On<AttemptHeal>,
+    attempt_heal: On<AttemptHeal>,
     mut commands: Commands,
     mut healed_query: Query<&mut Health>,
 ) {
-    if let Ok(mut health) = healed_query.get_mut(healing_trigger.target()) {
-        let actual_amount = health.add_health(healing_trigger.amount);
+    if let Ok(mut health) = healed_query.get_mut(attempt_heal.entity) {
+        let actual_amount = health.add_health(attempt_heal.amount);
         commands.trigger(Healed {
-            entity: healing_trigger.target(),
+            entity: attempt_heal.entity,
             amount: actual_amount,
         });
         info!(
             "Entity {} healed by {:.2} points",
-            healing_trigger.target(),
-            actual_amount,
+            attempt_heal.entity, actual_amount,
         );
     }
 }

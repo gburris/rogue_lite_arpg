@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::equipment::{
-        EquipmentSlot, StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
-    },
+    items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
     labels::states::PausedState,
 };
 
@@ -40,20 +38,20 @@ pub fn player_input(
     }
 
     if buttons.pressed(MouseButton::Left) {
-        commands.trigger(UseEquipmentInputEvent {
+        commands.trigger(UseEquipmentInput {
             entity: player_entity,
             slot: EquipmentSlot::Mainhand,
         });
     }
 
     if buttons.just_pressed(MouseButton::Right) {
-        commands.trigger(UseEquipmentInputEvent {
+        commands.trigger(UseEquipmentInput {
             entity: player_entity,
             slot: EquipmentSlot::Offhand,
         });
     }
     if buttons.just_released(MouseButton::Right) {
-        commands.trigger(StopUsingHoldableEquipmentInputEvent {
+        commands.trigger(StopUsingHoldableEquipmentInput {
             entity: player_entity,
             slot: EquipmentSlot::Offhand,
         });

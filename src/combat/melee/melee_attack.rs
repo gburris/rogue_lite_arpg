@@ -3,7 +3,7 @@ use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
     combat::{
-        damage::{AttemptDamageEvent, Damage},
+        damage::{AttemptDamage, Damage},
         melee::{MeleeSwingType, MeleeWeapon},
     },
     prelude::ActionState,
@@ -112,7 +112,7 @@ pub fn handle_melee_collisions(
                 .entities_damaged
                 .contains(&colliding_entity)
             {
-                commands.trigger(AttemptDamageEvent {
+                commands.trigger(AttemptDamage {
                     entity: colliding_entity,
                     ignore_invulnerable: false,
                     damage: Damage::Range(melee_weapon.damage),

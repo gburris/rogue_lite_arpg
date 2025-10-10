@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    damage::{AttemptDamageEvent, Damage, HurtBox},
+    damage::{AttemptDamage, Damage, HurtBox},
     shield::components::ProjectileReflection,
 };
 
@@ -107,7 +107,7 @@ pub fn handle_collisions(
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // If the thing we collide with has a HurtBox, lets try to damage it!
             if hurt_box_query.contains(colliding_entity) {
-                commands.trigger(AttemptDamageEvent {
+                commands.trigger(AttemptDamage {
                     entity: colliding_entity,
                     ignore_invulnerable: false,
                     damage: projectile.damage,

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    items::equipment::{EquipmentSlot, UseEquipmentInputEvent},
+    items::equipment::{EquipmentSlot, UseEquipmentInput},
     prelude::*,
 };
 
@@ -32,11 +32,11 @@ impl Idle {
 }
 
 pub fn on_idle_start(
-    trigger: On<Add, Idle>,
+    idle: On<Add, Idle>,
     idle_query: Query<&BehaveCtx, With<Idle>>,
     mut target_query: Query<&mut SimpleMotion>,
 ) {
-    let ctx = idle_query.get(trigger.target()).unwrap();
+    let ctx = idle_query.get(idle.entity).unwrap();
 
     let mut motion = target_query.get_mut(ctx.target_entity()).unwrap();
     motion.stop_moving();
@@ -107,12 +107,12 @@ impl Wander {
 }
 
 pub fn on_wander_start(
-    trigger: On<Add, Wander>,
+    wander: On<Add, Wander>,
     mut commands: Commands,
     wander_query: Query<&BehaveCtx, With<Wander>>,
     mut target_query: Query<(&mut SimpleMotion, Option<&Anchor>, &Transform)>,
 ) {
-    let ctx = wander_query.get(trigger.event().entity).unwrap();
+    let ctx = wander_query.get(wander.entity).unwrap();
     let (mut motion, anchor, transform) = target_query.get_mut(ctx.target_entity()).unwrap();
 
     if anchor.map_or(false, |a| a.outside_range(transform)) {
@@ -198,10 +198,10 @@ fn random_direction() -> Vec2 {
 #[derive(Clone)]
 pub struct AttemptMelee;
 
-pub fn on_attempt_melee(trigger: On<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
-    let ctx = trigger.ctx();
+pub fn on_attempt_melee(attempt_melee: On<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
+    let ctx = attempt_melee.ctx();
 
-    commands.trigger(UseEquipmentInputEvent {
+    commands.trigger(UseEquipmentInput {
         entity: ctx.target_entity(),
         slot: EquipmentSlot::Mainhand,
     });
@@ -223,7 +223,7 @@ pub fn while_keeping_distance_and_firing(
         if !has_target {
             commands.trigger(ctx.failure());
         } else {
-            commands.trigger(UseEquipmentInputEvent {
+            commands.trigger(UseEquipmentInput {
                 entity: ctx.target_entity(),
                 slot: EquipmentSlot::Mainhand,
             });

@@ -5,8 +5,8 @@ use crate::{
     items::{
         Item, Items,
         equipment::{
-            EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable, Equipped,
-            Mainhand, Offhand, UseEquipment,
+            EquipmentSlot, EquipmentUseFailed, EquipmentUseFailure, Equippable, Equipped, Mainhand,
+            Offhand, UseEquipment,
         },
     },
     prelude::Player,
@@ -376,18 +376,18 @@ pub fn update_action_bar(
 }
 
 pub fn on_equipment_used(
-    trigger: On<UseEquipment>,
+    equipment_used: On<UseEquipment>,
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,
     equipment_query: Query<&Equippable, With<Equipped>>,
     error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
-    if trigger.holder != player.0 {
+    if equipment_used.holder != player.0 {
         return;
     }
 
-    if let Ok(equipmemnt) = equipment_query.get(trigger.target()) {
+    if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity) {
         if let Some((box_entity, _, box_children)) = action_box_query
             .iter()
             .find(|(_, action_box, _)| action_box.slot == equipmemnt.slot)
@@ -419,20 +419,20 @@ pub fn on_equipment_used(
 }
 
 pub fn on_equipment_use_failed(
-    trigger: On<EquipmentUseFailedEvent>,
+    equipment_use_failed: On<EquipmentUseFailed>,
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    if trigger.target() != player.0 {
+    if equipment_use_failed.entity != player.0 {
         return;
     }
 
     if let Some((box_entity, _)) = action_box_query
         .iter()
-        .find(|(_, action_box)| action_box.slot == trigger.slot)
+        .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
     {
-        if trigger.reason == EquipmentUseFailure::OutOfMana {
+        if equipment_use_failed.reason == EquipmentUseFailure::OutOfMana {
             commands.entity(box_entity).with_child((
                 ErrorFlash,
                 Node {

@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{combat::damage::DamageDealtEvent, prelude::*, utility::schedule_component_removal};
+use crate::{combat::damage::DamageDealt, prelude::*, utility::schedule_component_removal};
 
 /// Represents the current direction an entity is aiming toward (e.g., cursor for player, target for AI).
 /// This is decoupled from movement-facing direction.
@@ -213,21 +213,22 @@ pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
 /// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
 /// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
 pub fn on_damage_aggro(
-    damage_trigger: On<DamageDealtEvent>,
+    damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     target_query: Query<&Watching>,
 ) {
-    if let Ok(watching) = target_query.get(damage_trigger.target()) {
+    let damaged_entity = damage_dealt.entity;
+
+    if let Ok(watching) = target_query.get(damaged_entity) {
         debug!(
             "I've been hit: {}, attacking: {}",
-            damage_trigger.target(),
-            watching.0
+            damaged_entity, watching.0
         );
         commands
-            .entity(damage_trigger.target())
+            .entity(damaged_entity)
             .insert((TargetLock, Targeting(watching.0)));
 
-        schedule_component_removal::<TargetLock>(&mut commands, damage_trigger.target(), 6.0);
+        schedule_component_removal::<TargetLock>(&mut commands, damaged_entity, 6.0);
     }
 }
 

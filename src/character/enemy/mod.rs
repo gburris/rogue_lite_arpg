@@ -23,7 +23,7 @@ use crate::{
         equipment::{Equipped, on_equipment_activated},
         fire_staff, health_potion, ice_staff, sword,
     },
-    map::EnemiesSpawnEvent,
+    map::SpawnEnemies,
     prelude::*,
 };
 
@@ -65,14 +65,14 @@ pub enum EnemyType {
 }
 
 fn spawn_enemies(
-    enemy_trigger: On<EnemiesSpawnEvent>,
+    spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
     player: Single<Entity, With<Player>>,
 ) {
-    for spawn_data in enemy_trigger.0.clone() {
+    for spawn_data in spawn_enemies.0.clone() {
         spawn_enemy(
             &mut commands,
             spawn_data,

@@ -16,7 +16,7 @@ MAP EVENTS - Should be the only part of map exposed to other crates
 */
 
 #[derive(EntityEvent)]
-pub struct SpawnZoneEvent {
+pub struct SpawnZone {
     pub entity: Entity,
 }
 
@@ -24,10 +24,10 @@ pub struct SpawnZoneEvent {
 pub struct CleanupZone;
 
 #[derive(Event)]
-pub struct NPCSpawnEvent(pub Vec<Vec2>);
+pub struct SpawnNpcs(pub Vec<Vec2>);
 
 #[derive(Debug, Event)]
-pub struct EnemiesSpawnEvent(pub Vec<EnemySpawnData>);
+pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
 
 #[derive(Component)]
 pub struct Wall;

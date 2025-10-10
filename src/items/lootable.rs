@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::{Rng, rng};
 
 use crate::{
-    character::player::interact::{InteractionEvent, InteractionZone},
+    character::player::interact::{Interaction, InteractionZone},
     configuration::{YSort, ZLayer},
     items::{ItemOf, Items, equipment::Unequip},
     prelude::Player,
@@ -21,7 +21,7 @@ use super::Item;
 pub struct Lootable;
 
 #[derive(EntityEvent)]
-pub struct ItemDropEvent {
+pub struct ItemDrop {
     pub entity: Entity,
 }
 
@@ -30,12 +30,12 @@ pub struct ItemDropEvent {
 /// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
 /// 3. Needs parent to be holder for position, then removes parent
 pub fn on_drop_event(
-    trigger: On<ItemDropEvent>,
+    item_dropped: On<ItemDrop>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
     mut holder_query: Query<&Transform, With<Items>>,
 ) {
-    let item_entity = trigger.target();
+    let item_entity = item_dropped.entity;
 
     let Ok(ItemOf(holder_entity)) = item_query.get(item_entity) else {
         warn!("Lootable item missing parent");
@@ -71,11 +71,11 @@ pub fn on_drop_event(
 }
 
 pub fn on_lootable_item_interaction(
-    interaction: On<InteractionEvent>,
+    interaction: On<Interaction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
 ) {
-    let item_entity = interaction.event().entity;
+    let item_entity = interaction.entity;
 
     // Make sure item doesn't despawn and is hidden (since its in inventory)
     commands
@@ -85,7 +85,7 @@ pub fn on_lootable_item_interaction(
 
     // Remove interaction zone once itme is picked up
     commands
-        .entity(interaction.event().interaction_zone_entity)
+        .entity(interaction.interaction_zone_entity)
         .despawn();
 }
 

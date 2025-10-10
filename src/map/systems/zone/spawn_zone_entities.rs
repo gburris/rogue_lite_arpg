@@ -7,8 +7,7 @@ use crate::{
     map::{
         chest::SpawnChestsEvent,
         components::{
-            EnemiesSpawnEvent, InstanceAssets, MapLayout, MarkerType, NPCSpawnEvent,
-            WorldSpaceConfig,
+            InstanceAssets, MapLayout, MarkerType, SpawnEnemies, SpawnNpcs, WorldSpaceConfig,
         },
         helpers::generator::generate_instance_layout,
         portal::Portal,
@@ -75,7 +74,7 @@ pub fn spawn_zone_entities(
             })
             .collect();
 
-        commands.trigger(EnemiesSpawnEvent(enemy_spawn_data_list));
+        commands.trigger(SpawnEnemies(enemy_spawn_data_list));
     }
 
     // Spawn chests
@@ -89,7 +88,7 @@ pub fn spawn_zone_entities(
     if let Some(npc_positions) = map_layout.markers.get_markers(MarkerType::NPCSpawns) {
         let spawn_positions =
             convert_tiles_to_world_positions(npc_positions, &world_config, &map_layout);
-        commands.trigger(NPCSpawnEvent(spawn_positions));
+        commands.trigger(SpawnNpcs(spawn_positions));
     }
 
     // Handle player spawn

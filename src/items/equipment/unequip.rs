@@ -21,7 +21,7 @@ pub fn on_item_unequipped(
     mut item_query: Query<(&ItemOf, &mut Visibility), With<Equipped>>,
     mut holder_query: Query<&mut ActionState>,
 ) {
-    let item_entity = trigger.event().entity;
+    let item_entity = trigger.entity;
 
     let Ok((equipment_of, mut visibility)) = item_query.get_mut(item_entity) else {
         info!("Equipment was despawned prior to unequip");

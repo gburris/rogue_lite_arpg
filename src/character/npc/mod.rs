@@ -17,7 +17,7 @@ use crate::{
         shadow,
     },
     items::{Items, axe, equipment::Equipped, ice_staff, sword},
-    map::NPCSpawnEvent,
+    map::SpawnNpcs,
     prelude::*,
 };
 
@@ -46,7 +46,7 @@ const TILE_SIZE: f32 = 32.0;
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 fn spawn_npcs(
-    npc_spawn_trigger: On<NPCSpawnEvent>,
+    npc_spawn_trigger: On<SpawnNpcs>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,

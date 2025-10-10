@@ -18,7 +18,7 @@ impl Plugin for EconomyPlugin {
 }
 
 pub use gold::Gold;
-pub use gold::GoldDropEvent;
+pub use gold::GoldDrop;
 
 #[derive(Component, Clone, Default)]
 pub struct Purse {

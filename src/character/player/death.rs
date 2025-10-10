@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::prelude::Player,
-    combat::{Health, damage::DefeatedEvent},
+    combat::{Health, damage::Defeated},
     labels::states::{AppState, PlayingState},
     map::CleanupZone,
     prelude::*,
@@ -12,7 +12,7 @@ use crate::{
 pub struct GameOverTimer(pub Timer);
 
 pub fn on_player_defeated(
-    _: On<DefeatedEvent>,
+    _: On<Defeated>,
     player: Single<(Entity, &mut SimpleMotion), With<Player>>,
     mut commands: Commands,
     mut playing_state: ResMut<NextState<PlayingState>>,

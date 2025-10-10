@@ -13,11 +13,11 @@ mod use_equipped;
 pub use equipment_transform::EquipmentTransform;
 
 // Equipment events to "get shit done"
-pub use use_equipped::EquipmentUseFailedEvent;
+pub use use_equipped::EquipmentUseFailed;
 pub use use_equipped::EquipmentUseFailure;
-pub use use_equipped::StopUsingHoldableEquipmentInputEvent;
+pub use use_equipped::StopUsingHoldableEquipmentInput;
 pub use use_equipped::UseEquipment;
-pub use use_equipped::UseEquipmentInputEvent;
+pub use use_equipped::UseEquipmentInput;
 
 // Observers to be added to respective equipment/weapons that want this functionality
 pub use use_equipped::on_equipment_activated;

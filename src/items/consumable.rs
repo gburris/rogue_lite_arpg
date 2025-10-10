@@ -13,7 +13,7 @@ pub enum ConsumableType {
 }
 
 #[derive(EntityEvent)]
-pub struct ConsumeEvent {
+pub struct Consume {
     pub entity: Entity,
     pub item_entity: Entity,
 }
@@ -30,17 +30,17 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
 }
 
 pub fn on_consume_event(
-    consume_trigger: On<ConsumeEvent>,
+    consume: On<Consume>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,
 ) {
-    let item_entity = consume_trigger.item_entity;
+    let item_entity = consume.item_entity;
 
     if let Ok(consumable) = consumable_query.get(item_entity) {
         match &consumable.effect {
             ConsumableType::Heal(amount) => {
                 commands.trigger(AttemptHeal {
-                    entity: consume_trigger.target(),
+                    entity: consume.entity,
                     amount: *amount,
                 });
             }

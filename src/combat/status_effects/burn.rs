@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::combat::{
     Health,
-    damage::{AttemptDamageEvent, Damage},
+    damage::{AttemptDamage, Damage},
     status_effects::{Status, StatusApplied, StatusOf},
 };
 
@@ -39,7 +39,7 @@ pub fn while_burning(
     for (burn, status_of) in status_query.iter() {
         if let Ok(entity) = health_query.get_mut(status_of.0) {
             if burn.damage_frequency.just_finished() {
-                commands.trigger(AttemptDamageEvent {
+                commands.trigger(AttemptDamage {
                     entity: entity,
                     ignore_invulnerable: true,
                     damage_source: None,
@@ -65,11 +65,11 @@ pub fn apply_burning(
 }
 
 pub fn on_burn_removed(
-    trigger: On<Remove, Burning>,
+    burning_status: On<Remove, Burning>,
     status_query: Query<&StatusOf, With<Burning>>,
     mut sprite_query: Query<&mut Sprite>,
 ) {
-    let Ok(status_of) = status_query.get(trigger.target()) else {
+    let Ok(status_of) = status_query.get(burning_status.entity) else {
         return;
     };
 

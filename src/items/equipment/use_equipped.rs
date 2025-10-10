@@ -35,13 +35,13 @@ pub struct UseEquipment {
 }
 
 #[derive(EntityEvent)]
-pub struct UseEquipmentInputEvent {
+pub struct UseEquipmentInput {
     pub entity: Entity,
     pub slot: EquipmentSlot,
 }
 
 #[derive(EntityEvent)]
-pub struct StopUsingHoldableEquipmentInputEvent {
+pub struct StopUsingHoldableEquipmentInput {
     pub entity: Entity,
     pub slot: EquipmentSlot,
 }
@@ -55,7 +55,7 @@ pub enum EquipmentUseFailure {
 
 #[derive(EntityEvent)]
 
-pub struct EquipmentUseFailedEvent {
+pub struct EquipmentUseFailed {
     pub entity: Entity,
     pub slot: EquipmentSlot,
     pub reason: EquipmentUseFailure,
@@ -67,14 +67,14 @@ pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, ti
     }
 }
 pub fn on_equipment_activated(
-    trigger: On<UseEquipmentInputEvent>,
+    equipment_used: On<UseEquipmentInput>,
     commands: Commands,
     holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Items>>,
     equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
 ) {
     handle_equipment_activation(
-        trigger.target(),
-        trigger.slot,
+        equipment_used.entity,
+        equipment_used.slot,
         commands,
         holder_query,
         equippable_query,
@@ -100,7 +100,7 @@ fn handle_equipment_activation(
 
     let Some(equipment_entity) = equipment_entity else {
         warn!("{:?} is empty!", slot);
-        commands.trigger(EquipmentUseFailedEvent {
+        commands.trigger(EquipmentUseFailed {
             entity,
             slot,
             reason: EquipmentUseFailure::NoneEquipped,
@@ -111,7 +111,7 @@ fn handle_equipment_activation(
     if let Ok((mut equippable, mana_cost)) = equippable_query.get_mut(equipment_entity) {
         // Check cooldown first
         if !equippable.use_rate.is_finished() {
-            commands.trigger(EquipmentUseFailedEvent {
+            commands.trigger(EquipmentUseFailed {
                 entity,
                 slot,
                 reason: EquipmentUseFailure::OnCooldown,
@@ -123,7 +123,7 @@ fn handle_equipment_activation(
         if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
             if !mana.attempt_use_mana(mana_cost) {
                 debug!("Not enough mana!");
-                commands.trigger(EquipmentUseFailedEvent {
+                commands.trigger(EquipmentUseFailed {
                     entity,
                     slot,
                     reason: EquipmentUseFailure::OutOfMana,
@@ -146,25 +146,25 @@ fn handle_equipment_activation(
 
 // "fired" implies this is a projectile weapon
 pub fn on_weapon_fired(
-    fired_trigger: On<UseEquipment>,
+    weapon_fired: On<UseEquipment>,
     mut commands: Commands,
     weapon_query: Query<&Projectiles>,
     holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<(&Projectile, Option<&Effects>), With<Disabled>>,
 ) {
-    let Ok(projectiles) = weapon_query.get(fired_trigger.target()) else {
+    let Ok(projectiles) = weapon_query.get(weapon_fired.entity) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
 
-    let damage_source = if enemy_query.get(fired_trigger.holder).is_ok() {
+    let damage_source = if enemy_query.get(weapon_fired.holder).is_ok() {
         DamageSource::Enemy
     } else {
         DamageSource::Player
     };
 
-    let Ok((holder_transform, holder_vision)) = holder_query.get(fired_trigger.holder) else {
+    let Ok((holder_transform, holder_vision)) = holder_query.get(weapon_fired.holder) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };
@@ -206,18 +206,19 @@ pub fn on_weapon_fired(
 }
 
 pub fn on_weapon_melee(
-    fired_trigger: On<UseEquipment>,
+    melee_weapon_used: On<UseEquipment>,
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
     holder_query: Query<&Vision>,
 ) {
-    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(fired_trigger.target()) else {
+    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(melee_weapon_used.entity)
+    else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok(vision) = holder_query.get(fired_trigger.holder) else {
+    let Ok(vision) = holder_query.get(melee_weapon_used.holder) else {
         warn!("Holder missing required components");
         return;
     };
@@ -231,7 +232,7 @@ pub fn on_weapon_melee(
         attack_angle,
     );
 
-    if let Ok(mut action_state) = action_state_query.get_mut(fired_trigger.holder) {
+    if let Ok(mut action_state) = action_state_query.get_mut(melee_weapon_used.holder) {
         *action_state = ActionState::Attacking;
     }
 }
@@ -243,8 +244,8 @@ pub fn on_healing_tome_cast(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    let tome_entity = use_healing_tome.event().entity;
-    let holder_entity = use_healing_tome.event().holder;
+    let tome_entity = use_healing_tome.entity;
+    let holder_entity = use_healing_tome.holder;
 
     let Ok(tome) = tome_query.get(tome_entity) else {
         warn!("Tried to use a tome that does not exist");
@@ -262,11 +263,11 @@ pub fn on_healing_tome_cast(
 }
 
 pub fn on_shield_block(
-    fired_trigger: On<UseEquipment>,
+    use_shield_block: On<UseEquipment>,
     mut commands: Commands,
     mut shield_query: Query<(Entity, &Shield)>,
 ) {
-    let Ok((shield_entity, _)) = shield_query.get_mut(fired_trigger.target()) else {
+    let Ok((shield_entity, _)) = shield_query.get_mut(use_shield_block.entity) else {
         warn!("Tried to block with invalid shield");
         return;
     };
@@ -276,13 +277,15 @@ pub fn on_shield_block(
 }
 
 pub fn on_equipment_deactivated(
-    trigger: On<StopUsingHoldableEquipmentInputEvent>,
+    stop_using_holdable: On<StopUsingHoldableEquipmentInput>,
     mut commands: Commands,
     holder_query: Query<(&Offhand, &FacingDirection)>,
     mut shield_query: Query<&mut Sprite, (With<Shield>, With<ActiveShield>)>,
 ) {
     // Get the holder's inventory
-    let Ok((Offhand(shield_entity), facing_direction)) = holder_query.get(trigger.target()) else {
+    let Ok((Offhand(shield_entity), facing_direction)) =
+        holder_query.get(stop_using_holdable.entity)
+    else {
         warn!("Tried to stop blocking but entity has no offhand or no direction");
         return;
     };

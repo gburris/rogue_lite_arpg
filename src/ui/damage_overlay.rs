@@ -1,5 +1,5 @@
 use crate::{
-    combat::{damage::DamageDealtEvent, health::Healed},
+    combat::{damage::DamageDealt, health::Healed},
     configuration::ZLayer,
     utility::Lifespan,
 };
@@ -58,28 +58,28 @@ fn random_angle(angle_range: f32) -> f32 {
 }
 
 pub fn on_damage_overlay_amount(
-    damage_trigger: On<DamageDealtEvent>,
+    damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     damaged_query: Query<&ColliderAabb>,
 ) {
     spawn_health_change_text(
         &mut commands,
-        damage_trigger.target(),
-        damage_trigger.damage,
+        damage_dealt.entity,
+        damage_dealt.damage,
         RED_COLOR,
         &damaged_query,
     );
 }
 
 pub fn on_healing_overlay_amount(
-    healing_trigger: On<Healed>,
+    healed: On<Healed>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,
 ) {
     spawn_health_change_text(
         &mut commands,
-        healing_trigger.target(),
-        healing_trigger.amount,
+        healed.entity,
+        healed.amount,
         GREEN_COLOR,
         &healed_query,
     );

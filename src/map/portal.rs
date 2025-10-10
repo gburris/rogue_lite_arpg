@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::{GameCollisionLayer, YSort},
     labels::states::AppState,
-    map::components::SpawnZoneEvent,
+    map::components::SpawnZone,
     prelude::PlayerInteractionRadius,
 };
 
@@ -34,19 +34,19 @@ pub fn handle_portal_collisions(
     for (entity, portal_colliding_entities) in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == *player_collider {
-                commands.trigger(SpawnZoneEvent { entity });
+                commands.trigger(SpawnZone { entity });
             }
         }
     }
 }
 
 pub fn on_portal_entered(
-    trigger: On<SpawnZoneEvent>,
+    spawn_zone: On<SpawnZone>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     portal_query: Query<&Portal>,
 ) {
-    if let Ok(portal) = portal_query.get(trigger.target()) {
+    if let Ok(portal) = portal_query.get(spawn_zone.entity) {
         commands.insert_resource(portal.map_layout.clone());
         game_state.set(AppState::SpawnZone);
     }

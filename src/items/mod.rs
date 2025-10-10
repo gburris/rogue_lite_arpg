@@ -126,10 +126,6 @@ pub struct HealingTome {
 }
 
 #[derive(Component)]
-#[require(Lifespan::new(1.0))]
-pub struct HealingTomeSpellVisualEffect;
-
-#[derive(Component)]
 pub struct Shield {
     pub hitbox: Collider,
 }

@@ -4,19 +4,23 @@ use rand::Rng;
 
 use super::EquipmentSlot;
 use crate::{
+    animation::heal_vfx,
     combat::{
         Mana, Projectile,
         damage::DamageSource,
-        health::AttemptHealingEvent,
+        health::AttemptHeal,
         mana::ManaCost,
         melee::{MeleeWeapon, start_melee_attack},
         projectile::{ProjectileOf, Projectiles},
         shield::{ActiveShield, shield_block::deactivate_shield},
         status_effects::Effects,
     },
-    configuration::{GameCollisionLayer, ZLayer},
+    configuration::{
+        GameCollisionLayer, ZLayer,
+        assets::{SpriteAssets, SpriteSheetLayouts},
+    },
     items::{
-        HealingTome, HealingTomeSpellVisualEffect, Items, Shield,
+        HealingTome, Items, Shield,
         equipment::{Equippable, Equipped, Mainhand, Offhand},
     },
     prelude::{Enemy, *},
@@ -25,7 +29,7 @@ use crate::{
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
 #[derive(EntityEvent)]
-pub struct UseEquipmentEvent {
+pub struct UseEquipment {
     pub entity: Entity,
     pub holder: Entity,
 }
@@ -132,7 +136,7 @@ fn handle_equipment_activation(
         }
 
         // Success path - trigger equipment use and reset cooldown
-        commands.trigger(UseEquipmentEvent {
+        commands.trigger(UseEquipment {
             entity: equipment_entity,
             holder: entity,
         });
@@ -142,7 +146,7 @@ fn handle_equipment_activation(
 
 // "fired" implies this is a projectile weapon
 pub fn on_weapon_fired(
-    fired_trigger: On<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipment>,
     mut commands: Commands,
     weapon_query: Query<&Projectiles>,
     holder_query: Query<(&Transform, &Vision)>,
@@ -202,7 +206,7 @@ pub fn on_weapon_fired(
 }
 
 pub fn on_weapon_melee(
-    fired_trigger: On<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipment>,
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
     mut action_state_query: Query<&mut ActionState>,
@@ -233,28 +237,32 @@ pub fn on_weapon_melee(
 }
 
 pub fn on_healing_tome_cast(
-    fired_trigger: On<UseEquipmentEvent>,
+    use_healing_tome: On<UseEquipment>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
+    sprites: Res<SpriteAssets>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    let Ok(tome) = tome_query.get(fired_trigger.target()) else {
+    let tome_entity = use_healing_tome.event().entity;
+    let holder_entity = use_healing_tome.event().holder;
+
+    let Ok(tome) = tome_query.get(tome_entity) else {
         warn!("Tried to use a tome that does not exist");
         return;
     };
 
     let health_to_add = rand::rng().random_range(tome.healing.0..tome.healing.1);
-    commands.trigger(AttemptHealingEvent {
-        entity: fired_trigger.holder,
-
+    commands.trigger(AttemptHeal {
+        entity: holder_entity,
         amount: health_to_add,
     });
     commands
-        .entity(fired_trigger.holder)
-        .with_child(HealingTomeSpellVisualEffect);
+        .entity(holder_entity)
+        .with_child(heal_vfx(sprites, sprite_layouts));
 }
 
 pub fn on_shield_block(
-    fired_trigger: On<UseEquipmentEvent>,
+    fired_trigger: On<UseEquipment>,
     mut commands: Commands,
     mut shield_query: Query<(Entity, &Shield)>,
 ) {

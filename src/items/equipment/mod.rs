@@ -16,7 +16,7 @@ pub use equipment_transform::EquipmentTransform;
 pub use use_equipped::EquipmentUseFailedEvent;
 pub use use_equipped::EquipmentUseFailure;
 pub use use_equipped::StopUsingHoldableEquipmentInputEvent;
-pub use use_equipped::UseEquipmentEvent;
+pub use use_equipped::UseEquipment;
 pub use use_equipped::UseEquipmentInputEvent;
 
 // Observers to be added to respective equipment/weapons that want this functionality

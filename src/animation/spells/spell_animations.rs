@@ -3,18 +3,14 @@ use bevy::{prelude::*, sprite::Anchor};
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    items::HealingTomeSpellVisualEffect,
+    utility::Lifespan,
 };
 
-pub fn on_healing_tome_visual_added(
-    trigger: On<Add, HealingTomeSpellVisualEffect>,
-    mut commands: Commands,
+pub fn heal_vfx(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-) {
-    let entity = trigger.target();
-
-    commands.entity(entity).insert((
+) -> impl Bundle {
+    (
         Sprite {
             image: sprites.tome_of_healing_effect.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -26,5 +22,6 @@ pub fn on_healing_tome_visual_added(
         Anchor(Vec2::new(0.0, 0.10)),
         AnimationIndices::OneShot(0..=9),
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));
+        Lifespan::new(1.0),
+    )
 }

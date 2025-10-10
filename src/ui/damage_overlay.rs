@@ -1,5 +1,5 @@
 use crate::{
-    combat::{damage::DamageDealtEvent, health::HealedEvent},
+    combat::{damage::DamageDealtEvent, health::Healed},
     configuration::ZLayer,
     utility::Lifespan,
 };
@@ -72,7 +72,7 @@ pub fn on_damage_overlay_amount(
 }
 
 pub fn on_healing_overlay_amount(
-    healing_trigger: On<HealedEvent>,
+    healing_trigger: On<Healed>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,
 ) {

@@ -6,7 +6,7 @@ use crate::{
         Item, Items,
         equipment::{
             EquipmentSlot, EquipmentUseFailedEvent, EquipmentUseFailure, Equippable, Equipped,
-            Mainhand, Offhand, UseEquipmentEvent,
+            Mainhand, Offhand, UseEquipment,
         },
     },
     prelude::Player,
@@ -376,7 +376,7 @@ pub fn update_action_bar(
 }
 
 pub fn on_equipment_used(
-    trigger: On<UseEquipmentEvent>,
+    trigger: On<UseEquipment>,
     player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,

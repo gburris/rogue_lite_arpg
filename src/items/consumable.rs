@@ -1,4 +1,4 @@
-use crate::{combat::health::AttemptHealingEvent, configuration::assets::SpriteAssets};
+use crate::{combat::health::AttemptHeal, configuration::assets::SpriteAssets};
 use bevy::prelude::*;
 
 use super::{Item, ItemType};
@@ -39,7 +39,7 @@ pub fn on_consume_event(
     if let Ok(consumable) = consumable_query.get(item_entity) {
         match &consumable.effect {
             ConsumableType::Heal(amount) => {
-                commands.trigger(AttemptHealingEvent {
+                commands.trigger(AttemptHeal {
                     entity: consume_trigger.target(),
                     amount: *amount,
                 });

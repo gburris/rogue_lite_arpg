@@ -177,11 +177,11 @@ pub fn is_target_in_sight(
                 }
 
                 // Check if hit entity is a child of the watched entity
-                if let Ok(Some(children)) = target_query.get(target_entity) {
-                    if children.contains(&hit.entity) {
-                        target_info.line_of_sight = true;
-                        break;
-                    }
+                if let Ok(Some(children)) = target_query.get(target_entity)
+                    && children.contains(&hit.entity)
+                {
+                    target_info.line_of_sight = true;
+                    break;
                 }
             }
         },

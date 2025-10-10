@@ -49,7 +49,7 @@ pub fn while_idling(
     target_query: Query<&Targeting>,
 ) {
     idle_query.iter_mut().for_each(|(ctx, mut idle)| {
-        if let Ok(_) = target_query.get(ctx.target_entity()) {
+        if target_query.get(ctx.target_entity()).is_ok() {
             info!("{} Got target while idling", ctx.target_entity());
             commands.trigger(ctx.failure());
         } else if idle.timer.tick(time.delta()).just_finished() {
@@ -115,7 +115,7 @@ pub fn on_wander_start(
     let ctx = wander_query.get(wander.entity).unwrap();
     let (mut motion, anchor, transform) = target_query.get_mut(ctx.target_entity()).unwrap();
 
-    if anchor.map_or(false, |a| a.outside_range(transform)) {
+    if anchor.is_some_and(|a| a.outside_range(transform)) {
         commands.trigger(ctx.failure());
     } else {
         motion.start_moving(random_direction());
@@ -129,7 +129,7 @@ pub fn while_wandering(
     target_query: Query<&Targeting>,
 ) {
     wander_query.iter_mut().for_each(|(ctx, mut wander)| {
-        if let Ok(_) = target_query.get(ctx.target_entity()) {
+        if target_query.get(ctx.target_entity()).is_ok() {
             info!("{} Got target while wandering", ctx.target_entity());
             commands.trigger(ctx.failure());
         } else if wander.timer.tick(time.delta()).just_finished() {

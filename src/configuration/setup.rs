@@ -5,7 +5,7 @@ use bevy_behave::prelude::BehavePlugin;
 use crate::{
     configuration::debug::DebugPlugin,
     labels::{
-        sets::MainSet,
+        sets::MainSystems,
         states::{AppState, PausedState, PlayingState},
     },
     progression::components::GameProgress,
@@ -58,6 +58,9 @@ impl Plugin for SetupPlugin {
                 PostUpdate,
                 view::camera_follow_system.before(TransformSystems::Propagate),
             )
-            .add_systems(FixedUpdate, view::ysort_transforms.in_set(MainSet::InGame));
+            .add_systems(
+                FixedUpdate,
+                view::ysort_transforms.in_set(MainSystems::InGame),
+            );
     }
 }

@@ -44,7 +44,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         "Cobblestone" => TileType::Cobblestone,
         "Grass" => TileType::Grass,
         _ => {
-            eprintln!(
+            warn!(
                 "Unknown floor type: {}, defaulting to Grass",
                 instance_type.floor_type
             );
@@ -60,7 +60,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
             "EmptySquare" => PrefabType::EmptySquare,
             "NPCHub" => PrefabType::NPCHub, // Added since you mentioned it
             _ => {
-                eprintln!("Unknown prefab type: {}", prefab_str);
+                warn!("Unknown prefab type: {}", prefab_str);
                 continue;
             }
         };

@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::labels::sets::InGameSet;
+use crate::labels::sets::InGameSystems;
 
 use super::view;
 
@@ -25,7 +25,7 @@ impl Plugin for DebugPlugin {
                 .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins((PhysicsDebugPlugin::default()))
+        .add_plugins(PhysicsDebugPlugin::default())
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {
@@ -44,13 +44,16 @@ impl Plugin for DebugPlugin {
             Update,
             (
                 handle_debug_input
-                    .in_set(InGameSet::PlayerInput)
+                    .in_set(InGameSystems::PlayerInput)
                     .ambiguous_with_all(),
                 view::camera_debug_system
-                    .in_set(InGameSet::HudOverlay)
+                    .in_set(InGameSystems::HudOverlay)
                     .run_if(resource_exists::<DebugRenderEnabled>),
             ),
         );
+
+        #[cfg(feature = "dev_native")]
+        app.add_plugins(FpsOverlayPlugin::default());
     }
 }
 

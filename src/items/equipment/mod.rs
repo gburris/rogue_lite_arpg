@@ -29,8 +29,8 @@ pub use use_equipped::on_weapon_melee;
 
 pub use unequip::Unequip;
 
-use crate::labels::sets::InGameSet;
-use crate::labels::sets::MainSet;
+use crate::labels::sets::InGameSystems;
+use crate::labels::sets::MainSystems;
 
 pub struct EquipmentPlugin;
 
@@ -40,8 +40,8 @@ impl Plugin for EquipmentPlugin {
             Update,
             (
                 // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
-                equipment_transform::update_equipment_transforms.in_set(MainSet::Shared),
-                use_equipped::tick_equippable_use_rate.in_set(InGameSet::Simulation),
+                equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
+                use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
             ),
         )
         .add_observer(equip::on_item_equipped)
@@ -91,7 +91,7 @@ impl fmt::Display for EquipmentSlot {
             EquipmentSlot::Mainhand => "Main Hand",
             EquipmentSlot::Offhand => "Off Hand",
         };
-        write!(f, "{}", variant_name)
+        write!(f, "{variant_name}")
     }
 }
 

@@ -2,7 +2,7 @@ mod gold;
 
 use bevy::prelude::*;
 
-use crate::labels::sets::InGameSet;
+use crate::labels::sets::InGameSystems;
 
 pub struct EconomyPlugin;
 
@@ -11,7 +11,7 @@ impl Plugin for EconomyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            gold::handle_gold_collisions.in_set(InGameSet::Collision),
+            gold::handle_gold_collisions.in_set(InGameSystems::Collision),
         )
         .add_observer(gold::on_gold_drop_event);
     }

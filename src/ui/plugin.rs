@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSet, states::AppState},
+    labels::{sets::InGameSystems, states::AppState},
     ui::*,
 };
 
@@ -50,7 +50,7 @@ impl Plugin for UIPlugin {
                     )
                         .chain(),
                 )
-                    .in_set(InGameSet::HudOverlay),
+                    .in_set(InGameSystems::HudOverlay),
             )
             .add_observer(damage_overlay::on_damage_overlay_amount)
             .add_observer(damage_overlay::on_healing_overlay_amount)

@@ -37,15 +37,15 @@ pub fn while_burning(
     mut health_query: Query<Entity, With<Health>>,
 ) {
     for (burn, status_of) in status_query.iter() {
-        if let Ok(entity) = health_query.get_mut(status_of.0) {
-            if burn.damage_frequency.just_finished() {
-                commands.trigger(AttemptDamage {
-                    entity: entity,
-                    ignore_invulnerable: true,
-                    damage_source: None,
-                    damage: Damage::Single(burn.damage),
-                });
-            }
+        if let Ok(entity) = health_query.get_mut(status_of.0)
+            && burn.damage_frequency.just_finished()
+        {
+            commands.trigger(AttemptDamage {
+                entity,
+                ignore_invulnerable: true,
+                damage_source: None,
+                damage: Damage::Single(burn.damage),
+            });
         }
     }
 }

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{
     items::lootable::ItemDrop,
-    labels::sets::{InGameSet, MainSet},
+    labels::sets::{InGameSystems, MainSystems},
 };
 
 mod consumable;
@@ -23,11 +23,11 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        magnet::update_magnet_locations.in_set(MainSet::InGame),
+        magnet::update_magnet_locations.in_set(MainSystems::InGame),
     )
     .add_systems(
         Update,
-        (lootable::glow_and_rotate_lootables.in_set(InGameSet::Vfx),),
+        (lootable::glow_and_rotate_lootables.in_set(InGameSystems::Vfx),),
     )
     .add_observer(on_item_added)
     .add_observer(on_item_added_to_inventory)

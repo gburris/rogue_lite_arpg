@@ -9,8 +9,8 @@ mod vision;
 pub mod prelude {
     pub use crate::character::enemy::Enemy;
     pub use crate::character::npc::NPC;
-    pub use crate::character::player::interact::PlayerInteractionRadius;
     pub use crate::character::player::Player;
+    pub use crate::character::player::interact::PlayerInteractionRadius;
     pub use crate::character::simple_motion::SimpleMotion;
     pub use crate::character::state::*;
     pub use crate::character::vision::Vision;
@@ -22,10 +22,10 @@ use bevy::prelude::*;
 use crate::{
     animation::AnimationTimer,
     configuration::{
-        debug::DebugRenderEnabled, GameCollisionLayer, YSort, CHARACTER_FEET_POS_OFFSET,
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort, debug::DebugRenderEnabled,
     },
     items::ItemCapacity,
-    labels::sets::{InGameSet, MainSet},
+    labels::sets::{InGameSystems, MainSystems},
 };
 
 use enemy::EnemyPlugin;
@@ -41,7 +41,7 @@ impl Plugin for CharacterPlugin {
 
         app.add_systems(
             FixedUpdate,
-            simple_motion::to_velocity.in_set(MainSet::InGame),
+            simple_motion::to_velocity.in_set(MainSystems::InGame),
         );
 
         app.add_systems(
@@ -62,7 +62,7 @@ impl Plugin for CharacterPlugin {
                 vision::should_target_watched,
                 vision::should_stop_targeting,
             )
-                .in_set(InGameSet::Simulation),
+                .in_set(InGameSystems::Simulation),
         )
         .add_observer(behavior::on_idle_start)
         .add_observer(behavior::on_wander_start)

@@ -110,17 +110,17 @@ pub fn update_equipment_transforms(
         let direction_transforms = EquipmentTransform::get(*direction);
 
         // Update mainhand equipment
-        if let Some(Mainhand(mainhand)) = mainhand {
-            if let Ok(mut transform) = transforms.get_mut(*mainhand) {
-                *transform = direction_transforms.mainhand;
-            }
+        if let Some(Mainhand(mainhand)) = mainhand
+            && let Ok(mut transform) = transforms.get_mut(*mainhand)
+        {
+            *transform = direction_transforms.mainhand;
         }
 
         // Update offhand equipment
-        if let Some(Offhand(offhand)) = offhand {
-            if let Ok(mut transform) = transforms.get_mut(*offhand) {
-                *transform = direction_transforms.offhand;
-            }
+        if let Some(Offhand(offhand)) = offhand
+            && let Ok(mut transform) = transforms.get_mut(*offhand)
+        {
+            *transform = direction_transforms.offhand;
         }
     }
 }

@@ -129,19 +129,19 @@ fn spawn_enemy(
         EnemyType::Warrior => commands.spawn((
             warrior(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(melee_enemy_behavior, &shadows),
+            enemy_children(melee_enemy_behavior, shadows),
         )),
 
         EnemyType::IceMage => commands.spawn((
             ice_mage(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, &shadows),
+            enemy_children(ranged_enemy_behavior, shadows),
         )),
 
         EnemyType::FireMage => commands.spawn((
             fire_mage(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, &shadows),
+            enemy_children(ranged_enemy_behavior, shadows),
         )),
     };
 }
@@ -168,7 +168,7 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
 
 fn enemy_children(behavior: Tree<Behave>, shadows: &Shadows) -> impl Bundle {
     children![
-        shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+        shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
         physical_collider(),
         hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
         BehaveTree::new(behavior.clone()),

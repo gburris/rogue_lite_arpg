@@ -25,7 +25,7 @@ use crate::{
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
     labels::{
-        sets::InGameSet,
+        sets::InGameSystems,
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
@@ -48,13 +48,13 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 death::finish_death_animation
-                    .in_set(InGameSet::Vfx)
+                    .in_set(InGameSystems::Vfx)
                     .run_if(in_state(PlayingState::Death)),
             )
             .add_systems(
                 Update,
                 input::player_input
-                    .in_set(InGameSet::PlayerInput)
+                    .in_set(InGameSystems::PlayerInput)
                     .run_if(in_state(PlayingState::Playing)),
             )
             .add_systems(
@@ -65,8 +65,8 @@ impl Plugin for PlayerPlugin {
                         aim::update_player_aim,
                         level::on_player_experience_change,
                     )
-                        .in_set(InGameSet::Simulation),
-                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSet::Vfx),
+                        .in_set(InGameSystems::Simulation),
+                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSystems::Vfx),
                 ),
             )
             .add_observer(level::on_level_up)

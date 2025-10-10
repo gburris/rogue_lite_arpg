@@ -159,7 +159,7 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
                 GameCollisionLayer::AllyHurtBox,
                 GameCollisionLayer::HighObstacle,
             ]))
-            .with_max_hits(1),
+            .with_max_hits(2),
         Watching(player),
         observe(defeat::on_enemy_defeated),
         observe(on_equipment_activated),

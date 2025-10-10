@@ -368,9 +368,10 @@ dependencies = [
  "bevy_behave",
  "bevy_ecs_tilemap",
  "console_error_panic_hook",
- "log",
+ "getrandom",
  "rand",
  "serde",
+ "tracing",
  "wasm-bindgen",
  "web-sys",
 ]

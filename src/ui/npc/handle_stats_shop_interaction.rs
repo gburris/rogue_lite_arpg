@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::stats_shop::{
-    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent,
+    StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent, spawn_stats_shop_menu,
 };
 
 pub fn handle_stat_button_interaction(

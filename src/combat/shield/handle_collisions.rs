@@ -1,5 +1,5 @@
 use crate::{
-    combat::{damage::DamageSource, shield::components::ProjectileReflection, Projectile},
+    combat::{Projectile, damage::DamageSource, shield::components::ProjectileReflection},
     configuration::GameCollisionLayer,
     prelude::Enemy,
 };

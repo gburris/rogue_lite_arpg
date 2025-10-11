@@ -1,13 +1,13 @@
 use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 
 use crate::{
     character::player::PlayerStats,
-    combat::{damage::DefeatedEvent, Health},
-    economy::{GoldDropEvent, Purse},
-    items::{lootable::ItemDropEvent, Item, Items},
+    combat::{Health, damage::Defeated},
+    economy::{GoldDrop, Purse},
+    items::{Item, Items, lootable::ItemDrop},
     prelude::*,
     utility::Lifespan,
 };
@@ -15,7 +15,7 @@ use crate::{
 use super::{Enemy, Experience};
 
 pub fn on_enemy_defeated(
-    trigger: Trigger<DefeatedEvent>,
+    defeated: On<Defeated>,
     mut commands: Commands,
     mut defeated_enemy_query: Query<
         (&Experience, &Transform, Option<&Items>, Option<&Purse>),
@@ -24,10 +24,10 @@ pub fn on_enemy_defeated(
     player_query: Single<(&PlayerStats, &mut Player)>,
     item_query: Query<&Item>,
 ) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     if let Ok((experience_to_gain, transform, items, purse)) =
-        defeated_enemy_query.get_mut(trigger.target())
+        defeated_enemy_query.get_mut(defeated.entity)
     {
         let (player_stats, mut player) = player_query.into_inner();
         //Give EXP to the player
@@ -37,9 +37,11 @@ pub fn on_enemy_defeated(
             for item_entity in items.iter() {
                 // Enemies drop their items based on drop rate
                 if let Ok(item_result) = item_query.get(item_entity) {
-                    let roll = rng.gen_range(0.0..1.0);
+                    let roll = rng.random_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger_targets(ItemDropEvent, item_entity);
+                        commands.trigger(ItemDrop {
+                            entity: item_entity,
+                        });
                     }
                 }
             }
@@ -47,8 +49,8 @@ pub fn on_enemy_defeated(
 
         if let Some(purse) = purse {
             // Enemies drop their gold based on player luck
-            if rng.gen_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
-                commands.trigger(GoldDropEvent {
+            if rng.random_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
+                commands.trigger(GoldDrop {
                     drop_location: transform.translation.truncate(),
                     amount: purse.amount,
                 });
@@ -56,7 +58,7 @@ pub fn on_enemy_defeated(
         }
 
         commands
-            .entity(trigger.target())
+            .entity(defeated.entity)
             .insert((Lifespan::new(2.0), ActionState::Defeated))
             .remove::<(Health, RigidBody)>()
             .despawn_related::<Children>();

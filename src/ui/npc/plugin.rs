@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::labels::{sets::MainSet, states::PausedState};
+use crate::labels::{sets::MainSystems, states::PausedState};
 
 use super::{
     handle_stats_shop_interaction::{
@@ -22,7 +22,7 @@ impl Plugin for NPCPauseScreensPlugin {
                 Update,
                 handle_stat_button_interaction
                     .run_if(in_state(PausedState::StatsShop))
-                    .in_set(MainSet::Menu),
+                    .in_set(MainSystems::Menu),
             );
     }
 }

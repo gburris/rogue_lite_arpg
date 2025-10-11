@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use crate::map::{
     components::{MarkerType, TileType},
     helpers::generator::{
-        utils::{calculate_center_rect, is_position_valid},
         MapData,
+        utils::{calculate_center_rect, is_position_valid},
     },
 };
 
@@ -47,7 +47,7 @@ const TEMPLE_HEIGHT: u32 = 7;
 const ENTRANCE_WIDTH: u32 = 3;
 
 fn find_temple_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Option<Rect> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let max_attempts = 100;
 
     let temple_size = TilemapSize {
@@ -56,8 +56,8 @@ fn find_temple_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Option<
     };
 
     for _ in 0..max_attempts {
-        let offset_x = rng.gen_range(-(map_size.x as i32 / 4)..(map_size.x as i32 / 4));
-        let offset_y = rng.gen_range(-(map_size.y as i32 / 4)..(map_size.y as i32 / 4));
+        let offset_x = rng.random_range(-(map_size.x as i32 / 4)..(map_size.x as i32 / 4));
+        let offset_y = rng.random_range(-(map_size.y as i32 / 4)..(map_size.y as i32 / 4));
 
         let base_bounds = calculate_center_rect(map_size, temple_size);
         let min_x = base_bounds.min.x + offset_x as f32;

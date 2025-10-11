@@ -1,6 +1,12 @@
 name: Build and Deploy to GitHub Pages
 permissions:
+  # Required to create a GitHub release: <https://docs.github.com/en/rest/releases/releases#create-a-release>.
   contents: write
+  # Required to deploy to GitHub Pages.
+  pages: write
+  # Required for GitHub Pages to verify the source of the deployment.
+  # See: <https://github.com/actions/deploy-pages/issues/329>.
+  id-token: write
 on:
   push:
     branches:
@@ -12,9 +18,32 @@ env:
   CARGO_INCREMENTAL: 0
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
+      - name: Set up environment
+        run: |
+          # Default values:
+          echo "app_binary_name=baba_yaga" >> "${GITHUB_ENV}"
+          echo "app_package_name=baba_yaga" >> "${GITHUB_ENV}"
+          echo "app_display_name=Baba Yaga" >> "${GITHUB_ENV}"
+          echo "app_short_name=Baba Yaga" >> "${GITHUB_ENV}"
+
+          # File paths:
+          echo "app=tmp/app/baba_yaga" >> "${GITHUB_ENV}"
+          echo "package=baba_yaga-web.zip" >> "${GITHUB_ENV}"
+
+          # Rustflags:
+          RUSTFLAGS='-Zthreads=0'
+          RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }"'-Zshare-generics=y'
+          echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
+
       - uses: nschloe/action-cached-lfs-checkout@v1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+
       # Cache cargo dependencies
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -25,27 +54,44 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Update Rust and Add Target
+
+      - name: Prepare output directories
+        run: rm -rf tmp; mkdir -p tmp/binary '${{ env.app }}'
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install Bevy CLI
+        run: cargo binstall --version 0.1.0-alpha.2 --locked --no-confirm --force --git='https://github.com/TheBevyFlock/bevy_cli' bevy_cli
+
+      - name: Build and add web bundle to app (Web)
         run: |
-          rustup update
-          rustup target add wasm32-unknown-unknown
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
-      - name: Build WASM
-        run: wasm-pack build --target web --out-dir dist
-      - name: Copy assets to dist folder
-        run: |
-          mkdir -p dist/assets
-          cp -r assets/* dist/assets/
+          cargo binstall --locked --no-confirm --force wasm-bindgen-cli
+          cargo binstall --locked --no-confirm --force wasm-opt
+          bevy build --locked --release --yes web --bundle
+          mv 'target/bevy_web/web-release/baba_yaga' '${{ env.app }}'
+
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
           ls
+
+      - name: Package app
+        working-directory: tmp/app
+        run: |
+            zip --recurse-paths '${{ env.package }}' 'baba_yaga'
+
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: dist/*
+          path: tmp/app/${{ env.package }}
           name: wasm-artifacts
+          retention-days: 1
+
+      - name: Upload web bundle to workflow artifacts for GitHub Pages (Web)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.app }}/baba_yaga
 
   deploy:
     needs: build
@@ -53,91 +99,14 @@ jobs:
     # Set environment variable for the directory name based on PR or main branch
     env:
       DEPLOY_DIR: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+    environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}/${{ env.DEPLOY_DIR }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: wasm-artifacts
       - name: Debug Download Output
         run: |
           echo "Debugging downloaded artifacts:"
           ls
-      - name: Create gh-pages Directory
-        run: |
-          mkdir -p gh-pages/${{ env.DEPLOY_DIR }}
-          cp -r assets gh-pages/${{ env.DEPLOY_DIR }}/
-          cp -r src gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga.js gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga_bg.wasm gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga_bg.wasm.d.ts gh-pages/${{ env.DEPLOY_DIR }}/
-          cp Cargo.toml gh-pages/${{ env.DEPLOY_DIR }}/
-          cp Cargo.lock gh-pages/${{ env.DEPLOY_DIR }}/
-          cp package.json gh-pages/${{ env.DEPLOY_DIR }}/
-          echo '<!DOCTYPE html>
-          <html>
-          <head>
-          <meta charset="utf-8"/>
-          <title>Bevy game - ${{ env.DEPLOY_DIR }}</title>
-          <style>
-          body {
-          margin: 0;
-          height: 100vh;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background: #333;
-          }
-          canvas {
-          background-color: white;
-          }
-          </style>
-          </head>
-          <body>
-          <script type="module">
-          console.log("Starting import...");
-          import init from "./baba_yaga.js";
-          console.log("Import completed, initializing...");
-          init().catch((error) => {
-          console.error("Error during initialization:", error);
-          });
-          </script>
-          </body>
-          </html>' > gh-pages/${{ env.DEPLOY_DIR }}/index.html
-          
-          # Create a simple index at the root listing all deployments
-          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo '<!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8"/>
-              <title>Bevy Game Deployments</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 2rem; }
-                h1 { color: #333; }
-                ul { list-style-type: none; padding: 0; }
-                li { margin: 0.5rem 0; }
-                a { color: #0366d6; text-decoration: none; }
-                a:hover { text-decoration: underline; }
-                .main { font-weight: bold; }
-              </style>
-            </head>
-            <body>
-              <h1>Bevy Game Deployments</h1>
-              <ul>
-                <li><a href="./main/" class="main">Main Branch (Stable)</a></li>
-            ' > gh-pages/index.html
-            
-            # Find all PR directories and add them to the index
-            find gh-pages -maxdepth 1 -type d -name "pr-*" | sort -r | while read dir; do
-              pr_name=$(basename "$dir")
-              echo "    <li><a href=\"./$pr_name/\">$pr_name</a></li>" >> gh-pages/index.html
-            done
-            
-            echo '  </ul>
-            </body>
-            </html>' >> gh-pages/index.html
-          fi
       - name: Debug gh-pages Directory
         run: |
           echo "Debugging gh-pages directory:"
@@ -147,33 +116,5 @@ jobs:
             ls -l gh-pages/${{ env.DEPLOY_DIR }}
           fi
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: gh-pages
-          keep_files: true  # Important to maintain other PR deployments
-
-  test:
-    needs: deploy
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Update Rust
-        run: rustup update
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-test-
-      - name: Run Cargo Tests
-        run: |
-          echo "Running Cargo tests..."
-          cargo test
-      - name: Report Test Results
-        if: always()
-        run: |
-          echo "Tests completed. This step runs after deployment and won't block the workflow."
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -14,7 +14,7 @@ pub fn handle_ui_inputs(mut commands: Commands, mut keyboard_input: ResMut<Butto
 }
 
 pub fn on_pause_input(
-    pause_input_trigger: Trigger<PauseInputEvent>,
+    pause_input_trigger: On<PauseInputEvent>,
     mut next_pause_state: ResMut<NextState<PausedState>>,
     state: Res<State<AppState>>,
     mut next_state: ResMut<NextState<AppState>>,

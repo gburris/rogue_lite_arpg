@@ -15,17 +15,19 @@ use super::helpers::generator::MapData;
 MAP EVENTS - Should be the only part of map exposed to other crates
 */
 
-#[derive(Event)]
-pub struct SpawnZoneEvent;
+#[derive(EntityEvent)]
+pub struct SpawnZone {
+    pub entity: Entity,
+}
 
 #[derive(Event)]
 pub struct CleanupZone;
 
 #[derive(Event)]
-pub struct NPCSpawnEvent(pub Vec<Vec2>);
+pub struct SpawnNpcs(pub Vec<Vec2>);
 
 #[derive(Debug, Event)]
-pub struct EnemiesSpawnEvent(pub Vec<EnemySpawnData>);
+pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
 
 #[derive(Component)]
 pub struct Wall;

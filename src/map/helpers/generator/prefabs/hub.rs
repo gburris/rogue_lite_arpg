@@ -8,7 +8,7 @@ use bevy_ecs_tilemap::map::TilemapSize;
 
 use crate::map::{
     components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType},
-    helpers::generator::{utils::calculate_center_rect, MapData},
+    helpers::generator::{MapData, utils::calculate_center_rect},
 };
 
 use super::prefab::Prefab;

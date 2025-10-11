@@ -1,5 +1,5 @@
 use crate::{
-    combat::{damage::DamageDealtEvent, health::HealedEvent},
+    combat::{damage::DamageDealt, health::Healed},
     configuration::ZLayer,
     utility::Lifespan,
 };
@@ -38,9 +38,9 @@ fn spawn_health_change_text(
 
     let rounded_amount = (amount * 10.0).round() / 10.0; // Round to 1 decimal place
     let formatted_amount = if rounded_amount.fract() == 0.0 {
-        format!("{:.0}", rounded_amount) // Display as a whole number
+        format!("{rounded_amount:.0}") // Display as a whole number
     } else {
-        format!("{:.1}", rounded_amount) // Display with one decimal place
+        format!("{rounded_amount:.1}") // Display with one decimal place
     };
 
     commands.entity(entity).with_child((
@@ -53,33 +53,33 @@ fn spawn_health_change_text(
 
 // Generate a random angle between -angle_range and angle_range degrees (convert to radians)
 fn random_angle(angle_range: f32) -> f32 {
-    let mut rng = rand::thread_rng();
-    rng.gen_range(-angle_range..angle_range).to_radians()
+    let mut rng = rand::rng();
+    rng.random_range(-angle_range..angle_range).to_radians()
 }
 
 pub fn on_damage_overlay_amount(
-    damage_trigger: Trigger<DamageDealtEvent>,
+    damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     damaged_query: Query<&ColliderAabb>,
 ) {
     spawn_health_change_text(
         &mut commands,
-        damage_trigger.target(),
-        damage_trigger.damage,
+        damage_dealt.entity,
+        damage_dealt.damage,
         RED_COLOR,
         &damaged_query,
     );
 }
 
 pub fn on_healing_overlay_amount(
-    healing_trigger: Trigger<HealedEvent>,
+    healed: On<Healed>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,
 ) {
     spawn_health_change_text(
         &mut commands,
-        healing_trigger.target(),
-        healing_trigger.amount,
+        healed.entity,
+        healed.amount,
         GREEN_COLOR,
         &healed_query,
     );

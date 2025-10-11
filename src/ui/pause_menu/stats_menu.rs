@@ -19,13 +19,13 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
     if let Ok(stats) = player_stats.single() {
         commands.spawn((
             StatsMenu,
-            StateScoped(PausedState::Stats),
+            DespawnOnExit(PausedState::Stats),
             Node {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
+                width: percent(100.0),
+                height: percent(100.0),
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(20.0),
+                row_gap: px(20.0),
                 ..default()
             },
             BackgroundColor::from(BACKGROUND_COLOR),
@@ -34,10 +34,10 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                 (
                     StatsDisplay,
                     Node {
-                        width: Val::Px(600.0),
-                        height: Val::Percent(80.0),
+                        width: px(600.0),
+                        height: percent(80.0),
                         flex_direction: FlexDirection::Column,
-                        padding: UiRect::all(Val::Px(20.0)),
+                        padding: px(20.0).all(),
                         ..default()
                     },
                     BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
@@ -61,10 +61,10 @@ fn stat_row(
 ) -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(60.0),
-            padding: UiRect::all(Val::Px(10.0)),
-            margin: UiRect::bottom(Val::Px(5.0)),
+            width: percent(100.0),
+            height: px(60.0),
+            padding: px(10.0).all(),
+            margin: px(5.0).bottom(),
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
             ..default()
@@ -83,14 +83,14 @@ fn stat_row(
                     (
                         text(description, 16.0),
                         Node {
-                            margin: UiRect::top(Val::Px(4.0)),
+                            margin: px(4.0).top(),
                             ..default()
                         },
                     )
                 ]
             ),
             // right side
-            text(format!("{}/99", stat_value), 24.0)
+            text(format!("{stat_value}/99"), 24.0)
         ],
     )
 }

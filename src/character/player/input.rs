@@ -1,16 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    items::equipment::{
-        EquipmentSlot, StopUsingHoldableEquipmentInputEvent, UseEquipmentInputEvent,
-    },
+    items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
     labels::states::PausedState,
 };
 
 use super::{
+    Player,
     interact::PlayerInteractionInput,
     movement::{PlayerMovementEvent, PlayerStoppedEvent},
-    Player,
 };
 
 #[derive(Event)]
@@ -22,7 +20,7 @@ pub fn player_input(
     mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     buttons: Res<ButtonInput<MouseButton>>,
-    mut event_writer: EventWriter<PlayerMovementEvent>, // Dispatch movement events
+    mut event_writer: MessageWriter<PlayerMovementEvent>, // Dispatch movement events
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();
@@ -40,29 +38,23 @@ pub fn player_input(
     }
 
     if buttons.pressed(MouseButton::Left) {
-        commands.trigger_targets(
-            UseEquipmentInputEvent {
-                slot: EquipmentSlot::Mainhand,
-            },
-            player_entity,
-        );
+        commands.trigger(UseEquipmentInput {
+            entity: player_entity,
+            slot: EquipmentSlot::Mainhand,
+        });
     }
 
     if buttons.just_pressed(MouseButton::Right) {
-        commands.trigger_targets(
-            UseEquipmentInputEvent {
-                slot: EquipmentSlot::Offhand,
-            },
-            player_entity,
-        );
+        commands.trigger(UseEquipmentInput {
+            entity: player_entity,
+            slot: EquipmentSlot::Offhand,
+        });
     }
     if buttons.just_released(MouseButton::Right) {
-        commands.trigger_targets(
-            StopUsingHoldableEquipmentInputEvent {
-                slot: EquipmentSlot::Offhand,
-            },
-            player_entity,
-        );
+        commands.trigger(StopUsingHoldableEquipmentInput {
+            entity: player_entity,
+            slot: EquipmentSlot::Offhand,
+        });
         return;
     }
     let mut direction = Vec2::ZERO;

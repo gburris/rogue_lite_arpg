@@ -2,11 +2,13 @@ use bevy::prelude::*;
 
 use std::{collections::HashMap, sync::LazyLock};
 
-use super::EquipmentOf;
 use crate::{
     combat::melee::ActiveMeleeAttack,
     configuration::ZLayer,
-    items::equipment::{Equipment, Mainhand, Offhand},
+    items::{
+        Items,
+        equipment::{Equipped, Mainhand, Offhand},
+    },
     prelude::*,
 };
 
@@ -96,28 +98,29 @@ pub fn update_equipment_transforms(
                 // Update when holder stops attacking, stops casting, etc...
                 Changed<ActionState>,
                 // Update when new item is equipped
-                Changed<Equipment>,
+                Changed<Mainhand>,
+                Changed<Offhand>,
             )>,
-            With<Equipment>,
+            With<Items>,
         ),
     >,
-    mut transforms: Query<&mut Transform, (With<EquipmentOf>, Without<ActiveMeleeAttack>)>,
+    mut transforms: Query<&mut Transform, (With<Equipped>, Without<ActiveMeleeAttack>)>,
 ) {
     for (mainhand, offhand, direction) in &all_worn_equipment {
         let direction_transforms = EquipmentTransform::get(*direction);
 
         // Update mainhand equipment
-        if let Some(Mainhand(mainhand)) = mainhand {
-            if let Ok(mut transform) = transforms.get_mut(*mainhand) {
-                *transform = direction_transforms.mainhand;
-            }
+        if let Some(Mainhand(mainhand)) = mainhand
+            && let Ok(mut transform) = transforms.get_mut(*mainhand)
+        {
+            *transform = direction_transforms.mainhand;
         }
 
         // Update offhand equipment
-        if let Some(Offhand(offhand)) = offhand {
-            if let Ok(mut transform) = transforms.get_mut(*offhand) {
-                *transform = direction_transforms.offhand;
-            }
+        if let Some(Offhand(offhand)) = offhand
+            && let Ok(mut transform) = transforms.get_mut(*offhand)
+        {
+            *transform = direction_transforms.offhand;
         }
     }
 }

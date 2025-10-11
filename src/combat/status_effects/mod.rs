@@ -8,7 +8,7 @@ pub use slow::Slowed;
 
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
-use crate::{labels::sets::InGameSet, utility::Lifespan};
+use crate::{labels::sets::InGameSystems, utility::Lifespan};
 
 pub struct StatusEffectPlugin;
 
@@ -22,7 +22,7 @@ impl Plugin for StatusEffectPlugin {
                 freeze::apply_frozen,
                 slow::apply_slowed,
             )
-                .in_set(InGameSet::Simulation),
+                .in_set(InGameSystems::Simulation),
         )
         .add_observer(burn::on_burn_removed)
         .add_observer(freeze::on_frozen_removed)

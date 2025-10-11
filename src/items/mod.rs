@@ -2,9 +2,8 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
 use crate::{
-    items::lootable::ItemDropEvent,
-    labels::sets::{InGameSet, MainSet},
-    utility::Lifespan,
+    items::lootable::ItemDrop,
+    labels::sets::{InGameSystems, MainSystems},
 };
 
 mod consumable;
@@ -14,7 +13,7 @@ mod magnet;
 mod mainhand_factory;
 mod offhand_factory;
 
-pub use consumable::{health_potion, Consumable, ConsumeEvent};
+pub use consumable::{Consumable, Consume, health_potion};
 pub use magnet::Magnet;
 pub use mainhand_factory::*;
 pub use offhand_factory::*;
@@ -24,11 +23,11 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        magnet::update_magnet_locations.in_set(MainSet::InGame),
+        magnet::update_magnet_locations.in_set(MainSystems::InGame),
     )
     .add_systems(
         Update,
-        (lootable::glow_and_rotate_lootables.in_set(InGameSet::Vfx),),
+        (lootable::glow_and_rotate_lootables.in_set(InGameSystems::Vfx),),
     )
     .add_observer(on_item_added)
     .add_observer(on_item_added_to_inventory)
@@ -36,10 +35,10 @@ pub fn plugin(app: &mut App) {
     .add_observer(consumable::on_consume_event);
 }
 
-fn on_item_added(trigger: Trigger<OnAdd, Item>, mut commands: Commands) {
+fn on_item_added(item_added: On<Add, Item>, mut commands: Commands) {
     // We do this to avoid having to manually add this observer to every item we create
     commands
-        .entity(trigger.target())
+        .entity(item_added.entity)
         .observe(lootable::on_lootable_item_interaction);
 }
 
@@ -100,13 +99,13 @@ pub enum ItemType {
 pub struct ItemCapacity(pub usize);
 
 fn on_item_added_to_inventory(
-    trigger: Trigger<OnAdd, ItemOf>,
+    item_added: On<Add, ItemOf>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
     holder_query: Query<(Option<&Items>, &ItemCapacity)>,
 ) {
     let holder_entity = item_query
-        .get(trigger.target())
+        .get(item_added.entity)
         .expect("ItemOf Missing HOWWWW");
 
     let (items, ItemCapacity(item_capacity)) = holder_query
@@ -114,7 +113,9 @@ fn on_item_added_to_inventory(
         .expect("Missing item capacity");
 
     if items.map(|items| items.len()).unwrap_or(0) >= *item_capacity {
-        commands.trigger_targets(ItemDropEvent, trigger.target());
+        commands.trigger(ItemDrop {
+            entity: item_added.entity,
+        });
     }
 }
 
@@ -122,10 +123,6 @@ fn on_item_added_to_inventory(
 pub struct HealingTome {
     pub healing: (f32, f32),
 }
-
-#[derive(Component)]
-#[require(Lifespan::new(1.0))]
-pub struct HealingTomeSpellVisualEffect;
 
 #[derive(Component)]
 pub struct Shield {

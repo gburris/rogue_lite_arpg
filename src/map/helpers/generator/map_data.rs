@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
 
 use super::{
-    prefabs::{prefab::Prefab, EmptySquare, Hub, Temple},
+    prefabs::{EmptySquare, Hub, Temple, prefab::Prefab},
     utils::{
         calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
         generate_entrance_exit_positions,

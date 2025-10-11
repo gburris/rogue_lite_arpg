@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 
 #[derive(Component)]
 pub struct ZoneBackground;
@@ -28,7 +28,7 @@ const GEM_COLORS: [(f32, f32, f32); 3] = [
 ];
 
 pub fn spawn_background(mut commands: Commands) {
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     // Spawn base floor
     commands.spawn((
@@ -47,16 +47,17 @@ pub fn spawn_background(mut commands: Commands) {
             let base_y = y as f32 * GRID_SIZE;
 
             // Spawn rock pile (4-6 rocks per pile)
-            let num_rocks = rng.gen_range(4..7);
+            let num_rocks = rng.random_range(4..7);
             for _ in 0..num_rocks {
-                let offset_x = rng.gen_range(-20.0..20.0);
-                let offset_y = rng.gen_range(-20.0..20.0);
+                let offset_x = rng.random_range(-20.0..20.0);
+                let offset_y = rng.random_range(-20.0..20.0);
 
-                let color_idx = rng.gen_range(0..ROCK_COLORS.len());
+                let color_idx = rng.random_range(0..ROCK_COLORS.len());
                 let (r, g, b) = ROCK_COLORS[color_idx];
-                let variation = 0.95 + (rng.gen::<f32>() * 0.1);
+                let variation = 0.95 + (rng.random::<f32>() * 0.1);
 
-                let rock_size = Vec2::new(rng.gen_range(15.0..25.0), rng.gen_range(15.0..25.0));
+                let rock_size =
+                    Vec2::new(rng.random_range(15.0..25.0), rng.random_range(15.0..25.0));
 
                 commands.spawn((
                     Sprite::from_color(
@@ -69,7 +70,7 @@ pub fn spawn_background(mut commands: Commands) {
             }
 
             // 1% chance to spawn gem cluster
-            if rng.gen::<f32>() < 0.001 {
+            if rng.random::<f32>() < 0.001 {
                 spawn_gem_cluster(&mut commands, &mut rng, base_x, base_y);
             }
         }
@@ -82,16 +83,16 @@ fn spawn_gem_cluster(
     base_x: f32,
     base_y: f32,
 ) {
-    let num_gems = rng.gen_range(3..7);
+    let num_gems = rng.random_range(3..7);
 
     for _ in 0..num_gems {
-        let offset_x = rng.gen_range(-30.0..30.0);
-        let offset_y = rng.gen_range(-30.0..30.0);
+        let offset_x = rng.random_range(-30.0..30.0);
+        let offset_y = rng.random_range(-30.0..30.0);
 
-        let color_idx = rng.gen_range(0..GEM_COLORS.len());
+        let color_idx = rng.random_range(0..GEM_COLORS.len());
         let (r, g, b) = GEM_COLORS[color_idx];
 
-        let gem_size = Vec2::new(rng.gen_range(8.0..12.0), rng.gen_range(8.0..12.0));
+        let gem_size = Vec2::new(rng.random_range(8.0..12.0), rng.random_range(8.0..12.0));
 
         commands.spawn((
             Sprite::from_color(Color::srgba(r, g, b, 0.9), gem_size),

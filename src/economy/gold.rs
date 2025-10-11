@@ -4,7 +4,7 @@ use rand::Rng;
 
 use crate::{
     character::player::interact::PlayerInteractionRadius,
-    configuration::{assets::SpriteAssets, GameCollisionLayer, YSort},
+    configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
     economy::Purse,
     items::Magnet,
     prelude::Player,
@@ -46,7 +46,7 @@ pub fn handle_gold_collisions(
 }
 
 #[derive(Event)]
-pub struct GoldDropEvent {
+pub struct GoldDrop {
     pub drop_location: Vec2,
     pub amount: u32,
 }
@@ -54,11 +54,11 @@ pub struct GoldDropEvent {
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
 pub fn on_gold_drop_event(
-    trigger: Trigger<GoldDropEvent>,
+    trigger: On<GoldDrop>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = trigger.amount;
     //TODO: Give each visual representation of money quantity
@@ -78,8 +78,8 @@ pub fn on_gold_drop_event(
         }
 
         // Random position within radius
-        let angle = rng.gen_range(0.0..std::f32::consts::TAU);
-        let distance = rng.gen_range(20.0..70.0);
+        let angle = rng.random_range(0.0..std::f32::consts::TAU);
+        let distance = rng.random_range(20.0..70.0);
         let offset = Vec2::from_angle(angle) * distance;
 
         commands

@@ -1,18 +1,17 @@
-use bevy::{ecs::spawn::SpawnWith, prelude::*};
-use bevy_bundled_observers::observers;
+use bevy::{ecs::spawn::SpawnWith, prelude::*, ui_widgets::observe};
 
 use crate::{
     configuration::assets::GameIcons,
     items::{
-        equipment::{EquipmentOf, EquipmentSlot, Equippable},
-        lootable::ItemDropEvent,
-        Consumable, ConsumeEvent, Item, ItemType,
+        Consumable, Consume, Item, ItemType,
+        equipment::{EquipmentSlot, Equippable, Equipped, Unequip},
+        lootable::ItemDrop,
     },
     prelude::Player,
 };
 
 use super::{
-    display_case::{UpdateDisplayCaseEvent, EQUIP_SLOT_WIDTH, VALUE_WIDTH},
+    display_case::{EQUIP_SLOT_WIDTH, UpdateDisplayCase, VALUE_WIDTH},
     primitives::{text, width},
 };
 
@@ -49,10 +48,10 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
     (
         DisplaySlotOf(context.item_entity),
         Node {
-            width: Val::Px(900.0),
-            height: Val::Px(32.0),
-            padding: UiRect::all(Val::Px(5.0)),
-            column_gap: Val::Px(5.0),
+            width: px(900.0),
+            height: px(32.0),
+            padding: px(5.0).all(),
+            column_gap: px(5.0),
             align_items: AlignItems::Center,
             ..default()
         },
@@ -72,8 +71,8 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                     ..default()
                 },
                 Node {
-                    width: Val::Px(30.0),
-                    height: Val::Px(30.0),
+                    width: px(30.0),
+                    height: px(30.0),
                     ..default()
                 },
                 Pickable::IGNORE,
@@ -102,7 +101,9 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                 Pickable::IGNORE,
             )),
         )),
-        observers![on_slot_clicked, on_slot_hover, on_slot_done_hovering],
+        observe(on_slot_clicked),
+        observe(on_slot_hover),
+        observe(on_slot_done_hovering),
     )
 }
 
@@ -113,8 +114,8 @@ fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
             ..default()
         },
         Node {
-            height: Val::Px(16.0),
-            width: Val::Px(16.0),
+            height: px(16.0),
+            width: px(16.0),
             ..default()
         },
         Pickable::IGNORE,
@@ -122,52 +123,57 @@ fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
 }
 
 pub fn on_slot_clicked(
-    trigger: Trigger<Pointer<Click>>,
+    pointer_click: On<Pointer<Click>>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
-    item_query: Query<(Has<Equippable>, Has<EquipmentOf>, Has<Consumable>), With<Item>>,
+    item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
 ) {
-    let item_entity = slot_query.get(trigger.target()).unwrap().0;
+    let item_entity = slot_query.get(pointer_click.entity).unwrap().0;
 
     if let Ok((equippable, is_equipped, consumable)) = item_query.get(item_entity) {
         // Left click consumes or equips item
-        if trigger.event.button == PointerButton::Primary {
+        if pointer_click.button == PointerButton::Primary {
             if equippable {
                 if is_equipped {
-                    commands.entity(item_entity).remove::<EquipmentOf>();
+                    commands.trigger(Unequip {
+                        entity: item_entity,
+                    });
                 } else {
-                    commands
-                        .entity(*player)
-                        .add_one_related::<EquipmentOf>(item_entity);
+                    commands.entity(item_entity).insert(Equipped);
                 }
             } else if consumable {
-                commands.trigger_targets(ConsumeEvent { item_entity }, *player);
+                commands.trigger(Consume {
+                    entity: *player,
+                    item_entity,
+                });
             }
 
         // Right click drops items from inventory
-        } else if trigger.event.button == PointerButton::Secondary {
-            commands.trigger_targets(ItemDropEvent, item_entity);
+        } else if pointer_click.button == PointerButton::Secondary {
+            commands.trigger(ItemDrop {
+                entity: item_entity,
+            });
         }
 
-        commands.trigger_targets(UpdateDisplayCaseEvent, *player);
+        commands.trigger(UpdateDisplayCase { entity: *player });
     }
 }
 
 pub fn on_slot_hover(
-    trigger: Trigger<Pointer<Over>>,
+    pointer_over: On<Pointer<Over>>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
-    if let Ok(mut background_color) = item_slot.get_mut(trigger.target()) {
+    if let Ok(mut background_color) = item_slot.get_mut(pointer_over.entity) {
         background_color.0 = HOVER_COLOR;
     }
 }
 
 pub fn on_slot_done_hovering(
-    trigger: Trigger<Pointer<Out>>,
+    pointer_out: On<Pointer<Out>>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
-    if let Ok(mut background_color) = item_slot.get_mut(trigger.target()) {
+    if let Ok(mut background_color) = item_slot.get_mut(pointer_out.entity) {
         background_color.0 = Color::NONE;
     }
 }

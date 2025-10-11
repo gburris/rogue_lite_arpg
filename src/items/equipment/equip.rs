@@ -4,8 +4,8 @@ use crate::{
     character::Character,
     combat::{damage::DamageSource, melee::MeleeWeapon},
     items::{
-        equipment::{EquipmentOf, Mainhand, MainhandOf, Offhand, OffhandOf},
         ItemOf,
+        equipment::{Equipped, Mainhand, MainhandOf, Offhand, OffhandOf, unequip::Unequip},
     },
     prelude::Enemy,
 };
@@ -13,52 +13,47 @@ use crate::{
 use super::{EquipmentSlot, Equippable};
 
 pub fn on_item_equipped(
-    trigger: Trigger<OnAdd, EquipmentOf>,
+    trigger: On<Add, Equipped>,
     mut commands: Commands,
-    mut item_query: Query<(
-        Has<ItemOf>,
-        &Equippable,
-        &EquipmentOf,
-        &mut Visibility,
-        Option<&MeleeWeapon>,
-    )>,
-    mut holder_query: Query<Has<Enemy>, With<Character>>,
+    mut item_query: Query<
+        (&ItemOf, &Equippable, &mut Visibility, Option<&MeleeWeapon>),
+        With<Equipped>,
+    >,
+    mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>, Has<Enemy>), With<Character>>,
 ) {
-    let equipped_entity = trigger.target();
-    let (is_in_inventory, equippable, equipment_of, mut visibility, melee_weapon) = item_query
+    let equipped_entity = trigger.entity;
+    let (item_of, equippable, mut visibility, melee_weapon) = item_query
         .get_mut(equipped_entity)
         .expect("Added Equipped to non-equippable item");
 
-    let is_enemy = holder_query
-        .get_mut(equipment_of.0)
-        .expect("Added Equipment to holder that is not a character");
+    let holder_entity = item_of.0;
 
-    if !is_in_inventory {
-        commands
-            .entity(equipped_entity)
-            .insert(ItemOf(equipment_of.0));
-    }
+    let (mainhand, offhand, is_enemy) = holder_query
+        .get_mut(holder_entity)
+        .expect("Added Equipment to holder that is not a character");
 
     commands
         .entity(equipped_entity)
-        .insert(ChildOf(equipment_of.0));
+        .insert(ChildOf(holder_entity));
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
-            // remove in bevy 0.17
-            commands.entity(equipment_of.0).remove::<Mainhand>();
+            if let Some(mainhand) = mainhand {
+                commands.trigger(Unequip { entity: mainhand.0 })
+            }
 
             commands
                 .entity(equipped_entity)
-                .insert(MainhandOf(equipment_of.0));
+                .insert(MainhandOf(holder_entity));
         }
         EquipmentSlot::Offhand => {
-            // remove in bevy 0.17
-            commands.entity(equipment_of.0).remove::<Offhand>();
+            if let Some(offhand) = offhand {
+                commands.trigger(Unequip { entity: offhand.0 })
+            }
 
             commands
                 .entity(equipped_entity)
-                .insert(OffhandOf(equipment_of.0));
+                .insert(OffhandOf(holder_entity));
         }
     }
 

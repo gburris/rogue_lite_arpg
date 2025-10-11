@@ -1,10 +1,9 @@
 use avian2d::prelude::Collider;
-use bevy::prelude::*;
-use bevy_bundled_observers::observers;
+use bevy::{prelude::*, ui_widgets::observe};
 
 use super::{
-    equipment::{on_healing_tome_cast, on_shield_block, EquipmentSlot},
     HealingTome, Holdable, Item, ItemType, Shield,
+    equipment::{EquipmentSlot, on_healing_tome_cast, on_shield_block},
 };
 use crate::{
     combat::{
@@ -25,7 +24,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
             healing: (25.0, 50.0),
         },
         Sprite::from_image(sprites.tome_of_healing.clone()),
-        observers![on_healing_tome_cast],
+        observe(on_healing_tome_cast),
     )
 }
 pub fn magic_shield(
@@ -51,7 +50,7 @@ pub fn magic_shield(
             }),
             ..default()
         },
-        observers![on_shield_block],
+        observe(on_shield_block),
     )
 }
 
@@ -77,6 +76,6 @@ pub fn knight_shield(
             }),
             ..default()
         },
-        observers![on_shield_block],
+        observe(on_shield_block),
     )
 }

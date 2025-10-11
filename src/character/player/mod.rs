@@ -1,6 +1,5 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
-use bevy_bundled_observers::observers;
+use bevy::{prelude::*, ui_widgets::observe};
 use movement::PlayerMovementEvent;
 
 mod aim;
@@ -13,20 +12,20 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    character::{physical_collider, player::interact::PlayerInteractionRadius, Character},
-    combat::{damage::hurtbox, invulnerable::IFrames, Health, Mana},
+    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
     economy::Purse,
     items::{
-        self,
-        equipment::{on_equipment_activated, on_equipment_deactivated, Equipment},
-        Items,
+        self, Items,
+        equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
     labels::{
-        sets::InGameSet,
+        sets::InGameSystems,
         states::{AppState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
@@ -41,7 +40,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<PlayerMovementEvent>()
+        app.add_message::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (spawn_player, transition_to_create_hub).chain(),
@@ -49,13 +48,13 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 death::finish_death_animation
-                    .in_set(InGameSet::Vfx)
+                    .in_set(InGameSystems::Vfx)
                     .run_if(in_state(PlayingState::Death)),
             )
             .add_systems(
                 Update,
                 input::player_input
-                    .in_set(InGameSet::PlayerInput)
+                    .in_set(InGameSystems::PlayerInput)
                     .run_if(in_state(PlayingState::Playing)),
             )
             .add_systems(
@@ -66,8 +65,8 @@ impl Plugin for PlayerPlugin {
                         aim::update_player_aim,
                         level::on_player_experience_change,
                     )
-                        .in_set(InGameSet::Simulation),
-                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSet::Vfx),
+                        .in_set(InGameSystems::Simulation),
+                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSystems::Vfx),
                 ),
             )
             .add_observer(level::on_level_up)
@@ -201,8 +200,8 @@ fn spawn_player(
                 ..default()
             },
         ),
-        related!(Equipment[items::fire_staff(&sprites, &sprite_layouts)]),
         related!(Items[
+        (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
             items::ice_staff(&sprites, &sprite_layouts),
             items::sword(&sprites),
             items::axe(&sprites),
@@ -211,11 +210,9 @@ fn spawn_player(
             items::health_potion(&sprites),
             items::tome_of_healing(&sprites)
         ]),
-        observers![
-            death::on_player_defeated,
-            on_equipment_activated,
-            on_equipment_deactivated
-        ],
+        observe(death::on_player_defeated),
+        observe(on_equipment_activated),
+        observe(on_equipment_deactivated),
         children![
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),

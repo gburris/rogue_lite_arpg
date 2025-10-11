@@ -1,12 +1,9 @@
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::{
-    color::palettes::css::{GREEN, YELLOW},
-    prelude::*,
-};
+use bevy::prelude::*;
 
-use crate::{combat::damage::DamageDealtEvent, prelude::*, utility::schedule_component_removal};
+use crate::{combat::damage::DamageDealt, prelude::*, utility::schedule_component_removal};
 
 /// Represents the current direction an entity is aiming toward (e.g., cursor for player, target for AI).
 /// This is decoupled from movement-facing direction.
@@ -177,31 +174,15 @@ pub fn is_target_in_sight(
                 }
 
                 // Check if hit entity is a child of the watched entity
-                if let Ok(Some(children)) = target_query.get(target_entity) {
-                    if children.contains(&hit.entity) {
-                        target_info.line_of_sight = true;
-                        break;
-                    }
+                if let Ok(Some(children)) = target_query.get(target_entity)
+                    && children.contains(&hit.entity)
+                {
+                    target_info.line_of_sight = true;
+                    break;
                 }
             }
         },
     );
-}
-
-/// Draws debug gizmos for AI vision direction and cone angles.
-pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
-    for (transform, vision) in &query {
-        let origin = transform.translation.xy();
-        let forward = vision.aim_direction;
-
-        gizmos.arrow_2d(origin, origin + forward * 64.0, GREEN);
-
-        let left = forward.rotate(Vec2::from_angle(45f32.to_radians()));
-        let right = forward.rotate(Vec2::from_angle(-45f32.to_radians()));
-
-        gizmos.line_2d(origin, origin + left * 64.0, YELLOW);
-        gizmos.line_2d(origin, origin + right * 64.0, YELLOW);
-    }
 }
 
 // ---------------------
@@ -213,21 +194,22 @@ pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
 /// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
 /// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
 pub fn on_damage_aggro(
-    damage_trigger: Trigger<DamageDealtEvent>,
+    damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     target_query: Query<&Watching>,
 ) {
-    if let Ok(watching) = target_query.get(damage_trigger.target()) {
+    let damaged_entity = damage_dealt.entity;
+
+    if let Ok(watching) = target_query.get(damaged_entity) {
         debug!(
             "I've been hit: {}, attacking: {}",
-            damage_trigger.target(),
-            watching.0
+            damaged_entity, watching.0
         );
         commands
-            .entity(damage_trigger.target())
+            .entity(damaged_entity)
             .insert((TargetLock, Targeting(watching.0)));
 
-        schedule_component_removal::<TargetLock>(&mut commands, damage_trigger.target(), 6.0);
+        schedule_component_removal::<TargetLock>(&mut commands, damaged_entity, 6.0);
     }
 }
 

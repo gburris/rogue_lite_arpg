@@ -1,23 +1,23 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::observe};
 use bevy_behave::prelude::*;
-use bevy_bundled_observers::observers;
 
 mod interaction;
 
 use crate::{
     character::{
+        Character,
         behavior::{Idle, Retreat},
         physical_collider,
         player::interact::InteractionZone,
-        Character,
     },
-    combat::{damage::hurtbox, Health},
+    combat::{Health, damage::hurtbox},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
-    items::{axe, equipment::Equipment, ice_staff, sword},
-    map::NPCSpawnEvent,
+    items::{Items, axe, equipment::Equipped, ice_staff, sword},
+    map::SpawnNpcs,
     prelude::*,
 };
 
@@ -46,7 +46,7 @@ const TILE_SIZE: f32 = 32.0;
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 fn spawn_npcs(
-    npc_spawn_trigger: Trigger<NPCSpawnEvent>,
+    npc_spawn_trigger: On<SpawnNpcs>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -104,7 +104,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
         Health::new(1000.0),
         Transform::from_translation(spawn_position.extend(0.0)),
         children![
-            shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+            shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             (
                 InteractionZone::NPC,
                 Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
@@ -125,8 +125,8 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
                 ..default()
             },
         ),
-        observers![interaction::on_game_guide_start],
-        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
+        observe(interaction::on_game_guide_start),
+        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts))]),
     )
 }
 
@@ -139,8 +139,8 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
                 ..default()
             },
         ),
-        observers![interaction::on_shop_keeper_store_open],
-        related!(Equipment[axe(sprites)]),
+        observe(interaction::on_shop_keeper_store_open),
+        related!(Items[(Equipped, axe(sprites))]),
     )
 }
 
@@ -153,8 +153,8 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
                 ..default()
             },
         ),
-        observers![interaction::on_stat_trainer_store_open],
-        related!(Equipment[sword(sprites)]),
+        observe(interaction::on_stat_trainer_store_open),
+        related!(Items[(Equipped, sword(sprites))]),
     )
 }
 

@@ -1,47 +1,70 @@
 [package]
 name = "baba_yaga"
 version = "0.1.0"
-edition = "2021"
-
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
-[lib]
-name = "baba_yaga"              # for wasm stuff
-crate-type = ["cdylib", "rlib"]
-
-[[bin]]
-name = "baba_yaga_bin" # for local build stuff
-path = "src/main.rs"
+edition = "2024"
 
 [dependencies]
-bevy = { version = "0.16.0", features = ["dynamic_linking", "bevy_dev_tools"] }
-bevy_ecs_tilemap = { version = "0.16" }
-bevy_asset_loader = { version = "0.23", features = ["2d"] }
-bevy_behave = { version = "0.3" }
-accesskit = "0.17"
-avian2d = "0.3"
-rand = "0.8"
-bevy_bundled_observers = "0.2"
-log = { version = "*", features = [
-  "max_level_debug",
-  "release_max_level_warn",
+bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
+bevy_ecs_tilemap = { git = "https://github.com/ChristopherBiscardi/bevy_ecs_tilemap", branch = "bevy-0.17" }
+bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
+bevy_behave = { git = "https://github.com/HazelTheWitch/bevy_behave", branch = "main" }
+accesskit = "0.21"
+avian2d = { git = "https://github.com/Jondolf/avian", branch = "main" }
+rand = "0.9"
+serde = "1.0.228"
+# Compile out low-severity logs to improve performance.
+# Remove these features if you want to profile your game with tracy.
+# (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
+tracing = { version = "0.1", features = [
+    "max_level_debug",
+    "release_max_level_warn",
 ] }
-serde = "1.0.217"
 
 [target.wasm32-unknown-unknown.dependencies]
-wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = [
-  "Document",
-  "Window",
-  "Element",
-  "HtmlCanvasElement",
-] }
-console_error_panic_hook = "0.1"
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [features]
-atlas = []
-trace = ["bevy/trace_tracy", "bevy/trace"]
+# Default to a native dev build.
+default = ["dev_native"]
+dev = [
+    # Improve compile times for dev builds by linking Bevy as a dynamic library.
+    "bevy/dynamic_linking",
+    "bevy/bevy_dev_tools",
+    "bevy/bevy_ui_debug",
+    # Improve error messages coming from Bevy
+    "bevy/track_location",
+]
+dev_native = [
+    "dev",
+    # Enable asset hot reloading for native dev builds.
+    "bevy/file_watcher",
+    # Enable embedded asset hot reloading for native dev builds.
+    "bevy/embedded_watcher",
+]
+
+[package.metadata.bevy_cli.release]
+# Disable dev features for release builds.
+default-features = false
+
+[package.metadata.bevy_cli.web]
+# Disable native features for web builds.
+default-features = false
+
+[package.metadata.bevy_cli.web.dev]
+features = ["dev"]
+
+[lints.rust]
+# Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+
+[lints.clippy]
+# Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
+# request more than 7 arguments, which would undesirably trigger this lint.
+too_many_arguments = "allow"
+# Queries may access many components, which would undesirably trigger this lint.
+type_complexity = "allow"
+# Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
+nonstandard_macro_braces = "warn"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
@@ -51,5 +74,34 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
-[lints.clippy]
-type_complexity = "allow"
+# Remove expensive debug assertions due to <https://github.com/bevyengine/bevy/issues/14291>
+[profile.dev.package.wgpu-types]
+debug-assertions = false
+
+[profile.release]
+# Compile the entire crate as one unit.
+# Slows compile times, marginal improvements.
+codegen-units = 1
+# Do a second optimization pass over the entire program, including dependencies.
+# Slows compile times, marginal improvements.
+lto = "thin"
+
+# This profile will be used by `bevy run web` automatically.
+[profile.web-release]
+# Default to release profile values.
+inherits = "release"
+# Optimize with size in mind (also try "z", sometimes it is better).
+# Slightly slows compile times, great improvements to file size and runtime performance.
+opt-level = "s"
+# Strip all debugging information from the binary to slightly reduce file size.
+strip = "debuginfo"
+
+# Optimize for build time in CI.
+[profile.ci]
+inherits = "dev"
+opt-level = 0
+debug = "line-tables-only"
+codegen-units = 4
+
+[profile.ci.package."*"]
+opt-level = 0

@@ -1,4 +1,4 @@
-use crate::{combat::health::AttemptHealingEvent, configuration::assets::SpriteAssets};
+use crate::{combat::health::AttemptHeal, configuration::assets::SpriteAssets};
 use bevy::prelude::*;
 
 use super::{Item, ItemType};
@@ -12,8 +12,9 @@ pub enum ConsumableType {
     Heal(f32), // Heal player for a specific amount
 }
 
-#[derive(Event)]
-pub struct ConsumeEvent {
+#[derive(EntityEvent)]
+pub struct Consume {
+    pub entity: Entity,
     pub item_entity: Entity,
 }
 
@@ -29,19 +30,19 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
 }
 
 pub fn on_consume_event(
-    consume_trigger: Trigger<ConsumeEvent>,
+    consume: On<Consume>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,
 ) {
-    let item_entity = consume_trigger.item_entity;
+    let item_entity = consume.item_entity;
 
     if let Ok(consumable) = consumable_query.get(item_entity) {
         match &consumable.effect {
             ConsumableType::Heal(amount) => {
-                commands.trigger_targets(
-                    AttemptHealingEvent { amount: *amount },
-                    consume_trigger.target(),
-                );
+                commands.trigger(AttemptHeal {
+                    entity: consume.entity,
+                    amount: *amount,
+                });
             }
         }
         commands.entity(item_entity).despawn();

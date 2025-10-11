@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     configuration::time_control,
     labels::{
-        sets::MainSet,
+        sets::MainSystems,
         states::{AppState, PausedState},
     },
     ui::{display_case, input},
@@ -23,7 +23,7 @@ impl Plugin for PauseMenuPlugin {
                     input::handle_ui_inputs,
                     display_case::update_scroll_position,
                 )
-                    .in_set(MainSet::Menu),
+                    .in_set(MainSystems::Menu),
             )
             .add_systems(OnEnter(AppState::Paused), (time_control::pause_game,))
             .add_systems(OnExit(AppState::Paused), time_control::resume_game)
@@ -33,7 +33,7 @@ impl Plugin for PauseMenuPlugin {
                 Update,
                 button_interactions::handle_menu_button_pressed
                     .run_if(in_state(PausedState::MainMenu))
-                    .in_set(MainSet::Menu),
+                    .in_set(MainSystems::Menu),
             )
             // Inventory menu systems
             .add_observer(display_case::on_display_case_updated)

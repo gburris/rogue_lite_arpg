@@ -1,12 +1,12 @@
 use bevy_behave::prelude::{BehaveCtx, BehaveTrigger};
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 use std::ops::Range;
 
 use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    items::equipment::{EquipmentSlot, UseEquipmentInputEvent},
+    items::equipment::{EquipmentSlot, UseEquipmentInput},
     prelude::*,
 };
 
@@ -25,18 +25,18 @@ impl Default for Idle {
 
 impl Idle {
     pub fn timer_range(mut self, idle_range: Range<f32>) -> Self {
-        let mut rng = thread_rng();
-        self.timer = Timer::from_seconds(rng.gen_range(idle_range), TimerMode::Repeating);
+        let mut rng = rng();
+        self.timer = Timer::from_seconds(rng.random_range(idle_range), TimerMode::Repeating);
         self
     }
 }
 
 pub fn on_idle_start(
-    trigger: Trigger<OnAdd, Idle>,
+    idle: On<Add, Idle>,
     idle_query: Query<&BehaveCtx, With<Idle>>,
     mut target_query: Query<&mut SimpleMotion>,
 ) {
-    let ctx = idle_query.get(trigger.target()).unwrap();
+    let ctx = idle_query.get(idle.entity).unwrap();
 
     let mut motion = target_query.get_mut(ctx.target_entity()).unwrap();
     motion.stop_moving();
@@ -49,7 +49,7 @@ pub fn while_idling(
     target_query: Query<&Targeting>,
 ) {
     idle_query.iter_mut().for_each(|(ctx, mut idle)| {
-        if let Ok(_) = target_query.get(ctx.target_entity()) {
+        if target_query.get(ctx.target_entity()).is_ok() {
             info!("{} Got target while idling", ctx.target_entity());
             commands.trigger(ctx.failure());
         } else if idle.timer.tick(time.delta()).just_finished() {
@@ -100,22 +100,22 @@ impl Wander {
     }
 
     pub fn timer_range(mut self, move_range: Range<f32>) -> Self {
-        let mut rng = thread_rng();
-        self.timer = Timer::from_seconds(rng.gen_range(move_range), TimerMode::Repeating);
+        let mut rng = rng();
+        self.timer = Timer::from_seconds(rng.random_range(move_range), TimerMode::Repeating);
         self
     }
 }
 
 pub fn on_wander_start(
-    trigger: Trigger<OnAdd, Wander>,
+    wander: On<Add, Wander>,
     mut commands: Commands,
     wander_query: Query<&BehaveCtx, With<Wander>>,
     mut target_query: Query<(&mut SimpleMotion, Option<&Anchor>, &Transform)>,
 ) {
-    let ctx = wander_query.get(trigger.target()).unwrap();
+    let ctx = wander_query.get(wander.entity).unwrap();
     let (mut motion, anchor, transform) = target_query.get_mut(ctx.target_entity()).unwrap();
 
-    if anchor.map_or(false, |a| a.outside_range(transform)) {
+    if anchor.is_some_and(|a| a.outside_range(transform)) {
         commands.trigger(ctx.failure());
     } else {
         motion.start_moving(random_direction());
@@ -129,7 +129,7 @@ pub fn while_wandering(
     target_query: Query<&Targeting>,
 ) {
     wander_query.iter_mut().for_each(|(ctx, mut wander)| {
-        if let Ok(_) = target_query.get(ctx.target_entity()) {
+        if target_query.get(ctx.target_entity()).is_ok() {
             info!("{} Got target while wandering", ctx.target_entity());
             commands.trigger(ctx.failure());
         } else if wander.timer.tick(time.delta()).just_finished() {
@@ -190,23 +190,21 @@ pub fn while_chasing(
 }
 
 fn random_direction() -> Vec2 {
-    let mut rng = thread_rng();
-    let angle = rng.gen_range(0.0..std::f32::consts::TAU);
+    let mut rng = rng();
+    let angle = rng.random_range(0.0..std::f32::consts::TAU);
     Vec2::new(angle.cos(), angle.sin())
 }
 
 #[derive(Clone)]
 pub struct AttemptMelee;
 
-pub fn on_attempt_melee(trigger: Trigger<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
-    let ctx = trigger.ctx();
+pub fn on_attempt_melee(attempt_melee: On<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
+    let ctx = attempt_melee.ctx();
 
-    commands.trigger_targets(
-        UseEquipmentInputEvent {
-            slot: EquipmentSlot::Mainhand,
-        },
-        ctx.target_entity(),
-    );
+    commands.trigger(UseEquipmentInput {
+        entity: ctx.target_entity(),
+        slot: EquipmentSlot::Mainhand,
+    });
     commands.trigger(ctx.success());
 }
 
@@ -225,12 +223,10 @@ pub fn while_keeping_distance_and_firing(
         if !has_target {
             commands.trigger(ctx.failure());
         } else {
-            commands.trigger_targets(
-                UseEquipmentInputEvent {
-                    slot: EquipmentSlot::Mainhand,
-                },
-                ctx.target_entity(),
-            );
+            commands.trigger(UseEquipmentInput {
+                entity: ctx.target_entity(),
+                slot: EquipmentSlot::Mainhand,
+            });
 
             if target_info.distance < 200.0 {
                 // If target is too close we try to move away

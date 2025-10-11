@@ -12,7 +12,7 @@ pub use melee_attack::*;
 pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
 
 //Repesent a melee weapon
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug)]
 pub struct MeleeWeapon {
     // Time it takes (seconds) to complete the attack, smaller = faster
     pub attack_time: f32,

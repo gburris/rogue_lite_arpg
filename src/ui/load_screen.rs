@@ -17,14 +17,14 @@ pub struct AnimatedText;
 pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
-        StateScoped(AppState::SpawnZone),
+        DespawnOnExit(AppState::SpawnZone),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
+            width: percent(100.0),
+            height: percent(100.0),
             flex_direction: FlexDirection::Column,
             // Make sure there's no extra space on sides
-            padding: UiRect::all(Val::Px(0.0)),
-            margin: UiRect::all(Val::Px(0.0)),
+            padding: px(0.0).all(),
+            margin: px(0.0).all(),
             ..default()
         },
         // Darker background for more contrast
@@ -43,26 +43,26 @@ pub fn spawn(mut commands: Commands) {
 fn title_section() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(300.0),
+            width: percent(100.0),
+            height: px(300.0),
             flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             // Remove any potential spacing issues
-            margin: UiRect::all(Val::Px(0.0)),
-            padding: UiRect::all(Val::Px(0.0)),
+            margin: px(0.0).all(),
+            padding: px(0.0).all(),
             ..default()
         },
         children![(
             Node {
-                width: Val::Auto,
-                height: Val::Auto,
-                border: UiRect::all(Val::Px(2.0)),
-                padding: UiRect::horizontal(Val::Px(40.0)),
-                margin: UiRect::all(Val::Px(0.0)),
+                width: auto(),
+                height: auto(),
+                border: px(2.0).all(),
+                padding: px(40.0).horizontal(),
+                margin: px(0.0).all(),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
             children![(
                 text("Loading Instance", TITLE_FONT_SIZE),
@@ -76,26 +76,26 @@ fn title_section() -> impl Bundle {
 fn body_section() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
+            width: percent(100.0),
             flex_grow: 1.0,
             flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
-            margin: UiRect::all(Val::Px(0.0)),
-            padding: UiRect::all(Val::Px(0.0)),
+            margin: px(0.0).all(),
+            padding: px(0.0).all(),
             ..default()
         },
         children![(
             Node {
-                width: Val::Px(300.0),
-                height: Val::Px(80.0),
-                border: UiRect::all(Val::Px(2.0)),
+                width: px(300.0),
+                height: px(80.0),
+                border: px(2.0).all(),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                margin: UiRect::all(Val::Px(20.0)),
+                margin: px(20.0).all(),
                 ..default()
             },
-            BorderColor(Color::srgb(0.8, 0.6, 0.2)),
+            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
             BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
                 text("Loading Instance", 48.0),
@@ -108,13 +108,13 @@ fn body_section() -> impl Bundle {
 fn footer_section() -> impl Bundle {
     (
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Px(120.0),
+            width: percent(100.0),
+            height: px(120.0),
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
-            padding: UiRect::all(Val::Px(20.0)),
-            margin: UiRect::all(Val::Px(0.0)),
+            padding: px(20.0).all(),
+            margin: px(0.0).all(),
             ..default()
         },
         BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),

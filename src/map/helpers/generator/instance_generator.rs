@@ -1,15 +1,14 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::map::TilemapSize;
-use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
-use rand::Rng;
+use rand::{Rng, distr::weighted::WeightedIndex};
 
 use crate::map::components::{InstanceAssets, MapLayout, TileType};
 
 use super::map_data::{MapDataBuilder, PrefabType};
 
 pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let instance_names = [
         "Swamp",
@@ -26,24 +25,26 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .get(instance_names[selected_index])
         .unwrap();
 
-    let size_x = rng.gen_range(instance_type.size_x_range.0..=instance_type.size_x_range.1) as u32;
-    let size_y = rng.gen_range(instance_type.size_y_range.0..=instance_type.size_y_range.1) as u32;
+    let size_x =
+        rng.random_range(instance_type.size_x_range.0..=instance_type.size_x_range.1) as u32;
+    let size_y =
+        rng.random_range(instance_type.size_y_range.0..=instance_type.size_y_range.1) as u32;
     let map_size = TilemapSize {
         x: size_x,
         y: size_y,
     };
-    let num_enemies = rng.gen_range(
+    let num_enemies = rng.random_range(
         instance_type.number_of_enemies_range.0..=instance_type.number_of_enemies_range.1,
     ) as u32;
     let num_chests =
-        rng.gen_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
+        rng.random_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
 
     let floor_type = match instance_type.floor_type.as_str() {
         "Ground" => TileType::Ground,
         "Cobblestone" => TileType::Cobblestone,
         "Grass" => TileType::Grass,
         _ => {
-            eprintln!(
+            warn!(
                 "Unknown floor type: {}, defaulting to Grass",
                 instance_type.floor_type
             );
@@ -59,7 +60,7 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
             "EmptySquare" => PrefabType::EmptySquare,
             "NPCHub" => PrefabType::NPCHub, // Added since you mentioned it
             _ => {
-                eprintln!("Unknown prefab type: {}", prefab_str);
+                warn!("Unknown prefab type: {}", prefab_str);
                 continue;
             }
         };

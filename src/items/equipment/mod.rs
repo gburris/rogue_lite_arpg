@@ -13,11 +13,11 @@ mod use_equipped;
 pub use equipment_transform::EquipmentTransform;
 
 // Equipment events to "get shit done"
-pub use use_equipped::EquipmentUseFailedEvent;
+pub use use_equipped::EquipmentUseFailed;
 pub use use_equipped::EquipmentUseFailure;
-pub use use_equipped::StopUsingHoldableEquipmentInputEvent;
-pub use use_equipped::UseEquipmentEvent;
-pub use use_equipped::UseEquipmentInputEvent;
+pub use use_equipped::StopUsingHoldableEquipmentInput;
+pub use use_equipped::UseEquipment;
+pub use use_equipped::UseEquipmentInput;
 
 // Observers to be added to respective equipment/weapons that want this functionality
 pub use use_equipped::on_equipment_activated;
@@ -27,8 +27,10 @@ pub use use_equipped::on_shield_block;
 pub use use_equipped::on_weapon_fired;
 pub use use_equipped::on_weapon_melee;
 
-use crate::labels::sets::InGameSet;
-use crate::labels::sets::MainSet;
+pub use unequip::Unequip;
+
+use crate::labels::sets::InGameSystems;
+use crate::labels::sets::MainSystems;
 
 pub struct EquipmentPlugin;
 
@@ -38,17 +40,16 @@ impl Plugin for EquipmentPlugin {
             Update,
             (
                 // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
-                equipment_transform::update_equipment_transforms.in_set(MainSet::Shared),
-                use_equipped::tick_equippable_use_rate.in_set(InGameSet::Simulation),
+                equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
+                use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
             ),
         )
         .add_observer(equip::on_item_equipped)
-        .add_observer(unequip::on_item_unequipped)
-        .add_observer(unequip::on_equip_slot_removed);
+        .add_observer(unequip::on_item_unequipped);
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
@@ -90,17 +91,12 @@ impl fmt::Display for EquipmentSlot {
             EquipmentSlot::Mainhand => "Main Hand",
             EquipmentSlot::Offhand => "Off Hand",
         };
-        write!(f, "{}", variant_name)
+        write!(f, "{variant_name}")
     }
 }
 
-#[derive(Component, Clone)]
-#[relationship(relationship_target = Equipment)]
-pub struct EquipmentOf(Entity);
-
 #[derive(Component, Clone, Debug)]
-#[relationship_target(relationship = EquipmentOf)]
-pub struct Equipment(Vec<Entity>);
+pub struct Equipped;
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]

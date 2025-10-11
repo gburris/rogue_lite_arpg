@@ -1,16 +1,15 @@
 use avian2d::prelude::*;
-use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy_bundled_observers::observers;
+use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    character::player::interact::{InteractionEvent, InteractionZone},
+    character::player::interact::{Interaction, InteractionZone},
     configuration::{
-        assets::{SpriteAssets, SpriteSheetLayouts},
         GameCollisionLayer, YSort,
+        assets::{SpriteAssets, SpriteSheetLayouts},
     },
-    economy::GoldDropEvent,
+    economy::GoldDrop,
 };
 
 /// Center of chest relative to its sprite's anchor point
@@ -37,7 +36,7 @@ pub struct Chest;
 pub struct ChestCollider;
 
 pub fn on_spawn_chests_event(
-    chest_spawn_trigger: Trigger<SpawnChestsEvent>,
+    chest_spawn_trigger: On<SpawnChestsEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -62,9 +61,9 @@ fn spawn_chest(
                 layout: sprite_layouts.chest_layout.clone(),
                 index: 0,
             }),
-            anchor: Anchor::Custom(Vec2::new(-0.18, 0.0)),
             ..default()
         },
+        Anchor(Vec2::new(-0.18, 0.0)),
         AnimationIndices::OneShot(0..=8),
         Transform {
             translation: spawn_position.extend(0.0),
@@ -78,16 +77,16 @@ fn spawn_chest(
                 Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
             )
         ],
-        observers![on_interaction_open_chest],
+        observe(on_interaction_open_chest),
     ));
 }
 
 pub fn on_interaction_open_chest(
-    open_chest_trigger: Trigger<InteractionEvent>,
+    chest_opened: On<Interaction>,
     chest_transforms: Query<&Transform, With<Chest>>,
     mut commands: Commands,
 ) {
-    let chest_entity = open_chest_trigger.target();
+    let chest_entity = chest_opened.entity;
 
     commands
         .entity(chest_entity)
@@ -97,11 +96,11 @@ pub fn on_interaction_open_chest(
         )));
 
     commands
-        .entity(open_chest_trigger.interaction_zone_entity)
+        .entity(chest_opened.interaction_zone_entity)
         .despawn();
 
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
-        commands.trigger(GoldDropEvent {
+        commands.trigger(GoldDrop {
             amount: 999,
             drop_location: chest_transform.translation.truncate(),
         });

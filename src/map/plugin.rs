@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSet, states::AppState},
+    labels::{sets::InGameSystems, states::AppState},
     map::{chest, components::WorldSpaceConfig, portal, systems::*},
 };
 
@@ -16,7 +16,7 @@ impl Plugin for MapPlugin {
                     zone::despawn_previous_zone,
                     zone::spawn_zone_tilemap,
                     zone::spawn_zone_colliders,
-                    zone::spawn_background,
+                    //zone::spawn_background,
                     zone::spawn_zone_entities,
                     zone::finish_create_zone,
                 )
@@ -25,7 +25,7 @@ impl Plugin for MapPlugin {
             .add_systems(OnEnter(AppState::CreateHub), (insert_hub_layout,).chain())
             .add_systems(
                 Update,
-                (portal::handle_portal_collisions).in_set(InGameSet::Collision),
+                (portal::handle_portal_collisions).in_set(InGameSystems::Collision),
             )
             .insert_resource(WorldSpaceConfig::default())
             .add_observer(portal::on_portal_entered)

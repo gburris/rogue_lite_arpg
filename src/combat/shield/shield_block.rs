@@ -1,12 +1,12 @@
 use crate::{
     combat::{
-        mana::{ManaCost, ManaDrainRate},
         Mana,
+        mana::{ManaCost, ManaDrainRate},
     },
     configuration::ZLayer,
     items::{
-        equipment::{EquipmentOf, EquipmentTransform},
         ItemOf, Shield,
+        equipment::{EquipmentTransform, Equipped},
     },
     prelude::*,
 };
@@ -14,14 +14,14 @@ use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
-use super::{components::ProjectileReflection, ActiveShield};
+use super::{ActiveShield, components::ProjectileReflection};
 
 pub fn update_active_shields(
     mut commands: Commands,
     time: Res<Time>,
     mut active_shield_query: Query<
         (Entity, &ManaDrainRate, &ItemOf, &mut Sprite),
-        (With<ActiveShield>, With<EquipmentOf>),
+        (With<ActiveShield>, With<Equipped>),
     >,
     mut holder_query: Query<(&Vision, &FacingDirection, Option<&mut Mana>)>,
 ) {
@@ -104,15 +104,15 @@ pub fn deactivate_shield(
 }
 
 pub fn activate_shield(
-    trigger: Trigger<OnAdd, ActiveShield>,
+    active_shield: On<Add, ActiveShield>,
     mut commands: Commands,
     shield_query: Query<&Shield>,
 ) {
-    if let Ok(activated_shield) = shield_query.get(trigger.target()) {
-        commands
-            .entity(trigger.target())
-            .insert(activated_shield.hitbox.clone())
-            .insert(ProjectileReflection::collision_layers());
+    if let Ok(activated_shield) = shield_query.get(active_shield.entity) {
+        commands.entity(active_shield.entity).insert((
+            activated_shield.hitbox.clone(),
+            ProjectileReflection::collision_layers(),
+        ));
     } else {
         warn!("Active Shield added to something that isn't a shield");
     }

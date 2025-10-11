@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum MainSet {
+pub enum MainSystems {
     InGame,
     Menu,
     Shared,
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
-pub enum InGameSet {
+pub enum InGameSystems {
     DespawnEntities, // Despawn entities only! MUST happen before simulation of this new frame we are in!
     PlayerInput,
     Simulation, // Most game logic (queries modifying components)

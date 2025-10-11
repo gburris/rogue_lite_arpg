@@ -7,10 +7,10 @@ use bevy::{
 use crate::{
     configuration::assets::GameIcons,
     items::{
-        equipment::{EquipmentOf, Equippable},
         Item, Items,
+        equipment::{Equippable, Equipped},
     },
-    ui::display_case_slot::{display_slot, DisplaySlotOf},
+    ui::display_case_slot::{DisplaySlotOf, display_slot},
 };
 
 use super::{
@@ -32,13 +32,15 @@ pub struct DisplayCaseOf(Entity);
 pub struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
-#[derive(Event)]
-pub struct UpdateDisplayCaseEvent;
+#[derive(EntityEvent)]
+pub struct UpdateDisplayCase {
+    pub entity: Entity,
+}
 
 pub fn display_case(inventory_owner: Entity) -> impl Bundle {
     (
         Node {
-            height: Val::Px(800.0),
+            height: px(800.0),
             flex_direction: FlexDirection::Column,
             ..default()
         },
@@ -47,12 +49,12 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
             // inventory header
             (
                 Node {
-                    width: Val::Px(900.0),
-                    height: Val::Px(35.0),
-                    border: UiRect::vertical(Val::Px(2.0)),
-                    margin: UiRect::top(Val::Px(5.0)),
-                    padding: UiRect::all(Val::Px(5.0)),
-                    column_gap: Val::Px(5.0),
+                    width: px(900.0),
+                    height: px(35.0),
+                    border: px(2.0).vertical(),
+                    margin: px(5.0).top(),
+                    padding: px(5.0).all(),
+                    column_gap: px(5.0),
                     align_items: AlignItems::Center,
                     ..default()
                 },
@@ -82,17 +84,17 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
 }
 
 pub fn on_display_case_updated(
-    trigger: Trigger<UpdateDisplayCaseEvent>,
+    update_display_case: On<UpdateDisplayCase>,
     mut commands: Commands,
     icons: Res<GameIcons>,
     slot_container_query: Query<Option<&Children>, With<DisplayCaseOf>>,
     slots_querys: Query<(Entity, &DisplaySlotOf)>,
     items_query: Query<(Option<&Items>, &DisplayedBy)>,
-    item_query: Query<(&Name, &Item, Option<&Equippable>, Has<EquipmentOf>)>,
+    item_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
 ) {
     // Get entities inventory
     let (items, displayed_by) = items_query
-        .get(trigger.target())
+        .get(update_display_case.entity)
         .expect("Item holder is not displayed by anything");
 
     // Get children entities of DisplayCaseOf which should all have a DisplayCaseSlot
@@ -133,20 +135,20 @@ const LINE_HEIGHT: f32 = 35.;
 
 /// Updates the scroll position of scrollable nodes in response to mouse input
 pub fn update_scroll_position(
-    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut mouse_wheel_messages: MessageReader<MouseWheel>,
     hover_map: Res<HoverMap>,
     mut scrolled_node_query: Query<&mut ScrollPosition>,
 ) {
-    for mouse_wheel_event in mouse_wheel_events.read() {
-        let dy = match mouse_wheel_event.unit {
-            MouseScrollUnit::Line => mouse_wheel_event.y * LINE_HEIGHT,
-            MouseScrollUnit::Pixel => mouse_wheel_event.y,
+    for mouse_wheel_message in mouse_wheel_messages.read() {
+        let dy = match mouse_wheel_message.unit {
+            MouseScrollUnit::Line => mouse_wheel_message.y * LINE_HEIGHT,
+            MouseScrollUnit::Pixel => mouse_wheel_message.y,
         };
 
         for (_pointer, pointer_map) in hover_map.iter() {
             for (entity, _hit) in pointer_map.iter() {
                 if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
-                    scroll_position.offset_y -= dy;
+                    scroll_position.y -= dy;
                 }
             }
         }

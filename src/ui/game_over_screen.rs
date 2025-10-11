@@ -16,14 +16,14 @@ pub struct RestartButton;
 pub fn spawn(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
-        StateScoped(AppState::GameOver),
+        DespawnOnExit(AppState::GameOver),
         Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
+            width: percent(100.0),
+            height: percent(100.0),
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
-            padding: UiRect::top(Val::Px(200.0)),
-            row_gap: Val::Px(20.),
+            padding: px(200.0).top(),
+            row_gap: px(20.),
             ..default()
         },
         BackgroundColor::from(Color::BLACK.with_alpha(1.0)), // want to allow game to be seen in background
@@ -35,16 +35,16 @@ pub fn spawn(mut commands: Commands) {
                 Button,
                 RestartButton,
                 Node {
-                    width: Val::Px(150.0),
-                    height: Val::Px(65.0),
-                    border: UiRect::all(Val::Px(5.0)),
+                    width: px(150.0),
+                    height: px(65.0),
+                    border: px(5.0).all(),
                     // horizontally center child text
                     justify_content: JustifyContent::Center,
                     // vertically center child text
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BorderColor(Color::BLACK),
+                BorderColor::all(Color::BLACK),
                 BorderRadius::MAX,
                 BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
                 children![Text::new("Restart"), Observer::new(on_restart_clicked)]
@@ -55,7 +55,7 @@ pub fn spawn(mut commands: Commands) {
 
 /// Passes players current level to the next instance of the game, despawns everything and starts again
 fn on_restart_clicked(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     player: Single<&Player>,
@@ -66,6 +66,6 @@ fn on_restart_clicked(
     game_state.set(AppState::SpawnPlayer);
 }
 
-pub fn on_restart_event_cleanup_zone(_: Trigger<RestartEvent>, mut commands: Commands) {
+pub fn on_restart_event_cleanup_zone(_: On<RestartEvent>, mut commands: Commands) {
     commands.trigger(CleanupZone);
 }

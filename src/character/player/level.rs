@@ -27,7 +27,7 @@ pub fn on_player_experience_change(mut commands: Commands, mut player: Single<&m
 }
 
 pub fn on_level_up(
-    _: Trigger<PlayerLevelUpEvent>,
+    _: On<PlayerLevelUpEvent>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,

@@ -1,12 +1,16 @@
-use std::{collections::HashMap, fs::File, io::BufReader};
+use std::{collections::HashMap, io::BufReader};
 
 use crate::map::components::{InstanceAssets, InstanceConfig, InstanceType};
-use bevy::{prelude::Commands, scene::ron::de::from_reader};
+use bevy::{prelude::*, scene::ron::de::from_reader};
 
 pub fn setup_instance_data(mut commands: Commands) {
     let instance_config = load_instance_data();
     commands.insert_resource(InstanceAssets { instance_config });
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::fs::File;
+
 #[cfg(not(target_arch = "wasm32"))]
 fn fetch_instance_data() -> File {
     File::open("assets/config/instances.ron").expect("Failed to open RON file")
@@ -22,7 +26,7 @@ fn load_instance_data() -> HashMap<String, InstanceType> {
 
     from_reader::<_, InstanceConfig>(reader)
         .unwrap_or_else(|e| {
-            eprintln!("Failed to parse RON file: {:?}", e);
+            error!("Failed to parse RON file: {:?}", e);
             panic!("RON parsing error");
         })
         .instances

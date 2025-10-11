@@ -1,28 +1,29 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::observe};
 use bevy_behave::prelude::*;
-use bevy_bundled_observers::observers;
 
 mod defeat;
 
 use crate::{
     character::{
+        Character,
         behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
-        Character,
     },
-    combat::{damage::hurtbox, Health, Mana},
+    combat::{Health, Mana, damage::hurtbox},
     configuration::{
+        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET,
+        shadow,
     },
     economy::Purse,
     items::{
-        equipment::{on_equipment_activated, Equipment},
-        fire_staff, health_potion, ice_staff, sword, Items,
+        Items,
+        equipment::{Equipped, on_equipment_activated},
+        fire_staff, health_potion, ice_staff, sword,
     },
-    map::EnemiesSpawnEvent,
+    map::SpawnEnemies,
     prelude::*,
 };
 
@@ -64,14 +65,14 @@ pub enum EnemyType {
 }
 
 fn spawn_enemies(
-    enemy_trigger: Trigger<EnemiesSpawnEvent>,
+    spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
     player: Single<Entity, With<Player>>,
 ) {
-    for spawn_data in enemy_trigger.0.clone() {
+    for spawn_data in spawn_enemies.0.clone() {
         spawn_enemy(
             &mut commands,
             spawn_data,
@@ -128,19 +129,19 @@ fn spawn_enemy(
         EnemyType::Warrior => commands.spawn((
             warrior(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(melee_enemy_behavior, &shadows),
+            enemy_children(melee_enemy_behavior, shadows),
         )),
 
         EnemyType::IceMage => commands.spawn((
             ice_mage(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, &shadows),
+            enemy_children(ranged_enemy_behavior, shadows),
         )),
 
         EnemyType::FireMage => commands.spawn((
             fire_mage(sprites, sprite_layouts),
             base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, &shadows),
+            enemy_children(ranged_enemy_behavior, shadows),
         )),
     };
 }
@@ -158,15 +159,16 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
                 GameCollisionLayer::AllyHurtBox,
                 GameCollisionLayer::HighObstacle,
             ]))
-            .with_max_hits(1),
+            .with_max_hits(2),
         Watching(player),
-        observers![defeat::on_enemy_defeated, on_equipment_activated],
+        observe(defeat::on_enemy_defeated),
+        observe(on_equipment_activated),
     )
 }
 
 fn enemy_children(behavior: Tree<Behave>, shadows: &Shadows) -> impl Bundle {
     children![
-        shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+        shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
         physical_collider(),
         hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
         BehaveTree::new(behavior.clone()),
@@ -184,8 +186,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
                 ..default()
             },
         ),
-        related!(Equipment[sword(sprites)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, sword(sprites)), health_potion(sprites)]),
     )
 }
 
@@ -200,8 +201,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
                 ..default()
             },
         ),
-        related!(Equipment[ice_staff(sprites, sprite_layouts)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts)), health_potion(sprites)]),
     )
 }
 
@@ -216,7 +216,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
                 ..default()
             },
         ),
-        related!(Equipment[fire_staff(sprites, sprite_layouts)]),
-        related!(Items[health_potion(sprites)]),
+        related!(Items[(Equipped, fire_staff(sprites, sprite_layouts)), health_potion(sprites)]),
     )
 }

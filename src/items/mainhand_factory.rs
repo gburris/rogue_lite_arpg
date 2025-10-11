@@ -1,20 +1,19 @@
 use std::f32::consts::FRAC_PI_8;
 
 use avian2d::prelude::Collider;
-use bevy::prelude::*;
-use bevy_bundled_observers::observers;
+use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
     combat::{
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
-        projectile::{fireball, icebolt, Projectiles},
+        projectile::{Projectiles, fireball, icebolt},
         status_effects::{Effects, Frozen},
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{
-        equipment::{on_weapon_fired, on_weapon_melee, Equippable},
         Item,
+        equipment::{Equippable, on_weapon_fired, on_weapon_melee},
     },
     utility::Lifespan,
 };
@@ -34,7 +33,7 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
         Equippable::default(),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
-        observers![on_weapon_melee],
+        observe(on_weapon_melee),
     )
 }
 
@@ -52,7 +51,7 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),
-        observers![on_weapon_melee],
+        observe(on_weapon_melee),
     )
 }
 
@@ -70,7 +69,7 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
                 fireball(sprites, sprite_layouts, FRAC_PI_8)
             ]
         ),
-        observers![on_weapon_fired],
+        observe(on_weapon_fired),
     )
 }
 
@@ -85,6 +84,6 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         },
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
-        observers![on_weapon_fired],
+        observe(on_weapon_fired),
     )
 }

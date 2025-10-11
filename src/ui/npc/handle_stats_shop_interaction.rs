@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::stats_shop::{
-    spawn_stats_shop_menu, StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent,
+    StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent, spawn_stats_shop_menu,
 };
 
 pub fn handle_stat_button_interaction(
@@ -45,7 +45,7 @@ pub fn handle_stat_button_interaction(
 }
 
 pub fn handle_player_stat_change(
-    trigger: Trigger<StatChangeEvent>,
+    trigger: On<StatChangeEvent>,
     mut player_stats: Query<&mut PlayerStats>,
     mut game_progress: ResMut<GameProgress>,
     mut commands: Commands,
@@ -83,7 +83,7 @@ pub fn handle_player_stat_change(
 }
 
 pub fn handle_stats_shop_ui_update(
-    _: Trigger<StatsUIUpdateEvent>,
+    _: On<StatsUIUpdateEvent>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
     player_stats_query: Single<&PlayerStats>,

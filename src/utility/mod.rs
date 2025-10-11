@@ -6,9 +6,9 @@ use crate::{
     configuration::time_control::RestartEvent,
     economy::Gold,
     items::lootable::Lootable,
-    labels::sets::InGameSet,
-    map::{portal::Portal, systems::zone::ZoneBackground, Chest, CleanupZone, Wall, Water},
-    prelude::{Enemy, Player, NPC},
+    labels::sets::InGameSystems,
+    map::{Chest, CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
+    prelude::{Enemy, NPC, Player},
     ui::PlayerOverlay,
 };
 
@@ -16,7 +16,7 @@ pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (despawn_expired_entities, generic_remove_component_system)
-            .in_set(InGameSet::DespawnEntities),
+            .in_set(InGameSystems::DespawnEntities),
     )
     .add_observer(despawn_all::<CleanupZone, Portal>)
     .add_observer(despawn_all::<CleanupZone, TilemapId>)
@@ -57,7 +57,7 @@ pub fn despawn_expired_entities(
     for (entity, mut duration) in duration_query.iter_mut() {
         duration.0.tick(time.delta());
 
-        if duration.0.finished() {
+        if duration.0.is_finished() {
             commands.entity(entity).despawn();
         }
     }
@@ -65,7 +65,7 @@ pub fn despawn_expired_entities(
 
 /// Despawn all entities with the specific component
 pub fn despawn_all<T: Event, C: Component>(
-    _: Trigger<T>,
+    _: On<T>,
     mut commands: Commands,
     query: Query<Entity, With<C>>,
 ) {
@@ -87,12 +87,12 @@ pub fn generic_remove_component_system(
 ) {
     for (entity, mut remove_component) in query.iter_mut() {
         remove_component.timer.tick(time.delta());
-        if remove_component.timer.finished() {
-            if let Some(remover) = remove_component.remover.take() {
-                let mut entity_cmds = commands.entity(entity);
-                remover(&mut entity_cmds);
-                entity_cmds.remove::<RemoveComponent>();
-            }
+        if remove_component.timer.is_finished()
+            && let Some(remover) = remove_component.remover.take()
+        {
+            let mut entity_cmds = commands.entity(entity);
+            remover(&mut entity_cmds);
+            entity_cmds.remove::<RemoveComponent>();
         }
     }
 }

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::prelude::Player,
-    combat::{damage::DefeatedEvent, Health},
+    combat::{Health, damage::Defeated},
     labels::states::{AppState, PlayingState},
     map::CleanupZone,
     prelude::*,
@@ -12,7 +12,7 @@ use crate::{
 pub struct GameOverTimer(pub Timer);
 
 pub fn on_player_defeated(
-    _: Trigger<DefeatedEvent>,
+    _: On<Defeated>,
     player: Single<(Entity, &mut SimpleMotion), With<Player>>,
     mut commands: Commands,
     mut playing_state: ResMut<NextState<PlayingState>>,
@@ -39,7 +39,7 @@ pub fn finish_death_animation(
 ) {
     let mut death_timer = player_death_timer_single.into_inner();
     death_timer.0.tick(time.delta());
-    if death_timer.0.finished() {
+    if death_timer.0.is_finished() {
         commands.trigger(CleanupZone);
         game_over_state.set(AppState::GameOver);
     }

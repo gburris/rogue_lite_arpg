@@ -7,4 +7,5 @@ pub mod update_animation;
 pub use animate_sprite::*;
 pub use components::*;
 pub use plugin::*;
+pub use spells::heal_vfx;
 pub use update_animation::*;

@@ -32,11 +32,11 @@ pub fn apply_slowed(
 }
 
 pub fn on_slow_removed(
-    trigger: Trigger<OnRemove, Slowed>,
+    slow_status: On<Remove, Slowed>,
     status_query: Query<&StatusOf, With<Slowed>>,
     mut motion_query: Query<&mut SimpleMotion>,
 ) {
-    let Ok(status_of) = status_query.get(trigger.target()) else {
+    let Ok(status_of) = status_query.get(slow_status.entity) else {
         return;
     };
 

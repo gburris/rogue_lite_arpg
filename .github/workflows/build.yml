@@ -54,6 +54,10 @@ jobs:
         with:
           path: dist/*
           name: wasm-artifacts
+      - name: Upload web bundle to workflow artifacts for GitHub Pages (Web)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.app }}/${{ env.cargo_build_binary_name }}
 
   deploy:
     needs: build

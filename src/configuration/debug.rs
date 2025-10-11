@@ -1,10 +1,12 @@
 use avian2d::prelude::*;
 use bevy::{
-    dev_tools::fps_overlay::FpsOverlayPlugin,
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::labels::sets::InGameSystems;
 
@@ -25,7 +27,7 @@ impl Plugin for DebugPlugin {
                 .set(view::get_window_plugin())
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin)
         .insert_gizmo_config(
             PhysicsGizmos::default(),
             GizmoConfig {
@@ -52,7 +54,7 @@ impl Plugin for DebugPlugin {
             ),
         );
 
-        #[cfg(feature = "dev_native")]
+        #[cfg(not(target_arch = "wasm32"))]
         app.add_plugins(FpsOverlayPlugin::default());
     }
 }

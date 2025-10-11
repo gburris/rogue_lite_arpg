@@ -38,9 +38,9 @@ fn spawn_health_change_text(
 
     let rounded_amount = (amount * 10.0).round() / 10.0; // Round to 1 decimal place
     let formatted_amount = if rounded_amount.fract() == 0.0 {
-        format!("{:.0}", rounded_amount) // Display as a whole number
+        format!("{rounded_amount:.0}") // Display as a whole number
     } else {
-        format!("{:.1}", rounded_amount) // Display with one decimal place
+        format!("{rounded_amount:.1}") // Display with one decimal place
     };
 
     commands.entity(entity).with_child((

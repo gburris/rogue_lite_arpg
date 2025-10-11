@@ -90,7 +90,7 @@ fn stat_row(
                 ]
             ),
             // right side
-            text(format!("{}/99", stat_value), 24.0)
+            text(format!("{stat_value}/99"), 24.0)
         ],
     )
 }

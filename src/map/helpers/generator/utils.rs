@@ -67,10 +67,10 @@ pub fn find_multiple_positions(
     let mut attempts = 0;
 
     while positions.len() < count as usize && attempts < 100 {
-        if let Some(pos) = find_valid_position(map, map_size, x_range.clone()) {
-            if !positions.iter().any(|p: &Vec2| p.distance(pos) < 5.0) {
-                positions.push(pos);
-            }
+        if let Some(pos) = find_valid_position(map, map_size, x_range.clone())
+            && !positions.iter().any(|p: &Vec2| p.distance(pos) < 5.0)
+        {
+            positions.push(pos);
         }
         attempts += 1;
     }

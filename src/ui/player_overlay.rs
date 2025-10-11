@@ -351,24 +351,22 @@ pub fn update_action_bar(
                 EquipmentSlot::Offhand => offhand.map(|o| o.get()),
             };
 
-            if let Some(&image_entity) = children.first() {
-                if let Ok(mut image_node) = image_query.get_mut(image_entity) {
-                    if let Some(equipped_entity) = equipment {
-                        if let Ok(item_sprite) = item_query.get(equipped_entity) {
-                            let action_bar_sprite = get_action_bar_sprite(item_sprite);
+            if let Some(&image_entity) = children.first()
+                && let Ok(mut image_node) = image_query.get_mut(image_entity)
+                && let Some(equipped_entity) = equipment
+                && let Ok(item_sprite) = item_query.get(equipped_entity)
+            {
+                let action_bar_sprite = get_action_bar_sprite(item_sprite);
 
-                            image_node.image = action_bar_sprite.image.clone();
+                image_node.image = action_bar_sprite.image.clone();
 
-                            if let Some(atlas) = &action_bar_sprite.texture_atlas {
-                                image_node.texture_atlas = Some(TextureAtlas {
-                                    layout: atlas.layout.clone(),
-                                    index: atlas.index,
-                                });
-                            } else {
-                                image_node.texture_atlas = None;
-                            }
-                        }
-                    }
+                if let Some(atlas) = &action_bar_sprite.texture_atlas {
+                    image_node.texture_atlas = Some(TextureAtlas {
+                        layout: atlas.layout.clone(),
+                        index: atlas.index,
+                    });
+                } else {
+                    image_node.texture_atlas = None;
                 }
             }
         }

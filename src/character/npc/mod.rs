@@ -104,7 +104,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
         Health::new(1000.0),
         Transform::from_translation(spawn_position.extend(0.0)),
         children![
-            shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
+            shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             (
                 InteractionZone::NPC,
                 Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),

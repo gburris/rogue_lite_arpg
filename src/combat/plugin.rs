@@ -41,6 +41,7 @@ impl Plugin for CombatPlugin {
             )
             .add_observer(health::on_healing_event)
             .add_observer(damage::on_damage_event)
+            .add_observer(damage::on_damage_dealt_flash)
             .add_observer(activate_shield);
     }
 }

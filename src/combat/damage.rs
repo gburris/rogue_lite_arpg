@@ -156,3 +156,9 @@ pub fn on_damage_event(
         }
     }
 }
+
+pub fn on_damage_dealt_flash(damage_dealt: On<DamageDealt>, mut sprite_query: Query<&mut Sprite>) {
+    if let Ok(mut sprite) = sprite_query.get_mut(damage_dealt.entity) {
+        sprite.color = Color::linear_rgb(255., 255., 255.);
+    }
+}

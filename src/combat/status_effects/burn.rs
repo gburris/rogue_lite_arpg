@@ -1,9 +1,13 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 
-use crate::combat::{
-    Health,
-    damage::{AttemptDamage, Damage},
-    status_effects::{Status, StatusApplied, StatusOf},
+use crate::{
+    animation::AnimationIndices,
+    combat::{
+        Health,
+        damage::{AttemptDamage, Damage},
+        status_effects::{Status, StatusApplied, StatusOf},
+    },
+    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
 };
 
 #[derive(Component, Clone)]
@@ -54,6 +58,8 @@ pub fn apply_burning(
     mut commands: Commands,
     status_query: Query<(Entity, &StatusOf), (With<Burning>, Without<StatusApplied>)>,
     mut sprite_query: Query<&mut Sprite>,
+    sprites: Res<SpriteAssets>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
     status_query.iter().for_each(|(status, status_of)| {
         commands.entity(status).insert(StatusApplied);
@@ -76,4 +82,19 @@ pub fn on_burn_removed(
     if let Ok(mut burnt_sprite) = sprite_query.get_mut(status_of.0) {
         burnt_sprite.color = Color::default();
     }
+}
+
+fn burn(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+    (
+        Sprite::from_atlas_image(
+            sprites.flame.clone(),
+            TextureAtlas {
+                layout: sprite_layouts.player_atlas_layout.clone(),
+                ..default()
+            },
+        ),
+        Anchor(Vec2::new(0.0, 0.10)),
+        AnimationIndices::OneShot(0..=9),
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+    )
 }

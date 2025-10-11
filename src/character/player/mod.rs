@@ -201,7 +201,7 @@ fn spawn_player(
             },
         ),
         related!(Items[
-        (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
+            (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
             items::ice_staff(&sprites, &sprite_layouts),
             items::sword(&sprites),
             items::axe(&sprites),

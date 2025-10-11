@@ -87,7 +87,9 @@ pub struct SpriteAssets {
     pub run_start_door: Handle<Image>,
     #[asset(path = "chests.png")]
     pub chests_sprite_sheet: Handle<Image>,
-    #[asset(path = "spells/tome_of_healing_effect.png")]
+    #[asset(path = "vfx/flame.png")]
+    pub flame: Handle<Image>,
+    #[asset(path = "vfx/tome_of_healing_effect.png")]
     pub tome_of_healing_effect: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,

@@ -32,10 +32,12 @@ jobs:
           echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
 
       - uses: nschloe/action-cached-lfs-checkout@v1
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
+
       # Cache cargo dependencies
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -46,6 +48,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Prepare output directories
+        if: ${{ env.is_platform_enabled == 'true' }}
+        run: rm -rf tmp; mkdir -p tmp/binary '${{ env.app }}'
+
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@main
 
@@ -58,20 +65,24 @@ jobs:
           cargo binstall --locked --no-confirm --force wasm-opt
           bevy build --locked --release --yes web --bundle
           mv 'target/bevy_web/web-release/baba_yaga' '${{ env.app }}'
+
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
           ls
+
       - name: Package app
         working-directory: tmp/app
         run: |
             zip --recurse-paths '${{ env.package }}' 'baba_yaga'
+
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
         with:
           path: tmp/app/${{ env.package }}
           name: wasm-artifacts
           retention-days: 1
+          
       - name: Upload web bundle to workflow artifacts for GitHub Pages (Web)
         uses: actions/upload-pages-artifact@v3
         with:

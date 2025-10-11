@@ -87,12 +87,12 @@ pub fn generic_remove_component_system(
 ) {
     for (entity, mut remove_component) in query.iter_mut() {
         remove_component.timer.tick(time.delta());
-        if remove_component.timer.is_finished() {
-            if let Some(remover) = remove_component.remover.take() {
-                let mut entity_cmds = commands.entity(entity);
-                remover(&mut entity_cmds);
-                entity_cmds.remove::<RemoveComponent>();
-            }
+        if remove_component.timer.is_finished()
+            && let Some(remover) = remove_component.remover.take()
+        {
+            let mut entity_cmds = commands.entity(entity);
+            remover(&mut entity_cmds);
+            entity_cmds.remove::<RemoveComponent>();
         }
     }
 }

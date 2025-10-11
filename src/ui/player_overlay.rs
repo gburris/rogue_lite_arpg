@@ -385,34 +385,33 @@ pub fn on_equipment_used(
         return;
     }
 
-    if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity) {
-        if let Some((box_entity, _, box_children)) = action_box_query
+    if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity)
+        && let Some((box_entity, _, box_children)) = action_box_query
             .iter()
             .find(|(_, action_box, _)| action_box.slot == equipmemnt.slot)
-        {
-            // When on cooldown we don't want red error flash over action box
-            for child in box_children.iter() {
-                if error_flash_query.contains(child) {
-                    commands.entity(child).despawn();
-                }
+    {
+        // When on cooldown we don't want red error flash over action box
+        for child in box_children.iter() {
+            if error_flash_query.contains(child) {
+                commands.entity(child).despawn();
             }
-
-            commands.entity(box_entity).with_children(|parent| {
-                parent.spawn((
-                    CooldownIndicator,
-                    Node {
-                        width: px(ACTION_BOX_INTERIOR_SIZE),
-                        height: px(ACTION_BOX_INTERIOR_SIZE),
-                        position_type: PositionType::Absolute,
-                        left: px(0.0),
-                        top: px(0.0),
-                        ..default()
-                    },
-                    Lifespan::new(equipmemnt.use_rate.remaining_secs()),
-                    BackgroundColor::from(COOLDOWN_LINE_COLOR),
-                ));
-            });
         }
+
+        commands.entity(box_entity).with_children(|parent| {
+            parent.spawn((
+                CooldownIndicator,
+                Node {
+                    width: px(ACTION_BOX_INTERIOR_SIZE),
+                    height: px(ACTION_BOX_INTERIOR_SIZE),
+                    position_type: PositionType::Absolute,
+                    left: px(0.0),
+                    top: px(0.0),
+                    ..default()
+                },
+                Lifespan::new(equipmemnt.use_rate.remaining_secs()),
+                BackgroundColor::from(COOLDOWN_LINE_COLOR),
+            ));
+        });
     }
 }
 
@@ -429,21 +428,20 @@ pub fn on_equipment_use_failed(
     if let Some((box_entity, _)) = action_box_query
         .iter()
         .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
+        && equipment_use_failed.reason == EquipmentUseFailure::OutOfMana
     {
-        if equipment_use_failed.reason == EquipmentUseFailure::OutOfMana {
-            commands.entity(box_entity).with_child((
-                ErrorFlash,
-                Node {
-                    width: px(ACTION_BOX_INTERIOR_SIZE),
-                    height: px(ACTION_BOX_INTERIOR_SIZE),
-                    position_type: PositionType::Absolute,
-                    left: px(0.0),
-                    top: px(0.0),
-                    ..default()
-                },
-                BackgroundColor::from(ERROR_FLASH_COLOR),
-            ));
-        }
+        commands.entity(box_entity).with_child((
+            ErrorFlash,
+            Node {
+                width: px(ACTION_BOX_INTERIOR_SIZE),
+                height: px(ACTION_BOX_INTERIOR_SIZE),
+                position_type: PositionType::Absolute,
+                left: px(0.0),
+                top: px(0.0),
+                ..default()
+            },
+            BackgroundColor::from(ERROR_FLASH_COLOR),
+        ));
     }
 }
 

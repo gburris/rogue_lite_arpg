@@ -1,5 +1,7 @@
 name: Build and Deploy to GitHub Pages
 permissions:
+  # Required to create a GitHub release: <https://docs.github.com/en/rest/releases/releases#create-a-release>.
+  contents: write
   # Required to deploy to GitHub Pages.
   pages: write
   # Required for GitHub Pages to verify the source of the deployment.

@@ -21,9 +21,7 @@ use bevy::prelude::*;
 
 use crate::{
     animation::AnimationTimer,
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort, debug::DebugRenderEnabled,
-    },
+    configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
     items::ItemCapacity,
     labels::sets::{InGameSystems, MainSystems},
 };
@@ -57,7 +55,6 @@ impl Plugin for CharacterPlugin {
                 vision::update_aim_position,
                 vision::update_target_info,
                 vision::is_target_in_sight,
-                vision::debug_vision.run_if(resource_exists::<DebugRenderEnabled>),
                 // Targeting
                 vision::should_target_watched,
                 vision::should_stop_targeting,

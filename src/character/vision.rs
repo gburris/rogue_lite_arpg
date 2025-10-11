@@ -1,10 +1,7 @@
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::{
-    color::palettes::css::{GREEN, YELLOW},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 use crate::{combat::damage::DamageDealt, prelude::*, utility::schedule_component_removal};
 
@@ -186,22 +183,6 @@ pub fn is_target_in_sight(
             }
         },
     );
-}
-
-/// Draws debug gizmos for AI vision direction and cone angles.
-pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
-    for (transform, vision) in &query {
-        let origin = transform.translation.xy();
-        let forward = vision.aim_direction;
-
-        gizmos.arrow_2d(origin, origin + forward * 64.0, GREEN);
-
-        let left = forward.rotate(Vec2::from_angle(45f32.to_radians()));
-        let right = forward.rotate(Vec2::from_angle(-45f32.to_radians()));
-
-        gizmos.line_2d(origin, origin + left * 64.0, YELLOW);
-        gizmos.line_2d(origin, origin + right * 64.0, YELLOW);
-    }
 }
 
 // ---------------------

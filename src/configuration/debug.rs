@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{
+    color::palettes::css::{GREEN, YELLOW},
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
@@ -8,7 +9,7 @@ use bevy::{
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
-use crate::labels::sets::InGameSystems;
+use crate::{labels::sets::InGameSystems, prelude::Vision};
 
 use super::view;
 
@@ -48,7 +49,7 @@ impl Plugin for DebugPlugin {
                 handle_debug_input
                     .in_set(InGameSystems::PlayerInput)
                     .ambiguous_with_all(),
-                view::camera_debug_system
+                (view::camera_debug_system, debug_vision)
                     .in_set(InGameSystems::HudOverlay)
                     .run_if(resource_exists::<DebugRenderEnabled>),
             ),
@@ -76,5 +77,21 @@ fn handle_debug_input(
         }
         let config = config_store.config_mut::<PhysicsGizmos>().0;
         config.enabled = !config.enabled;
+    }
+}
+
+/// Draws debug gizmos for AI vision direction and cone angles.
+pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
+    for (transform, vision) in &query {
+        let origin = transform.translation.xy();
+        let forward = vision.aim_direction;
+
+        gizmos.arrow_2d(origin, origin + forward * 64.0, GREEN);
+
+        let left = forward.rotate(Vec2::from_angle(45f32.to_radians()));
+        let right = forward.rotate(Vec2::from_angle(-45f32.to_radians()));
+
+        gizmos.line_2d(origin, origin + left * 64.0, YELLOW);
+        gizmos.line_2d(origin, origin + right * 64.0, YELLOW);
     }
 }

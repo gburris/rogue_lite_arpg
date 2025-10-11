@@ -2,14 +2,19 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_behave::prelude::BehavePlugin;
 
+#[cfg(not(feature = "dev"))]
+use bevy::asset::AssetMetaCheck;
+
 use crate::{
-    configuration::debug::DebugPlugin,
     labels::{
         sets::MainSystems,
         states::{AppState, PausedState, PlayingState},
     },
     progression::components::GameProgress,
 };
+
+#[cfg(feature = "dev")]
+use crate::configuration::debug::DebugPlugin;
 
 use super::view;
 

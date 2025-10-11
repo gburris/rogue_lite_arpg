@@ -39,6 +39,8 @@ pub struct SpriteSheetLayouts {
         offset_y = 8,
     ))]
     pub chest_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 64, columns = 8, rows = 1))]
+    pub flame_vfx: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
     pub spell_effect: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 1))]

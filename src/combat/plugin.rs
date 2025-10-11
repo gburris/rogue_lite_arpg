@@ -30,6 +30,7 @@ impl Plugin for CombatPlugin {
                     (
                         melee::end_melee_attacks,
                         handle_projectile_reflection_collisions,
+                        damage::tick_and_remove_damage_flash,
                     )
                         .in_set(InGameSystems::Simulation),
                     (

@@ -1,13 +1,17 @@
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::prelude::*;
 
 use crate::{
-    animation::AnimationIndices,
+    animation::{AnimationIndices, AnimationTimer},
     combat::{
         Health,
         damage::{AttemptDamage, Damage},
         status_effects::{Status, StatusApplied, StatusOf},
     },
-    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
+    configuration::{
+        CHARACTER_FEET_POS_OFFSET, ZLayer,
+        assets::{SpriteAssets, SpriteSheetLayouts},
+    },
+    utility::Lifespan,
 };
 
 #[derive(Component, Clone)]
@@ -25,8 +29,6 @@ impl Default for Burning {
         }
     }
 }
-
-const RED_COLOR: bevy::prelude::Color = Color::srgb(1.0, 0.0, 0.0);
 
 pub fn tick_burn(mut burn_query: Query<&mut Burning>, time: Res<Time>) {
     for mut burn_status in burn_query.iter_mut() {
@@ -56,18 +58,21 @@ pub fn while_burning(
 
 pub fn apply_burning(
     mut commands: Commands,
-    status_query: Query<(Entity, &StatusOf), (With<Burning>, Without<StatusApplied>)>,
-    mut sprite_query: Query<&mut Sprite>,
+    status_query: Query<(Entity, &StatusOf, &Lifespan), (With<Burning>, Without<StatusApplied>)>,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    status_query.iter().for_each(|(status, status_of)| {
-        commands.entity(status).insert(StatusApplied);
+    status_query
+        .iter()
+        .for_each(|(status, status_of, lifespan)| {
+            commands.entity(status).insert(StatusApplied);
 
-        if let Ok(mut affected_sprite) = sprite_query.get_mut(status_of.0) {
-            affected_sprite.color = RED_COLOR;
-        }
-    });
+            commands.entity(status_of.0).with_child(burn_vfx(
+                &sprites,
+                &sprite_layouts,
+                lifespan.0.clone(),
+            ));
+        });
 }
 
 pub fn on_burn_removed(
@@ -84,17 +89,30 @@ pub fn on_burn_removed(
     }
 }
 
-fn burn(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
+fn burn_vfx(
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+    duration: Timer,
+) -> impl Bundle {
     (
         Sprite::from_atlas_image(
             sprites.flame.clone(),
             TextureAtlas {
-                layout: sprite_layouts.player_atlas_layout.clone(),
+                layout: sprite_layouts.flame_vfx.clone(),
                 ..default()
             },
         ),
-        Anchor(Vec2::new(0.0, 0.10)),
-        AnimationIndices::OneShot(0..=9),
+        Transform {
+            translation: Vec3::new(
+                0.0,
+                CHARACTER_FEET_POS_OFFSET + 8.0,
+                ZLayer::SpriteForeground.z(),
+            ),
+            scale: Vec3::new(1.2, 1.2, 1.0),
+            ..default()
+        },
+        AnimationIndices::Cycle((0..=7).cycle()),
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        Lifespan(duration),
     )
 }

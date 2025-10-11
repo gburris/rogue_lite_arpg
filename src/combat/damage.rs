@@ -10,6 +10,7 @@ use crate::{
         status_effects::{EffectOf, Effects, StatusOf},
     },
     configuration::GameCollisionLayer,
+    prelude::Player,
 };
 
 #[derive(PartialEq, Clone, Copy)]
@@ -157,8 +158,43 @@ pub fn on_damage_event(
     }
 }
 
-pub fn on_damage_dealt_flash(damage_dealt: On<DamageDealt>, mut sprite_query: Query<&mut Sprite>) {
-    if let Ok(mut sprite) = sprite_query.get_mut(damage_dealt.entity) {
-        sprite.color = Color::linear_rgb(255., 255., 255.);
+#[derive(Component)]
+pub struct DamageFlash(pub Timer);
+
+impl Default for DamageFlash {
+    fn default() -> Self {
+        Self(Timer::from_seconds(0.05, TimerMode::Once))
     }
+}
+
+pub fn on_damage_dealt_flash(
+    damage_dealt: On<DamageDealt>,
+    mut commands: Commands,
+    mut sprite_query: Query<&mut Sprite>,
+    player: Single<Entity, With<Player>>,
+) {
+    // Player has iframe animation different from damage flash
+    if damage_dealt.entity == *player {
+        return;
+    }
+
+    if let Ok(mut sprite) = sprite_query.get_mut(damage_dealt.entity) {
+        commands
+            .entity(damage_dealt.entity)
+            .insert(DamageFlash::default());
+        sprite.color = Color::linear_rgba(255., 255., 255., 0.9);
+    }
+}
+
+pub fn tick_and_remove_damage_flash(
+    mut damage_flash_query: Query<(&mut DamageFlash, &mut Sprite)>,
+    time: Res<Time>,
+) {
+    damage_flash_query
+        .par_iter_mut()
+        .for_each(|(mut flash, mut sprite)| {
+            if flash.0.tick(time.delta()).is_finished() {
+                sprite.color = Color::WHITE;
+            }
+        });
 }

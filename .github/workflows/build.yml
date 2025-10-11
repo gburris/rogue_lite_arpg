@@ -14,6 +14,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up environment
+        run: |
+          # Default values:
+          echo "app_binary_name=baba_yaga" >> "${GITHUB_ENV}"
+          echo "app_package_name=baba_yaga" >> "${GITHUB_ENV}"
+          echo "app_display_name=Baba Yaga" >> "${GITHUB_ENV}"
+          echo "app_short_name=Baba Yaga" >> "${GITHUB_ENV}"
+
+          # File paths:
+          echo "app=tmp/app/baba_yaga" >> "${GITHUB_ENV}"
+          echo "package=baba_yaga-web.zip" >> "${GITHUB_ENV}"
+
+          # Rustflags:
+          RUSTFLAGS='-Zthreads=0'
+          RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }"'-Zshare-generics=y'
+          echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
+
       - uses: nschloe/action-cached-lfs-checkout@v1
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -40,7 +57,7 @@ jobs:
           cargo binstall --locked --no-confirm --force wasm-bindgen-cli
           cargo binstall --locked --no-confirm --force wasm-opt
           bevy build --locked --release --yes web --bundle
-          mv 'target/bevy_web/web-release/${{ env.cargo_build_binary_name }}' '${{ env.app }}'
+          mv 'target/bevy_web/web-release/baba_yaga' '${{ env.app }}'
       - name: Debug Build Output
         run: |
           echo "Debugging build output:"
@@ -48,7 +65,7 @@ jobs:
       - name: Package app
         working-directory: tmp/app
         run: |
-            zip --recurse-paths '${{ env.package }}' '${{ env.app_package_name }}'
+            zip --recurse-paths '${{ env.package }}' 'baba_yaga'
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -58,7 +75,7 @@ jobs:
       - name: Upload web bundle to workflow artifacts for GitHub Pages (Web)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ env.app }}/${{ env.cargo_build_binary_name }}
+          path: ${{ env.app }}/baba_yaga
 
   deploy:
     needs: build

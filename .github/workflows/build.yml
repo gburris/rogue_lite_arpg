@@ -109,14 +109,6 @@ jobs:
         run: |
           echo "Debugging downloaded artifacts:"
           ls
-      - name: Debug gh-pages Directory
-        run: |
-          echo "Debugging gh-pages directory:"
-          ls -l gh-pages
-          if [ -d "gh-pages/${{ env.DEPLOY_DIR }}" ]; then
-            echo "Contents of ${{ env.DEPLOY_DIR }} directory:"
-            ls -l gh-pages/${{ env.DEPLOY_DIR }}
-          fi
       - name: Deploy to GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v4

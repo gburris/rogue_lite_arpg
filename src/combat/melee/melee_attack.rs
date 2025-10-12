@@ -117,6 +117,7 @@ pub fn handle_melee_collisions(
                     ignore_invulnerable: false,
                     damage: Damage::Range(melee_weapon.damage),
                     damage_source: Some(weapon_entity),
+                    direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),
                 });
                 active_melee_attack
                     .entities_damaged

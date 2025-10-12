@@ -109,9 +109,9 @@ pub fn handle_collisions(
             if hurt_box_query.contains(colliding_entity) {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    ignore_invulnerable: false,
                     damage: projectile.damage,
                     damage_source: Some(projectile_entity),
+                    ..default()
                 });
             }
             if reflector_query.contains(colliding_entity) {

@@ -103,7 +103,7 @@ jobs:
       DEPLOY_DIR: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
     environment:
         name: github-pages
-        url: ${{ steps.deployment.outputs.page_url }}/${{ env.DEPLOY_DIR }}
+        url: ${{ steps.deploy.outputs.page_url }}/${{ env.DEPLOY_DIR }}
     steps:
       - name: Debug Download Output
         run: |

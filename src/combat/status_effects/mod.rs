@@ -24,8 +24,6 @@ impl Plugin for StatusEffectPlugin {
             )
                 .in_set(InGameSystems::Simulation),
         )
-        .add_observer(burn::on_burn_removed)
-        .add_observer(freeze::on_frozen_removed)
         .add_observer(slow::on_slow_removed);
     }
 }

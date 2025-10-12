@@ -91,6 +91,8 @@ pub struct SpriteAssets {
     pub chests_sprite_sheet: Handle<Image>,
     #[asset(path = "vfx/flame.png")]
     pub flame: Handle<Image>,
+    #[asset(path = "vfx/grounded_ice.png")]
+    pub grounded_ice: Handle<Image>,
     #[asset(path = "vfx/tome_of_healing_effect.png")]
     pub tome_of_healing_effect: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]

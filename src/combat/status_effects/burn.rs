@@ -49,8 +49,8 @@ pub fn while_burning(
             commands.trigger(AttemptDamage {
                 entity,
                 ignore_invulnerable: true,
-                damage_source: None,
                 damage: Damage::Single(burn.damage),
+                ..default()
             });
         }
     }
@@ -73,20 +73,6 @@ pub fn apply_burning(
                 lifespan.0.clone(),
             ));
         });
-}
-
-pub fn on_burn_removed(
-    burning_status: On<Remove, Burning>,
-    status_query: Query<&StatusOf, With<Burning>>,
-    mut sprite_query: Query<&mut Sprite>,
-) {
-    let Ok(status_of) = status_query.get(burning_status.entity) else {
-        return;
-    };
-
-    if let Ok(mut burnt_sprite) = sprite_query.get_mut(status_of.0) {
-        burnt_sprite.color = Color::default();
-    }
 }
 
 fn burn_vfx(

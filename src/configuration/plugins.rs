@@ -6,7 +6,7 @@ pub struct GamePlugin;
 use crate::{
     animation::AnimationPlugin,
     character::CharacterPlugin,
-    combat::plugin::CombatPlugin,
+    combat::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
     economy::EconomyPlugin,
     items,

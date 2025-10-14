@@ -3,7 +3,10 @@ use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
-    combat::status_effects::{Burning, Effects, Frozen},
+    combat::{
+        damage::Knockback,
+        status_effects::{Burning, Effects, Frozen},
+    },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     utility::Lifespan,
 };
@@ -69,6 +72,7 @@ pub fn fireball(
                 index: 0,
             },
         ),
+        Knockback(5.0),
         related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
     )
 }
@@ -92,17 +96,18 @@ pub fn icebolt(
                 index: 0,
             },
         ),
+        Knockback(5.0),
         related!(Effects[(Frozen, Lifespan::new(0.7))]),
     )
 }
 
 pub fn handle_collisions(
     mut commands: Commands,
-    projectile_query: Query<(&Projectile, &CollidingEntities, Entity)>,
+    projectile_query: Query<(&Projectile, &LinearVelocity, &CollidingEntities, Entity)>,
     hurt_box_query: Query<&HurtBox>,
     reflector_query: Query<&ProjectileReflection>,
 ) {
-    for (projectile, colliding_entities, projectile_entity) in projectile_query.iter() {
+    for (projectile, velocity, colliding_entities, projectile_entity) in projectile_query.iter() {
         // ignore further collisions after ANY collision with the projectile
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // If the thing we collide with has a HurtBox, lets try to damage it!
@@ -111,6 +116,7 @@ pub fn handle_collisions(
                     entity: colliding_entity,
                     damage: projectile.damage,
                     damage_source: Some(projectile_entity),
+                    direction: Some(velocity.normalize()),
                     ..default()
                 });
             }

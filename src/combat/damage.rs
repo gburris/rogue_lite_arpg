@@ -216,7 +216,7 @@ pub fn tick_and_remove_damage_flash(
         });
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Knockback(pub f32);
 
 pub fn on_damage_dealt_knockback(

@@ -5,11 +5,11 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
-bevy_ecs_tilemap = { git = "https://github.com/ChristopherBiscardi/bevy_ecs_tilemap", branch = "bevy-0.17" }
+bevy_ecs_tilemap = "0.17"
 bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
 bevy_behave = { git = "https://github.com/HazelTheWitch/bevy_behave", branch = "main" }
 accesskit = "0.21"
-avian2d = { git = "https://github.com/Jondolf/avian", branch = "main" }
+avian2d = "0.4"
 rand = "0.9"
 serde = "1.0.228"
 # Compile out low-severity logs to improve performance.

@@ -5,6 +5,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
     combat::{
+        damage::Knockback,
         mana::ManaCost,
         melee::{MeleeSwingType, MeleeWeapon},
         projectile::{Projectiles, fireball, icebolt},
@@ -30,6 +31,7 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 15.0,
         },
         Name::new("Sword"),
+        Knockback(10.0),
         Equippable::default(),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
@@ -47,6 +49,25 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Name::new("Axe"),
+        Knockback(20.0),
+        Equippable::default(),
+        Item::new(220, ItemType::Melee),
+        Sprite::from_image(sprites.axe.clone()),
+        observe(on_weapon_melee),
+    )
+}
+
+pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
+    (
+        MeleeWeapon {
+            damage: (2.0, 12.0),
+            hitbox: Collider::rectangle(10.0, 40.0),
+            attack_type: MeleeSwingType::SLASH,
+            attack_time: 0.3,
+            hold_distance: 30.0,
+        },
+        Name::new("Freeze Axe"),
+        Knockback(2.0),
         Equippable::default(),
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),

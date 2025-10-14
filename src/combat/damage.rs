@@ -10,6 +10,7 @@ use crate::{
         status_effects::{EffectOf, Effects, StatusOf},
     },
     configuration::GameCollisionLayer,
+    prelude::Player,
 };
 
 #[derive(PartialEq, Clone, Copy)]
@@ -79,6 +80,20 @@ pub struct AttemptDamage {
     pub damage: Damage,
     /// Not all damage has a "Source" entity, like environmental damage or damage-over-time effects
     pub damage_source: Option<Entity>,
+    /// damage direction, ex. velocity direction of projectile or character position for melee
+    pub direction: Option<Vec2>,
+}
+
+impl Default for AttemptDamage {
+    fn default() -> Self {
+        Self {
+            entity: Entity::PLACEHOLDER,
+            ignore_invulnerable: false,
+            damage: Damage::Single(1.0),
+            damage_source: None,
+            direction: None,
+        }
+    }
 }
 
 /// While AttemptDamageEvent is sent any time a damage source interacts with an entity,
@@ -88,6 +103,8 @@ pub struct DamageDealt {
     pub entity: Entity,
     pub damage: f32,
     pub damage_source: Option<Entity>,
+    /// damage direction, ex. velocity direction of projectile or character position for melee
+    pub direction: Option<Vec2>,
 }
 
 /// This is the character holding the weapon that dealt damage
@@ -135,6 +152,7 @@ pub fn on_damage_event(
             entity: damaged_entity,
             damage,
             damage_source: attempt_damage.damage_source,
+            direction: attempt_damage.direction,
         });
 
         if health.hp == 0.0 {
@@ -154,5 +172,66 @@ pub fn on_damage_event(
                 });
             }
         }
+    }
+}
+
+#[derive(Component)]
+pub struct DamageFlash(pub Timer);
+
+impl Default for DamageFlash {
+    fn default() -> Self {
+        Self(Timer::from_seconds(0.05, TimerMode::Once))
+    }
+}
+
+pub fn on_damage_dealt_flash(
+    damage_dealt: On<DamageDealt>,
+    mut commands: Commands,
+    mut sprite_query: Query<&mut Sprite>,
+    player: Single<Entity, With<Player>>,
+) {
+    // Player has iframe animation different from damage flash
+    if damage_dealt.entity == *player {
+        return;
+    }
+
+    if let Ok(mut sprite) = sprite_query.get_mut(damage_dealt.entity) {
+        commands
+            .entity(damage_dealt.entity)
+            .insert(DamageFlash::default());
+        sprite.color = Color::linear_rgba(255., 255., 255., 0.9);
+    }
+}
+
+pub fn tick_and_remove_damage_flash(
+    mut damage_flash_query: Query<(&mut DamageFlash, &mut Sprite)>,
+    time: Res<Time>,
+) {
+    damage_flash_query
+        .par_iter_mut()
+        .for_each(|(mut flash, mut sprite)| {
+            if flash.0.tick(time.delta()).is_finished() {
+                sprite.color = Color::WHITE;
+            }
+        });
+}
+
+#[derive(Component, Clone)]
+pub struct Knockback(pub f32);
+
+pub fn on_damage_dealt_knockback(
+    damage_dealt: On<DamageDealt>,
+    knockback_query: Query<&Knockback>,
+    mut forces: Query<Forces>,
+) {
+    if let Some(damage_source) = damage_dealt.damage_source
+        && let Ok(knockback) = knockback_query.get(damage_source)
+        && let Some(damage_direction) = damage_dealt.direction
+    {
+        info!("Applying knockback!");
+        forces
+            .get_mut(damage_dealt.entity)
+            .expect("Damaged entity missing forces")
+            .apply_force(damage_direction * knockback.0 * 1000000.0);
     }
 }

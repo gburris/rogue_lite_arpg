@@ -21,7 +21,7 @@ use crate::{
     },
     economy::Purse,
     items::{
-        self, Items,
+        self, ItemCapacity, Items,
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
     labels::{
@@ -79,6 +79,7 @@ impl Plugin for PlayerPlugin {
 #[derive(Component)]
 #[require(
     Character,
+    ItemCapacity(50),
     Health::new(100.0),
     SimpleMotion::new(250.0),
     // Double the mass of npcs/enemies so the player can push them around more
@@ -201,10 +202,11 @@ fn spawn_player(
             },
         ),
         related!(Items[
-        (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
+            (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
             items::ice_staff(&sprites, &sprite_layouts),
             items::sword(&sprites),
             items::axe(&sprites),
+            items::freeze_axe(&sprites),
             items::magic_shield(&sprites, &sprite_layouts),
             items::knight_shield(&sprites, &sprite_layouts),
             items::health_potion(&sprites),

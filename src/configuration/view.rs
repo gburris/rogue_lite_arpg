@@ -66,6 +66,7 @@ pub enum ZLayer {
     SpriteBackground,
     BehindSprite,
     AboveSprite,
+    SpriteForeground,
 }
 
 impl ZLayer {
@@ -81,6 +82,7 @@ impl ZLayer {
             ZLayer::SpriteBackground => -2.0,
             ZLayer::BehindSprite => -0.001,
             ZLayer::AboveSprite => 0.001,
+            ZLayer::SpriteForeground => 2.0,
         }
     }
 }

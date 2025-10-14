@@ -39,6 +39,8 @@ pub struct SpriteSheetLayouts {
         offset_y = 8,
     ))]
     pub chest_layout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 64, columns = 8, rows = 1))]
+    pub flame_vfx: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
     pub spell_effect: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 1))]
@@ -87,7 +89,11 @@ pub struct SpriteAssets {
     pub run_start_door: Handle<Image>,
     #[asset(path = "chests.png")]
     pub chests_sprite_sheet: Handle<Image>,
-    #[asset(path = "spells/tome_of_healing_effect.png")]
+    #[asset(path = "vfx/flame.png")]
+    pub flame: Handle<Image>,
+    #[asset(path = "vfx/grounded_ice.png")]
+    pub grounded_ice: Handle<Image>,
+    #[asset(path = "vfx/tome_of_healing_effect.png")]
     pub tome_of_healing_effect: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]
     pub player_sprite_sheet: Handle<Image>,

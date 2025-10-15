@@ -107,13 +107,9 @@ jobs:
         run: |
           mkdir -p gh-pages/${{ env.DEPLOY_DIR }}
           cp -r assets gh-pages/${{ env.DEPLOY_DIR }}/
-          cp -r src gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga.js gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga_bg.wasm gh-pages/${{ env.DEPLOY_DIR }}/
-          cp baba_yaga_bg.wasm.d.ts gh-pages/${{ env.DEPLOY_DIR }}/
-          cp Cargo.toml gh-pages/${{ env.DEPLOY_DIR }}/
-          cp Cargo.lock gh-pages/${{ env.DEPLOY_DIR }}/
-          cp package.json gh-pages/${{ env.DEPLOY_DIR }}/
+          cp build/baba_yaga.js gh-pages/${{ env.DEPLOY_DIR }}/
+          cp build/baba_yaga_bg.wasm gh-pages/${{ env.DEPLOY_DIR }}/
+          cp index.html gh-pages/${{ env.DEPLOY_DIR }}/
       - name: Debug gh-pages Directory
         run: |
           echo "Debugging gh-pages directory:"

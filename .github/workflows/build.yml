@@ -75,25 +75,16 @@ jobs:
 
       - name: Debug Build Output
         run: |
-          echo "Debugging build output:"
+          echo "Debugging base directory:"
           ls
-
-      - name: Package app
-        working-directory: tmp/app
-        run: |
-            zip --recurse-paths '${{ env.package }}' 'baba_yaga'
+          echo "Debugging build output:"
+          ls ${{ env.app }}/baba_yaga
 
       - name: Upload WASM Artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: tmp/app/${{ env.package }}
-          name: wasm-artifacts
-          retention-days: 1
-
-      - name: Upload web bundle to workflow artifacts for GitHub Pages (Web)
-        uses: actions/upload-pages-artifact@v3
-        with:
           path: ${{ env.app }}/baba_yaga
+          name: wasm-artifacts
 
   deploy:
     needs: build
@@ -101,14 +92,34 @@ jobs:
     # Set environment variable for the directory name based on PR or main branch
     env:
       DEPLOY_DIR: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
-    environment:
-        name: github-pages
-        url: ${{ steps.deploy.outputs.page_url }}/${{ env.DEPLOY_DIR }}
+  
     steps:
+      - uses: actions/checkout@v4
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-artifacts
       - name: Debug Download Output
         run: |
           echo "Debugging downloaded artifacts:"
           ls
+      - name: Create gh-pages Directory
+        run: |
+          mkdir -p gh-pages/${{ env.DEPLOY_DIR }}
+          cp -r assets gh-pages/${{ env.DEPLOY_DIR }}/
+          cp -r build gh-pages/${{ env.DEPLOY_DIR }}/
+          cp index.html gh-pages/${{ env.DEPLOY_DIR }}/
+      - name: Debug gh-pages Directory
+        run: |
+          echo "Debugging gh-pages directory:"
+          ls -l gh-pages
+          if [ -d "gh-pages/${{ env.DEPLOY_DIR }}" ]; then
+            echo "Contents of ${{ env.DEPLOY_DIR }} directory:"
+            ls -l gh-pages/${{ env.DEPLOY_DIR }}
+          fi     
       - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: gh-pages
+          keep_files: true

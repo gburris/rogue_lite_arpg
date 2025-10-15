@@ -128,8 +128,8 @@ pub fn on_slot_clicked(
     slot_query: Query<&DisplaySlotOf>,
     item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
     player: Single<Entity, With<Player>>,
-) {
-    let item_entity = slot_query.get(pointer_click.entity).unwrap().0;
+) -> Result {
+    let item_entity = slot_query.get(pointer_click.entity)?.0;
 
     if let Ok((equippable, is_equipped, consumable)) = item_query.get(item_entity) {
         // Left click consumes or equips item
@@ -158,6 +158,7 @@ pub fn on_slot_clicked(
 
         commands.trigger(UpdateDisplayCase { entity: *player });
     }
+    Ok(())
 }
 
 pub fn on_slot_hover(

@@ -33,7 +33,7 @@ pub fn spawn_zone_entities(
     world_config: Res<WorldSpaceConfig>,
     instance_assets: Res<InstanceAssets>,
     player_query: Single<&mut Transform, With<Player>>,
-) {
+) -> Result {
     //TODO: Markers should all store an associated type
     //So maps can have a set of enemy types that they create markers for
     //and chest types, and NPC types
@@ -49,7 +49,7 @@ pub fn spawn_zone_entities(
 
             // Generate a unique instance layout for each portal
             let portal_instance = Portal {
-                map_layout: generate_instance_layout(&instance_assets),
+                map_layout: generate_instance_layout(&instance_assets)?,
             };
 
             commands.spawn((
@@ -105,4 +105,5 @@ pub fn spawn_zone_entities(
     } else {
         warn!("Player spawn marker not found in map layout.");
     }
+    Ok(())
 }

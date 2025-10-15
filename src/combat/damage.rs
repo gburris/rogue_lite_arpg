@@ -223,15 +223,15 @@ pub fn on_damage_dealt_knockback(
     damage_dealt: On<DamageDealt>,
     knockback_query: Query<&Knockback>,
     mut forces: Query<Forces>,
-) {
+) -> Result {
     if let Some(damage_source) = damage_dealt.damage_source
         && let Ok(knockback) = knockback_query.get(damage_source)
         && let Some(damage_direction) = damage_dealt.direction
     {
         info!("Applying knockback!");
         forces
-            .get_mut(damage_dealt.entity)
-            .expect("Damaged entity missing forces")
+            .get_mut(damage_dealt.entity)?
             .apply_force(damage_direction * knockback.0 * 1000000.0);
     }
+    Ok(())
 }

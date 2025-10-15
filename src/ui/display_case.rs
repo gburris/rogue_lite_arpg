@@ -91,7 +91,7 @@ pub fn on_display_case_updated(
     slots_querys: Query<(Entity, &DisplaySlotOf)>,
     items_query: Query<(Option<&Items>, &DisplayedBy)>,
     item_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
-) {
+) -> Result {
     // Get entities inventory
     let (items, displayed_by) = items_query
         .get(update_display_case.entity)
@@ -109,7 +109,7 @@ pub fn on_display_case_updated(
         .for_each(|(e, _)| commands.entity(e).despawn());
 
     let Some(items) = items else {
-        return;
+        return Ok(());
     };
 
     // Get name and entity for each item in inventory
@@ -129,6 +129,7 @@ pub fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
+    Ok(())
 }
 
 const LINE_HEIGHT: f32 = 35.;

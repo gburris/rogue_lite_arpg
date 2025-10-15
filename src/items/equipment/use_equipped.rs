@@ -291,12 +291,15 @@ pub fn on_equipment_deactivated(
     };
 
     if let Ok(mut shield_sprite) = shield_query.get_mut(*shield_entity) {
-        deactivate_shield(
+        let shield_result = deactivate_shield(
             &mut commands,
             *shield_entity,
             *facing_direction,
             &mut shield_sprite,
         );
+        if let Err(e) = shield_result {
+            warn!("Failed to deactivate shield: {}", e);
+        }
     } else {
         warn!("Offhand missing Shield or ActiveShield");
     }

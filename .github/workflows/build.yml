@@ -107,8 +107,7 @@ jobs:
         run: |
           mkdir -p gh-pages/${{ env.DEPLOY_DIR }}
           cp -r assets gh-pages/${{ env.DEPLOY_DIR }}/
-          cp build/baba_yaga.js gh-pages/${{ env.DEPLOY_DIR }}/
-          cp build/baba_yaga_bg.wasm gh-pages/${{ env.DEPLOY_DIR }}/
+          cp -r build gh-pages/${{ env.DEPLOY_DIR }}/
           cp index.html gh-pages/${{ env.DEPLOY_DIR }}/
       - name: Debug gh-pages Directory
         run: |

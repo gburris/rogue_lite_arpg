@@ -4,7 +4,7 @@ use bevy_ecs_tilemap::prelude::*;
 pub struct GamePlugin;
 
 use crate::{
-    animation::AnimationPlugin,
+    animation,
     character::CharacterPlugin,
     combat::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
@@ -20,7 +20,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             // Setup and configuration
-            .add_plugins((SetupPlugin, AnimationPlugin, SchedulePlugin))
+            .add_plugins((SetupPlugin, animation::plugin, SchedulePlugin))
             // Third-party plugins
             .add_plugins((AssetLoadingPlugin, TilemapPlugin))
             // Core systems

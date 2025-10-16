@@ -25,7 +25,6 @@ pub use use_equipped::on_equipment_deactivated;
 pub use use_equipped::on_healing_tome_cast;
 pub use use_equipped::on_shield_block;
 pub use use_equipped::on_weapon_fired;
-pub use use_equipped::on_weapon_melee;
 
 pub use unequip::Unequip;
 

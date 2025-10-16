@@ -10,7 +10,6 @@ use crate::{
         damage::DamageSource,
         health::AttemptHeal,
         mana::ManaCost,
-        melee::{MeleeWeapon, start_melee_attack},
         projectile::{ProjectileOf, Projectiles},
         shield::{ActiveShield, shield_block::deactivate_shield},
         status_effects::Effects,
@@ -202,38 +201,6 @@ pub fn on_weapon_fired(
                     ),
                 ));
         }
-    }
-}
-
-pub fn on_weapon_melee(
-    melee_weapon_used: On<UseEquipment>,
-    mut commands: Commands,
-    mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
-    mut action_state_query: Query<&mut ActionState>,
-    holder_query: Query<&Vision>,
-) {
-    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(melee_weapon_used.entity)
-    else {
-        warn!("Tried to melee attack with invalid weapon");
-        return;
-    };
-
-    let Ok(vision) = holder_query.get(melee_weapon_used.holder) else {
-        warn!("Holder missing required components");
-        return;
-    };
-
-    let attack_angle = vision.aim_direction.to_angle();
-
-    start_melee_attack(
-        &mut commands,
-        weapon_entity,
-        &mut melee_weapon,
-        attack_angle,
-    );
-
-    if let Ok(mut action_state) = action_state_query.get_mut(melee_weapon_used.holder) {
-        *action_state = ActionState::Attacking;
     }
 }
 

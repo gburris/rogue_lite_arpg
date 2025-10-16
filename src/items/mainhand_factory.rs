@@ -7,14 +7,14 @@ use crate::{
     combat::{
         damage::Knockback,
         mana::ManaCost,
-        melee::{MeleeSwingType, MeleeWeapon},
+        melee::{MeleeSwingType, MeleeWeapon, on_weapon_melee},
         projectile::{Projectiles, fireball, icebolt},
         status_effects::{Effects, Frozen},
     },
     configuration::assets::{SpriteAssets, SpriteSheetLayouts},
     items::{
         Item,
-        equipment::{Equippable, on_weapon_fired, on_weapon_melee},
+        equipment::{Equippable, on_weapon_fired},
     },
     utility::Lifespan,
 };

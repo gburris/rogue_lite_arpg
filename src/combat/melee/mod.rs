@@ -5,7 +5,7 @@ use crate::{
     combat::damage::{AttemptDamage, Damage, DamageSource},
     configuration::GameCollisionLayer,
     items::equipment::UseEquipment,
-    prelude::{ActionState, Vision},
+    prelude::{AttackState, Vision},
 };
 
 mod swing;
@@ -92,7 +92,7 @@ pub fn on_weapon_melee(
     melee_weapon_used: On<UseEquipment>,
     mut commands: Commands,
     mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
-    mut action_state_query: Query<&mut ActionState>,
+    mut attack_state_query: Query<&mut AttackState>,
     holder_query: Query<&Vision>,
 ) {
     let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(melee_weapon_used.entity)
@@ -115,8 +115,8 @@ pub fn on_weapon_melee(
         attack_angle,
     );
 
-    if let Ok(mut action_state) = action_state_query.get_mut(melee_weapon_used.holder) {
-        *action_state = ActionState::Attacking;
+    if let Ok(mut attack_state) = attack_state_query.get_mut(melee_weapon_used.holder) {
+        attack_state.is_attacking = true;
     }
 }
 
@@ -137,12 +137,12 @@ fn start_melee_attack(
 pub fn end_melee_attacks(
     mut commands: Commands,
     mut query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
-    mut action_state_query: Query<&mut ActionState>,
+    mut attack_state_query: Query<&mut AttackState>,
 ) {
     for (entity, child_of, attack) in query.iter_mut() {
         if attack.duration.just_finished() {
-            if let Ok(mut action_state) = action_state_query.get_mut(child_of.parent()) {
-                *action_state = ActionState::Movement;
+            if let Ok(mut attack_state) = attack_state_query.get_mut(child_of.parent()) {
+                attack_state.is_attacking = false;
             }
             commands.entity(entity).remove::<ActiveMeleeAttack>();
         }

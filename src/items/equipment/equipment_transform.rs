@@ -96,7 +96,7 @@ pub fn update_equipment_transforms(
                 // Update when holder changes direction
                 Changed<FacingDirection>,
                 // Update when holder stops attacking, stops casting, etc...
-                Changed<ActionState>,
+                Changed<AttackState>,
                 // Update when new item is equipped
                 Changed<Mainhand>,
                 Changed<Offhand>,

@@ -1,8 +1,8 @@
+mod animation;
 mod behavior;
 pub mod enemy;
 pub mod npc;
 pub mod player;
-mod simple_motion;
 mod state;
 mod vision;
 
@@ -11,7 +11,6 @@ pub mod prelude {
     pub use crate::character::npc::NPC;
     pub use crate::character::player::Player;
     pub use crate::character::player::interact::PlayerInteractionRadius;
-    pub use crate::character::simple_motion::SimpleMotion;
     pub use crate::character::state::*;
     pub use crate::character::vision::Vision;
 }
@@ -21,15 +20,17 @@ use bevy::prelude::*;
 
 use crate::{
     animation::AnimationTimer,
+    character::animation::DefaultAnimationConfig,
     configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
     items::ItemCapacity,
     labels::sets::{InGameSystems, MainSystems},
+    prelude::Vision,
 };
 
+use animation::CharacterAnimationState;
 use enemy::EnemyPlugin;
 use npc::NPCPlugin;
 use player::PlayerPlugin;
-use state::ActionState;
 
 pub struct CharacterPlugin;
 
@@ -39,28 +40,38 @@ impl Plugin for CharacterPlugin {
 
         app.add_systems(
             FixedUpdate,
-            simple_motion::to_velocity.in_set(MainSystems::InGame),
+            state::motion_to_velocity.in_set(MainSystems::InGame),
         );
 
         app.add_systems(
             Update,
             (
-                state::update_state_on_simple_motion_change,
-                behavior::while_chasing,
-                behavior::while_idling,
-                behavior::while_wandering,
-                behavior::while_retreating,
-                behavior::while_keeping_distance_and_firing,
-                // Vision + Perception
-                vision::update_aim_position,
-                vision::update_target_info,
-                vision::is_target_in_sight,
-                // Targeting
-                vision::should_target_watched,
-                vision::should_stop_targeting,
-            )
-                .in_set(InGameSystems::Simulation),
+                // Animation
+                (
+                    animation::update_animation_state,
+                    animation::cycle_character_animation,
+                )
+                    .chain()
+                    .in_set(InGameSystems::Vfx),
+                (
+                    // NPC AI
+                    behavior::while_chasing,
+                    behavior::while_idling,
+                    behavior::while_wandering,
+                    behavior::while_retreating,
+                    behavior::while_keeping_distance_and_firing,
+                    // Vision + Perception
+                    vision::update_aim_position,
+                    vision::update_target_info,
+                    vision::is_target_in_sight,
+                    // Targeting
+                    vision::should_target_watched,
+                    vision::should_stop_targeting,
+                )
+                    .in_set(InGameSystems::Simulation),
+            ),
         )
+        .insert_resource(DefaultAnimationConfig::default())
         .add_observer(behavior::on_idle_start)
         .add_observer(behavior::on_wander_start)
         .add_observer(behavior::on_attempt_melee)
@@ -75,7 +86,8 @@ impl Plugin for CharacterPlugin {
     // Set stable mass for characters so speed can be compared numerically
     Mass(50.0),
     NoAutoMass,
-    ActionState,
+    CharacterAnimationState,
+    Vision,
     ItemCapacity(10),
     AnimationTimer,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]

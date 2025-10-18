@@ -18,24 +18,27 @@ pub struct Unequip {
 pub fn on_item_unequipped(
     trigger: On<Unequip>,
     mut commands: Commands,
-    mut item_query: Query<(&ItemOf, &mut Visibility), With<Equipped>>,
-    mut holder_query: Query<&mut ActionState>,
+    mut item_query: Query<(&ItemOf, &mut Visibility, Has<ActiveMeleeAttack>), With<Equipped>>,
+    mut holder_query: Query<&mut AttackState>,
 ) {
     let item_entity = trigger.entity;
 
-    let Ok((equipment_of, mut visibility)) = item_query.get_mut(item_entity) else {
+    let Ok((equipment_of, mut visibility, is_active_attack)) = item_query.get_mut(item_entity)
+    else {
         info!("Equipment was despawned prior to unequip");
         return;
     };
 
-    let Ok(mut action_state) = holder_query.get_mut(equipment_of.0) else {
+    let Ok(mut attack_state) = holder_query.get_mut(equipment_of.0) else {
         info!("Holder was despawned prior to unequip");
         return;
     };
 
-    if *action_state == ActionState::Defeated {
-        info!("Holder was in the death animation prior to unequip");
-        return;
+    // If you are in the menu and unequip a weapon while you were mid-swing,
+    // we need to handle leaving attack state
+    // TODO: Consider just cancelling attacks upon pausing
+    if is_active_attack {
+        attack_state.is_attacking = false;
     }
 
     *visibility = Visibility::Hidden;
@@ -47,9 +50,4 @@ pub fn on_item_unequipped(
         OffhandOf,
         ChildOf,
     )>();
-
-    // TODO: We need to re-evaluate action state this has "issues"
-    if *action_state == ActionState::Attacking {
-        *action_state = ActionState::Movement;
-    }
 }

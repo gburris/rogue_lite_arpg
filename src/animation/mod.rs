@@ -39,10 +39,7 @@ pub fn animate_sprite_system(
             .texture_atlas
             .as_mut()
             .ok_or("Tried to animate a sprite without a texture atlas")?;
-        let next = match &mut *indices {
-            AnimationIndices::Cycle(i) => i.next(),
-            AnimationIndices::OneShot(i) => i.next(),
-        };
+        let next = indices.next();
         match next {
             Some(index) => atlas.index = index,
             None => {
@@ -90,6 +87,16 @@ impl AnimationIndices {
             // easier to include metadata
             AnimationIndices::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
             AnimationIndices::OneShot(range_inclusive) => *range_inclusive.start(),
+        }
+    }
+}
+
+impl Iterator for AnimationIndices {
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            AnimationIndices::Cycle(cycle) => cycle.next(),
+            AnimationIndices::OneShot(range_inclusive) => range_inclusive.next(),
         }
     }
 }

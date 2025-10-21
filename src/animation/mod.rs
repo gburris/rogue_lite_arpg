@@ -1,9 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 mod spells;
-mod update_animation;
 
 pub use spells::heal_vfx;
-pub use update_animation::update_animation;
 
 use crate::{
     labels::sets::InGameSystems,
@@ -15,7 +13,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             animate_sprite_system,
-            update_animation, //Change animation if components change that dictace updating it
+            update_animation_system, //Change animation if components change that dictace updating it
         )
             .chain()
             .in_set(InGameSystems::Vfx),
@@ -40,7 +38,7 @@ pub fn animate_sprite_system(
         let atlas = sprite
             .texture_atlas
             .as_mut()
-            .ok_or(format!("Tried to animate a sprite without a texture atlas"))?;
+            .ok_or("Tried to animate a sprite without a texture atlas")?;
         let next = match &mut *indices {
             AnimationIndices::Cycle(i) => i.next(),
             AnimationIndices::OneShot(i) => i.next(),
@@ -51,6 +49,29 @@ pub fn animate_sprite_system(
                 commands.entity(entity).remove::<AnimationTimer>();
             }
         };
+    }
+    Ok(())
+}
+
+pub fn update_animation_system(
+    animation_config: Res<DefaultAnimationConfig>,
+    mut query: Query<
+        (
+            &mut AnimationIndices,
+            &mut AnimationTimer,
+            &mut Sprite,
+            &ActionState,
+            &FacingDirection,
+        ),
+        Or<(Changed<ActionState>, Changed<FacingDirection>)>,
+    >,
+) -> Result {
+    for (mut indices, mut timer, mut sprite, state, direction) in query.iter_mut() {
+        *indices = animation_config.indices(*state, *direction)?;
+        *timer = AnimationTimer(animation_config.timer(*state, *direction)?);
+        if let Some(atlas) = &mut sprite.texture_atlas {
+            atlas.index = indices.start();
+        }
     }
     Ok(())
 }
@@ -262,7 +283,7 @@ impl DefaultAnimationConfig {
     ) -> Result<&AnimationData> {
         self.animations
             .get(&(state, direction))
-            .ok_or(format!("Missing animation data for {:?} {:?}", state, direction).into())
+            .ok_or(format!("Missing animation data for {state:?} {direction:?}").into())
     }
 
     pub fn indices(

@@ -20,7 +20,7 @@ use super::{
 #[require(
     Lifespan::new(1.0),
     Sensor,
-    RigidBody,
+    RigidBody::Kinematic,
     Collider::rectangle(10.0, 10.0),
     CollidingEntities,
     AnimationIndices::Cycle((0..=4).cycle()),

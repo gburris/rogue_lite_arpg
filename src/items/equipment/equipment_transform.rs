@@ -83,8 +83,11 @@ static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTrans
     });
 
 impl EquipmentTransform {
-    pub fn get(direction: FacingDirection) -> Self {
-        EQUIPMENT_TRANSFORM_MAP.get(&direction).copied().unwrap()
+    pub fn get(direction: FacingDirection) -> Result<Self> {
+        EQUIPMENT_TRANSFORM_MAP
+            .get(&direction)
+            .copied()
+            .ok_or(BevyError::from("Direction not found"))
     }
 }
 
@@ -105,9 +108,9 @@ pub fn update_equipment_transforms(
         ),
     >,
     mut transforms: Query<&mut Transform, (With<Equipped>, Without<ActiveMeleeAttack>)>,
-) {
+) -> Result {
     for (mainhand, offhand, direction) in &all_worn_equipment {
-        let direction_transforms = EquipmentTransform::get(*direction);
+        let direction_transforms = EquipmentTransform::get(*direction)?;
 
         // Update mainhand equipment
         if let Some(Mainhand(mainhand)) = mainhand
@@ -123,4 +126,5 @@ pub fn update_equipment_transforms(
             *transform = direction_transforms.offhand;
         }
     }
+    Ok(())
 }

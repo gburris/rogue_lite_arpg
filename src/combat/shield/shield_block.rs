@@ -24,13 +24,11 @@ pub fn update_active_shields(
         (With<ActiveShield>, With<Equipped>),
     >,
     mut holder_query: Query<(&Vision, &FacingDirection, Option<&mut Mana>)>,
-) {
+) -> Result {
     for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in
         active_shield_query.iter_mut()
     {
-        let (vision, facing_direction, mana) = holder_query
-            .get_mut(item_of.0)
-            .expect("Shield holder missing necessary components");
+        let (vision, facing_direction, mana) = holder_query.get_mut(item_of.0)?;
 
         let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
 
@@ -81,10 +79,11 @@ pub fn update_active_shields(
                     shield_entity,
                     *facing_direction,
                     &mut shield_sprite,
-                );
+                )?;
             }
         }
     }
+    Ok(())
 }
 
 pub fn deactivate_shield(
@@ -92,15 +91,16 @@ pub fn deactivate_shield(
     shield_entity: Entity,
     facing_direction: FacingDirection,
     shield_sprite: &mut Sprite,
-) {
+) -> Result {
     commands
         .entity(shield_entity)
         .remove::<(ActiveShield, Collider)>()
-        .insert(EquipmentTransform::get(facing_direction).offhand);
+        .insert(EquipmentTransform::get(facing_direction)?.offhand);
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;
     }
+    Ok(())
 }
 
 pub fn activate_shield(

@@ -44,7 +44,7 @@ pub fn on_player_interaction_input(
     mut commands: Commands,
     interact_query: Query<(&ChildOf, &Transform), With<InteractionZone>>,
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
-) {
+) -> Result {
     let (player_transform, interact_collisions) = player_query.into_inner();
     let player_pos = player_transform.translation.truncate();
 
@@ -70,6 +70,7 @@ pub fn on_player_interaction_input(
             interaction_zone_entity,
         });
     }
+    Ok(())
 }
 
 /// This method acts as a constructor, adding a collider to the InteractionZone based the variant chosen
@@ -77,11 +78,11 @@ pub fn on_interaction_zone_added(
     interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,
     interact_query: Query<&InteractionZone>,
-) {
+) -> Result {
     let interaction_zone = interaction_zone_added.entity;
 
     // We can unwrap since this is an Add. Surely it exists right 0.o
-    let interact = interact_query.get(interaction_zone).unwrap();
+    let interact = interact_query.get(interaction_zone)?;
 
     let collider = match interact {
         InteractionZone::Circle { radius } => Collider::circle(*radius),
@@ -89,4 +90,5 @@ pub fn on_interaction_zone_added(
     };
 
     commands.entity(interaction_zone).insert(collider);
+    Ok(())
 }

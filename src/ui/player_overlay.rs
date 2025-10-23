@@ -158,22 +158,20 @@ pub fn update_health_bar(
 }
 
 pub fn update_mana_bar(
-    player_mana: Option<Single<&Mana, (With<Player>, Changed<Mana>)>>,
+    player_mana: Single<&Mana, (With<Player>, Changed<Mana>)>,
     mut mana_bar: Single<&mut Node, (With<ManaBar>, Without<ManaLostBar>)>,
     mana_lost_bar: Single<(&mut Node, &mut ManaLostBar)>,
 ) {
     let (mut mana_lost_node, mut mana_lost) = mana_lost_bar.into_inner();
 
-    if let Some(player_mana) = player_mana {
-        mana_bar.width = get_amount_left_in_pixels(player_mana.current_mana, player_mana.max_mana);
-        mana_lost_node.width = get_amount_lost_in_pixels(
-            mana_lost.previous_mana,
-            player_mana.current_mana,
-            mana_lost_node.width,
-        );
+    mana_bar.width = get_amount_left_in_pixels(player_mana.current_mana, player_mana.max_mana);
+    mana_lost_node.width = get_amount_lost_in_pixels(
+        mana_lost.previous_mana,
+        player_mana.current_mana,
+        mana_lost_node.width,
+    );
 
-        mana_lost.previous_mana = player_mana.current_mana;
-    }
+    mana_lost.previous_mana = player_mana.current_mana;
 }
 
 pub fn update_lost_mana_bar(

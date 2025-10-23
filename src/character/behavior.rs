@@ -35,11 +35,12 @@ pub fn on_idle_start(
     idle: On<Add, Idle>,
     idle_query: Query<&BehaveCtx, With<Idle>>,
     mut target_query: Query<&mut SimpleMotion>,
-) {
-    let ctx = idle_query.get(idle.entity).unwrap();
+) -> Result {
+    let ctx = idle_query.get(idle.entity)?;
 
-    let mut motion = target_query.get_mut(ctx.target_entity()).unwrap();
+    let mut motion = target_query.get_mut(ctx.target_entity())?;
     motion.stop_moving();
+    Ok(())
 }
 
 pub fn while_idling(
@@ -111,15 +112,16 @@ pub fn on_wander_start(
     mut commands: Commands,
     wander_query: Query<&BehaveCtx, With<Wander>>,
     mut target_query: Query<(&mut SimpleMotion, Option<&Anchor>, &Transform)>,
-) {
-    let ctx = wander_query.get(wander.entity).unwrap();
-    let (mut motion, anchor, transform) = target_query.get_mut(ctx.target_entity()).unwrap();
+) -> Result {
+    let ctx = wander_query.get(wander.entity)?;
+    let (mut motion, anchor, transform) = target_query.get_mut(ctx.target_entity())?;
 
     if anchor.is_some_and(|a| a.outside_range(transform)) {
         commands.trigger(ctx.failure());
     } else {
         motion.start_moving(random_direction());
     }
+    Ok(())
 }
 
 pub fn while_wandering(
@@ -146,10 +148,10 @@ pub fn while_retreating(
     mut commands: Commands,
     mut retreat_query: Query<&BehaveCtx, With<Retreat>>,
     mut target_query: Query<(&mut SimpleMotion, &Transform, &Anchor, Has<Targeting>)>,
-) {
-    retreat_query.iter_mut().for_each(|ctx| {
+) -> Result {
+    retreat_query.iter_mut().try_for_each(|ctx| {
         let (mut motion, transform, anchor, has_target) =
-            target_query.get_mut(ctx.target_entity()).unwrap();
+            target_query.get_mut(ctx.target_entity())?;
         if has_target {
             commands.trigger(ctx.failure());
             // within half a tile, we can stop retreating
@@ -159,7 +161,8 @@ pub fn while_retreating(
             let direction = (anchor.origin - transform.translation.xy()).normalize_or_zero();
             motion.start_moving(direction);
         }
-    });
+        Ok(())
+    })
 }
 
 /// When a character has a target, it moves towards them. The chase!!
@@ -170,10 +173,9 @@ pub fn while_chasing(
     mut commands: Commands,
     mut chase_query: Query<&BehaveCtx, With<Chase>>,
     mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
-) {
-    chase_query.iter_mut().for_each(|ctx| {
-        let (mut motion, target_info, has_target) =
-            target_query.get_mut(ctx.target_entity()).unwrap();
+) -> Result {
+    chase_query.iter_mut().try_for_each(|ctx| {
+        let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
         if !has_target {
             debug!("We chased and failed!");
@@ -186,7 +188,8 @@ pub fn while_chasing(
                 commands.trigger(ctx.success());
             }
         }
-    });
+        Ok(())
+    })
 }
 
 fn random_direction() -> Vec2 {
@@ -215,10 +218,9 @@ pub fn while_keeping_distance_and_firing(
     mut commands: Commands,
     mut behave_query: Query<&BehaveCtx, With<KeepDistanceAndFire>>,
     mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
-) {
-    behave_query.iter_mut().for_each(|ctx| {
-        let (mut motion, target_info, has_target) =
-            target_query.get_mut(ctx.target_entity()).unwrap();
+) -> Result {
+    behave_query.iter_mut().try_for_each(|ctx| {
+        let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
         if !has_target {
             commands.trigger(ctx.failure());
@@ -236,5 +238,6 @@ pub fn while_keeping_distance_and_firing(
                 motion.start_moving(target_info.direction);
             }
         }
-    });
+        Ok(())
+    })
 }

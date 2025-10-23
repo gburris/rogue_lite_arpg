@@ -7,7 +7,7 @@ use crate::map::components::{InstanceAssets, MapLayout, TileType};
 
 use super::map_data::{MapDataBuilder, PrefabType};
 
-pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLayout {
+pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> Result<MapLayout> {
     let mut rng = rand::rng();
 
     let instance_names = [
@@ -18,12 +18,12 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
     ];
     let weights = [40, 25, 25, 10];
 
-    let dist = WeightedIndex::new(weights).unwrap();
+    let dist = WeightedIndex::new(weights)?;
     let selected_index = dist.sample(&mut rng);
     let instance_type = instance_assets
         .instance_config
         .get(instance_names[selected_index])
-        .unwrap();
+        .ok_or(BevyError::from("Instance name not found"))?;
 
     let size_x =
         rng.random_range(instance_type.size_x_range.0..=instance_type.size_x_range.1) as u32;
@@ -75,5 +75,5 @@ pub fn generate_instance_layout(instance_assets: &Res<InstanceAssets>) -> MapLay
         .with_enemies(num_enemies)
         .build();
 
-    MapLayout::from(map_data)
+    Ok(MapLayout::from(map_data))
 }

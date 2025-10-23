@@ -4,6 +4,7 @@ use bevy_behave::prelude::BehavePlugin;
 
 #[cfg(not(feature = "dev"))]
 use bevy::asset::AssetMetaCheck;
+use bevy_enhanced_input::EnhancedInputPlugin;
 
 use crate::{
     labels::{
@@ -47,7 +48,7 @@ impl Plugin for SetupPlugin {
             .add_plugins(PhysicsPlugins::default().with_length_unit(32.0))
             .insert_resource(GameProgress::default())
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
-            .add_plugins(BehavePlugin::default())
+            .add_plugins((EnhancedInputPlugin, BehavePlugin::default()))
             // initialize states
             .init_state::<AppState>()
             .add_sub_state::<PausedState>()

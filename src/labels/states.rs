@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 #[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
-#[states(scoped_entities)]
 pub enum AppState {
     #[default]
     StartScreen,
@@ -16,7 +15,6 @@ pub enum AppState {
 
 #[derive(SubStates, Eq, Default, Hash, Clone, Copy, Debug, PartialEq)]
 #[source(AppState = AppState::Paused)]
-#[states(scoped_entities)]
 pub enum PausedState {
     #[default]
     MainMenu,

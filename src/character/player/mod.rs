@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
+use bevy_enhanced_input::prelude::*;
 use movement::PlayerMovementEvent;
 
 mod aim;
@@ -9,10 +10,11 @@ pub mod interact;
 mod level;
 mod movement;
 
-pub use input::PauseInputEvent;
-
 use crate::{
-    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    character::{
+        Character, physical_collider,
+        player::interact::{PlayerInteractionInput, PlayerInteractionRadius},
+    },
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     configuration::{
         CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
@@ -26,11 +28,12 @@ use crate::{
     },
     labels::{
         sets::InGameSystems,
-        states::{AppState, PlayingState},
+        states::{AppState, PausedState, PlayingState},
     },
     map::systems::state::transition_to_create_hub,
     prelude::*,
     progression::GameProgress,
+    ui::pause_menu::PauseInputEvent,
 };
 
 /// How much more experience is required (as a multiplier) after each level up
@@ -40,7 +43,9 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<PlayerMovementEvent>()
+        app.add_input_context::<Player>()
+            .add_input_context::<Menu>()
+            .add_message::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (spawn_player, transition_to_create_hub).chain(),
@@ -72,7 +77,10 @@ impl Plugin for PlayerPlugin {
             .add_observer(level::on_level_up)
             .add_observer(movement::on_player_stopped)
             .add_observer(interact::on_player_interaction_input)
-            .add_observer(interact::on_interaction_zone_added);
+            .add_observer(interact::on_interaction_zone_added)
+            .add_observer(on_pause)
+            .add_observer(on_resume)
+            .add_observer(on_inventory_opened);
     }
 }
 
@@ -183,6 +191,9 @@ impl DisplayableStatType {
     }
 }
 
+#[derive(Component)]
+struct Menu;
+
 fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -192,6 +203,37 @@ fn spawn_player(
 ) {
     commands.spawn((
         Player::default(),
+        actions!(Player[
+            (
+                Action::<PauseGame>::new(),
+                // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
+                // and we want it to be triggerable only after the button is released.
+                ActionSettings {
+                    require_reset: true,
+                    ..Default::default()
+                },
+                bindings![KeyCode::Escape, GamepadButton::Start],
+            ),
+            (
+                Action::<OpenInventory>::new(),
+                bindings![KeyCode::KeyI],
+            ),
+            (
+                Action::<PlayerInteractionInput>::new(),
+                bindings![KeyCode::Space, GamepadButton::South],
+            )
+        ]),
+        Menu,
+        actions!(Menu[
+            (
+                Action::<ResumeGame>::new(),
+                ActionSettings {
+                    require_reset: true,
+                    ..Default::default()
+                },
+                bindings![KeyCode::Escape, GamepadButton::Start],
+            ),
+        ]),
         Mana::new(100.0, 10.0),
         game_progress.base_stats.clone(),
         Sprite::from_atlas_image(
@@ -229,4 +271,59 @@ fn spawn_player(
             )
         ],
     ));
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct OpenInventory;
+
+fn on_inventory_opened(
+    inventory: On<Start<OpenInventory>>,
+    mut commands: Commands,
+    mut next_app_state: ResMut<NextState<AppState>>,
+    mut next_pause_state: ResMut<NextState<PausedState>>,
+) {
+    commands.entity(inventory.context).insert((
+        ContextActivity::<Player>::INACTIVE,
+        ContextActivity::<Menu>::ACTIVE,
+    ));
+
+    next_app_state.set(AppState::Paused);
+    next_pause_state.set(PausedState::Inventory);
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct PauseGame;
+
+fn on_pause(
+    pause: On<Start<PauseGame>>,
+    mut commands: Commands,
+    mut next_app_state: ResMut<NextState<AppState>>,
+) {
+    info!("Pausing Game");
+    commands.entity(pause.context).insert((
+        ContextActivity::<Player>::INACTIVE,
+        ContextActivity::<Menu>::ACTIVE,
+    ));
+
+    debug!("Not currently paused, transitioning to paused");
+    next_app_state.set(AppState::Paused)
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct ResumeGame;
+
+fn on_resume(
+    resume: On<Start<ResumeGame>>,
+    mut commands: Commands,
+    mut next_app_state: ResMut<NextState<AppState>>,
+) {
+    info!("Resuming Game");
+    commands.entity(resume.context).insert((
+        ContextActivity::<Player>::ACTIVE,
+        ContextActivity::<Menu>::INACTIVE,
+    ));
+    next_app_state.set(AppState::Playing);
 }

@@ -5,7 +5,7 @@ use crate::{
     ui::*,
 };
 
-use super::{npc::plugin::NPCPauseScreensPlugin, pause_menu::plugin::PauseMenuPlugin};
+use super::{npc::plugin::NPCPauseScreensPlugin, pause_menu::PauseMenuPlugin};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::labels::states::PausedState;
 
-use super::main_menu::MenuButton;
+use super::MenuButton;
 
 pub fn handle_menu_button_pressed(
     mut button_query: Query<(&Interaction, &MenuButton)>,

@@ -1,20 +1,11 @@
 use bevy::prelude::*;
 
-use crate::{
-    items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
-    labels::states::PausedState,
-};
+use crate::items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput};
 
 use super::{
     Player,
-    interact::PlayerInteractionInput,
     movement::{PlayerMovementEvent, PlayerStoppedEvent},
 };
-
-#[derive(Event)]
-pub struct PauseInputEvent {
-    pub paused_state: Option<PausedState>, //What pause state to default to
-}
 
 pub fn player_input(
     mut commands: Commands,
@@ -24,18 +15,6 @@ pub fn player_input(
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();
-
-    if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        commands.trigger(PauseInputEvent {
-            paused_state: Some(PausedState::MainMenu),
-        });
-        return;
-    }
-
-    if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(PlayerInteractionInput);
-        return;
-    }
 
     if buttons.pressed(MouseButton::Left) {
         commands.trigger(UseEquipmentInput {

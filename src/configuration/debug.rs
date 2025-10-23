@@ -22,7 +22,7 @@ impl Plugin for DebugPlugin {
                 .set(LogPlugin {
                     level: Level::INFO,
                     // update game dev project to info or another when you get tired of debug
-                    filter: "wgpu=error,baba_yaga=debug".to_string(),
+                    filter: "wgpu=error,baba_yaga=debug,bevy_enhanced_input=debug".to_string(),
                     ..default()
                 })
                 .set(view::get_window_plugin())

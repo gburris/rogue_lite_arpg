@@ -4,10 +4,9 @@ use bevy_ecs_tilemap::map::TilemapId;
 use crate::{
     combat::Projectile,
     configuration::time_control::RestartEvent,
-    economy::Gold,
     items::lootable::Lootable,
     labels::sets::InGameSystems,
-    map::{Chest, CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
+    map::{CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
     prelude::{Enemy, NPC, Player},
     ui::PlayerOverlay,
 };
@@ -24,11 +23,9 @@ pub fn plugin(app: &mut App) {
     .add_observer(despawn_all::<CleanupZone, Water>)
     .add_observer(despawn_all::<CleanupZone, ZoneBackground>)
     .add_observer(despawn_all::<CleanupZone, Lootable>)
-    .add_observer(despawn_all::<CleanupZone, Chest>)
     .add_observer(despawn_all::<CleanupZone, Enemy>)
     .add_observer(despawn_all::<CleanupZone, Projectile>)
     .add_observer(despawn_all::<CleanupZone, NPC>)
-    .add_observer(despawn_all::<CleanupZone, Gold>)
     .add_observer(despawn_all::<RestartEvent, Player>)
     .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
 }

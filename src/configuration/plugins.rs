@@ -8,12 +8,11 @@ use crate::{
     character::CharacterPlugin,
     combat::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
-    economy::EconomyPlugin,
     items,
     map::plugin::MapPlugin,
     progression::plugin::ProgressionPlugin,
     ui::plugin::UIPlugin,
-    utility,
+    utility, world,
 };
 
 impl Plugin for GamePlugin {
@@ -28,7 +27,7 @@ impl Plugin for GamePlugin {
                 utility::plugin,
                 CombatPlugin,
                 ProgressionPlugin,
-                EconomyPlugin,
+                world::plugin,
             ))
             // Entity systems
             .add_plugins((MapPlugin, items::plugin, CharacterPlugin))

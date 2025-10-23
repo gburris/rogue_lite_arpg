@@ -9,19 +9,23 @@ use crate::{
         GameCollisionLayer, YSort,
         assets::{SpriteAssets, SpriteSheetLayouts},
     },
-    economy::GoldDrop,
+    world::gold::GoldDrop,
 };
 
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
 const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(on_spawn_chests_event);
+}
+
 #[derive(Debug, Event)]
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
 #[require(YSort::from_offset(BOTTOM_OF_CHEST))]
-pub struct Chest;
+struct Chest;
 
 #[derive(Component)]
 #[require(
@@ -33,9 +37,9 @@ pub struct Chest;
     ),
     Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0))
 )]
-pub struct ChestCollider;
+struct ChestCollider;
 
-pub fn on_spawn_chests_event(
+fn on_spawn_chests_event(
     chest_spawn_trigger: On<SpawnChestsEvent>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -43,17 +47,16 @@ pub fn on_spawn_chests_event(
 ) {
     let chest_spawn_positions = chest_spawn_trigger.0.clone();
     for spawn_position in chest_spawn_positions {
-        spawn_chest(&mut commands, &sprites, &sprite_layouts, spawn_position);
+        commands.spawn(chest(&sprites, &sprite_layouts, spawn_position));
     }
 }
 
-fn spawn_chest(
-    commands: &mut Commands,
+fn chest(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     spawn_position: Vec2,
-) {
-    commands.spawn((
+) -> impl Bundle {
+    (
         Chest,
         Sprite {
             image: sprites.chests_sprite_sheet.clone(),
@@ -78,10 +81,10 @@ fn spawn_chest(
             )
         ],
         observe(on_interaction_open_chest),
-    ));
+    )
 }
 
-pub fn on_interaction_open_chest(
+fn on_interaction_open_chest(
     chest_opened: On<Interaction>,
     chest_transforms: Query<&Transform, With<Chest>>,
     mut commands: Commands,
@@ -102,7 +105,7 @@ pub fn on_interaction_open_chest(
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
         commands.trigger(GoldDrop {
             amount: 999,
-            drop_location: chest_transform.translation.truncate(),
+            location: chest_transform.translation.truncate(),
         });
     };
 }

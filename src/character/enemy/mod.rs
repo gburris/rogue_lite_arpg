@@ -5,6 +5,7 @@ use bevy_behave::prelude::*;
 mod defeat;
 
 use crate::{
+    character::Purse,
     character::{
         Character,
         behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
@@ -17,7 +18,6 @@ use crate::{
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow,
     },
-    economy::Purse,
     items::{
         Items,
         equipment::{Equipped, on_equipment_activated},

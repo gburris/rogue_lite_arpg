@@ -5,7 +5,6 @@ use crate::{
     character::enemy::{EnemySpawnData, EnemyType},
     configuration::{ZLayer, assets::SpriteAssets},
     map::{
-        chest::SpawnChestsEvent,
         components::{
             InstanceAssets, MapLayout, MarkerType, SpawnEnemies, SpawnNpcs, WorldSpaceConfig,
         },
@@ -13,6 +12,7 @@ use crate::{
         portal::Portal,
     },
     prelude::Player,
+    world::chest::SpawnChestsEvent,
 };
 
 fn convert_tiles_to_world_positions(

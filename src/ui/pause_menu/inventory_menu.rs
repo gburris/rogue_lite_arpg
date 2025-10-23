@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    economy::Purse,
+    character::Purse,
     labels::states::PausedState,
     prelude::{Enemy, NPC, Player},
     ui::{

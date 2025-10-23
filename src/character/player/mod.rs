@@ -12,14 +12,13 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    character::{Character, Purse, physical_collider, player::interact::PlayerInteractionRadius},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     configuration::{
         CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow,
     },
-    economy::Purse,
     items::{
         self, ItemCapacity, Items,
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},

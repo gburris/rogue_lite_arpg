@@ -4,12 +4,12 @@ use bevy::prelude::*;
 use rand::{Rng, rng};
 
 use crate::{
-    character::player::PlayerStats,
+    character::{Purse, player::PlayerStats},
     combat::{Health, damage::Defeated},
-    economy::{GoldDrop, Purse},
     items::{Item, Items, lootable::ItemDrop},
     prelude::*,
     utility::Lifespan,
+    world::gold::GoldDrop,
 };
 
 use super::{Enemy, Experience};
@@ -51,7 +51,7 @@ pub fn on_enemy_defeated(
             // Enemies drop their gold based on player luck
             if rng.random_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
                 commands.trigger(GoldDrop {
-                    drop_location: transform.translation.truncate(),
+                    location: transform.translation.truncate(),
                     amount: purse.amount,
                 });
             }

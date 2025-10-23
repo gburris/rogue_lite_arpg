@@ -1,17 +1,19 @@
 use bevy::prelude::*;
 
-use crate::{configuration::ZLayer, ui::primitives::text, utility::Lifespan};
+use crate::{
+    configuration::ZLayer, labels::sets::InGameSystems, ui::primitives::text, utility::Lifespan,
+};
 
 use super::Player;
 
 #[derive(Event)]
-pub struct PlayerLevelUpEvent;
+struct PlayerLevelUpEvent;
 
 #[derive(Component)]
-pub struct LevelUpEffect;
+struct LevelUpEffect;
 
 #[derive(Component)]
-pub struct LevelUpText;
+struct LevelUpText;
 
 /// Starting and ending size of level up ring animation
 const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
@@ -20,13 +22,24 @@ const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
 const LEVEL_UP_ANIMATION_DURATION: f32 = 1.2;
 const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
 
-pub fn on_player_experience_change(mut commands: Commands, mut player: Single<&mut Player>) {
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            on_player_experience_change.in_set(InGameSystems::Simulation),
+            animate_level_up.in_set(InGameSystems::Vfx),
+        ),
+    )
+    .add_observer(on_level_up);
+}
+
+fn on_player_experience_change(mut commands: Commands, mut player: Single<&mut Player>) {
     while player.attempt_level_up() {
         commands.trigger(PlayerLevelUpEvent);
     }
 }
 
-pub fn on_level_up(
+fn on_level_up(
     _: On<PlayerLevelUpEvent>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -58,7 +71,7 @@ pub fn on_level_up(
         });
 }
 
-pub fn animate_level_up(
+fn animate_level_up(
     mut effect_query: Query<
         (
             &mut Transform,

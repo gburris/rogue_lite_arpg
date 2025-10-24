@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use crate::{
     character::prelude::Player,
     combat::{Health, damage::Defeated},
-    map::CleanupZone,
     prelude::*,
 };
 
@@ -33,13 +32,11 @@ pub fn on_player_defeated(
 pub fn finish_death_animation(
     time: Res<Time>,
     player_death_timer_single: Single<&mut GameOverTimer, With<Player>>,
-    mut commands: Commands,
     mut game_over_state: ResMut<NextState<AppState>>,
 ) {
     let mut death_timer = player_death_timer_single.into_inner();
     death_timer.0.tick(time.delta());
     if death_timer.0.is_finished() {
-        commands.trigger(CleanupZone);
         game_over_state.set(AppState::GameOver);
     }
 }

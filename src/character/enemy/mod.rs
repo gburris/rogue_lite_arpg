@@ -23,21 +23,38 @@ use crate::{
         equipment::{Equipped, on_equipment_activated},
         fire_staff, health_potion, ice_staff, sword,
     },
-    map::SpawnEnemies,
     prelude::*,
 };
 
-pub struct EnemyPlugin;
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(spawn_enemies);
+}
 
-impl Plugin for EnemyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_observer(spawn_enemies);
-    }
+#[derive(Debug, Event)]
+pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
+
+#[derive(Debug, Clone)]
+pub struct EnemySpawnData {
+    pub position: Vec2,
+    pub enemy_type: EnemyType,
 }
 
 #[derive(Component)]
-#[require(Character, Experience, VisionCapabilities, Purse { amount: 50 })]
+#[require(
+    Character, 
+    Experience, 
+    VisionCapabilities, 
+    Purse { amount: 50 },     
+    DespawnOnExit::<AppState>(AppState::Playing),
+)]
 pub struct Enemy;
+
+#[derive(Component, PartialEq, Clone, Debug)]
+pub enum EnemyType {
+    Warrior,
+    IceMage,
+    FireMage,
+}
 
 //Experience granted by the enemy when player defeats it
 #[derive(Component)]
@@ -49,19 +66,6 @@ impl Default for Experience {
     fn default() -> Self {
         Experience { base_exp: 10.0 }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct EnemySpawnData {
-    pub position: Vec2,
-    pub enemy_type: EnemyType,
-}
-
-#[derive(Component, PartialEq, Clone, Debug)]
-pub enum EnemyType {
-    Warrior,
-    IceMage,
-    FireMage,
 }
 
 fn spawn_enemies(

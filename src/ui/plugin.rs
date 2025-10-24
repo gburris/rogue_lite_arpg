@@ -55,7 +55,6 @@ impl Plugin for UIPlugin {
             .add_observer(player_overlay::on_equipment_use_failed);
 
         // Game over systems
-        app.add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn)
-            .add_observer(game_over_screen::on_restart_event_cleanup_zone);
+        app.add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn);
     }
 }

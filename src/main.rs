@@ -5,18 +5,15 @@
 
 use bevy::prelude::*;
 
-use crate::configuration::GamePlugin;
-
 pub mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
 pub mod items;
-pub mod map;
 pub mod progression;
 pub mod ui;
 pub mod utility;
-pub mod world;
+mod world;
 
 pub mod prelude {
     pub use super::character::prelude::*;
@@ -25,5 +22,21 @@ pub mod prelude {
 }
 
 fn main() {
-    App::new().add_plugins(GamePlugin).run();
+    App::new().add_plugins(plugin).run();
+}
+
+fn plugin(app: &mut App) {
+    // Core systems
+    app.add_plugins((
+        utility::plugin,
+        configuration::plugin,
+        combat::CombatPlugin,
+        progression::plugin::ProgressionPlugin,
+    ));
+
+    // Entity systems
+    app.add_plugins((world::plugin, items::plugin, character::CharacterPlugin));
+
+    // UI
+    app.add_plugins(ui::plugin::UIPlugin);
 }

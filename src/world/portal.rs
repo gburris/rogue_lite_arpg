@@ -2,13 +2,19 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    configuration::{GameCollisionLayer, YSort},
-    map::components::SpawnZone,
-    prelude::AppState,
-    prelude::PlayerInteractionRadius,
+    configuration::{GameCollisionLayer, YSort, ZLayer, assets::SpriteAssets},
+    prelude::*,
 };
 
-use super::components::MapLayout;
+use super::map::MapLayout;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        handle_portal_collisions.in_set(InGameSystems::Collision),
+    )
+    .add_observer(on_portal_entered);
+}
 
 /// Portals represent any "warping device" in the game, currently spawning a new zone when entered
 #[derive(Component)]
@@ -20,13 +26,25 @@ use super::components::MapLayout;
         GameCollisionLayer::Interaction,
         GameCollisionLayer::PlayerInteractionRadius
     ),
-    YSort
+    YSort,
+    DespawnOnExit::<AppState>(AppState::Playing),
 )]
-pub struct Portal {
-    pub map_layout: MapLayout,
+struct Portal {
+    map_layout: MapLayout,
 }
 
-pub fn handle_portal_collisions(
+pub fn portal(instance: &InstanceAssets, sprites: &SpriteAssets, position: Vec2) -> impl Bundle {
+    (
+        // Generate a unique instance layout for each portal
+        Portal {
+            map_layout: instance.generate_map_layout().unwrap(),
+        },
+        Sprite::from_image(sprites.exit_door.clone()),
+        Transform::from_translation(position.extend(ZLayer::OnGround.z())),
+    )
+}
+
+fn handle_portal_collisions(
     mut commands: Commands,
     portal_query: Query<(Entity, &CollidingEntities), With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
@@ -40,7 +58,7 @@ pub fn handle_portal_collisions(
     }
 }
 
-pub fn on_portal_entered(
+fn on_portal_entered(
     spawn_zone: On<SpawnZone>,
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,

@@ -195,6 +195,7 @@ pub fn on_weapon_fired(
                         rotation: Quat::from_rotation_z(rotated_direction.to_angle()),
                         ..default()
                     },
+                    DespawnOnExit::<AppState>(AppState::Playing),
                     LinearVelocity(rotated_direction * projectile.speed),
                     CollisionLayers::new(
                         GameCollisionLayer::PROJECTILE_MEMBERSHIPS,

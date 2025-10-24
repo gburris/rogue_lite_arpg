@@ -17,26 +17,27 @@ use crate::{
         shadow,
     },
     items::{Items, axe, equipment::Equipped, ice_staff, sword},
-    map::SpawnNpcs,
     prelude::*,
 };
 
 use super::behavior::{Anchor, Wander};
 
-pub struct NPCPlugin;
-
-impl Plugin for NPCPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_observer(spawn_npcs);
-    }
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(spawn_npcs);
 }
 
+#[derive(Event)]
+pub struct SpawnNpcs(pub Vec<Vec2>);
+
 #[derive(Component)]
-#[require(Character)]
+#[require(
+    Character,     
+    DespawnOnExit::<AppState>(AppState::Playing),
+)]
 pub struct NPC;
 
 #[derive(Component, Clone, Copy, Debug)]
-pub enum NPCType {
+enum NPCType {
     Helper,
     Shopkeeper,
     StatTrainer,

@@ -18,39 +18,17 @@ use bevy_ecs_tilemap::prelude::*;
 
 use crate::{
     animation,
-    character::CharacterPlugin,
-    combat::CombatPlugin,
     configuration::{assets::AssetLoadingPlugin, setup::SetupPlugin},
-    items,
-    map::plugin::MapPlugin,
-    progression::plugin::ProgressionPlugin,
-    ui::plugin::UIPlugin,
-    utility, world,
 };
 
 pub mod prelude {
     pub use super::schedule::*;
 }
 
-pub struct GamePlugin;
+pub(super) fn plugin(app: &mut App) {
+    // Setup and configuration
+    app.add_plugins((SetupPlugin, animation::plugin, schedule::plugin));
 
-impl Plugin for GamePlugin {
-    fn build(&self, app: &mut App) {
-        app
-            // Setup and configuration
-            .add_plugins((SetupPlugin, animation::plugin, schedule::plugin))
-            // Third-party plugins
-            .add_plugins((AssetLoadingPlugin, TilemapPlugin))
-            // Core systems
-            .add_plugins((
-                utility::plugin,
-                CombatPlugin,
-                ProgressionPlugin,
-                world::plugin,
-            ))
-            // Entity systems
-            .add_plugins((MapPlugin, items::plugin, CharacterPlugin))
-            // UI
-            .add_plugins(UIPlugin);
-    }
+    // Third-party plugins
+    app.add_plugins((AssetLoadingPlugin, TilemapPlugin));
 }

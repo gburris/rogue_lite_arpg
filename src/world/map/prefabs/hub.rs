@@ -6,12 +6,13 @@ use bevy::{
 };
 use bevy_ecs_tilemap::map::TilemapSize;
 
-use crate::map::{
-    components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType},
-    helpers::generator::{MapData, utils::calculate_center_rect},
+use crate::{
+    prelude::Prefab,
+    world::map::{
+        EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, map_data::MapData,
+        utils::calculate_center_rect,
+    },
 };
-
-use super::prefab::Prefab;
 
 const PLAYER_SPAWN_Y_OFFSET: f32 = 5.0;
 const LEVEL_EXIT_Y_OFFSET: f32 = 24.0;

@@ -1,13 +1,6 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::map::TilemapId;
 
-use crate::{
-    combat::Projectile,
-    items::lootable::Lootable,
-    map::{CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
-    prelude::*,
-    ui::PlayerOverlay,
-};
+use crate::{prelude::*, ui::PlayerOverlay};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
@@ -15,15 +8,6 @@ pub fn plugin(app: &mut App) {
         (despawn_expired_entities, generic_remove_component_system)
             .in_set(InGameSystems::DespawnEntities),
     )
-    .add_observer(despawn_all::<CleanupZone, Portal>)
-    .add_observer(despawn_all::<CleanupZone, TilemapId>)
-    .add_observer(despawn_all::<CleanupZone, Wall>)
-    .add_observer(despawn_all::<CleanupZone, Water>)
-    .add_observer(despawn_all::<CleanupZone, ZoneBackground>)
-    .add_observer(despawn_all::<CleanupZone, Lootable>)
-    .add_observer(despawn_all::<CleanupZone, Enemy>)
-    .add_observer(despawn_all::<CleanupZone, Projectile>)
-    .add_observer(despawn_all::<CleanupZone, NPC>)
     .add_observer(despawn_all::<RestartEvent, Player>)
     .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
 }

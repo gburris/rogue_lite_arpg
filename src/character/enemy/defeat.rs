@@ -15,7 +15,7 @@ use crate::prelude::GoldDrop;
 
 use super::{Enemy, Experience};
 
-pub fn on_enemy_defeated(
+pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
     mut commands: Commands,
     mut defeated_enemy_query: Query<

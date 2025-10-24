@@ -7,7 +7,7 @@ use crate::{
     character::player::interact::{Interaction, InteractionZone},
     configuration::{YSort, ZLayer},
     items::{ItemOf, Items, equipment::Unequip},
-    prelude::Player,
+    prelude::{AppState, Player},
     utility::Lifespan,
 };
 
@@ -16,7 +16,8 @@ use super::Item;
 #[derive(Component, Clone, Debug, Default)]
 #[require(
     Lifespan::new(10.0),
-    YSort::from_offset(-6.0)
+    YSort::from_offset(-6.0),
+    DespawnOnExit::<AppState>(AppState::Playing),
 )]
 pub struct Lootable;
 

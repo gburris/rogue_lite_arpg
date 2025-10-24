@@ -23,7 +23,6 @@ use crate::{
         self, ItemCapacity, Items,
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
-    map::systems::state::transition_to_create_hub,
     prelude::*,
     progression::GameProgress,
 };
@@ -224,4 +223,8 @@ fn spawn_player(
             )
         ],
     ));
+}
+
+fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
+    game_state.set(AppState::CreateHub);
 }

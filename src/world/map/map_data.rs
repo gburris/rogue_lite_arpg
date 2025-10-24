@@ -1,13 +1,13 @@
 use bevy::{log::warn, math::Vec2, transform::components::Transform};
 use bevy_ecs_tilemap::map::TilemapSize;
-use serde::Deserialize;
-use serde::Serialize;
 use std::collections::HashMap;
 
-use crate::map::components::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType};
+use crate::{
+    prelude::{EmptySquare, Hub, Prefab, PrefabType, Temple},
+    world::map::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType},
+};
 
 use super::{
-    prefabs::{EmptySquare, Hub, Temple, prefab::Prefab},
     utils::{
         calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
         generate_entrance_exit_positions,
@@ -55,14 +55,6 @@ impl MapData {
             height,
         });
     }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-
-pub enum PrefabType {
-    NPCHub,
-    Temple,
-    EmptySquare,
 }
 
 pub struct MapDataBuilder {

@@ -7,10 +7,10 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use crate::character::enemy::Enemy;
-    pub use crate::character::npc::NPC;
-    pub use crate::character::player::Player;
+    pub use crate::character::enemy::*;
+    pub use crate::character::npc::*;
     pub use crate::character::player::interact::PlayerInteractionRadius;
+    pub use crate::character::player::*;
     pub use crate::character::simple_motion::SimpleMotion;
     pub use crate::character::state::*;
     pub use crate::character::vision::Vision;
@@ -26,8 +26,6 @@ use crate::{
     prelude::*,
 };
 
-use enemy::EnemyPlugin;
-use npc::NPCPlugin;
 use player::PlayerPlugin;
 use state::ActionState;
 
@@ -35,7 +33,7 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlayerPlugin, EnemyPlugin, NPCPlugin));
+        app.add_plugins((PlayerPlugin, enemy::plugin, npc::plugin));
 
         app.add_systems(
             FixedUpdate,

@@ -6,15 +6,15 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 use std::collections::HashMap;
 
-use crate::map::{
-    components::{MarkerType, TileType},
-    helpers::generator::{
-        MapData,
+use crate::{
+    prelude::Prefab,
+    world::map::{
+        MarkerType, TileType,
+        map_data::MapData,
         utils::{calculate_center_rect, is_position_valid},
     },
 };
 
-use super::prefab::Prefab;
 pub struct Temple;
 
 impl Prefab for Temple {

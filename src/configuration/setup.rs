@@ -5,13 +5,7 @@ use bevy_behave::prelude::BehavePlugin;
 #[cfg(not(feature = "dev"))]
 use bevy::asset::AssetMetaCheck;
 
-use crate::{
-    labels::{
-        sets::MainSystems,
-        states::{AppState, PausedState, PlayingState},
-    },
-    progression::components::GameProgress,
-};
+use crate::{prelude::*, progression::components::GameProgress};
 
 #[cfg(feature = "dev")]
 use crate::configuration::debug::DebugPlugin;

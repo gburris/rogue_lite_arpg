@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    labels::{sets::InGameSystems, states::AppState},
-    ui::*,
-};
+use crate::{prelude::*, ui::*};
 
 use super::{npc::plugin::NPCPauseScreensPlugin, pause_menu::plugin::PauseMenuPlugin};
 

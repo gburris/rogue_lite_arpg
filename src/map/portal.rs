@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::{GameCollisionLayer, YSort},
-    labels::states::AppState,
     map::components::SpawnZone,
+    prelude::AppState,
     prelude::PlayerInteractionRadius,
 };
 

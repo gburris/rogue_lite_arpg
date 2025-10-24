@@ -2,10 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     configuration::time_control,
-    labels::{
-        sets::MainSystems,
-        states::{AppState, PausedState},
-    },
+    prelude::*,
     ui::{display_case, input},
 };
 

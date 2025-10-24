@@ -1,7 +1,7 @@
 use crate::{
     character::Purse,
     combat::Health,
-    labels::states::PausedState,
+    prelude::PausedState,
     prelude::Player,
     progression::GameProgress,
     ui::{

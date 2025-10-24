@@ -9,7 +9,7 @@ use bevy::{
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
-use crate::{labels::sets::InGameSystems, prelude::Vision};
+use crate::prelude::{InGameSystems, Vision};
 
 use super::view;
 

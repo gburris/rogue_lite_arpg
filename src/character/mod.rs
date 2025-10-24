@@ -23,7 +23,7 @@ use crate::{
     animation::AnimationTimer,
     configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
     items::ItemCapacity,
-    labels::sets::{InGameSystems, MainSystems},
+    prelude::*,
 };
 
 use enemy::EnemyPlugin;

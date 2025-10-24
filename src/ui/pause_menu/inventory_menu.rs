@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::Purse,
-    labels::states::PausedState,
+    prelude::PausedState,
     prelude::{Enemy, NPC, Player},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},

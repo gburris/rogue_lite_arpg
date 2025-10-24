@@ -9,8 +9,9 @@ use crate::{
     items::{Item, Items, lootable::ItemDrop},
     prelude::*,
     utility::Lifespan,
-    world::gold::GoldDrop,
 };
+
+use crate::prelude::GoldDrop;
 
 use super::{Enemy, Experience};
 

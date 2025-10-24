@@ -5,14 +5,13 @@
 
 use bevy::prelude::*;
 
-use crate::configuration::plugins::GamePlugin;
+use crate::configuration::GamePlugin;
 
 pub mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
 pub mod items;
-pub mod labels;
 pub mod map;
 pub mod progression;
 pub mod ui;
@@ -20,7 +19,9 @@ pub mod utility;
 pub mod world;
 
 pub mod prelude {
-    pub use crate::character::prelude::*;
+    pub use super::character::prelude::*;
+    pub use super::configuration::prelude::*;
+    pub use super::world::prelude::*;
 }
 
 fn main() {

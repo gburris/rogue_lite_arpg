@@ -29,8 +29,7 @@ pub use use_equipped::on_weapon_melee;
 
 pub use unequip::Unequip;
 
-use crate::labels::sets::InGameSystems;
-use crate::labels::sets::MainSystems;
+use crate::prelude::*;
 
 pub struct EquipmentPlugin;
 

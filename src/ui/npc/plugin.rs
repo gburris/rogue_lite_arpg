@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::labels::{sets::MainSystems, states::PausedState};
+use crate::prelude::*;
 
 use super::{
     handle_stats_shop_interaction::{

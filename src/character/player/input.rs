@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
-    labels::states::PausedState,
+    prelude::PausedState,
 };
 
 use super::{

@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone,
-    prelude::Player,
+    configuration::time_control::RestartEvent, map::CleanupZone, prelude::AppState, prelude::Player,
 };
 
 use super::{constants::TITLE_FONT_SIZE, primitives::text};

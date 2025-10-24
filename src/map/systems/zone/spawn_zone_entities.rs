@@ -11,8 +11,7 @@ use crate::{
         helpers::generator::generate_instance_layout,
         portal::Portal,
     },
-    prelude::Player,
-    world::chest::SpawnChestsEvent,
+    prelude::{Player, SpawnChestsEvent},
 };
 
 fn convert_tiles_to_world_positions(

@@ -6,7 +6,7 @@ use crate::{
     character::{Purse, player::interact::PlayerInteractionRadius},
     configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
     items::Magnet,
-    labels::sets::InGameSystems,
+    prelude::InGameSystems,
     prelude::Player,
 };
 

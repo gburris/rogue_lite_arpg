@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::AppState, map::CleanupZone};
+use crate::{map::CleanupZone, prelude::AppState};
 
 pub fn despawn_previous_zone(mut commands: Commands) {
     commands.trigger(CleanupZone);

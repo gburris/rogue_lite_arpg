@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::{sets::InGameSystems, states::AppState},
     map::{components::WorldSpaceConfig, portal, systems::*},
+    prelude::*,
 };
 
 pub struct MapPlugin;

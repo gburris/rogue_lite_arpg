@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{labels::states::AppState, map::helpers::generator::generate_hub_layout};
+use crate::{map::helpers::generator::generate_hub_layout, prelude::AppState};
 
 pub fn insert_hub_layout(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {
     let map_layout = generate_hub_layout();

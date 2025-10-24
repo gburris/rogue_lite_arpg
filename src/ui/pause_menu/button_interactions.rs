@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::labels::states::PausedState;
+use crate::prelude::PausedState;
 
 use super::main_menu::MenuButton;
 

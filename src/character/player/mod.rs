@@ -23,10 +23,6 @@ use crate::{
         self, ItemCapacity, Items,
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
-    labels::{
-        sets::InGameSystems,
-        states::{AppState, PlayingState},
-    },
     map::systems::state::transition_to_create_hub,
     prelude::*,
     progression::GameProgress,

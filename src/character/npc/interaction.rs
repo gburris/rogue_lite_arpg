@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     character::player::{PauseInputEvent, interact::Interaction},
-    labels::states::PausedState,
+    prelude::PausedState,
 };
 
 pub fn on_shop_keeper_store_open(_: On<Interaction>, mut commands: Commands) {

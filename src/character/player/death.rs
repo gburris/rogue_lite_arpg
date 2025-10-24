@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use crate::{
     character::prelude::Player,
     combat::{Health, damage::Defeated},
-    labels::states::{AppState, PlayingState},
     map::CleanupZone,
     prelude::*,
 };

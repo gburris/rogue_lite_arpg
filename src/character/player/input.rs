@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
-    prelude::PausedState,
+    prelude::Menu,
 };
 
 use super::{
@@ -13,7 +13,7 @@ use super::{
 
 #[derive(Event)]
 pub struct PauseInputEvent {
-    pub paused_state: Option<PausedState>, //What pause state to default to
+    pub menu: Option<Menu>, //What menu to enter on pause
 }
 
 pub fn player_input(
@@ -27,7 +27,7 @@ pub fn player_input(
 
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         commands.trigger(PauseInputEvent {
-            paused_state: Some(PausedState::MainMenu),
+            menu: Some(Menu::MainMenu),
         });
         return;
     }

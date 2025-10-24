@@ -42,10 +42,6 @@ impl Plugin for SetupPlugin {
             .insert_resource(GameProgress::default())
             .insert_resource(Gravity::ZERO) // no gravity since this is top-down game
             .add_plugins(BehavePlugin::default())
-            // initialize states
-            .init_state::<AppState>()
-            .add_sub_state::<PausedState>()
-            .add_sub_state::<PlayingState>()
             .add_systems(Startup, view::spawn_camera)
             // avian recommendeds ordering camera following logic in PostUpdate after transform prop
             .add_systems(

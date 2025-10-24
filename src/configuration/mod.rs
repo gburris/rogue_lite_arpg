@@ -4,7 +4,6 @@ mod collision_layers;
 pub mod debug;
 mod schedule;
 pub mod setup;
-pub mod time_control;
 mod view;
 
 pub use collision_layers::GameCollisionLayer;
@@ -21,7 +20,7 @@ use crate::{
     animation,
     character::CharacterPlugin,
     combat::CombatPlugin,
-    configuration::{assets::AssetLoadingPlugin, schedule::SchedulePlugin, setup::SetupPlugin},
+    configuration::{assets::AssetLoadingPlugin, setup::SetupPlugin},
     items,
     map::plugin::MapPlugin,
     progression::plugin::ProgressionPlugin,
@@ -39,7 +38,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app
             // Setup and configuration
-            .add_plugins((SetupPlugin, animation::plugin, SchedulePlugin))
+            .add_plugins((SetupPlugin, animation::plugin, schedule::plugin))
             // Third-party plugins
             .add_plugins((AssetLoadingPlugin, TilemapPlugin))
             // Core systems

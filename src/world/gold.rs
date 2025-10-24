@@ -6,8 +6,7 @@ use crate::{
     character::{Purse, player::interact::PlayerInteractionRadius},
     configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
     items::Magnet,
-    prelude::InGameSystems,
-    prelude::Player,
+    prelude::{AppState, InGameSystems, Player},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -87,14 +86,19 @@ fn on_gold_drop_event(gold_drop: On<GoldDrop>, mut commands: Commands, sprites: 
         let offset = Vec2::from_angle(angle) * distance;
 
         commands
-            .spawn((
-                Gold { value },
-                Sprite::from_image(gold_image),
-                Transform::from_translation((gold_drop.location + offset).extend(0.0)),
-            ))
+            .spawn(gold(gold_image, value, gold_drop.location + offset))
             .with_child(Magnet);
 
         remaining_gold -= value;
         entities_spawned += 1;
     }
+}
+
+fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Bundle {
+    (
+        Gold { value },
+        Sprite::from_image(gold_image),
+        Transform::from_translation(location.extend(0.0)),
+        DespawnOnExit(AppState::Playing),
+    )
 }

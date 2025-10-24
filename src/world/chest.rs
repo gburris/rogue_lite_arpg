@@ -2,6 +2,7 @@ use avian2d::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::{prelude::*, ui_widgets::observe};
 
+use crate::prelude::{AppState, GoldDrop};
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     character::player::interact::{Interaction, InteractionZone},
@@ -9,7 +10,6 @@ use crate::{
         GameCollisionLayer, YSort,
         assets::{SpriteAssets, SpriteSheetLayouts},
     },
-    world::gold::GoldDrop,
 };
 
 /// Center of chest relative to its sprite's anchor point
@@ -73,6 +73,7 @@ fn chest(
             scale: Vec3::new(2.0, 2.0, 1.0),
             ..default()
         },
+        DespawnOnExit(AppState::Playing),
         children![
             ChestCollider,
             (

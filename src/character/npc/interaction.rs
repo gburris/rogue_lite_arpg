@@ -2,18 +2,18 @@ use bevy::prelude::*;
 
 use crate::{
     character::player::{PauseInputEvent, interact::Interaction},
-    prelude::PausedState,
+    prelude::Menu,
 };
 
 pub fn on_shop_keeper_store_open(_: On<Interaction>, mut commands: Commands) {
     commands.trigger(PauseInputEvent {
-        paused_state: Some(PausedState::Inventory),
+        menu: Some(Menu::Inventory),
     });
 }
 
 pub fn on_stat_trainer_store_open(_: On<Interaction>, mut commands: Commands) {
     commands.trigger(PauseInputEvent {
-        paused_state: Some(PausedState::StatsShop),
+        menu: Some(Menu::StatsShop),
     });
 }
 

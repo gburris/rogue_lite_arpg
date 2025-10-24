@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
-use crate::prelude::PausedState;
+use crate::prelude::Menu;
 
 use super::main_menu::MenuButton;
 
 pub fn handle_menu_button_pressed(
     mut button_query: Query<(&Interaction, &MenuButton)>,
-    mut pause_state: ResMut<NextState<PausedState>>,
+    mut pause_state: ResMut<NextState<Menu>>,
 ) {
     for (interaction, menu_button) in &mut button_query {
         if *interaction == Interaction::Pressed {

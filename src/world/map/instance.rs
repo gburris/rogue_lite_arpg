@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource)]
 pub struct InstanceAssets {
-    pub instance_config: HashMap<String, InstanceType>,
+    instance_config: HashMap<String, InstanceType>,
 }
 
 impl InstanceAssets {

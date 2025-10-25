@@ -12,23 +12,17 @@ mod movement;
 pub use input::PauseInputEvent;
 
 use crate::{
-    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    character::{Character, Purse, physical_collider, player::interact::PlayerInteractionRadius},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     configuration::{
         CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
         assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
         shadow,
     },
-    economy::Purse,
     items::{
         self, ItemCapacity, Items,
         equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
     },
-    labels::{
-        sets::InGameSystems,
-        states::{AppState, PlayingState},
-    },
-    map::systems::state::transition_to_create_hub,
     prelude::*,
     progression::GameProgress,
 };
@@ -40,7 +34,8 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<PlayerMovementEvent>()
+        app.add_plugins(level::plugin)
+            .add_message::<PlayerMovementEvent>()
             .add_systems(
                 OnEnter(AppState::SpawnPlayer),
                 (spawn_player, transition_to_create_hub).chain(),
@@ -60,16 +55,11 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 (
-                    (
-                        movement::player_movement,
-                        aim::update_player_aim,
-                        level::on_player_experience_change,
-                    )
+                    (movement::player_movement, aim::update_player_aim)
                         .in_set(InGameSystems::Simulation),
-                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSystems::Vfx),
+                    aim::draw_cursor.in_set(InGameSystems::Vfx),
                 ),
             )
-            .add_observer(level::on_level_up)
             .add_observer(movement::on_player_stopped)
             .add_observer(interact::on_player_interaction_input)
             .add_observer(interact::on_interaction_zone_added);
@@ -229,4 +219,8 @@ fn spawn_player(
             )
         ],
     ));
+}
+
+fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
+    game_state.set(AppState::CreateHub);
 }

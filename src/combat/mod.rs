@@ -14,7 +14,7 @@ pub use projectile::Projectile;
 
 use bevy::prelude::*;
 
-use crate::{combat::status_effects::StatusEffectPlugin, labels::sets::InGameSystems};
+use crate::{combat::status_effects::StatusEffectPlugin, prelude::InGameSystems};
 
 use shield::{
     handle_collisions::handle_projectile_reflection_collisions,

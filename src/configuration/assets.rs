@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
-use crate::labels::states::AppState;
+use crate::prelude::AppState;
 
 pub struct AssetLoadingPlugin;
 

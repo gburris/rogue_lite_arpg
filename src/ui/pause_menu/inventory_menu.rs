@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    economy::Purse,
-    labels::states::PausedState,
+    character::Purse,
+    prelude::Menu,
     prelude::{Enemy, NPC, Player},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
@@ -20,7 +20,7 @@ pub fn spawn_inventory_menu(
 ) {
     commands.spawn((
         InventoryMenu,
-        DespawnOnExit(PausedState::Inventory),
+        DespawnOnExit(Menu::Inventory),
         Node {
             width: percent(100.0),
             height: percent(100.0),

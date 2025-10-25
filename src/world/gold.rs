@@ -3,12 +3,19 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
-    character::player::interact::PlayerInteractionRadius,
+    character::{Purse, player::interact::PlayerInteractionRadius},
     configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
-    economy::Purse,
     items::Magnet,
-    prelude::Player,
+    prelude::{AppState, InGameSystems, Player},
 };
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        handle_gold_collisions.in_set(InGameSystems::Collision),
+    )
+    .add_observer(on_gold_drop_event);
+}
 
 #[derive(Component)]
 #[require(
@@ -26,11 +33,11 @@ use crate::{
     Dominance(-1),
     YSort,
 )]
-pub struct Gold {
+struct Gold {
     pub value: u32,
 }
 
-pub fn handle_gold_collisions(
+fn handle_gold_collisions(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
     mut player_purse: Single<&mut Purse, With<Player>>,
@@ -47,20 +54,16 @@ pub fn handle_gold_collisions(
 
 #[derive(Event)]
 pub struct GoldDrop {
-    pub drop_location: Vec2,
+    pub location: Vec2,
     pub amount: u32,
 }
 
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
-pub fn on_gold_drop_event(
-    trigger: On<GoldDrop>,
-    mut commands: Commands,
-    sprites: Res<SpriteAssets>,
-) {
+fn on_gold_drop_event(gold_drop: On<GoldDrop>, mut commands: Commands, sprites: Res<SpriteAssets>) {
     let mut rng = rand::rng();
     let mut entities_spawned = 0;
-    let mut remaining_gold = trigger.amount;
+    let mut remaining_gold = gold_drop.amount;
     //TODO: Give each visual representation of money quantity
     //It's own sprite. Like red, yellow and blue coins in Mario 64.
     while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
@@ -83,14 +86,19 @@ pub fn on_gold_drop_event(
         let offset = Vec2::from_angle(angle) * distance;
 
         commands
-            .spawn((
-                Gold { value },
-                Sprite::from_image(gold_image),
-                Transform::from_translation((trigger.drop_location + offset).extend(0.0)),
-            ))
+            .spawn(gold(gold_image, value, gold_drop.location + offset))
             .with_child(Magnet);
 
         remaining_gold -= value;
         entities_spawned += 1;
     }
+}
+
+fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Bundle {
+    (
+        Gold { value },
+        Sprite::from_image(gold_image),
+        Transform::from_translation(location.extend(0.0)),
+        DespawnOnExit(AppState::Playing),
+    )
 }

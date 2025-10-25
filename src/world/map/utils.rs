@@ -2,7 +2,7 @@ use bevy::math::{Rect, Vec2};
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 
-use crate::map::components::TileType;
+use crate::world::map::TileType;
 
 #[derive(Debug)]
 enum MapOrientation {

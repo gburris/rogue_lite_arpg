@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    configuration::time_control::RestartEvent, labels::states::AppState, map::CleanupZone,
-    prelude::Player,
-};
+use crate::prelude::*;
 
 use super::{constants::TITLE_FONT_SIZE, primitives::text};
 
@@ -64,8 +61,4 @@ fn on_restart_clicked(
         player_level: player.get_level(),
     });
     game_state.set(AppState::SpawnPlayer);
-}
-
-pub fn on_restart_event_cleanup_zone(_: On<RestartEvent>, mut commands: Commands) {
-    commands.trigger(CleanupZone);
 }

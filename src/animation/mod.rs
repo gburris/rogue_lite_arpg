@@ -4,7 +4,7 @@ mod spells;
 pub use spells::heal_vfx;
 
 use crate::{
-    labels::sets::InGameSystems,
+    prelude::InGameSystems,
     prelude::{ActionState, FacingDirection},
 };
 

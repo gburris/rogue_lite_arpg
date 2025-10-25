@@ -1,10 +1,18 @@
 use std::ops::Range;
 
-use crate::map::components::TileType;
+use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
 
-use bevy_ecs_tilemap::map::TilemapSize;
+use crate::{
+    prelude::AppState,
+    world::map::{TileType, map_data::MapData},
+};
 
-use super::map_data::MapData;
+#[derive(Component)]
+#[require(
+    DespawnOnExit::<AppState>(AppState::Playing),
+)]
+pub struct Wall;
 
 pub fn add_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {
     add_horizontal_exterior_walls(map_data, map_size);

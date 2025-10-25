@@ -7,10 +7,10 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use crate::character::enemy::Enemy;
-    pub use crate::character::npc::NPC;
-    pub use crate::character::player::Player;
+    pub use crate::character::enemy::*;
+    pub use crate::character::npc::*;
     pub use crate::character::player::interact::PlayerInteractionRadius;
+    pub use crate::character::player::*;
     pub use crate::character::simple_motion::SimpleMotion;
     pub use crate::character::state::*;
     pub use crate::character::vision::Vision;
@@ -23,11 +23,9 @@ use crate::{
     animation::AnimationTimer,
     configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
     items::ItemCapacity,
-    labels::sets::{InGameSystems, MainSystems},
+    prelude::*,
 };
 
-use enemy::EnemyPlugin;
-use npc::NPCPlugin;
 use player::PlayerPlugin;
 use state::ActionState;
 
@@ -35,7 +33,7 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlayerPlugin, EnemyPlugin, NPCPlugin));
+        app.add_plugins((PlayerPlugin, enemy::plugin, npc::plugin));
 
         app.add_systems(
             FixedUpdate,
@@ -94,4 +92,24 @@ pub fn physical_collider() -> impl Bundle {
             ],
         ),
     )
+}
+
+#[derive(Component, Clone, Default)]
+pub struct Purse {
+    pub amount: u32,
+}
+
+impl Purse {
+    pub fn add(&mut self, amount: u32) {
+        self.amount += amount;
+    }
+
+    pub fn remove(&mut self, amount: u32) -> Result<u32, String> {
+        if self.amount >= amount {
+            self.amount -= amount;
+            Ok(self.amount)
+        } else {
+            Err("Not enough in purse!".to_string())
+        }
+    }
 }

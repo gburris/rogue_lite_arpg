@@ -5,10 +5,7 @@ use bevy::{
     window::WindowResolution,
 };
 
-use crate::{
-    map::components::{MapLayout, WorldSpaceConfig},
-    prelude::*,
-};
+use crate::prelude::*;
 
 use super::assets::Shadows;
 

@@ -8,7 +8,7 @@ pub use slow::Slowed;
 
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
-use crate::{labels::sets::InGameSystems, utility::Lifespan};
+use crate::{prelude::InGameSystems, utility::Lifespan};
 
 pub struct StatusEffectPlugin;
 

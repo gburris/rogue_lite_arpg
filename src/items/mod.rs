@@ -1,10 +1,7 @@
 use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::{
-    items::lootable::ItemDrop,
-    labels::sets::{InGameSystems, MainSystems},
-};
+use crate::{items::lootable::ItemDrop, prelude::*};
 
 mod consumable;
 pub mod equipment;

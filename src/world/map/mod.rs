@@ -1,36 +1,33 @@
-use bevy::prelude::*;
-use bevy_ecs_tilemap::{
-    anchor::TilemapAnchor,
-    map::{TilemapGridSize, TilemapSize, TilemapTileSize, TilemapType},
-    tiles::TilePos,
-};
-use serde::{Deserialize, Serialize};
+mod instance;
+mod map_data;
+mod prefabs;
+mod utils;
+mod walls;
+mod zone;
+
 use std::collections::HashMap;
 
-use crate::character::enemy::EnemySpawnData;
+use ::bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
+use serde::{Deserialize, Serialize};
 
-use super::helpers::generator::MapData;
+use crate::{
+    prelude::{AppState, PrefabType},
+    world::map::map_data::{MapData, MapDataBuilder},
+};
 
-/*
-MAP EVENTS - Should be the only part of map exposed to other crates
-*/
-
-#[derive(EntityEvent)]
-pub struct SpawnZone {
-    pub entity: Entity,
+pub mod prelude {
+    pub use super::instance::*;
+    pub use super::prefabs::*;
+    pub use super::zone::*;
+    pub use super::*;
 }
 
-#[derive(Event)]
-pub struct CleanupZone;
-
-#[derive(Event)]
-pub struct SpawnNpcs(pub Vec<Vec2>);
-
-#[derive(Debug, Event)]
-pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
-
-#[derive(Component)]
-pub struct Wall;
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((instance::plugin, zone::plugin))
+        .add_systems(OnEnter(AppState::CreateHub), insert_hub_layout)
+        .insert_resource(WorldSpaceConfig::default());
+}
 
 #[derive(Component)]
 pub struct Water;
@@ -79,54 +76,6 @@ pub struct EnvironmentalMapCollider {
     pub transform: Transform,
     pub width: f32,
     pub height: f32,
-}
-#[derive(Resource, Default, Clone)]
-pub struct MapLayout {
-    pub size: TilemapSize,
-    pub tiles: Vec<Vec<TileType>>,
-    pub markers: MapMarkers,
-    pub environmental_colliders: Vec<EnvironmentalMapCollider>,
-}
-
-impl From<MapData> for MapLayout {
-    fn from(map_data: MapData) -> Self {
-        MapLayout {
-            size: map_data.size,
-            tiles: map_data.tiles,
-            markers: MapMarkers {
-                markers: map_data.markers,
-            },
-            environmental_colliders: map_data.colliders,
-        }
-    }
-}
-#[derive(Default)]
-pub struct WallSection {
-    pub start: (u32, u32),
-    pub is_horizontal: bool,
-    end: (u32, u32),
-}
-
-impl WallSection {
-    pub fn new(start: (u32, u32), is_horizontal: bool) -> Self {
-        WallSection {
-            start,
-            is_horizontal,
-            end: start,
-        }
-    }
-
-    pub fn extend(&mut self, pos: (u32, u32)) {
-        self.end = pos;
-    }
-
-    pub fn length(&self) -> u32 {
-        if self.is_horizontal {
-            self.end.0 - self.start.0 + 1
-        } else {
-            self.end.1 - self.start.1 + 1
-        }
-    }
 }
 
 //This holds the concept of "Tiles are this big relative to world cordinaties"
@@ -181,23 +130,39 @@ impl WorldSpaceConfig {
             + offset
     }
 }
-#[derive(Deserialize, Debug)]
-pub struct InstanceConfig {
-    pub instances: HashMap<String, InstanceType>,
+
+#[derive(Resource, Default, Clone)]
+pub struct MapLayout {
+    pub size: TilemapSize,
+    pub tiles: Vec<Vec<TileType>>,
+    pub markers: MapMarkers,
+    pub environmental_colliders: Vec<EnvironmentalMapCollider>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct InstanceType {
-    pub size_x_range: (f32, f32),
-    pub size_y_range: (f32, f32),
-    pub number_of_enemies_range: (f32, f32),
-    pub num_exits: u32,
-    pub chest_range: (f32, f32),
-    pub prefabs: Vec<String>,
-    pub floor_type: String,
+impl From<MapData> for MapLayout {
+    fn from(map_data: MapData) -> Self {
+        MapLayout {
+            size: map_data.size,
+            tiles: map_data.tiles,
+            markers: MapMarkers {
+                markers: map_data.markers,
+            },
+            environmental_colliders: map_data.colliders,
+        }
+    }
 }
 
-#[derive(Resource)]
-pub struct InstanceAssets {
-    pub instance_config: HashMap<String, InstanceType>,
+fn insert_hub_layout(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {
+    let map_size = TilemapSize { x: 100, y: 100 };
+
+    let map_data = MapDataBuilder::new(map_size)
+        .with_floor(TileType::Grass)
+        .with_exterior_walls()
+        .with_exits(0)
+        .with_prefab(PrefabType::NPCHub)
+        .build();
+    let map_layout = MapLayout::from(map_data);
+
+    commands.insert_resource(map_layout);
+    game_state.set(AppState::SpawnZone);
 }

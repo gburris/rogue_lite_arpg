@@ -6,12 +6,7 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use rand::Rng;
 use std::collections::HashMap;
 
-use crate::map::{
-    components::{MarkerType, TileType},
-    helpers::generator::MapData,
-};
-
-use super::prefab::Prefab;
+use crate::world::map::{MarkerType, TileType, map_data::MapData, prefabs::Prefab};
 
 pub struct EmptySquare;
 

@@ -2,15 +2,7 @@ use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
 use crate::{
     combat::{Health, Mana},
-    items::{
-        Item, Items,
-        equipment::{
-            EquipmentSlot, EquipmentUseFailed, EquipmentUseFailure, Equippable, Equipped, Mainhand,
-            Offhand, UseEquipment,
-        },
-    },
-    prelude::Player,
-    utility::Lifespan,
+    prelude::*,
 };
 
 #[derive(Component)]

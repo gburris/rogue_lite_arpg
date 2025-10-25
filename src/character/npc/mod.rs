@@ -5,19 +5,10 @@ mod interaction;
 
 use crate::{
     character::{
-        Character,
-        behavior::{Idle, Retreat},
-        physical_collider,
-        player::interact::InteractionZone,
-    },
-    combat::{Health, damage::hurtbox},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    items::{Items, axe, equipment::Equipped, ice_staff, sword},
-    prelude::*,
+        behavior::{Idle, Retreat}, physical_collider, player::interact::InteractionZone, Character
+    }, combat::{damage::hurtbox, Health}, configuration::{
+        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET
+    }, items::Items, prelude::*
 };
 
 use super::behavior::{Anchor, Wander};
@@ -36,7 +27,7 @@ pub struct SpawnNpcs(pub Vec<Vec2>);
 )]
 pub struct NPC;
 
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug)]
 enum NPCType {
     Helper,
     Shopkeeper,
@@ -80,17 +71,14 @@ fn spawn_npc(
 ) {
     match npc_type {
         NPCType::Helper => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             helper(sprites, sprite_layouts),
         )),
         NPCType::Shopkeeper => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             shopkeeper(sprites, sprite_layouts),
         )),
         NPCType::StatTrainer => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             stat_trainer(sprites, sprite_layouts),
         )),
@@ -114,6 +102,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             physical_collider(),
             BehaveTree::new(wander_and_retreat_behavior()),
         ],
+        observe(on_equipment_activated)
     )
 }
 

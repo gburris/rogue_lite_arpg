@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    character::prelude::Player,
     combat::{Health, damage::Defeated},
     prelude::*,
 };
@@ -19,10 +18,7 @@ pub fn on_player_defeated(
 
     commands
         .entity(player_entity)
-        .insert((
-            ActionState::Defeated,
-            GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)),
-        ))
+        .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
         .remove::<Health>()
         .despawn_related::<Children>();
     player_motion.stop_moving();

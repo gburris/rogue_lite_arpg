@@ -4,48 +4,31 @@ use bevy::prelude::*;
 
 mod equip;
 mod equipment_transform;
-mod unequip;
 mod use_equipped;
-
-// Only expose the things outside modules need!!!
-
-// Components!!
-pub use equipment_transform::EquipmentTransform;
-
-// Equipment events to "get shit done"
-pub use use_equipped::EquipmentUseFailed;
-pub use use_equipped::EquipmentUseFailure;
-pub use use_equipped::StopUsingHoldableEquipmentInput;
-pub use use_equipped::UseEquipment;
-pub use use_equipped::UseEquipmentInput;
-
-// Observers to be added to respective equipment/weapons that want this functionality
-pub use use_equipped::on_equipment_activated;
-pub use use_equipped::on_equipment_deactivated;
-pub use use_equipped::on_healing_tome_cast;
-pub use use_equipped::on_shield_block;
-pub use use_equipped::on_weapon_fired;
-pub use use_equipped::on_weapon_melee;
-
-pub use unequip::Unequip;
 
 use crate::prelude::*;
 
-pub struct EquipmentPlugin;
+pub mod prelude {
+    pub use super::equip::*;
+    pub use super::equipment_transform::*;
+    pub use super::use_equipped::*;
+    pub use super::{
+        EquipmentSlot, Equippable, Equipped, Mainhand, MainhandOf, Offhand, OffhandOf,
+    };
+}
 
-impl Plugin for EquipmentPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
-                equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-                use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
-            ),
-        )
-        .add_observer(equip::on_item_equipped)
-        .add_observer(unequip::on_item_unequipped);
-    }
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(equip::plugin);
+
+    app.add_systems(
+        Update,
+        (
+            // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
+            equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
+            use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
+        ),
+    );
+    // .add_observer(use_equipped::on_equipment_activated);
 }
 
 #[derive(Component, Clone, Debug)]

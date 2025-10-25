@@ -5,19 +5,22 @@
 
 use bevy::prelude::*;
 
-pub mod animation;
+mod animation;
 pub mod character;
 pub mod combat;
 pub mod configuration;
-pub mod items;
+mod items;
 pub mod progression;
 pub mod ui;
 pub mod utility;
 mod world;
 
 pub mod prelude {
+    pub use super::animation::*;
     pub use super::character::prelude::*;
     pub use super::configuration::prelude::*;
+    pub use super::items::prelude::*;
+    pub use super::utility::*;
     pub use super::world::prelude::*;
 }
 
@@ -28,9 +31,10 @@ fn main() {
 fn plugin(app: &mut App) {
     // Core systems
     app.add_plugins((
+        animation::plugin,
         utility::plugin,
         configuration::plugin,
-        combat::CombatPlugin,
+        combat::plugin,
         progression::plugin::ProgressionPlugin,
     ));
 

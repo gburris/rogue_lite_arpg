@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
-    prelude::Menu,
-};
+use crate::prelude::*;
 
 use super::{
     Player,

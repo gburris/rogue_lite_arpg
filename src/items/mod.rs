@@ -1,22 +1,30 @@
-use avian2d::prelude::Collider;
 use bevy::prelude::*;
 
-use crate::{items::lootable::ItemDrop, prelude::*};
+use crate::prelude::*;
 
 mod consumable;
-pub mod equipment;
-pub mod lootable;
+mod equipment;
+mod lootable;
 mod magnet;
-mod mainhand_factory;
-mod offhand_factory;
+mod melee;
+mod shield;
+mod staff;
+mod tome;
 
-pub use consumable::{Consumable, Consume, health_potion};
-pub use magnet::Magnet;
-pub use mainhand_factory::*;
-pub use offhand_factory::*;
+pub mod prelude {
+    pub use super::consumable::*;
+    pub use super::equipment::prelude::*;
+    pub use super::lootable::*;
+    pub use super::magnet::*;
+    pub use super::melee::prelude::*;
+    pub use super::shield::*;
+    pub use super::staff::*;
+    pub use super::tome::*;
+    pub use super::{Item, ItemCapacity, ItemOf, ItemType, Items};
+}
 
-pub fn plugin(app: &mut App) {
-    app.add_plugins(equipment::EquipmentPlugin);
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((equipment::plugin, melee::plugin, shield::plugin));
 
     app.add_systems(
         FixedUpdate,
@@ -99,34 +107,19 @@ fn on_item_added_to_inventory(
     item_added: On<Add, ItemOf>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
-    holder_query: Query<(Option<&Items>, &ItemCapacity)>,
-) {
-    let holder_entity = item_query
-        .get(item_added.entity)
-        .expect("ItemOf Missing HOWWWW");
+    holder_query: Query<(Option<&Items>, Option<&ItemCapacity>)>,
+) -> Result {
+    let holder_entity = item_query.get(item_added.entity)?;
 
-    let (items, ItemCapacity(item_capacity)) = holder_query
-        .get(holder_entity.0)
-        .expect("Missing item capacity");
+    let (items, capacity) = holder_query.get(holder_entity.0)?;
 
-    if items.map(|items| items.len()).unwrap_or(0) >= *item_capacity {
+    let capacity = capacity.map(|c| c.0).unwrap_or(usize::MAX);
+
+    if items.map(|items| items.len()).unwrap_or(0) >= capacity {
         commands.trigger(ItemDrop {
             entity: item_added.entity,
         });
     }
-}
 
-#[derive(Component)]
-pub struct HealingTome {
-    pub healing: (f32, f32),
+    Ok(())
 }
-
-#[derive(Component)]
-pub struct Shield {
-    pub hitbox: Collider,
-}
-
-//This component tags items that are active continiously while being used
-//e.g. Holding right will keep a shield up
-#[derive(Component)]
-pub struct Holdable;

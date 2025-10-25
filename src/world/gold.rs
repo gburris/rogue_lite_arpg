@@ -4,9 +4,8 @@ use rand::Rng;
 
 use crate::{
     character::{Purse, player::interact::PlayerInteractionRadius},
-    configuration::{GameCollisionLayer, YSort, assets::SpriteAssets},
-    items::Magnet,
-    prelude::{AppState, InGameSystems, Player},
+    configuration::{GameCollisionLayer, YSort},
+    prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {

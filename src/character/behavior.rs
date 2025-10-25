@@ -6,7 +6,6 @@ use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    items::equipment::{EquipmentSlot, UseEquipmentInput},
     prelude::*,
 };
 

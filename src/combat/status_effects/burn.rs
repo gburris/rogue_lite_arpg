@@ -7,11 +7,8 @@ use crate::{
         damage::{AttemptDamage, Damage},
         status_effects::{Status, StatusApplied, StatusOf},
     },
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, ZLayer,
-        assets::{SpriteAssets, SpriteSheetLayouts},
-    },
-    utility::Lifespan,
+    configuration::{CHARACTER_FEET_POS_OFFSET, ZLayer},
+    prelude::*,
 };
 
 #[derive(Component, Clone)]
@@ -30,14 +27,14 @@ impl Default for Burning {
     }
 }
 
-pub fn tick_burn(mut burn_query: Query<&mut Burning>, time: Res<Time>) {
+pub(super) fn tick_burn(mut burn_query: Query<&mut Burning>, time: Res<Time>) {
     for mut burn_status in burn_query.iter_mut() {
         burn_status.damage_frequency.tick(time.delta());
     }
 }
 
 // TODO: Modify this to be a "DamagePerSecond" component + system since it isn't specific to burning
-pub fn while_burning(
+pub(super) fn while_burning(
     mut commands: Commands,
     status_query: Query<(&Burning, &StatusOf)>,
     mut health_query: Query<Entity, With<Health>>,
@@ -56,7 +53,7 @@ pub fn while_burning(
     }
 }
 
-pub fn apply_burning(
+pub(super) fn apply_burning(
     mut commands: Commands,
     status_query: Query<(Entity, &StatusOf, &Lifespan), (With<Burning>, Without<StatusApplied>)>,
     sprites: Res<SpriteAssets>,

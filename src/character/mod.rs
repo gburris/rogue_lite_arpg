@@ -1,49 +1,46 @@
+mod animation;
 mod behavior;
 pub mod enemy;
 pub mod npc;
 pub mod player;
-mod simple_motion;
 mod state;
 mod vision;
 
 pub mod prelude {
-    pub use crate::character::enemy::*;
-    pub use crate::character::npc::*;
-    pub use crate::character::player::interact::PlayerInteractionRadius;
-    pub use crate::character::player::*;
-    pub use crate::character::simple_motion::SimpleMotion;
-    pub use crate::character::state::*;
-    pub use crate::character::vision::Vision;
+    pub use super::animation::*;
+    pub use super::enemy::*;
+    pub use super::npc::*;
+    pub use super::player::interact::PlayerInteractionRadius;
+    pub use super::player::*;
+    pub use super::state::*;
+    pub use super::vision::Vision;
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    animation::AnimationTimer,
     configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
     items::ItemCapacity,
     prelude::*,
 };
 
 use player::PlayerPlugin;
-use state::ActionState;
 
 pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlayerPlugin, enemy::plugin, npc::plugin));
+        app.add_plugins((PlayerPlugin, enemy::plugin, npc::plugin, animation::plugin));
 
         app.add_systems(
             FixedUpdate,
-            simple_motion::to_velocity.in_set(MainSystems::InGame),
+            state::motion_to_velocity.in_set(MainSystems::InGame),
         );
 
         app.add_systems(
             Update,
             (
-                state::update_state_on_simple_motion_change,
                 behavior::while_chasing,
                 behavior::while_idling,
                 behavior::while_wandering,
@@ -73,7 +70,8 @@ impl Plugin for CharacterPlugin {
     // Set stable mass for characters so speed can be compared numerically
     Mass(50.0),
     NoAutoMass,
-    ActionState,
+    CharacterAnimationState,
+    Vision,
     ItemCapacity(10),
     AnimationTimer,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]

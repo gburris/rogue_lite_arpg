@@ -1,14 +1,6 @@
 use bevy::{ecs::spawn::SpawnWith, prelude::*, ui_widgets::observe};
 
-use crate::{
-    configuration::assets::GameIcons,
-    items::{
-        Consumable, Consume, Item, ItemType,
-        equipment::{EquipmentSlot, Equippable, Equipped, Unequip},
-        lootable::ItemDrop,
-    },
-    prelude::Player,
-};
+use crate::prelude::*;
 
 use super::{
     display_case::{EQUIP_SLOT_WIDTH, UpdateDisplayCase, VALUE_WIDTH},

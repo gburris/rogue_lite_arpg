@@ -6,9 +6,7 @@ use rand::{Rng, rng};
 use crate::{
     character::{Purse, player::PlayerStats},
     combat::{Health, damage::Defeated},
-    items::{Item, Items, lootable::ItemDrop},
     prelude::*,
-    utility::Lifespan,
 };
 
 use crate::prelude::GoldDrop;
@@ -60,7 +58,7 @@ pub(super) fn on_enemy_defeated(
 
         commands
             .entity(defeated.entity)
-            .insert((Lifespan::new(2.0), ActionState::Defeated))
+            .insert(Lifespan::new(2.0))
             .remove::<(Health, RigidBody)>()
             .despawn_related::<Children>();
     }

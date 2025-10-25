@@ -2,15 +2,15 @@ use bevy::prelude::*;
 
 use crate::{
     combat::status_effects::{Status, StatusApplied, StatusOf, slow::Slowed},
-    configuration::{CHARACTER_FEET_POS_OFFSET, ZLayer, assets::SpriteAssets},
-    utility::Lifespan,
+    configuration::{CHARACTER_FEET_POS_OFFSET, ZLayer},
+    prelude::*,
 };
 
 #[derive(Component, Clone, Default)]
 #[require(Status)]
 pub struct Frozen;
 
-pub fn apply_frozen(
+pub(super) fn apply_frozen(
     mut commands: Commands,
     status_query: Query<(Entity, &StatusOf, &Lifespan), (With<Frozen>, Without<StatusApplied>)>,
     sprites: Res<SpriteAssets>,

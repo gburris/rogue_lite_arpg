@@ -13,16 +13,6 @@ use crate::{
         vision::{VisionCapabilities, Watching},
     },
     combat::{Health, Mana, damage::hurtbox},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    items::{
-        Items,
-        equipment::{Equipped, on_equipment_activated},
-        fire_staff, health_potion, ice_staff, sword,
-    },
     prelude::*,
 };
 

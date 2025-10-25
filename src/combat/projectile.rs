@@ -7,14 +7,15 @@ use crate::{
         damage::Knockback,
         status_effects::{Burning, Effects, Frozen},
     },
-    configuration::assets::{SpriteAssets, SpriteSheetLayouts},
-    utility::Lifespan,
+    items::prelude::ProjectileReflection,
+    prelude::*,
 };
 
-use super::{
-    damage::{AttemptDamage, Damage, HurtBox},
-    shield::components::ProjectileReflection,
-};
+use super::damage::{AttemptDamage, Damage, HurtBox};
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision));
+}
 
 #[derive(Component, Clone)]
 #[require(
@@ -101,7 +102,7 @@ pub fn icebolt(
     )
 }
 
-pub fn handle_collisions(
+fn handle_collisions(
     mut commands: Commands,
     projectile_query: Query<(&Projectile, &LinearVelocity, &CollidingEntities, Entity)>,
     hurt_box_query: Query<&HurtBox>,

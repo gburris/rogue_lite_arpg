@@ -14,15 +14,8 @@ pub use input::PauseInputEvent;
 use crate::{
     character::{Character, Purse, physical_collider, player::interact::PlayerInteractionRadius},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    items::{
-        self, ItemCapacity, Items,
-        equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
-    },
+    configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, shadow},
+    items::{ItemCapacity, Items},
     prelude::*,
     progression::GameProgress,
 };
@@ -192,19 +185,18 @@ fn spawn_player(
             },
         ),
         related!(Items[
-            (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
-            items::ice_staff(&sprites, &sprite_layouts),
-            items::sword(&sprites),
-            items::axe(&sprites),
-            items::freeze_axe(&sprites),
-            items::magic_shield(&sprites, &sprite_layouts),
-            items::knight_shield(&sprites, &sprite_layouts),
-            items::health_potion(&sprites),
-            items::tome_of_healing(&sprites)
+            (Equipped, fire_staff(&sprites, &sprite_layouts)),
+            ice_staff(&sprites, &sprite_layouts),
+            sword(&sprites),
+            axe(&sprites),
+            freeze_axe(&sprites),
+            magic_shield(&sprites, &sprite_layouts),
+            knight_shield(&sprites, &sprite_layouts),
+            health_potion(&sprites),
+            tome_of_healing(&sprites)
         ]),
         observe(death::on_player_defeated),
         observe(on_equipment_activated),
-        observe(on_equipment_deactivated),
         children![
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),

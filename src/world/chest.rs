@@ -2,14 +2,11 @@ use avian2d::prelude::*;
 use bevy::sprite::Anchor;
 use bevy::{prelude::*, ui_widgets::observe};
 
-use crate::prelude::{AppState, GoldDrop};
+use crate::prelude::*;
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     character::player::interact::{Interaction, InteractionZone},
-    configuration::{
-        GameCollisionLayer, YSort,
-        assets::{SpriteAssets, SpriteSheetLayouts},
-    },
+    configuration::{GameCollisionLayer, YSort},
 };
 
 /// Center of chest relative to its sprite's anchor point

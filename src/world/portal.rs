@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use crate::{
-    configuration::{GameCollisionLayer, YSort, ZLayer, assets::SpriteAssets},
+    configuration::{GameCollisionLayer, YSort, ZLayer},
     prelude::*,
 };
 

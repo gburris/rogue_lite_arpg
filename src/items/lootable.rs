@@ -6,9 +6,8 @@ use rand::{Rng, rng};
 use crate::{
     character::player::interact::{Interaction, InteractionZone},
     configuration::{YSort, ZLayer},
-    items::{ItemOf, Items, equipment::Unequip},
-    prelude::{AppState, Player},
-    utility::Lifespan,
+    items::{ItemOf, Items},
+    prelude::*,
 };
 
 use super::Item;

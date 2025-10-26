@@ -3,10 +3,6 @@ use bevy::sprite::Anchor;
 use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::prelude::*;
-use crate::{
-    animation::{AnimationIndices, AnimationTimer},
-    character::player::interact::{Interaction, InteractionZone},
-};
 
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
@@ -83,7 +79,7 @@ fn chest(
 }
 
 fn on_interaction_open_chest(
-    chest_opened: On<Interaction>,
+    chest_opened: On<PlayerInteraction>,
     chest_transforms: Query<&Transform, With<Chest>>,
     mut commands: Commands,
 ) {

@@ -6,7 +6,6 @@ use bevy_ecs_tilemap::prelude::*;
 use rand::{Rng, rng};
 
 use crate::{
-    character::{enemy::SpawnEnemies, npc::SpawnNpcs},
     prelude::*,
     world::map::{
         EnvironmentalType, MapLayout, MarkerType, TileType, WorldSpaceConfig, walls::Wall,

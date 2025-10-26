@@ -96,7 +96,7 @@ impl ZLayer {
     }
 }
 
-pub fn get_window_plugin() -> WindowPlugin {
+pub(super) fn get_window_plugin() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
             title: String::from("Baba Yaga"),
@@ -150,7 +150,7 @@ fn camera_follow_system(
         .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
 }
 
-pub fn camera_debug_system(
+pub(super) fn camera_debug_system(
     player: Single<(&Transform, &Player), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {

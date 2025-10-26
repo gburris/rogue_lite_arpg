@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-pub fn plugin(app: &mut App) {
+pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (despawn_expired_entities, generic_remove_component_system)
@@ -26,7 +26,7 @@ impl Default for Lifespan {
     }
 }
 
-pub fn despawn_expired_entities(
+fn despawn_expired_entities(
     mut commands: Commands,
     mut duration_query: Query<(Entity, &mut Lifespan)>,
     time: Res<Time>,
@@ -52,12 +52,12 @@ pub fn despawn_all<T: Event, C: Component>(
 }
 
 #[derive(Component)]
-pub struct RemoveComponent {
-    pub timer: Timer,
-    pub remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
+struct RemoveComponent {
+    timer: Timer,
+    remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
 }
 
-pub fn generic_remove_component_system(
+fn generic_remove_component_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut RemoveComponent)>,
     time: Res<Time>,

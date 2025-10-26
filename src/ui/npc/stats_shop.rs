@@ -1,7 +1,5 @@
 use crate::{
-    character::player::{DisplayableStatType, PlayerStats},
-    prelude::Menu,
-    progression::GameProgress,
+    prelude::{DisplayableStatType, GameProgress, Menu, PlayerStats},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
         primitives::{menu_header, text},

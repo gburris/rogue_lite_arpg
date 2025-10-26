@@ -2,10 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{
-    character::{Purse, player::interact::PlayerInteractionRadius},
-    prelude::*,
-};
+use crate::{character::Purse, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

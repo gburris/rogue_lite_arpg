@@ -12,8 +12,6 @@ use bevy::prelude::*;
 use bevy_behave::prelude::BehavePlugin;
 use bevy_ecs_tilemap::prelude::TilemapPlugin;
 
-use crate::progression::GameProgress;
-
 pub mod prelude {
     pub use super::assets::*;
     pub use super::physics::*;
@@ -46,8 +44,6 @@ pub(super) fn plugin(app: &mut App) {
             .set(view::get_window_plugin())
             .set(ImagePlugin::default_nearest()),
     );
-
-    app.insert_resource(GameProgress::default());
 
     // Third-party plugins
     app.add_plugins((TilemapPlugin, BehavePlugin::default()));

@@ -2,7 +2,7 @@ use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingStateSet;
 
-use crate::{character::player::PauseInputEvent, prelude::CleanupZone};
+use crate::prelude::{CleanupZone, PauseInputEvent};
 
 pub(super) fn plugin(app: &mut App) {
     // initialize states

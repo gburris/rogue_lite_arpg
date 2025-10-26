@@ -5,24 +5,26 @@ mod interaction;
 
 use crate::{
     character::{
-        behavior::{Idle, Retreat}, physical_collider, player::interact::InteractionZone, Character
-    }, combat::{damage::hurtbox, Health}, prelude::*
+        Character,
+        behavior::{Idle, Retreat},
+        physical_collider,
+    },
+    combat::{Health, damage::hurtbox},
+    prelude::*,
 };
 
 use super::behavior::{Anchor, Wander};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(spawn_npcs).add_observer(despawn_all::<CleanupZone, NPC>);
+    app.add_observer(spawn_npcs)
+        .add_observer(despawn_all::<CleanupZone, NPC>);
 }
 
 #[derive(Event)]
 pub struct SpawnNpcs(pub Vec<Vec2>);
 
 #[derive(Component)]
-#[require(
-    Character,     
-
-)]
+#[require(Character)]
 pub struct NPC;
 
 #[derive(Clone, Copy, Debug)]
@@ -100,7 +102,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             physical_collider(),
             BehaveTree::new(wander_and_retreat_behavior()),
         ],
-        observe(on_equipment_activated)
+        observe(on_equipment_activated),
     )
 }
 

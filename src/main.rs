@@ -6,21 +6,20 @@
 use bevy::prelude::*;
 
 mod animation;
-pub mod character;
+mod character;
 pub mod combat;
 mod configuration;
 mod items;
-pub mod progression;
 pub mod ui;
 pub mod utility;
 mod world;
 
 pub mod prelude {
-    pub use super::animation::*;
+    pub use super::animation::{AnimationData, AnimationIndices, AnimationTimer};
     pub use super::character::prelude::*;
     pub use super::configuration::prelude::*;
     pub use super::items::prelude::*;
-    pub use super::utility::*;
+    pub use super::utility::{Lifespan, despawn_all, schedule_component_removal};
     pub use super::world::prelude::*;
 }
 
@@ -35,7 +34,6 @@ fn plugin(app: &mut App) {
         utility::plugin,
         configuration::plugin,
         combat::plugin,
-        progression::plugin::ProgressionPlugin,
     ));
 
     // Entity systems

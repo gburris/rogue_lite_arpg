@@ -5,10 +5,19 @@ use crate::{
     prelude::*,
 };
 
-#[derive(Component)]
-pub struct GameOverTimer(pub Timer);
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        finish_death_animation
+            .in_set(InGameSystems::Vfx)
+            .run_if(in_state(PlayingState::Death)),
+    );
+}
 
-pub fn on_player_defeated(
+#[derive(Component)]
+struct GameOverTimer(Timer);
+
+pub(super) fn on_player_defeated(
     _: On<Defeated>,
     player: Single<(Entity, &mut SimpleMotion), With<Player>>,
     mut commands: Commands,
@@ -25,7 +34,7 @@ pub fn on_player_defeated(
     playing_state.set(PlayingState::Death);
 }
 
-pub fn finish_death_animation(
+fn finish_death_animation(
     time: Res<Time>,
     player_death_timer_single: Single<&mut GameOverTimer, With<Player>>,
     mut game_over_state: ResMut<NextState<AppState>>,

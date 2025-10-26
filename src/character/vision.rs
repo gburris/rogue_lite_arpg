@@ -5,6 +5,22 @@ use bevy::prelude::*;
 
 use crate::{combat::damage::DamageDealt, prelude::*, utility::schedule_component_removal};
 
+pub(super) fn plugin(app: &mut App) {
+    // Vision + Perception
+    app.add_systems(
+        Update,
+        (update_aim_position, update_target_info, is_target_in_sight)
+            .in_set(InGameSystems::Simulation),
+    );
+
+    // Targeting
+    app.add_systems(
+        Update,
+        (should_target_watched, should_stop_targeting).in_set(InGameSystems::Simulation),
+    )
+    .add_observer(on_damage_aggro);
+}
+
 /// Represents the current direction an entity is aiming toward (e.g., cursor for player, target for AI).
 /// This is decoupled from movement-facing direction.
 #[derive(Component, Default)]
@@ -17,7 +33,7 @@ pub struct Vision {
 #[derive(Component)]
 #[component(immutable)]
 #[require(Vision, TargetInfo)]
-pub struct VisionCapabilities {
+pub(super) struct VisionCapabilities {
     /// Half-angle of the entity's field of view, in **radians**.
     ///
     /// For example:
@@ -36,7 +52,7 @@ impl Default for VisionCapabilities {
 
 /// Stores calculated perception data for a given potential or current target.
 #[derive(Component, Default)]
-pub struct TargetInfo {
+pub(super) struct TargetInfo {
     /// Distance to the observed entity.
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
@@ -52,27 +68,27 @@ pub struct TargetInfo {
 /// Added when both line of sight and vision cone are satisfied.
 #[derive(Component)]
 #[relationship(relationship_target = TargetedBy)]
-pub struct Targeting(pub Entity);
+pub(super) struct Targeting(pub Entity);
 
 /// Inverse of `Targeting` — tracked by the targeted entity.
 #[derive(Component)]
 #[relationship_target(relationship = Targeting)]
-pub struct TargetedBy(Vec<Entity>);
+pub(super) struct TargetedBy(Vec<Entity>);
 
 /// Tracks which entity the NPC is currently watching or trying to detect.
 #[derive(Component)]
 #[relationship(relationship_target = WatchedBy)]
-pub struct Watching(pub Entity);
+pub(super) struct Watching(pub Entity);
 
 /// Inverse of `Watching` — attached to the entity being watched.
 #[derive(Component)]
 #[relationship_target(relationship = Watching)]
-pub struct WatchedBy(Vec<Entity>);
+pub(super) struct WatchedBy(Vec<Entity>);
 
 /// Indicates a temporary target lock.
 /// Automatically removed after a certain duration via `Lifespan`.
 #[derive(Component)]
-pub struct TargetLock;
+struct TargetLock;
 
 // ---------------------
 // VISION + PERCEPTION
@@ -81,7 +97,7 @@ pub struct TargetLock;
 /// Updates the `Vision` component's direction for each entity:
 /// - If the entity is actively targeting something, aim at it.
 /// - Otherwise, aim in the direction it is facing.
-pub fn update_aim_position(
+fn update_aim_position(
     mut character_query: Query<
         (&mut Vision, &TargetInfo, Has<Targeting>, &FacingDirection),
         Without<Player>,
@@ -100,7 +116,7 @@ pub fn update_aim_position(
 
 /// Updates the direction and distance of the watched (or targeted) entity,
 /// and points the `RayCaster` in that direction.
-pub fn update_target_info(
+fn update_target_info(
     mut npc_query: Query<(
         &mut TargetInfo,
         &mut RayCaster,
@@ -144,7 +160,7 @@ pub fn update_target_info(
 /// Requirements:
 /// - The NPC must have a `Watching` component referencing the target
 /// - The target must have a `WatchedBy` component and optionally `Children` (e.g. for colliders)
-pub fn is_target_in_sight(
+fn is_target_in_sight(
     mut npc_query: Query<(
         &mut TargetInfo,
         &RayHits,
@@ -193,7 +209,7 @@ pub fn is_target_in_sight(
 /// Ignores line of sight or cone checks — instant rage response.
 /// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
 /// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
-pub fn on_damage_aggro(
+fn on_damage_aggro(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     target_query: Query<&Watching>,
@@ -214,7 +230,7 @@ pub fn on_damage_aggro(
 }
 
 /// Starts targeting the watched entity if it is in sight and in the vision cone.
-pub fn should_target_watched(
+fn should_target_watched(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
@@ -228,7 +244,7 @@ pub fn should_target_watched(
 }
 
 /// Stops targeting if the entity loses sight of the target or the target lock has expired.
-pub fn should_stop_targeting(
+fn should_stop_targeting(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, Has<TargetLock>, Entity), With<Targeting>>,
 ) {

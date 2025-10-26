@@ -1,62 +1,49 @@
 use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
-use movement::PlayerMovementEvent;
 
 mod aim;
 mod death;
 mod input;
-pub mod interact;
+mod interact;
 mod level;
 mod movement;
+mod progression;
 
-pub use input::PauseInputEvent;
+use interact::PlayerInteractionRadius;
 
 use crate::{
-    character::{Character, Purse, physical_collider, player::interact::PlayerInteractionRadius},
+    character::{Character, Purse, physical_collider},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     prelude::*,
-    progression::GameProgress,
 };
+
+pub mod prelude {
+    pub use super::input::*;
+    pub use super::interact::*;
+    pub use super::progression::GameProgress;
+    pub use super::{DisplayableStatType, Player, PlayerStats};
+}
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
-pub struct PlayerPlugin;
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((
+        aim::plugin,
+        death::plugin,
+        input::plugin,
+        interact::plugin,
+        level::plugin,
+        movement::plugin,
+        progression::plugin,
+    ));
 
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(level::plugin)
-            .add_message::<PlayerMovementEvent>()
-            .add_systems(
-                OnEnter(AppState::SpawnPlayer),
-                (spawn_player, transition_to_create_hub).chain(),
-            )
-            .add_systems(
-                Update,
-                death::finish_death_animation
-                    .in_set(InGameSystems::Vfx)
-                    .run_if(in_state(PlayingState::Death)),
-            )
-            .add_systems(
-                Update,
-                input::player_input
-                    .in_set(InGameSystems::PlayerInput)
-                    .run_if(in_state(PlayingState::Playing)),
-            )
-            .add_systems(
-                Update,
-                (
-                    (movement::player_movement, aim::update_player_aim)
-                        .in_set(InGameSystems::Simulation),
-                    aim::draw_cursor.in_set(InGameSystems::Vfx),
-                ),
-            )
-            .add_observer(movement::on_player_stopped)
-            .add_observer(interact::on_player_interaction_input)
-            .add_observer(interact::on_interaction_zone_added);
+    app.add_systems(
+        OnEnter(AppState::SpawnPlayer),
+        (spawn_player, transition_to_create_hub).chain(),
+    );
 
-        app.add_observer(despawn_all::<RestartEvent, Player>);
-    }
+    app.add_observer(despawn_all::<RestartEvent, Player>);
 }
 
 #[derive(Component)]

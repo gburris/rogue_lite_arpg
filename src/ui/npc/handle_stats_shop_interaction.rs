@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    character::player::{DisplayableStatType, PlayerStats},
-    progression::GameProgress,
-};
+use crate::prelude::{DisplayableStatType, GameProgress, PlayerStats};
 
 use super::stats_shop::{
     StatChangeEvent, StatShopButton, StatShopMenu, StatsUIUpdateEvent, spawn_stats_shop_menu,

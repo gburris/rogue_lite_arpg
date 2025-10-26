@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    character::player::PlayerStats,
-    prelude::Menu,
+    prelude::{Menu, PlayerStats},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
         primitives::{menu_header, text},

@@ -2,15 +2,23 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
+pub(super) fn plugin(app: &mut App) {
+    app.add_message::<PlayerMovementEvent>();
+
+    app.add_systems(Update, player_movement.in_set(InGameSystems::Simulation));
+
+    app.add_observer(on_player_stopped);
+}
+
 #[derive(Message)]
-pub struct PlayerMovementEvent {
+pub(super) struct PlayerMovementEvent {
     pub direction: Vec2,
 }
 
 #[derive(Event)]
-pub struct PlayerStoppedEvent;
+pub(super) struct PlayerStoppedEvent;
 
-pub fn player_movement(
+fn player_movement(
     player_motion_query: Single<&mut SimpleMotion, With<Player>>,
     mut player_movement_messages: MessageReader<PlayerMovementEvent>,
 ) {
@@ -20,7 +28,7 @@ pub fn player_movement(
     }
 }
 
-pub fn on_player_stopped(
+fn on_player_stopped(
     _: On<PlayerStoppedEvent>,
     mut player_motion: Single<&mut SimpleMotion, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {

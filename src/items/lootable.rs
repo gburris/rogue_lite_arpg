@@ -3,13 +3,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use rand::{Rng, rng};
 
-use crate::{
-    character::player::interact::{Interaction, InteractionZone},
-    items::{ItemOf, Items},
-    prelude::*,
-};
-
-use super::Item;
+use crate::prelude::*;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
@@ -70,7 +64,7 @@ pub fn on_drop_event(
 }
 
 pub fn on_lootable_item_interaction(
-    interaction: On<Interaction>,
+    interaction: On<PlayerInteraction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
 ) {

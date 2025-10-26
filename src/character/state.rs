@@ -67,7 +67,7 @@ impl Default for SimpleMotion {
 }
 
 /// Converts simulation motion into physics "real" motion (using avian linear velocity)
-pub fn motion_to_velocity(mut query: Query<(&SimpleMotion, &mut LinearVelocity)>) {
+pub(super) fn motion_to_velocity(mut query: Query<(&SimpleMotion, &mut LinearVelocity)>) {
     for (motion, mut velocity) in query.iter_mut() {
         if motion.is_moving() {
             let temp_vel = motion.get_velocity();

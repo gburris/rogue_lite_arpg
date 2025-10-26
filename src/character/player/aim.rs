@@ -2,7 +2,17 @@ use bevy::{color::palettes::css::WHITE, prelude::*, window::PrimaryWindow};
 
 use crate::prelude::*;
 
-pub(super) fn update_player_aim(
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            update_player_aim.in_set(InGameSystems::Simulation),
+            draw_cursor.in_set(InGameSystems::Vfx),
+        ),
+    );
+}
+
+fn update_player_aim(
     player: Single<(&mut Player, &mut Vision, &Transform)>,
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
@@ -25,6 +35,6 @@ pub(super) fn update_player_aim(
     player.aim_position = cursor_pos_in_world;
 }
 
-pub(super) fn draw_cursor(player: Single<&Player>, mut gizmos: Gizmos) {
+fn draw_cursor(player: Single<&Player>, mut gizmos: Gizmos) {
     gizmos.circle_2d(player.aim_position, 10., WHITE);
 }

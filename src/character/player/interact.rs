@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::configuration::GameCollisionLayer;
+use crate::prelude::GameCollisionLayer;
 
 /// Marker component for the sensor added to the player, which must collide with an InteractionZone for
 /// a player interaction to be possible

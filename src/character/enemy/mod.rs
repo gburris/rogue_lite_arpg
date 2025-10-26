@@ -18,6 +18,8 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_enemies);
+    
+    app.add_observer(despawn_all::<CleanupZone, Enemy>);
 }
 
 #[derive(Debug, Event)]
@@ -35,7 +37,6 @@ pub struct EnemySpawnData {
     Experience, 
     VisionCapabilities, 
     Purse { amount: 50 },     
-    DespawnOnExit::<AppState>(AppState::Playing),
 )]
 pub struct Enemy;
 
@@ -86,6 +87,8 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
+    info!("Spawning enemy at: {}", spawn_data.position);
+
     let chase_behavior = behave! {
         Behave::While => {
             Behave::spawn_named("Chase", Chase),
@@ -143,7 +146,8 @@ fn spawn_enemy(
 fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
-        Transform::from_translation(position.extend(0.0)),
+        DespawnOnExit(AppState::Playing),
+        Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 256.0), // 8 tile radius
         Mana::new(100.0, 10.0),
         // enemy vision distance

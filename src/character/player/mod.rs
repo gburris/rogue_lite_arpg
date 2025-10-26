@@ -14,8 +14,6 @@ pub use input::PauseInputEvent;
 use crate::{
     character::{Character, Purse, physical_collider, player::interact::PlayerInteractionRadius},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
-    configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, shadow},
-    items::{ItemCapacity, Items},
     prelude::*,
     progression::GameProgress,
 };
@@ -56,6 +54,8 @@ impl Plugin for PlayerPlugin {
             .add_observer(movement::on_player_stopped)
             .add_observer(interact::on_player_interaction_input)
             .add_observer(interact::on_interaction_zone_added);
+
+        app.add_observer(despawn_all::<RestartEvent, Player>);
     }
 }
 

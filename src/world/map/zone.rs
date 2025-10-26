@@ -7,18 +7,11 @@ use rand::{Rng, rng};
 
 use crate::{
     character::{enemy::SpawnEnemies, npc::SpawnNpcs},
-    configuration::{GameCollisionLayer, ZLayer},
     prelude::*,
     world::map::{
-        EnvironmentalType, MapLayout, MarkerType, TileType, WorldSpaceConfig,
-        instance::InstanceAssets, walls::Wall,
+        EnvironmentalType, MapLayout, MarkerType, TileType, WorldSpaceConfig, walls::Wall,
     },
 };
-
-#[derive(EntityEvent)]
-pub struct SpawnZone {
-    pub entity: Entity,
-}
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -31,7 +24,14 @@ pub(super) fn plugin(app: &mut App) {
         )
             .chain(),
     );
+
+    app.add_observer(despawn_all::<CleanupZone, TilemapId>)
+        .add_observer(despawn_all::<CleanupZone, Wall>)
+        .add_observer(despawn_all::<CleanupZone, Water>);
 }
+
+#[derive(Event)]
+pub struct CleanupZone;
 
 fn transition_to_playing(mut game_state: ResMut<NextState<AppState>>) {
     game_state.set(AppState::Playing);
@@ -104,6 +104,7 @@ fn spawn_zone_colliders(
                         GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
                     ),
                 ));
+                info!("spawning wall");
             }
             EnvironmentalType::Water => todo!(),
         }
@@ -115,7 +116,6 @@ fn spawn_zone_entities(
     sprites: Res<SpriteAssets>,
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
-    instance_assets: Res<InstanceAssets>,
     player_query: Single<&mut Transform, With<Player>>,
 ) {
     //TODO: Markers should all store an associated type
@@ -125,7 +125,8 @@ fn spawn_zone_entities(
         for exit_position in exit_positions {
             let exit_position_in_world =
                 world_config.tile_to_world(map_layout.size, exit_position.as_ivec2());
-            commands.spawn(portal(&instance_assets, &sprites, exit_position_in_world));
+            info!("spawning portal");
+            commands.spawn(portal(&sprites, exit_position_in_world));
         }
     }
 
@@ -143,6 +144,7 @@ fn spawn_zone_entities(
             })
             .collect();
 
+        info!("spawning enemies");
         commands.trigger(SpawnEnemies(enemy_spawn_data_list));
     }
 
@@ -168,6 +170,9 @@ fn spawn_zone_entities(
                 world_config.tile_to_world(map_layout.size, spawn_position.as_ivec2());
 
             let mut player_transform = player_query.into_inner();
+
+            info!("moving player");
+
             player_transform.translation =
                 player_spawn_position.extend(player_transform.translation.z);
         }
@@ -252,7 +257,6 @@ fn spawn_zone_tilemap(
                             texture_index: TileTextureIndex(texture_index),
                             ..default()
                         },
-                        DespawnOnExit::<AppState>(AppState::Playing),
                     ))
                     .id();
                 storage.set(&tile_pos, tile_entity);

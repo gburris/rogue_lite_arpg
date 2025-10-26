@@ -3,19 +3,15 @@ use bevy_asset_loader::prelude::*;
 
 use crate::prelude::AppState;
 
-pub struct AssetLoadingPlugin;
-
-impl Plugin for AssetLoadingPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_loading_state(
-            LoadingState::new(AppState::AssetLoading)
-                .continue_to_state(AppState::SpawnPlayer)
-                .load_collection::<SpriteAssets>()
-                .load_collection::<SpriteSheetLayouts>()
-                .load_collection::<GameIcons>()
-                .load_collection::<Shadows>(),
-        );
-    }
+pub(super) fn plugin(app: &mut App) {
+    app.add_loading_state(
+        LoadingState::new(AppState::AssetLoading)
+            .continue_to_state(AppState::SpawnPlayer)
+            .load_collection::<SpriteAssets>()
+            .load_collection::<SpriteSheetLayouts>()
+            .load_collection::<GameIcons>()
+            .load_collection::<Shadows>(),
+    );
 }
 
 #[derive(AssetCollection, Resource)]

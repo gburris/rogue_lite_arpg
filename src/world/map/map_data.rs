@@ -1,4 +1,4 @@
-use bevy::{log::warn, math::Vec2, transform::components::Transform};
+use bevy::{log::warn, math::Vec2, prelude::*};
 use bevy_ecs_tilemap::map::TilemapSize;
 use std::collections::HashMap;
 
@@ -126,6 +126,11 @@ impl MapDataBuilder {
         // Always generate entrance/exit positions for random sprite_layouts
         let (player_pos, exit_positions) =
             generate_entrance_exit_positions(self.size, self.num_exits);
+
+        info!(
+            "New player position determined: {}",
+            player_pos.first().unwrap()
+        );
         markers.insert(MarkerType::PlayerSpawns, player_pos);
         markers.insert(MarkerType::LevelExits, exit_positions);
 

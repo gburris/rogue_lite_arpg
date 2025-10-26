@@ -4,7 +4,6 @@ use rand::Rng;
 
 use crate::{
     character::{Purse, player::interact::PlayerInteractionRadius},
-    configuration::{GameCollisionLayer, YSort},
     prelude::*,
 };
 
@@ -14,6 +13,8 @@ pub(super) fn plugin(app: &mut App) {
         handle_gold_collisions.in_set(InGameSystems::Collision),
     )
     .add_observer(on_gold_drop_event);
+
+    app.add_observer(despawn_all::<CleanupZone, Gold>);
 }
 
 #[derive(Component)]
@@ -97,7 +98,7 @@ fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Bundle {
     (
         Gold { value },
         Sprite::from_image(gold_image),
-        Transform::from_translation(location.extend(0.0)),
+        Transform::from_translation(location.extend(ZLayer::OnGround.z())),
         DespawnOnExit(AppState::Playing),
     )
 }

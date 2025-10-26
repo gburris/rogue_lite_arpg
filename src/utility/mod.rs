@@ -1,15 +1,13 @@
 use bevy::prelude::*;
 
-use crate::{prelude::*, ui::PlayerOverlay};
+use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (despawn_expired_entities, generic_remove_component_system)
             .in_set(InGameSystems::DespawnEntities),
-    )
-    .add_observer(despawn_all::<RestartEvent, Player>)
-    .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
+    );
 }
 
 /// Represents an entity that will be despawned after time elapsed

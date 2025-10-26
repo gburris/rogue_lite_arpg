@@ -19,11 +19,7 @@ pub mod prelude {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{
-    configuration::{CHARACTER_FEET_POS_OFFSET, GameCollisionLayer, YSort},
-    items::ItemCapacity,
-    prelude::*,
-};
+use crate::{items::ItemCapacity, prelude::*};
 
 use player::PlayerPlugin;
 

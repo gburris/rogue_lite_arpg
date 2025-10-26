@@ -13,7 +13,7 @@ impl Plugin for UIPlugin {
         app.add_plugins(PauseMenuPlugin)
             .add_plugins(NPCPauseScreensPlugin);
 
-        // Loading screen
+        //Loading screen
         app.add_systems(OnEnter(AppState::SpawnZone), load_screen::spawn)
             .add_systems(
                 Update,
@@ -52,7 +52,8 @@ impl Plugin for UIPlugin {
             .add_observer(damage_overlay::on_damage_overlay_amount)
             .add_observer(damage_overlay::on_healing_overlay_amount)
             .add_observer(player_overlay::on_equipment_used)
-            .add_observer(player_overlay::on_equipment_use_failed);
+            .add_observer(player_overlay::on_equipment_use_failed)
+            .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
 
         // Game over systems
         app.add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn);

@@ -8,7 +8,7 @@ use bevy::prelude::*;
 mod animation;
 pub mod character;
 pub mod combat;
-pub mod configuration;
+mod configuration;
 mod items;
 pub mod progression;
 pub mod ui;

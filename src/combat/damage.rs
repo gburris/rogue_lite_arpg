@@ -9,8 +9,7 @@ use crate::{
         invulnerable::IFrames,
         status_effects::{EffectOf, Effects, StatusOf},
     },
-    configuration::GameCollisionLayer,
-    prelude::Player,
+    prelude::{GameCollisionLayer, Player},
 };
 
 #[derive(PartialEq, Clone, Copy)]

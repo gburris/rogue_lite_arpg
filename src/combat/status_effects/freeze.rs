@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use crate::{
     combat::status_effects::{Status, StatusApplied, StatusOf, slow::Slowed},
-    configuration::{CHARACTER_FEET_POS_OFFSET, ZLayer},
     prelude::*,
 };
 

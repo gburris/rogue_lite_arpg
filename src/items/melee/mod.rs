@@ -6,7 +6,6 @@ use crate::{
         damage::{AttemptDamage, Damage, DamageSource, Knockback},
         status_effects::{Effects, Frozen},
     },
-    configuration::GameCollisionLayer,
     items::{Item, ItemType, equipment::Equippable, prelude::UseEquipment},
     prelude::*,
 };

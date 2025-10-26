@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::{
-    configuration::ZLayer,
     items::{
         Items,
         equipment::{Equipped, Mainhand, Offhand},

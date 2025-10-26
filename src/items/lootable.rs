@@ -5,7 +5,6 @@ use rand::{Rng, rng};
 
 use crate::{
     character::player::interact::{Interaction, InteractionZone},
-    configuration::{YSort, ZLayer},
     items::{ItemOf, Items},
     prelude::*,
 };
@@ -16,7 +15,7 @@ use super::Item;
 #[require(
     Lifespan::new(10.0),
     YSort::from_offset(-6.0),
-    DespawnOnExit::<AppState>(AppState::Playing),
+
 )]
 pub struct Lootable;
 

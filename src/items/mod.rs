@@ -37,7 +37,8 @@ pub(super) fn plugin(app: &mut App) {
     .add_observer(on_item_added)
     .add_observer(on_item_added_to_inventory)
     .add_observer(lootable::on_drop_event)
-    .add_observer(consumable::on_consume_event);
+    .add_observer(consumable::on_consume_event)
+    .add_observer(despawn_all::<CleanupZone, Lootable>);
 }
 
 fn on_item_added(item_added: On<Add, Item>, mut commands: Commands) {

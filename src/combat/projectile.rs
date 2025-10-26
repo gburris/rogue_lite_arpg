@@ -15,6 +15,8 @@ use super::damage::{AttemptDamage, Damage, HurtBox};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision));
+
+    app.add_observer(despawn_all::<CleanupZone, Projectile>);
 }
 
 #[derive(Component, Clone)]

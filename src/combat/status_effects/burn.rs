@@ -7,7 +7,6 @@ use crate::{
         damage::{AttemptDamage, Damage},
         status_effects::{Status, StatusApplied, StatusOf},
     },
-    configuration::{CHARACTER_FEET_POS_OFFSET, ZLayer},
     prelude::*,
 };
 

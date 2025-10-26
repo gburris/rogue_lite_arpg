@@ -12,7 +12,6 @@ use crate::{
         damage::DamageSource,
         mana::{ManaCost, ManaDrainRate},
     },
-    configuration::GameCollisionLayer,
     items::{
         Item, ItemOf, ItemType,
         equipment::{EquipmentSlot, Equippable, Equipped, Offhand},

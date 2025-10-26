@@ -6,15 +6,13 @@ mod interaction;
 use crate::{
     character::{
         behavior::{Idle, Retreat}, physical_collider, player::interact::InteractionZone, Character
-    }, combat::{damage::hurtbox, Health}, configuration::{
-        shadow, GameCollisionLayer, CHARACTER_FEET_POS_OFFSET
-    }, items::Items, prelude::*
+    }, combat::{damage::hurtbox, Health}, prelude::*
 };
 
 use super::behavior::{Anchor, Wander};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(spawn_npcs);
+    app.add_observer(spawn_npcs).add_observer(despawn_all::<CleanupZone, NPC>);
 }
 
 #[derive(Event)]
@@ -23,7 +21,7 @@ pub struct SpawnNpcs(pub Vec<Vec2>);
 #[derive(Component)]
 #[require(
     Character,     
-    DespawnOnExit::<AppState>(AppState::Playing),
+
 )]
 pub struct NPC;
 
@@ -91,7 +89,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
         Anchor::new(spawn_position, WANDER_RADIUS),
         SimpleMotion::new(100.0),
         Health::new(1000.0),
-        Transform::from_translation(spawn_position.extend(0.0)),
+        Transform::from_translation(spawn_position.extend(ZLayer::OnGround.z())),
         children![
             shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             (

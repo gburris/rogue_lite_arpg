@@ -2,7 +2,7 @@ use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingStateSet;
 
-use crate::character::player::PauseInputEvent;
+use crate::{character::player::PauseInputEvent, prelude::CleanupZone};
 
 pub(super) fn plugin(app: &mut App) {
     // initialize states
@@ -49,6 +49,8 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Pause(true)), pause_game)
         .add_systems(OnEnter(Pause(false)), resume_game)
         .add_observer(on_pause_input);
+
+    app.add_systems(OnEnter(AppState::Transition), transition_zones);
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
@@ -77,6 +79,7 @@ pub enum AppState {
     SpawnPlayer, // Also creates player overlay UI
     SpawnZone,   //Used to 1. put a load screen on 2. Spawn everything in ur zone
     Playing,
+    Transition,
     GameOver,
 }
 
@@ -143,4 +146,9 @@ fn on_pause_input(
             }
         }
     }
+}
+
+fn transition_zones(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {
+    commands.trigger(CleanupZone);
+    game_state.set(AppState::SpawnZone);
 }

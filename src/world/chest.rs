@@ -6,7 +6,6 @@ use crate::prelude::*;
 use crate::{
     animation::{AnimationIndices, AnimationTimer},
     character::player::interact::{Interaction, InteractionZone},
-    configuration::{GameCollisionLayer, YSort},
 };
 
 /// Center of chest relative to its sprite's anchor point
@@ -15,6 +14,8 @@ const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_spawn_chests_event);
+
+    app.add_observer(despawn_all::<CleanupZone, Chest>);
 }
 
 #[derive(Debug, Event)]
@@ -66,7 +67,7 @@ fn chest(
         Anchor(Vec2::new(-0.18, 0.0)),
         AnimationIndices::OneShot(0..=8),
         Transform {
-            translation: spawn_position.extend(0.0),
+            translation: spawn_position.extend(ZLayer::OnGround.z()),
             scale: Vec3::new(2.0, 2.0, 1.0),
             ..default()
         },

@@ -49,7 +49,7 @@ impl FromStr for PrefabType {
             "NPCHub" => Ok(PrefabType::NPCHub),
             "Temple" => Ok(PrefabType::Temple),
             "EmptySquare" => Ok(PrefabType::EmptySquare),
-            _ => Err(format!("Unknown prefab type: {}", s)),
+            _ => Err(format!("Unknown prefab type: {s}")),
         }
     }
 }

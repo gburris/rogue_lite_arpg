@@ -5,9 +5,8 @@ use bevy_behave::prelude::*;
 mod defeat;
 
 use crate::{
-    character::Purse,
     character::{
-        Character,
+        Character, Purse,
         behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
@@ -18,7 +17,7 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_enemies);
-    
+
     app.add_observer(despawn_all::<CleanupZone, Enemy>);
 }
 
@@ -33,10 +32,10 @@ pub struct EnemySpawnData {
 
 #[derive(Component)]
 #[require(
-    Character, 
-    Experience, 
-    VisionCapabilities, 
-    Purse { amount: 50 },     
+    Character,
+    Experience,
+    VisionCapabilities,
+    Purse { amount: 50 },
 )]
 pub struct Enemy;
 

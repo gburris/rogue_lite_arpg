@@ -3,22 +3,27 @@ use bevy::prelude::*;
 use crate::{
     prelude::{Menu, PlayerStats},
     ui::{
-        constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
+        constants::DARK_GRAY_ALPHA_COLOR,
         primitives::{menu_header, text},
     },
 };
 
-#[derive(Component)]
-pub struct StatsMenu;
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(Menu::Stats), spawn_stats_menu);
+}
 
 #[derive(Component)]
-pub struct StatsDisplay;
+struct StatsMenu;
 
-pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
+#[derive(Component)]
+struct StatsDisplay;
+
+fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
     if let Ok(stats) = player_stats.single() {
         commands.spawn((
             StatsMenu,
             DespawnOnExit(Menu::Stats),
+            GlobalZIndex(2),
             Node {
                 width: percent(100.0),
                 height: percent(100.0),
@@ -27,7 +32,6 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
                 row_gap: px(20.0),
                 ..default()
             },
-            BackgroundColor::from(BACKGROUND_COLOR),
             children![
                 menu_header("STATS"),
                 (

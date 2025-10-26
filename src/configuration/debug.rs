@@ -10,7 +10,7 @@ use bevy::{
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
-use crate::prelude::{AppState, InGameSystems, Vision};
+use crate::prelude::{AppState, InGameSystems, Menu, Pause, Vision};
 
 use super::view;
 
@@ -54,6 +54,8 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_systems(Update, log_transitions::<AppState>);
+    app.add_systems(Update, log_transitions::<Pause>);
+    app.add_systems(Update, log_transitions::<Menu>);
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins(FpsOverlayPlugin::default());

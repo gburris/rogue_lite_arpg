@@ -5,18 +5,85 @@ use bevy::{
 };
 
 use crate::{
+    character::Purse,
+    menu::inventory::item_display::{
+        DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
+    },
     prelude::*,
-    ui::display_case_slot::{DisplaySlotOf, display_slot},
+    ui::{
+        constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        primitives::{menu_header, text, width},
+    },
 };
 
-use super::{
-    constants::DARK_GRAY_ALPHA_COLOR,
-    display_case_slot::DisplaySlotContext,
-    primitives::{text, width},
-};
+mod item_display;
 
-pub const VALUE_WIDTH: f32 = 60.0;
-pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(Menu::Inventory), spawn_inventory_menu);
+
+    app.add_systems(
+        Update,
+        update_scroll_position
+            .run_if(in_state(Menu::Inventory))
+            .in_set(MainSystems::Menu),
+    );
+
+    app.add_observer(on_display_case_updated);
+}
+
+#[derive(Component)]
+struct InventoryMenu;
+
+fn spawn_inventory_menu(
+    mut commands: Commands,
+    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<NPC>)>,
+) {
+    commands.spawn((
+        InventoryMenu,
+        DespawnOnExit(Menu::Inventory),
+        GlobalZIndex(2),
+        Node {
+            width: percent(100.0),
+            height: percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            flex_direction: FlexDirection::Column,
+            row_gap: px(20.0), // space between header and item list
+            ..default()
+        },
+        children![
+            menu_header("INVENTORY"),
+            display_case(player.0),
+            (
+                Node {
+                    width: percent(100.0),
+                    height: FOOTER_HEIGHT,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    padding: px(40.0).horizontal(),
+                    column_gap: px(20.0),
+                    ..default()
+                },
+                BackgroundColor::from(DARK_GRAY_COLOR),
+                children![
+                    text("Left click to equip/consume", 24.0),
+                    text("Right click to drop", 24.0),
+                    text(format!("Total coins: {:.1}", player.1.amount), 24.0),
+                    // Spacer between left and right side of footer
+                    Node {
+                        flex_grow: 1.0,
+                        ..default()
+                    },
+                    text("Press ESC to unpause", 24.0)
+                ],
+            )
+        ],
+    ));
+
+    // We spawned base inventory UI, now lets update it with items
+    commands.trigger(UpdateDisplayCase { entity: player.0 });
+}
 
 /// Div that wraps all display slots, but not top level component
 #[derive(Component)]
@@ -29,11 +96,11 @@ pub struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
 #[derive(EntityEvent)]
-pub struct UpdateDisplayCase {
+struct UpdateDisplayCase {
     pub entity: Entity,
 }
 
-pub fn display_case(inventory_owner: Entity) -> impl Bundle {
+fn display_case(inventory_owner: Entity) -> impl Bundle {
     (
         Node {
             height: px(800.0),
@@ -79,7 +146,7 @@ pub fn display_case(inventory_owner: Entity) -> impl Bundle {
     )
 }
 
-pub fn on_display_case_updated(
+fn on_display_case_updated(
     update_display_case: On<UpdateDisplayCase>,
     mut commands: Commands,
     icons: Res<GameIcons>,
@@ -131,7 +198,7 @@ pub fn on_display_case_updated(
 const LINE_HEIGHT: f32 = 35.;
 
 /// Updates the scroll position of scrollable nodes in response to mouse input
-pub fn update_scroll_position(
+fn update_scroll_position(
     mut mouse_wheel_messages: MessageReader<MouseWheel>,
     hover_map: Res<HoverMap>,
     mut scrolled_node_query: Query<&mut ScrollPosition>,

@@ -10,8 +10,9 @@ mod character;
 pub mod combat;
 mod configuration;
 mod items;
-pub mod ui;
-pub mod utility;
+mod menu;
+mod ui;
+mod utility;
 mod world;
 
 pub mod prelude {
@@ -19,6 +20,7 @@ pub mod prelude {
     pub use super::character::prelude::*;
     pub use super::configuration::prelude::*;
     pub use super::items::prelude::*;
+    pub use super::menu::prelude::*;
     pub use super::utility::{Lifespan, despawn_all, schedule_component_removal};
     pub use super::world::prelude::*;
 }
@@ -40,5 +42,5 @@ fn plugin(app: &mut App) {
     app.add_plugins((world::plugin, items::plugin, character::CharacterPlugin));
 
     // UI
-    app.add_plugins(ui::plugin::UIPlugin);
+    app.add_plugins((ui::plugin::UIPlugin, menu::plugin));
 }

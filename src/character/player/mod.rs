@@ -1,6 +1,3 @@
-use avian2d::prelude::*;
-use bevy::{prelude::*, ui_widgets::observe};
-
 mod aim;
 mod death;
 mod input;
@@ -8,6 +5,10 @@ mod interact;
 mod level;
 mod movement;
 mod progression;
+
+use avian2d::prelude::*;
+use bevy::{prelude::*, ui_widgets::observe};
+use bevy_enhanced_input::prelude::*;
 
 use interact::PlayerInteractionRadius;
 
@@ -18,7 +19,6 @@ use crate::{
 };
 
 pub mod prelude {
-    pub use super::input::*;
     pub use super::interact::*;
     pub use super::progression::GameProgress;
     pub use super::{DisplayableStatType, Player, PlayerStats};
@@ -43,7 +43,14 @@ pub(super) fn plugin(app: &mut App) {
         (spawn_player, transition_to_create_hub).chain(),
     );
 
-    app.add_observer(despawn_all::<RestartEvent, Player>);
+    app.add_observer(despawn_all::<RestartEvent, Player>)
+        .add_observer(on_pause)
+        .add_observer(on_inventory_opened);
+
+    app.add_input_context::<Player>();
+
+    app.add_systems(OnEnter(Menu::None), unpause)
+        .add_observer(on_controls_activated);
 }
 
 #[derive(Component)]
@@ -162,6 +169,22 @@ fn spawn_player(
 ) {
     commands.spawn((
         Player::default(),
+        actions!(Player[
+            (
+                Action::<PauseGame>::new(),
+                // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
+                // and we want it to be triggerable only after the button is released.
+                ActionSettings {
+                    require_reset: true,
+                    ..Default::default()
+                },
+                bindings![KeyCode::Escape, GamepadButton::Start],
+            ),
+            (
+                Action::<OpenInventory>::new(),
+                bindings![KeyCode::KeyI],
+            ),
+        ]),
         Mana::new(100.0, 10.0),
         game_progress.base_stats.clone(),
         Sprite::from_atlas_image(
@@ -202,4 +225,56 @@ fn spawn_player(
 
 fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
     game_state.set(AppState::CreateHub);
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+
+struct OpenInventory;
+
+fn on_inventory_opened(
+    inventory: On<Start<OpenInventory>>,
+    mut commands: Commands,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    commands
+        .entity(inventory.context)
+        .insert(ContextActivity::<Player>::INACTIVE);
+
+    next_menu_state.set(Menu::Inventory);
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+
+struct PauseGame;
+
+fn on_pause(
+    pause: On<Start<PauseGame>>,
+    mut commands: Commands,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    commands
+        .entity(pause.context)
+        .insert(ContextActivity::<Player>::INACTIVE);
+
+    next_menu_state.set(Menu::Pause);
+}
+
+#[derive(Event)]
+struct ActivatePlayerControls;
+
+fn unpause(mut commands: Commands, mut next_pause_state: ResMut<NextState<Pause>>) {
+    next_pause_state.set(Pause(false));
+    commands.trigger(ActivatePlayerControls);
+}
+
+fn on_controls_activated(
+    _: On<ActivatePlayerControls>,
+    mut commands: Commands,
+    player: Single<Entity, With<Player>>,
+) {
+    commands
+        .entity(*player)
+        .insert(ContextActivity::<Player>::ACTIVE);
 }

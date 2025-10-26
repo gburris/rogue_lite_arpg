@@ -2,13 +2,11 @@ use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingStateSet;
 
-use crate::prelude::{CleanupZone, PauseInputEvent};
+use crate::prelude::CleanupZone;
 
 pub(super) fn plugin(app: &mut App) {
     // initialize states
-    app.init_state::<AppState>()
-        .init_state::<Menu>()
-        .add_sub_state::<PlayingState>();
+    app.init_state::<AppState>().add_sub_state::<PlayingState>();
 
     // Ensure InGame system only runs when not paused
     app.configure_sets(
@@ -47,8 +45,7 @@ pub(super) fn plugin(app: &mut App) {
     // Setup Pausing!
     app.init_state::<Pause>()
         .add_systems(OnEnter(Pause(true)), pause_game)
-        .add_systems(OnEnter(Pause(false)), resume_game)
-        .add_observer(on_pause_input);
+        .add_systems(OnEnter(Pause(false)), resume_game);
 
     app.add_systems(OnEnter(AppState::Transition), transition_zones);
 }
@@ -83,17 +80,6 @@ pub enum AppState {
     GameOver,
 }
 
-#[derive(States, Eq, Default, Hash, Clone, Copy, Debug, PartialEq)]
-pub enum Menu {
-    #[default]
-    None, // In Game
-    MainMenu,
-    Inventory,
-    StatsShop,
-    ItemsShop,
-    Stats,
-}
-
 /// Whether or not the game is paused.
 #[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub struct Pause(pub bool);
@@ -113,39 +99,12 @@ pub struct RestartEvent {
 
 // Make pause menu visible when we enter the state
 fn resume_game(mut time: ResMut<Time<Physics>>) {
-    debug!("resume_game");
     time.unpause();
 }
 
 // Cleanup pause menu once we return to game, set it to hidden
 fn pause_game(mut time: ResMut<Time<Physics>>) {
-    debug!("pause_game");
     time.pause();
-}
-
-fn on_pause_input(
-    pause_input_trigger: On<PauseInputEvent>,
-    pause: Res<State<Pause>>,
-    mut next_menu: ResMut<NextState<Menu>>,
-    mut next_pause: ResMut<NextState<Pause>>,
-) {
-    match pause.get() {
-        Pause(true) => {
-            debug!("Currently paused, transitioning to playing");
-            next_menu.set(Menu::None);
-            next_pause.set(Pause(false));
-        }
-        Pause(false) => {
-            debug!("Not currently paused, transitioning to paused");
-            next_pause.set(Pause(true));
-
-            if let Some(menu) = pause_input_trigger.menu {
-                next_menu.set(menu);
-            } else {
-                next_menu.set(Menu::MainMenu);
-            }
-        }
-    }
 }
 
 fn transition_zones(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {

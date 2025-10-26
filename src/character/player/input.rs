@@ -17,11 +17,6 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Event)]
-pub struct PauseInputEvent {
-    pub menu: Option<Menu>, //What menu to enter on pause
-}
-
 fn player_input(
     mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
@@ -30,13 +25,6 @@ fn player_input(
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();
-
-    if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        commands.trigger(PauseInputEvent {
-            menu: Some(Menu::MainMenu),
-        });
-        return;
-    }
 
     if keyboard_input.clear_just_pressed(KeyCode::Space) {
         commands.trigger(PlayerInteractionInput);

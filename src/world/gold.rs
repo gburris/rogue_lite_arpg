@@ -99,6 +99,5 @@ fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Bundle {
         Gold { value },
         Sprite::from_image(gold_image),
         Transform::from_translation(location.extend(ZLayer::OnGround.z())),
-        DespawnOnExit(AppState::Playing),
     )
 }

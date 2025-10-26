@@ -146,7 +146,6 @@ fn spawn_enemy(
 fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
-        DespawnOnExit(AppState::Playing),
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 256.0), // 8 tile radius
         Mana::new(100.0, 10.0),

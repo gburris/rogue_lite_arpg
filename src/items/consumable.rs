@@ -1,4 +1,4 @@
-use crate::{combat::health::AttemptHeal, configuration::assets::SpriteAssets};
+use crate::{combat::health::AttemptHeal, prelude::SpriteAssets};
 use bevy::prelude::*;
 
 use super::{Item, ItemType};
@@ -29,7 +29,7 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
     )
 }
 
-pub fn on_consume_event(
+pub(super) fn on_consume_event(
     consume: On<Consume>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,

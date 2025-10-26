@@ -1,5 +1,6 @@
-use crate::labels::states::AppState;
 use bevy::prelude::*;
+
+use crate::prelude::AppState;
 
 use super::{
     constants::TITLE_FONT_SIZE,

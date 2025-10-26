@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    labels::states::AppState,
+    prelude::AppState,
     ui::{
         constants::TITLE_FONT_SIZE,
         primitives::{gold_border, text},

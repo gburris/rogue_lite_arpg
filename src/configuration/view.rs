@@ -5,14 +5,23 @@ use bevy::{
     window::WindowResolution,
 };
 
-use crate::{
-    map::components::{MapLayout, WorldSpaceConfig},
-    prelude::*,
-};
+use crate::prelude::*;
 
 use super::assets::Shadows;
 
 pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(Startup, spawn_camera);
+
+    // avian recommendeds ordering camera following logic in PostUpdate after transform prop
+    app.add_systems(
+        PostUpdate,
+        camera_follow_system.before(TransformSystems::Propagate),
+    );
+
+    app.add_systems(FixedUpdate, ysort_transforms.in_set(MainSystems::InGame));
+}
 
 #[derive(Component)]
 pub struct YSort {
@@ -45,7 +54,7 @@ impl YSort {
     }
 }
 
-pub fn ysort_transforms(
+fn ysort_transforms(
     mut transform_query: Query<(&mut Transform, &YSort)>,
     world_space_config: Res<WorldSpaceConfig>,
     map_layout: Res<MapLayout>,
@@ -87,7 +96,7 @@ impl ZLayer {
     }
 }
 
-pub fn get_window_plugin() -> WindowPlugin {
+pub(super) fn get_window_plugin() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
             title: String::from("Baba Yaga"),
@@ -103,7 +112,7 @@ pub fn get_window_plugin() -> WindowPlugin {
     }
 }
 
-pub fn spawn_camera(mut commands: Commands) {
+fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
@@ -120,7 +129,7 @@ const DECAY_RATE: f32 = 2.3; // f32::ln(10.0);
 const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
-pub fn camera_follow_system(
+fn camera_follow_system(
     player: Single<(&Transform, &Player), Without<Camera>>,
     mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
     time: Res<Time>,
@@ -141,7 +150,7 @@ pub fn camera_follow_system(
         .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
 }
 
-pub fn camera_debug_system(
+pub(super) fn camera_debug_system(
     player: Single<(&Transform, &Player), (With<Player>, Without<Camera>)>,
     mut gizmos: Gizmos,
 ) {

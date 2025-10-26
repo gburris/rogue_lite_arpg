@@ -3,20 +3,13 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use rand::{Rng, rng};
 
-use crate::{
-    character::player::interact::{Interaction, InteractionZone},
-    configuration::{YSort, ZLayer},
-    items::{ItemOf, Items, equipment::Unequip},
-    prelude::Player,
-    utility::Lifespan,
-};
-
-use super::Item;
+use crate::prelude::*;
 
 #[derive(Component, Clone, Debug, Default)]
 #[require(
     Lifespan::new(10.0),
-    YSort::from_offset(-6.0)
+    YSort::from_offset(-6.0),
+
 )]
 pub struct Lootable;
 
@@ -71,7 +64,7 @@ pub fn on_drop_event(
 }
 
 pub fn on_lootable_item_interaction(
-    interaction: On<Interaction>,
+    interaction: On<PlayerInteraction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
 ) {

@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    character::player::PlayerStats,
-    labels::states::PausedState,
+    prelude::{Menu, PlayerStats},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
         primitives::{menu_header, text},
@@ -19,7 +18,7 @@ pub fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats
     if let Ok(stats) = player_stats.single() {
         commands.spawn((
             StatsMenu,
-            DespawnOnExit(PausedState::Stats),
+            DespawnOnExit(Menu::Stats),
             Node {
                 width: percent(100.0),
                 height: percent(100.0),

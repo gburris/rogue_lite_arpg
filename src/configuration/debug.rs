@@ -1,6 +1,7 @@
 use avian2d::prelude::*;
 use bevy::{
     color::palettes::css::{GREEN, YELLOW},
+    dev_tools::states::log_transitions,
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
@@ -9,59 +10,57 @@ use bevy::{
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
-use crate::{labels::sets::InGameSystems, prelude::Vision};
+use crate::prelude::{AppState, InGameSystems, Vision};
 
 use super::view;
 
-pub struct DebugPlugin;
-
-impl Plugin for DebugPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(
-            DefaultPlugins
-                .set(LogPlugin {
-                    level: Level::INFO,
-                    // update game dev project to info or another when you get tired of debug
-                    filter: "wgpu=error,baba_yaga=debug".to_string(),
-                    ..default()
-                })
-                .set(view::get_window_plugin())
-                .set(ImagePlugin::default_nearest()),
-        )
-        .add_plugins(PhysicsDebugPlugin)
-        .insert_gizmo_config(
-            PhysicsGizmos::default(),
-            GizmoConfig {
-                enabled: false,
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(
+        DefaultPlugins
+            .set(LogPlugin {
+                level: Level::INFO,
+                // update game dev project to info or another when you get tired of debug
+                filter: "wgpu=error,baba_yaga=debug".to_string(),
                 ..default()
-            },
-        )
-        // Enable system ambiguity detection
-        .edit_schedule(Update, |schedule| {
-            schedule.set_build_settings(ScheduleBuildSettings {
-                ambiguity_detection: LogLevel::Warn,
-                ..default()
-            });
-        })
-        .add_systems(
-            Update,
-            (
-                handle_debug_input
-                    .in_set(InGameSystems::PlayerInput)
-                    .ambiguous_with_all(),
-                (view::camera_debug_system, debug_vision)
-                    .in_set(InGameSystems::HudOverlay)
-                    .run_if(resource_exists::<DebugRenderEnabled>),
-            ),
-        );
+            })
+            .set(view::get_window_plugin())
+            .set(ImagePlugin::default_nearest()),
+    )
+    .add_plugins(PhysicsDebugPlugin)
+    .insert_gizmo_config(
+        PhysicsGizmos::default(),
+        GizmoConfig {
+            enabled: false,
+            ..default()
+        },
+    )
+    // Enable system ambiguity detection
+    .edit_schedule(Update, |schedule| {
+        schedule.set_build_settings(ScheduleBuildSettings {
+            ambiguity_detection: LogLevel::Warn,
+            ..default()
+        });
+    })
+    .add_systems(
+        Update,
+        (
+            handle_debug_input
+                .in_set(InGameSystems::PlayerInput)
+                .ambiguous_with_all(),
+            (view::camera_debug_system, debug_vision)
+                .in_set(InGameSystems::HudOverlay)
+                .run_if(resource_exists::<DebugRenderEnabled>),
+        ),
+    );
 
-        #[cfg(not(target_arch = "wasm32"))]
-        app.add_plugins(FpsOverlayPlugin::default());
-    }
+    app.add_systems(Update, log_transitions::<AppState>);
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_plugins(FpsOverlayPlugin::default());
 }
 
 #[derive(Resource)]
-pub struct DebugRenderEnabled;
+struct DebugRenderEnabled;
 
 fn handle_debug_input(
     mut commands: Commands,
@@ -81,7 +80,7 @@ fn handle_debug_input(
 }
 
 /// Draws debug gizmos for AI vision direction and cone angles.
-pub fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
+fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
     for (transform, vision) in &query {
         let origin = transform.translation.xy();
         let forward = vision.aim_direction;

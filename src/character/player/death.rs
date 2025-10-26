@@ -1,17 +1,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    character::prelude::Player,
     combat::{Health, damage::Defeated},
-    labels::states::{AppState, PlayingState},
-    map::CleanupZone,
     prelude::*,
 };
 
-#[derive(Component)]
-pub struct GameOverTimer(pub Timer);
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        finish_death_animation
+            .in_set(InGameSystems::Vfx)
+            .run_if(in_state(PlayingState::Death)),
+    );
+}
 
-pub fn on_player_defeated(
+#[derive(Component)]
+struct GameOverTimer(Timer);
+
+pub(super) fn on_player_defeated(
     _: On<Defeated>,
     player: Single<(Entity, &mut SimpleMotion), With<Player>>,
     mut commands: Commands,
@@ -21,26 +27,21 @@ pub fn on_player_defeated(
 
     commands
         .entity(player_entity)
-        .insert((
-            ActionState::Defeated,
-            GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)),
-        ))
+        .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
         .remove::<Health>()
         .despawn_related::<Children>();
     player_motion.stop_moving();
     playing_state.set(PlayingState::Death);
 }
 
-pub fn finish_death_animation(
+fn finish_death_animation(
     time: Res<Time>,
     player_death_timer_single: Single<&mut GameOverTimer, With<Player>>,
-    mut commands: Commands,
     mut game_over_state: ResMut<NextState<AppState>>,
 ) {
     let mut death_timer = player_death_timer_single.into_inner();
     death_timer.0.tick(time.delta());
     if death_timer.0.is_finished() {
-        commands.trigger(CleanupZone);
         game_over_state.set(AppState::GameOver);
     }
 }

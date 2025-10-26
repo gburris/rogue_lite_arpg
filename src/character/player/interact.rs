@@ -1,7 +1,12 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::configuration::GameCollisionLayer;
+use crate::prelude::GameCollisionLayer;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(on_player_interaction_input)
+        .add_observer(on_interaction_zone_added);
+}
 
 /// Marker component for the sensor added to the player, which must collide with an InteractionZone for
 /// a player interaction to be possible
@@ -34,12 +39,12 @@ impl InteractionZone {
 pub struct PlayerInteractionInput;
 
 #[derive(EntityEvent)]
-pub struct Interaction {
+pub struct PlayerInteraction {
     pub entity: Entity,
     pub interaction_zone_entity: Entity,
 }
 
-pub fn on_player_interaction_input(
+fn on_player_interaction_input(
     _: On<PlayerInteractionInput>,
     mut commands: Commands,
     interact_query: Query<(&ChildOf, &Transform), With<InteractionZone>>,
@@ -65,7 +70,7 @@ pub fn on_player_interaction_input(
         .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.partial_cmp(dist_b).unwrap());
 
     if let Some((interaction_zone_entity, interactable_entity, _)) = closest_interaction {
-        commands.trigger(Interaction {
+        commands.trigger(PlayerInteraction {
             entity: interactable_entity,
             interaction_zone_entity,
         });
@@ -74,7 +79,7 @@ pub fn on_player_interaction_input(
 }
 
 /// This method acts as a constructor, adding a collider to the InteractionZone based the variant chosen
-pub fn on_interaction_zone_added(
+fn on_interaction_zone_added(
     interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,
     interact_query: Query<&InteractionZone>,

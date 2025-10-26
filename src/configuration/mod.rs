@@ -1,16 +1,50 @@
-pub mod assets;
-mod collision_layers;
+mod assets;
 #[cfg(feature = "dev")]
 pub mod debug;
-pub mod plugins;
-pub mod schedule;
-pub mod setup;
-pub mod time_control;
+mod physics;
+mod schedule;
 mod view;
 
-pub use collision_layers::GameCollisionLayer;
-pub use view::CHARACTER_FEET_POS_OFFSET;
-pub use view::YSort;
-pub use view::ZLayer;
+#[cfg(not(feature = "dev"))]
+use bevy::asset::AssetMetaCheck;
 
-pub use view::shadow;
+use bevy::prelude::*;
+use bevy_behave::prelude::BehavePlugin;
+use bevy_ecs_tilemap::prelude::TilemapPlugin;
+
+pub mod prelude {
+    pub use super::assets::*;
+    pub use super::physics::*;
+    pub use super::schedule::*;
+    pub use super::view::*;
+}
+
+pub(super) fn plugin(app: &mut App) {
+    // Setup and configuration
+    app.add_plugins((
+        assets::plugin,
+        physics::plugin,
+        schedule::plugin,
+        view::plugin,
+    ));
+
+    #[cfg(feature = "dev")]
+    app.add_plugins(debug::plugin);
+
+    #[cfg(not(feature = "dev"))]
+    app.add_plugins(
+        DefaultPlugins
+            .set(AssetPlugin {
+                // Wasm builds will check for meta files (that don't exist) if this isn't set.
+                // This causes errors and even panics on web build on itch.
+                // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            })
+            .set(view::get_window_plugin())
+            .set(ImagePlugin::default_nearest()),
+    );
+
+    // Third-party plugins
+    app.add_plugins((TilemapPlugin, BehavePlugin::default()));
+}

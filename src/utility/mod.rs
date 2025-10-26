@@ -1,36 +1,13 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::map::TilemapId;
 
-use crate::{
-    combat::Projectile,
-    configuration::time_control::RestartEvent,
-    economy::Gold,
-    items::lootable::Lootable,
-    labels::sets::InGameSystems,
-    map::{Chest, CleanupZone, Wall, Water, portal::Portal, systems::zone::ZoneBackground},
-    prelude::{Enemy, NPC, Player},
-    ui::PlayerOverlay,
-};
+use crate::prelude::*;
 
-pub fn plugin(app: &mut App) {
+pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (despawn_expired_entities, generic_remove_component_system)
             .in_set(InGameSystems::DespawnEntities),
-    )
-    .add_observer(despawn_all::<CleanupZone, Portal>)
-    .add_observer(despawn_all::<CleanupZone, TilemapId>)
-    .add_observer(despawn_all::<CleanupZone, Wall>)
-    .add_observer(despawn_all::<CleanupZone, Water>)
-    .add_observer(despawn_all::<CleanupZone, ZoneBackground>)
-    .add_observer(despawn_all::<CleanupZone, Lootable>)
-    .add_observer(despawn_all::<CleanupZone, Chest>)
-    .add_observer(despawn_all::<CleanupZone, Enemy>)
-    .add_observer(despawn_all::<CleanupZone, Projectile>)
-    .add_observer(despawn_all::<CleanupZone, NPC>)
-    .add_observer(despawn_all::<CleanupZone, Gold>)
-    .add_observer(despawn_all::<RestartEvent, Player>)
-    .add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
+    );
 }
 
 /// Represents an entity that will be despawned after time elapsed
@@ -49,7 +26,7 @@ impl Default for Lifespan {
     }
 }
 
-pub fn despawn_expired_entities(
+fn despawn_expired_entities(
     mut commands: Commands,
     mut duration_query: Query<(Entity, &mut Lifespan)>,
     time: Res<Time>,
@@ -75,12 +52,12 @@ pub fn despawn_all<T: Event, C: Component>(
 }
 
 #[derive(Component)]
-pub struct RemoveComponent {
-    pub timer: Timer,
-    pub remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
+struct RemoveComponent {
+    timer: Timer,
+    remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
 }
 
-pub fn generic_remove_component_system(
+fn generic_remove_component_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut RemoveComponent)>,
     time: Res<Time>,

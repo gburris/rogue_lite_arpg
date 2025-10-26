@@ -1,79 +1,49 @@
 use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
-use movement::PlayerMovementEvent;
 
 mod aim;
 mod death;
 mod input;
-pub mod interact;
+mod interact;
 mod level;
 mod movement;
+mod progression;
 
-pub use input::PauseInputEvent;
+use interact::PlayerInteractionRadius;
 
 use crate::{
-    character::{Character, physical_collider, player::interact::PlayerInteractionRadius},
+    character::{Character, Purse, physical_collider},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    economy::Purse,
-    items::{
-        self, ItemCapacity, Items,
-        equipment::{Equipped, on_equipment_activated, on_equipment_deactivated},
-    },
-    labels::{
-        sets::InGameSystems,
-        states::{AppState, PlayingState},
-    },
-    map::systems::state::transition_to_create_hub,
     prelude::*,
-    progression::GameProgress,
 };
+
+pub mod prelude {
+    pub use super::input::*;
+    pub use super::interact::*;
+    pub use super::progression::GameProgress;
+    pub use super::{DisplayableStatType, Player, PlayerStats};
+}
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
-pub struct PlayerPlugin;
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((
+        aim::plugin,
+        death::plugin,
+        input::plugin,
+        interact::plugin,
+        level::plugin,
+        movement::plugin,
+        progression::plugin,
+    ));
 
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_message::<PlayerMovementEvent>()
-            .add_systems(
-                OnEnter(AppState::SpawnPlayer),
-                (spawn_player, transition_to_create_hub).chain(),
-            )
-            .add_systems(
-                Update,
-                death::finish_death_animation
-                    .in_set(InGameSystems::Vfx)
-                    .run_if(in_state(PlayingState::Death)),
-            )
-            .add_systems(
-                Update,
-                input::player_input
-                    .in_set(InGameSystems::PlayerInput)
-                    .run_if(in_state(PlayingState::Playing)),
-            )
-            .add_systems(
-                Update,
-                (
-                    (
-                        movement::player_movement,
-                        aim::update_player_aim,
-                        level::on_player_experience_change,
-                    )
-                        .in_set(InGameSystems::Simulation),
-                    (aim::draw_cursor, level::animate_level_up).in_set(InGameSystems::Vfx),
-                ),
-            )
-            .add_observer(level::on_level_up)
-            .add_observer(movement::on_player_stopped)
-            .add_observer(interact::on_player_interaction_input)
-            .add_observer(interact::on_interaction_zone_added);
-    }
+    app.add_systems(
+        OnEnter(AppState::SpawnPlayer),
+        (spawn_player, transition_to_create_hub).chain(),
+    );
+
+    app.add_observer(despawn_all::<RestartEvent, Player>);
 }
 
 #[derive(Component)]
@@ -202,19 +172,18 @@ fn spawn_player(
             },
         ),
         related!(Items[
-            (Equipped, items::fire_staff(&sprites, &sprite_layouts)),
-            items::ice_staff(&sprites, &sprite_layouts),
-            items::sword(&sprites),
-            items::axe(&sprites),
-            items::freeze_axe(&sprites),
-            items::magic_shield(&sprites, &sprite_layouts),
-            items::knight_shield(&sprites, &sprite_layouts),
-            items::health_potion(&sprites),
-            items::tome_of_healing(&sprites)
+            (Equipped, fire_staff(&sprites, &sprite_layouts)),
+            ice_staff(&sprites, &sprite_layouts),
+            sword(&sprites),
+            axe(&sprites),
+            freeze_axe(&sprites),
+            magic_shield(&sprites, &sprite_layouts),
+            knight_shield(&sprites, &sprite_layouts),
+            health_potion(&sprites),
+            tome_of_healing(&sprites)
         ]),
         observe(death::on_player_defeated),
         observe(on_equipment_activated),
-        observe(on_equipment_deactivated),
         children![
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),
@@ -229,4 +198,8 @@ fn spawn_player(
             )
         ],
     ));
+}
+
+fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
+    game_state.set(AppState::CreateHub);
 }

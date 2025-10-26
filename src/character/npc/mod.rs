@@ -8,35 +8,27 @@ use crate::{
         Character,
         behavior::{Idle, Retreat},
         physical_collider,
-        player::interact::InteractionZone,
     },
     combat::{Health, damage::hurtbox},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    items::{Items, axe, equipment::Equipped, ice_staff, sword},
-    map::SpawnNpcs,
     prelude::*,
 };
 
 use super::behavior::{Anchor, Wander};
 
-pub struct NPCPlugin;
-
-impl Plugin for NPCPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_observer(spawn_npcs);
-    }
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(spawn_npcs)
+        .add_observer(despawn_all::<CleanupZone, NPC>);
 }
+
+#[derive(Event)]
+pub struct SpawnNpcs(pub Vec<Vec2>);
 
 #[derive(Component)]
 #[require(Character)]
 pub struct NPC;
 
-#[derive(Component, Clone, Copy, Debug)]
-pub enum NPCType {
+#[derive(Clone, Copy, Debug)]
+enum NPCType {
     Helper,
     Shopkeeper,
     StatTrainer,
@@ -79,17 +71,14 @@ fn spawn_npc(
 ) {
     match npc_type {
         NPCType::Helper => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             helper(sprites, sprite_layouts),
         )),
         NPCType::Shopkeeper => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             shopkeeper(sprites, sprite_layouts),
         )),
         NPCType::StatTrainer => commands.spawn((
-            npc_type,
             base_npc(spawn_position, shadows),
             stat_trainer(sprites, sprite_layouts),
         )),
@@ -102,7 +91,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
         Anchor::new(spawn_position, WANDER_RADIUS),
         SimpleMotion::new(100.0),
         Health::new(1000.0),
-        Transform::from_translation(spawn_position.extend(0.0)),
+        Transform::from_translation(spawn_position.extend(ZLayer::OnGround.z())),
         children![
             shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             (
@@ -113,6 +102,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             physical_collider(),
             BehaveTree::new(wander_and_retreat_behavior()),
         ],
+        observe(on_equipment_activated),
     )
 }
 

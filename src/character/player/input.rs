@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    items::equipment::{EquipmentSlot, StopUsingHoldableEquipmentInput, UseEquipmentInput},
-    labels::states::PausedState,
-};
+use crate::prelude::*;
 
 use super::{
     Player,
@@ -11,12 +8,21 @@ use super::{
     movement::{PlayerMovementEvent, PlayerStoppedEvent},
 };
 
-#[derive(Event)]
-pub struct PauseInputEvent {
-    pub paused_state: Option<PausedState>, //What pause state to default to
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        player_input
+            .in_set(InGameSystems::PlayerInput)
+            .run_if(in_state(PlayingState::Playing)),
+    );
 }
 
-pub fn player_input(
+#[derive(Event)]
+pub struct PauseInputEvent {
+    pub menu: Option<Menu>, //What menu to enter on pause
+}
+
+fn player_input(
     mut commands: Commands,
     mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
     buttons: Res<ButtonInput<MouseButton>>,
@@ -27,7 +33,7 @@ pub fn player_input(
 
     if keyboard_input.clear_just_pressed(KeyCode::Escape) {
         commands.trigger(PauseInputEvent {
-            paused_state: Some(PausedState::MainMenu),
+            menu: Some(Menu::MainMenu),
         });
         return;
     }

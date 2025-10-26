@@ -1,7 +1,5 @@
 use crate::{
-    character::player::{DisplayableStatType, PlayerStats},
-    labels::states::PausedState,
-    progression::GameProgress,
+    prelude::{DisplayableStatType, GameProgress, Menu, PlayerStats},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR},
         primitives::{menu_header, text},
@@ -36,7 +34,7 @@ pub fn spawn_stats_shop_menu(
 
     commands.spawn((
         StatShopMenu,
-        DespawnOnExit(PausedState::StatsShop),
+        DespawnOnExit(Menu::StatsShop),
         Node {
             width: percent(100.0),
             height: percent(100.0),

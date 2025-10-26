@@ -6,38 +6,45 @@ mod defeat;
 
 use crate::{
     character::{
-        Character,
+        Character, Purse,
         behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
     },
     combat::{Health, Mana, damage::hurtbox},
-    configuration::{
-        CHARACTER_FEET_POS_OFFSET, GameCollisionLayer,
-        assets::{Shadows, SpriteAssets, SpriteSheetLayouts},
-        shadow,
-    },
-    economy::Purse,
-    items::{
-        Items,
-        equipment::{Equipped, on_equipment_activated},
-        fire_staff, health_potion, ice_staff, sword,
-    },
-    map::SpawnEnemies,
     prelude::*,
 };
 
-pub struct EnemyPlugin;
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(spawn_enemies);
 
-impl Plugin for EnemyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_observer(spawn_enemies);
-    }
+    app.add_observer(despawn_all::<CleanupZone, Enemy>);
+}
+
+#[derive(Debug, Event)]
+pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
+
+#[derive(Debug, Clone)]
+pub struct EnemySpawnData {
+    pub position: Vec2,
+    pub enemy_type: EnemyType,
 }
 
 #[derive(Component)]
-#[require(Character, Experience, VisionCapabilities, Purse { amount: 50 })]
+#[require(
+    Character,
+    Experience,
+    VisionCapabilities,
+    Purse { amount: 50 },
+)]
 pub struct Enemy;
+
+#[derive(Component, PartialEq, Clone, Debug)]
+pub enum EnemyType {
+    Warrior,
+    IceMage,
+    FireMage,
+}
 
 //Experience granted by the enemy when player defeats it
 #[derive(Component)]
@@ -49,19 +56,6 @@ impl Default for Experience {
     fn default() -> Self {
         Experience { base_exp: 10.0 }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct EnemySpawnData {
-    pub position: Vec2,
-    pub enemy_type: EnemyType,
-}
-
-#[derive(Component, PartialEq, Clone, Debug)]
-pub enum EnemyType {
-    Warrior,
-    IceMage,
-    FireMage,
 }
 
 fn spawn_enemies(
@@ -92,6 +86,8 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
+    info!("Spawning enemy at: {}", spawn_data.position);
+
     let chase_behavior = behave! {
         Behave::While => {
             Behave::spawn_named("Chase", Chase),
@@ -149,7 +145,7 @@ fn spawn_enemy(
 fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
-        Transform::from_translation(position.extend(0.0)),
+        Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 256.0), // 8 tile radius
         Mana::new(100.0, 10.0),
         // enemy vision distance

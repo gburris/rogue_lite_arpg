@@ -6,9 +6,25 @@ use bevy::prelude::*;
 
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    items::equipment::{EquipmentSlot, UseEquipmentInput},
     prelude::*,
 };
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            while_chasing,
+            while_idling,
+            while_wandering,
+            while_retreating,
+            while_keeping_distance_and_firing,
+        )
+            .in_set(InGameSystems::Simulation),
+    )
+    .add_observer(on_idle_start)
+    .add_observer(on_wander_start)
+    .add_observer(on_attempt_melee);
+}
 
 #[derive(Component, Clone)]
 pub struct Idle {

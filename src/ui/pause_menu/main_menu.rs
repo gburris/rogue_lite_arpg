@@ -1,9 +1,8 @@
 use crate::{
+    character::Purse,
     combat::Health,
-    economy::Purse,
-    labels::states::PausedState,
-    prelude::Player,
-    progression::GameProgress,
+    prelude::Menu,
+    prelude::{GameProgress, Player},
     ui::{
         constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         primitives::{menu_header, text},
@@ -15,7 +14,7 @@ use bevy::prelude::*;
 pub struct MainMenu;
 
 #[derive(Component)]
-pub struct MenuButton(pub PausedState);
+pub struct MenuButton(pub Menu);
 
 #[derive(Clone, Copy)]
 enum MenuButtonConfig {
@@ -26,8 +25,8 @@ enum MenuButtonConfig {
 impl MenuButtonConfig {
     fn to_component(self) -> (MenuButton, &'static str) {
         match self {
-            MenuButtonConfig::Inventory => (MenuButton(PausedState::Inventory), "INVENTORY"),
-            MenuButtonConfig::Stats => (MenuButton(PausedState::Stats), "STATS"),
+            MenuButtonConfig::Inventory => (MenuButton(Menu::Inventory), "INVENTORY"),
+            MenuButtonConfig::Stats => (MenuButton(Menu::Stats), "STATS"),
         }
     }
 }
@@ -41,7 +40,7 @@ pub fn spawn_main_menu(
 
     commands.spawn((
         MainMenu,
-        DespawnOnExit(PausedState::MainMenu),
+        DespawnOnExit(Menu::MainMenu),
         Node {
             width: percent(100.0),
             height: percent(100.0),

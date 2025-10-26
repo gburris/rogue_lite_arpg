@@ -5,11 +5,7 @@ use bevy::{
 };
 
 use crate::{
-    configuration::assets::GameIcons,
-    items::{
-        Item, Items,
-        equipment::{Equippable, Equipped},
-    },
+    prelude::*,
     ui::display_case_slot::{DisplaySlotOf, display_slot},
 };
 

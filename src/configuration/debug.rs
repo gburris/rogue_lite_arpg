@@ -54,7 +54,6 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_systems(Update, log_transitions::<AppState>);
-    app.add_systems(Update, log_transitions::<Pause>);
     app.add_systems(Update, log_transitions::<Menu>);
 
     #[cfg(not(target_arch = "wasm32"))]

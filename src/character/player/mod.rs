@@ -19,7 +19,7 @@ use bevy_enhanced_input::prelude::*;
 use interact::PlayerInteractionRadius;
 
 use crate::{
-    character::{Character, Purse, physical_collider},
+    character::{Character, Purse, physical_collider, player::movement::PlayerMovement},
     combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     prelude::*,
 };
@@ -185,11 +185,18 @@ fn spawn_player(
                 Action::<OpenInventory>::new(),
                 bindings![KeyCode::KeyI],
             ),
-
             (
                 Action::<PlayerInteractionInput>::new(),
                 bindings![KeyCode::Space, GamepadButton::South],
-            )
+            ),
+            (
+                Action::<PlayerMovement>::new(),
+                DeadZone::default(),
+                Bindings::spawn((
+                    Cardinal::wasd_keys(),
+                    Axial::left_stick(),
+                )),
+            ),
         ]),
         Mana::new(100.0, 10.0),
         game_progress.base_stats.clone(),

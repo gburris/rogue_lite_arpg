@@ -57,7 +57,7 @@ struct MenuBackground;
 
 fn menu_background() -> impl Bundle {
     (
-        Name::new("Pause Overlay"),
+        Name::new("Menu Background"),
         MenuBackground,
         DespawnOnEnter(Menu::None),
         actions!(MenuBackground[
@@ -67,7 +67,7 @@ fn menu_background() -> impl Bundle {
                     require_reset: true,
                     ..Default::default()
                 },
-                bindings![KeyCode::Escape, GamepadButton::Start],
+                bindings![KeyCode::Escape, GamepadButton::Start, GamepadButton::East],
             ),
         ]),
         Node {

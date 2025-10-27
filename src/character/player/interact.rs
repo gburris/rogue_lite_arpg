@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
 use crate::prelude::GameCollisionLayer;
 
@@ -35,7 +36,8 @@ impl InteractionZone {
     pub const ITEM_PICKUP: Self = Self::Circle { radius: 25.0 };
 }
 
-#[derive(Event)]
+#[derive(InputAction)]
+#[action_output(bool)]
 pub struct PlayerInteractionInput;
 
 #[derive(EntityEvent)]
@@ -45,7 +47,7 @@ pub struct PlayerInteraction {
 }
 
 fn on_player_interaction_input(
-    _: On<PlayerInteractionInput>,
+    _: On<Start<PlayerInteractionInput>>,
     mut commands: Commands,
     interact_query: Query<(&ChildOf, &Transform), With<InteractionZone>>,
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,

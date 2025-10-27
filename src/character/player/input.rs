@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 use super::{
     Player,
-    interact::PlayerInteractionInput,
     movement::{PlayerMovementEvent, PlayerStoppedEvent},
 };
 
@@ -19,17 +18,12 @@ pub(super) fn plugin(app: &mut App) {
 
 fn player_input(
     mut commands: Commands,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
+    keyboard_input: Res<ButtonInput<KeyCode>>, // Access keyboard input
     buttons: Res<ButtonInput<MouseButton>>,
     mut event_writer: MessageWriter<PlayerMovementEvent>, // Dispatch movement events
     player_movement_query: Single<Entity, With<Player>>,
 ) {
     let player_entity = player_movement_query.into_inner();
-
-    if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(PlayerInteractionInput);
-        return;
-    }
 
     if buttons.pressed(MouseButton::Left) {
         commands.trigger(UseEquipmentInput {

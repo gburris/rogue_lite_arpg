@@ -58,7 +58,6 @@ pub fn spawn_stats_shop_menu(
             row_gap: px(20.0),
             ..default()
         },
-        GlobalZIndex(1),
         children![
             menu_header("STATS SHOP"),
             // stats shop body

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 mod animation;
 mod character;
-pub mod combat;
+mod combat;
 mod configuration;
 mod items;
 mod menu;

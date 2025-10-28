@@ -106,10 +106,6 @@ pub struct DamageDealt {
     pub direction: Option<Vec2>,
 }
 
-/// This is the character holding the weapon that dealt damage
-#[derive(Component)]
-pub struct Damager(pub Entity);
-
 #[derive(EntityEvent)]
 pub struct Defeated {
     pub entity: Entity,

@@ -1,23 +1,21 @@
+mod swing;
+
+pub mod prelude {
+    pub use super::{ActiveMeleeAttack, axe, freeze_axe, sword};
+}
+
 use avian2d::prelude::*;
 use bevy::{platform::collections::HashSet, prelude::*, ui_widgets::observe};
 
 use crate::{
+    character::Character,
     combat::{
         damage::{AttemptDamage, Damage, DamageSource, Knockback},
         status_effects::{Effects, Frozen},
     },
-    items::{Item, ItemType, equipment::Equippable, prelude::UseEquipment},
+    items::melee::swing::MeleeSwingType,
     prelude::*,
 };
-
-mod swing;
-
-pub use swing::{MeleeSwingType, process_melee_attacks};
-
-pub mod prelude {
-    pub use super::swing::*;
-    pub use super::{ActiveMeleeAttack, MeleeWeapon, axe, freeze_axe, sword};
-}
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change
@@ -26,7 +24,7 @@ pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (process_melee_attacks, end_melee_attacks).in_set(InGameSystems::Simulation),
+        (swing::process_melee_attacks, end_melee_attacks).in_set(InGameSystems::Simulation),
     );
 
     app.add_systems(
@@ -37,6 +35,7 @@ pub(super) fn plugin(app: &mut App) {
 
 pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
     (
+        Name::new("Sword"),
         MeleeWeapon {
             damage: (1.0, 6.0),
             hitbox: Collider::rectangle(10.0, 40.0),
@@ -44,17 +43,18 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             attack_time: 0.2,
             hold_distance: 15.0,
         },
-        Name::new("Sword"),
         Knockback(10.0),
         Equippable::default(),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
+        observe(on_melee_equipped),
         observe(on_weapon_melee),
     )
 }
 
 pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
     (
+        Name::new("Axe"),
         MeleeWeapon {
             damage: (2.0, 12.0),
             hitbox: Collider::rectangle(10.0, 40.0),
@@ -62,17 +62,18 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             attack_time: 0.3,
             hold_distance: 30.0,
         },
-        Name::new("Axe"),
         Knockback(20.0),
         Equippable::default(),
-        Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
+        Item::new(220, ItemType::Melee),
+        observe(on_melee_equipped),
         observe(on_weapon_melee),
     )
 }
 
 pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
     (
+        Name::new("Freeze Axe"),
         MeleeWeapon {
             damage: (2.0, 12.0),
             hitbox: Collider::rectangle(10.0, 40.0),
@@ -80,25 +81,25 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
             attack_time: 0.3,
             hold_distance: 30.0,
         },
-        Name::new("Freeze Axe"),
         Knockback(2.0),
         Equippable::default(),
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),
+        observe(on_melee_equipped),
         observe(on_weapon_melee),
     )
 }
 
 //Repesent a melee weapon
 #[derive(Component, Clone, Debug)]
-pub struct MeleeWeapon {
+struct MeleeWeapon {
     // Time it takes (seconds) to complete the attack, smaller = faster
-    pub attack_time: f32,
-    pub damage: (f32, f32),
-    pub hitbox: Collider,
-    pub attack_type: swing::MeleeSwingType,
-    pub hold_distance: f32,
+    attack_time: f32,
+    damage: (f32, f32),
+    hitbox: Collider,
+    attack_type: swing::MeleeSwingType,
+    hold_distance: f32,
 }
 
 impl MeleeWeapon {
@@ -107,6 +108,31 @@ impl MeleeWeapon {
     pub fn collision_layers(damage_source: DamageSource) -> CollisionLayers {
         CollisionLayers::new(GameCollisionLayer::HitBox, LayerMask::from(damage_source))
     }
+}
+
+fn on_melee_equipped(
+    equipped: On<Add, Equipped>,
+    mut commands: Commands,
+    mut weapon_query: Query<(&ItemOf, &MeleeWeapon), With<Equipped>>,
+    mut holder_query: Query<Has<Enemy>, With<Character>>,
+) -> Result {
+    let (item_of, melee_weapon) = weapon_query.get_mut(equipped.entity)?;
+
+    let is_enemy = holder_query.get_mut(item_of.0)?;
+
+    let damage_source = if is_enemy {
+        DamageSource::Enemy
+    } else {
+        DamageSource::Player
+    };
+
+    // If melee weapon, we need to add collider and new collision layers on equip
+    commands.entity(equipped.entity).insert((
+        melee_weapon.hitbox.clone(),
+        MeleeWeapon::collision_layers(damage_source),
+    ));
+
+    Ok(())
 }
 
 fn handle_melee_collisions(

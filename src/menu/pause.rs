@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use crate::{
     character::Purse,
-    combat::Health,
     prelude::*,
     ui::{
         constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},

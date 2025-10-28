@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 
-use super::EquipmentSlot;
 use crate::{
-    combat::{Mana, mana::ManaCost},
     items::{
         Items,
         equipment::{Equippable, Equipped, Mainhand, Offhand},
     },
+    prelude::{EquipmentSlot, Mana, ManaCost},
 };
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
@@ -44,11 +43,15 @@ pub struct EquipmentUseFailed {
     pub reason: EquipmentUseFailure,
 }
 
-pub fn tick_equippable_use_rate(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
+pub(super) fn tick_equippable_use_rate(
+    mut equippable_query: Query<&mut Equippable>,
+    time: Res<Time>,
+) {
     for mut equippable in equippable_query.iter_mut() {
         equippable.use_rate.tick(time.delta());
     }
 }
+
 pub fn on_equipment_activated(
     equipment_used: On<UseEquipmentInput>,
     commands: Commands,

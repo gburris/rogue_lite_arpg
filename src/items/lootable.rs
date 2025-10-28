@@ -5,6 +5,14 @@ use rand::{Rng, rng};
 
 use crate::prelude::*;
 
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(Update, glow_and_rotate_lootables.in_set(InGameSystems::Vfx));
+
+    app.add_observer(on_item_added_make_lootable)
+        .add_observer(on_drop_event)
+        .add_observer(despawn_all::<CleanupZone, Lootable>);
+}
+
 #[derive(Component, Clone, Debug, Default)]
 #[require(
     Lifespan::new(10.0),
@@ -22,7 +30,7 @@ pub struct ItemDrop {
 /// 1. ItemDropEvent is for items only!
 /// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
 /// 3. Needs parent to be holder for position, then removes parent
-pub fn on_drop_event(
+fn on_drop_event(
     item_dropped: On<ItemDrop>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
@@ -63,7 +71,7 @@ pub fn on_drop_event(
         .with_child(InteractionZone::ITEM_PICKUP);
 }
 
-pub fn on_lootable_item_interaction(
+fn on_lootable_item_interaction(
     interaction: On<PlayerInteraction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
@@ -82,7 +90,7 @@ pub fn on_lootable_item_interaction(
         .despawn();
 }
 
-pub fn glow_and_rotate_lootables(
+fn glow_and_rotate_lootables(
     mut query: Query<(&mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
     time: Res<Time>,
 ) {
@@ -100,4 +108,11 @@ pub fn glow_and_rotate_lootables(
             base_color.alpha,
         );
     }
+}
+
+fn on_item_added_make_lootable(item_added: On<Add, Item>, mut commands: Commands) {
+    // We do this to avoid having to manually add this observer to every item we create
+    commands
+        .entity(item_added.entity)
+        .observe(on_lootable_item_interaction);
 }

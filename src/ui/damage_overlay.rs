@@ -2,11 +2,7 @@ use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::{
-    combat::{damage::DamageDealt, health::Healed},
-    prelude::ZLayer,
-    utility::Lifespan,
-};
+use crate::prelude::{DamageDealt, Healed, Lifespan, ZLayer};
 
 const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);

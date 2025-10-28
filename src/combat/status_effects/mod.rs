@@ -2,40 +2,34 @@ mod burn;
 mod freeze;
 mod slow;
 
-pub use burn::Burning;
-pub use freeze::Frozen;
-pub use slow::Slowed;
+pub mod prelude {
+    pub use super::burn::*;
+    pub use super::freeze::*;
+    pub use super::{EffectOf, Effects, StatusOf};
+}
 
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
-use crate::{prelude::InGameSystems, utility::Lifespan};
+use crate::prelude::{InGameSystems, Lifespan};
 
-pub struct StatusEffectPlugin;
-
-impl Plugin for StatusEffectPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                burn::apply_burning,
-                (burn::tick_burn, burn::while_burning).chain(),
-                freeze::apply_frozen,
-                slow::apply_slowed,
-            )
-                .in_set(InGameSystems::Simulation),
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            burn::apply_burning,
+            (burn::tick_burn, burn::while_burning).chain(),
+            freeze::apply_frozen,
+            slow::apply_slowed,
         )
-        .add_observer(slow::on_slow_removed);
-    }
+            .in_set(InGameSystems::Simulation),
+    )
+    .add_observer(slow::on_slow_removed);
 }
-
-#[derive(Component, Default, Clone)]
-#[require(Lifespan)]
-pub struct Status;
 
 #[derive(Component, Clone)]
 #[require(Disabled)]
 #[relationship(relationship_target = Effects)]
-pub struct EffectOf(pub Entity);
+pub struct EffectOf(Entity);
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = EffectOf, linked_spawn)]
@@ -43,6 +37,7 @@ pub struct Effects(Vec<Entity>);
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Statuses)]
+#[require(Lifespan)]
 pub struct StatusOf(pub Entity);
 
 #[derive(Component, Clone)]
@@ -50,4 +45,4 @@ pub struct StatusOf(pub Entity);
 pub struct Statuses(Vec<Entity>);
 
 #[derive(Component, Clone)]
-pub struct StatusApplied;
+struct StatusApplied;

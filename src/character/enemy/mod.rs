@@ -11,7 +11,6 @@ use crate::{
         physical_collider,
         vision::{VisionCapabilities, Watching},
     },
-    combat::{Health, Mana, damage::hurtbox},
     prelude::*,
 };
 

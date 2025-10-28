@@ -33,7 +33,10 @@ impl IFrames {
 }
 
 // System to handle invulnerability duration and flashing
-pub fn handle_invulnerability(time: Res<Time>, mut query: Query<(&mut IFrames, &mut Sprite)>) {
+pub(super) fn handle_invulnerability(
+    time: Res<Time>,
+    mut query: Query<(&mut IFrames, &mut Sprite)>,
+) {
     for (mut iframes, mut sprite) in query.iter_mut() {
         if iframes.is_invulnerable {
             iframes.invulnerable_timer.tick(time.delta());

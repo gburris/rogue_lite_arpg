@@ -3,7 +3,7 @@ use std::f32::consts::FRAC_PI_4;
 use avian2d::prelude::{RayCaster, RayHits};
 use bevy::prelude::*;
 
-use crate::{combat::damage::DamageDealt, prelude::*, utility::schedule_component_removal};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     // Vision + Perception

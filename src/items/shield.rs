@@ -7,11 +7,6 @@ use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
-    combat::{
-        Mana, Projectile,
-        damage::DamageSource,
-        mana::{ManaCost, ManaDrainRate},
-    },
     items::{
         Item, ItemOf, ItemType,
         equipment::{EquipmentSlot, Equippable, Equipped, Offhand},

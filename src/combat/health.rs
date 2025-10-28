@@ -49,7 +49,7 @@ impl Default for Health {
     }
 }
 
-pub fn on_healing_event(
+pub(super) fn on_healing_event(
     attempt_heal: On<AttemptHeal>,
     mut commands: Commands,
     mut healed_query: Query<&mut Health>,

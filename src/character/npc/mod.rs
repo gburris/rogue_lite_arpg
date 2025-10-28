@@ -9,7 +9,6 @@ use crate::{
         behavior::{Idle, Retreat},
         physical_collider,
     },
-    combat::{Health, damage::hurtbox},
     prelude::*,
 };
 

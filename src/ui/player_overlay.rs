@@ -1,9 +1,6 @@
 use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
-use crate::{
-    combat::{Health, Mana},
-    prelude::*,
-};
+use crate::prelude::*;
 
 #[derive(Component)]
 pub struct PlayerOverlay;

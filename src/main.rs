@@ -18,6 +18,7 @@ mod world;
 pub mod prelude {
     pub use super::animation::{AnimationData, AnimationIndices, AnimationTimer};
     pub use super::character::prelude::*;
+    pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;
     pub use super::items::prelude::*;
     pub use super::menu::prelude::*;

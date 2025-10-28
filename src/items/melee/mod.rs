@@ -7,15 +7,7 @@ pub mod prelude {
 use avian2d::prelude::*;
 use bevy::{platform::collections::HashSet, prelude::*, ui_widgets::observe};
 
-use crate::{
-    character::Character,
-    combat::{
-        damage::{AttemptDamage, Damage, DamageSource, Knockback},
-        status_effects::{Effects, Frozen},
-    },
-    items::melee::swing::MeleeSwingType,
-    prelude::*,
-};
+use crate::{character::Character, items::melee::swing::MeleeSwingType, prelude::*};
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change

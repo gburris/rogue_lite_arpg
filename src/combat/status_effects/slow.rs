@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::status_effects::{Status, StatusApplied, StatusOf},
+    combat::status_effects::{StatusApplied, StatusOf},
     prelude::SimpleMotion,
 };
 
 #[derive(Component, Clone)]
-#[require(Status)]
 pub struct Slowed {
     pub percent: f32,
 }

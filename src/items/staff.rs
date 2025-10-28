@@ -4,14 +4,6 @@ use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*, ui_widgets::observe};
 
 use crate::{
-    combat::{
-        Projectile,
-        damage::DamageSource,
-        mana::ManaCost,
-        prelude::ProjectileOf,
-        projectile::{Projectiles, fireball, icebolt},
-        status_effects::Effects,
-    },
     items::{Item, equipment::Equippable, prelude::UseEquipment},
     prelude::*,
 };

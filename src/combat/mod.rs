@@ -1,26 +1,25 @@
-pub mod damage;
-pub mod health;
-pub mod invulnerable;
-pub mod mana;
-pub mod projectile;
-pub mod status_effects;
-
-// These exist just to reduce stutter
-pub use health::Health;
-pub use mana::Mana;
-pub use projectile::Projectile;
+mod damage;
+mod health;
+mod invulnerable;
+mod mana;
+mod projectile;
+mod status_effects;
 
 use bevy::prelude::*;
 
-use crate::{combat::status_effects::StatusEffectPlugin, prelude::InGameSystems};
+use crate::prelude::InGameSystems;
 
 pub mod prelude {
+    pub use super::damage::*;
+    pub use super::health::*;
+    pub use super::invulnerable::*;
     pub use super::mana::*;
     pub use super::projectile::*;
+    pub use super::status_effects::prelude::*;
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((projectile::plugin, StatusEffectPlugin));
+    app.add_plugins((projectile::plugin, status_effects::plugin));
 
     app.add_systems(
         Update,

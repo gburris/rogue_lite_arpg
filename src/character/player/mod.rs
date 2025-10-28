@@ -20,7 +20,6 @@ use interact::PlayerInteractionRadius;
 
 use crate::{
     character::{Character, Purse, physical_collider, player::movement::PlayerMovement},
-    combat::{Health, Mana, damage::hurtbox, invulnerable::IFrames},
     prelude::*,
 };
 

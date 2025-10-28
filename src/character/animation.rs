@@ -2,7 +2,6 @@ use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     animation::{AnimationData, AnimationIndices, AnimationTimer},
-    combat::Health,
     prelude::*,
 };
 

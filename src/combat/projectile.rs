@@ -2,16 +2,9 @@ use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
 use crate::{
-    animation::{AnimationIndices, AnimationTimer},
-    combat::{
-        damage::Knockback,
-        status_effects::{Burning, Effects, Frozen},
-    },
-    items::prelude::ProjectileReflection,
+    combat::damage::{AttemptDamage, Damage, HurtBox, Knockback},
     prelude::*,
 };
-
-use super::damage::{AttemptDamage, Damage, HurtBox};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision));

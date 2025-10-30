@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-    combat::{Health, damage::Defeated},
-    prelude::*,
-};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

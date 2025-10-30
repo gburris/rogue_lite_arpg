@@ -5,7 +5,6 @@ use rand::{Rng, rng};
 
 use crate::{
     character::{Purse, player::PlayerStats},
-    combat::{Health, damage::Defeated},
     prelude::*,
 };
 

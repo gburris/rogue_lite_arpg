@@ -28,7 +28,6 @@ pub(super) fn plugin(app: &mut App) {
             use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
         ),
     );
-    // .add_observer(use_equipped::on_equipment_activated);
 }
 
 #[derive(Component, Clone, Debug)]

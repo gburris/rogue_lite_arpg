@@ -1,17 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    animation::{AnimationIndices, AnimationTimer},
     combat::{
-        Health,
         damage::{AttemptDamage, Damage},
-        status_effects::{Status, StatusApplied, StatusOf},
+        status_effects::{StatusApplied, StatusOf},
     },
     prelude::*,
 };
 
 #[derive(Component, Clone)]
-#[require(Status)]
 pub struct Burning {
     pub damage: f32,
     pub damage_frequency: Timer,

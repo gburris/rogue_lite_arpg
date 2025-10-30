@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    prelude::{InGameSystems, ZLayer},
+    prelude::{InGameSystems, Lifespan, ZLayer},
     ui::primitives::text,
-    utility::Lifespan,
 };
 
 use super::Player;

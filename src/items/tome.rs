@@ -2,7 +2,6 @@ use bevy::{prelude::*, sprite::Anchor, ui_widgets::observe};
 use rand::Rng;
 
 use crate::{
-    combat::{health::AttemptHeal, mana::ManaCost},
     items::{
         Item, ItemType,
         equipment::{EquipmentSlot, Equippable},

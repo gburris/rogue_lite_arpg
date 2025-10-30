@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
 
 #[derive(Debug, Clone)]
-pub enum MeleeSwingType {
+pub(super) enum MeleeSwingType {
     Stab {
         /// How far the weapon should move (stab) forward from its starting position
         reach: f32,
@@ -23,7 +23,7 @@ impl MeleeSwingType {
 
 /// Determines path of melee weapon based on swing type
 /// TODO: Consider using bevy curve functions to reduce math needed here
-pub fn process_melee_attacks(
+pub(super) fn process_melee_attacks(
     time: Res<Time>,
     mut attack_query: Query<(&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack)>,
 ) {

@@ -90,7 +90,7 @@ impl EquipmentTransform {
     }
 }
 
-pub fn update_equipment_transforms(
+pub(super) fn update_equipment_transforms(
     all_worn_equipment: Query<
         (Option<&Mainhand>, Option<&Offhand>, &FacingDirection),
         (

@@ -8,6 +8,7 @@ bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
 bevy_ecs_tilemap = "0.17"
 bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
 bevy_behave = { git = "https://github.com/HazelTheWitch/bevy_behave", branch = "main" }
+bevy_enhanced_input = "0.19"
 accesskit = "0.21"
 avian2d = "0.4"
 rand = "0.9"

@@ -1,18 +1,15 @@
 use bevy::prelude::*;
 
-use crate::{prelude::*, ui::*};
-
-use super::{npc::plugin::NPCPauseScreensPlugin, pause_menu::plugin::PauseMenuPlugin};
+use crate::{
+    prelude::*,
+    ui::{player_overlay::PlayerOverlay, *},
+};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        // sub UI plugins
-        app.add_plugins(PauseMenuPlugin)
-            .add_plugins(NPCPauseScreensPlugin);
-
         //Loading screen
         app.add_systems(OnEnter(AppState::SpawnZone), load_screen::spawn)
             .add_systems(

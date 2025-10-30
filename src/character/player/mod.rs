@@ -19,7 +19,10 @@ use bevy_enhanced_input::prelude::*;
 use interact::PlayerInteractionRadius;
 
 use crate::{
-    character::{Character, Purse, physical_collider, player::movement::PlayerMovement},
+    character::{
+        Character, Purse, physical_collider,
+        player::{aim::PlayerAim, movement::PlayerMovement},
+    },
     prelude::*,
 };
 
@@ -160,6 +163,9 @@ impl DisplayableStatType {
     }
 }
 
+const MOUSE_SENSITIVITY: f32 = 0.3;
+const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
+
 fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -196,6 +202,16 @@ fn spawn_player(
                     Axial::left_stick(),
                 )),
             ),
+            (
+                Action::<PlayerAim>::new(),
+                Bindings::spawn((
+                    Spawn((Binding::mouse_motion(), Negate::y(), Scale::splat(MOUSE_SENSITIVITY))),
+                    Axial::right_stick().with((
+                        DeadZone { upper_threshold: 0.8, ..default() },
+                        Scale::splat(CONTROLLER_AIM_SENSITIVITY),
+                    ))
+                )),
+            )
         ]),
         Mana::new(100.0, 10.0),
         game_progress.base_stats.clone(),

@@ -7,7 +7,10 @@ pub mod prelude {
     pub use super::Menu;
 }
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
+};
 use bevy_enhanced_input::prelude::*;
 
 use crate::{prelude::*, ui::constants::BACKGROUND_COLOR};
@@ -22,7 +25,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.init_state::<Menu>();
 
-    app.add_systems(OnExit(Menu::None), pause)
+    app.add_systems(OnExit(Menu::None), (pause, release_cursor))
         .add_input_context::<MenuBackground>()
         .add_observer(on_resume);
 }
@@ -78,4 +81,9 @@ fn menu_background() -> impl Bundle {
         GlobalZIndex(1),
         BackgroundColor::from(BACKGROUND_COLOR),
     )
+}
+
+fn release_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+    cursor.visible = true;
+    cursor.grab_mode = CursorGrabMode::None;
 }

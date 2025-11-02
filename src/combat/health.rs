@@ -24,10 +24,7 @@ impl Health {
     }
 
     pub fn take_damage(&mut self, amount: f32) {
-        self.hp -= amount;
-        if self.hp < 0.0 {
-            self.hp = 0.0;
-        }
+        self.hp = (self.hp - amount).max(0.0);
     }
 
     fn add_health(&mut self, amount: f32) -> f32 {

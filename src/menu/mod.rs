@@ -70,7 +70,14 @@ fn menu_background() -> impl Bundle {
                     require_reset: true,
                     ..Default::default()
                 },
-                bindings![KeyCode::Escape, GamepadButton::Start, GamepadButton::East],
+                // Can't allow escape on wasm because that un-grabs cursor
+                Bindings::spawn((
+                    Spawn(Binding::from(KeyCode::KeyP)),
+                    Spawn(Binding::from(GamepadButton::Start)),
+                    Spawn(Binding::from(GamepadButton::East)),
+                    #[cfg(not(target_family = "wasm"))]
+                    Spawn(Binding::from(KeyCode::Escape))
+                )),
             ),
         ]),
         Node {

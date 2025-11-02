@@ -2,27 +2,43 @@ use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
 use crate::prelude::*;
 
-#[derive(Component)]
-pub struct PlayerOverlay;
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        (
+            update_exp_bar,
+            update_action_bar,
+            update_cooldowns,
+            (update_mana_bar, update_lost_mana_bar).chain(),
+            (update_health_bar, update_lost_health_bar).chain(),
+        )
+            .in_set(InGameSystems::HudOverlay),
+    );
+
+    app.add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
+}
 
 #[derive(Component)]
-pub struct ManaBar;
+struct PlayerOverlay;
 
 #[derive(Component)]
-pub struct ManaLostBar {
+struct ManaBar;
+
+#[derive(Component)]
+struct ManaLostBar {
     previous_mana: f32,
 }
 
 #[derive(Component)]
-pub struct HealthBar;
+struct HealthBar;
 
 #[derive(Component)]
-pub struct HealthLostBar {
+struct HealthLostBar {
     previous_hp: f32,
 }
 
 #[derive(Component, Debug)]
-pub struct ExpBar;
+struct ExpBar;
 
 const EXP_COLOR: Color = Color::srgb(0.5, 0.0, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
@@ -35,7 +51,7 @@ const ATTRIBUTE_TO_PIXEL_SCALE: f32 = 4.0;
 // Represents how fast the yellow "amount lost" of health or mana goes away
 const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 
-pub fn spawn(mut commands: Commands) {
+pub(super) fn spawn_player_overlay(mut commands: Commands) {
     commands.spawn((
         PlayerOverlay,
         Node {
@@ -127,7 +143,7 @@ fn attribute_bar(
     )
 }
 
-pub fn update_health_bar(
+fn update_health_bar(
     player_health: Option<Single<&Health, (With<Player>, Changed<Health>)>>,
     mut health_bar: Single<&mut Node, (With<HealthBar>, Without<HealthLostBar>)>,
     health_lost_bar: Single<(&mut Node, &mut HealthLostBar)>,
@@ -146,7 +162,7 @@ pub fn update_health_bar(
     }
 }
 
-pub fn update_mana_bar(
+fn update_mana_bar(
     player_mana: Single<&Mana, (With<Player>, Changed<Mana>)>,
     mut mana_bar: Single<&mut Node, (With<ManaBar>, Without<ManaLostBar>)>,
     mana_lost_bar: Single<(&mut Node, &mut ManaLostBar)>,
@@ -163,10 +179,7 @@ pub fn update_mana_bar(
     mana_lost.previous_mana = player_mana.current_mana;
 }
 
-pub fn update_lost_mana_bar(
-    mut mana_lost_node: Single<&mut Node, With<ManaLostBar>>,
-    time: Res<Time>,
-) {
+fn update_lost_mana_bar(mut mana_lost_node: Single<&mut Node, With<ManaLostBar>>, time: Res<Time>) {
     let Val::Px(current_pixel) = mana_lost_node.width else {
         panic!("Non-pixel value for mana bar");
     };
@@ -175,7 +188,7 @@ pub fn update_lost_mana_bar(
     mana_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
 }
 
-pub fn update_lost_health_bar(
+fn update_lost_health_bar(
     mut health_lost_node: Single<&mut Node, With<HealthLostBar>>,
     time: Res<Time>,
 ) {
@@ -251,7 +264,7 @@ fn experience_bar() -> impl Bundle {
     )
 }
 
-pub fn update_exp_bar(
+fn update_exp_bar(
     player: Option<Single<&Player, Changed<Player>>>,
     mut exp_bar: Single<&mut Node, With<ExpBar>>,
 ) {
@@ -260,21 +273,17 @@ pub fn update_exp_bar(
     }
 }
 
-/* Action Bar Components and Systems */
 #[derive(Component)]
-pub struct ActionBar;
-
-#[derive(Component)]
-pub struct ActionBox {
+pub(super) struct ActionBox {
     slot: EquipmentSlot,
 }
 
 #[derive(Component)]
-pub struct CooldownIndicator;
+struct CooldownIndicator;
 
 #[derive(Component)]
 #[require(Lifespan::new(0.1))]
-pub struct ErrorFlash;
+pub(super) struct ErrorFlash;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_BORDER: f32 = 2.0;
@@ -286,7 +295,7 @@ const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.2); // Semi-trans
 
 fn action_bar() -> impl Bundle {
     (
-        ActionBar,
+        Name::new("Action Bar"),
         Node {
             flex_direction: FlexDirection::Row,
             ..default()
@@ -321,7 +330,7 @@ fn action_box(slot: EquipmentSlot) -> impl Bundle {
     )
 }
 
-pub fn update_action_bar(
+fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     equipment_query: Option<
@@ -360,18 +369,13 @@ pub fn update_action_bar(
     }
 }
 
-pub fn on_equipment_used(
+pub(super) fn on_equipment_use_success(
     equipment_used: On<UseEquipment>,
-    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox, &Children)>,
     equipment_query: Query<&Equippable, With<Equipped>>,
     error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
-    if equipment_used.holder != player.0 {
-        return;
-    }
-
     if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity)
         && let Some((box_entity, _, box_children)) = action_box_query
             .iter()
@@ -402,20 +406,14 @@ pub fn on_equipment_used(
     }
 }
 
-pub fn on_equipment_use_failed(
+pub(super) fn on_equipment_use_failed(
     equipment_use_failed: On<EquipmentUseFailed>,
-    player: Single<(Entity, &Player)>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    if equipment_use_failed.entity != player.0 {
-        return;
-    }
-
     if let Some((box_entity, _)) = action_box_query
         .iter()
         .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
-        && equipment_use_failed.reason == EquipmentUseFailure::OutOfMana
     {
         commands.entity(box_entity).with_child((
             ErrorFlash,
@@ -432,9 +430,7 @@ pub fn on_equipment_use_failed(
     }
 }
 
-pub fn update_cooldowns(
-    mut cooldown_query: Query<(&mut Node, &Lifespan), With<CooldownIndicator>>,
-) {
+fn update_cooldowns(mut cooldown_query: Query<(&mut Node, &Lifespan), With<CooldownIndicator>>) {
     for (mut line_node, cooldown_duration) in cooldown_query.iter_mut() {
         line_node.height = px(ACTION_BOX_INTERIOR_SIZE * cooldown_duration.0.fraction_remaining());
     }

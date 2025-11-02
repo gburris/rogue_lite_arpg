@@ -6,14 +6,17 @@ pub mod prelude {
 
 use avian2d::prelude::*;
 use bevy::{platform::collections::HashSet, prelude::*, ui_widgets::observe};
+use bevy_enhanced_input::prelude::*;
 
-use crate::{character::Character, items::melee::swing::MeleeSwingType, prelude::*};
+use crate::{items::melee::swing::MeleeSwingType, prelude::*};
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change
 pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
 
 pub(super) fn plugin(app: &mut App) {
+    app.add_input_context::<MeleeWeapon>();
+
     app.add_systems(
         Update,
         (swing::process_melee_attacks, end_melee_attacks).in_set(InGameSystems::Simulation),
@@ -85,6 +88,7 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
 
 //Repesent a melee weapon
 #[derive(Component, Clone, Debug)]
+#[require(ContextPriority::<MeleeWeapon>::new(1))]
 struct MeleeWeapon {
     // Time it takes (seconds) to complete the attack, smaller = faster
     attack_time: f32,
@@ -106,16 +110,16 @@ fn on_melee_equipped(
     equipped: On<Add, Equipped>,
     mut commands: Commands,
     mut weapon_query: Query<(&ItemOf, &MeleeWeapon), With<Equipped>>,
-    mut holder_query: Query<Has<Enemy>, With<Character>>,
+    player: Single<Entity, With<Player>>,
 ) -> Result {
     let (item_of, melee_weapon) = weapon_query.get_mut(equipped.entity)?;
 
-    let is_enemy = holder_query.get_mut(item_of.0)?;
+    let is_player = *player == item_of.0;
 
-    let damage_source = if is_enemy {
-        DamageSource::Enemy
-    } else {
+    let damage_source = if is_player {
         DamageSource::Player
+    } else {
+        DamageSource::Enemy
     };
 
     // If melee weapon, we need to add collider and new collision layers on equip
@@ -181,49 +185,28 @@ impl ActiveMeleeAttack {
 }
 
 fn on_weapon_melee(
-    melee_weapon_used: On<UseEquipment>,
+    melee: On<UseEquipment>,
     mut commands: Commands,
-    mut weapon_query: Query<(Entity, &mut MeleeWeapon)>,
-    mut attack_state_query: Query<&mut AttackState>,
-    holder_query: Query<&Vision>,
+    weapon_query: Query<(&ItemOf, &MeleeWeapon)>,
+    mut holder_query: Query<(&mut AttackState, &Vision)>,
 ) {
-    let Ok((weapon_entity, mut melee_weapon)) = weapon_query.get_mut(melee_weapon_used.entity)
-    else {
+    let Ok((item_of, melee_weapon)) = weapon_query.get(melee.entity) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok(vision) = holder_query.get(melee_weapon_used.holder) else {
-        warn!("Holder missing required components");
+    let Ok((mut attack_state, vision)) = holder_query.get_mut(item_of.0) else {
+        warn!("Holder missing vision");
         return;
     };
 
     let attack_angle = vision.aim_direction.to_angle();
+    attack_state.is_attacking = true;
 
-    start_melee_attack(
-        &mut commands,
-        weapon_entity,
-        &mut melee_weapon,
+    commands.entity(melee.entity).insert(ActiveMeleeAttack::new(
         attack_angle,
-    );
-
-    if let Ok(mut attack_state) = attack_state_query.get_mut(melee_weapon_used.holder) {
-        attack_state.is_attacking = true;
-    }
-}
-
-fn start_melee_attack(
-    commands: &mut Commands,
-    weapon_entity: Entity,
-    melee_weapon: &mut MeleeWeapon,
-    attack_angle: f32,
-) {
-    commands
-        .entity(weapon_entity)
-        .insert(ActiveMeleeAttack::new(
-            attack_angle,
-            melee_weapon.attack_time,
-        ));
+        melee_weapon.attack_time,
+    ));
 }
 
 fn end_melee_attacks(

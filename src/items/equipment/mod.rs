@@ -81,7 +81,7 @@ pub struct Equipped;
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]
-pub struct MainhandOf(Entity);
+pub struct MainhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = MainhandOf)]
@@ -95,7 +95,7 @@ impl Mainhand {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Offhand)]
-pub struct OffhandOf(Entity);
+pub struct OffhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = OffhandOf)]

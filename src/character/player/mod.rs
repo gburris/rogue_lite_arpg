@@ -4,6 +4,7 @@ mod input;
 mod interact;
 mod level;
 mod movement;
+mod overlay;
 mod progression;
 
 pub mod prelude {
@@ -14,14 +15,12 @@ pub mod prelude {
 
 use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
-use bevy_enhanced_input::prelude::*;
-
 use interact::PlayerInteractionRadius;
 
 use crate::{
     character::{
         Character, Purse, physical_collider,
-        player::{aim::PlayerAim, movement::PlayerMovement},
+        player::{aim::PlayerAim, input::player_actions, movement::PlayerMovement},
     },
     prelude::*,
 };
@@ -37,23 +36,23 @@ pub(super) fn plugin(app: &mut App) {
         interact::plugin,
         level::plugin,
         movement::plugin,
+        overlay::plugin,
         progression::plugin,
     ));
 
+    // Player spawn
     app.add_systems(
         OnEnter(AppState::SpawnPlayer),
-        (spawn_player, transition_to_create_hub).chain(),
+        (
+            spawn_player,
+            overlay::spawn_player_overlay,
+            transition_to_create_hub,
+        )
+            .chain(),
     );
 
-    app.add_observer(despawn_all::<RestartEvent, Player>)
-        .add_observer(on_pause)
-        .add_observer(on_inventory_opened);
-
-    app.add_input_context::<Player>();
-
-    app.add_systems(OnEnter(Pause(true)), deactivate_controls)
-        .add_systems(OnEnter(Menu::None), unpause)
-        .add_observer(on_controls_activated);
+    // Player despawn
+    app.add_observer(despawn_all::<RestartEvent, Player>);
 }
 
 #[derive(Component)]
@@ -163,9 +162,6 @@ impl DisplayableStatType {
     }
 }
 
-const MOUSE_SENSITIVITY: f32 = 0.3;
-const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
-
 fn spawn_player(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -175,44 +171,7 @@ fn spawn_player(
 ) {
     commands.spawn((
         Player::default(),
-        actions!(Player[
-            (
-                Action::<PauseGame>::new(),
-                // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
-                // and we want it to be triggerable only after the button is released.
-                ActionSettings {
-                    require_reset: true,
-                    ..Default::default()
-                },
-                bindings![KeyCode::Escape, GamepadButton::Start],
-            ),
-            (
-                Action::<OpenInventory>::new(),
-                bindings![KeyCode::KeyI],
-            ),
-            (
-                Action::<PlayerInteractionInput>::new(),
-                bindings![KeyCode::Space, GamepadButton::South],
-            ),
-            (
-                Action::<PlayerMovement>::new(),
-                DeadZone::default(),
-                Bindings::spawn((
-                    Cardinal::wasd_keys(),
-                    Axial::left_stick(),
-                )),
-            ),
-            (
-                Action::<PlayerAim>::new(),
-                Bindings::spawn((
-                    Spawn((Binding::mouse_motion(), Negate::y(), Scale::splat(MOUSE_SENSITIVITY))),
-                    Axial::right_stick().with((
-                        DeadZone { upper_threshold: 0.8, ..default() },
-                        Scale::splat(CONTROLLER_AIM_SENSITIVITY),
-                    ))
-                )),
-            )
-        ]),
+        player_actions(),
         Mana::new(100.0, 10.0),
         game_progress.base_stats.clone(),
         Sprite::from_atlas_image(
@@ -234,7 +193,8 @@ fn spawn_player(
             tome_of_healing(&sprites)
         ]),
         observe(death::on_player_defeated),
-        observe(on_equipment_activated),
+        observe(overlay::on_equipment_use_success),
+        observe(overlay::on_equipment_use_failed),
         children![
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),
@@ -253,46 +213,4 @@ fn spawn_player(
 
 fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
     game_state.set(AppState::CreateHub);
-}
-
-#[derive(InputAction)]
-#[action_output(bool)]
-
-struct OpenInventory;
-
-fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<NextState<Menu>>) {
-    next_menu_state.set(Menu::Inventory);
-}
-
-#[derive(InputAction)]
-#[action_output(bool)]
-
-struct PauseGame;
-
-fn on_pause(_: On<Start<PauseGame>>, mut next_menu_state: ResMut<NextState<Menu>>) {
-    next_menu_state.set(Menu::Pause);
-}
-
-fn deactivate_controls(mut commands: Commands, player: Single<Entity, With<Player>>) {
-    commands
-        .entity(*player)
-        .insert(ContextActivity::<Player>::INACTIVE);
-}
-
-#[derive(Event)]
-struct ActivatePlayerControls;
-
-fn unpause(mut commands: Commands, mut next_pause_state: ResMut<NextState<Pause>>) {
-    next_pause_state.set(Pause(false));
-    commands.trigger(ActivatePlayerControls);
-}
-
-fn on_controls_activated(
-    _: On<ActivatePlayerControls>,
-    mut commands: Commands,
-    player: Single<Entity, With<Player>>,
-) {
-    commands
-        .entity(*player)
-        .insert(ContextActivity::<Player>::ACTIVE);
 }

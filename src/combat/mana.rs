@@ -16,13 +16,12 @@ impl Mana {
         }
     }
 
-    /// Optionally uses mana if it can afford it, otherwise returns false if it cost too much
-    pub fn attempt_use_mana(&mut self, cost: &ManaCost) -> bool {
-        if self.current_mana >= cost.0 {
-            self.current_mana -= cost.0;
-            return true;
-        }
-        false
+    pub fn has_enough_mana(&self, cost: &ManaCost) -> bool {
+        self.current_mana >= cost.0
+    }
+
+    pub fn use_mana(&mut self, cost: &ManaCost) {
+        self.current_mana = (self.current_mana - cost.0).max(0.0);
     }
 
     pub fn regenerate(&mut self, delta_time: f32) {

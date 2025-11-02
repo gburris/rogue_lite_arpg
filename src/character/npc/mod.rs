@@ -101,7 +101,6 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             physical_collider(),
             BehaveTree::new(wander_and_retreat_behavior()),
         ],
-        observe(on_equipment_activated),
     )
 }
 

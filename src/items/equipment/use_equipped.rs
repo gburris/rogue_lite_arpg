@@ -1,9 +1,9 @@
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryData, prelude::*};
 
 use crate::{
     items::{
-        Items,
-        equipment::{Equippable, Equipped, Mainhand, Offhand},
+        ItemOf,
+        equipment::{Equippable, Equipped},
     },
     prelude::{EquipmentSlot, Mana, ManaCost},
 };
@@ -13,7 +13,6 @@ use crate::{
 #[derive(EntityEvent)]
 pub struct UseEquipment {
     pub entity: Entity,
-    pub holder: Entity,
 }
 
 #[derive(EntityEvent)]
@@ -23,9 +22,8 @@ pub struct UseEquipmentInput {
 }
 
 #[derive(EntityEvent)]
-pub struct StopUsingHoldableEquipmentInput {
+pub struct StopUsingEquipment {
     pub entity: Entity,
-    pub slot: EquipmentSlot,
 }
 
 #[derive(PartialEq)]
@@ -52,80 +50,52 @@ pub(super) fn tick_equippable_use_rate(
     }
 }
 
-pub fn on_equipment_activated(
-    equipment_used: On<UseEquipmentInput>,
-    commands: Commands,
-    holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Items>>,
-    equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
-) {
-    handle_equipment_activation(
-        equipment_used.entity,
-        equipment_used.slot,
-        commands,
-        holder_query,
-        equippable_query,
-    );
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub struct EquipmentUsed {
+    // It is required that all reference lifetimes are explicitly annotated, just like in any
+    // struct. Each lifetime should be 'static.
+    pub equippable: &'static mut Equippable,
+    equipped: &'static Equipped, // just a marker component
+    mana_cost: Option<&'static ManaCost>,
+    pub item_of: &'static ItemOf,
 }
 
-fn handle_equipment_activation(
-    entity: Entity,
-    slot: EquipmentSlot,
-    mut commands: Commands,
-    mut holder_query: Query<(Option<&mut Mana>, Option<&Mainhand>, Option<&Offhand>), With<Items>>,
-    mut equippable_query: Query<(&mut Equippable, Option<&ManaCost>), With<Equipped>>,
-) {
-    let Ok((mut holder_mana, mainhand, offhand)) = holder_query.get_mut(entity) else {
-        error!("Entity: {} tried to use equipment, but has none", entity);
-        return;
-    };
-
-    let equipment_entity: Option<Entity> = match slot {
-        EquipmentSlot::Mainhand => mainhand.map(|m| m.0),
-        EquipmentSlot::Offhand => offhand.map(|o| o.0),
-    };
-
-    let Some(equipment_entity) = equipment_entity else {
-        warn!("{:?} is empty!", slot);
-        commands.trigger(EquipmentUseFailed {
-            entity,
-            slot,
-            reason: EquipmentUseFailure::NoneEquipped,
-        });
-        return;
-    };
-
-    if let Ok((mut equippable, mana_cost)) = equippable_query.get_mut(equipment_entity) {
+impl<'w, 's> EquipmentUsedItem<'w, 's> {
+    pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
         // Check cooldown first
-        if !equippable.use_rate.is_finished() {
-            commands.trigger(EquipmentUseFailed {
-                entity,
-                slot,
-                reason: EquipmentUseFailure::OnCooldown,
-            });
-            return;
+        if !self.equippable.use_rate.is_finished() {
+            return Err(EquipmentUseFailure::OnCooldown);
         }
 
         // Check mana next
-        if let (Some(mana), Some(mana_cost)) = (holder_mana.as_mut(), mana_cost) {
-            if !mana.attempt_use_mana(mana_cost) {
+        if let (Some(mana), Some(mana_cost)) = (holder_mana, self.mana_cost) {
+            if !mana.has_enough_mana(mana_cost) {
                 debug!("Not enough mana!");
-                commands.trigger(EquipmentUseFailed {
-                    entity,
-                    slot,
-                    reason: EquipmentUseFailure::OutOfMana,
-                });
-                return;
+                return Err(EquipmentUseFailure::OutOfMana);
             }
-        } else if holder_mana.is_none() && mana_cost.is_some() {
+        } else if holder_mana.is_none() && self.mana_cost.is_some() {
             warn!("This wielder is not skilled in the arts of the arcane");
-            return;
+            return Err(EquipmentUseFailure::OutOfMana);
         }
 
-        // Success path - trigger equipment use and reset cooldown
-        commands.trigger(UseEquipment {
-            entity: equipment_entity,
-            holder: entity,
-        });
-        equippable.use_rate.reset();
+        Ok(())
+    }
+
+    pub fn attempt_use(
+        &mut self,
+        holder_mana: Option<&mut Mana>,
+    ) -> Result<(), EquipmentUseFailure> {
+        let can_use = self.can_use(holder_mana.as_deref());
+
+        if can_use.is_ok() {
+            if let (Some(holder_mana), Some(mana_cost)) = (holder_mana, self.mana_cost) {
+                holder_mana.use_mana(mana_cost);
+            }
+
+            self.equippable.use_rate.reset();
+        }
+
+        return can_use;
     }
 }

@@ -67,7 +67,7 @@ pub struct Anchor {
 }
 
 impl Anchor {
-    pub fn new(origin: Vec2, distance: f32) -> Self {
+    pub const fn new(origin: Vec2, distance: f32) -> Self {
         Self { origin, distance }
     }
 
@@ -177,16 +177,16 @@ pub fn while_chasing(
     chase_query.iter_mut().try_for_each(|ctx| {
         let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
-        if !has_target {
-            debug!("We chased and failed!");
-            commands.trigger(ctx.failure());
-        } else {
+        if has_target {
             motion.start_moving(target_info.direction);
 
             if target_info.distance < 64.0 {
                 debug!("We chased and succeeded!");
                 commands.trigger(ctx.success());
             }
+        } else {
+            debug!("We chased and failed!");
+            commands.trigger(ctx.failure());
         }
         Ok(())
     })
@@ -222,9 +222,7 @@ pub fn while_keeping_distance_and_firing(
     behave_query.iter_mut().try_for_each(|ctx| {
         let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
-        if !has_target {
-            commands.trigger(ctx.failure());
-        } else {
+        if has_target {
             commands.trigger(UseEquipmentInput {
                 entity: ctx.target_entity(),
                 slot: EquipmentSlot::Mainhand,
@@ -237,6 +235,8 @@ pub fn while_keeping_distance_and_firing(
             } else if target_info.distance > 300.0 {
                 motion.start_moving(target_info.direction);
             }
+        } else {
+            commands.trigger(ctx.failure());
         }
         Ok(())
     })

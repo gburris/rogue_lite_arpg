@@ -16,8 +16,8 @@ serde = "1.0.228"
 # Remove these features if you want to profile your game with tracy.
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
 tracing = { version = "0.1", features = [
-    "max_level_debug",
-    "release_max_level_warn",
+  "max_level_debug",
+  "release_max_level_warn",
 ] }
 
 [target.wasm32-unknown-unknown.dependencies]
@@ -27,19 +27,19 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 # Default to a native dev build.
 default = ["dev_native"]
 dev = [
-    # Improve compile times for dev builds by linking Bevy as a dynamic library.
-    "bevy/dynamic_linking",
-    "bevy/bevy_dev_tools",
-    "bevy/bevy_ui_debug",
-    # Improve error messages coming from Bevy
-    "bevy/track_location",
+  # Improve compile times for dev builds by linking Bevy as a dynamic library.
+  "bevy/dynamic_linking",
+  "bevy/bevy_dev_tools",
+  "bevy/bevy_ui_debug",
+  # Improve error messages coming from Bevy
+  "bevy/track_location",
 ]
 dev_native = [
-    "dev",
-    # Enable asset hot reloading for native dev builds.
-    "bevy/file_watcher",
-    # Enable embedded asset hot reloading for native dev builds.
-    "bevy/embedded_watcher",
+  "dev",
+  # Enable asset hot reloading for native dev builds.
+  "bevy/file_watcher",
+  # Enable embedded asset hot reloading for native dev builds.
+  "bevy/embedded_watcher",
 ]
 
 [package.metadata.bevy_cli.release]
@@ -59,10 +59,19 @@ unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = 1 }
+pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
-cargo = { level = "warn", priority = -1 }
-restriction = { level = "warn", priority = -1 }
+# cargo = { level = "warn", priority = -1 }
+# restriction = { level = "warn", priority = -1 }
+
+missing_errors_doc = "allow"
+self_named_module_files = "allow"
+needless_pass_by_value = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+missing_panics_doc = "allow"
 
 # Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
 # request more than 7 arguments, which would undesirably trigger this lint.
@@ -72,7 +81,6 @@ type_complexity = "allow"
 # Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
 nonstandard_macro_braces = "warn"
 
-missing_error_docs = "allow"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

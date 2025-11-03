@@ -16,10 +16,9 @@ pub(super) struct PlayerMovement;
 
 fn on_player_movement(
     movement: On<Fire<PlayerMovement>>,
-    player_motion_query: Single<&mut SimpleMotion, With<Player>>,
+    mut player_motion: Single<&mut SimpleMotion, With<Player>>,
 ) {
-    let mut motion = player_motion_query.into_inner();
-    motion.start_moving(movement.value);
+    player_motion.start_moving(movement.value);
 }
 
 fn on_player_stopped(

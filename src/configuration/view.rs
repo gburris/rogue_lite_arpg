@@ -130,14 +130,13 @@ const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
 
 fn camera_follow_system(
-    player: Single<(&Transform, &Player), Without<Camera>>,
-    mut camera: Single<&mut Transform, (With<Camera>, Without<Player>)>,
+    player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
+    player_aim: Single<&Transform, With<PlayerAim>>,
+    mut camera: Single<&mut Transform, (With<Camera>, Without<PlayerAim>, Without<Player>)>,
     time: Res<Time>,
 ) {
-    let (player_transform, player) = player.into_inner();
-
     let z = camera.translation.z;
-    let aim = player.aim_position.extend(z);
+    let aim = player_aim.translation.with_z(z);
     let player_pos = player_transform.translation.with_z(z);
     let target = player_pos.lerp(aim, TARGET_BIAS);
 
@@ -151,13 +150,12 @@ fn camera_follow_system(
 }
 
 pub(super) fn camera_debug_system(
-    player: Single<(&Transform, &Player), (With<Player>, Without<Camera>)>,
+    player: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
+    player_aim: Single<&Transform, With<PlayerAim>>,
     mut gizmos: Gizmos,
 ) {
-    let (transform, player) = player.into_inner();
-
-    let player_pos = transform.translation.xy();
-    let target = player_pos.lerp(player.aim_position, TARGET_BIAS);
+    let player_pos = player.translation.xy();
+    let target = player_pos.lerp(player_aim.translation.xy(), TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera

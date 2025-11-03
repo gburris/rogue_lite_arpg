@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
 use crate::{
-    character::player::{PlayerAim, PlayerMovement},
+    character::player::{AimInput, PlayerMovement},
     prelude::*,
 };
 
@@ -24,7 +24,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_controls_activated);
 }
 
-const MOUSE_SENSITIVITY: f32 = 0.3;
+const MOUSE_SENSITIVITY: f32 = 0.5;
 const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
 
 pub(super) fn player_actions() -> impl Bundle {
@@ -62,7 +62,7 @@ pub(super) fn player_actions() -> impl Bundle {
             )),
         ),
         (
-            Action::<PlayerAim>::new(),
+            Action::<AimInput>::new(),
             Bindings::spawn((
                 Spawn((Binding::mouse_motion(), Negate::y(), Scale::splat(MOUSE_SENSITIVITY))),
                 Axial::right_stick().with((

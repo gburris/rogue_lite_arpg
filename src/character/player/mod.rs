@@ -8,6 +8,7 @@ mod overlay;
 mod progression;
 
 pub mod prelude {
+    pub use super::aim::PlayerAim;
     pub use super::interact::*;
     pub use super::progression::GameProgress;
     pub use super::{DisplayableStatType, Player, PlayerStats};
@@ -20,7 +21,11 @@ use interact::PlayerInteractionRadius;
 use crate::{
     character::{
         Character, Purse, physical_collider,
-        player::{aim::PlayerAim, input::player_actions, movement::PlayerMovement},
+        player::{
+            aim::{AimInput, player_aim},
+            input::player_actions,
+            movement::PlayerMovement,
+        },
     },
     prelude::*,
 };
@@ -67,7 +72,6 @@ pub(super) fn plugin(app: &mut App) {
     Purse
 )]
 pub struct Player {
-    pub aim_position: Vec2, // tracks the cursor
     current_level: u32,
     // Outside systems may give the player experience, like when an enemy dies
     pub current_experience: f32,
@@ -77,7 +81,6 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Player {
-            aim_position: Vec2::ZERO,
             current_level: 1,
             current_experience: 0.0,
             next_level_experience_req: 20.0,
@@ -168,6 +171,7 @@ fn spawn_player(
     sprite_layouts: Res<SpriteSheetLayouts>,
     game_progress: Res<GameProgress>,
     shadows: Res<Shadows>,
+    gizmo_assets: ResMut<Assets<GizmoAsset>>,
 ) {
     commands.spawn((
         Player::default(),
@@ -196,6 +200,7 @@ fn spawn_player(
         observe(overlay::on_equipment_use_success),
         observe(overlay::on_equipment_use_failed),
         children![
+            player_aim(gizmo_assets),
             shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
             physical_collider(),
             hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),

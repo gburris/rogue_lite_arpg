@@ -73,11 +73,11 @@ pub(super) fn player_actions() -> impl Bundle {
         ),
         (
             Action::<UseMainhand>::new(),
-            bindings![MouseButton::Left, GamepadButton::RightTrigger],
+            bindings![MouseButton::Left, GamepadButton::RightTrigger, GamepadButton::RightTrigger2],
         ),
         (
             Action::<UseOffhand>::new(),
-            bindings![MouseButton::Right, GamepadButton::LeftTrigger],
+            bindings![MouseButton::Right, GamepadButton::LeftTrigger, GamepadButton::LeftTrigger2],
         )
     ]),)
 }

@@ -1,6 +1,7 @@
 use bevy::{ecs::query::QueryData, prelude::*};
 
 use crate::{
+    character::Character,
     items::{
         ItemOf,
         equipment::{Equippable, Equipped},
@@ -16,9 +17,32 @@ pub struct UseEquipment {
 }
 
 #[derive(EntityEvent)]
-pub struct UseEquipmentInput {
+pub struct AIUseEquipment {
     pub entity: Entity,
-    pub slot: EquipmentSlot,
+}
+
+pub(super) fn on_ai_equipment_used(
+    equipment: On<AIUseEquipment>,
+    mut commands: Commands,
+    mut equipment_query: Query<EquipmentUsed>,
+    mut holder_query: Query<Option<&mut Mana>, With<Character>>,
+) {
+    let mut equipment_used = equipment_query
+        .get_mut(equipment.entity)
+        .expect("AI should have equipment equipped");
+
+    let Ok(mut mana) = holder_query.get_mut(equipment_used.item_of.0) else {
+        warn!("Non-character attempted to use equipment");
+        return;
+    };
+
+    let use_result = equipment_used.attempt_use(mana.as_deref_mut());
+
+    if use_result.is_ok() {
+        commands.trigger(UseEquipment {
+            entity: equipment.entity,
+        });
+    }
 }
 
 #[derive(EntityEvent)]

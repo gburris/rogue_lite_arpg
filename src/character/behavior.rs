@@ -217,14 +217,25 @@ fn random_direction() -> Vec2 {
 #[derive(Clone)]
 pub struct AttemptMelee;
 
-pub fn on_attempt_melee(attempt_melee: On<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
+pub fn on_attempt_melee(
+    attempt_melee: On<BehaveTrigger<AttemptMelee>>,
+    mut commands: Commands,
+    target_query: Query<(Option<&Mainhand>, Has<Targeting>), With<TargetInfo>>,
+) -> Result {
     let ctx = attempt_melee.ctx();
 
-    commands.trigger(UseEquipmentInput {
-        entity: ctx.target_entity(),
-        slot: EquipmentSlot::Mainhand,
+    let (mainhand, has_target) = target_query.get(ctx.target_entity())?;
+
+    if !has_target || mainhand.is_none() {
+        commands.trigger(ctx.failure());
+    }
+
+    commands.trigger(AIUseEquipment {
+        entity: mainhand.unwrap().get(),
     });
     commands.trigger(ctx.success());
+
+    Ok(())
 }
 
 #[derive(Component, Clone)]
@@ -233,17 +244,22 @@ pub struct KeepDistanceAndFire;
 pub fn while_keeping_distance_and_firing(
     mut commands: Commands,
     mut behave_query: Query<&BehaveCtx, With<KeepDistanceAndFire>>,
-    mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
+    mut target_query: Query<(
+        &mut SimpleMotion,
+        &TargetInfo,
+        Option<&Mainhand>,
+        Has<Targeting>,
+    )>,
 ) -> Result {
     behave_query.iter_mut().try_for_each(|ctx| {
-        let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
+        let (mut motion, target_info, mainhand, has_target) =
+            target_query.get_mut(ctx.target_entity())?;
 
-        if !has_target {
+        if !has_target || mainhand.is_none() {
             commands.trigger(ctx.failure());
         } else {
-            commands.trigger(UseEquipmentInput {
-                entity: ctx.target_entity(),
-                slot: EquipmentSlot::Mainhand,
+            commands.trigger(AIUseEquipment {
+                entity: mainhand.unwrap().get(),
             });
 
             if target_info.distance < 200.0 {

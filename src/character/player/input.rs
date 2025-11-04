@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
 use crate::{
-    character::player::{AimInput, PlayerMovement},
+    character::player::{AimInput, PlayerMovement, overlay::PlayerEquipmentUsed},
     prelude::*,
 };
 
@@ -140,7 +140,7 @@ fn on_use_mainhand_input(
 ) {
     let Some(player) = player else {
         commands.trigger(EquipmentUseFailed {
-            entity: use_mainhand.context,
+            holder: use_mainhand.context,
             slot: EquipmentSlot::Mainhand,
             reason: EquipmentUseFailure::NoneEquipped,
         });
@@ -156,12 +156,15 @@ fn on_use_mainhand_input(
 
     if let Err(failure_reason) = failure_reason {
         commands.trigger(EquipmentUseFailed {
-            entity: use_mainhand.context,
+            holder: use_mainhand.context,
             slot: EquipmentSlot::Mainhand,
             reason: failure_reason,
         });
     } else {
         commands.trigger(UseEquipment {
+            entity: mainhand.get(),
+        });
+        commands.trigger(PlayerEquipmentUsed {
             entity: mainhand.get(),
         });
     }
@@ -175,7 +178,7 @@ fn on_use_offhand_input(
 ) {
     let Some(player) = player else {
         commands.trigger(EquipmentUseFailed {
-            entity: use_offhand.context,
+            holder: use_offhand.context,
             slot: EquipmentSlot::Offhand,
             reason: EquipmentUseFailure::NoneEquipped,
         });
@@ -191,12 +194,15 @@ fn on_use_offhand_input(
 
     if let Err(failure_reason) = failure_reason {
         commands.trigger(EquipmentUseFailed {
-            entity: use_offhand.context,
+            holder: use_offhand.context,
             slot: EquipmentSlot::Offhand,
             reason: failure_reason,
         });
     } else {
         commands.trigger(UseEquipment {
+            entity: offhand.get(),
+        });
+        commands.trigger(PlayerEquipmentUsed {
             entity: offhand.get(),
         });
     }

@@ -15,6 +15,8 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::HudOverlay),
     );
 
+    app.add_observer(on_equipment_use_add_cooldown_line);
+
     app.add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
 }
 
@@ -334,7 +336,10 @@ fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
     equipment_query: Option<
-        Single<(Option<&Mainhand>, Option<&Offhand>), (Changed<Items>, With<Player>)>,
+        Single<
+            (Option<&Mainhand>, Option<&Offhand>),
+            (Or<(Changed<Mainhand>, Changed<Offhand>)>, With<Player>),
+        >,
     >,
     item_query: Query<&Sprite, With<Item>>,
 ) {
@@ -369,25 +374,22 @@ fn update_action_bar(
     }
 }
 
-pub(super) fn on_equipment_use_success(
-    equipment_used: On<UseEquipment>,
+#[derive(EntityEvent)]
+pub(super) struct PlayerEquipmentUsed {
+    pub entity: Entity,
+}
+
+fn on_equipment_use_add_cooldown_line(
+    equipment_used: On<PlayerEquipmentUsed>,
     mut commands: Commands,
-    action_box_query: Query<(Entity, &ActionBox, &Children)>,
+    action_box_query: Query<(Entity, &ActionBox)>,
     equipment_query: Query<&Equippable, With<Equipped>>,
-    error_flash_query: Query<Entity, With<ErrorFlash>>,
 ) {
     if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity)
-        && let Some((box_entity, _, box_children)) = action_box_query
+        && let Some((box_entity, _)) = action_box_query
             .iter()
-            .find(|(_, action_box, _)| action_box.slot == equipmemnt.slot)
+            .find(|(_, action_box)| action_box.slot == equipmemnt.slot)
     {
-        // When on cooldown we don't want red error flash over action box
-        for child in box_children.iter() {
-            if error_flash_query.contains(child) {
-                commands.entity(child).despawn();
-            }
-        }
-
         commands.entity(box_entity).with_children(|parent| {
             parent.spawn((
                 CooldownIndicator,
@@ -414,6 +416,7 @@ pub(super) fn on_equipment_use_failed(
     if let Some((box_entity, _)) = action_box_query
         .iter()
         .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
+        && equipment_use_failed.reason != EquipmentUseFailure::OnCooldown
     {
         commands.entity(box_entity).with_child((
             ErrorFlash,

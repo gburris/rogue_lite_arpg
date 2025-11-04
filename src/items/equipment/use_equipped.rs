@@ -61,7 +61,8 @@ pub enum EquipmentUseFailure {
 #[derive(EntityEvent)]
 
 pub struct EquipmentUseFailed {
-    pub entity: Entity,
+    #[event_target]
+    pub holder: Entity,
     pub slot: EquipmentSlot,
     pub reason: EquipmentUseFailure,
 }

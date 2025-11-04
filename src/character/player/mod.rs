@@ -199,7 +199,6 @@ fn spawn_player(
                 tome_of_healing(&sprites)
             ]),
             observe(death::on_player_defeated),
-            observe(overlay::on_equipment_use_success),
             observe(overlay::on_equipment_use_failed),
             children![
                 player_aim(gizmo_assets),

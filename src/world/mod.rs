@@ -12,6 +12,6 @@ pub mod prelude {
     pub use super::portal::*;
 }
 
-pub fn plugin(app: &mut App) {
+pub(super) fn plugin(app: &mut App) {
     app.add_plugins((chest::plugin, gold::plugin, portal::plugin, map::plugin));
 }

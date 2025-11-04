@@ -3,13 +3,12 @@ use bevy::prelude::*;
 
 use crate::{
     character::Character,
-    combat::damage::DamageSource,
     items::{
         ItemOf,
         equipment::{Equipped, Mainhand, MainhandOf, Offhand, OffhandOf},
-        melee::{ActiveMeleeAttack, MeleeWeapon},
+        melee::ActiveMeleeAttack,
     },
-    prelude::{AttackState, Enemy},
+    prelude::AttackState,
 };
 
 use super::{EquipmentSlot, Equippable};
@@ -18,29 +17,37 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_equip).add_observer(on_unequip);
 }
 
+#[derive(EntityEvent)]
+pub struct Equip {
+    #[event_target]
+    pub item: Entity,
+    pub holder: Entity,
+}
+
 fn on_equip(
-    trigger: On<Add, Equipped>,
+    equipped: On<Equip>,
     mut commands: Commands,
-    mut item_query: Query<
-        (&ItemOf, &Equippable, &mut Visibility, Option<&MeleeWeapon>),
-        With<Equipped>,
-    >,
-    mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>, Has<Enemy>), With<Character>>,
+    mut item_query: Query<(&Equippable, &mut Visibility, Has<ItemOf>)>,
+    mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>), With<Character>>,
 ) {
-    let equipped_entity = trigger.entity;
-    let (item_of, equippable, mut visibility, melee_weapon) = item_query
-        .get_mut(equipped_entity)
+    let (equippable, mut visibility, in_inventory) = item_query
+        .get_mut(equipped.item)
         .expect("Added Equipped to non-equippable item");
 
-    let holder_entity = item_of.0;
-
-    let (mainhand, offhand, is_enemy) = holder_query
-        .get_mut(holder_entity)
+    let (mainhand, offhand) = holder_query
+        .get_mut(equipped.holder)
         .expect("Added Equipment to holder that is not a character");
 
     commands
-        .entity(equipped_entity)
-        .insert(ChildOf(holder_entity));
+        .entity(equipped.item)
+        .insert((Equipped, ChildOf(equipped.holder)));
+
+    // Without this condition items get "re-added" to item relationship and order gets rearranged
+    if !in_inventory {
+        commands
+            .entity(equipped.item)
+            .insert(ItemOf(equipped.holder));
+    }
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
@@ -49,8 +56,8 @@ fn on_equip(
             }
 
             commands
-                .entity(equipped_entity)
-                .insert(MainhandOf(holder_entity));
+                .entity(equipped.item)
+                .insert(MainhandOf(equipped.holder));
         }
         EquipmentSlot::Offhand => {
             if let Some(offhand) = offhand {
@@ -58,29 +65,13 @@ fn on_equip(
             }
 
             commands
-                .entity(equipped_entity)
-                .insert(OffhandOf(holder_entity));
+                .entity(equipped.item)
+                .insert(OffhandOf(equipped.holder));
         }
     }
 
-    if equippable.slot == EquipmentSlot::Mainhand || equippable.slot == EquipmentSlot::Offhand {
-        // Make sure item is now visible, since it is hidden while in inventory
-        *visibility = Visibility::Visible;
-    }
-
-    if let Some(melee_weapon) = melee_weapon {
-        let damage_source = if is_enemy {
-            DamageSource::Enemy
-        } else {
-            DamageSource::Player
-        };
-
-        // If melee weapon, we need to add collider and new collision layers on equip
-        commands.entity(equipped_entity).insert((
-            melee_weapon.hitbox.clone(),
-            MeleeWeapon::collision_layers(damage_source),
-        ));
-    }
+    // Make sure item is now visible, since it is hidden while in inventory
+    *visibility = Visibility::Visible;
 }
 
 #[derive(EntityEvent)]

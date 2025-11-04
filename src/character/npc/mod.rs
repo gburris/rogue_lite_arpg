@@ -9,7 +9,6 @@ use crate::{
         behavior::{Idle, Retreat},
         physical_collider,
     },
-    combat::{Health, damage::hurtbox},
     prelude::*,
 };
 
@@ -70,19 +69,42 @@ fn spawn_npc(
     shadows: &Shadows,
 ) {
     match npc_type {
-        NPCType::Helper => commands.spawn((
-            base_npc(spawn_position, shadows),
-            helper(sprites, sprite_layouts),
-        )),
-        NPCType::Shopkeeper => commands.spawn((
-            base_npc(spawn_position, shadows),
-            shopkeeper(sprites, sprite_layouts),
-        )),
-        NPCType::StatTrainer => commands.spawn((
-            base_npc(spawn_position, shadows),
-            stat_trainer(sprites, sprite_layouts),
-        )),
-    };
+        NPCType::Helper => spawn_npc_with_equipment(
+            commands,
+            (
+                base_npc(spawn_position, shadows),
+                helper(sprites, sprite_layouts),
+            ),
+            ice_staff(sprites, sprite_layouts),
+        ),
+        NPCType::Shopkeeper => spawn_npc_with_equipment(
+            commands,
+            (
+                base_npc(spawn_position, shadows),
+                shopkeeper(sprites, sprite_layouts),
+            ),
+            axe(sprites),
+        ),
+        NPCType::StatTrainer => spawn_npc_with_equipment(
+            commands,
+            (
+                base_npc(spawn_position, shadows),
+                stat_trainer(sprites, sprite_layouts),
+            ),
+            sword(sprites),
+        ),
+    }
+}
+
+fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand: impl Bundle) {
+    let npc = commands.spawn(npc).id();
+
+    let mainhand = commands.spawn(mainhand).id();
+
+    commands.trigger(Equip {
+        item: mainhand,
+        holder: npc,
+    });
 }
 
 fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
@@ -102,7 +124,6 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             physical_collider(),
             BehaveTree::new(wander_and_retreat_behavior()),
         ],
-        observe(on_equipment_activated),
     )
 }
 
@@ -116,7 +137,6 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
             },
         ),
         observe(interaction::on_game_guide_start),
-        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts))]),
     )
 }
 
@@ -130,7 +150,6 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
             },
         ),
         observe(interaction::on_shop_keeper_store_open),
-        related!(Items[(Equipped, axe(sprites))]),
     )
 }
 
@@ -144,7 +163,6 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
             },
         ),
         observe(interaction::on_stat_trainer_store_open),
-        related!(Items[(Equipped, sword(sprites))]),
     )
 }
 

@@ -4,14 +4,6 @@ use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*, ui_widgets::observe};
 
 use crate::{
-    combat::{
-        Projectile,
-        damage::DamageSource,
-        mana::ManaCost,
-        prelude::ProjectileOf,
-        projectile::{Projectiles, fireball, icebolt},
-        status_effects::Effects,
-    },
     items::{Item, equipment::Equippable, prelude::UseEquipment},
     prelude::*,
 };
@@ -55,23 +47,23 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
 fn on_weapon_fired(
     weapon_fired: On<UseEquipment>,
     mut commands: Commands,
-    weapon_query: Query<&Projectiles>,
+    weapon_query: Query<(&Projectiles, &ItemOf)>,
     holder_query: Query<(&Transform, &Vision)>,
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<(&Projectile, Option<&Effects>), With<Disabled>>,
 ) {
-    let Ok(projectiles) = weapon_query.get(weapon_fired.entity) else {
+    let Ok((projectiles, item_of)) = weapon_query.get(weapon_fired.entity) else {
         warn!("Tried to fire weapon that is not a projectile weapon");
         return;
     };
 
-    let damage_source = if enemy_query.get(weapon_fired.holder).is_ok() {
+    let damage_source = if enemy_query.get(item_of.0).is_ok() {
         DamageSource::Enemy
     } else {
         DamageSource::Player
     };
 
-    let Ok((holder_transform, holder_vision)) = holder_query.get(weapon_fired.holder) else {
+    let Ok((holder_transform, holder_vision)) = holder_query.get(item_of.0) else {
         warn!("Tried to fire weapon with holder missing aim position or transform");
         return;
     };

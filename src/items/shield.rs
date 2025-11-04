@@ -7,15 +7,10 @@ use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
 
 use crate::{
-    combat::{
-        Mana, Projectile,
-        damage::DamageSource,
-        mana::{ManaCost, ManaDrainRate},
-    },
     items::{
         Item, ItemOf, ItemType,
-        equipment::{EquipmentSlot, Equippable, Equipped, Offhand},
-        prelude::{EquipmentTransform, StopUsingHoldableEquipmentInput, UseEquipment},
+        equipment::{EquipmentSlot, Equippable, Equipped},
+        prelude::{EquipmentTransform, UseEquipment},
     },
     prelude::*,
 };
@@ -25,9 +20,6 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (update_active_shields, reflect_projectiles).in_set(InGameSystems::Simulation),
     );
-
-    app.add_observer(activate_shield)
-        .add_observer(on_shield_deactivated);
 }
 
 pub fn magic_shield(
@@ -44,7 +36,6 @@ pub fn magic_shield(
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
-        Holdable,
         Sprite {
             image: sprites.magic_shield.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -54,6 +45,7 @@ pub fn magic_shield(
             ..default()
         },
         observe(on_shield_block),
+        observe(on_shield_deactivated),
     )
 }
 
@@ -70,7 +62,6 @@ pub fn knight_shield(
         },
         ManaDrainRate(25.0),
         ManaCost(25.0),
-        Holdable,
         Sprite {
             image: sprites.knight_shield.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -80,19 +71,14 @@ pub fn knight_shield(
             ..default()
         },
         observe(on_shield_block),
+        observe(on_shield_deactivated),
     )
 }
 
 #[derive(Component)]
-#[require(Holdable)]
 pub struct Shield {
     pub hitbox: Collider,
 }
-
-//This component tags items that are active continiously while being used
-//e.g. Holding right will keep a shield up
-#[derive(Component, Default)]
-pub struct Holdable;
 
 #[derive(Component, Default)]
 #[require(CollidingEntities, Sensor)]
@@ -109,38 +95,6 @@ pub struct ActiveShield {
     pub projectiles_reflected: HashSet<Entity>,
 }
 
-fn activate_shield(
-    active_shield: On<Add, ActiveShield>,
-    mut commands: Commands,
-    shield_query: Query<&Shield>,
-) {
-    if let Ok(activated_shield) = shield_query.get(active_shield.entity) {
-        commands.entity(active_shield.entity).insert((
-            activated_shield.hitbox.clone(),
-            ProjectileReflection::collision_layers(),
-        ));
-    } else {
-        warn!("Active Shield added to something that isn't a shield");
-    }
-}
-
-fn deactivate_shield(
-    commands: &mut Commands,
-    shield_entity: Entity,
-    facing_direction: FacingDirection,
-    shield_sprite: &mut Sprite,
-) -> Result {
-    commands
-        .entity(shield_entity)
-        .remove::<(ActiveShield, Collider)>()
-        .insert(EquipmentTransform::get(facing_direction)?.offhand);
-
-    if let Some(atlas) = &mut shield_sprite.texture_atlas {
-        atlas.index = 0;
-    }
-    Ok(())
-}
-
 fn update_active_shields(
     mut commands: Commands,
     time: Res<Time>,
@@ -148,12 +102,25 @@ fn update_active_shields(
         (Entity, &ManaDrainRate, &ItemOf, &mut Sprite),
         (With<ActiveShield>, With<Equipped>),
     >,
-    mut holder_query: Query<(&Vision, &FacingDirection, Option<&mut Mana>)>,
+    mut holder_query: Query<(&Vision, Option<&mut Mana>)>,
 ) -> Result {
     for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in
         active_shield_query.iter_mut()
     {
-        let (vision, facing_direction, mana) = holder_query.get_mut(item_of.0)?;
+        let (vision, mana) = holder_query.get_mut(item_of.0)?;
+
+        if let Some(mut mana) = mana {
+            let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
+
+            if !mana.has_enough_mana(&drain_amount) {
+                commands.trigger(StopUsingEquipment {
+                    entity: shield_entity,
+                });
+                continue;
+            } else {
+                mana.use_mana(&drain_amount);
+            }
+        }
 
         let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
 
@@ -195,34 +162,27 @@ fn update_active_shields(
             position_offset.y,
             position_offset.z,
         ));
-
-        if let Some(mut mana) = mana {
-            let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
-            if !mana.attempt_use_mana(&drain_amount) {
-                deactivate_shield(
-                    &mut commands,
-                    shield_entity,
-                    *facing_direction,
-                    &mut shield_sprite,
-                )?;
-            }
-        }
     }
     Ok(())
 }
 
 fn on_shield_block(
-    use_shield_block: On<UseEquipment>,
+    used_shield: On<UseEquipment>,
     mut commands: Commands,
-    mut shield_query: Query<(Entity, &Shield)>,
+    mut shield_query: Query<&Shield>,
 ) {
-    let Ok((shield_entity, _)) = shield_query.get_mut(use_shield_block.entity) else {
+    let Ok(shield) = shield_query.get_mut(used_shield.entity) else {
         warn!("Tried to block with invalid shield");
         return;
     };
-    commands.entity(shield_entity).insert(ActiveShield {
-        projectiles_reflected: Default::default(),
-    });
+
+    commands.entity(used_shield.entity).insert((
+        ActiveShield {
+            projectiles_reflected: Default::default(),
+        },
+        shield.hitbox.clone(),
+        ProjectileReflection::collision_layers(),
+    ));
 }
 
 fn reflect_projectiles(
@@ -268,28 +228,31 @@ fn reflect_projectiles(
 }
 
 fn on_shield_deactivated(
-    stop_using_holdable: On<StopUsingHoldableEquipmentInput>,
+    shield: On<StopUsingEquipment>,
     mut commands: Commands,
-    holder_query: Query<(&Offhand, &FacingDirection)>,
-    mut shield_query: Query<&mut Sprite, (With<Shield>, With<ActiveShield>)>,
+    holder_query: Query<&FacingDirection>,
+    mut shield_query: Query<(&mut Sprite, &ItemOf), (With<Shield>, With<ActiveShield>)>,
 ) {
-    // Get the holder's inventory
-    let Ok((offhand, facing_direction)) = holder_query.get(stop_using_holdable.entity) else {
-        warn!("Tried to stop blocking but entity has no offhand or no direction");
+    let Ok((mut shield_sprite, item_of)) = shield_query.get_mut(shield.entity) else {
+        warn!("Offhand missing Shield or ActiveShield");
         return;
     };
 
-    if let Ok(mut shield_sprite) = shield_query.get_mut(offhand.get()) {
-        let shield_result = deactivate_shield(
-            &mut commands,
-            offhand.get(),
-            *facing_direction,
-            &mut shield_sprite,
+    let Ok(facing_direction) = holder_query.get(item_of.0) else {
+        warn!("Tried to stop blocking but entity no facing direction");
+        return;
+    };
+
+    commands
+        .entity(shield.entity)
+        .remove::<(ActiveShield, Collider)>()
+        .insert(
+            EquipmentTransform::get(*facing_direction)
+                .expect("Failed to deactivate shield")
+                .offhand,
         );
-        if let Err(e) = shield_result {
-            warn!("Failed to deactivate shield: {}", e);
-        }
-    } else {
-        warn!("Offhand missing Shield or ActiveShield");
+
+    if let Some(atlas) = &mut shield_sprite.texture_atlas {
+        atlas.index = 0;
     }
 }

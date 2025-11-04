@@ -2,34 +2,26 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
+use bevy_enhanced_input::prelude::*;
+
 pub(super) fn plugin(app: &mut App) {
-    app.add_message::<PlayerMovementEvent>();
-
-    app.add_systems(Update, player_movement.in_set(InGameSystems::Simulation));
-
-    app.add_observer(on_player_stopped);
+    app.add_observer(on_player_stopped)
+        .add_observer(on_player_movement);
 }
 
-#[derive(Message)]
-pub(super) struct PlayerMovementEvent {
-    pub direction: Vec2,
-}
+#[derive(InputAction)]
+#[action_output(Vec2)]
+pub(super) struct PlayerMovement;
 
-#[derive(Event)]
-pub(super) struct PlayerStoppedEvent;
-
-fn player_movement(
-    player_motion_query: Single<&mut SimpleMotion, With<Player>>,
-    mut player_movement_messages: MessageReader<PlayerMovementEvent>,
+fn on_player_movement(
+    movement: On<Fire<PlayerMovement>>,
+    mut player_motion: Single<&mut SimpleMotion, With<Player>>,
 ) {
-    let mut motion = player_motion_query.into_inner();
-    for player_movement in player_movement_messages.read() {
-        motion.start_moving(player_movement.direction);
-    }
+    player_motion.start_moving(movement.value);
 }
 
 fn on_player_stopped(
-    _: On<PlayerStoppedEvent>,
+    _: On<Complete<PlayerMovement>>,
     mut player_motion: Single<&mut SimpleMotion, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
     player_motion.stop_moving();

@@ -28,7 +28,8 @@ pub(super) fn plugin(app: &mut App) {
             use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
         ),
     );
-    // .add_observer(use_equipped::on_equipment_activated);
+
+    app.add_observer(use_equipped::on_ai_equipment_used);
 }
 
 #[derive(Component, Clone, Debug)]
@@ -82,7 +83,7 @@ pub struct Equipped;
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]
-pub struct MainhandOf(Entity);
+pub struct MainhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = MainhandOf)]
@@ -96,7 +97,7 @@ impl Mainhand {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Offhand)]
-pub struct OffhandOf(Entity);
+pub struct OffhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = OffhandOf)]

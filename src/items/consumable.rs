@@ -1,5 +1,6 @@
-use crate::{combat::health::AttemptHeal, prelude::SpriteAssets};
 use bevy::prelude::*;
+
+use crate::prelude::{AttemptHeal, SpriteAssets};
 
 use super::{Item, ItemType};
 

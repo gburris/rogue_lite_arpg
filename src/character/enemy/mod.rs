@@ -11,7 +11,6 @@ use crate::{
         physical_collider,
         vision::{VisionCapabilities, Watching},
     },
-    combat::{Health, Mana, damage::hurtbox},
     prelude::*,
 };
 
@@ -122,24 +121,47 @@ fn spawn_enemy(
     };
 
     match spawn_data.enemy_type {
-        EnemyType::Warrior => commands.spawn((
-            warrior(sprites, sprite_layouts),
-            base_enemy(spawn_data.position, player),
-            enemy_children(melee_enemy_behavior, shadows),
-        )),
+        EnemyType::Warrior => spawn_enemy_with_equipment(
+            commands,
+            (
+                warrior(sprites, sprite_layouts),
+                base_enemy(spawn_data.position, player),
+                enemy_children(melee_enemy_behavior, shadows),
+            ),
+            sword(sprites),
+        ),
 
-        EnemyType::IceMage => commands.spawn((
-            ice_mage(sprites, sprite_layouts),
-            base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, shadows),
-        )),
+        EnemyType::IceMage => spawn_enemy_with_equipment(
+            commands,
+            (
+                ice_mage(sprites, sprite_layouts),
+                base_enemy(spawn_data.position, player),
+                enemy_children(ranged_enemy_behavior, shadows),
+            ),
+            ice_staff(sprites, sprite_layouts),
+        ),
 
-        EnemyType::FireMage => commands.spawn((
-            fire_mage(sprites, sprite_layouts),
-            base_enemy(spawn_data.position, player),
-            enemy_children(ranged_enemy_behavior, shadows),
-        )),
+        EnemyType::FireMage => spawn_enemy_with_equipment(
+            commands,
+            (
+                fire_mage(sprites, sprite_layouts),
+                base_enemy(spawn_data.position, player),
+                enemy_children(ranged_enemy_behavior, shadows),
+            ),
+            fire_staff(sprites, sprite_layouts),
+        ),
     };
+}
+
+fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainhand: impl Bundle) {
+    let enemy = commands.spawn(enemy).id();
+
+    let mainhand = commands.spawn(mainhand).id();
+
+    commands.trigger(Equip {
+        item: mainhand,
+        holder: enemy,
+    });
 }
 
 fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
@@ -155,10 +177,9 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
                 GameCollisionLayer::AllyHurtBox,
                 GameCollisionLayer::HighObstacle,
             ]))
-            .with_max_hits(2),
+            .with_max_hits(1),
         Watching(player),
         observe(defeat::on_enemy_defeated),
-        observe(on_equipment_activated),
     )
 }
 
@@ -182,7 +203,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
                 ..default()
             },
         ),
-        related!(Items[(Equipped, sword(sprites)), health_potion(sprites)]),
+        related!(Items[health_potion(sprites)]),
     )
 }
 
@@ -197,7 +218,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
                 ..default()
             },
         ),
-        related!(Items[(Equipped, ice_staff(sprites, sprite_layouts)), health_potion(sprites)]),
+        related!(Items[health_potion(sprites)]),
     )
 }
 
@@ -212,6 +233,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
                 ..default()
             },
         ),
-        related!(Items[(Equipped, fire_staff(sprites, sprite_layouts)), health_potion(sprites)]),
+        related!(Items[health_potion(sprites)]),
     )
 }

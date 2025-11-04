@@ -12,7 +12,7 @@ use crate::{
     prelude::{GameCollisionLayer, Player},
 };
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum DamageSource {
     Player,
     Enemy,
@@ -106,16 +106,12 @@ pub struct DamageDealt {
     pub direction: Option<Vec2>,
 }
 
-/// This is the character holding the weapon that dealt damage
-#[derive(Component)]
-pub struct Damager(pub Entity);
-
 #[derive(EntityEvent)]
 pub struct Defeated {
     pub entity: Entity,
 }
 
-pub fn on_damage_event(
+pub(super) fn on_damage_event(
     attempt_damage: On<AttemptDamage>,
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
@@ -183,7 +179,7 @@ impl Default for DamageFlash {
     }
 }
 
-pub fn on_damage_dealt_flash(
+pub(super) fn on_damage_dealt_flash(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     mut sprite_query: Query<&mut Sprite>,
@@ -202,7 +198,7 @@ pub fn on_damage_dealt_flash(
     }
 }
 
-pub fn tick_and_remove_damage_flash(
+pub(super) fn tick_and_remove_damage_flash(
     mut damage_flash_query: Query<(&mut DamageFlash, &mut Sprite)>,
     time: Res<Time>,
 ) {
@@ -218,7 +214,7 @@ pub fn tick_and_remove_damage_flash(
 #[derive(Component, Clone)]
 pub struct Knockback(pub f32);
 
-pub fn on_damage_dealt_knockback(
+pub(super) fn on_damage_dealt_knockback(
     damage_dealt: On<DamageDealt>,
     knockback_query: Query<&Knockback>,
     mut forces: Query<Forces>,

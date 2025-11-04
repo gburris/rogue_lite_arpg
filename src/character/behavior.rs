@@ -200,7 +200,6 @@ pub fn while_chasing(
             motion.start_moving(target_info.direction);
 
             if target_info.distance < 64.0 {
-                debug!("We chased and succeeded!");
                 commands.trigger(ctx.success());
             }
         }
@@ -217,14 +216,28 @@ fn random_direction() -> Vec2 {
 #[derive(Clone)]
 pub struct AttemptMelee;
 
-pub fn on_attempt_melee(attempt_melee: On<BehaveTrigger<AttemptMelee>>, mut commands: Commands) {
+pub fn on_attempt_melee(
+    attempt_melee: On<BehaveTrigger<AttemptMelee>>,
+    mut commands: Commands,
+    target_query: Query<(Option<&Mainhand>, Has<Targeting>), With<TargetInfo>>,
+) -> Result {
     let ctx = attempt_melee.ctx();
 
-    commands.trigger(UseEquipmentInput {
-        entity: ctx.target_entity(),
-        slot: EquipmentSlot::Mainhand,
-    });
-    commands.trigger(ctx.success());
+    let (mainhand, has_target) = target_query.get(ctx.target_entity())?;
+
+    if !has_target {
+        commands.trigger(ctx.failure());
+    } else if let Some(mainhand) = mainhand {
+        commands.trigger(AIUseEquipment {
+            entity: mainhand.get(),
+        });
+        commands.trigger(ctx.success());
+    } else {
+        // No mainhand equipped
+        commands.trigger(ctx.failure());
+    }
+
+    Ok(())
 }
 
 #[derive(Component, Clone)]
@@ -233,26 +246,33 @@ pub struct KeepDistanceAndFire;
 pub fn while_keeping_distance_and_firing(
     mut commands: Commands,
     mut behave_query: Query<&BehaveCtx, With<KeepDistanceAndFire>>,
-    mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
+    mut target_query: Query<(
+        &mut SimpleMotion,
+        &TargetInfo,
+        Option<&Mainhand>,
+        Has<Targeting>,
+    )>,
 ) -> Result {
     behave_query.iter_mut().try_for_each(|ctx| {
-        let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
+        let (mut motion, target_info, mainhand, has_target) =
+            target_query.get_mut(ctx.target_entity())?;
 
         if !has_target {
             commands.trigger(ctx.failure());
-        } else {
-            commands.trigger(UseEquipmentInput {
-                entity: ctx.target_entity(),
-                slot: EquipmentSlot::Mainhand,
+        } else if let Some(mainhand) = mainhand {
+            commands.trigger(AIUseEquipment {
+                entity: mainhand.get(),
             });
 
             if target_info.distance < 200.0 {
                 // If target is too close we try to move away
-                // TODO: Make this a variable on a component
                 motion.start_moving(-target_info.direction);
             } else if target_info.distance > 300.0 {
                 motion.start_moving(target_info.direction);
             }
+        } else {
+            // No mainhand equipped
+            commands.trigger(ctx.failure());
         }
         Ok(())
     })

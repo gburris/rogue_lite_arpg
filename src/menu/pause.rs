@@ -1,37 +1,42 @@
+use bevy::prelude::*;
+
 use crate::{
     character::Purse,
-    combat::Health,
-    prelude::Menu,
-    prelude::{GameProgress, Player},
+    prelude::*,
     ui::{
-        constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},
         primitives::{menu_header, text},
     },
 };
-use bevy::prelude::*;
 
-#[derive(Component)]
-pub struct MainMenu;
-
-#[derive(Component)]
-pub struct MenuButton(pub Menu);
-
-#[derive(Clone, Copy)]
-enum MenuButtonConfig {
-    Inventory,
-    Stats,
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)
+        .add_systems(
+            Update,
+            handle_menu_button_pressed
+                .run_if(in_state(Menu::Pause))
+                .in_set(MainSystems::Menu),
+        );
 }
 
-impl MenuButtonConfig {
-    fn to_component(self) -> (MenuButton, &'static str) {
-        match self {
-            MenuButtonConfig::Inventory => (MenuButton(Menu::Inventory), "INVENTORY"),
-            MenuButtonConfig::Stats => (MenuButton(Menu::Stats), "STATS"),
+#[derive(Component)]
+struct MainMenu;
+
+#[derive(Component)]
+struct MenuButton(pub Menu);
+
+fn handle_menu_button_pressed(
+    mut button_query: Query<(&Interaction, &MenuButton)>,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    for (interaction, menu_button) in &mut button_query {
+        if *interaction == Interaction::Pressed {
+            next_menu_state.set(menu_button.0);
         }
     }
 }
 
-pub fn spawn_main_menu(
+fn spawn_main_menu(
     mut commands: Commands,
     player: Single<(&Health, &Player, &Purse)>,
     game_progress: Res<GameProgress>,
@@ -40,7 +45,8 @@ pub fn spawn_main_menu(
 
     commands.spawn((
         MainMenu,
-        DespawnOnExit(Menu::MainMenu),
+        DespawnOnExit(Menu::Pause),
+        GlobalZIndex(2),
         Node {
             width: percent(100.0),
             height: percent(100.0),
@@ -48,7 +54,6 @@ pub fn spawn_main_menu(
             flex_direction: FlexDirection::Column,
             ..default()
         },
-        BackgroundColor::from(BACKGROUND_COLOR),
         children![
             menu_header("PAUSED"),
             // Body Section
@@ -63,8 +68,8 @@ pub fn spawn_main_menu(
                     ..default()
                 },
                 children![
-                    menu_button(MenuButtonConfig::Inventory),
-                    menu_button(MenuButtonConfig::Stats),
+                    menu_button(MenuButton(Menu::Inventory), "INVENTORY"),
+                    menu_button(MenuButton(Menu::Stats), "STATS"),
                 ]
             ),
             main_menu_footer(player.get_level(), health, purse.amount, &game_progress),
@@ -72,11 +77,9 @@ pub fn spawn_main_menu(
     ));
 }
 
-fn menu_button(config: MenuButtonConfig) -> impl Bundle {
-    let (button_component, button_text) = config.to_component();
-
+fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
     (
-        button_component,
+        marker,
         Button,
         Node {
             width: px(300.0),

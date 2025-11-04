@@ -1,13 +1,14 @@
 use bevy::{ecs::spawn::SpawnWith, prelude::*, ui_widgets::observe};
 
-use crate::prelude::*;
-
-use super::{
-    display_case::{EQUIP_SLOT_WIDTH, UpdateDisplayCase, VALUE_WIDTH},
-    primitives::{text, width},
+use crate::{
+    menu::inventory::UpdateDisplayCase,
+    prelude::*,
+    ui::primitives::{text, width},
 };
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
+pub const VALUE_WIDTH: f32 = 60.0;
+pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
 
 #[derive(Component)]
 #[relationship(relationship_target = ItemDisplayed)]
@@ -132,7 +133,10 @@ pub fn on_slot_clicked(
                         entity: item_entity,
                     });
                 } else {
-                    commands.entity(item_entity).insert(Equipped);
+                    commands.trigger(Equip {
+                        item: item_entity,
+                        holder: *player,
+                    })
                 }
             } else if consumable {
                 commands.trigger(Consume {

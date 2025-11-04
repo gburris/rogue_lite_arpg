@@ -2,7 +2,6 @@ use bevy::{prelude::*, sprite::Anchor, ui_widgets::observe};
 use rand::Rng;
 
 use crate::{
-    combat::{health::AttemptHeal, mana::ManaCost},
     items::{
         Item, ItemType,
         equipment::{EquipmentSlot, Equippable},
@@ -31,28 +30,24 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
 }
 
 fn on_healing_tome_cast(
-    use_healing_tome: On<UseEquipment>,
+    healing_tome: On<UseEquipment>,
     mut commands: Commands,
-    tome_query: Query<&HealingTome>,
+    tome_query: Query<(&HealingTome, &ItemOf)>,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-) {
-    let tome_entity = use_healing_tome.entity;
-    let holder_entity = use_healing_tome.holder;
-
-    let Ok(tome) = tome_query.get(tome_entity) else {
-        warn!("Tried to use a tome that does not exist");
-        return;
-    };
+) -> Result {
+    let (tome, item_of) = tome_query.get(healing_tome.entity)?;
 
     let health_to_add = rand::rng().random_range(tome.healing.0..tome.healing.1);
     commands.trigger(AttemptHeal {
-        entity: holder_entity,
+        entity: item_of.0,
         amount: health_to_add,
     });
     commands
-        .entity(holder_entity)
+        .entity(item_of.0)
         .with_child(heal_tome_vfx(sprites, sprite_layouts));
+
+    Ok(())
 }
 
 fn heal_tome_vfx(

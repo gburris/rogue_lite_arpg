@@ -24,28 +24,19 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((equipment::plugin, melee::plugin, shield::plugin));
+    app.add_plugins((
+        equipment::plugin,
+        lootable::plugin,
+        melee::plugin,
+        shield::plugin,
+    ));
 
     app.add_systems(
         FixedUpdate,
         magnet::update_magnet_locations.in_set(MainSystems::InGame),
     )
-    .add_systems(
-        Update,
-        (lootable::glow_and_rotate_lootables.in_set(InGameSystems::Vfx),),
-    )
-    .add_observer(on_item_added)
     .add_observer(on_item_added_to_inventory)
-    .add_observer(lootable::on_drop_event)
-    .add_observer(consumable::on_consume_event)
-    .add_observer(despawn_all::<CleanupZone, Lootable>);
-}
-
-fn on_item_added(item_added: On<Add, Item>, mut commands: Commands) {
-    // We do this to avoid having to manually add this observer to every item we create
-    commands
-        .entity(item_added.entity)
-        .observe(lootable::on_lootable_item_interaction);
+    .add_observer(consumable::on_consume_event);
 }
 
 /// This is the base component for all items in the game. If you have a new concept that will be

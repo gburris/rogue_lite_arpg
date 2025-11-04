@@ -16,13 +16,12 @@ impl Mana {
         }
     }
 
-    /// Optionally uses mana if it can afford it, otherwise returns false if it cost too much
-    pub fn attempt_use_mana(&mut self, cost: &ManaCost) -> bool {
-        if self.current_mana >= cost.0 {
-            self.current_mana -= cost.0;
-            return true;
-        }
-        false
+    pub fn has_enough_mana(&self, cost: &ManaCost) -> bool {
+        self.current_mana >= cost.0
+    }
+
+    pub fn use_mana(&mut self, cost: &ManaCost) {
+        self.current_mana = (self.current_mana - cost.0).max(0.0);
     }
 
     pub fn regenerate(&mut self, delta_time: f32) {
@@ -41,7 +40,7 @@ pub struct ManaCost(pub f32);
 pub struct ManaDrainRate(pub f32);
 
 /// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration rate
-pub fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
+pub(super) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     let delta_time = time.delta_secs();
     for mut mana in query.iter_mut() {
         mana.regenerate(delta_time);

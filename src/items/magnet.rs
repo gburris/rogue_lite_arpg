@@ -17,7 +17,7 @@ const MAGNETIC_FORCE: f32 = 2000000.0;
 )]
 pub struct Magnet;
 
-pub fn update_magnet_locations(
+pub(super) fn update_magnet_locations(
     magnet_query: Query<(&ChildOf, &GlobalTransform, &CollidingEntities), With<Magnet>>,
     player_query: Single<(Entity, &GlobalTransform), With<PlayerInteractionRadius>>,
     mut forces: Query<Forces>,

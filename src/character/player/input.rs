@@ -1,87 +1,219 @@
 use bevy::prelude::*;
+use bevy_enhanced_input::prelude::*;
 
-use crate::prelude::*;
-
-use super::{
-    Player,
-    interact::PlayerInteractionInput,
-    movement::{PlayerMovementEvent, PlayerStoppedEvent},
+use crate::{
+    character::player::{AimInput, PlayerMovement, overlay::PlayerEquipmentUsed},
+    prelude::*,
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        player_input
-            .in_set(InGameSystems::PlayerInput)
-            .run_if(in_state(PlayingState::Playing)),
-    );
+    app.add_input_context::<Player>();
+
+    // Use Equipment Logic
+    app.add_observer(on_use_mainhand_input)
+        .add_observer(on_use_offhand_input)
+        .add_observer(on_use_offhand_complete);
+
+    // Pause Logic
+    app.add_observer(on_pause)
+        .add_systems(OnEnter(Pause(true)), deactivate_controls)
+        .add_observer(on_inventory_opened);
+
+    // Unpause Logic
+    app.add_systems(OnEnter(Menu::None), unpause)
+        .add_observer(on_controls_activated);
+}
+
+const MOUSE_SENSITIVITY: f32 = 0.5;
+const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
+
+pub(super) fn player_actions() -> impl Bundle {
+    (actions!(Player[
+        (
+            Action::<PauseGame>::new(),
+            // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
+            // and we want it to be triggerable only after the button is released.
+            ActionSettings {
+                require_reset: true,
+                ..Default::default()
+            },
+            // Can't allow escape on wasm because that un-grabs cursor
+            Bindings::spawn((
+                Spawn(Binding::from(KeyCode::KeyP)),
+                Spawn(Binding::from(GamepadButton::Start)),
+                #[cfg(not(target_family = "wasm"))]
+                Spawn(Binding::from(KeyCode::Escape))
+            )),
+        ),
+        (
+            Action::<OpenInventory>::new(),
+            bindings![KeyCode::KeyI],
+        ),
+        (
+            Action::<PlayerInteractionInput>::new(),
+            bindings![KeyCode::Space, GamepadButton::South],
+        ),
+        (
+            Action::<PlayerMovement>::new(),
+            DeadZone::default(),
+            Bindings::spawn((
+                Cardinal::wasd_keys(),
+                Axial::left_stick(),
+            )),
+        ),
+        (
+            Action::<AimInput>::new(),
+            Bindings::spawn((
+                Spawn((Binding::mouse_motion(), Negate::y(), Scale::splat(MOUSE_SENSITIVITY))),
+                Axial::right_stick().with((
+                    DeadZone { upper_threshold: 0.8, ..default() },
+                    Scale::splat(CONTROLLER_AIM_SENSITIVITY),
+                ))
+            )),
+        ),
+        (
+            Action::<UseMainhand>::new(),
+            bindings![MouseButton::Left, GamepadButton::RightTrigger, GamepadButton::RightTrigger2],
+        ),
+        (
+            Action::<UseOffhand>::new(),
+            bindings![MouseButton::Right, GamepadButton::LeftTrigger, GamepadButton::LeftTrigger2],
+        )
+    ]),)
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct OpenInventory;
+
+fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<NextState<Menu>>) {
+    next_menu_state.set(Menu::Inventory);
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+struct PauseGame;
+
+fn on_pause(_: On<Start<PauseGame>>, mut next_menu_state: ResMut<NextState<Menu>>) {
+    next_menu_state.set(Menu::Pause);
+}
+
+fn deactivate_controls(mut commands: Commands, player: Single<Entity, With<Player>>) {
+    commands
+        .entity(*player)
+        .insert(ContextActivity::<Player>::INACTIVE);
 }
 
 #[derive(Event)]
-pub struct PauseInputEvent {
-    pub menu: Option<Menu>, //What menu to enter on pause
+struct ActivatePlayerControls;
+
+fn unpause(mut commands: Commands, mut next_pause_state: ResMut<NextState<Pause>>) {
+    next_pause_state.set(Pause(false));
+    commands.trigger(ActivatePlayerControls);
 }
 
-fn player_input(
+fn on_controls_activated(
+    _: On<ActivatePlayerControls>,
     mut commands: Commands,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>, // Access keyboard input
-    buttons: Res<ButtonInput<MouseButton>>,
-    mut event_writer: MessageWriter<PlayerMovementEvent>, // Dispatch movement events
-    player_movement_query: Single<Entity, With<Player>>,
+    player: Single<Entity, With<Player>>,
 ) {
-    let player_entity = player_movement_query.into_inner();
+    commands
+        .entity(*player)
+        .insert(ContextActivity::<Player>::ACTIVE);
+}
 
-    if keyboard_input.clear_just_pressed(KeyCode::Escape) {
-        commands.trigger(PauseInputEvent {
-            menu: Some(Menu::MainMenu),
-        });
-        return;
-    }
+#[derive(InputAction)]
+#[action_output(bool)]
+struct UseMainhand;
 
-    if keyboard_input.clear_just_pressed(KeyCode::Space) {
-        commands.trigger(PlayerInteractionInput);
-        return;
-    }
+#[derive(InputAction)]
+#[action_output(bool)]
+struct UseOffhand;
 
-    if buttons.pressed(MouseButton::Left) {
-        commands.trigger(UseEquipmentInput {
-            entity: player_entity,
+fn on_use_mainhand_input(
+    use_mainhand: On<Start<UseMainhand>>,
+    mut commands: Commands,
+    player: Option<Single<(&Mainhand, Option<&mut Mana>), With<Player>>>,
+    mut mainhand_query: Query<EquipmentUsed>,
+) {
+    let Some(player) = player else {
+        commands.trigger(EquipmentUseFailed {
+            holder: use_mainhand.context,
             slot: EquipmentSlot::Mainhand,
-        });
-    }
-
-    if buttons.just_pressed(MouseButton::Right) {
-        commands.trigger(UseEquipmentInput {
-            entity: player_entity,
-            slot: EquipmentSlot::Offhand,
-        });
-    }
-    if buttons.just_released(MouseButton::Right) {
-        commands.trigger(StopUsingHoldableEquipmentInput {
-            entity: player_entity,
-            slot: EquipmentSlot::Offhand,
+            reason: EquipmentUseFailure::NoneEquipped,
         });
         return;
-    }
-    let mut direction = Vec2::ZERO;
+    };
 
-    // Check input for movement and update direction
-    if keyboard_input.pressed(KeyCode::KeyW) {
-        direction.y += 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyS) {
-        direction.y -= 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyA) {
-        direction.x -= 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyD) {
-        direction.x += 1.0;
-    }
+    let (mainhand, mut mana) = player.into_inner();
 
-    if direction.length() > 0.0 {
-        event_writer.write(PlayerMovementEvent { direction });
+    let failure_reason = mainhand_query
+        .get_mut(mainhand.get())
+        .expect("Player should have mainhand")
+        .attempt_use(mana.as_deref_mut());
+
+    if let Err(failure_reason) = failure_reason {
+        commands.trigger(EquipmentUseFailed {
+            holder: use_mainhand.context,
+            slot: EquipmentSlot::Mainhand,
+            reason: failure_reason,
+        });
     } else {
-        commands.trigger(PlayerStoppedEvent);
+        commands.trigger(UseEquipment {
+            entity: mainhand.get(),
+        });
+        commands.trigger(PlayerEquipmentUsed {
+            entity: mainhand.get(),
+        });
+    }
+}
+
+fn on_use_offhand_input(
+    use_offhand: On<Start<UseOffhand>>,
+    mut commands: Commands,
+    player: Option<Single<(&Offhand, Option<&mut Mana>), With<Player>>>,
+    mut offhand_query: Query<EquipmentUsed>,
+) {
+    let Some(player) = player else {
+        commands.trigger(EquipmentUseFailed {
+            holder: use_offhand.context,
+            slot: EquipmentSlot::Offhand,
+            reason: EquipmentUseFailure::NoneEquipped,
+        });
+        return;
+    };
+
+    let (offhand, mut mana) = player.into_inner();
+
+    let failure_reason = offhand_query
+        .get_mut(offhand.get())
+        .expect("Player should have offhand")
+        .attempt_use(mana.as_deref_mut());
+
+    if let Err(failure_reason) = failure_reason {
+        commands.trigger(EquipmentUseFailed {
+            holder: use_offhand.context,
+            slot: EquipmentSlot::Offhand,
+            reason: failure_reason,
+        });
+    } else {
+        commands.trigger(UseEquipment {
+            entity: offhand.get(),
+        });
+        commands.trigger(PlayerEquipmentUsed {
+            entity: offhand.get(),
+        });
+    }
+}
+
+fn on_use_offhand_complete(
+    _: On<Complete<UseOffhand>>,
+    mut commands: Commands,
+    player_offhand: Option<Single<&Offhand, With<Player>>>,
+) {
+    if let Some(player_offhand) = player_offhand {
+        commands.trigger(StopUsingEquipment {
+            entity: player_offhand.get(),
+        })
     }
 }

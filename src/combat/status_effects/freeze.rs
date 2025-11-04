@@ -1,12 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::status_effects::{Status, StatusApplied, StatusOf, slow::Slowed},
+    combat::status_effects::{StatusApplied, StatusOf, slow::Slowed},
     prelude::*,
 };
 
 #[derive(Component, Clone, Default)]
-#[require(Status)]
 pub struct Frozen;
 
 pub(super) fn apply_frozen(

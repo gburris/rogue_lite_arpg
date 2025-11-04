@@ -225,14 +225,17 @@ pub fn on_attempt_melee(
 
     let (mainhand, has_target) = target_query.get(ctx.target_entity())?;
 
-    if !has_target || mainhand.is_none() {
+    if !has_target {
+        commands.trigger(ctx.failure());
+    } else if let Some(mainhand) = mainhand {
+        commands.trigger(AIUseEquipment {
+            entity: mainhand.get(),
+        });
+        commands.trigger(ctx.success());
+    } else {
+        // No mainhand equipped
         commands.trigger(ctx.failure());
     }
-
-    commands.trigger(AIUseEquipment {
-        entity: mainhand.unwrap().get(),
-    });
-    commands.trigger(ctx.success());
 
     Ok(())
 }
@@ -254,20 +257,22 @@ pub fn while_keeping_distance_and_firing(
         let (mut motion, target_info, mainhand, has_target) =
             target_query.get_mut(ctx.target_entity())?;
 
-        if !has_target || mainhand.is_none() {
+        if !has_target {
             commands.trigger(ctx.failure());
-        } else {
+        } else if let Some(mainhand) = mainhand {
             commands.trigger(AIUseEquipment {
-                entity: mainhand.unwrap().get(),
+                entity: mainhand.get(),
             });
 
             if target_info.distance < 200.0 {
                 // If target is too close we try to move away
-                // TODO: Make this a variable on a component
                 motion.start_moving(-target_info.direction);
             } else if target_info.distance > 300.0 {
                 motion.start_moving(target_info.direction);
             }
+        } else {
+            // No mainhand equipped
+            commands.trigger(ctx.failure());
         }
         Ok(())
     })

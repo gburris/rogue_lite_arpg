@@ -122,6 +122,6 @@ impl<'w, 's> EquipmentUsedItem<'w, 's> {
             self.equippable.use_rate.reset();
         }
 
-        return can_use;
+        can_use
     }
 }

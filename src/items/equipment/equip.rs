@@ -17,25 +17,37 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_equip).add_observer(on_unequip);
 }
 
+#[derive(EntityEvent)]
+pub struct Equip {
+    #[event_target]
+    pub item: Entity,
+    pub holder: Entity,
+}
+
 fn on_equip(
-    equipped: On<Add, Equipped>,
+    equipped: On<Equip>,
     mut commands: Commands,
-    mut item_query: Query<(&ItemOf, &Equippable, &mut Visibility), With<Equipped>>,
+    mut item_query: Query<(&Equippable, &mut Visibility, Has<ItemOf>)>,
     mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>), With<Character>>,
 ) {
-    let (item_of, equippable, mut visibility) = item_query
-        .get_mut(equipped.entity)
+    let (equippable, mut visibility, in_inventory) = item_query
+        .get_mut(equipped.item)
         .expect("Added Equipped to non-equippable item");
 
-    let holder_entity = item_of.0;
-
     let (mainhand, offhand) = holder_query
-        .get_mut(holder_entity)
+        .get_mut(equipped.holder)
         .expect("Added Equipment to holder that is not a character");
 
     commands
-        .entity(equipped.entity)
-        .insert(ChildOf(holder_entity));
+        .entity(equipped.item)
+        .insert((Equipped, ChildOf(equipped.holder)));
+
+    // Without this condition items get "re-added" to item relationship and order gets rearranged
+    if !in_inventory {
+        commands
+            .entity(equipped.item)
+            .insert(ItemOf(equipped.holder));
+    }
 
     match equippable.slot {
         EquipmentSlot::Mainhand => {
@@ -44,8 +56,8 @@ fn on_equip(
             }
 
             commands
-                .entity(equipped.entity)
-                .insert(MainhandOf(holder_entity));
+                .entity(equipped.item)
+                .insert(MainhandOf(equipped.holder));
         }
         EquipmentSlot::Offhand => {
             if let Some(offhand) = offhand {
@@ -53,8 +65,8 @@ fn on_equip(
             }
 
             commands
-                .entity(equipped.entity)
-                .insert(OffhandOf(holder_entity));
+                .entity(equipped.item)
+                .insert(OffhandOf(equipped.holder));
         }
     }
 

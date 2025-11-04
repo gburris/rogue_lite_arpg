@@ -107,14 +107,17 @@ impl MeleeWeapon {
 }
 
 fn on_melee_equipped(
-    equipped: On<Add, Equipped>,
+    equipped: On<Equip>,
     mut commands: Commands,
-    mut weapon_query: Query<(&ItemOf, &MeleeWeapon), With<Equipped>>,
+    weapon_query: Query<&MeleeWeapon, With<Equippable>>,
     player: Single<Entity, With<Player>>,
-) -> Result {
-    let (item_of, melee_weapon) = weapon_query.get_mut(equipped.entity)?;
+) {
+    let Ok(melee_weapon) = weapon_query.get(equipped.item) else {
+        error!("on_melee_equipped on wrong type");
+        return;
+    };
 
-    let is_player = *player == item_of.0;
+    let is_player = *player == equipped.holder;
 
     let damage_source = if is_player {
         DamageSource::Player
@@ -123,12 +126,10 @@ fn on_melee_equipped(
     };
 
     // If melee weapon, we need to add collider and new collision layers on equip
-    commands.entity(equipped.entity).insert((
+    commands.entity(equipped.item).insert((
         melee_weapon.hitbox.clone(),
         MeleeWeapon::collision_layers(damage_source),
     ));
-
-    Ok(())
 }
 
 fn handle_melee_collisions(

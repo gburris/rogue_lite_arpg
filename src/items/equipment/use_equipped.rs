@@ -27,9 +27,10 @@ pub(super) fn on_ai_equipment_used(
     mut equipment_query: Query<EquipmentUsed>,
     mut holder_query: Query<Option<&mut Mana>, With<Character>>,
 ) {
-    let mut equipment_used = equipment_query
-        .get_mut(equipment.entity)
-        .expect("AI should have equipment equipped");
+    let Ok(mut equipment_used) = equipment_query.get_mut(equipment.entity) else {
+        debug!("AI killed while attempting to use equipment");
+        return;
+    };
 
     let Ok(mut mana) = holder_query.get_mut(equipment_used.item_of.0) else {
         warn!("Non-character attempted to use equipment");

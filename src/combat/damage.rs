@@ -12,7 +12,7 @@ use crate::{
     prelude::{GameCollisionLayer, Player},
 };
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum DamageSource {
     Player,
     Enemy,

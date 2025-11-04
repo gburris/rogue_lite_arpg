@@ -200,7 +200,6 @@ pub fn while_chasing(
             motion.start_moving(target_info.direction);
 
             if target_info.distance < 64.0 {
-                debug!("We chased and succeeded!");
                 commands.trigger(ctx.success());
             }
         }

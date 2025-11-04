@@ -133,7 +133,10 @@ pub fn on_slot_clicked(
                         entity: item_entity,
                     });
                 } else {
-                    commands.entity(item_entity).insert(Equipped);
+                    commands.trigger(Equip {
+                        item: item_entity,
+                        holder: *player,
+                    })
                 }
             } else if consumable {
                 commands.trigger(Consume {

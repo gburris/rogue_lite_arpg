@@ -11,7 +11,6 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(InputAction)]
 #[action_output(Vec2)]
-
 pub(super) struct PlayerMovement;
 
 fn on_player_movement(

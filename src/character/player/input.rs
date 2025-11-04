@@ -84,7 +84,6 @@ pub(super) fn player_actions() -> impl Bundle {
 
 #[derive(InputAction)]
 #[action_output(bool)]
-
 struct OpenInventory;
 
 fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<NextState<Menu>>) {
@@ -93,7 +92,6 @@ fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<
 
 #[derive(InputAction)]
 #[action_output(bool)]
-
 struct PauseGame;
 
 fn on_pause(_: On<Start<PauseGame>>, mut next_menu_state: ResMut<NextState<Menu>>) {

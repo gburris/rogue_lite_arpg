@@ -49,15 +49,25 @@ fn on_player_aim(
     aim_input: On<Fire<AimInput>>,
     mut player_vision: Single<&mut Vision, With<Player>>,
     mut player_aim: Single<&mut Transform, With<PlayerAim>>,
+    player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>)>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     if window.focused {
-        // Apply input to create a direction vector
-        let new_direction = player_aim.translation.xy() + aim_input.value;
+        // Convert player-relative aim to screen-relative world position
+        let world_aim_pos = player_transform.translation.xy() + player_aim.translation.xy();
 
-        // Normalize and scale to always be exactly AIM_DISTANCE away
-        if new_direction != Vec2::ZERO {
-            player_aim.translation = (new_direction.normalize() * AIM_DISTANCE).extend(0.0);
+        // Apply screen-relative input
+        let new_world_aim_pos = world_aim_pos + aim_input.value;
+
+        // Convert back to player-relative, clamped to max distance
+        let player_pos = player_transform.translation.xy();
+        let direction = new_world_aim_pos - player_pos;
+        let distance = direction.length();
+
+        if distance > AIM_DISTANCE {
+            player_aim.translation = (direction.normalize() * AIM_DISTANCE).extend(0.0);
+        } else {
+            player_aim.translation = direction.extend(0.0);
         }
 
         player_vision.aim_direction = player_aim.translation.xy().normalize_or_zero();

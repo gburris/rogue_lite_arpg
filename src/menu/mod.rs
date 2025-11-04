@@ -43,7 +43,6 @@ pub enum Menu {
 
 #[derive(InputAction)]
 #[action_output(bool)]
-
 struct ResumeGame;
 
 fn on_resume(_: On<Start<ResumeGame>>, mut next_menu_state: ResMut<NextState<Menu>>) {

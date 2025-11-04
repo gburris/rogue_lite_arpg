@@ -136,9 +136,9 @@ fn camera_follow_system(
     time: Res<Time>,
 ) {
     let z = camera.translation.z;
-    let aim = player_aim.translation.with_z(z);
+    let aim: Vec3 = player_aim.translation.with_z(z);
     let player_pos = player_transform.translation.with_z(z);
-    let target = player_pos.lerp(aim, TARGET_BIAS);
+    let target = player_pos.lerp(aim + player_pos, TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera
@@ -155,7 +155,7 @@ pub(super) fn camera_debug_system(
     mut gizmos: Gizmos,
 ) {
     let player_pos = player.translation.xy();
-    let target = player_pos.lerp(player_aim.translation.xy(), TARGET_BIAS);
+    let target = player_pos.lerp(player_aim.translation.xy() + player_pos, TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera

@@ -79,3 +79,13 @@ pub struct AnimationData {
     pub frame_count: usize,  // Number of frames in animation
     pub frame_duration: f32, // Duration of each frame
 }
+
+impl From<(usize, usize, f32)> for AnimationData {
+    fn from((row, frame_count, frame_duration): (usize, usize, f32)) -> Self {
+        Self {
+            row,
+            frame_count,
+            frame_duration,
+        }
+    }
+}

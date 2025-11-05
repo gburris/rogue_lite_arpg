@@ -94,151 +94,30 @@ pub struct DefaultAnimationConfig {
 
 impl Default for DefaultAnimationConfig {
     fn default() -> Self {
-        let mut animations = HashMap::default();
-
-        // Define all animations
-        animations.insert(
-            (CharacterAnimationState::Idle, FacingDirection::Down),
-            AnimationData {
-                row: 14,
-                frame_count: 3,
-                frame_duration: 0.5,
-            },
-        );
-        animations.insert(
-            (CharacterAnimationState::Idle, FacingDirection::Up),
-            AnimationData {
-                row: 12,
-                frame_count: 3,
-                frame_duration: 0.5,
-            },
-        );
-        animations.insert(
-            (CharacterAnimationState::Idle, FacingDirection::Left),
-            AnimationData {
-                row: 13,
-                frame_count: 3,
-                frame_duration: 0.5,
-            },
-        );
-        animations.insert(
-            (CharacterAnimationState::Idle, FacingDirection::Right),
-            AnimationData {
-                row: 15,
-                frame_count: 3,
-                frame_duration: 0.5,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Moving, FacingDirection::Down),
-            AnimationData {
-                row: 10,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Moving, FacingDirection::Up),
-            AnimationData {
-                row: 8,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Moving, FacingDirection::Left),
-            AnimationData {
-                row: 9,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Moving, FacingDirection::Right),
-            AnimationData {
-                row: 11,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-        //Literally less code to repeat this 4x than solve it in a proper way
-        //All four FacingDirections map to defeated down row / animation
-        animations.insert(
-            (CharacterAnimationState::Dying, FacingDirection::Down),
-            AnimationData {
-                row: 20,
-                frame_count: 5,
-                frame_duration: 0.4,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Dying, FacingDirection::Left),
-            AnimationData {
-                row: 20,
-                frame_count: 5,
-                frame_duration: 0.4,
-            },
-        );
-        animations.insert(
-            (CharacterAnimationState::Dying, FacingDirection::Right),
-            AnimationData {
-                row: 20,
-                frame_count: 5,
-                frame_duration: 0.4,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Dying, FacingDirection::Up),
-            AnimationData {
-                row: 20,
-                frame_count: 5,
-                frame_duration: 0.4,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Attacking, FacingDirection::Up),
-            AnimationData {
-                row: 16,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Attacking, FacingDirection::Down),
-            AnimationData {
-                row: 18,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-        animations.insert(
-            (CharacterAnimationState::Attacking, FacingDirection::Left),
-            AnimationData {
-                row: 17,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        animations.insert(
-            (CharacterAnimationState::Attacking, FacingDirection::Right),
-            AnimationData {
-                row: 19,
-                frame_count: 9,
-                frame_duration: 0.1,
-            },
-        );
-
-        // Add more animations as needed...
-
+        use CharacterAnimationState::*;
+        use FacingDirection::*;
+        let data = [
+            (Idle, Up, (12, 3, 0.5)),
+            (Idle, Left, (13, 3, 0.5)),
+            (Idle, Down, (14, 3, 0.5)),
+            (Idle, Right, (15, 3, 0.5)),
+            (Moving, Up, (8, 9, 0.1)),
+            (Moving, Left, (9, 9, 0.1)),
+            (Moving, Down, (10, 9, 0.1)),
+            (Moving, Right, (11, 9, 0.1)),
+            (Dying, Up, (20, 5, 0.4)),
+            (Dying, Left, (20, 5, 0.4)),
+            (Dying, Down, (20, 5, 0.4)),
+            (Dying, Right, (20, 5, 0.4)),
+            (Attacking, Up, (16, 9, 0.1)),
+            (Attacking, Left, (17, 9, 0.1)),
+            (Attacking, Down, (18, 9, 0.1)),
+            (Attacking, Right, (19, 9, 0.1)),
+        ];
+        let animations = data
+            .into_iter()
+            .map(|(state, dir, data)| ((state, dir), AnimationData::from(data)))
+            .collect::<HashMap<_, _>>();
         Self {
             columns: 13,
             animations,

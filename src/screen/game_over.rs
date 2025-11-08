@@ -1,16 +1,22 @@
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{
+    prelude::{AppState, Player, RestartEvent},
+    ui_primitives::{constants::TITLE_FONT_SIZE, primitives::text},
+};
 
-use super::{constants::TITLE_FONT_SIZE, primitives::text};
+pub(super) fn plugin(app: &mut App) {
+    // Game over systems
+    app.add_systems(OnEnter(AppState::GameOver), spawn_game_over_screen);
+}
 
 #[derive(Component)]
-pub struct GameOverScreen;
+struct GameOverScreen;
 
 #[derive(Component)]
-pub struct RestartButton;
+struct RestartButton;
 
-pub fn spawn(mut commands: Commands) {
+fn spawn_game_over_screen(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
         DespawnOnExit(AppState::GameOver),

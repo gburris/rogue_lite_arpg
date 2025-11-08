@@ -10,7 +10,7 @@ use crate::{
         DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
     },
     prelude::*,
-    ui::{
+    ui_primitives::{
         constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
         primitives::{menu_header, text, width},
     },

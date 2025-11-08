@@ -1,24 +1,33 @@
 use bevy::prelude::*;
 
-use crate::prelude::AppState;
-
-use super::{
-    constants::TITLE_FONT_SIZE,
-    primitives::{gold_border, text},
+use crate::{
+    prelude::AppState,
+    ui_primitives::{
+        constants::TITLE_FONT_SIZE,
+        primitives::{gold_border, text},
+    },
 };
 
-#[derive(Component)]
-pub struct StartScreen;
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(AppState::StartScreen), spawn_splash_screen)
+        .add_systems(
+            Update,
+            (handle_button_interactions, animate_text).run_if(in_state(AppState::StartScreen)),
+        );
+}
 
 #[derive(Component)]
-pub struct StartScreenButton;
+struct SplashScreen;
 
 #[derive(Component)]
-pub struct AnimatedText;
+struct StartScreenButton;
 
-pub fn spawn(mut commands: Commands) {
+#[derive(Component)]
+struct AnimatedText;
+
+pub fn spawn_splash_screen(mut commands: Commands) {
     commands.spawn((
-        StartScreen,
+        SplashScreen,
         DespawnOnExit(AppState::StartScreen),
         Node {
             width: percent(100.0),
@@ -122,7 +131,7 @@ fn start_screen_footer() -> impl Bundle {
 }
 
 // Enhanced button system with more dramatic hover effects
-pub fn button_system(
+fn handle_button_interactions(
     mut interaction_query: Query<
         (&Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<StartScreenButton>),
@@ -148,7 +157,7 @@ pub fn button_system(
     }
 }
 
-pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
+fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
     for mut color in query.iter_mut() {
         let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6; // Increased frequency and amplitude
         *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));

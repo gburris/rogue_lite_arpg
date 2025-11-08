@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     prelude::{InGameSystems, Lifespan, ZLayer},
-    ui::primitives::text,
+    ui_primitives::primitives::text,
 };
 
 use super::Player;

@@ -101,10 +101,11 @@ pub(super) fn get_window_plugin() -> WindowPlugin {
         primary_window: Some(Window {
             title: String::from("Baba Yaga"),
             fit_canvas_to_parent: cfg!(target_arch = "wasm32"),
+            resizable: false,
             resolution: if cfg!(target_arch = "wasm32") {
                 Default::default() // No resolution for wasm32
             } else {
-                WindowResolution::new(1920, 1080) // Set resolution for non-WASM
+                WindowResolution::new(1280, 720) // Set resolution for non-WASM
             },
             ..default()
         }),
@@ -117,8 +118,8 @@ fn spawn_camera(mut commands: Commands) {
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
             scaling_mode: ScalingMode::Fixed {
-                width: 960.0,
-                height: 540.0,
+                width: 640.0,
+                height: 360.0,
             },
             ..OrthographicProjection::default_2d()
         }),
@@ -126,8 +127,8 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 const DECAY_RATE: f32 = 2.3; // f32::ln(10.0);
-const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
-const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
+const TARGET_BIAS: f32 = 0.6; // 0.5 is middle of the two positions between the player and the aim position
+const CAMERA_DISTANCE_CONSTRAINT: f32 = 400.0; // The camera will not go further than this distance from the player
 
 fn camera_follow_system(
     player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,

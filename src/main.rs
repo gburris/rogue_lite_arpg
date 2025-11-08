@@ -11,7 +11,8 @@ mod combat;
 mod configuration;
 mod items;
 mod menu;
-mod ui;
+mod screen;
+mod ui_primitives;
 mod utility;
 mod world;
 
@@ -43,5 +44,5 @@ fn plugin(app: &mut App) {
     app.add_plugins((world::plugin, items::plugin, character::CharacterPlugin));
 
     // UI
-    app.add_plugins((ui::plugin::UIPlugin, menu::plugin));
+    app.add_plugins((menu::plugin, screen::plugin, ui_primitives::plugin));
 }

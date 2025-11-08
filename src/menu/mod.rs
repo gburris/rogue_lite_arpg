@@ -13,7 +13,7 @@ use bevy::{
 };
 use bevy_enhanced_input::prelude::*;
 
-use crate::{prelude::*, ui::constants::BACKGROUND_COLOR};
+use crate::{prelude::*, ui_primitives::constants::BACKGROUND_COLOR};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((

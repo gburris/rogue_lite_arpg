@@ -3,7 +3,7 @@ use bevy::{ecs::spawn::SpawnWith, prelude::*, ui_widgets::observe};
 use crate::{
     menu::inventory::UpdateDisplayCase,
     prelude::*,
-    ui::primitives::{text, width},
+    ui_primitives::primitives::{text, width},
 };
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);

@@ -54,7 +54,7 @@ fn random_angle(angle_range: f32) -> f32 {
     rng.random_range(-angle_range..angle_range).to_radians()
 }
 
-pub fn on_damage_overlay_amount(
+pub(super) fn on_damage_overlay_amount(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     damaged_query: Query<&ColliderAabb>,
@@ -68,7 +68,7 @@ pub fn on_damage_overlay_amount(
     );
 }
 
-pub fn on_healing_overlay_amount(
+pub(super) fn on_healing_overlay_amount(
     healed: On<Healed>,
     mut commands: Commands,
     healed_query: Query<&ColliderAabb>,

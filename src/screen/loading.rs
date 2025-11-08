@@ -2,21 +2,27 @@ use bevy::prelude::*;
 
 use crate::{
     prelude::AppState,
-    ui::{
+    ui_primitives::{
         constants::TITLE_FONT_SIZE,
         primitives::{gold_border, text},
     },
 };
 
-#[derive(Component)]
-pub struct LoadScreen;
+pub(super) fn plugin(app: &mut App) {
+    //Loading screen
+    app.add_systems(OnEnter(AppState::SpawnZone), spawn_loading_screen)
+        .add_systems(Update, animate_text.run_if(in_state(AppState::SpawnZone)));
+}
 
 #[derive(Component)]
-pub struct AnimatedText;
+struct LoadingScreen;
 
-pub fn spawn(mut commands: Commands) {
+#[derive(Component)]
+struct AnimatedText;
+
+fn spawn_loading_screen(mut commands: Commands) {
     commands.spawn((
-        LoadScreen,
+        LoadingScreen,
         DespawnOnExit(AppState::SpawnZone),
         Node {
             width: percent(100.0),
@@ -125,7 +131,7 @@ fn footer_section() -> impl Bundle {
     )
 }
 
-pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
+fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
     for mut color in query.iter_mut() {
         let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6; // Increased frequency and amplitude
         *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     character::Purse,
     prelude::*,
-    ui::{
+    ui_primitives::{
         constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},
         primitives::{menu_header, text},
     },

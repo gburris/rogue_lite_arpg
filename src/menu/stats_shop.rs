@@ -1,6 +1,6 @@
 use crate::{
     prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats},
-    ui::{
+    ui_primitives::{
         constants::DARK_GRAY_ALPHA_COLOR,
         primitives::{menu_header, text},
     },

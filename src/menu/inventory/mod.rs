@@ -11,7 +11,7 @@ use crate::{
     },
     prelude::*,
     ui::{
-        constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        constants::{color, val},
         primitives::{menu_header, text, width},
     },
 };
@@ -57,7 +57,7 @@ fn spawn_inventory_menu(
             (
                 Node {
                     width: percent(100.0),
-                    height: FOOTER_HEIGHT,
+                    height: val::FOOTER_HEIGHT,
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     align_items: AlignItems::Center,
@@ -65,7 +65,7 @@ fn spawn_inventory_menu(
                     column_gap: px(20.0),
                     ..default()
                 },
-                BackgroundColor::from(DARK_GRAY_COLOR),
+                BackgroundColor::from(color::DARK_GRAY),
                 children![
                     text("Left click to equip/consume", 24.0),
                     text("Right click to drop", 24.0),
@@ -107,7 +107,7 @@ fn display_case(inventory_owner: Entity) -> impl Bundle {
             flex_direction: FlexDirection::Column,
             ..default()
         },
-        BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+        BackgroundColor::from(color::DARK_GRAY_ALPHA),
         children![
             // inventory header
             (
@@ -121,7 +121,7 @@ fn display_case(inventory_owner: Entity) -> impl Bundle {
                     align_items: AlignItems::Center,
                     ..default()
                 },
-                BorderColor::from(Color::WHITE),
+                BorderColor::from(color::WHITE),
                 children![
                     width(30.0),
                     text("Name", 18.0),
@@ -172,7 +172,7 @@ fn on_display_case_updated(
         .for_each(|(e, _)| commands.entity(e).despawn());
 
     let Some(items) = items else {
-        return ;
+        return;
     };
 
     // Get name and entity for each item in inventory
@@ -192,7 +192,6 @@ fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
-    
 }
 
 const LINE_HEIGHT: f32 = 35.;

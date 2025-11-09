@@ -4,7 +4,7 @@ use crate::{
     character::Purse,
     prelude::*,
     ui::{
-        constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        constants::{color, val},
         primitives::{menu_header, text},
     },
 };
@@ -89,8 +89,8 @@ fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
             align_items: AlignItems::Center,
             ..default()
         },
-        BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor(DARK_GRAY_COLOR),
+        BorderColor::all(color::GOLD_BORDER),
+        BackgroundColor(color::DARK_GRAY),
         children![text(button_text, 32.0)],
     )
 }
@@ -105,14 +105,14 @@ fn main_menu_footer(
     (
         Node {
             width: percent(100.0),
-            height: FOOTER_HEIGHT,
+            height: val::FOOTER_HEIGHT,
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
             padding: px(40.0).horizontal(),
             ..default()
         },
-        BackgroundColor::from(DARK_GRAY_COLOR),
+        BackgroundColor::from(color::DARK_GRAY),
         children![
             // left side player info
             (

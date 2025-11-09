@@ -1,7 +1,7 @@
 use crate::{
     prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats},
     ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
+        constants::color,
         primitives::{menu_header, text},
     },
 };
@@ -69,7 +69,7 @@ pub fn spawn_stats_shop_menu(
                     row_gap: px(10.0),
                     ..default()
                 },
-                BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+                BackgroundColor::from(color::DARK_GRAY_ALPHA),
                 children![
                     stat_row(DisplayableStatType::Agility, stats),
                     stat_row(DisplayableStatType::Strength, stats),

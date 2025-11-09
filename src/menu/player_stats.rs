@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::{
     prelude::{Menu, PlayerStats},
     ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
+        constants::color,
         primitives::{menu_header, text},
     },
 };
@@ -43,7 +43,7 @@ fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
                         padding: px(20.0).all(),
                         ..default()
                     },
-                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+                    BackgroundColor::from(color::DARK_GRAY_ALPHA),
                     children![
                         stat_row("Agility", stats.agility, "Movement speed, roll range"),
                         stat_row("Strength", stats.strength, "Melee swing damage"),

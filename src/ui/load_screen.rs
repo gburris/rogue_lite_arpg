@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::{
     prelude::AppState,
     ui::{
-        constants::TITLE_FONT_SIZE,
+        constants::{color, font_size},
+        element::Element,
         primitives::{gold_border, text},
     },
 };
@@ -18,18 +19,15 @@ pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
         DespawnOnExit(AppState::SpawnZone),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
+        Element::new()
+            .width(percent(100.0))
+            .height(percent(100.0))
+            .flex_direction(FlexDirection::Column)
             // Make sure there's no extra space on sides
-            padding: px(0.0).all(),
-            margin: px(0.0).all(),
-            ..default()
-        },
-        // Darker background for more contrast
-        BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
-        GlobalZIndex(1),
+            .padding(px(0.0).all())
+            .margin(px(0.0).all())
+            .background_color(color::LOAD_SCREEN_BACKGROUND)
+            .global_z_index(1),
         children![
             gold_border(),
             title_section(),
@@ -62,11 +60,11 @@ fn title_section() -> impl Bundle {
                 margin: px(0.0).all(),
                 ..default()
             },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
+            BorderColor::all(color::GOLD_BORDER),
+            BackgroundColor::from(color::BLACK.with_alpha(0.3)),
             children![(
-                text("Loading Instance", TITLE_FONT_SIZE),
-                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
+                text("Loading Instance", font_size::TITLE),
+                TextColor::from(color::TEXT_COLOR),
                 AnimatedText,
             )]
         )],
@@ -95,11 +93,11 @@ fn body_section() -> impl Bundle {
                 margin: px(20.0).all(),
                 ..default()
             },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            BorderColor::all(color::GOLD_BORDER),
+            BackgroundColor(color::BUTTON_BACKGROUND.with_alpha(0.7)),
             children![(
                 text("Loading Instance", 48.0),
-                TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
+                TextColor::from(color::TEXT_COLOR_ACTIVE),
             )]
         )],
     )
@@ -117,10 +115,10 @@ fn footer_section() -> impl Bundle {
             margin: px(0.0).all(),
             ..default()
         },
-        BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+        BackgroundColor::from(color::BLACK.with_alpha(0.4)),
         children![(
             text("I'm loading", 24.0),
-            TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
+            TextColor::from(color::TEXT_COLOR_LOADING),
         )],
     )
 }

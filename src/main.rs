@@ -1,3 +1,4 @@
+#![feature(const_trait_impl, const_convert)]
 // Support configuring Bevy lints within code.
 #![cfg_attr(bevy_lint, feature(register_tool), register_tool(bevy))]
 // Disable console on Windows for non-dev builds.
@@ -43,5 +44,5 @@ fn plugin(app: &mut App) {
     app.add_plugins((world::plugin, items::plugin, character::CharacterPlugin));
 
     // UI
-    app.add_plugins((ui::plugin::UIPlugin, menu::plugin));
+    app.add_plugins((ui::plugin, menu::plugin));
 }

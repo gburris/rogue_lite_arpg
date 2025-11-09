@@ -176,7 +176,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
 
 fn add_hub_entrance(map_data: &mut MapData, bounds: &Rect) {
     let entrance_width = ENTRANCE_WIDTH;
-    let entrance_x_start = (bounds.min.x as i32 + bounds.max.x as i32) / 2 - entrance_width / 2;
+    let entrance_x_start = i32::midpoint(bounds.min.x as i32, bounds.max.x as i32) - entrance_width / 2;
 
     // Create the entrance path
     let y_range_start = bounds.min.y as i32 - 5;

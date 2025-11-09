@@ -57,7 +57,7 @@ pub(super) struct TargetInfo {
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
     pub direction: Vec2,
-    /// Whether the observed entity is within an unobstructed line of sight (based on RayCaster).
+    /// Whether the observed entity is within an unobstructed line of sight (based on `RayCaster`).
     pub line_of_sight: bool,
     /// Whether the observed entity is within the entity’s vision cone angle.
     pub in_vision_cone: bool,
@@ -129,7 +129,7 @@ fn update_target_info(
     npc_query.par_iter_mut().for_each(
         |(mut target_info, mut ray_caster, transform, watching, targeting)| {
             // Track distance and direction to target if there is one, otherwise track watching
-            let target_entity = targeting.map(|t| t.0).unwrap_or(watching.0);
+            let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             if let Ok(target_transform) = target_query.get(target_entity) {
                 let target_direction = (target_transform.translation.xy()
@@ -180,9 +180,9 @@ fn is_target_in_sight(
             target_info.in_vision_cone =
                 target_info.direction.dot(vision.aim_direction) > vision_cone_dot;
 
-            let target_entity = targeting.map(|t| t.0).unwrap_or(watching.0);
+            let target_entity = targeting.map_or(watching.0, |t| t.0);
 
-            for hit in ray_hits.iter() {
+            for hit in ray_hits {
                 // Check direct match
                 if hit.entity == target_entity {
                     target_info.line_of_sight = true;

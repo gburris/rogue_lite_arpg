@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::prelude::{GameCollisionLayer, PlayerInteractionRadius};
 
-const MAGNETIC_FORCE: f32 = 2000000.0;
+const MAGNETIC_FORCE: f32 = 2_000_000.0;
 
 #[derive(Component)]
 #[require(

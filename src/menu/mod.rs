@@ -13,7 +13,7 @@ use bevy::{
 };
 use bevy_enhanced_input::prelude::*;
 
-use crate::{prelude::*, ui::constants::BACKGROUND_COLOR};
+use crate::{prelude::*, ui::constants::color};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -85,7 +85,7 @@ fn menu_background() -> impl Bundle {
             ..default()
         },
         GlobalZIndex(1),
-        BackgroundColor::from(BACKGROUND_COLOR),
+        BackgroundColor::from(color::BACKGROUND),
     )
 }
 

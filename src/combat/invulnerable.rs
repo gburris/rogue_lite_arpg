@@ -28,7 +28,7 @@ impl IFrames {
 
         if let Some(flash) = &mut self.flash_timer {
             flash.reset();
-        };
+        }
     }
 }
 
@@ -37,7 +37,7 @@ pub(super) fn handle_invulnerability(
     time: Res<Time>,
     mut query: Query<(&mut IFrames, &mut Sprite)>,
 ) {
-    for (mut iframes, mut sprite) in query.iter_mut() {
+    for (mut iframes, mut sprite) in &mut query {
         if iframes.is_invulnerable {
             iframes.invulnerable_timer.tick(time.delta());
 

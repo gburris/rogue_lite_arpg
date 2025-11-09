@@ -150,7 +150,7 @@ fn spawn_enemy(
             ),
             fire_staff(sprites, sprite_layouts),
         ),
-    };
+    }
 }
 
 fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainhand: impl Bundle) {

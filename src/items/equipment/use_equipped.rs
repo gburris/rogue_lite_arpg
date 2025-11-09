@@ -71,7 +71,7 @@ pub(super) fn tick_equippable_use_rate(
     mut equippable_query: Query<&mut Equippable>,
     time: Res<Time>,
 ) {
-    for mut equippable in equippable_query.iter_mut() {
+    for mut equippable in &mut equippable_query {
         equippable.use_rate.tick(time.delta());
     }
 }
@@ -87,7 +87,7 @@ pub struct EquipmentUsed {
     pub item_of: &'static ItemOf,
 }
 
-impl<'w, 's> EquipmentUsedItem<'w, 's> {
+impl EquipmentUsedItem<'_, '_> {
     pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
         // Check cooldown first
         if !self.equippable.use_rate.is_finished() {

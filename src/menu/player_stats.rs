@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::{
     prelude::{Menu, PlayerStats},
     ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
+        constants::color,
+        element::node,
         primitives::{menu_header, text},
     },
 };
@@ -24,26 +25,24 @@ fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
             StatsMenu,
             DespawnOnExit(Menu::Stats),
             GlobalZIndex(2),
-            Node {
-                width: percent(100.0),
-                height: percent(100.0),
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                row_gap: px(20.0),
-                ..default()
-            },
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .align_items(AlignItems::Center)
+                .flex_direction(FlexDirection::Column)
+                .row_gap(px(20.0))
+                .build(),
             children![
                 menu_header("STATS"),
                 (
                     StatsDisplay,
-                    Node {
-                        width: px(600.0),
-                        height: percent(80.0),
-                        flex_direction: FlexDirection::Column,
-                        padding: px(20.0).all(),
-                        ..default()
-                    },
-                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+                    node()
+                        .width(px(600.0))
+                        .height(percent(80.0))
+                        .flex_direction(FlexDirection::Column)
+                        .padding(px(20.0).all())
+                        .build(),
+                    BackgroundColor::from(color::DARK_GRAY_ALPHA),
                     children![
                         stat_row("Agility", stats.agility, "Movement speed, roll range"),
                         stat_row("Strength", stats.strength, "Melee swing damage"),
@@ -63,32 +62,29 @@ fn stat_row(
     description: impl Into<String>,
 ) -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(60.0),
-            padding: px(10.0).all(),
-            margin: px(5.0).bottom(),
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::Center,
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .height(px(60.0))
+            .padding(px(10.0).all())
+            .margin(px(5.0).bottom())
+            .justify_content(JustifyContent::SpaceBetween)
+            .align_items(AlignItems::Center)
+            .build(),
         BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         children![
             // left side
             (
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
+                node()
+                    .flex_direction(FlexDirection::Column)
+                    .justify_content(JustifyContent::Center)
+                    .build(),
                 children![
                     text(stat_name, 24.0),
                     (
                         text(description, 16.0),
-                        Node {
-                            margin: px(4.0).top(),
-                            ..default()
-                        },
+                        node()
+                            .margin(px(4.0).top())
+                            .build(),
                     )
                 ]
             ),

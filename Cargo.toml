@@ -3,7 +3,6 @@ name = "baba_yaga"
 version = "0.1.0"
 edition = "2024"
 description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
-description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
 
 [dependencies]
 bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
@@ -22,6 +21,7 @@ tracing = { version = "0.1", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
+bon = "3.8.1"
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
@@ -69,15 +69,6 @@ too_many_arguments = "allow"
 type_complexity = "allow"
 # Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
 nonstandard_macro_braces = "warn"
-needless_pass_by_value = "allow"
-cast_precision_loss = "allow"
-cast_possible_truncation = "allow"
-cast_possible_wrap = "allow"
-must_use_candidate = "allow"
-return_self_not_must_use = "allow"
-missing_panics_doc = "allow"
-missing_errors_doc = "allow"
-cast_sign_loss = "allow"
 needless_pass_by_value = "allow"
 cast_precision_loss = "allow"
 cast_possible_truncation = "allow"

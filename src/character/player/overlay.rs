@@ -1,6 +1,6 @@
 use bevy::{ecs::spawn::SpawnIter, prelude::*};
 
-use crate::prelude::*;
+use crate::{prelude::*, ui::element::node};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -56,23 +56,21 @@ const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 pub(super) fn spawn_player_overlay(mut commands: Commands) {
     commands.spawn((
         PlayerOverlay,
-        Node {
-            width: percent(100.),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
-            padding: px(20.0).all(),
-            ..default()
-        },
+        node()
+            .width(percent(100.))
+            .height(percent(100.0))
+            .flex_direction(FlexDirection::Column)
+            .padding(px(20.0).all())
+            .build(),
         children![
             // Top left container for health and mana bars
             (
-                Node {
-                    width: percent(100.0),
-                    height: auto(),
-                    flex_direction: FlexDirection::Column,
-                    row_gap: px(10.0),
-                    ..default()
-                },
+                node()
+                    .width(percent(100.0))
+                    .height(auto())
+                    .flex_direction(FlexDirection::Column)
+                    .row_gap(px(10.0))
+                    .build(),
                 children![
                     attribute_bar(
                         HealthBar,
@@ -88,19 +86,17 @@ pub(super) fn spawn_player_overlay(mut commands: Commands) {
                     )
                 ]
             ),
-            Node {
-                flex_grow: 1.0,
-                ..default()
-            },
+            node()
+                .flex_grow(1.0)
+                .build(),
             (
-                Node {
-                    width: percent(100.0),
-                    height: auto(),
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::FlexEnd,
-                    ..default()
-                },
+                node()
+                    .width(percent(100.0))
+                    .height(auto())
+                    .flex_direction(FlexDirection::Row)
+                    .justify_content(JustifyContent::SpaceBetween)
+                    .align_items(AlignItems::FlexEnd)
+                    .build(),
                 children![experience_bar(), action_bar()]
             )
         ],
@@ -116,29 +112,26 @@ fn attribute_bar(
     bar_color: Color,
 ) -> impl Bundle {
     (
-        Node {
-            width: ATTRIBUTE_BAR_WIDTH,
-            height: px(15.0),
-            ..default()
-        },
+        node()
+            .width(ATTRIBUTE_BAR_WIDTH)
+            .height(px(15.0))
+            .build(),
         BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
         children![
             (
                 marker_component,
-                Node {
-                    width: ATTRIBUTE_BAR_WIDTH,
-                    height: px(15.0),
-                    ..default()
-                },
+                node()
+                    .width(ATTRIBUTE_BAR_WIDTH)
+                    .height(px(15.0))
+                    .build(),
                 BackgroundColor::from(bar_color),
             ),
             (
                 change_component,
-                Node {
-                    width: px(0.0),
-                    height: px(15.0),
-                    ..default()
-                },
+                node()
+                    .width(px(0.0))
+                    .height(px(15.0))
+                    .build(),
                 BackgroundColor::from(BAR_CHANGE_COLOR),
             )
         ],
@@ -223,42 +216,37 @@ fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_wi
 
 fn experience_bar() -> impl Bundle {
     (
-        Node {
-            width: px(400.0),
-            height: px(20.0),
-            justify_content: JustifyContent::FlexStart,
-            align_items: AlignItems::FlexStart,
-            // Add overflow visibility for debugging
-            overflow: Overflow::visible(),
-            ..default()
-        },
+        node()
+            .width(px(400.0))
+            .height(px(20.0))
+            .justify_content(JustifyContent::FlexStart)
+            .align_items(AlignItems::FlexStart)
+            .overflow(Overflow::visible())
+            .build(),
         children![
             (
-                Node {
-                    width: px(400.0),
-                    height: px(20.0),
-                    ..default()
-                },
+                node()
+                    .width(px(400.0))
+                    .height(px(20.0))
+                    .build(),
                 BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
             ),
             (
                 ExpBar,
-                Node {
-                    width: px(0.0),
-                    height: px(20.0),
-                    position_type: PositionType::Absolute,
-                    left: px(0.0),
-                    ..default()
-                },
+                node()
+                    .width(px(0.0))
+                    .height(px(20.0))
+                    .position_type(PositionType::Absolute)
+                    .left(px(0.0))
+                    .build(),
                 BackgroundColor::from(EXP_COLOR),
                 Children::spawn(SpawnIter((1..10).map(|i| (
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: px(i as f32 * 40.0),
-                        width: px(2.0),
-                        height: px(20.0),
-                        ..default()
-                    },
+                    node()
+                        .position_type(PositionType::Absolute)
+                        .left(px(i as f32 * 40.0))
+                        .width(px(2.0))
+                        .height(px(20.0))
+                        .build(),
                     BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)),
                 ))))
             )
@@ -298,10 +286,9 @@ const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.2); // Semi-trans
 fn action_bar() -> impl Bundle {
     (
         Name::new("Action Bar"),
-        Node {
-            flex_direction: FlexDirection::Row,
-            ..default()
-        },
+        node()
+            .flex_direction(FlexDirection::Row)
+            .build(),
         Children::spawn(SpawnIter(
             [EquipmentSlot::Mainhand, EquipmentSlot::Offhand]
                 .iter()
@@ -313,21 +300,19 @@ fn action_bar() -> impl Bundle {
 fn action_box(slot: EquipmentSlot) -> impl Bundle {
     (
         ActionBox { slot },
-        Node {
-            width: px(ACTION_BOX_SIZE),
-            height: px(ACTION_BOX_SIZE),
-            border: px(ACTION_BOX_BORDER).all(),
-            ..default()
-        },
+        node()
+            .width(px(ACTION_BOX_SIZE))
+            .height(px(ACTION_BOX_SIZE))
+            .border(px(ACTION_BOX_BORDER).all())
+            .build(),
         BackgroundColor::from(ACTION_BOX_COLOR),
         BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
         Children::spawn_one((
             ImageNode::default(),
-            Node {
-                width: percent(100.0),
-                height: percent(100.0),
-                ..default()
-            },
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .build(),
         )),
     )
 }
@@ -393,14 +378,13 @@ fn on_equipment_use_add_cooldown_line(
         commands.entity(box_entity).with_children(|parent| {
             parent.spawn((
                 CooldownIndicator,
-                Node {
-                    width: px(ACTION_BOX_INTERIOR_SIZE),
-                    height: px(ACTION_BOX_INTERIOR_SIZE),
-                    position_type: PositionType::Absolute,
-                    left: px(0.0),
-                    top: px(0.0),
-                    ..default()
-                },
+                node()
+                    .width(px(ACTION_BOX_INTERIOR_SIZE))
+                    .height(px(ACTION_BOX_INTERIOR_SIZE))
+                    .position_type(PositionType::Absolute)
+                    .left(px(0.0))
+                    .top(px(0.0))
+                    .build(),
                 Lifespan::new(equipmemnt.use_rate.remaining_secs()),
                 BackgroundColor::from(COOLDOWN_LINE_COLOR),
             ));
@@ -420,14 +404,13 @@ pub(super) fn on_equipment_use_failed(
     {
         commands.entity(box_entity).with_child((
             ErrorFlash,
-            Node {
-                width: px(ACTION_BOX_INTERIOR_SIZE),
-                height: px(ACTION_BOX_INTERIOR_SIZE),
-                position_type: PositionType::Absolute,
-                left: px(0.0),
-                top: px(0.0),
-                ..default()
-            },
+            node()
+                .width(px(ACTION_BOX_INTERIOR_SIZE))
+                .height(px(ACTION_BOX_INTERIOR_SIZE))
+                .position_type(PositionType::Absolute)
+                .left(px(0.0))
+                .top(px(0.0))
+                .build(),
             BackgroundColor::from(ERROR_FLASH_COLOR),
         ));
     }

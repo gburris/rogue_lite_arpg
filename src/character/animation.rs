@@ -94,8 +94,8 @@ pub struct DefaultAnimationConfig {
 
 impl Default for DefaultAnimationConfig {
     fn default() -> Self {
-        use CharacterAnimationState::{Attacking, Dying, Idle, Moving};
-        use FacingDirection::{Down, Left, Right, Up};
+        use CharacterAnimationState::{Idle, Moving, Dying, Attacking};
+        use FacingDirection::{Up, Left, Down, Right};
         let data = [
             (Idle, Up, (12, 3, 0.5)),
             (Idle, Left, (13, 3, 0.5)),

@@ -192,6 +192,7 @@ fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
+
 }
 
 const LINE_HEIGHT: f32 = 35.;

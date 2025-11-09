@@ -3,6 +3,7 @@ name = "baba_yaga"
 version = "0.1.0"
 edition = "2024"
 description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
+description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
 
 [dependencies]
 bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
@@ -77,22 +78,29 @@ return_self_not_must_use = "allow"
 missing_panics_doc = "allow"
 missing_errors_doc = "allow"
 cast_sign_loss = "allow"
+needless_pass_by_value = "allow"
+cast_precision_loss = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_panics_doc = "allow"
+missing_errors_doc = "allow"
+cast_sign_loss = "allow"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1
 split-debuginfo = "unpacked"
 
-# Remove expensive debug assertions due to <https://github.com/bevyengine/bevy/issues/14291>
-[profile.dev.package.wgpu-types]
-debug-assertions = false
 
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]
 opt-level = 3
 
-[profile.dev.build-override]
-opt-level = 3
+# Remove expensive debug assertions due to <https://github.com/bevyengine/bevy/issues/14291>
+[profile.dev.package.wgpu-types]
+debug-assertions = false
 
 [profile.release]
 # Compile the entire crate as one unit.

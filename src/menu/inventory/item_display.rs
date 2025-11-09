@@ -32,8 +32,7 @@ pub struct DisplaySlotContext {
 pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bundle {
     let equip_slot_string = context
         .equipment_slot
-        .map(|slot| slot.to_string())
-        .unwrap_or("-".to_string());
+        .map_or("-".to_string(), |slot| slot.to_string());
 
     let equipped_icon = icons.equip_icon.clone();
     let is_equipped = context.is_equipped;
@@ -136,7 +135,7 @@ pub fn on_slot_clicked(
                     commands.trigger(Equip {
                         item: item_entity,
                         holder: *player,
-                    })
+                    });
                 }
             } else if consumable {
                 commands.trigger(Consume {

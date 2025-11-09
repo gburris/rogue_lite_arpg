@@ -23,8 +23,7 @@ pub enum DamageSource {
 impl From<DamageSource> for LayerMask {
     fn from(source: DamageSource) -> Self {
         match source {
-            DamageSource::Player => GameCollisionLayer::EnemyHurtBox.to_bits(),
-            DamageSource::NPC => GameCollisionLayer::EnemyHurtBox.to_bits(),
+            DamageSource::Player | DamageSource::NPC => GameCollisionLayer::EnemyHurtBox.to_bits(),
             DamageSource::Enemy => GameCollisionLayer::AllyHurtBox.to_bits(),
             DamageSource::Environment => {
                 // Environment can affect all characters
@@ -95,7 +94,7 @@ impl Default for AttemptDamage {
     }
 }
 
-/// While AttemptDamageEvent is sent any time a damage source interacts with an entity,
+/// While `AttemptDamageEvent` is sent any time a damage source interacts with an entity,
 ///this event represents when that damage attempt succeeds
 #[derive(EntityEvent)]
 pub struct DamageDealt {
@@ -226,7 +225,7 @@ pub(super) fn on_damage_dealt_knockback(
         info!("Applying knockback!");
         forces
             .get_mut(damage_dealt.entity)?
-            .apply_force(damage_direction * knockback.0 * 1000000.0);
+            .apply_force(damage_direction * knockback.0 * 1_000_000.0);
     }
     Ok(())
 }

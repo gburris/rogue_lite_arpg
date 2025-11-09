@@ -9,14 +9,14 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_interaction_zone_added);
 }
 
-/// Marker component for the sensor added to the player, which must collide with an InteractionZone for
+/// Marker component for the sensor added to the player, which must collide with an `InteractionZone` for
 /// a player interaction to be possible
 #[derive(Component)]
 #[require(Collider::circle(16.0), Sensor, CollidingEntities)]
 pub struct PlayerInteractionRadius;
 
 /// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
-/// this component will trigger the specified `[#InteractionEvent]` on the ChildOf entity (ex. Open Chest, Talk to NPC, Item Pickup)
+/// this component will trigger the specified `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup)
 #[derive(Component)]
 #[require(
     Sensor,
@@ -51,7 +51,7 @@ fn on_player_interaction_input(
     mut commands: Commands,
     interact_query: Query<(&ChildOf, &Transform), With<InteractionZone>>,
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
-) -> Result {
+) {
     let (player_transform, interact_collisions) = player_query.into_inner();
     let player_pos = player_transform.translation.truncate();
 
@@ -69,7 +69,7 @@ fn on_player_interaction_input(
                 })
         })
         // Select colliding zone closest to player
-        .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.partial_cmp(dist_b).unwrap());
+        .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.total_cmp(dist_b));
 
     if let Some((interaction_zone_entity, interactable_entity, _)) = closest_interaction {
         commands.trigger(PlayerInteraction {
@@ -77,10 +77,9 @@ fn on_player_interaction_input(
             interaction_zone_entity,
         });
     }
-    Ok(())
 }
 
-/// This method acts as a constructor, adding a collider to the InteractionZone based the variant chosen
+/// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant chosen
 fn on_interaction_zone_added(
     interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,

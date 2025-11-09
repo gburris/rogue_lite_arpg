@@ -1,7 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-/// Simple motion has no acceleration and assumes all entities move at max speed unless altered by slowed_percentage
+/// Simple motion has no acceleration and assumes all entities move at max speed unless altered by `slowed_percentage`
 /// by Movement
 #[derive(Component, Clone)]
 #[require(FacingDirection, AttackState)]
@@ -9,7 +9,7 @@ pub struct SimpleMotion {
     pub direction: Vec2,
     pub max_speed: f32,
     current_speed: f32,
-    /// Applied on top of max_speed, slowed_percentage of 1.0 represents being "stunned"
+    /// Applied on top of `max_speed`, `slowed_percentage` of 1.0 represents being "stunned"
     slowed_percentage: f32,
 }
 
@@ -68,7 +68,7 @@ impl Default for SimpleMotion {
 
 /// Converts simulation motion into physics "real" motion (using avian linear velocity)
 pub(super) fn motion_to_velocity(mut query: Query<(&SimpleMotion, &mut LinearVelocity)>) {
-    for (motion, mut velocity) in query.iter_mut() {
+    for (motion, mut velocity) in &mut query {
         if motion.is_moving() {
             let temp_vel = motion.get_velocity();
             velocity.x = temp_vel.x;

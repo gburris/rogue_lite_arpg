@@ -38,7 +38,7 @@ fn update_animation_state(
     >,
 ) {
     for (motion, attack_state, health, mut animation_state, mut facing_direction) in
-        character_query.iter_mut()
+        &mut character_query
     {
         facing_direction.set_if_neq(FacingDirection::from_vec2(
             &facing_direction,
@@ -77,7 +77,7 @@ fn cycle_character_animation(
         Or<(Changed<CharacterAnimationState>, Changed<FacingDirection>)>,
     >,
 ) {
-    for (mut indices, mut timer, mut sprite, state, direction) in query.iter_mut() {
+    for (mut indices, mut timer, mut sprite, state, direction) in &mut query {
         *indices = animation_config.get_indices(*state, *direction);
         *timer = AnimationTimer(animation_config.get_timer(*state, *direction));
         if let Some(atlas) = &mut sprite.texture_atlas {
@@ -94,8 +94,8 @@ pub struct DefaultAnimationConfig {
 
 impl Default for DefaultAnimationConfig {
     fn default() -> Self {
-        use CharacterAnimationState::*;
-        use FacingDirection::*;
+        use CharacterAnimationState::{Idle, Moving, Dying, Attacking};
+        use FacingDirection::{Up, Left, Down, Right};
         let data = [
             (Idle, Up, (12, 3, 0.5)),
             (Idle, Left, (13, 3, 0.5)),

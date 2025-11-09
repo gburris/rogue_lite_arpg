@@ -30,7 +30,7 @@ fn animate_sprites(
             None => {
                 commands.entity(entity).remove::<AnimationTimer>();
             }
-        };
+        }
     }
     Ok(())
 }

@@ -129,7 +129,7 @@ pub fn button_system(
     >,
     mut game_state: ResMut<NextState<AppState>>,
 ) {
-    for (interaction, mut bg_color, mut border_color) in interaction_query.iter_mut() {
+    for (interaction, mut bg_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *bg_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
@@ -149,7 +149,7 @@ pub fn button_system(
 }
 
 pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
-    for mut color in query.iter_mut() {
+    for mut color in &mut query {
         let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6; // Increased frequency and amplitude
         *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));
     }

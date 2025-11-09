@@ -214,6 +214,6 @@ fn on_use_offhand_complete(
     if let Some(player_offhand) = player_offhand {
         commands.trigger(StopUsingEquipment {
             entity: player_offhand.get(),
-        })
+        });
     }
 }

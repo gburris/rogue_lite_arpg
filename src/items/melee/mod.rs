@@ -142,7 +142,7 @@ fn handle_melee_collisions(
     )>,
 ) {
     for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities) in
-        melee_query.iter_mut()
+        &mut melee_query
     {
         for &colliding_entity in colliding_entities.iter() {
             // We only hit a given entity once per attack
@@ -170,7 +170,7 @@ fn handle_melee_collisions(
 pub struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming
     initial_angle: f32,
-    /// Comes from "attack_speed" defined on MeleeWeapon
+    /// Comes from "`attack_speed`" defined on `MeleeWeapon`
     duration: Timer,
     entities_damaged: HashSet<Entity>,
 }
@@ -212,10 +212,10 @@ fn on_weapon_melee(
 
 fn end_melee_attacks(
     mut commands: Commands,
-    mut query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
+    query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
     mut attack_state_query: Query<&mut AttackState>,
 ) {
-    for (entity, child_of, attack) in query.iter_mut() {
+    for (entity, child_of, attack) in query {
         if attack.duration.just_finished() {
             if let Ok(mut attack_state) = attack_state_query.get_mut(child_of.parent()) {
                 attack_state.is_attacking = false;

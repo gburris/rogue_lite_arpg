@@ -27,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct YSort {
     /// z layer of sprite, only sprites on the same layer will be y-sorted correctly
     z: f32,
-    /// in some instances we don't want to YSort from Sprite anchor, but instead
+    /// in some instances we don't want to `YSort` from Sprite anchor, but instead
     /// from the feet or some other position on the sprite
     height_offset: f32,
 }
@@ -59,7 +59,7 @@ fn ysort_transforms(
     world_space_config: Res<WorldSpaceConfig>,
     map_layout: Res<MapLayout>,
 ) {
-    for (mut transform, ysort) in transform_query.iter_mut() {
+    for (mut transform, ysort) in &mut transform_query {
         let relative_height_on_map = (transform.translation.y + ysort.height_offset)
             / (map_layout.size.y as f32 * world_space_config.tile_size.y);
 
@@ -102,7 +102,7 @@ pub(super) fn get_window_plugin() -> WindowPlugin {
             title: String::from("Baba Yaga"),
             fit_canvas_to_parent: cfg!(target_arch = "wasm32"),
             resolution: if cfg!(target_arch = "wasm32") {
-                Default::default() // No resolution for wasm32
+                WindowResolution::default() // No resolution for wasm32
             } else {
                 WindowResolution::new(1920, 1080) // Set resolution for non-WASM
             },

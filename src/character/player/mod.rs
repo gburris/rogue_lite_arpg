@@ -90,7 +90,7 @@ impl Default for Player {
 
 impl Player {
     /// Attempts to increase player level based on current experience and level requirement, and then
-    /// sets the new level requirement based on PLAYER_LEVEL_REQUIREMENT_MULTIPLIER
+    /// sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
     ///
     /// returns whether the player leveled up
     pub fn attempt_level_up(&mut self) -> bool {

@@ -193,15 +193,15 @@ pub fn while_chasing(
     chase_query.iter_mut().try_for_each(|ctx| {
         let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
-        if !has_target {
-            debug!("We chased and failed!");
-            commands.trigger(ctx.failure());
-        } else {
+        if has_target {
             motion.start_moving(target_info.direction);
 
             if target_info.distance < 64.0 {
                 commands.trigger(ctx.success());
             }
+        } else {
+            debug!("We chased and failed!");
+            commands.trigger(ctx.failure());
         }
         Ok(())
     })

@@ -31,7 +31,7 @@ fn despawn_expired_entities(
     mut duration_query: Query<(Entity, &mut Lifespan)>,
     time: Res<Time>,
 ) {
-    for (entity, mut duration) in duration_query.iter_mut() {
+    for (entity, mut duration) in &mut duration_query {
         duration.0.tick(time.delta());
 
         if duration.0.is_finished() {
@@ -62,7 +62,7 @@ fn generic_remove_component_system(
     mut query: Query<(Entity, &mut RemoveComponent)>,
     time: Res<Time>,
 ) {
-    for (entity, mut remove_component) in query.iter_mut() {
+    for (entity, mut remove_component) in &mut query {
         remove_component.timer.tick(time.delta());
         if remove_component.timer.is_finished()
             && let Some(remover) = remove_component.remover.take()

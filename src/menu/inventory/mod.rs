@@ -154,7 +154,7 @@ fn on_display_case_updated(
     slots_querys: Query<(Entity, &DisplaySlotOf)>,
     items_query: Query<(Option<&Items>, &DisplayedBy)>,
     item_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
-) -> Result {
+) {
     // Get entities inventory
     let (items, displayed_by) = items_query
         .get(update_display_case.entity)
@@ -172,7 +172,7 @@ fn on_display_case_updated(
         .for_each(|(e, _)| commands.entity(e).despawn());
 
     let Some(items) = items else {
-        return Ok(());
+        return ;
     };
 
     // Get name and entity for each item in inventory
@@ -192,7 +192,7 @@ fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
-    Ok(())
+    
 }
 
 const LINE_HEIGHT: f32 = 35.;
@@ -210,7 +210,7 @@ fn update_scroll_position(
         };
 
         for (_pointer, pointer_map) in hover_map.iter() {
-            for (entity, _hit) in pointer_map.iter() {
+            for (entity, _hit) in pointer_map {
                 if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
                     scroll_position.y -= dy;
                 }

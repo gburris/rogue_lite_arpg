@@ -105,9 +105,9 @@ fn on_item_added_to_inventory(
 
     let (items, capacity) = holder_query.get(holder_entity.0)?;
 
-    let capacity = capacity.map(|c| c.0).unwrap_or(usize::MAX);
+    let capacity = capacity.map_or(usize::MAX, |c| c.0);
 
-    if items.map(|items| items.len()).unwrap_or(0) >= capacity {
+    if items.map_or(0, bevy::prelude::RelationshipTarget::len) >= capacity {
         commands.trigger(ItemDrop {
             entity: item_added.entity,
         });

@@ -101,5 +101,5 @@ fn on_interaction_open_chest(
             amount: 999,
             location: chest_transform.translation.truncate(),
         });
-    };
+    }
 }

@@ -105,20 +105,20 @@ fn update_active_shields(
     mut holder_query: Query<(&Vision, Option<&mut Mana>)>,
 ) -> Result {
     for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in
-        active_shield_query.iter_mut()
+        &mut active_shield_query
     {
         let (vision, mana) = holder_query.get_mut(item_of.0)?;
 
         if let Some(mut mana) = mana {
             let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
 
-            if !mana.has_enough_mana(&drain_amount) {
+            if mana.has_enough_mana(&drain_amount) {
+                mana.use_mana(&drain_amount);
+            } else {
                 commands.trigger(StopUsingEquipment {
                     entity: shield_entity,
                 });
                 continue;
-            } else {
-                mana.use_mana(&drain_amount);
             }
         }
 
@@ -178,7 +178,7 @@ fn on_shield_block(
 
     commands.entity(used_shield.entity).insert((
         ActiveShield {
-            projectiles_reflected: Default::default(),
+            projectiles_reflected: HashSet::default(),
         },
         shield.hitbox.clone(),
         ProjectileReflection::collision_layers(),
@@ -196,7 +196,7 @@ fn reflect_projectiles(
     >,
     enemy_query: Query<&Enemy>,
 ) {
-    for (mut shield, colliding_entities, child_of) in shield_query.iter_mut() {
+    for (mut shield, colliding_entities, child_of) in &mut shield_query {
         for &colliding_entity in colliding_entities.iter() {
             if shield.projectiles_reflected.contains(&colliding_entity) {
                 continue;

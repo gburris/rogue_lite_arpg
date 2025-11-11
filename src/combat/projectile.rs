@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
+use bevy_lit::prelude::PointLight2d;
 
 use crate::{
     combat::damage::{AttemptDamage, Damage, HurtBox, Knockback},
@@ -49,6 +50,8 @@ pub struct ProjectileOf(Entity);
 #[relationship_target(relationship = ProjectileOf, linked_spawn)]
 pub struct Projectiles(Vec<Entity>);
 
+const FIREBALL_CENTER_X_OFFSET: f32 = 10.0;
+
 pub fn fireball(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
@@ -68,6 +71,13 @@ pub fn fireball(
                 index: 0,
             },
         ),
+        PointLight2d {
+            color: Color::WHITE,
+            intensity: 1.5,
+            outer_radius: 10.0,
+            ..default()
+        },
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         Knockback(5.0),
         related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
     )

@@ -15,7 +15,8 @@ pub mod prelude {
 }
 
 use avian2d::prelude::*;
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::{ecs::entity_disabling::Disabled, prelude::*, ui_widgets::observe};
+use bevy_lit::prelude::PointLight2d;
 use interact::PlayerInteractionRadius;
 
 use crate::{
@@ -206,6 +207,16 @@ fn spawn_player(
                 physical_collider(),
                 hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
                 (
+                    PointLight2d {
+                        color: Color::WHITE,
+                        intensity: 0.8,
+                        outer_radius: 100.0,
+                        falloff: 5.0,
+                        ..default()
+                    },
+                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
+                ),
+                (
                     PlayerInteractionRadius,
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
                     CollisionLayers::new(
@@ -216,6 +227,11 @@ fn spawn_player(
             ],
         ))
         .id();
+
+    commands
+        .spawn(fireball(&sprites, &sprite_layouts, 0.0))
+        .remove::<(Lifespan, Disabled)>()
+        .insert(Transform::from_xyz(0.0, 0.0, 10.0));
 
     commands.trigger(Equip {
         item: fire_staff,

@@ -1,9 +1,14 @@
 use bevy::{
     camera::ScalingMode,
-    color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700},
+    color::palettes::{
+        basic::RED,
+        css::BLUE,
+        tailwind::{BLUE_300, PURPLE_700},
+    },
     prelude::*,
     window::WindowResolution,
 };
+use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings, RaymarchSettings};
 
 use crate::prelude::*;
 
@@ -123,6 +128,15 @@ fn spawn_camera(mut commands: Commands) {
             },
             ..OrthographicProjection::default_2d()
         }),
+        Lighting2dSettings {
+            blur: 4,
+            edge_intensity: 8.0,
+            ..default()
+        },
+        AmbientLight2d {
+            intensity: 0.5,
+            color: Color::from(BLUE_300),
+        },
     ));
 }
 

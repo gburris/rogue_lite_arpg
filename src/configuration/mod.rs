@@ -12,6 +12,7 @@ use bevy::prelude::*;
 use bevy_behave::prelude::BehavePlugin;
 use bevy_ecs_tilemap::prelude::TilemapPlugin;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
+use bevy_lit::prelude::Lighting2dPlugin;
 
 pub mod prelude {
     pub use super::assets::*;
@@ -47,5 +48,10 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Third-party plugins
-    app.add_plugins((BehavePlugin::default(), EnhancedInputPlugin, TilemapPlugin));
+    app.add_plugins((
+        BehavePlugin::default(),
+        EnhancedInputPlugin,
+        Lighting2dPlugin,
+        TilemapPlugin,
+    ));
 }

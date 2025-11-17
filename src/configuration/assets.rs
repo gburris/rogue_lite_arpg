@@ -20,7 +20,14 @@ pub struct SpriteSheetLayouts {
     pub player_atlas_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
     pub enemy_atlas_layout: Handle<TextureAtlasLayout>,
-    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 32, columns = 5, rows = 1))]
+    #[asset(texture_atlas_layout(
+        tile_size_x = 40,
+        tile_size_y = 32,
+        columns = 5,
+        rows = 1,
+        offset_x = 24,
+        padding_x = 24,
+    ))]
     pub fireball_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 5, rows = 1))]
     pub ice_bolt_layout: Handle<TextureAtlasLayout>,

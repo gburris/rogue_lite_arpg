@@ -1,5 +1,5 @@
 use avian2d::prelude::*;
-use bevy::{ecs::entity_disabling::Disabled, prelude::*};
+use bevy::{color::palettes::tailwind::YELLOW_300, ecs::entity_disabling::Disabled, prelude::*};
 use bevy_lit::prelude::PointLight2d;
 
 use crate::{
@@ -18,7 +18,6 @@ pub(super) fn plugin(app: &mut App) {
     Lifespan::new(1.0),
     Sensor,
     RigidBody::Kinematic,
-    Collider::rectangle(10.0, 10.0),
     CollidingEntities,
     AnimationIndices::Cycle((0..=4).cycle()),
     AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
@@ -50,8 +49,6 @@ pub struct ProjectileOf(Entity);
 #[relationship_target(relationship = ProjectileOf, linked_spawn)]
 pub struct Projectiles(Vec<Entity>);
 
-const FIREBALL_CENTER_X_OFFSET: f32 = 10.0;
-
 pub fn fireball(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
@@ -60,7 +57,7 @@ pub fn fireball(
     (
         Projectile {
             damage: Damage::Single(3.0),
-            speed: 600.0,
+            speed: 500.0,
             forward_offset: 25.0,
             angle_offset,
         },
@@ -72,12 +69,14 @@ pub fn fireball(
             },
         ),
         PointLight2d {
-            color: Color::WHITE,
-            intensity: 1.5,
-            outer_radius: 10.0,
+            color: Color::from(YELLOW_300),
+            intensity: 1.4,
+            falloff: 5.0,
+            outer_radius: 30.0,
             ..default()
         },
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        Collider::circle(10.0),
+        AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating)),
         Knockback(5.0),
         related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
     )
@@ -91,7 +90,7 @@ pub fn icebolt(
     (
         Projectile {
             damage: Damage::Range((10.0, 20.0)),
-            speed: 500.0,
+            speed: 400.0,
             forward_offset: 25.0,
             angle_offset,
         },

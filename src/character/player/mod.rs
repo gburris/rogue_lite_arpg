@@ -205,7 +205,7 @@ fn spawn_player(
                 player_aim(gizmo_assets),
                 shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                 physical_collider(),
-                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+                hurtbox(Vec2::new(24.0, 40.0), GameCollisionLayer::AllyHurtBox),
                 (
                     PointLight2d {
                         color: Color::WHITE,

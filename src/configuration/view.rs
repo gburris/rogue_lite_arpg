@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
     window::WindowResolution,
 };
-use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings, RaymarchSettings};
+use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings};
 
 use crate::prelude::*;
 

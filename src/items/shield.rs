@@ -104,9 +104,7 @@ fn update_active_shields(
     >,
     mut holder_query: Query<(&Vision, Option<&mut Mana>)>,
 ) -> Result {
-    for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in
-        &mut active_shield_query
-    {
+    for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in &mut active_shield_query {
         let (vision, mana) = holder_query.get_mut(item_of.0)?;
 
         if let Some(mut mana) = mana {

@@ -370,6 +370,7 @@ dependencies = [
  "bevy_behave",
  "bevy_ecs_tilemap",
  "bevy_enhanced_input",
+ "bevy_lit",
  "getrandom",
  "rand",
  "serde",
@@ -1107,6 +1108,17 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "tracing",
+]
+
+[[package]]
+name = "bevy_lit"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5e723b74f7b6748207b8d33008c17ca823db07586ee75c4f96d976fdae92728"
+dependencies = [
+ "bevy",
+ "bytemuck",
+ "fixedbitset",
 ]
 
 [[package]]

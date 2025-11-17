@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{prelude::*, ui::{load_screen, start_screen, damage_overlay, game_over_screen}};
+use crate::{
+    prelude::*,
+    ui::{damage_overlay, game_over_screen, load_screen, start_screen},
+};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;

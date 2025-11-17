@@ -172,7 +172,7 @@ fn on_display_case_updated(
         .for_each(|(e, _)| commands.entity(e).despawn());
 
     let Some(items) = items else {
-        return ;
+        return;
     };
 
     // Get name and entity for each item in inventory
@@ -192,7 +192,6 @@ fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
-    
 }
 
 const LINE_HEIGHT: f32 = 35.;

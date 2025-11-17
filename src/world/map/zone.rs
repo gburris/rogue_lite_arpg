@@ -103,7 +103,6 @@ fn spawn_zone_colliders(
                         GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
                     ),
                 ));
-                info!("spawning wall");
             }
             EnvironmentalType::Water => todo!(),
         }

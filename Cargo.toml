@@ -84,6 +84,9 @@ cast_sign_loss = "allow"
 opt-level = 1
 split-debuginfo = "unpacked"
 
+# Remove expensive debug assertions due to <https://github.com/bevyengine/bevy/issues/14291>
+[profile.dev.package.wgpu-types]
+debug-assertions = false
 
 # Enable a large amount of optimization in the dev profile for dependencies.
 [profile.dev.package."*"]

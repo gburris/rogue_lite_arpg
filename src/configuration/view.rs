@@ -101,10 +101,11 @@ pub(super) fn get_window_plugin() -> WindowPlugin {
         primary_window: Some(Window {
             title: String::from("Baba Yaga"),
             fit_canvas_to_parent: cfg!(target_arch = "wasm32"),
+            resizable: false,
             resolution: if cfg!(target_arch = "wasm32") {
                 WindowResolution::default() // No resolution for wasm32
             } else {
-                WindowResolution::new(1920, 1080) // Set resolution for non-WASM
+                WindowResolution::new(1280, 720) // Set resolution for non-WASM
             },
             ..default()
         }),

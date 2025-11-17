@@ -348,8 +348,8 @@ fn update_action_bar(
 
         for (action_box, children) in action_box_query.iter() {
             let equipment: Option<Entity> = match action_box.slot {
-                EquipmentSlot::Mainhand => mainhand.map(|m| m.get()),
-                EquipmentSlot::Offhand => offhand.map(|o| o.get()),
+                EquipmentSlot::Mainhand => mainhand.map(crate::prelude::Mainhand::get),
+                EquipmentSlot::Offhand => offhand.map(crate::prelude::Offhand::get),
             };
 
             if let Some(&image_entity) = children.first()
@@ -434,7 +434,7 @@ pub(super) fn on_equipment_use_failed(
 }
 
 fn update_cooldowns(mut cooldown_query: Query<(&mut Node, &Lifespan), With<CooldownIndicator>>) {
-    for (mut line_node, cooldown_duration) in cooldown_query.iter_mut() {
+    for (mut line_node, cooldown_duration) in &mut cooldown_query {
         line_node.height = px(ACTION_BOX_INTERIOR_SIZE * cooldown_duration.0.fraction_remaining());
     }
 }

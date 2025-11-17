@@ -136,7 +136,7 @@ impl<const W: u16, const H: u16> FromWorld for ShadowMesh<W, H> {
         let mut meshes = world.get_resource_mut::<Assets<Mesh>>().unwrap();
         ShadowMesh {
             handle: meshes.add(Ellipse {
-                half_size: Vec2::new(W as f32, H as f32),
+                half_size: Vec2::new(f32::from(W), f32::from(H)),
             }),
         }
     }

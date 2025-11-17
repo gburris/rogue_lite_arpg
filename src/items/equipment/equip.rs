@@ -52,7 +52,7 @@ fn on_equip(
     match equippable.slot {
         EquipmentSlot::Mainhand => {
             if let Some(mainhand) = mainhand {
-                commands.trigger(Unequip { entity: mainhand.0 })
+                commands.trigger(Unequip { entity: mainhand.0 });
             }
 
             commands
@@ -61,7 +61,7 @@ fn on_equip(
         }
         EquipmentSlot::Offhand => {
             if let Some(offhand) = offhand {
-                commands.trigger(Unequip { entity: offhand.0 })
+                commands.trigger(Unequip { entity: offhand.0 });
             }
 
             commands

@@ -34,7 +34,7 @@ impl MapData {
 
     // Updates all ground tiles to the new floor type while preserving other tile types
     pub fn set_floor(&mut self, floor_type: TileType) {
-        for row in self.tiles.iter_mut() {
+        for row in &mut self.tiles {
             for tile in row.iter_mut() {
                 *tile = floor_type;
             }

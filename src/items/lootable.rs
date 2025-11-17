@@ -27,7 +27,7 @@ pub struct ItemDrop {
 }
 
 /// Notes:
-/// 1. ItemDropEvent is for items only!
+/// 1. `ItemDropEvent` is for items only!
 /// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
 /// 3. Needs parent to be holder for position, then removes parent
 fn on_drop_event(
@@ -94,7 +94,7 @@ fn glow_and_rotate_lootables(
     mut query: Query<(&mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
     time: Res<Time>,
 ) {
-    for (mut item, mut transform, mut sprite) in query.iter_mut() {
+    for (mut item, mut transform, mut sprite) in &mut query {
         item.drop_rotation_timer += time.delta_secs();
         let rotation_angle = (item.drop_rotation_timer / 6.0) * 2.0 * PI;
         transform.rotation = Quat::from_rotation_z(rotation_angle);

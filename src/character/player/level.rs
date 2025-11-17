@@ -88,7 +88,7 @@ fn animate_level_up(
     mut text_query: Query<(&mut Transform, &Lifespan), With<LevelUpText>>,
 ) {
     // Animate ring effect
-    for (mut transform, mut material, duration) in effect_query.iter_mut() {
+    for (mut transform, mut material, duration) in &mut effect_query {
         let progress = duration.0.fraction();
 
         // Scale up and rotate
@@ -102,7 +102,7 @@ fn animate_level_up(
     }
 
     // Animate text
-    for (mut transform, duration) in text_query.iter_mut() {
+    for (mut transform, duration) in &mut text_query {
         transform.translation.y = LEVEL_UP_TEXT_MAX_HEIGHT * duration.0.fraction();
     }
 }

@@ -27,7 +27,7 @@ pub(super) fn process_melee_attacks(
     time: Res<Time>,
     mut attack_query: Query<(&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack)>,
 ) {
-    for (melee_weapon, mut transform, mut active_attack) in attack_query.iter_mut() {
+    for (melee_weapon, mut transform, mut active_attack) in &mut attack_query {
         active_attack.duration.tick(time.delta());
         let attack_progress = active_attack.duration.fraction();
 

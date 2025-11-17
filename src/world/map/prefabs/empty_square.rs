@@ -87,7 +87,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
     let wall_size = size + 2;
     if start_x > 0 && start_y > 0 {
         // Top wall
-        for x in (start_x - 1)..(start_x + size + 1) {
+        for x in (start_x - 1)..=(start_x + size)  {
             if x < map_data.tiles.len() {
                 map_data.tiles[x][start_y - 1] = TileType::Wall;
             }
@@ -99,7 +99,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
         );
 
         // Bottom wall
-        for x in (start_x - 1)..(start_x + size + 1) {
+        for x in (start_x - 1)..=(start_x + size)  {
             if x < map_data.tiles.len() && (start_y + size) < map_data.tiles[0].len() {
                 map_data.tiles[x][start_y + size] = TileType::Wall;
             }
@@ -111,7 +111,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
         );
 
         // Left wall
-        for y in (start_y - 1)..(start_y + size + 1) {
+        for y in (start_y - 1)..=(start_y + size)  {
             if y < map_data.tiles[0].len() {
                 map_data.tiles[start_x - 1][y] = TileType::Wall;
             }
@@ -123,7 +123,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
         );
 
         // Right wall
-        for y in (start_y - 1)..(start_y + size + 1) {
+        for y in (start_y - 1)..=(start_y + size)  {
             if (start_x + size) < map_data.tiles.len() && y < map_data.tiles[0].len() {
                 map_data.tiles[start_x + size][y] = TileType::Wall;
             }

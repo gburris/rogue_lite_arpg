@@ -24,7 +24,7 @@ impl Default for Burning {
 }
 
 pub(super) fn tick_burn(mut burn_query: Query<&mut Burning>, time: Res<Time>) {
-    for mut burn_status in burn_query.iter_mut() {
+    for mut burn_status in &mut burn_query {
         burn_status.damage_frequency.tick(time.delta());
     }
 }

@@ -24,7 +24,7 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
                 fireball(sprites, sprite_layouts, FRAC_PI_8)
             ]
         ),
-        observe(on_weapon_fired),
+        observe(on_staff_fired),
     )
 }
 
@@ -39,23 +39,38 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         },
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
-        observe(on_weapon_fired),
+        observe(on_staff_fired),
     )
 }
 
 // "fired" implies this is a projectile weapon
-fn on_weapon_fired(
-    weapon_fired: On<UseEquipment>,
+fn on_staff_fired(
+    staff_fired: On<UseEquipment>,
     mut commands: Commands,
-    weapon_query: Query<(&Projectiles, &ItemOf)>,
-    holder_query: Query<(&Transform, &Vision)>,
+    staff_query: Query<(&Projectiles, &ItemOf, &Sprite, &Transform)>,
+    holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>)>,
     enemy_query: Query<Entity, With<Enemy>>,
     projectile_query: Query<(&Projectile, Option<&Effects>), With<Disabled>>,
+    images: Res<Assets<Image>>,
 ) {
-    let Ok((projectiles, item_of)) = weapon_query.get(weapon_fired.entity) else {
-        warn!("Tried to fire weapon that is not a projectile weapon");
+    let Ok((projectiles, item_of, sprite, staff_transform)) = staff_query.get(staff_fired.entity)
+    else {
+        warn!("Tried to fire staff that is not a projectile staff");
         return;
     };
+
+    // TODO: Move staff "projectile source offset" computation to staff construction time!
+    let staff_image = images
+        .get(sprite.image.id())
+        .expect("Staff should have image");
+
+    // Subtract a little to try to get center of staff "eye" (source of projectile spawn)
+    let staff_half_height = (staff_image.height() as f32 / 2.) - 6.;
+    // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
+    let staff_projectile_source_offset =
+        staff_half_height * (staff_transform.rotation * Vec3::Y).truncate();
+    let staff_projectile_source_pos =
+        staff_transform.translation.truncate() + staff_projectile_source_offset;
 
     let damage_source = if enemy_query.get(item_of.0).is_ok() {
         DamageSource::Enemy
@@ -63,21 +78,27 @@ fn on_weapon_fired(
         DamageSource::Player
     };
 
-    let Ok((holder_transform, holder_vision)) = holder_query.get(item_of.0) else {
-        warn!("Tried to fire weapon with holder missing aim position or transform");
+    let Ok((holder_transform, holder_vision, target_info)) = holder_query.get(item_of.0) else {
+        warn!("Tried to fire staff with holder missing aim position or transform");
         return;
     };
+
+    // If no target ditance default to sane value away from holder
+    let target_angle = (holder_vision.aim_direction * target_info.map_or(100., |t| t.distance))
+        - staff_projectile_source_pos;
 
     for projectile_entity in projectiles.iter() {
         if let Ok((projectile, effects)) = projectile_query.get(projectile_entity) {
             trace!("Spawning projectile with effects: {:?}", effects);
 
             // Rotate the aim direction by the projectile’s angle offset
-            let rotated_direction = holder_vision
-                .aim_direction
+            let projectile_direction = target_angle
+                .normalize()
                 .rotate(Vec2::from_angle(projectile.angle_offset));
-            let starting_position = holder_transform.translation.truncate()
-                + (projectile.forward_offset * rotated_direction);
+
+            // Staff is child of holder so position is relative, need to add holder transform for global position
+            let starting_position =
+                holder_transform.translation.truncate() + staff_projectile_source_pos;
 
             commands
                 .entity(projectile_entity)
@@ -88,13 +109,13 @@ fn on_weapon_fired(
                 .remove::<(ProjectileOf, Disabled)>()
                 .insert((
                     Position(starting_position),
-                    Rotation::radians(rotated_direction.to_angle()),
+                    Rotation::radians(projectile_direction.to_angle()),
                     Transform {
                         translation: starting_position.extend(ZLayer::InAir.z()),
-                        rotation: Quat::from_rotation_z(rotated_direction.to_angle()),
+                        rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
                         ..default()
                     },
-                    LinearVelocity(rotated_direction * projectile.speed),
+                    LinearVelocity(projectile_direction * projectile.speed),
                     CollisionLayers::new(
                         GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
                         LayerMask::from(damage_source) | GameCollisionLayer::HighObstacle,

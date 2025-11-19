@@ -27,6 +27,7 @@ use crate::{
             input::player_actions,
             movement::PlayerMovement,
         },
+        vision::TargetInfo,
     },
     prelude::*,
 };
@@ -189,6 +190,7 @@ fn spawn_player(
                     ..default()
                 },
             ),
+            TargetInfo::default(),
             related!(Items[
                 ice_staff(&sprites, &sprite_layouts),
                 sword(&sprites),

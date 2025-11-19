@@ -26,7 +26,6 @@ pub(super) fn plugin(app: &mut App) {
 pub struct Projectile {
     pub damage: Damage,
     pub speed: f32,
-    pub forward_offset: f32,
     pub angle_offset: f32,
 }
 
@@ -35,7 +34,6 @@ impl Default for Projectile {
         Self {
             damage: Damage::Range((5.0, 10.0)),
             speed: 600.0,
-            forward_offset: 25.0,
             angle_offset: 0.0,
         }
     }
@@ -58,7 +56,6 @@ pub fn fireball(
         Projectile {
             damage: Damage::Single(3.0),
             speed: 500.0,
-            forward_offset: 25.0,
             angle_offset,
         },
         Sprite::from_atlas_image(
@@ -91,7 +88,6 @@ pub fn icebolt(
         Projectile {
             damage: Damage::Range((10.0, 20.0)),
             speed: 400.0,
-            forward_offset: 25.0,
             angle_offset,
         },
         Sprite::from_atlas_image(

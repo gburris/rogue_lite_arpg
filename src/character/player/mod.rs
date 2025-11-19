@@ -15,7 +15,7 @@ pub mod prelude {
 }
 
 use avian2d::prelude::*;
-use bevy::{ecs::entity_disabling::Disabled, prelude::*, ui_widgets::observe};
+use bevy::{prelude::*, ui_widgets::observe};
 use bevy_lit::prelude::PointLight2d;
 use interact::PlayerInteractionRadius;
 
@@ -229,11 +229,6 @@ fn spawn_player(
             ],
         ))
         .id();
-
-    commands
-        .spawn(fireball(&sprites, &sprite_layouts, 0.0))
-        .remove::<(Lifespan, Disabled)>()
-        .insert(Transform::from_xyz(0.0, 0.0, 10.0));
 
     commands.trigger(Equip {
         item: fire_staff,

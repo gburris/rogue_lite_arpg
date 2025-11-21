@@ -3,7 +3,10 @@ use bevy::{ecs::spawn::SpawnWith, prelude::*, ui_widgets::observe};
 use crate::{
     menu::inventory::UpdateDisplayCase,
     prelude::*,
-    ui::primitives::{text, width},
+    ui::{
+        element::node,
+        primitives::{text, width},
+    },
 };
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
@@ -39,14 +42,13 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
 
     (
         DisplaySlotOf(context.item_entity),
-        Node {
-            width: px(900.0),
-            height: px(32.0),
-            padding: px(5.0).all(),
-            column_gap: px(5.0),
-            align_items: AlignItems::Center,
-            ..default()
-        },
+        node()
+            .width(px(900.0))
+            .height(px(32.0))
+            .padding(px(5.0).all())
+            .column_gap(px(5.0))
+            .align_items(AlignItems::Center)
+            .build(),
         Pickable {
             should_block_lower: false,
             ..default()
@@ -62,11 +64,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                     },
                     ..default()
                 },
-                Node {
-                    width: px(30.0),
-                    height: px(30.0),
-                    ..default()
-                },
+                node().width(px(30.0)).height(px(30.0)).build(),
                 Pickable::IGNORE,
             )),
             Spawn((text(context.item_name, 18.0), Pickable::IGNORE)),
@@ -75,13 +73,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                     spawn_equip_icon(parent, equipped_icon);
                 }
             }),
-            Spawn((
-                Node {
-                    flex_grow: 1.0,
-                    ..default()
-                },
-                Pickable::IGNORE,
-            )),
+            Spawn((node().flex_grow(1.0).build(), Pickable::IGNORE)),
             Spawn((
                 text(equip_slot_string, 18.0),
                 width(EQUIP_SLOT_WIDTH),
@@ -105,11 +97,7 @@ fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
             image: equipped_icon,
             ..default()
         },
-        Node {
-            height: px(16.0),
-            width: px(16.0),
-            ..default()
-        },
+        node().height(px(16.0)).width(px(16.0)).build(),
         Pickable::IGNORE,
     ));
 }

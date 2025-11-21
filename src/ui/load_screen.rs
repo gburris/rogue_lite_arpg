@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::{
     prelude::AppState,
     ui::{
-        constants::TITLE_FONT_SIZE,
+        constants::{color, font_size},
+        element::{Element, node},
         primitives::{gold_border, text},
     },
 };
@@ -18,18 +19,19 @@ pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
         DespawnOnExit(AppState::SpawnZone),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
-            // Make sure there's no extra space on sides
-            padding: px(0.0).all(),
-            margin: px(0.0).all(),
-            ..default()
-        },
-        // Darker background for more contrast
-        BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
-        GlobalZIndex(1),
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .flex_direction(FlexDirection::Column)
+                // Make sure there's no extra space on sides
+                .padding(px(0.0).all())
+                .margin(px(0.0).all())
+                .build(),
+        )
+        .background_color(color::LOAD_SCREEN_BACKGROUND)
+        .global_z_index(1)
+        .build(),
         children![
             gold_border(),
             title_section(),
@@ -42,31 +44,28 @@ pub fn spawn(mut commands: Commands) {
 
 fn title_section() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(300.0),
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            // Remove any potential spacing issues
-            margin: px(0.0).all(),
-            padding: px(0.0).all(),
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .height(px(300.0))
+            .flex_direction(FlexDirection::Column)
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .margin(px(0.0).all())
+            .padding(px(0.0).all())
+            .build(),
         children![(
-            Node {
-                width: auto(),
-                height: auto(),
-                border: px(2.0).all(),
-                padding: px(40.0).horizontal(),
-                margin: px(0.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
+            node()
+                .width(auto())
+                .height(auto())
+                .border(px(2.0).all())
+                .padding(px(40.0).horizontal())
+                .margin(px(0.0).all())
+                .build(),
+            BorderColor::all(color::GOLD_BORDER),
+            BackgroundColor::from(color::BLACK.with_alpha(0.3)),
             children![(
-                text("Loading Instance", TITLE_FONT_SIZE),
-                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
+                text("Loading Instance", font_size::TITLE),
+                TextColor::from(color::TEXT_COLOR),
                 AnimatedText,
             )]
         )],
@@ -75,31 +74,29 @@ fn title_section() -> impl Bundle {
 
 fn body_section() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            flex_grow: 1.0,
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            margin: px(0.0).all(),
-            padding: px(0.0).all(),
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .flex_grow(1.0)
+            .flex_direction(FlexDirection::Column)
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .margin(px(0.0).all())
+            .padding(px(0.0).all())
+            .build(),
         children![(
-            Node {
-                width: px(300.0),
-                height: px(80.0),
-                border: px(2.0).all(),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                margin: px(20.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            node()
+                .width(px(300.0))
+                .height(px(80.0))
+                .border(px(2.0).all())
+                .justify_content(JustifyContent::Center)
+                .align_items(AlignItems::Center)
+                .margin(px(20.0).all())
+                .build(),
+            BorderColor::all(color::GOLD_BORDER),
+            BackgroundColor(color::BUTTON_BACKGROUND.with_alpha(0.7)),
             children![(
                 text("Loading Instance", 48.0),
-                TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
+                TextColor::from(color::TEXT_COLOR_ACTIVE),
             )]
         )],
     )
@@ -107,20 +104,19 @@ fn body_section() -> impl Bundle {
 
 fn footer_section() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(120.0),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: px(20.0).all(),
-            margin: px(0.0).all(),
-            ..default()
-        },
-        BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+        node()
+            .width(percent(100.0))
+            .height(px(120.0))
+            .flex_direction(FlexDirection::Row)
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .padding(px(20.0).all())
+            .margin(px(0.0).all())
+            .build(),
+        BackgroundColor::from(color::BLACK.with_alpha(0.4)),
         children![(
             text("I'm loading", 24.0),
-            TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
+            TextColor::from(color::TEXT_COLOR_LOADING),
         )],
     )
 }

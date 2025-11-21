@@ -4,7 +4,8 @@ use crate::{
     character::Purse,
     prelude::*,
     ui::{
-        constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        constants::{color, val},
+        element::node,
         primitives::{menu_header, text},
     },
 };
@@ -47,26 +48,24 @@ fn spawn_main_menu(
         MainMenu,
         DespawnOnExit(Menu::Pause),
         GlobalZIndex(2),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            row_gap: px(20.0),
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .height(percent(100.0))
+            .row_gap(px(20.0))
+            .flex_direction(FlexDirection::Column)
+            .build(),
         children![
             menu_header("PAUSED"),
             // Body Section
             (
-                Node {
-                    width: percent(100.0),
-                    flex_grow: 1.0,
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    row_gap: px(20.0),
-                    ..default()
-                },
+                node()
+                    .width(percent(100.0))
+                    .flex_grow(1.0)
+                    .flex_direction(FlexDirection::Column)
+                    .justify_content(JustifyContent::Center)
+                    .align_items(AlignItems::Center)
+                    .row_gap(px(20.0))
+                    .build(),
                 children![
                     menu_button(MenuButton(Menu::Inventory), "INVENTORY"),
                     menu_button(MenuButton(Menu::Stats), "STATS"),
@@ -81,16 +80,15 @@ fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
     (
         marker,
         Button,
-        Node {
-            width: px(300.0),
-            height: px(60.0),
-            border: px(2.0).all(),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor(DARK_GRAY_COLOR),
+        node()
+            .width(px(300.0))
+            .height(px(60.0))
+            .border(px(2.0).all())
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .build(),
+        BorderColor::all(color::GOLD_BORDER),
+        BackgroundColor(color::DARK_GRAY),
         children![text(button_text, 32.0)],
     )
 }
@@ -103,24 +101,22 @@ fn main_menu_footer(
 ) -> impl Bundle {
     // Footer Section
     (
-        Node {
-            width: percent(100.0),
-            height: FOOTER_HEIGHT,
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::Center,
-            padding: px(40.0).horizontal(),
-            ..default()
-        },
-        BackgroundColor::from(DARK_GRAY_COLOR),
+        node()
+            .width(percent(100.0))
+            .height(val::FOOTER_HEIGHT)
+            .flex_direction(FlexDirection::Row)
+            .justify_content(JustifyContent::SpaceBetween)
+            .align_items(AlignItems::Center)
+            .padding(px(40.0).horizontal())
+            .build(),
+        BackgroundColor::from(color::DARK_GRAY),
         children![
             // left side player info
             (
-                Node {
-                    flex_direction: FlexDirection::Row,
-                    column_gap: px(20.0),
-                    ..default()
-                },
+                node()
+                    .flex_direction(FlexDirection::Row)
+                    .column_gap(px(20.0))
+                    .build(),
                 children![
                     text(format!("Level: {player_level}"), 24.0),
                     text(

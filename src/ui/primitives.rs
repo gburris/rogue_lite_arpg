@@ -1,36 +1,33 @@
 use bevy::prelude::*;
 
-use super::constants::{DARK_GRAY_COLOR, HEADER_FONT_SIZE, HEADER_HEIGHT};
+use crate::ui::element::{Element, node};
+
+use super::constants::{color, font_size, val};
 
 pub fn menu_header(title: &str) -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            align_items: AlignItems::Center,
-            height: HEADER_HEIGHT,
-            padding: UiRect::axes(px(30.0), px(10.0)),
-            ..default()
-        },
-        BackgroundColor::from(DARK_GRAY_COLOR),
-        Children::spawn_one((
-            Text::new(title),
-            TextFont {
-                font_size: HEADER_FONT_SIZE,
-                ..default()
-            },
-        )),
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(val::HEADER_HEIGHT)
+                .padding(px(30.0).horizontal())
+                .build(),
+        )
+        .background_color(color::DARK_GRAY)
+        .build(),
+        children![text(title, font_size::HEADER)],
     )
 }
 
 pub fn gold_border() -> impl Bundle {
-    (
-        Node {
-            width: percent(100.0),
-            height: px(8.0),
-            ..default()
-        },
-        BackgroundColor::from(Color::srgb(0.8, 0.6, 0.2)),
+    Element::builder(
+        node()
+            .width(percent(100.0))
+            .height(px(8.0))
+            .build(),
     )
+    .background_color(BackgroundColor(color::GOLD_BORDER))
+    .build()
 }
 
 pub fn text(message: impl Into<String>, font_size: f32) -> impl Bundle {
@@ -44,8 +41,10 @@ pub fn text(message: impl Into<String>, font_size: f32) -> impl Bundle {
 }
 
 pub fn width(width: f32) -> impl Bundle {
-    Node {
-        width: px(width),
-        ..default()
-    }
+    Element::builder(
+        node()
+            .width(px(width))
+            .build(),
+    )
+    .build()
 }

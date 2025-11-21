@@ -1,11 +1,14 @@
 use bevy::prelude::*;
 
-use crate::prelude::AppState;
-
-use super::{
-    constants::TITLE_FONT_SIZE,
-    primitives::{gold_border, text},
+use crate::{
+    prelude::AppState,
+    ui::{
+        constants::{color, font_size},
+        element::{Element, node},
+    },
 };
+
+use super::primitives::text;
 
 #[derive(Component)]
 pub struct StartScreen;
@@ -20,80 +23,84 @@ pub fn spawn(mut commands: Commands) {
     commands.spawn((
         StartScreen,
         DespawnOnExit(AppState::StartScreen),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        // Darker background for more contrast
-        BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .flex_direction(FlexDirection::Column)
+                .build(),
+        )
+        .background_color(color::LOAD_SCREEN_BACKGROUND)
+        .build(),
         children![
-            gold_border(),
             start_screen_title(),
             start_screen_body(),
             start_screen_footer(),
-            gold_border(),
         ],
     ));
 }
 
 fn start_screen_title() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(300.0),
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(px(300.0))
+                .flex_direction(FlexDirection::Column)
+                .justify_content(JustifyContent::Center)
+                .align_items(AlignItems::Center)
+                .build(),
+        )
+        .build(),
         children![(
-            Node {
-                width: auto(),
-                height: auto(),
-                border: px(2.0).all(),
-                padding: px(40.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
-            children![(
-                text("Baba Yaga", TITLE_FONT_SIZE),
-                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
+            Element::builder(
+                node()
+                    .width(auto())
+                    .height(auto())
+                    .border(px(2.0).all())
+                    .padding(px(40.0).all())
+                    .build(),
+            )
+            .background_color(color::BLACK.with_alpha(0.3))
+            .build(),
+            children![
+                text("Baba Yaga", font_size::TITLE),
+                TextColor(color::TEXT_COLOR),
                 AnimatedText,
-            )]
-        ),],
+            ]
+        )],
     )
 }
 
 fn start_screen_body() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            flex_grow: 1.0,
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .flex_grow(1.0)
+                .flex_direction(FlexDirection::Column)
+                .justify_content(JustifyContent::Center)
+                .align_items(AlignItems::Center)
+                .build(),
+        )
+        .build(),
         children![(
             StartScreenButton,
             Button,
-            Node {
-                width: px(300.0),
-                height: px(80.0),
-                border: px(2.0).all(),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                margin: px(20.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            node()
+                .width(px(300.0))
+                .height(px(80.0))
+                .border(px(2.0).all())
+                .justify_content(JustifyContent::Center)
+                .align_items(AlignItems::Center)
+                .margin(px(20.0).all())
+                .build(),
+            
+            BorderColor::all(color::GOLD_BORDER),
+            BackgroundColor(color::BUTTON_BACKGROUND.with_alpha(0.7)),
             children![(
                 text("BEGIN", 48.0),
-                TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
+                TextColor::from(color::TEXT_COLOR_ACTIVE),
             )]
         )],
     )
@@ -101,22 +108,21 @@ fn start_screen_body() -> impl Bundle {
 
 fn start_screen_footer() -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(120.0),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: px(20.0).all(),
-            ..default()
-        },
-        BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
+        node()
+            .width(percent(100.0))
+            .height(px(120.0))
+            .flex_direction(FlexDirection::Row)
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .padding(px(20.0).all())
+            .build(),
+        BackgroundColor::from(color::BLACK.with_alpha(0.4)),
         children![(
             text(
                 "She is a mysterious witch and ogress from Slavic folklore",
                 24.0
             ),
-            TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
+            TextColor::from(color::TEXT_COLOR),
         )],
     )
 }
@@ -132,17 +138,17 @@ pub fn button_system(
     for (interaction, mut bg_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                *bg_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
-                *border_color = Color::srgb(1.0, 0.8, 0.3).into();
+                *bg_color = color::BUTTON_BACKGROUND_ACTIVE.into();
+                *border_color = color::GOLD_BORDER_ACTIVE.into();
                 game_state.set(AppState::AssetLoading);
             }
             Interaction::Hovered => {
-                *bg_color = Color::srgba(0.2, 0.15, 0.1, 0.8).into();
-                *border_color = Color::srgb(1.0, 0.8, 0.3).into();
+                *bg_color = color::BUTTON_BACKGROUND_HOVER.into();
+                *border_color = color::GOLD_BORDER_ACTIVE.into();
             }
             Interaction::None => {
-                *bg_color = Color::srgba(0.1, 0.1, 0.1, 0.7).into();
-                *border_color = Color::srgb(0.8, 0.6, 0.2).into();
+                *bg_color = color::BUTTON_BACKGROUND.into();
+                *border_color = color::GOLD_BORDER.into();
             }
         }
     }

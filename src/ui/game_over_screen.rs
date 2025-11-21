@@ -1,8 +1,14 @@
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    ui::{
+        constants::font_size,
+        element::{Element, node},
+    },
+};
 
-use super::{constants::TITLE_FONT_SIZE, primitives::text};
+use super::primitives::text;
 
 #[derive(Component)]
 pub struct GameOverScreen;
@@ -14,36 +20,38 @@ pub fn spawn(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
         DespawnOnExit(AppState::GameOver),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            padding: px(200.0).top(),
-            row_gap: px(20.),
-            ..default()
-        },
-        BackgroundColor::from(Color::BLACK.with_alpha(1.0)), // want to allow game to be seen in background
-        // render this above in-game UI such as player health and score
-        GlobalZIndex(1),
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .flex_direction(FlexDirection::Column)
+                .align_items(AlignItems::Center)
+                .padding(px(200.0).top())
+                .row_gap(px(20.0))
+                .build(),
+        )
+        .background_color(BackgroundColor(Color::BLACK))
+        .global_z_index(1)
+        .build(),
         children![
-            text("Game Over!", TITLE_FONT_SIZE),
+            text("Game Over!", font_size::TITLE),
             (
                 Button,
                 RestartButton,
-                Node {
-                    width: px(150.0),
-                    height: px(65.0),
-                    border: px(5.0).all(),
-                    // horizontally center child text
-                    justify_content: JustifyContent::Center,
-                    // vertically center child text
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                BorderColor::all(Color::BLACK),
-                BorderRadius::MAX,
-                BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                Element::builder(
+                    node()
+                        .width(px(150.0))
+                        .height(px(65.0))
+                        .border(px(5.0).all())
+                        .justify_content(JustifyContent::Center)
+                        .align_items(AlignItems::Center)
+                        .build()
+                )
+                .build(),
+                // .border_color(BorderColor::all(Color::BLACK))
+                // .border_radius(BorderRadius::MAX)
+                // .background_color(BackgroundColor(color::BUTTON_BACKGROUND))
+                // .build(),
                 children![Text::new("Restart"), Observer::new(on_restart_clicked)]
             )
         ],

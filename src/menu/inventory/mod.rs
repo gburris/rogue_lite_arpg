@@ -11,7 +11,8 @@ use crate::{
     },
     prelude::*,
     ui::{
-        constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
+        constants::{color, val},
+        element::{Element, node},
         primitives::{menu_header, text, width},
     },
 };
@@ -41,40 +42,40 @@ fn spawn_inventory_menu(
     commands.spawn((
         InventoryMenu,
         DespawnOnExit(Menu::Inventory),
-        GlobalZIndex(2),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::SpaceBetween,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(20.0), // space between header and item list
-            ..default()
-        },
+        Element::builder(
+            node()
+                .width(percent(100.0))
+                .height(percent(100.0))
+                .align_items(AlignItems::Center)
+                .justify_content(JustifyContent::SpaceBetween)
+                .flex_direction(FlexDirection::Column)
+                .row_gap(px(20.0))
+                .build(),
+        )
+        .global_z_index(2)
+        .build(),
         children![
             menu_header("INVENTORY"),
             display_case(player.0),
             (
-                Node {
-                    width: percent(100.0),
-                    height: FOOTER_HEIGHT,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    padding: px(40.0).horizontal(),
-                    column_gap: px(20.0),
-                    ..default()
-                },
-                BackgroundColor::from(DARK_GRAY_COLOR),
+                node()
+                    .width(percent(100.0))
+                    .height(val::FOOTER_HEIGHT)
+                    .flex_direction(FlexDirection::Row)
+                    .justify_content(JustifyContent::SpaceBetween)
+                    .align_items(AlignItems::Center)
+                    .padding(px(40.0).horizontal())
+                    .column_gap(px(20.0))
+                    .build(),
+                BackgroundColor::from(color::DARK_GRAY),
                 children![
                     text("Left click to equip/consume", 24.0),
                     text("Right click to drop", 24.0),
                     text(format!("Total coins: {:.1}", player.1.amount), 24.0),
                     // Spacer between left and right side of footer
-                    Node {
-                        flex_grow: 1.0,
-                        ..default()
-                    },
+                    node()
+                        .flex_grow(1.0)
+                        .build(),
                     text("Press ESC to unpause", 24.0)
                 ],
             )
@@ -102,33 +103,30 @@ struct UpdateDisplayCase {
 
 fn display_case(inventory_owner: Entity) -> impl Bundle {
     (
-        Node {
-            height: px(800.0),
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+        node()
+            .height(px(800.0))
+            .flex_direction(FlexDirection::Column)
+            .build(),
+        BackgroundColor::from(color::DARK_GRAY_ALPHA),
         children![
             // inventory header
             (
-                Node {
-                    width: px(900.0),
-                    height: px(35.0),
-                    border: px(2.0).vertical(),
-                    margin: px(5.0).top(),
-                    padding: px(5.0).all(),
-                    column_gap: px(5.0),
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                BorderColor::from(Color::WHITE),
+                node()
+                    .width(px(900.0))
+                    .height(px(35.0))
+                    .border(px(2.0).vertical())
+                    .margin(px(5.0).top())
+                    .padding(px(5.0).all())
+                    .column_gap(px(5.0))
+                    .align_items(AlignItems::Center)
+                    .build(),
+                BorderColor::from(color::WHITE),
                 children![
                     width(30.0),
                     text("Name", 18.0),
-                    Node {
-                        flex_grow: 1.0,
-                        ..default()
-                    },
+                    node()
+                        .flex_grow(1.0)
+                        .build(),
                     (text("Equip Slot", 18.0), width(EQUIP_SLOT_WIDTH)),
                     (text("Value", 18.0), width(VALUE_WIDTH)),
                 ]
@@ -136,11 +134,10 @@ fn display_case(inventory_owner: Entity) -> impl Bundle {
             // Container for items in inventory
             (
                 DisplayCaseOf(inventory_owner),
-                Node {
-                    overflow: Overflow::scroll_y(),
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+                node()
+                    .overflow(Overflow::scroll_y())
+                    .flex_direction(FlexDirection::Column)
+                    .build(),
             )
         ],
     )
@@ -154,7 +151,7 @@ fn on_display_case_updated(
     slots_querys: Query<(Entity, &DisplaySlotOf)>,
     items_query: Query<(Option<&Items>, &DisplayedBy)>,
     item_query: Query<(&Name, &Item, Option<&Equippable>, Has<Equipped>)>,
-) {
+) -> Result {
     // Get entities inventory
     let (items, displayed_by) = items_query
         .get(update_display_case.entity)
@@ -172,7 +169,7 @@ fn on_display_case_updated(
         .for_each(|(e, _)| commands.entity(e).despawn());
 
     let Some(items) = items else {
-        return;
+        return Ok(());
     };
 
     // Get name and entity for each item in inventory
@@ -192,6 +189,7 @@ fn on_display_case_updated(
             parent.spawn(display_slot(&icons, slot_context));
         }
     });
+    Ok(())
 }
 
 const LINE_HEIGHT: f32 = 35.;
@@ -208,7 +206,7 @@ fn update_scroll_position(
             MouseScrollUnit::Pixel => mouse_wheel_message.y,
         };
 
-        for (_pointer, pointer_map) in hover_map.iter() {
+        for (_pointer, pointer_map) in hover_map {
             for (entity, _hit) in pointer_map {
                 if let Ok(mut scroll_position) = scrolled_node_query.get_mut(*entity) {
                     scroll_position.y -= dy;

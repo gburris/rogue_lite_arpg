@@ -1,7 +1,8 @@
 use crate::{
     prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats},
     ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
+        constants::color,
+        element::node,
         primitives::{menu_header, text},
     },
 };
@@ -50,26 +51,24 @@ pub fn spawn_stats_shop_menu(
         StatShopMenu,
         DespawnOnExit(Menu::StatsShop),
         GlobalZIndex(2),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            align_items: AlignItems::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(20.0),
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .height(percent(100.0))
+            .align_items(AlignItems::Center)
+            .flex_direction(FlexDirection::Column)
+            .row_gap(px(20.0))
+            .build(),
         children![
             menu_header("STATS SHOP"),
             // stats shop body
             (
-                Node {
-                    width: px(600.0),
-                    flex_direction: FlexDirection::Column,
-                    padding: px(20.0).all(),
-                    row_gap: px(10.0),
-                    ..default()
-                },
-                BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
+                node()
+                    .width(px(600.0))
+                    .flex_direction(FlexDirection::Column)
+                    .padding(px(20.0).all())
+                    .row_gap(px(10.0))
+                    .build(),
+                BackgroundColor::from(color::DARK_GRAY_ALPHA),
                 children![
                     stat_row(DisplayableStatType::Agility, stats),
                     stat_row(DisplayableStatType::Strength, stats),
@@ -92,23 +91,21 @@ pub fn spawn_stats_shop_menu(
 
 fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
     (
-        Node {
-            width: percent(100.0),
-            height: px(50.0),
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::Center,
-            padding: px(10.0).horizontal(),
-            ..default()
-        },
+        node()
+            .width(percent(100.0))
+            .height(px(50.0))
+            .justify_content(JustifyContent::SpaceBetween)
+            .align_items(AlignItems::Center)
+            .padding(px(10.0).horizontal())
+            .build(),
         children![
             // Decrease button
             stat_shop_button(stat_type, false),
             (
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
+                node()
+                    .flex_direction(FlexDirection::Column)
+                    .align_items(AlignItems::Center)
+                    .build(),
                 children![
                     text(
                         format!("{:?}: {}", stat_type, stat_type.get_value(stats)),
@@ -133,13 +130,12 @@ fn stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl B
             is_increase,
         },
         Button,
-        Node {
-            width: px(30.0),
-            height: px(30.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
+        node()
+            .width(px(30.0))
+            .height(px(30.0))
+            .justify_content(JustifyContent::Center)
+            .align_items(AlignItems::Center)
+            .build(),
         BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
         children![text(if is_increase { "+" } else { "-" }, 24.0)],
     )

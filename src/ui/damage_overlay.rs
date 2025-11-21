@@ -2,11 +2,10 @@ use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 use rand::Rng;
 
-use crate::prelude::{DamageDealt, Healed, Lifespan, ZLayer};
-
-const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
-const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
-const HEALTH_TEXT_OFFSET: f32 = 10.0;
+use crate::{
+    prelude::{DamageDealt, Healed, Lifespan, ZLayer},
+    ui::constants::{color, val},
+};
 
 fn spawn_health_change_text(
     commands: &mut Commands,
@@ -28,7 +27,7 @@ fn spawn_health_change_text(
     let rotated_vector = (random_rotation * Vec3::Y).truncate();
 
     // Text height is relative to center of entity, so we get half of entity height and add a buffer
-    let text_height = (entity_height / 2.0) + HEALTH_TEXT_OFFSET;
+    let text_height = (entity_height / 2.0) + val::HEALTH_TEXT_OFFSET;
 
     // Scale the direction vector by the desired text height to place the text above the entity
     let text_position = (rotated_vector.normalize() * text_height).extend(ZLayer::AboveSprite.z());
@@ -63,7 +62,7 @@ pub fn on_damage_overlay_amount(
         &mut commands,
         damage_dealt.entity,
         damage_dealt.damage,
-        RED_COLOR,
+        color::RED,
         &damaged_query,
     );
 }
@@ -77,7 +76,7 @@ pub fn on_healing_overlay_amount(
         &mut commands,
         healed.entity,
         healed.amount,
-        GREEN_COLOR,
+        color::GREEN,
         &healed_query,
     );
 }

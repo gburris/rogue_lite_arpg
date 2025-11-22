@@ -27,7 +27,8 @@ pub(super) fn plugin(app: &mut App) {
 pub struct Projectile {
     pub damage: Damage,
     pub speed: f32,
-    pub angle_offset: f32,
+    angle_offset: f32,
+    spawn_offset: f32,
 }
 
 impl Default for Projectile {
@@ -36,6 +37,7 @@ impl Default for Projectile {
             damage: Damage::Range((5.0, 10.0)),
             speed: 600.0,
             angle_offset: 0.0,
+            spawn_offset: 0.0,
         }
     }
 }
@@ -56,7 +58,8 @@ pub fn fireball(
     (
         Projectile {
             damage: Damage::Single(3.0),
-            speed: 500.0,
+            speed: 450.0,
+            spawn_offset: 20.0,
             angle_offset,
         },
         Sprite::from_atlas_image(
@@ -88,7 +91,8 @@ pub fn icebolt(
     (
         Projectile {
             damage: Damage::Range((10.0, 20.0)),
-            speed: 400.0,
+            speed: 350.0,
+            spawn_offset: 50.0,
             angle_offset,
         },
         Sprite::from_atlas_image(
@@ -164,6 +168,8 @@ fn on_fire_projectile(
         .aim_direction
         .rotate(Vec2::from_angle(projectile.angle_offset));
 
+    let position = fire.position + (projectile_direction * projectile.spawn_offset);
+
     commands
         .entity(fire.projectile)
         .clone_and_spawn_with_opt_out(|builder| {
@@ -171,10 +177,10 @@ fn on_fire_projectile(
         })
         .remove::<(ProjectileOf, Disabled)>()
         .insert((
-            Position(fire.position),
+            Position(position),
             Rotation::radians(projectile_direction.to_angle()),
             Transform {
-                translation: fire.position.extend(ZLayer::InAir.z()),
+                translation: position.extend(ZLayer::InAir.z()),
                 rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
                 ..default()
             },

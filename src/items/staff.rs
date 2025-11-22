@@ -1,14 +1,11 @@
 use std::{
-    f32::consts::{FRAC_PI_3, FRAC_PI_8},
+    f32::consts::{FRAC_PI_4, FRAC_PI_8},
     time::Duration,
 };
 
 use bevy::{prelude::*, ui_widgets::observe};
 use bevy_lit::prelude::PointLight2d;
-use bevy_tweening::{
-    lens::{TransformRotateZLens, TransformRotationLens},
-    *,
-};
+use bevy_tweening::{lens::TransformRotateZLens, *};
 
 use crate::{
     items::{
@@ -27,14 +24,22 @@ pub(super) fn plugin(app: &mut App) {
         (
             tick_casting_timer.in_set(InGameSystems::DespawnEntities),
             fire_projectile_on_casting_end.in_set(InGameSystems::Simulation),
-            animate_staff_while_casting.in_set(InGameSystems::Vfx),
         ),
     );
+}
+
+#[derive(Component)]
+struct Staff {
+    /// x, y offset relative to center of staff sprite where projectiles should be spawned
+    source_offset: Vec2,
 }
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Staff of Flames"),
+        Staff {
+            source_offset: Vec2::new(0.0, 26.0),
+        },
         Item::new(1340, ItemType::Staff),
         Equippable {
             equip_type: EquipmentType::Staff,
@@ -57,6 +62,9 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
 pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Staff of Ice"),
+        Staff {
+            source_offset: Vec2::new(0.0, 26.0),
+        },
         Item::new(2050, ItemType::Staff),
         ManaCost(20.0), // big mana cost
         Equippable {
@@ -85,52 +93,65 @@ impl Casting {
 
 // "fired" implies this is a projectile weapon
 fn on_staff_fired(
-    staff: On<UseEquipment>,
+    staff_used: On<UseEquipment>,
     mut commands: Commands,
-    staff_query: Query<&Transform, With<Projectiles>>,
+    staff_query: Query<(&Staff, &Transform, &ItemOf), With<Projectiles>>,
+    holder_query: Query<&FacingDirection>,
 ) {
-    let Ok(staff_transform) = staff_query.get(staff.entity) else {
+    let Ok((staff, staff_transform, item_of)) = staff_query.get(staff_used.entity) else {
         warn!("Unable to cast staff, no projectiles");
+        return;
+    };
+
+    let Ok(facing_direction) = holder_query.get(item_of.0) else {
+        warn!("Tried to fire staff with holder missing facing direction");
         return;
     };
 
     let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
 
-    commands.entity(staff.entity).insert(Casting::new(0.3));
+    let swing_angle = match facing_direction {
+        FacingDirection::Up => -FRAC_PI_4,
+        FacingDirection::Down => FRAC_PI_4,
+        FacingDirection::Left => FRAC_PI_4,
+        FacingDirection::Right => -FRAC_PI_4,
+    };
 
-    commands.entity(staff.entity).insert(
-        TweenAnim::new(
-            // Create a tween that swings back and forth
-            // Swing left
-            Tween::new(
-                EaseFunction::Linear,
-                Duration::from_millis(100),
-                TransformRotateZLens {
-                    start: staff_rotation,
-                    end: staff_rotation + FRAC_PI_8,
-                },
+    commands
+        .entity(staff_used.entity)
+        .insert((
+            Casting::new(0.1),
+            TweenAnim::new(
+                // Swing
+                Tween::new(
+                    EaseFunction::BackInOut,
+                    Duration::from_millis(100),
+                    TransformRotateZLens {
+                        start: staff_rotation,
+                        end: staff_rotation + swing_angle,
+                    },
+                )
+                // Return
+                .then(Tween::new(
+                    EaseFunction::Linear,
+                    Duration::from_millis(100),
+                    TransformRotateZLens {
+                        start: staff_rotation + swing_angle,
+                        end: staff_rotation,
+                    },
+                )),
             )
-            // Swing right
-            .then(Tween::new(
-                EaseFunction::Linear,
-                Duration::from_millis(100),
-                TransformRotateZLens {
-                    start: staff_rotation + FRAC_PI_8,
-                    end: staff_rotation - FRAC_PI_8,
-                },
-            ))
-            // Return
-            .then(Tween::new(
-                EaseFunction::Linear,
-                Duration::from_millis(100),
-                TransformRotateZLens {
-                    start: staff_rotation - FRAC_PI_8,
-                    end: staff_rotation,
-                },
-            )),
-        )
-        .with_destroy_on_completed(true),
-    );
+            .with_destroy_on_completed(true),
+        ))
+        .with_child((
+            Transform::from_translation(staff.source_offset.extend(ZLayer::AboveSprite.z())),
+            PointLight2d {
+                color: Color::WHITE,
+                intensity: 10.0,
+                outer_radius: 3.0,
+                ..default()
+            },
+        ));
 }
 
 fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
@@ -141,14 +162,18 @@ fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
 
 fn fire_projectile_on_casting_end(
     mut commands: Commands,
-    staff_query: Query<(Entity, &Casting, &Projectiles, &ItemOf, &Sprite, &Transform)>,
+    staff_query: Query<(Entity, &Staff, &Casting, &Projectiles, &ItemOf, &Transform)>,
     holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>, Has<Enemy>)>,
-    images: Res<Assets<Image>>,
 ) {
-    for (staff_entity, casting, projectiles, item_of, sprite, staff_transform) in staff_query {
+    for (staff_entity, staff, casting, projectiles, item_of, staff_transform) in staff_query {
         if !casting.duration.is_finished() {
             continue;
         }
+
+        commands
+            .entity(staff_entity)
+            .remove::<Casting>()
+            .despawn_children();
 
         let Ok((holder_transform, holder_vision, target_info, is_enemy)) =
             holder_query.get(item_of.0)
@@ -163,19 +188,12 @@ fn fire_projectile_on_casting_end(
             DamageSource::Player
         };
 
-        // TODO: Move staff "projectile source offset" computation to staff construction time!
-        let staff_image = images
-            .get(sprite.image.id())
-            .expect("Staff should have image");
-
-        // Subtract a little to try to get center of staff "eye" (source of projectile spawn)
-        let staff_half_height = (staff_image.height() as f32 / 2.) - 6.;
         // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
-        let staff_projectile_source_offset =
-            staff_half_height * (staff_transform.rotation * Vec3::Y).truncate();
+        let rotated_source_offset =
+            (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
+        // staff.source_offset * (staff_transform.rotation * Vec3::Y).truncate();
         let staff_projectile_source_pos =
-            staff_transform.translation.truncate() + staff_projectile_source_offset;
-
+            staff_transform.translation.truncate() + rotated_source_offset;
         // If no target ditance default to sane value away from holder
         let target_angle = (holder_vision.aim_direction * target_info.map_or(100., |t| t.distance))
             - staff_projectile_source_pos;
@@ -191,14 +209,6 @@ fn fire_projectile_on_casting_end(
                 starting_position,
                 target_angle,
             )));
-            commands.entity(staff_entity).remove::<Casting>();
         }
     }
-}
-
-fn animate_staff_while_casting(
-    mut commands: Commands,
-    staff_query: Query<(Entity, &Transform), With<Casting>>,
-) {
-    for (staff, transform) in staff_query {}
 }

@@ -371,6 +371,7 @@ dependencies = [
  "bevy_ecs_tilemap",
  "bevy_enhanced_input",
  "bevy_lit",
+ "bevy_tweening",
  "getrandom",
  "rand",
  "serde",
@@ -1630,6 +1631,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "284738382605476667bbe80cf0959f4dffb61adbdb0149e22e67f4dbf97a5bc2"
 dependencies = [
  "bevy",
+]
+
+[[package]]
+name = "bevy_tweening"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6205bd9d4e64686879ec1169a39db8f5937f34e3490fd990fb3d8bb36179fdf4"
+dependencies = [
+ "bevy",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

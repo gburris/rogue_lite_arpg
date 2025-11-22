@@ -11,6 +11,7 @@ bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
 bevy_behave = "0.4"
 bevy_enhanced_input = "0.20.0"
 bevy_lit = "0.9"
+bevy_tweening = "0.14"
 accesskit = "0.21"
 avian2d = "0.4.1"
 rand = "0.9"

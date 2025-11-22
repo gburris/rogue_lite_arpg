@@ -1,7 +1,14 @@
-use std::f32::consts::FRAC_PI_8;
+use std::{
+    f32::consts::{FRAC_PI_3, FRAC_PI_8},
+    time::Duration,
+};
 
-use avian2d::prelude::*;
-use bevy::{ecs::entity_disabling::Disabled, prelude::*, ui_widgets::observe};
+use bevy::{prelude::*, ui_widgets::observe};
+use bevy_lit::prelude::PointLight2d;
+use bevy_tweening::{
+    lens::{TransformRotateZLens, TransformRotationLens},
+    *,
+};
 
 use crate::{
     items::{
@@ -17,7 +24,11 @@ use super::ItemType;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        tick_and_end_casting.in_set(InGameSystems::DespawnEntities),
+        (
+            tick_casting_timer.in_set(InGameSystems::DespawnEntities),
+            fire_projectile_on_casting_end.in_set(InGameSystems::Simulation),
+            animate_staff_while_casting.in_set(InGameSystems::Vfx),
+        ),
     );
 }
 
@@ -27,6 +38,7 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
         Item::new(1340, ItemType::Staff),
         Equippable {
             equip_type: EquipmentType::Staff,
+            use_rate: Timer::from_seconds(0.5, TimerMode::Once),
             ..default()
         },
         ManaCost(6.0),
@@ -73,72 +85,120 @@ impl Casting {
 
 // "fired" implies this is a projectile weapon
 fn on_staff_fired(
-    staff_fired: On<UseEquipment>,
+    staff: On<UseEquipment>,
     mut commands: Commands,
-    staff_query: Query<(&Projectiles, &ItemOf, &Sprite, &Transform)>,
-    holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>)>,
-    enemy_query: Query<Entity, With<Enemy>>,
-    images: Res<Assets<Image>>,
+    staff_query: Query<&Transform, With<Projectiles>>,
 ) {
-    let Ok((projectiles, item_of, sprite, staff_transform)) = staff_query.get(staff_fired.entity)
-    else {
-        warn!("Tried to fire staff that is not a projectile staff");
+    let Ok(staff_transform) = staff_query.get(staff.entity) else {
+        warn!("Unable to cast staff, no projectiles");
         return;
     };
 
-    let Ok((holder_transform, holder_vision, target_info)) = holder_query.get(item_of.0) else {
-        warn!("Tried to fire staff with holder missing aim position or transform");
-        return;
-    };
+    let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
 
-    // add casting to staff
+    commands.entity(staff.entity).insert(Casting::new(0.3));
 
-    let damage_source = if enemy_query.get(item_of.0).is_ok() {
-        DamageSource::Enemy
-    } else {
-        DamageSource::Player
-    };
+    commands.entity(staff.entity).insert(
+        TweenAnim::new(
+            // Create a tween that swings back and forth
+            // Swing left
+            Tween::new(
+                EaseFunction::Linear,
+                Duration::from_millis(100),
+                TransformRotateZLens {
+                    start: staff_rotation,
+                    end: staff_rotation + FRAC_PI_8,
+                },
+            )
+            // Swing right
+            .then(Tween::new(
+                EaseFunction::Linear,
+                Duration::from_millis(100),
+                TransformRotateZLens {
+                    start: staff_rotation + FRAC_PI_8,
+                    end: staff_rotation - FRAC_PI_8,
+                },
+            ))
+            // Return
+            .then(Tween::new(
+                EaseFunction::Linear,
+                Duration::from_millis(100),
+                TransformRotateZLens {
+                    start: staff_rotation - FRAC_PI_8,
+                    end: staff_rotation,
+                },
+            )),
+        )
+        .with_destroy_on_completed(true),
+    );
+}
 
-    // TODO: Move staff "projectile source offset" computation to staff construction time!
-    let staff_image = images
-        .get(sprite.image.id())
-        .expect("Staff should have image");
-
-    // Subtract a little to try to get center of staff "eye" (source of projectile spawn)
-    let staff_half_height = (staff_image.height() as f32 / 2.) - 6.;
-    // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
-    let staff_projectile_source_offset =
-        staff_half_height * (staff_transform.rotation * Vec3::Y).truncate();
-    let staff_projectile_source_pos =
-        staff_transform.translation.truncate() + staff_projectile_source_offset;
-
-    // If no target ditance default to sane value away from holder
-    let target_angle = (holder_vision.aim_direction * target_info.map_or(100., |t| t.distance))
-        - staff_projectile_source_pos;
-
-    // Staff is child of holder so position is relative, need to add holder transform for global position
-    let starting_position = holder_transform.translation.truncate() + staff_projectile_source_pos;
-
-    for projectile_entity in projectiles.iter() {
-        commands.trigger(FireProjectile::from((
-            projectile_entity,
-            damage_source,
-            starting_position,
-            target_angle,
-        )));
+fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
+    for mut casting in casting_query {
+        casting.duration.tick(time.delta());
     }
 }
 
-fn tick_and_end_casting(
+fn fire_projectile_on_casting_end(
     mut commands: Commands,
-    casting_query: Query<(Entity, &mut Casting)>,
-    time: Res<Time>,
+    staff_query: Query<(Entity, &Casting, &Projectiles, &ItemOf, &Sprite, &Transform)>,
+    holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>, Has<Enemy>)>,
+    images: Res<Assets<Image>>,
 ) {
-    for (entity, mut casting) in casting_query {
-        casting.duration.tick(time.delta());
+    for (staff_entity, casting, projectiles, item_of, sprite, staff_transform) in staff_query {
+        if !casting.duration.is_finished() {
+            continue;
+        }
 
-        if casting.duration.is_finished() {
-            commands.entity(entity).remove::<Casting>();
+        let Ok((holder_transform, holder_vision, target_info, is_enemy)) =
+            holder_query.get(item_of.0)
+        else {
+            warn!("Tried to fire staff with holder missing aim position or transform");
+            continue;
+        };
+
+        let damage_source = if is_enemy {
+            DamageSource::Enemy
+        } else {
+            DamageSource::Player
+        };
+
+        // TODO: Move staff "projectile source offset" computation to staff construction time!
+        let staff_image = images
+            .get(sprite.image.id())
+            .expect("Staff should have image");
+
+        // Subtract a little to try to get center of staff "eye" (source of projectile spawn)
+        let staff_half_height = (staff_image.height() as f32 / 2.) - 6.;
+        // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
+        let staff_projectile_source_offset =
+            staff_half_height * (staff_transform.rotation * Vec3::Y).truncate();
+        let staff_projectile_source_pos =
+            staff_transform.translation.truncate() + staff_projectile_source_offset;
+
+        // If no target ditance default to sane value away from holder
+        let target_angle = (holder_vision.aim_direction * target_info.map_or(100., |t| t.distance))
+            - staff_projectile_source_pos;
+
+        // Staff is child of holder so position is relative, need to add holder transform for global position
+        let starting_position =
+            holder_transform.translation.truncate() + staff_projectile_source_pos;
+
+        for projectile_entity in projectiles.iter() {
+            commands.trigger(FireProjectile::from((
+                projectile_entity,
+                damage_source,
+                starting_position,
+                target_angle,
+            )));
+            commands.entity(staff_entity).remove::<Casting>();
         }
     }
+}
+
+fn animate_staff_while_casting(
+    mut commands: Commands,
+    staff_query: Query<(Entity, &Transform), With<Casting>>,
+) {
+    for (staff, transform) in staff_query {}
 }

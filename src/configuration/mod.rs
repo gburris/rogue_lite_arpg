@@ -13,6 +13,7 @@ use bevy_behave::prelude::BehavePlugin;
 use bevy_ecs_tilemap::prelude::TilemapPlugin;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
 use bevy_lit::prelude::Lighting2dPlugin;
+use bevy_tweening::TweeningPlugin;
 
 pub mod prelude {
     pub use super::assets::*;
@@ -53,5 +54,6 @@ pub(super) fn plugin(app: &mut App) {
         EnhancedInputPlugin,
         Lighting2dPlugin,
         TilemapPlugin,
+        TweeningPlugin,
     ));
 }

@@ -10,7 +10,7 @@ use crate::{
     items::{
         Item, ItemOf, ItemType,
         equipment::{EquipmentSlot, EquipmentType, Equippable, Equipped},
-        prelude::{EquipmentTransform, UseEquipment},
+        prelude::UseEquipment,
     },
     prelude::*,
 };

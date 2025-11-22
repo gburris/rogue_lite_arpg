@@ -6,16 +6,9 @@ use crate::{
     items::{
         Items,
         equipment::{EquipmentType, Equipped, Mainhand, Offhand},
-        melee::ActiveMeleeAttack,
     },
     prelude::*,
 };
-
-#[derive(Clone, Copy)]
-pub struct EquipmentTransform {
-    pub mainhand: Transform,
-    pub offhand: Transform,
-}
 
 // Simple transform tuple for concise definitions
 struct EquipmentTransformDef {
@@ -75,7 +68,7 @@ macro_rules! add_equipment_transforms {
     };
 }
 
-static NEW_EQUIPMENT_TRANSFORM_MAP: LazyLock<
+static EQUIPMENT_TRANSFORM_MAP: LazyLock<
     HashMap<EquipmentType, HashMap<FacingDirection, Transform>>,
 > = LazyLock::new(|| {
     use ZLayer::BehindSprite;
@@ -142,7 +135,12 @@ static NEW_EQUIPMENT_TRANSFORM_MAP: LazyLock<
 
 pub(super) fn update_equipment_transforms(
     all_worn_equipment: Query<
-        (Option<&Mainhand>, Option<&Offhand>, &FacingDirection),
+        (
+            Option<&Mainhand>,
+            Option<&Offhand>,
+            &FacingDirection,
+            &AttackState,
+        ),
         (
             Or<(
                 // Update when holder changes direction
@@ -156,29 +154,25 @@ pub(super) fn update_equipment_transforms(
             With<Items>,
         ),
     >,
-    mut transforms: Query<
-        (&Equippable, &mut Transform),
-        (With<Equipped>, Without<ActiveMeleeAttack>),
-    >,
+    mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
-    for (mainhand, offhand, direction) in &all_worn_equipment {
-        update_single_equipment(mainhand.map(|Mainhand(e)| *e), direction, &mut transforms);
-        update_single_equipment(offhand.map(|Offhand(e)| *e), direction, &mut transforms);
+    for (mainhand, offhand, direction, attack_state) in &all_worn_equipment {
+        if !attack_state.is_attacking {
+            update_single_equipment(mainhand.map(|Mainhand(e)| *e), direction, &mut transforms);
+            update_single_equipment(offhand.map(|Offhand(e)| *e), direction, &mut transforms);
+        }
     }
 }
 
 fn update_single_equipment(
     equipment_entity: Option<Entity>,
     direction: &FacingDirection,
-    transforms: &mut Query<
-        (&Equippable, &mut Transform),
-        (With<Equipped>, Without<ActiveMeleeAttack>),
-    >,
+    transforms: &mut Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
     if let Some(entity) = equipment_entity
         && let Ok((equippable, mut transform)) = transforms.get_mut(entity)
     {
-        let new_transform = NEW_EQUIPMENT_TRANSFORM_MAP
+        let new_transform = EQUIPMENT_TRANSFORM_MAP
             .get(&equippable.equip_type)
             .and_then(|dir_map| dir_map.get(direction));
 

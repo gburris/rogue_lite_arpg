@@ -96,17 +96,19 @@ fn on_staff_fired(
     staff_used: On<UseEquipment>,
     mut commands: Commands,
     staff_query: Query<(&Staff, &Transform, &ItemOf), With<Projectiles>>,
-    holder_query: Query<&FacingDirection>,
+    mut holder_query: Query<(&mut AttackState, &FacingDirection)>,
 ) {
     let Ok((staff, staff_transform, item_of)) = staff_query.get(staff_used.entity) else {
         warn!("Unable to cast staff, no projectiles");
         return;
     };
 
-    let Ok(facing_direction) = holder_query.get(item_of.0) else {
+    let Ok((mut attack_state, facing_direction)) = holder_query.get_mut(item_of.0) else {
         warn!("Tried to fire staff with holder missing facing direction");
         return;
     };
+
+    attack_state.is_attacking = true;
 
     let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
 
@@ -120,12 +122,12 @@ fn on_staff_fired(
     commands
         .entity(staff_used.entity)
         .insert((
-            Casting::new(0.1),
+            Casting::new(1.0),
             TweenAnim::new(
                 // Swing
                 Tween::new(
-                    EaseFunction::BackInOut,
-                    Duration::from_millis(100),
+                    EaseFunction::BackIn,
+                    Duration::from_millis(1000),
                     TransformRotateZLens {
                         start: staff_rotation,
                         end: staff_rotation + swing_angle,
@@ -133,8 +135,8 @@ fn on_staff_fired(
                 )
                 // Return
                 .then(Tween::new(
-                    EaseFunction::Linear,
-                    Duration::from_millis(100),
+                    EaseFunction::CubicOut,
+                    Duration::from_millis(1000),
                     TransformRotateZLens {
                         start: staff_rotation + swing_angle,
                         end: staff_rotation,
@@ -163,7 +165,13 @@ fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
 fn fire_projectile_on_casting_end(
     mut commands: Commands,
     staff_query: Query<(Entity, &Staff, &Casting, &Projectiles, &ItemOf, &Transform)>,
-    holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>, Has<Enemy>)>,
+    mut holder_query: Query<(
+        &mut AttackState,
+        &Transform,
+        &Vision,
+        Option<&TargetInfo>,
+        Has<Enemy>,
+    )>,
 ) {
     for (staff_entity, staff, casting, projectiles, item_of, staff_transform) in staff_query {
         if !casting.duration.is_finished() {
@@ -175,12 +183,14 @@ fn fire_projectile_on_casting_end(
             .remove::<Casting>()
             .despawn_children();
 
-        let Ok((holder_transform, holder_vision, target_info, is_enemy)) =
-            holder_query.get(item_of.0)
+        let Ok((mut attack_state, holder_transform, holder_vision, target_info, is_enemy)) =
+            holder_query.get_mut(item_of.0)
         else {
             warn!("Tried to fire staff with holder missing aim position or transform");
             continue;
         };
+
+        attack_state.is_attacking = false;
 
         let damage_source = if is_enemy {
             DamageSource::Enemy

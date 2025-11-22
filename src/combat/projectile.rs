@@ -92,7 +92,7 @@ pub fn icebolt(
         Projectile {
             damage: Damage::Range((10.0, 20.0)),
             speed: 350.0,
-            spawn_offset: 50.0,
+            spawn_offset: 30.0,
             angle_offset,
         },
         Sprite::from_atlas_image(

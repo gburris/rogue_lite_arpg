@@ -8,7 +8,10 @@ use avian2d::prelude::*;
 use bevy::{platform::collections::HashSet, prelude::*, ui_widgets::observe};
 use bevy_enhanced_input::prelude::*;
 
-use crate::{items::melee::swing::MeleeSwingType, prelude::*};
+use crate::{
+    items::{equipment::EquipmentType, melee::swing::MeleeSwingType},
+    prelude::*,
+};
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change
@@ -39,7 +42,10 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 15.0,
         },
         Knockback(10.0),
-        Equippable::default(),
+        Equippable {
+            equip_type: EquipmentType::Sword,
+            ..default()
+        },
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
         observe(on_melee_equipped),
@@ -58,7 +64,10 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(20.0),
-        Equippable::default(),
+        Equippable {
+            equip_type: EquipmentType::Axe,
+            ..default()
+        },
         Sprite::from_image(sprites.axe.clone()),
         Item::new(220, ItemType::Melee),
         observe(on_melee_equipped),
@@ -77,7 +86,10 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(2.0),
-        Equippable::default(),
+        Equippable {
+            equip_type: EquipmentType::Axe,
+            ..default()
+        },
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),

@@ -9,7 +9,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 use crate::{
     items::{
         Item, ItemOf, ItemType,
-        equipment::{EquipmentSlot, Equippable, Equipped},
+        equipment::{EquipmentSlot, EquipmentType, Equippable, Equipped},
         prelude::{EquipmentTransform, UseEquipment},
     },
     prelude::*,
@@ -29,7 +29,7 @@ pub fn magic_shield(
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::from(0.5, EquipmentSlot::Offhand, EquipmentType::Shield),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -56,7 +56,7 @@ pub fn knight_shield(
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::from(0.5, EquipmentSlot::Offhand, EquipmentType::Shield),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
@@ -243,12 +243,12 @@ fn on_shield_deactivated(
 
     commands
         .entity(shield.entity)
-        .remove::<(ActiveShield, Collider)>()
-        .insert(
-            EquipmentTransform::get(*facing_direction)
-                .expect("Failed to deactivate shield")
-                .offhand,
-        );
+        .remove::<(ActiveShield, Collider)>();
+    // .insert(
+    //     EquipmentTransform::get(*facing_direction)
+    //         .expect("Failed to deactivate shield")
+    //         .offhand,
+    // );
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;

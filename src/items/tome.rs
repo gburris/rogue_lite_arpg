@@ -4,7 +4,7 @@ use rand::Rng;
 use crate::{
     items::{
         Item, ItemType,
-        equipment::{EquipmentSlot, Equippable},
+        equipment::{EquipmentSlot, EquipmentType, Equippable},
         prelude::UseEquipment,
     },
     prelude::*,
@@ -19,7 +19,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
     (
         Name::new("Tome Of Healing"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(2.0, EquipmentSlot::Offhand),
+        Equippable::from(2.0, EquipmentSlot::Offhand, EquipmentType::Spellbook),
         ManaCost(40.0),
         HealingTome {
             healing: (25.0, 50.0),

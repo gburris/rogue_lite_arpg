@@ -98,7 +98,7 @@ impl Casting {
 
         casting.return_time.pause();
 
-        return casting;
+        casting
     }
 }
 
@@ -124,10 +124,8 @@ fn on_staff_fired(
     let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
 
     let swing_angle = match facing_direction {
-        FacingDirection::Up => -FRAC_PI_4,
-        FacingDirection::Down => FRAC_PI_4,
-        FacingDirection::Left => FRAC_PI_4,
-        FacingDirection::Right => -FRAC_PI_4,
+        FacingDirection::Up | FacingDirection::Right => -FRAC_PI_4,
+        FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
 
     commands

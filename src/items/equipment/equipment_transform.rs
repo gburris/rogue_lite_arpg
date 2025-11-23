@@ -101,22 +101,21 @@ pub(super) fn update_equipment_transforms(
 ) {
     for (mainhand, offhand, direction, attack_state) in &all_worn_equipment {
         if !attack_state.is_attacking {
-            update_single_equipment(mainhand.map(|Mainhand(e)| *e), direction, &mut transforms);
-            update_single_equipment(offhand.map(|Offhand(e)| *e), direction, &mut transforms);
+            update_single_equipment(mainhand.map(|Mainhand(e)| *e), *direction, &mut transforms);
+            update_single_equipment(offhand.map(|Offhand(e)| *e), *direction, &mut transforms);
         }
     }
 }
 
 fn update_single_equipment(
     equipment_entity: Option<Entity>,
-    direction: &FacingDirection,
+    direction: FacingDirection,
     transforms: &mut Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
     if let Some(entity) = equipment_entity
         && let Ok((equippable, mut transform)) = transforms.get_mut(entity)
+        && let Some(new_transform) = equippable.transforms.get(&direction)
     {
-        if let Some(new_transform) = equippable.transforms.get(direction) {
-            *transform = *new_transform;
-        }
+        *transform = *new_transform;
     }
 }

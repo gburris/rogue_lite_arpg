@@ -48,8 +48,8 @@ impl Equippable {
     ) -> Self {
         Equippable {
             slot,
+            transforms,
             use_rate: Timer::from_seconds(duration, TimerMode::Once),
-            transforms: &*transforms,
         }
     }
 }

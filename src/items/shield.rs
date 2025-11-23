@@ -210,12 +210,8 @@ fn reflect_projectiles(
             if let Ok((mut linear_velocity, mut collision_layers, mut transform)) =
                 projectile_query.get_mut(colliding_entity)
             {
-                // If holder is enemy and it is reflected, it can now hurt the player!
-                let new_damage_source = if enemy_query.contains(child_of.parent()) {
-                    DamageSource::Enemy
-                } else {
-                    DamageSource::Player
-                };
+                // If shield blocker is enemy, reflected projectile can now hurt the player! (and vice-versa)
+                let is_blocker_enemy = enemy_query.contains(child_of.parent());
 
                 // Reverse direction of projectile! Reflect!
                 linear_velocity.0 = -linear_velocity.0;
@@ -225,7 +221,8 @@ fn reflect_projectiles(
 
                 *collision_layers = CollisionLayers::new(
                     GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                    LayerMask::from(new_damage_source) | GameCollisionLayer::HighObstacle,
+                    LayerMask::from(DamageSource::from(is_blocker_enemy))
+                        | GameCollisionLayer::HighObstacle,
                 );
                 shield.projectiles_reflected.insert(colliding_entity);
             }

@@ -20,6 +20,16 @@ pub enum DamageSource {
     Environment,
 }
 
+impl From<bool> for DamageSource {
+    fn from(is_enemy: bool) -> Self {
+        if is_enemy {
+            DamageSource::Enemy
+        } else {
+            DamageSource::Player
+        }
+    }
+}
+
 impl From<DamageSource> for LayerMask {
     fn from(source: DamageSource) -> Self {
         match source {

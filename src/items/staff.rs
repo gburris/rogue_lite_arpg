@@ -6,7 +6,7 @@ use std::{
 
 use bevy::{platform::collections::HashMap, prelude::*, ui_widgets::observe};
 use bevy_lit::prelude::PointLight2d;
-use bevy_tweening::{lens::TransformRotateZLens, *};
+use bevy_tweening::{Tween, TweenAnim, lens::TransformRotateZLens};
 
 use crate::{
     equipment_transforms,
@@ -206,38 +206,31 @@ fn fire_projectile_on_casting_end(
         if casting.return_time.is_paused() {
             casting.return_time.unpause();
 
-            let damage_source = if is_enemy {
-                DamageSource::Enemy
-            } else {
-                DamageSource::Player
-            };
-
-            // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
             let rotated_source_offset =
                 (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-            // staff.source_offset * (staff_transform.rotation * Vec3::Y).truncate();
-            let staff_projectile_source_pos =
+            let holder_relative_source_pos =
                 staff_transform.translation.truncate() + rotated_source_offset;
+
             // If no target ditance default to sane value away from holder
-            let target_angle = (holder_vision.aim_direction
+            let target_angle: Vec2 = (holder_vision.aim_direction
                 * target_info.map_or(100., |t| t.distance))
-                - staff_projectile_source_pos;
+                - holder_relative_source_pos;
 
             // Staff is child of holder so position is relative, need to add holder transform for global position
-            let starting_position =
-                holder_transform.translation.truncate() + staff_projectile_source_pos;
+            let world_starting_position =
+                holder_transform.translation.truncate() + holder_relative_source_pos;
 
             for projectile_entity in projectiles.iter() {
                 commands.trigger(FireProjectile::from((
                     projectile_entity,
-                    damage_source,
-                    starting_position,
+                    DamageSource::from(is_enemy),
+                    world_starting_position,
                     target_angle,
                 )));
             }
         }
 
-        // Return
+        // Return complete, cast attack is finished
         if casting.return_time.is_finished() {
             attack_state.is_attacking = false;
 

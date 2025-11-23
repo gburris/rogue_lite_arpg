@@ -16,18 +16,15 @@ struct GameOverTimer(Timer);
 
 pub(super) fn on_player_defeated(
     _: On<Defeated>,
-    player: Single<(Entity, &mut SimpleMotion), With<Player>>,
+    player: Single<Entity, With<Player>>,
     mut commands: Commands,
     mut playing_state: ResMut<NextState<PlayingState>>,
 ) {
-    let (player_entity, mut player_motion) = player.into_inner();
-
     commands
-        .entity(player_entity)
+        .entity(*player)
         .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
         .remove::<Health>()
         .despawn_related::<Children>();
-    player_motion.stop_moving();
     playing_state.set(PlayingState::Death);
 }
 

@@ -146,6 +146,10 @@ pub(super) fn on_damage_event(
             iframes.is_invulnerable = true;
         }
 
+        if health.is_dead() {
+            return;
+        }
+
         // Convert `Damage` to raw damage amount
         let damage = attempt_damage.damage.to_float();
         health.take_damage(damage);

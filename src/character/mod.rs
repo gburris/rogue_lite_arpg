@@ -18,7 +18,7 @@ pub mod prelude {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{character::prelude::CharacterAnimationState, prelude::*};
 
 pub struct CharacterPlugin;
 

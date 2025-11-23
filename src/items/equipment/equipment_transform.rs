@@ -1,17 +1,17 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use crate::{
     items::{
         Items,
-        equipment::{EquipmentType, Equipped, Mainhand, Offhand},
+        equipment::{Equipped, Mainhand, Offhand},
     },
     prelude::*,
 };
 
 // Simple transform tuple for concise definitions
-struct EquipmentTransformDef {
+pub struct EquipmentTransformDef {
     pos: (f32, f32),
     rotation: f32, // in radians
     z_layer: ZLayer,
@@ -54,84 +54,27 @@ impl From<EquipmentTransformDef> for Transform {
             .with_rotation(Quat::from_rotation_z(def.rotation))
     }
 }
-
-macro_rules! add_equipment_transforms {
-    ($map:ident, $equip_type:expr, [$(($dir:ident, $def:expr)),* $(,)?]) => {
-        $map.insert(
-            $equip_type,
+#[macro_export]
+macro_rules! equipment_transforms {
+    ([$(($dir:ident, $def:expr)),* $(,)?]) => {
+        LazyLock::new(|| {
             HashMap::from([
                 $(
                     (FacingDirection::$dir, Transform::from(EquipmentTransformDef::from($def)))
                 ),*
             ])
-        );
+        })
     };
 }
 
-static EQUIPMENT_TRANSFORM_MAP: LazyLock<
-    HashMap<EquipmentType, HashMap<FacingDirection, Transform>>,
-> = LazyLock::new(|| {
-    use ZLayer::BehindSprite;
-
-    let mut equipment_map = HashMap::new();
-
-    add_equipment_transforms!(
-        equipment_map,
-        EquipmentType::Sword,
-        [
-            (Up, ((0.0, -8.0), 30.0)),
-            (Down, ((0.0, 8.0), -30.0, BehindSprite)),
-            (Left, ((-8.0, -15.0), 90.0, BehindSprite)),
-            (Right, ((8.0, -15.0), -90.0)),
-        ]
-    );
-
-    add_equipment_transforms!(
-        equipment_map,
-        EquipmentType::Staff,
-        [
-            (Up, ((10.0, 2.0), 0.0, BehindSprite)),
-            (Down, ((-10.0, 0.0), 0.0)),
-            (Left, ((-4.0, -7.0), 50.0, BehindSprite)),
-            (Right, ((4.0, -8.0), -50.0)),
-        ]
-    );
-
-    add_equipment_transforms!(
-        equipment_map,
-        EquipmentType::Axe,
-        [
-            (Up, ((0.0, -8.0), 30.0)),
-            (Down, ((0.0, 8.0), -30.0, BehindSprite)),
-            (Left, ((-8.0, -15.0), 90.0, BehindSprite)),
-            (Right, ((8.0, -15.0), -90.0)),
-        ]
-    );
-
-    add_equipment_transforms!(
-        equipment_map,
-        EquipmentType::Spellbook,
-        [
-            (Up, ((0.0, -8.0), 30.0)),
-            (Down, ((0.0, 8.0), -30.0, BehindSprite)),
-            (Left, ((1.0, -15.0), 90.0)),
-            (Right, ((8.0, -15.0), -90.0, BehindSprite)),
-        ]
-    );
-
-    add_equipment_transforms!(
-        equipment_map,
-        EquipmentType::Shield,
-        [
-            (Up, ((0.0, -8.0), 30.0)),
-            (Down, ((0.0, 8.0), -30.0, BehindSprite)),
-            (Left, ((1.0, -15.0), 90.0)),
-            (Right, ((8.0, -15.0), -90.0, BehindSprite)),
-        ]
-    );
-
-    equipment_map
-});
+use ZLayer::BehindSprite;
+pub static DEFAULT_EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, Transform>> =
+    equipment_transforms!([
+        (Up, ((0.0, -8.0), 30.0)),
+        (Down, ((0.0, 8.0), -30.0, BehindSprite)),
+        (Left, ((1.0, -15.0), 90.0)),
+        (Right, ((8.0, -15.0), -90.0, BehindSprite)),
+    ]);
 
 pub(super) fn update_equipment_transforms(
     all_worn_equipment: Query<
@@ -172,11 +115,7 @@ fn update_single_equipment(
     if let Some(entity) = equipment_entity
         && let Ok((equippable, mut transform)) = transforms.get_mut(entity)
     {
-        let new_transform = EQUIPMENT_TRANSFORM_MAP
-            .get(&equippable.equip_type)
-            .and_then(|dir_map| dir_map.get(direction));
-
-        if let Some(new_transform) = new_transform {
+        if let Some(new_transform) = equippable.transforms.get(direction) {
             *transform = *new_transform;
         }
     }

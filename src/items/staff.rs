@@ -1,18 +1,16 @@
 use std::{
     f32::consts::{FRAC_PI_4, FRAC_PI_8},
+    sync::LazyLock,
     time::Duration,
 };
 
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::{platform::collections::HashMap, prelude::*, ui_widgets::observe};
 use bevy_lit::prelude::PointLight2d;
 use bevy_tweening::{lens::TransformRotateZLens, *};
 
 use crate::{
-    items::{
-        Item,
-        equipment::{EquipmentType, Equippable},
-        prelude::UseEquipment,
-    },
+    equipment_transforms,
+    items::{Item, equipment::Equippable, prelude::UseEquipment},
     prelude::*,
 };
 
@@ -28,24 +26,16 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component)]
-struct Staff {
-    /// x, y offset relative to center of staff sprite where projectiles should be spawned
-    source_offset: Vec2,
-}
-
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Staff of Flames"),
         Staff {
             source_offset: Vec2::new(0.0, 26.0),
+            fire_time: 0.1,
+            return_time: 0.1,
         },
         Item::new(1340, ItemType::Staff),
-        Equippable {
-            equip_type: EquipmentType::Staff,
-            use_rate: Timer::from_seconds(0.5, TimerMode::Once),
-            ..default()
-        },
+        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_TRANSFORMS),
         ManaCost(6.0),
         Sprite::from_image(sprites.fire_staff.clone()),
         related!(
@@ -64,14 +54,12 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         Name::new("Staff of Ice"),
         Staff {
             source_offset: Vec2::new(0.0, 26.0),
+            fire_time: 0.2,
+            return_time: 0.2,
         },
         Item::new(2050, ItemType::Staff),
         ManaCost(20.0), // big mana cost
-        Equippable {
-            use_rate: Timer::from_seconds(0.7, TimerMode::Once),
-            equip_type: EquipmentType::Staff,
-            ..default()
-        },
+        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_TRANSFORMS),
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
         observe(on_staff_fired),
@@ -79,15 +67,38 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
 }
 
 #[derive(Component)]
+struct Staff {
+    /// x, y offset relative to center of staff sprite where projectiles should be spawned
+    source_offset: Vec2,
+    fire_time: f32,
+    return_time: f32,
+}
+
+use ZLayer::BehindSprite;
+static STAFF_EQUIPMENT_TRANSFORMS: LazyLock<HashMap<FacingDirection, Transform>> =
+    equipment_transforms!([
+        (Up, ((10.0, 2.0), 0.0, BehindSprite)),
+        (Down, ((-10.0, 0.0), 0.0)),
+        (Left, ((-4.0, -7.0), 50.0, BehindSprite)),
+        (Right, ((4.0, -8.0), -50.0)),
+    ]);
+
+#[derive(Component)]
 struct Casting {
-    duration: Timer,
+    fire_time: Timer,
+    return_time: Timer,
 }
 
 impl Casting {
-    pub fn new(speed: f32) -> Self {
-        Self {
-            duration: Timer::from_seconds(speed, TimerMode::Once),
-        }
+    pub fn new(fire_time: f32, return_time: f32) -> Self {
+        let mut casting = Self {
+            fire_time: Timer::from_seconds(fire_time, TimerMode::Once),
+            return_time: Timer::from_seconds(return_time, TimerMode::Once),
+        };
+
+        casting.return_time.pause();
+
+        return casting;
     }
 }
 
@@ -122,12 +133,12 @@ fn on_staff_fired(
     commands
         .entity(staff_used.entity)
         .insert((
-            Casting::new(1.0),
+            Casting::new(staff.fire_time, staff.return_time),
             TweenAnim::new(
                 // Swing
                 Tween::new(
                     EaseFunction::BackIn,
-                    Duration::from_millis(1000),
+                    Duration::from_secs_f32(staff.fire_time),
                     TransformRotateZLens {
                         start: staff_rotation,
                         end: staff_rotation + swing_angle,
@@ -136,7 +147,7 @@ fn on_staff_fired(
                 // Return
                 .then(Tween::new(
                     EaseFunction::CubicOut,
-                    Duration::from_millis(1000),
+                    Duration::from_secs_f32(staff.return_time),
                     TransformRotateZLens {
                         start: staff_rotation + swing_angle,
                         end: staff_rotation,
@@ -158,13 +169,21 @@ fn on_staff_fired(
 
 fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
     for mut casting in casting_query {
-        casting.duration.tick(time.delta());
+        casting.return_time.tick(time.delta());
+        casting.fire_time.tick(time.delta());
     }
 }
 
 fn fire_projectile_on_casting_end(
     mut commands: Commands,
-    staff_query: Query<(Entity, &Staff, &Casting, &Projectiles, &ItemOf, &Transform)>,
+    staff_query: Query<(
+        Entity,
+        &Staff,
+        &mut Casting,
+        &Projectiles,
+        &ItemOf,
+        &Transform,
+    )>,
     mut holder_query: Query<(
         &mut AttackState,
         &Transform,
@@ -173,15 +192,10 @@ fn fire_projectile_on_casting_end(
         Has<Enemy>,
     )>,
 ) {
-    for (staff_entity, staff, casting, projectiles, item_of, staff_transform) in staff_query {
-        if !casting.duration.is_finished() {
+    for (staff_entity, staff, mut casting, projectiles, item_of, staff_transform) in staff_query {
+        if !casting.fire_time.is_finished() {
             continue;
         }
-
-        commands
-            .entity(staff_entity)
-            .remove::<Casting>()
-            .despawn_children();
 
         let Ok((mut attack_state, holder_transform, holder_vision, target_info, is_enemy)) =
             holder_query.get_mut(item_of.0)
@@ -190,35 +204,49 @@ fn fire_projectile_on_casting_end(
             continue;
         };
 
-        attack_state.is_attacking = false;
+        // Time to fire, then we return
+        if casting.return_time.is_paused() {
+            casting.return_time.unpause();
 
-        let damage_source = if is_enemy {
-            DamageSource::Enemy
-        } else {
-            DamageSource::Player
-        };
+            let damage_source = if is_enemy {
+                DamageSource::Enemy
+            } else {
+                DamageSource::Player
+            };
 
-        // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
-        let rotated_source_offset =
-            (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-        // staff.source_offset * (staff_transform.rotation * Vec3::Y).truncate();
-        let staff_projectile_source_pos =
-            staff_transform.translation.truncate() + rotated_source_offset;
-        // If no target ditance default to sane value away from holder
-        let target_angle = (holder_vision.aim_direction * target_info.map_or(100., |t| t.distance))
-            - staff_projectile_source_pos;
+            // Staff images start straight up (Vec3::Y) so multiply rotation quat by that direction to get direction as a unit vector
+            let rotated_source_offset =
+                (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
+            // staff.source_offset * (staff_transform.rotation * Vec3::Y).truncate();
+            let staff_projectile_source_pos =
+                staff_transform.translation.truncate() + rotated_source_offset;
+            // If no target ditance default to sane value away from holder
+            let target_angle = (holder_vision.aim_direction
+                * target_info.map_or(100., |t| t.distance))
+                - staff_projectile_source_pos;
 
-        // Staff is child of holder so position is relative, need to add holder transform for global position
-        let starting_position =
-            holder_transform.translation.truncate() + staff_projectile_source_pos;
+            // Staff is child of holder so position is relative, need to add holder transform for global position
+            let starting_position =
+                holder_transform.translation.truncate() + staff_projectile_source_pos;
 
-        for projectile_entity in projectiles.iter() {
-            commands.trigger(FireProjectile::from((
-                projectile_entity,
-                damage_source,
-                starting_position,
-                target_angle,
-            )));
+            for projectile_entity in projectiles.iter() {
+                commands.trigger(FireProjectile::from((
+                    projectile_entity,
+                    damage_source,
+                    starting_position,
+                    target_angle,
+                )));
+            }
+        }
+
+        // Return
+        if casting.return_time.is_finished() {
+            attack_state.is_attacking = false;
+
+            commands
+                .entity(staff_entity)
+                .remove::<Casting>()
+                .despawn_children();
         }
     }
 }

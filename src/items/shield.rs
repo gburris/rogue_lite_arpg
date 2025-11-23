@@ -9,7 +9,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 use crate::{
     items::{
         Item, ItemOf, ItemType,
-        equipment::{EquipmentSlot, EquipmentType, Equippable, Equipped},
+        equipment::{EquipmentSlot, Equippable, Equipped},
         prelude::UseEquipment,
     },
     prelude::*,
@@ -29,7 +29,11 @@ pub fn magic_shield(
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand, EquipmentType::Shield),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -56,7 +60,11 @@ pub fn knight_shield(
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand, EquipmentType::Shield),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },

@@ -1,6 +1,7 @@
 use core::fmt;
+use std::sync::LazyLock;
 
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 mod equip;
 mod equipment_transform;
@@ -35,33 +36,20 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
-    pub equip_type: EquipmentType,
     pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
-}
-
-impl Default for Equippable {
-    fn default() -> Self {
-        Self {
-            slot: EquipmentSlot::Mainhand,
-            equip_type: EquipmentType::Sword,
-            use_rate: Timer::from_seconds(0.4, TimerMode::Once),
-        }
-    }
+    pub transforms: &'static HashMap<FacingDirection, Transform>,
 }
 
 impl Equippable {
-    pub fn new(slot: EquipmentSlot, equip_type: EquipmentType) -> Self {
+    pub fn new(
+        slot: EquipmentSlot,
+        duration: f32,
+        transforms: &'static LazyLock<HashMap<FacingDirection, Transform>>,
+    ) -> Self {
         Equippable {
             slot,
-            equip_type,
-            ..default()
-        }
-    }
-    pub fn from(duration: f32, slot: EquipmentSlot, equip_type: EquipmentType) -> Self {
-        Equippable {
             use_rate: Timer::from_seconds(duration, TimerMode::Once),
-            slot,
-            equip_type,
+            transforms: &*transforms,
         }
     }
 }
@@ -114,13 +102,4 @@ impl Offhand {
     pub fn get(&self) -> Entity {
         self.0
     }
-}
-
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
-pub enum EquipmentType {
-    Sword,
-    Axe,
-    Staff,
-    Shield,
-    Spellbook,
 }

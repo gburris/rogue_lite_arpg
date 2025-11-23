@@ -99,8 +99,8 @@ impl ProjectileReflection {
 }
 
 #[derive(Component)]
-pub struct ActiveShield {
-    pub projectiles_reflected: HashSet<Entity>,
+struct ActiveShield {
+    projectiles_reflected: HashSet<Entity>,
 }
 
 fn update_active_shields(
@@ -237,9 +237,12 @@ fn on_shield_deactivated(
     shield: On<StopUsingEquipment>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
-    mut shield_query: Query<(&mut Sprite, &ItemOf), (With<Shield>, With<ActiveShield>)>,
+    mut shield_query: Query<
+        (&mut Sprite, &ItemOf, &Equippable),
+        (With<Shield>, With<ActiveShield>),
+    >,
 ) {
-    let Ok((mut shield_sprite, item_of)) = shield_query.get_mut(shield.entity) else {
+    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(shield.entity) else {
         warn!("Offhand missing Shield or ActiveShield");
         return;
     };
@@ -251,12 +254,13 @@ fn on_shield_deactivated(
 
     commands
         .entity(shield.entity)
-        .remove::<(ActiveShield, Collider)>();
-    // .insert(
-    //     EquipmentTransform::get(*facing_direction)
-    //         .expect("Failed to deactivate shield")
-    //         .offhand,
-    // );
+        .remove::<(ActiveShield, Collider)>()
+        .insert(
+            *equippable
+                .transforms
+                .get(facing_direction)
+                .expect("Failed to deactivate shield"),
+        );
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;

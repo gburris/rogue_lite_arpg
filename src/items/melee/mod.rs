@@ -4,11 +4,17 @@ pub mod prelude {
     pub use super::{ActiveMeleeAttack, axe, freeze_axe, sword};
 }
 
+use std::sync::LazyLock;
+
 use avian2d::prelude::*;
-use bevy::{platform::collections::HashSet, prelude::*, ui_widgets::observe};
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+    ui_widgets::observe,
+};
 use bevy_enhanced_input::prelude::*;
 
-use crate::{items::melee::swing::MeleeSwingType, prelude::*};
+use crate::{equipment_transforms, items::melee::swing::MeleeSwingType, prelude::*};
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change
@@ -39,7 +45,7 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 15.0,
         },
         Knockback(10.0),
-        Equippable::default(),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
         observe(on_melee_equipped),
@@ -58,7 +64,7 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(20.0),
-        Equippable::default(),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
         Sprite::from_image(sprites.axe.clone()),
         Item::new(220, ItemType::Melee),
         observe(on_melee_equipped),
@@ -77,7 +83,7 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(2.0),
-        Equippable::default(),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),
@@ -105,6 +111,15 @@ impl MeleeWeapon {
         CollisionLayers::new(GameCollisionLayer::HitBox, LayerMask::from(damage_source))
     }
 }
+
+use ZLayer::BehindSprite;
+static MELEE_EQUIPMENT_TRANSFORMS: LazyLock<HashMap<FacingDirection, Transform>> =
+    equipment_transforms!([
+        (Up, ((0.0, -8.0), 30.0)),
+        (Down, ((0.0, 8.0), -30.0, BehindSprite)),
+        (Left, ((-8.0, -15.0), 90.0, BehindSprite)),
+        (Right, ((8.0, -15.0), -90.0)),
+    ]);
 
 fn on_melee_equipped(
     equipped: On<Equip>,

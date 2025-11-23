@@ -10,7 +10,7 @@ use crate::{
     items::{
         Item, ItemOf, ItemType,
         equipment::{EquipmentSlot, Equippable, Equipped},
-        prelude::{EquipmentTransform, UseEquipment},
+        prelude::UseEquipment,
     },
     prelude::*,
 };
@@ -29,7 +29,11 @@ pub fn magic_shield(
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -56,7 +60,11 @@ pub fn knight_shield(
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
@@ -91,8 +99,8 @@ impl ProjectileReflection {
 }
 
 #[derive(Component)]
-pub struct ActiveShield {
-    pub projectiles_reflected: HashSet<Entity>,
+struct ActiveShield {
+    projectiles_reflected: HashSet<Entity>,
 }
 
 fn update_active_shields(
@@ -229,9 +237,12 @@ fn on_shield_deactivated(
     shield: On<StopUsingEquipment>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
-    mut shield_query: Query<(&mut Sprite, &ItemOf), (With<Shield>, With<ActiveShield>)>,
+    mut shield_query: Query<
+        (&mut Sprite, &ItemOf, &Equippable),
+        (With<Shield>, With<ActiveShield>),
+    >,
 ) {
-    let Ok((mut shield_sprite, item_of)) = shield_query.get_mut(shield.entity) else {
+    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(shield.entity) else {
         warn!("Offhand missing Shield or ActiveShield");
         return;
     };
@@ -245,9 +256,10 @@ fn on_shield_deactivated(
         .entity(shield.entity)
         .remove::<(ActiveShield, Collider)>()
         .insert(
-            EquipmentTransform::get(*facing_direction)
-                .expect("Failed to deactivate shield")
-                .offhand,
+            *equippable
+                .transforms
+                .get(facing_direction)
+                .expect("Failed to deactivate shield"),
         );
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {

@@ -52,7 +52,7 @@ impl Default for VisionCapabilities {
 
 /// Stores calculated perception data for a given potential or current target.
 #[derive(Component, Default)]
-pub(super) struct TargetInfo {
+pub struct TargetInfo {
     /// Distance to the observed entity.
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
@@ -117,13 +117,16 @@ fn update_aim_position(
 /// Updates the direction and distance of the watched (or targeted) entity,
 /// and points the `RayCaster` in that direction.
 fn update_target_info(
-    mut npc_query: Query<(
-        &mut TargetInfo,
-        &mut RayCaster,
-        &Transform,
-        &Watching,
-        Option<&Targeting>,
-    )>,
+    mut npc_query: Query<
+        (
+            &mut TargetInfo,
+            &mut RayCaster,
+            &Transform,
+            &Watching,
+            Option<&Targeting>,
+        ),
+        Without<Player>,
+    >,
     target_query: Query<&Transform>,
 ) {
     npc_query.par_iter_mut().for_each(

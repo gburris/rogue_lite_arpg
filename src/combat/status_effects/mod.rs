@@ -89,9 +89,8 @@ fn dedupe_statuses(
 
     // For each target entity, process each status type
     for (target_entity, new_statuses_by_type) in new_statuses_by_target {
-        let statuses = match affected_query.get(target_entity) {
-            Ok(statuses) => statuses,
-            Err(_) => continue,
+        let Ok(statuses) = affected_query.get(target_entity) else {
+            continue;
         };
 
         let existing_status_by_type: HashMap<StatusType, Entity> = statuses
@@ -109,7 +108,7 @@ fn dedupe_statuses(
             let total_status_count = statuses.iter().count();
             let unique_types = existing_status_by_type.len();
             if total_status_count != (unique_types + new_status_entities.length()) {
-                panic!(
+                error!(
                     "Duplicate statuses detected! Had {} total statuses but only {} unique types",
                     total_status_count,
                     (unique_types + new_status_entities.length())

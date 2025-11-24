@@ -236,7 +236,6 @@ pub(super) fn on_damage_dealt_knockback(
         && let Ok(knockback) = knockback_query.get(damage_source)
         && let Some(damage_direction) = damage_dealt.direction
     {
-        info!("Applying knockback!");
         forces
             .get_mut(damage_dealt.entity)?
             .apply_force(damage_direction * knockback.0 * 1_000_000.0);

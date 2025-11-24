@@ -211,7 +211,7 @@ fn spawn_player(
                 (
                     PointLight2d {
                         color: Color::WHITE,
-                        intensity: 0.8,
+                        intensity: 0.4,
                         outer_radius: 100.0,
                         falloff: 5.0,
                         ..default()

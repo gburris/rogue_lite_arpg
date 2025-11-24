@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::status_effects::{StatusApplied, StatusOf, slow::Slowed},
+    combat::status_effects::{StatusApplied, StatusOf, StatusType, StatusVfxOf, slow::Slowed},
     prelude::*,
 };
 
 #[derive(Component, Clone, Default)]
+#[require(StatusType::Freeze)]
 pub struct Frozen;
 
 pub(super) fn apply_frozen(
@@ -16,8 +17,6 @@ pub(super) fn apply_frozen(
     status_query
         .iter()
         .for_each(|(status, status_of, duration)| {
-            commands.entity(status).insert(StatusApplied);
-
             let slowed = commands
                 .spawn((
                     Slowed {
@@ -31,13 +30,14 @@ pub(super) fn apply_frozen(
             commands
                 .entity(status_of.0)
                 .add_one_related::<StatusOf>(slowed)
-                .with_child(grounded_ice_vfx(&sprites, duration.0.remaining_secs()));
+                .with_child(grounded_ice_vfx(&sprites, status));
         });
 }
 
-fn grounded_ice_vfx(sprites: &SpriteAssets, duration: f32) -> impl Bundle {
+fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {
     (
         Sprite::from_image(sprites.grounded_ice.clone()),
+        StatusVfxOf(status),
         Transform {
             translation: Vec3::new(
                 0.0,
@@ -47,6 +47,5 @@ fn grounded_ice_vfx(sprites: &SpriteAssets, duration: f32) -> impl Bundle {
             scale: Vec3::new(1.4, 1.4, 1.0),
             ..default()
         },
-        Lifespan::new(duration),
     )
 }

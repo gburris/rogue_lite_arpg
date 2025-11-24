@@ -41,7 +41,6 @@ fn update_animation_state(
         &mut character_query
     {
         if health.is_none() || health.is_some_and(|h| h.hp <= 0.0) {
-            info!("Setting dying state");
             animation_state.set_if_neq(CharacterAnimationState::Dying);
             continue;
         }

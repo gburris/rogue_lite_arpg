@@ -16,10 +16,7 @@ use bevy::{
 use crate::prelude::{InGameSystems, Lifespan};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        dedupe_statuses.in_set(InGameSystems::DespawnEntities),
-    );
+    app.add_systems(Update, dedupe_statuses.in_set(InGameSystems::Simulation));
 
     app.add_systems(
         Update,
@@ -29,6 +26,7 @@ pub(super) fn plugin(app: &mut App) {
             freeze::apply_frozen,
             slow::apply_slowed,
         )
+            .before(dedupe_statuses)
             .in_set(InGameSystems::Simulation),
     )
     .add_observer(slow::on_slow_removed);

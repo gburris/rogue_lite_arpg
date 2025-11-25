@@ -66,10 +66,23 @@ jobs:
       - name: Install Bevy CLI
         run: cargo binstall --version 0.1.0-alpha.2 --locked --no-confirm --force --git='https://github.com/TheBevyFlock/bevy_cli' bevy_cli
 
+      - name: Debug wasm-opt and wasm-bindgen
+        run: |
+          echo "PATH=$PATH"
+          which wasm-opt || true
+          wasm-opt --version || true
+          which wasm-bindgen || true
+          wasm-bindgen --version || true
+
+      - name: Install pinned wasm-opt (v116)
+        run: |
+          cargo binstall --locked --no-confirm --force --version 116 wasm-opt
+          which wasm-opt
+          wasm-opt --version
+
       - name: Build and add web bundle to app (Web)
         run: |
           cargo binstall --locked --no-confirm --force wasm-bindgen-cli
-          cargo binstall --locked --no-confirm --force wasm-opt
           bevy build --locked --release --yes web --bundle
           mv 'target/bevy_web/web-release/baba_yaga' '${{ env.app }}'
 

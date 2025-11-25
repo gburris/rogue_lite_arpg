@@ -12,20 +12,20 @@ use crate::{
 #[derive(Component, Clone)]
 #[require(StatusType::Burn)]
 pub struct Burning {
-    pub damage: f32,
-    pub damage_frequency: Timer,
+    damage: f32,
+    damage_frequency: Timer,
 }
 
 impl Default for Burning {
     fn default() -> Burning {
         Burning {
             damage: 2.0,
-            damage_frequency: Timer::from_seconds(0.6, TimerMode::Repeating),
+            damage_frequency: Timer::from_seconds(0.7, TimerMode::Repeating),
         }
     }
 }
 
-pub(super) fn tick_burn(mut burn_query: Query<&mut Burning>, time: Res<Time>) {
+pub(super) fn tick_burn(mut burn_query: Query<&mut Burning, With<StatusApplied>>, time: Res<Time>) {
     for mut burn_status in &mut burn_query {
         burn_status.damage_frequency.tick(time.delta());
     }
@@ -58,6 +58,8 @@ pub(super) fn apply_burning(
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
     status_query.iter().for_each(|(status, status_of)| {
+        commands.entity(status).insert(StatusApplied);
+
         commands
             .entity(status_of.0)
             .with_child(burn_vfx(&sprites, &sprite_layouts, status));

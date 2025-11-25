@@ -1,13 +1,13 @@
 use avian2d::prelude::*;
 
-use bevy::{ecs::entity_disabling::Disabled, prelude::*};
+use bevy::prelude::*;
 use rand::Rng;
 
 use crate::{
     combat::{
         health::Health,
         invulnerable::IFrames,
-        status_effects::{EffectOf, Effects, StatusOf},
+        status_effects::{ApplyEffects, Effects},
     },
     prelude::{GameCollisionLayer, Player},
 };
@@ -170,21 +170,14 @@ pub(super) fn on_damage_event(
         } else if let Some(source_entity) = attempt_damage.damage_source {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {
-                trace!("Applying effects: {:?}", effects);
-                effects.iter().for_each(|e| {
-                    commands
-                        .entity(e)
-                        .clone_and_spawn()
-                        .remove::<(Disabled, EffectOf)>()
-                        .insert(StatusOf(damaged_entity));
-                });
+                commands.trigger(ApplyEffects::new(effects, damaged_entity));
             }
         }
     }
 }
 
 #[derive(Component)]
-pub struct DamageFlash(pub Timer);
+pub struct DamageFlash(Timer);
 
 impl Default for DamageFlash {
     fn default() -> Self {

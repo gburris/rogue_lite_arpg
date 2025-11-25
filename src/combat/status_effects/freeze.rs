@@ -17,6 +17,8 @@ pub(super) fn apply_frozen(
     status_query
         .iter()
         .for_each(|(status, status_of, duration)| {
+            commands.entity(status).insert(StatusApplied);
+
             let slowed = commands
                 .spawn((
                     Slowed {

@@ -81,7 +81,7 @@ jobs:
 
       - name: Build and add web bundle to app (Web)
         run: |
-          bevy build --locked --release --yes web --bundle
+          bevy build --locked --release --yes web --bundle --verbose
           mv 'target/bevy_web/web-release/baba_yaga' '${{ env.app }}'
 
       - name: Debug Build Output

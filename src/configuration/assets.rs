@@ -29,7 +29,7 @@ pub struct SpriteSheetLayouts {
         padding_x = 24,
     ))]
     pub fireball_layout: Handle<TextureAtlasLayout>,
-    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 5, rows = 1))]
+    #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 32, columns = 3, rows = 1))]
     pub ice_bolt_layout: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 4))]
     pub bat_enemy_layout: Handle<TextureAtlasLayout>,
@@ -70,7 +70,7 @@ pub struct SpriteAssets {
     pub ice_staff: Handle<Image>,
     #[asset(path = "items/health_potion.png")]
     pub health_potion: Handle<Image>,
-    #[asset(path = "projectiles/IceBolt.png")]
+    #[asset(path = "projectiles/ice_bolt.png")]
     pub ice_bolt: Handle<Image>,
     #[asset(path = "projectiles/fireball.png")]
     pub fire_ball: Handle<Image>,

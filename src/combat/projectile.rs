@@ -1,5 +1,9 @@
 use avian2d::prelude::*;
-use bevy::{color::palettes::tailwind::YELLOW_300, ecs::entity_disabling::Disabled, prelude::*};
+use bevy::{
+    color::palettes::tailwind::{BLUE_400, YELLOW_300},
+    ecs::entity_disabling::Disabled,
+    prelude::*,
+};
 use bevy_lit::prelude::PointLight2d;
 
 use crate::{
@@ -73,7 +77,7 @@ pub fn fireball(
             color: Color::from(YELLOW_300),
             intensity: 1.4,
             falloff: 5.0,
-            outer_radius: 30.0,
+            outer_radius: 50.0,
             ..default()
         },
         Collider::circle(10.0),
@@ -92,7 +96,7 @@ pub fn icebolt(
         Projectile {
             damage: Damage::Range((10.0, 20.0)),
             speed: 350.0,
-            spawn_offset: 30.0,
+            spawn_offset: 26.0,
             angle_offset,
         },
         Sprite::from_atlas_image(
@@ -102,6 +106,16 @@ pub fn icebolt(
                 index: 0,
             },
         ),
+        PointLight2d {
+            color: Color::from(BLUE_400),
+            intensity: 1.4,
+            falloff: 5.0,
+            outer_radius: 80.0,
+            ..default()
+        },
+        Collider::rectangle(40.0, 5.0),
+        AnimationIndices::Cycle((0..=2).cycle()),
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         Knockback(5.0),
         related!(Effects[(Frozen, Lifespan::new(0.7))]),
     )

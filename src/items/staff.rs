@@ -58,7 +58,7 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
             return_time: 0.2,
         },
         Item::new(2050, ItemType::Staff),
-        ManaCost(20.0), // big mana cost
+        ManaCost(15.0), // big mana cost
         Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_TRANSFORMS),
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),

@@ -93,7 +93,7 @@ fn burn_vfx(
             color: Color::from(YELLOW_300),
             intensity: 2.0,
             falloff: 10.0,
-            outer_radius: 100.0,
+            outer_radius: 150.0,
             ..default()
         },
         AnimationIndices::Cycle((0..=7).cycle()),

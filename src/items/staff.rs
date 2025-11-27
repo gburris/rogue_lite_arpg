@@ -54,8 +54,8 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         Name::new("Staff of Ice"),
         Staff {
             source_offset: Vec2::new(0.0, 26.0),
-            fire_time: 0.2,
-            return_time: 0.2,
+            fire_time: 0.15,
+            return_time: 0.15,
         },
         Item::new(2050, ItemType::Staff),
         ManaCost(15.0), // big mana cost

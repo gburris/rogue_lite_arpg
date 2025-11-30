@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
 #[require(FacingDirection, SimpleMotion)]
-pub enum CharacterAnimationState {
+pub(super) enum CharacterAnimationState {
     #[default]
     Idle,
     Moving,
@@ -40,15 +40,15 @@ fn update_animation_state(
     for (motion, attack_state, health, mut animation_state, mut facing_direction) in
         &mut character_query
     {
-        facing_direction.set_if_neq(FacingDirection::from_vec2(
-            &facing_direction,
-            motion.direction,
-        ));
-
         if health.is_none() || health.is_some_and(|h| h.hp <= 0.0) {
             animation_state.set_if_neq(CharacterAnimationState::Dying);
             continue;
         }
+
+        facing_direction.set_if_neq(FacingDirection::from_vec2(
+            &facing_direction,
+            motion.direction,
+        ));
 
         // Attacking animation takes priority over walking / idle
         if attack_state.is_attacking {
@@ -87,9 +87,9 @@ fn cycle_character_animation(
 }
 
 #[derive(Resource)]
-pub struct DefaultAnimationConfig {
-    pub columns: usize,
-    pub animations: HashMap<(CharacterAnimationState, FacingDirection), AnimationData>,
+struct DefaultAnimationConfig {
+    columns: usize,
+    animations: HashMap<(CharacterAnimationState, FacingDirection), AnimationData>,
 }
 
 impl Default for DefaultAnimationConfig {
@@ -126,7 +126,7 @@ impl Default for DefaultAnimationConfig {
 }
 
 impl DefaultAnimationConfig {
-    pub fn get_animation(
+    fn get_animation(
         &self,
         state: CharacterAnimationState,
         direction: FacingDirection,
@@ -140,7 +140,7 @@ impl DefaultAnimationConfig {
         })
     }
 
-    pub fn get_indices(
+    fn get_indices(
         &self,
         state: CharacterAnimationState,
         direction: FacingDirection,
@@ -151,7 +151,7 @@ impl DefaultAnimationConfig {
         AnimationIndices::Cycle((first..=last).cycle())
     }
 
-    pub fn get_timer(&self, state: CharacterAnimationState, direction: FacingDirection) -> Timer {
+    fn get_timer(&self, state: CharacterAnimationState, direction: FacingDirection) -> Timer {
         let animation = self.get_animation(state, direction);
         Timer::from_seconds(animation.frame_duration, TimerMode::Repeating)
     }

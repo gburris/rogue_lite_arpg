@@ -1,98 +1,89 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
-use std::{collections::HashMap, sync::LazyLock};
+use std::sync::LazyLock;
 
 use crate::{
     items::{
         Items,
         equipment::{Equipped, Mainhand, Offhand},
-        melee::ActiveMeleeAttack,
     },
     prelude::*,
 };
 
-// Constants for transform values
-const MAINHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
-const OFFHAND_SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
-#[derive(Clone, Copy)]
-pub struct EquipmentTransform {
-    pub mainhand: Transform,
-    pub offhand: Transform,
+// Simple transform tuple for concise definitions
+pub struct EquipmentTransformDef {
+    pos: (f32, f32),
+    rotation: f32, // in radians
+    z_layer: ZLayer,
 }
 
-//You wish this wasn't like this but it is
-//See std lib example here https://crates.io/crates/lazy_static
-static EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, EquipmentTransform>> =
-    LazyLock::new(|| {
-        let mut m = HashMap::new();
-
-        // Up direction
-        m.insert(
-            FacingDirection::Up,
-            EquipmentTransform {
-                mainhand: Transform::from_xyz(0.0, -8.0, ZLayer::AboveSprite.z())
-                    .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
-                    .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(0.0, -8.0, ZLayer::AboveSprite.z())
-                    .with_rotation(Quat::from_rotation_z(30.0f32.to_radians()))
-                    .with_scale(OFFHAND_SCALE),
-            },
-        );
-
-        // Down direction
-        m.insert(
-            FacingDirection::Down,
-            EquipmentTransform {
-                mainhand: Transform::from_xyz(0.0, 8.0, ZLayer::BehindSprite.z())
-                    .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
-                    .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(0.0, 8.0, ZLayer::BehindSprite.z())
-                    .with_rotation(Quat::from_rotation_z(-30.0f32.to_radians()))
-                    .with_scale(OFFHAND_SCALE),
-            },
-        );
-
-        // Left direction
-        m.insert(
-            FacingDirection::Left,
-            EquipmentTransform {
-                mainhand: Transform::from_xyz(-8.0, -15.0, ZLayer::BehindSprite.z())
-                    .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
-                    .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(1.0, -15.0, ZLayer::AboveSprite.z())
-                    .with_rotation(Quat::from_rotation_z(90.0f32.to_radians()))
-                    .with_scale(OFFHAND_SCALE),
-            },
-        );
-
-        // Right direction
-        m.insert(
-            FacingDirection::Right,
-            EquipmentTransform {
-                mainhand: Transform::from_xyz(8.0, -15.0, ZLayer::AboveSprite.z())
-                    .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
-                    .with_scale(MAINHAND_SCALE),
-                offhand: Transform::from_xyz(8.0, -15.0, ZLayer::BehindSprite.z())
-                    .with_rotation(Quat::from_rotation_z(-90.0f32.to_radians()))
-                    .with_scale(OFFHAND_SCALE),
-            },
-        );
-
-        m
-    });
-
-impl EquipmentTransform {
-    pub fn get(direction: FacingDirection) -> Result<Self> {
-        EQUIPMENT_TRANSFORM_MAP
-            .get(&direction)
-            .copied()
-            .ok_or(BevyError::from("Direction not found"))
+impl From<(f32, f32)> for EquipmentTransformDef {
+    fn from(pos: (f32, f32)) -> Self {
+        EquipmentTransformDef {
+            pos,
+            rotation: 0.0,
+            z_layer: ZLayer::AboveSprite,
+        }
     }
 }
 
+impl From<((f32, f32), f32)> for EquipmentTransformDef {
+    fn from((pos, rotation): ((f32, f32), f32)) -> Self {
+        EquipmentTransformDef {
+            pos,
+            rotation: rotation.to_radians(),
+            z_layer: ZLayer::AboveSprite,
+        }
+    }
+}
+
+impl From<((f32, f32), f32, ZLayer)> for EquipmentTransformDef {
+    fn from((pos, rotation, z_layer): ((f32, f32), f32, ZLayer)) -> Self {
+        EquipmentTransformDef {
+            pos,
+            rotation: rotation.to_radians(),
+            z_layer,
+        }
+    }
+}
+
+// Convert EquipmentTransformDef to actual Transform
+impl From<EquipmentTransformDef> for Transform {
+    fn from(def: EquipmentTransformDef) -> Self {
+        Transform::from_xyz(def.pos.0, def.pos.1, def.z_layer.z())
+            .with_rotation(Quat::from_rotation_z(def.rotation))
+    }
+}
+#[macro_export]
+macro_rules! equipment_transforms {
+    ([$(($dir:ident, $def:expr)),* $(,)?]) => {
+        LazyLock::new(|| {
+            HashMap::from([
+                $(
+                    (FacingDirection::$dir, Transform::from(EquipmentTransformDef::from($def)))
+                ),*
+            ])
+        })
+    };
+}
+
+use ZLayer::BehindSprite;
+pub static DEFAULT_EQUIPMENT_TRANSFORM_MAP: LazyLock<HashMap<FacingDirection, Transform>> =
+    equipment_transforms!([
+        (Up, ((0.0, -8.0), 30.0)),
+        (Down, ((0.0, 8.0), -30.0, BehindSprite)),
+        (Left, ((1.0, -15.0), 90.0)),
+        (Right, ((8.0, -15.0), -90.0, BehindSprite)),
+    ]);
+
 pub(super) fn update_equipment_transforms(
     all_worn_equipment: Query<
-        (Option<&Mainhand>, Option<&Offhand>, &FacingDirection),
+        (
+            Option<&Mainhand>,
+            Option<&Offhand>,
+            &FacingDirection,
+            &AttackState,
+        ),
         (
             Or<(
                 // Update when holder changes direction
@@ -106,24 +97,25 @@ pub(super) fn update_equipment_transforms(
             With<Items>,
         ),
     >,
-    mut transforms: Query<&mut Transform, (With<Equipped>, Without<ActiveMeleeAttack>)>,
-) -> Result {
-    for (mainhand, offhand, direction) in &all_worn_equipment {
-        let direction_transforms = EquipmentTransform::get(*direction)?;
-
-        // Update mainhand equipment
-        if let Some(Mainhand(mainhand)) = mainhand
-            && let Ok(mut transform) = transforms.get_mut(*mainhand)
-        {
-            *transform = direction_transforms.mainhand;
-        }
-
-        // Update offhand equipment
-        if let Some(Offhand(offhand)) = offhand
-            && let Ok(mut transform) = transforms.get_mut(*offhand)
-        {
-            *transform = direction_transforms.offhand;
+    mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
+) {
+    for (mainhand, offhand, direction, attack_state) in &all_worn_equipment {
+        if !attack_state.is_attacking {
+            update_single_equipment(mainhand.map(|Mainhand(e)| *e), *direction, &mut transforms);
+            update_single_equipment(offhand.map(|Offhand(e)| *e), *direction, &mut transforms);
         }
     }
-    Ok(())
+}
+
+fn update_single_equipment(
+    equipment_entity: Option<Entity>,
+    direction: FacingDirection,
+    transforms: &mut Query<(&Equippable, &mut Transform), With<Equipped>>,
+) {
+    if let Some(entity) = equipment_entity
+        && let Ok((equippable, mut transform)) = transforms.get_mut(entity)
+        && let Some(new_transform) = equippable.transforms.get(&direction)
+    {
+        *transform = *new_transform;
+    }
 }

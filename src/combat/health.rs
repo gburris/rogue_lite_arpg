@@ -27,6 +27,10 @@ impl Health {
         self.hp = (self.hp - amount).max(0.0);
     }
 
+    pub fn is_dead(&self) -> bool {
+        self.hp <= 0.0
+    }
+
     fn add_health(&mut self, amount: f32) -> f32 {
         let before = self.hp;
         self.hp += amount;

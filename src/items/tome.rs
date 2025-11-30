@@ -19,7 +19,11 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
     (
         Name::new("Tome Of Healing"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(2.0, EquipmentSlot::Offhand),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            2.0,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         ManaCost(40.0),
         HealingTome {
             healing: (25.0, 50.0),

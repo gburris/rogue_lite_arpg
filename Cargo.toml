@@ -5,11 +5,13 @@ edition = "2024"
 description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
 
 [dependencies]
-bevy = { version = "0.17", features = ["experimental_bevy_feathers"] }
+bevy = { version = "0.17.3", features = ["experimental_bevy_feathers", "webgpu"] }
 bevy_ecs_tilemap = "0.17"
 bevy_asset_loader = { version = "0.24.0-rc.1", features = ["2d"] }
 bevy_behave = "0.4"
 bevy_enhanced_input = "0.20.0"
+bevy_lit = "0.9"
+bevy_tweening = "0.14"
 accesskit = "0.21"
 avian2d = "0.4.1"
 rand = "0.9"

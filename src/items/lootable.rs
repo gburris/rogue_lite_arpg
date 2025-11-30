@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
+use bevy_lit::prelude::PointLight2d;
 use rand::{Rng, rng};
 
 use crate::prelude::*;
@@ -17,7 +18,11 @@ pub(super) fn plugin(app: &mut App) {
 #[require(
     Lifespan::new(10.0),
     YSort::from_offset(-6.0),
-
+    PointLight2d {
+                intensity: 0.3,
+                color: Color::WHITE,
+                ..default()
+    },
 )]
 pub struct Lootable;
 
@@ -65,6 +70,11 @@ fn on_drop_event(
         .remove::<ItemOf>()
         .insert((
             Lootable,
+            PointLight2d {
+                intensity: 0.3,
+                color: Color::WHITE,
+                ..default()
+            },
             Visibility::Visible,
             Transform::from_translation(final_position),
         ))
@@ -81,7 +91,7 @@ fn on_lootable_item_interaction(
     // Make sure item doesn't despawn and is hidden (since its in inventory)
     commands
         .entity(item_entity)
-        .remove::<(YSort, Lifespan, Lootable)>()
+        .remove::<(YSort, Lifespan, Lootable, PointLight2d)>()
         .insert((ItemOf(*player), Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up

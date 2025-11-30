@@ -1,6 +1,7 @@
 use core::fmt;
+use std::sync::LazyLock;
 
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 mod equip;
 mod equipment_transform;
@@ -36,25 +37,19 @@ pub(super) fn plugin(app: &mut App) {
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
-}
-
-impl Default for Equippable {
-    fn default() -> Self {
-        Self {
-            slot: EquipmentSlot::Mainhand,
-            use_rate: Timer::from_seconds(0.4, TimerMode::Once),
-        }
-    }
+    pub transforms: &'static HashMap<FacingDirection, Transform>,
 }
 
 impl Equippable {
-    pub fn new(slot: EquipmentSlot) -> Self {
-        Equippable { slot, ..default() }
-    }
-    pub fn from(duration: f32, slot: EquipmentSlot) -> Self {
+    pub fn new(
+        slot: EquipmentSlot,
+        duration: f32,
+        transforms: &'static LazyLock<HashMap<FacingDirection, Transform>>,
+    ) -> Self {
         Equippable {
-            use_rate: Timer::from_seconds(duration, TimerMode::Once),
             slot,
+            transforms,
+            use_rate: Timer::from_seconds(duration, TimerMode::Once),
         }
     }
 }

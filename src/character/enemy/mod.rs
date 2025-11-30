@@ -85,7 +85,7 @@ fn spawn_enemy(
     shadows: &Shadows,
     player: Entity,
 ) {
-    info!("Spawning enemy at: {}", spawn_data.position);
+    trace!("Spawning enemy at: {}", spawn_data.position);
 
     let chase_behavior = behave! {
         Behave::While => {

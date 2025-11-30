@@ -7,18 +7,17 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use super::animation::*;
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;
     pub use super::state::*;
-    pub use super::vision::Vision;
+    pub use super::vision::*;
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{character::animation::CharacterAnimationState, prelude::*};
 
 pub struct CharacterPlugin;
 

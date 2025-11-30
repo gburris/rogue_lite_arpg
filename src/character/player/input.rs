@@ -22,6 +22,8 @@ pub(super) fn plugin(app: &mut App) {
     // Unpause Logic
     app.add_systems(OnEnter(Menu::None), unpause)
         .add_observer(on_controls_activated);
+
+    app.add_systems(OnEnter(PlayingState::Death), deactivate_controls);
 }
 
 const MOUSE_SENSITIVITY: f32 = 0.5;

@@ -58,7 +58,7 @@ pub(super) fn on_enemy_defeated(
         commands
             .entity(defeated.entity)
             .insert(Lifespan::new(2.0))
-            .remove::<(Health, RigidBody)>()
+            .remove::<RigidBody>()
             .despawn_related::<Children>();
     }
 }

@@ -1,11 +1,13 @@
-use bevy::prelude::*;
+use bevy::{color::palettes::tailwind::BLUE_400, prelude::*};
+use bevy_lit::prelude::PointLight2d;
 
 use crate::{
-    combat::status_effects::{StatusApplied, StatusOf, slow::Slowed},
+    combat::status_effects::{StatusApplied, StatusOf, StatusType, StatusVfxOf, slow::Slowed},
     prelude::*,
 };
 
 #[derive(Component, Clone, Default)]
+#[require(StatusType::Freeze)]
 pub struct Frozen;
 
 pub(super) fn apply_frozen(
@@ -31,13 +33,21 @@ pub(super) fn apply_frozen(
             commands
                 .entity(status_of.0)
                 .add_one_related::<StatusOf>(slowed)
-                .with_child(grounded_ice_vfx(&sprites, duration.0.remaining_secs()));
+                .with_child(grounded_ice_vfx(&sprites, status));
         });
 }
 
-fn grounded_ice_vfx(sprites: &SpriteAssets, duration: f32) -> impl Bundle {
+fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {
     (
         Sprite::from_image(sprites.grounded_ice.clone()),
+        StatusVfxOf(status),
+        PointLight2d {
+            color: Color::from(BLUE_400),
+            intensity: 1.4,
+            falloff: 5.0,
+            outer_radius: 80.0,
+            ..default()
+        },
         Transform {
             translation: Vec3::new(
                 0.0,
@@ -47,6 +57,5 @@ fn grounded_ice_vfx(sprites: &SpriteAssets, duration: f32) -> impl Bundle {
             scale: Vec3::new(1.4, 1.4, 1.0),
             ..default()
         },
-        Lifespan::new(duration),
     )
 }

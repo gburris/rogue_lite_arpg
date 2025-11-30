@@ -10,7 +10,7 @@ use crate::{
     items::{
         Item, ItemOf, ItemType,
         equipment::{EquipmentSlot, Equippable, Equipped},
-        prelude::{EquipmentTransform, UseEquipment},
+        prelude::UseEquipment,
     },
     prelude::*,
 };
@@ -29,7 +29,11 @@ pub fn magic_shield(
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -56,7 +60,11 @@ pub fn knight_shield(
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::from(0.5, EquipmentSlot::Offhand),
+        Equippable::new(
+            EquipmentSlot::Offhand,
+            0.5,
+            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
+        ),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
@@ -91,8 +99,8 @@ impl ProjectileReflection {
 }
 
 #[derive(Component)]
-pub struct ActiveShield {
-    pub projectiles_reflected: HashSet<Entity>,
+struct ActiveShield {
+    projectiles_reflected: HashSet<Entity>,
 }
 
 fn update_active_shields(
@@ -202,12 +210,8 @@ fn reflect_projectiles(
             if let Ok((mut linear_velocity, mut collision_layers, mut transform)) =
                 projectile_query.get_mut(colliding_entity)
             {
-                // If holder is enemy and it is reflected, it can now hurt the player!
-                let new_damage_source = if enemy_query.contains(child_of.parent()) {
-                    DamageSource::Enemy
-                } else {
-                    DamageSource::Player
-                };
+                // If shield blocker is enemy, reflected projectile can now hurt the player! (and vice-versa)
+                let is_blocker_enemy = enemy_query.contains(child_of.parent());
 
                 // Reverse direction of projectile! Reflect!
                 linear_velocity.0 = -linear_velocity.0;
@@ -217,7 +221,8 @@ fn reflect_projectiles(
 
                 *collision_layers = CollisionLayers::new(
                     GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                    LayerMask::from(new_damage_source) | GameCollisionLayer::HighObstacle,
+                    LayerMask::from(DamageSource::from(is_blocker_enemy))
+                        | GameCollisionLayer::HighObstacle,
                 );
                 shield.projectiles_reflected.insert(colliding_entity);
             }
@@ -229,9 +234,12 @@ fn on_shield_deactivated(
     shield: On<StopUsingEquipment>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
-    mut shield_query: Query<(&mut Sprite, &ItemOf), (With<Shield>, With<ActiveShield>)>,
+    mut shield_query: Query<
+        (&mut Sprite, &ItemOf, &Equippable),
+        (With<Shield>, With<ActiveShield>),
+    >,
 ) {
-    let Ok((mut shield_sprite, item_of)) = shield_query.get_mut(shield.entity) else {
+    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(shield.entity) else {
         warn!("Offhand missing Shield or ActiveShield");
         return;
     };
@@ -245,9 +253,10 @@ fn on_shield_deactivated(
         .entity(shield.entity)
         .remove::<(ActiveShield, Collider)>()
         .insert(
-            EquipmentTransform::get(*facing_direction)
-                .expect("Failed to deactivate shield")
-                .offhand,
+            *equippable
+                .transforms
+                .get(facing_direction)
+                .expect("Failed to deactivate shield"),
         );
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {

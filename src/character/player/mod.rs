@@ -16,6 +16,7 @@ pub mod prelude {
 
 use avian2d::prelude::*;
 use bevy::{prelude::*, ui_widgets::observe};
+use bevy_lit::prelude::PointLight2d;
 use interact::PlayerInteractionRadius;
 
 use crate::{
@@ -26,6 +27,7 @@ use crate::{
             input::player_actions,
             movement::PlayerMovement,
         },
+        vision::TargetInfo,
     },
     prelude::*,
 };
@@ -188,6 +190,7 @@ fn spawn_player(
                     ..default()
                 },
             ),
+            TargetInfo::default(),
             related!(Items[
                 ice_staff(&sprites, &sprite_layouts),
                 sword(&sprites),
@@ -204,7 +207,17 @@ fn spawn_player(
                 player_aim(gizmo_assets),
                 shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
                 physical_collider(),
-                hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
+                hurtbox(Vec2::new(24.0, 40.0), GameCollisionLayer::AllyHurtBox),
+                (
+                    PointLight2d {
+                        color: Color::WHITE,
+                        intensity: 0.4,
+                        outer_radius: 100.0,
+                        falloff: 5.0,
+                        ..default()
+                    },
+                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
+                ),
                 (
                     PlayerInteractionRadius,
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),

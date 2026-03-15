@@ -35,6 +35,7 @@ pub fn spawn(mut commands: Commands) {
                     width: px(150.0),
                     height: px(65.0),
                     border: px(5.0).all(),
+                    border_radius: BorderRadius::MAX,
                     // horizontally center child text
                     justify_content: JustifyContent::Center,
                     // vertically center child text
@@ -42,7 +43,6 @@ pub fn spawn(mut commands: Commands) {
                     ..default()
                 },
                 BorderColor::all(Color::BLACK),
-                BorderRadius::MAX,
                 BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
                 children![Text::new("Restart"), Observer::new(on_restart_clicked)]
             )

@@ -1,5 +1,5 @@
 use bevy_behave::prelude::{BehaveCtx, BehaveTrigger};
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use std::ops::Range;
 
 use bevy::prelude::*;

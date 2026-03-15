@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::OnceLock};
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 
 use crate::{
     prelude::*,

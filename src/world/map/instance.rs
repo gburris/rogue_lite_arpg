@@ -1,11 +1,12 @@
 use std::{collections::HashMap, io::BufReader};
 
-use bevy::{prelude::*, scene::ron::de::from_reader};
+use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use rand::{
-    Rng,
+    RngExt,
     distr::{Distribution, weighted::WeightedIndex},
 };
+use ron::de::from_reader;
 use serde::Deserialize;
 
 pub(super) fn plugin(app: &mut App) {

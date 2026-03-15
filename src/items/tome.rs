@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor, ui_widgets::observe};
-use rand::Rng;
+use rand::RngExt;
 
 use crate::{
     items::{

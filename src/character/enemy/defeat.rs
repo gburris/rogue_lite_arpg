@@ -1,7 +1,7 @@
 use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 
 use crate::{
     character::{Purse, player::PlayerStats},

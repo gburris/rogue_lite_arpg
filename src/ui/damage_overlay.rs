@@ -1,6 +1,6 @@
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
-use rand::Rng;
+use rand::RngExt;
 
 use crate::prelude::{DamageDealt, Healed, Lifespan, ZLayer};
 

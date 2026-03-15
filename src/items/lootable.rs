@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 
 use crate::prelude::*;
 

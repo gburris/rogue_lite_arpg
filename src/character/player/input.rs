@@ -15,15 +15,10 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_use_offhand_complete);
 
     // Pause Logic
-    app.add_observer(on_pause)
-        .add_systems(OnEnter(Pause(true)), deactivate_controls)
+    app.add_systems(OnEnter(Pause(false)), set_controls(true))
+        .add_systems(OnEnter(Pause(true)), set_controls(false))
+        .add_systems(OnEnter(PlayingState::Death), set_controls(false))
         .add_observer(on_inventory_opened);
-
-    // Unpause Logic
-    app.add_systems(OnEnter(Menu::None), unpause)
-        .add_observer(on_controls_activated);
-
-    app.add_systems(OnEnter(PlayingState::Death), deactivate_controls);
 }
 
 const MOUSE_SENSITIVITY: f32 = 0.5;
@@ -31,22 +26,6 @@ const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
 
 pub(super) fn player_actions() -> impl Bundle {
     (actions!(Player[
-        (
-            Action::<PauseGame>::new(),
-            // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
-            // and we want it to be triggerable only after the button is released.
-            ActionSettings {
-                require_reset: true,
-                ..Default::default()
-            },
-            // Can't allow escape on wasm because that un-grabs cursor
-            Bindings::spawn((
-                Spawn(Binding::from(KeyCode::KeyP)),
-                Spawn(Binding::from(GamepadButton::Start)),
-                #[cfg(not(target_family = "wasm"))]
-                Spawn(Binding::from(KeyCode::Escape))
-            )),
-        ),
         (
             Action::<OpenInventory>::new(),
             bindings![KeyCode::KeyI],
@@ -92,36 +71,16 @@ fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<
     next_menu_state.set(Menu::Inventory);
 }
 
-#[derive(InputAction)]
-#[action_output(bool)]
-struct PauseGame;
+fn set_controls(active: bool) -> impl Fn(Commands, Single<Entity, With<Player>>) {
+    move |mut commands, player| {
+        let activity = if active {
+            ContextActivity::<Player>::ACTIVE
+        } else {
+            ContextActivity::<Player>::INACTIVE
+        };
 
-fn on_pause(_: On<Start<PauseGame>>, mut next_menu_state: ResMut<NextState<Menu>>) {
-    next_menu_state.set(Menu::Pause);
-}
-
-fn deactivate_controls(mut commands: Commands, player: Single<Entity, With<Player>>) {
-    commands
-        .entity(*player)
-        .insert(ContextActivity::<Player>::INACTIVE);
-}
-
-#[derive(Event)]
-struct ActivatePlayerControls;
-
-fn unpause(mut commands: Commands, mut next_pause_state: ResMut<NextState<Pause>>) {
-    next_pause_state.set(Pause(false));
-    commands.trigger(ActivatePlayerControls);
-}
-
-fn on_controls_activated(
-    _: On<ActivatePlayerControls>,
-    mut commands: Commands,
-    player: Single<Entity, With<Player>>,
-) {
-    commands
-        .entity(*player)
-        .insert(ContextActivity::<Player>::ACTIVE);
+        commands.entity(*player).insert(activity);
+    }
 }
 
 #[derive(InputAction)]

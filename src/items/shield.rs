@@ -192,14 +192,12 @@ fn on_shield_block(
 }
 
 fn reflect_projectiles(
+    mut commands: Commands,
     mut shield_query: Query<
         (&mut ActiveShield, &CollidingEntities, &ChildOf),
         With<ProjectileReflection>,
     >,
-    mut projectile_query: Query<
-        (&mut LinearVelocity, &mut CollisionLayers, &mut Transform),
-        With<Projectile>,
-    >,
+    mut projectile_query: Query<(&mut LinearVelocity, &mut Transform), With<Projectile>>,
     enemy_query: Query<&Enemy>,
 ) {
     for (mut shield, colliding_entities, child_of) in &mut shield_query {
@@ -207,7 +205,7 @@ fn reflect_projectiles(
             if shield.projectiles_reflected.contains(&colliding_entity) {
                 continue;
             }
-            if let Ok((mut linear_velocity, mut collision_layers, mut transform)) =
+            if let Ok((mut linear_velocity, mut transform)) =
                 projectile_query.get_mut(colliding_entity)
             {
                 // If shield blocker is enemy, reflected projectile can now hurt the player! (and vice-versa)
@@ -219,11 +217,14 @@ fn reflect_projectiles(
                 // Rotate projectile sprite to face new velocity direction
                 transform.rotation = Quat::from_rotation_z(linear_velocity.0.to_angle());
 
-                *collision_layers = CollisionLayers::new(
-                    GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                    LayerMask::from(DamageSource::from(is_blocker_enemy))
-                        | GameCollisionLayer::HighObstacle,
-                );
+                commands
+                    .entity(colliding_entity)
+                    .insert(CollisionLayers::new(
+                        GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+                        LayerMask::from(DamageSource::from(is_blocker_enemy))
+                            | GameCollisionLayer::HighObstacle,
+                    ));
+
                 shield.projectiles_reflected.insert(colliding_entity);
             }
         }

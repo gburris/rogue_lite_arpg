@@ -15,7 +15,7 @@ pub fn menu_header(title: &str) -> impl Bundle {
         Children::spawn_one((
             Text::new(title),
             TextFont {
-                font_size: HEADER_FONT_SIZE,
+                font_size: FontSize::Px(HEADER_FONT_SIZE),
                 ..default()
             },
         )),
@@ -37,7 +37,7 @@ pub fn text(message: impl Into<String>, font_size: f32) -> impl Bundle {
     (
         Text::new(message),
         TextFont {
-            font_size,
+            font_size: FontSize::Px(font_size),
             ..default()
         },
     )

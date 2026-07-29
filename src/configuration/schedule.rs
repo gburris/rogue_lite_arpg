@@ -12,7 +12,8 @@ pub(super) fn plugin(app: &mut App) {
     app.configure_sets(
         Update,
         (
-            MainSystems::InGame.run_if(in_state(Pause(false)).and(in_state(AppState::Playing))),
+            MainSystems::InGame
+                .run_if(in_state(Pause(false)).and_then(in_state(AppState::Playing))),
             MainSystems::Menu.run_if(in_state(Pause(true))),
             MainSystems::Shared,
         )
@@ -23,7 +24,7 @@ pub(super) fn plugin(app: &mut App) {
     // Must order per-schedule, so same as above but for FixedUpdate systems
     app.configure_sets(
         FixedUpdate,
-        MainSystems::InGame.run_if(in_state(Pause(false)).and(in_state(AppState::Playing))),
+        MainSystems::InGame.run_if(in_state(Pause(false)).and_then(in_state(AppState::Playing))),
     );
 
     // Configuring the ordering of our gameplay loop using these main sets

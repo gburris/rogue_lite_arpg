@@ -176,3 +176,140 @@ fn insert_hub_layout(
     commands.insert_resource(map_layout);
     game_state.set(AppState::SpawnZone);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
+
+    const SNAPSHOT_PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/snapshots/hub_layout.txt"
+    );
+
+    fn to_char(tile: &TileType) -> char {
+        match tile {
+            TileType::Wood => 'w',
+            TileType::Ground => '.',
+            TileType::Grass => ',',
+            TileType::Wall => '#',
+            TileType::Water => '~',
+            TileType::Cobblestone => 'c',
+            TileType::DeadZone => '_',
+        }
+    }
+
+    fn render(tiles: &[Vec<TileType>]) -> String {
+        let Some(first) = tiles.first() else {
+            return String::new();
+        };
+        let height = first.len();
+        assert!(
+            tiles.iter().all(|col| col.len() == first.len()),
+            "All columns must have the same length"
+        );
+
+        let mut output = (0..height)
+            .rev()
+            .map(|y| tiles.iter().map(|col| to_char(&col[y])).collect::<String>())
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        output.push('\n');
+        output
+    }
+
+    #[test]
+    fn hub_layout_matches_snapshot() {
+        // see isn't used for hub, so if it becomes seed-sensitive we want to know
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        let map_size = TilemapSize { x: 100, y: 100 };
+        let hub_layout = MapDataBuilder::new(map_size)
+            .with_floor(TileType::Grass)
+            .with_exterior_walls()
+            .with_exits(0)
+            .with_prefab(PrefabType::NPCHub)
+            .build(&mut rng);
+        let rendered_hub_layout = render(&hub_layout.tiles);
+
+        if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
+            std::fs::write(SNAPSHOT_PATH, &rendered_hub_layout).expect("Failed to write _PATH");
+            return;
+        }
+
+        let expected_hub_layout =
+            std::fs::read_to_string(SNAPSHOT_PATH).expect("Failed to read snapshot");
+        assert_eq!(
+            rendered_hub_layout,
+            expected_hub_layout,
+            "{}",
+            first_difference(&expected_hub_layout, &rendered_hub_layout)
+        );
+    }
+
+    #[test]
+    fn hub_is_deterministic() {
+        let mut rng1 = ChaCha8Rng::seed_from_u64(42);
+        let mut rng2 = ChaCha8Rng::seed_from_u64(42);
+
+        let map_size = TilemapSize { x: 100, y: 100 };
+        let hub_layout1 = MapDataBuilder::new(map_size)
+            .with_floor(TileType::Grass)
+            .with_exterior_walls()
+            .with_exits(0)
+            .with_prefab(PrefabType::NPCHub)
+            .build(&mut rng1);
+        let hub_layout2 = MapDataBuilder::new(map_size)
+            .with_floor(TileType::Grass)
+            .with_exterior_walls()
+            .with_exits(0)
+            .with_prefab(PrefabType::NPCHub)
+            .build(&mut rng2);
+
+        let rendered_layout_1 = render(&hub_layout1.tiles);
+        let rendered_layout_2 = render(&hub_layout2.tiles);
+        assert_eq!(rendered_layout_1, rendered_layout_2);
+    }
+
+    fn first_difference(expected: &str, actual: &str) -> String {
+        if expected.is_empty() {
+            return format!(
+                "no snapshot at {SNAPSHOT_PATH}, create one by running the test with UPDATE_SNAPSHOTS=1"
+            );
+        }
+
+        let rows = actual.lines().count();
+
+        for (row, (e_row, a_row)) in expected.lines().zip(actual.lines()).enumerate() {
+            if e_row != a_row {
+                let least_column_amount = e_row.chars().count().min(a_row.chars().count());
+
+                let col = e_row
+                    .chars()
+                    .zip(a_row.chars())
+                    .position(|(ec, ac)| ec != ac)
+                    .unwrap_or(least_column_amount);
+
+                let mut msg = format!(
+                    "hub map changed at tile ({col}, {}) [snapshot line {}]\n",
+                    rows - 1 - row,
+                    row + 1,
+                );
+                msg.push_str(&format!("expected: {e_row}\n"));
+                msg.push_str(&format!("actual:   {a_row}\n"));
+                msg.push_str(&" ".repeat(12 + col));
+                msg.push('^');
+                msg.push('\n');
+                return msg;
+            }
+        }
+
+        format!(
+            "hub map changed in size, expected {} rows, actual {} rows",
+            expected.lines().count(),
+            actual.lines().count()
+        )
+    }
+}

@@ -13,7 +13,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     prelude::{AppState, PrefabType},
-    world::map::map_data::{MapData, MapDataBuilder},
+    world::{
+        MapRng,
+        map::map_data::{MapData, MapDataBuilder},
+    },
 };
 
 pub mod prelude {
@@ -32,7 +35,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct Water;
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum TileType {
     Wood,
     Ground,
@@ -152,15 +155,22 @@ impl From<MapData> for MapLayout {
     }
 }
 
-fn insert_hub_layout(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {
+fn insert_hub_layout(
+    mut commands: Commands,
+    mut game_state: ResMut<NextState<AppState>>,
+    mut rng: ResMut<MapRng>,
+) {
     let map_size = TilemapSize { x: 100, y: 100 };
+
+    let (mut zone_rng, zone_seed) = rng.zone();
+    info!("Generating hub zone with seed: {}", zone_seed);
 
     let map_data = MapDataBuilder::new(map_size)
         .with_floor(TileType::Grass)
         .with_exterior_walls()
         .with_exits(0)
         .with_prefab(PrefabType::NPCHub)
-        .build();
+        .build(&mut zone_rng);
     let map_layout = MapLayout::from(map_data);
 
     commands.insert_resource(map_layout);

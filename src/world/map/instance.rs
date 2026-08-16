@@ -6,6 +6,7 @@ use rand::{
     RngExt,
     distr::{Distribution, weighted::WeightedIndex},
 };
+use rand_chacha::ChaCha8Rng;
 use ron::de::from_reader;
 use serde::Deserialize;
 
@@ -19,9 +20,7 @@ pub struct InstanceAssets {
 }
 
 impl InstanceAssets {
-    pub fn generate_map_layout(&self) -> Result<MapLayout> {
-        let mut rng = rand::rng();
-
+    pub fn generate_map_layout(&self, mut rng: &mut ChaCha8Rng) -> Result<MapLayout> {
         let instance_names = [
             "Swamp",
             "SwampWithALotOfEmptySquares",
@@ -79,7 +78,7 @@ impl InstanceAssets {
             .with_chests(num_chests)
             .with_exits(instance_type.num_exits)
             .with_enemies(num_enemies)
-            .build();
+            .build(rng);
 
         Ok(MapLayout::from(map_data))
     }

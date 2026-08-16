@@ -1,5 +1,6 @@
 use bevy::{log::warn, math::Vec2, prelude::*};
 use bevy_ecs_tilemap::map::TilemapSize;
+use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 
 use crate::{
@@ -108,24 +109,30 @@ impl MapDataBuilder {
         self
     }
 
-    fn generate_random_markers(&self) -> HashMap<MarkerType, Vec<Vec2>> {
+    fn generate_random_markers(&self, rng: &mut ChaCha8Rng) -> HashMap<MarkerType, Vec<Vec2>> {
         let mut markers = HashMap::new();
 
         if let Some(num_enemies) = self.num_enemies {
-            let enemy_positions =
-                find_multiple_positions(&self.map_data.tiles, self.size, 0.3..0.7, num_enemies);
+            let enemy_positions = find_multiple_positions(
+                &self.map_data.tiles,
+                self.size,
+                0.3..0.7,
+                num_enemies,
+                rng,
+            );
             markers.insert(MarkerType::EnemySpawns, enemy_positions);
         }
 
         if let Some(num_chests) = self.num_chests {
             let chest_positions =
-                find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests);
+                find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests, rng);
+            find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests, rng);
             markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
         // Always generate entrance/exit positions for random sprite_layouts
         let (player_pos, exit_positions) =
-            generate_entrance_exit_positions(self.size, self.num_exits);
+            generate_entrance_exit_positions(self.size, self.num_exits, rng);
 
         info!(
             "New player position determined: {}",
@@ -137,7 +144,7 @@ impl MapDataBuilder {
         markers
     }
 
-    pub fn build(mut self) -> MapData {
+    pub fn build(mut self, rng: &mut ChaCha8Rng) -> MapData {
         for prefab_type in &self.prefabs {
             let prefab: Box<dyn Prefab> = match prefab_type {
                 PrefabType::Temple => Box::new(Temple),
@@ -153,7 +160,7 @@ impl MapDataBuilder {
             }
         }
         //Add all other map markers
-        let random_markers = self.generate_random_markers();
+        let random_markers = self.generate_random_markers(rng);
         merge_markers(&mut self.map_data.markers, random_markers);
 
         self.map_data

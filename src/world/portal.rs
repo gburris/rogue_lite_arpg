@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{prelude::*, world::MapRng};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -41,11 +41,14 @@ fn handle_portal_collisions(
     portal_query: Query<&CollidingEntities, With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
     mut game_state: ResMut<NextState<AppState>>,
+    mut rng: ResMut<MapRng>,
 ) {
     for portal_colliding_entities in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == *player_collider {
-                commands.insert_resource(instance.generate_map_layout().unwrap());
+                let (mut zone_rng, zone_seed) = rng.zone();
+                info!("Generating portal zone with seed: {}", zone_seed);
+                commands.insert_resource(instance.generate_map_layout(&mut zone_rng).unwrap());
                 game_state.set(AppState::Transition);
             }
         }

@@ -1,6 +1,7 @@
 use bevy::math::{Rect, Vec2};
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::RngExt;
+use rand_chacha::ChaCha8Rng;
 
 use crate::world::map::TileType;
 
@@ -41,8 +42,8 @@ pub fn find_valid_position(
     map: &[Vec<TileType>],
     map_size: TilemapSize,
     x_range: std::ops::Range<f32>,
+    rng: &mut ChaCha8Rng,
 ) -> Option<Vec2> {
-    let mut rng = rand::rng();
     let x_start = (map_size.x as f32 * x_range.start) as u32;
     let x_end = (map_size.x as f32 * x_range.end) as u32;
 
@@ -62,12 +63,13 @@ pub fn find_multiple_positions(
     map_size: TilemapSize,
     x_range: std::ops::Range<f32>,
     count: u32,
+    rng: &mut ChaCha8Rng,
 ) -> Vec<Vec2> {
     let mut positions = Vec::new();
     let mut attempts = 0;
 
     while positions.len() < count as usize && attempts < 100 {
-        if let Some(pos) = find_valid_position(map, map_size, x_range.clone())
+        if let Some(pos) = find_valid_position(map, map_size, x_range.clone(), rng)
             && !positions.iter().any(|p: &Vec2| p.distance(pos) < 5.0)
         {
             positions.push(pos);
@@ -100,9 +102,8 @@ fn determine_map_orientation(map_size: TilemapSize) -> MapOrientation {
 pub fn generate_entrance_exit_positions(
     map_size: TilemapSize,
     num_exits: u32,
+    rng: &mut ChaCha8Rng,
 ) -> (Vec<Vec2>, Vec<Vec2>) {
-    let mut rng = rand::rng();
-
     let player_spawn = match determine_map_orientation(map_size) {
         MapOrientation::Horizontal => {
             // For horizontal maps: left to right

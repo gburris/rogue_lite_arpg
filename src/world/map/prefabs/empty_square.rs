@@ -1,18 +1,22 @@
 use bevy::{
     log::warn,
-    math::{Rect, Vec2},
+    math::{IVec2, Rect, UVec2, Vec2},
 };
-use bevy_ecs_tilemap::map::TilemapSize;
 use rand::RngExt;
 use std::collections::HashMap;
 
-use crate::world::map::{MarkerType, TileType, map_data::MapData, prefabs::Prefab};
+use crate::world::map::{
+    MarkerType, TileType,
+    map_data::MapData,
+    prefabs::Prefab,
+    space::{TileGrid, TileRect},
+};
 
 pub struct EmptySquare;
 
 impl Prefab for EmptySquare {
-    fn build(&self, map_data: &mut MapData) -> Option<Rect> {
-        if let Some(bounds) = find_dead_zone_position(&map_data.tiles, map_data.size) {
+    fn build(&self, map_data: &mut MapData) -> Option<TileRect> {
+        if let Some(bounds) = find_dead_zone_position(&map_data.grid) {
             add_dead_zone_structure(map_data, &bounds);
             Some(bounds)
         } else {
@@ -21,20 +25,21 @@ impl Prefab for EmptySquare {
         }
     }
 
-    fn get_markers(&self, _bounds: &Rect) -> HashMap<MarkerType, Vec<Vec2>> {
+    fn get_markers(&self, _bounds: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {
         HashMap::new()
     }
 }
 
-fn find_dead_zone_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Option<Rect> {
+fn find_dead_zone_position(map: &TileGrid) -> Option<TileRect> {
     let mut rng = rand::rng();
     let max_attempts = 50;
-    let size = rng.random_range(3..=10) as f32;
-    let min_distance = 4.0;
+    let size = rng.random_range(3..=10) as i32;
+    let min_distance = 4;
 
     for _ in 0..max_attempts {
-        let max_x = (map_size.x as f32 - size - min_distance).max(0.0);
-        let max_y = (map_size.y as f32 - size - min_distance).max(0.0);
+        let map_size = map.map_size();
+        let max_x = (map_size.x as i32 - size - min_distance).max(0);
+        let max_y = (map_size.y as i32 - size - min_distance).max(0);
         let min_x = min_distance;
         let min_y = min_distance;
 
@@ -44,7 +49,11 @@ fn find_dead_zone_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Opti
 
         let start_x = rng.random_range(min_x..max_x);
         let start_y = rng.random_range(min_y..max_y);
-        let bounds = Rect::new(start_x, start_y, start_x + size, start_y + size);
+
+        let bounds = TileRect {
+            min: IVec2::new(start_x, start_y),
+            size: UVec2::new(size as u32, size as u32),
+        };
 
         if can_place_dead_zone(map, &bounds) {
             return Some(bounds);
@@ -53,33 +62,34 @@ fn find_dead_zone_position(map: &[Vec<TileType>], map_size: TilemapSize) -> Opti
     None
 }
 
-fn can_place_dead_zone(map: &[Vec<TileType>], bounds: &Rect) -> bool {
+fn can_place_dead_zone(grid: &TileGrid, bounds: &TileRect) -> bool {
     let buffer = 2;
-    for x in (bounds.min.x as isize - buffer)..=(bounds.max.x as isize + buffer) {
-        for y in (bounds.min.y as isize - buffer)..=(bounds.max.y as isize + buffer) {
-            if x >= map.len() as isize || y >= map[0].len() as isize || x < 0 || y < 0 {
-                continue;
-            }
-            let tile = map[x as usize][y as usize];
-            if tile == TileType::DeadZone || tile == TileType::Wall {
-                return false;
+
+    let scan_min = bounds.min - IVec2::splat(buffer);
+    let scan_max = bounds.min + bounds.size.as_ivec2() + IVec2::splat(buffer);
+
+    for y in scan_min.y..scan_max.y {
+        for x in scan_min.x..scan_max.x {
+            // Check if the position is within the grid bounds
+            if let Some(tile_type) = grid.get(x, y) {
+                if matches!(tile_type, TileType::DeadZone | TileType::Wall) {
+                    return false;
+                }
             }
         }
     }
     true
 }
 
-fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
-    let start_x = bounds.min.x as usize; // Changed to usize
-    let start_y = bounds.min.y as usize; // Changed to usize
-    let size = (bounds.width() as usize).max(3); // Changed to usize
+fn add_dead_zone_structure(map_data: &mut MapData, bounds: &TileRect) {
+    let start_x = bounds.min.x as i32;
+    let start_y = bounds.min.y as i32;
+    let size = (bounds.size.x as i32).max(3);
 
     // Fill interior with DeadZone tiles
     for x in start_x..(start_x + size) {
         for y in start_y..(start_y + size) {
-            if x < map_data.tiles.len() && y < map_data.tiles[0].len() {
-                map_data.tiles[x][y] = TileType::DeadZone;
-            }
+            map_data.grid.set(x, y, TileType::DeadZone);
         }
     }
 
@@ -88,9 +98,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
     if start_x > 0 && start_y > 0 {
         // Top wall
         for x in (start_x - 1)..=(start_x + size) {
-            if x < map_data.tiles.len() {
-                map_data.tiles[x][start_y - 1] = TileType::Wall;
-            }
+            map_data.grid.set(x, start_y - 1, TileType::Wall);
         }
         map_data.add_wall_collider(
             (start_x as u32 - 1, start_y as u32 - 1),
@@ -100,9 +108,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
 
         // Bottom wall
         for x in (start_x - 1)..=(start_x + size) {
-            if x < map_data.tiles.len() && (start_y + size) < map_data.tiles[0].len() {
-                map_data.tiles[x][start_y + size] = TileType::Wall;
-            }
+            map_data.grid.set(x, start_y + size, TileType::Wall);
         }
         map_data.add_wall_collider(
             (start_x as u32 - 1, start_y as u32 + size as u32),
@@ -112,9 +118,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
 
         // Left wall
         for y in (start_y - 1)..=(start_y + size) {
-            if y < map_data.tiles[0].len() {
-                map_data.tiles[start_x - 1][y] = TileType::Wall;
-            }
+            map_data.grid.set(start_x - 1, y, TileType::Wall);
         }
         map_data.add_wall_collider(
             (start_x as u32 - 1, start_y as u32 - 1),
@@ -124,9 +128,7 @@ fn add_dead_zone_structure(map_data: &mut MapData, bounds: &Rect) {
 
         // Right wall
         for y in (start_y - 1)..=(start_y + size) {
-            if (start_x + size) < map_data.tiles.len() && y < map_data.tiles[0].len() {
-                map_data.tiles[start_x + size][y] = TileType::Wall;
-            }
+            map_data.grid.set(start_x + size, y, TileType::Wall);
         }
         map_data.add_wall_collider(
             (start_x as u32 + size as u32, start_y as u32 - 1),

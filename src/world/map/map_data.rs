@@ -5,29 +5,29 @@ use std::collections::HashMap;
 
 use crate::{
     prelude::{EmptySquare, Hub, Prefab, PrefabType, Temple},
-    world::map::{EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType},
+    world::map::{
+        EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, space::TileGrid,
+        walls::add_exterior_walls,
+    },
 };
 
-use super::{
-    utils::{
-        calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
-        generate_entrance_exit_positions,
-    },
-    walls::add_exterior_walls,
+use super::utils::{
+    calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
+    generate_entrance_exit_positions,
 };
 
 pub struct MapData {
     pub size: TilemapSize,
-    pub tiles: Vec<Vec<TileType>>,
+    pub grid: TileGrid,
     pub colliders: Vec<EnvironmentalMapCollider>,
     pub markers: HashMap<MarkerType, Vec<Vec2>>,
 }
 
 impl MapData {
-    pub fn new(size: TilemapSize, floor_type: TileType) -> Self {
+    pub fn new(size: TilemapSize) -> Self {
         Self {
             size,
-            tiles: vec![vec![floor_type; size.y as usize]; size.x as usize],
+            grid: TileGrid::new(size.into()),
             colliders: Vec::new(),
             markers: HashMap::new(),
         }
@@ -35,11 +35,11 @@ impl MapData {
 
     // Updates all ground tiles to the new floor type while preserving other tile types
     pub fn set_floor(&mut self, floor_type: TileType) {
-        for row in &mut self.tiles {
-            for tile in row.iter_mut() {
+        self.grid.cells.iter_mut().for_each(|tile| {
+            if *tile == TileType::Ground {
                 *tile = floor_type;
             }
-        }
+        });
     }
 
     pub fn add_wall_collider(&mut self, start: (u32, u32), is_horizontal: bool, length: u32) {
@@ -70,7 +70,7 @@ pub struct MapDataBuilder {
 impl MapDataBuilder {
     pub fn new(size: TilemapSize) -> Self {
         Self {
-            map_data: MapData::new(size, TileType::Ground), // Default to ground
+            map_data: MapData::new(size),
             size,
             prefabs: Vec::new(),
             num_enemies: None,
@@ -113,26 +113,20 @@ impl MapDataBuilder {
         let mut markers = HashMap::new();
 
         if let Some(num_enemies) = self.num_enemies {
-            let enemy_positions = find_multiple_positions(
-                &self.map_data.tiles,
-                self.size,
-                0.3..0.7,
-                num_enemies,
-                rng,
-            );
+            let enemy_positions =
+                find_multiple_positions(&self.map_data.grid, 0.3..0.7, num_enemies, rng);
             markers.insert(MarkerType::EnemySpawns, enemy_positions);
         }
 
         if let Some(num_chests) = self.num_chests {
             let chest_positions =
-                find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests, rng);
-            find_multiple_positions(&self.map_data.tiles, self.size, 0.2..0.8, num_chests, rng);
+                find_multiple_positions(&self.map_data.grid, 0.2..0.8, num_chests, rng);
             markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
         // Always generate entrance/exit positions for random sprite_layouts
         let (player_pos, exit_positions) =
-            generate_entrance_exit_positions(self.size, self.num_exits, rng);
+            generate_entrance_exit_positions(self.map_data.grid.map_size(), self.num_exits, rng);
 
         info!(
             "New player position determined: {}",

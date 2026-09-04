@@ -43,7 +43,9 @@ fn convert_tiles_to_world_positions(
 ) -> Vec<Vec2> {
     tile_positions
         .iter()
-        .map(|tile_position| world_config.tile_to_world(map_layout.size, tile_position.as_ivec2()))
+        .map(|tile_position| {
+            world_config.tile_corner_to_world_pos(map_layout.size.into(), tile_position.as_ivec2())
+        })
         .collect()
 }
 
@@ -52,45 +54,21 @@ fn spawn_zone_colliders(
     map_layout: Res<MapLayout>,
     world_config: Res<WorldSpaceConfig>,
 ) {
-    let tile_size = world_config.tile_size;
-
-    // Calculate center offset based on tilemap centering logic
-    let grid_size = TilemapGridSize::new(tile_size.x, tile_size.y);
-    let map_type = TilemapType::Square;
-
-    let low = TilePos::new(0, 0).center_in_world(
-        &map_layout.size,
-        &grid_size,
-        &tile_size,
-        &map_type,
-        &TilemapAnchor::Center,
-    );
-    let high = TilePos::new(map_layout.size.x, map_layout.size.y).center_in_world(
-        &map_layout.size,
-        &grid_size,
-        &tile_size,
-        &map_type,
-        &TilemapAnchor::Center,
-    );
-    let diff = high - low;
-    let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
-
     // Spawn all environmental colliders
     for collider in &map_layout.environmental_colliders {
-        // Convert tile position to world position
-        let pos: Vec2 = Vec2::new(
-            collider.transform.translation.x * tile_size.x,
-            collider.transform.translation.y * tile_size.y,
-        ) + offset;
+        let collider_pos = world_config
+            .tile_space_to_world_pos(map_layout.size.into(), collider.transform.translation.xy());
 
         // Scale the collider based on tile size
-        let scaled_collider =
-            Collider::rectangle(collider.width * tile_size.x, collider.height * tile_size.y);
+        let scaled_collider = Collider::rectangle(
+            collider.width * world_config.tile_size.x,
+            collider.height * world_config.tile_size.y,
+        );
 
         let mut entity_commands = commands.spawn((
             RigidBody::Static,
             scaled_collider,
-            Transform::from_xyz(pos.x, pos.y, ZLayer::OnGround.z()),
+            Transform::from_xyz(collider_pos.x, collider_pos.y, ZLayer::OnGround.z()),
             GlobalTransform::default(),
         ));
 
@@ -121,8 +99,8 @@ fn spawn_zone_entities(
     //and chest types, and NPC types
     if let Some(exit_positions) = map_layout.markers.get_markers(MarkerType::LevelExits) {
         for exit_position in exit_positions {
-            let exit_position_in_world =
-                world_config.tile_to_world(map_layout.size, exit_position.as_ivec2());
+            let exit_position_in_world = world_config
+                .tile_corner_to_world_pos(map_layout.size.into(), exit_position.as_ivec2());
             info!("spawning portal");
             commands.spawn(portal(&sprites, exit_position_in_world));
         }
@@ -164,8 +142,8 @@ fn spawn_zone_entities(
     if let Some(spawn_positions) = map_layout.markers.get_markers(MarkerType::PlayerSpawns) {
         // Use first spawn position if multiple exist
         if let Some(spawn_position) = spawn_positions.first() {
-            let player_spawn_position =
-                world_config.tile_to_world(map_layout.size, spawn_position.as_ivec2());
+            let player_spawn_position = world_config
+                .tile_corner_to_world_pos(map_layout.size.into(), spawn_position.as_ivec2());
 
             let mut player_transform = player_query.into_inner();
 
@@ -236,9 +214,9 @@ fn spawn_zone_tilemap(
     for x in 0..map_size.x {
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
-            let tile_type = map_layout.tiles[x as usize][y as usize];
 
-            if let Some((tilemap_entity, storage)) = storages.get_mut(&tile_type)
+            if let Some(tile_type) = map_layout.grid.get(x as i32, y as i32)
+                && let Some((tilemap_entity, storage)) = storages.get_mut(&tile_type)
                 && let Some(index_type) = tile_configurations().get(&tile_type)
             {
                 let texture_index = match index_type {

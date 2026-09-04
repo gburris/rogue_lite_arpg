@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{
-    math::{Rect, Vec2},
+    math::{IVec2, UVec2, Vec2},
     transform::components::Transform,
 };
 use bevy_ecs_tilemap::map::TilemapSize;
@@ -10,7 +10,7 @@ use crate::{
     prelude::Prefab,
     world::map::{
         EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, map_data::MapData,
-        utils::calculate_center_rect,
+        space::TileRect, utils::calculate_center_rect,
     },
 };
 
@@ -24,30 +24,40 @@ const ENTRANCE_WIDTH: i32 = 5;
 pub struct Hub;
 
 impl Prefab for Hub {
-    fn build(&self, map_data: &mut MapData) -> Option<Rect> {
+    fn build(&self, map_data: &mut MapData) -> Option<TileRect> {
         let hub_size = TilemapSize {
             x: HUB_WIDTH,
             y: HUB_HEIGHT,
         };
         let hub_bounds = calculate_center_rect(map_data.size, hub_size);
+        let tile_rect = TileRect {
+            min: IVec2::new(hub_bounds.min.x as i32, hub_bounds.min.y as i32),
+            size: UVec2::new(hub_size.x as u32, hub_size.y as u32),
+        };
 
-        add_hub_cobblestone(map_data, &hub_bounds);
-        add_hub_walls(map_data, &hub_bounds);
-        add_hub_entrance(map_data, &hub_bounds);
+        add_hub_cobblestone(map_data, &tile_rect);
+        add_hub_walls(map_data, &tile_rect);
+        add_hub_entrance(map_data, &tile_rect);
 
-        Some(hub_bounds)
+        Some(tile_rect)
     }
 
-    fn get_markers(&self, bounds: &Rect) -> HashMap<MarkerType, Vec<Vec2>> {
+    fn get_markers(&self, tile_rect: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {
         let mut markers: HashMap<MarkerType, Vec<Vec2>> = HashMap::new();
-        let center_of_hub = bounds.center();
+        let center_of_hub = tile_rect.size.as_vec2() / 2.0;
 
         // Generate player spawn
-        let player_spawn = Vec2::new(center_of_hub.x, bounds.min.y + PLAYER_SPAWN_Y_OFFSET);
+        let player_spawn = Vec2::new(
+            center_of_hub.x,
+            tile_rect.min.y as f32 + PLAYER_SPAWN_Y_OFFSET,
+        );
         markers.insert(MarkerType::PlayerSpawns, vec![player_spawn]);
 
         // Generate level exit
-        let level_exit = Vec2::new(center_of_hub.x, bounds.min.y + LEVEL_EXIT_Y_OFFSET);
+        let level_exit = Vec2::new(
+            center_of_hub.x,
+            tile_rect.min.y as f32 + LEVEL_EXIT_Y_OFFSET,
+        );
         markers.insert(MarkerType::LevelExits, vec![level_exit]);
 
         // Generate NPC positions
@@ -62,19 +72,15 @@ impl Prefab for Hub {
     }
 }
 
-fn add_hub_cobblestone(map_data: &mut MapData, bounds: &Rect) {
-    for x in bounds.min.x as i32..bounds.max.x as i32 {
-        for y in bounds.min.y as i32..bounds.max.y as i32 {
-            map_data.tiles[x as usize][y as usize] = TileType::Cobblestone;
-        }
-    }
+fn add_hub_cobblestone(map_data: &mut MapData, tile_rect: &TileRect) {
+    map_data.grid.fill_rect(tile_rect, TileType::Cobblestone);
 }
 
-fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
-    let min_x = bounds.min.x as i32;
-    let max_x = bounds.max.x as i32;
-    let min_y = bounds.min.y as i32;
-    let max_y = bounds.max.y as i32;
+fn add_hub_walls(map_data: &mut MapData, tile_rect: &TileRect) {
+    let min_x = tile_rect.min.x;
+    let max_x = tile_rect.min.x + tile_rect.size.x as i32;
+    let min_y = tile_rect.min.y;
+    let max_y = tile_rect.min.y + tile_rect.size.y as i32;
     let wall_thickness = 2;
 
     // Add horizontal walls (top and bottom)
@@ -87,7 +93,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
             let mut wall_start = start_x;
 
             for x in start_x..max_x {
-                map_data.tiles[x as usize][y as usize] = TileType::Wall;
+                map_data.grid.set(x, y, TileType::Wall);
                 if current_length == 0 {
                     wall_start = x;
                 }
@@ -110,7 +116,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
             let mut wall_start = start_x;
 
             for x in start_x..max_x {
-                map_data.tiles[x as usize][y as usize] = TileType::Wall;
+                map_data.grid.set(x, y, TileType::Wall);
                 if current_length == 0 {
                     wall_start = x;
                 }
@@ -135,7 +141,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
             let mut wall_start = min_y;
 
             for y in min_y..max_y {
-                map_data.tiles[x as usize][y as usize] = TileType::Wall;
+                map_data.grid.set(x, y, TileType::Wall);
                 if current_length == 0 {
                     wall_start = y;
                 }
@@ -157,7 +163,7 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
             let mut wall_start = min_y;
 
             for y in min_y..max_y {
-                map_data.tiles[x as usize][y as usize] = TileType::Wall;
+                map_data.grid.set(x, y, TileType::Wall);
                 if current_length == 0 {
                     wall_start = y;
                 }
@@ -174,14 +180,15 @@ fn add_hub_walls(map_data: &mut MapData, bounds: &Rect) {
     }
 }
 
-fn add_hub_entrance(map_data: &mut MapData, bounds: &Rect) {
+fn add_hub_entrance(map_data: &mut MapData, tile_rect: &TileRect) {
     let entrance_width = ENTRANCE_WIDTH;
     let entrance_x_start =
-        i32::midpoint(bounds.min.x as i32, bounds.max.x as i32) - entrance_width / 2;
+        i32::midpoint(tile_rect.min.x, tile_rect.min.x + tile_rect.size.x as i32)
+            - entrance_width / 2;
 
     // Create the entrance path
-    let y_range_start = bounds.min.y as i32 - 5;
-    let y_range_end = bounds.min.y as i32 + 5;
+    let y_range_start = tile_rect.min.y - 5;
+    let y_range_end = tile_rect.min.y + 5;
 
     // Find colliders that need to be modified
     let mut colliders_to_remove = Vec::new();
@@ -252,10 +259,10 @@ fn add_hub_entrance(map_data: &mut MapData, bounds: &Rect) {
         for y in y_range_start..y_range_end {
             if x >= 0
                 && y >= 0
-                && x < map_data.tiles.len() as i32
-                && y < map_data.tiles[0].len() as i32
+                && x < map_data.grid.map_size().x as i32
+                && y < map_data.grid.map_size().y as i32
             {
-                map_data.tiles[x as usize][y as usize] = TileType::Wood;
+                map_data.grid.set(x, y, TileType::Wood);
             }
         }
     }

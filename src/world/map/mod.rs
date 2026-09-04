@@ -1,6 +1,7 @@
 mod instance;
 mod map_data;
 mod prefabs;
+mod space;
 mod utils;
 mod walls;
 mod zone;
@@ -15,13 +16,17 @@ use crate::{
     prelude::{AppState, PrefabType},
     world::{
         MapRng,
-        map::map_data::{MapData, MapDataBuilder},
+        map::{
+            map_data::{MapData, MapDataBuilder},
+            space::{TileGrid, WorldSpaceConfig},
+        },
     },
 };
 
 pub mod prelude {
     pub use super::instance::*;
     pub use super::prefabs::*;
+    pub use super::space::WorldSpaceConfig;
     pub use super::zone::*;
     pub use super::*;
 }
@@ -35,10 +40,11 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct Water;
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Default, Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum TileType {
     Wood,
     Ground,
+    #[default]
     Grass,
     Wall,
     Water,
@@ -81,76 +87,23 @@ pub struct EnvironmentalMapCollider {
     pub height: f32,
 }
 
-//This holds the concept of "Tiles are this big relative to world cordinaties"
-#[derive(Resource)]
-pub struct WorldSpaceConfig {
-    pub tile_size: TilemapTileSize, // Size of each tile in world units
-    pub world_origin: Vec2,         // Where (0,0) in tile coordinates maps to in world space
-}
-
-//If we want to f with the scale of our tiles:world (e.g. have way more tiles in our world)
-//We can edit that here
-impl Default for WorldSpaceConfig {
-    fn default() -> Self {
-        WorldSpaceConfig {
-            tile_size: TilemapTileSize::new(32.0, 32.0),
-            world_origin: Vec2::ZERO,
-        }
-    }
-}
-
-//Helper impl -> Pass in a tile, and it tells you the world co-ords it maps to
-//This seems jank, but it's because the rendering of the tiles has this offset in it's
-//Library and in rendering code it's used to "Center" the tiles onto the bevy map
-impl WorldSpaceConfig {
-    pub fn tile_to_world(&self, map_size_in_tiles: TilemapSize, tile_pos: IVec2) -> Vec2 {
-        // Calculate the offset to center the tilemap
-        let grid_size = TilemapGridSize::new(self.tile_size.x, self.tile_size.y);
-        let map_type = TilemapType::Square;
-        let low = TilePos::new(0, 0).center_in_world(
-            &map_size_in_tiles,
-            &grid_size,
-            &self.tile_size,
-            &map_type,
-            &TilemapAnchor::Center,
-        );
-        let high = TilePos::new(map_size_in_tiles.x, map_size_in_tiles.y).center_in_world(
-            &map_size_in_tiles,
-            &grid_size,
-            &self.tile_size,
-            &map_type,
-            &TilemapAnchor::Center,
-        );
-        let diff = high - low;
-        let offset = Vec2::new(-diff.x / 2.0, -diff.y / 2.0);
-
-        // Compute world position with offset applied
-        self.world_origin
-            + Vec2::new(
-                tile_pos.x as f32 * self.tile_size.x,
-                tile_pos.y as f32 * self.tile_size.y,
-            )
-            + offset
-    }
-}
-
 #[derive(Resource, Default, Clone)]
 pub struct MapLayout {
     pub size: TilemapSize,
-    pub tiles: Vec<Vec<TileType>>,
     pub markers: MapMarkers,
     pub environmental_colliders: Vec<EnvironmentalMapCollider>,
+    pub grid: TileGrid,
 }
 
 impl From<MapData> for MapLayout {
     fn from(map_data: MapData) -> Self {
         MapLayout {
             size: map_data.size,
-            tiles: map_data.tiles,
             markers: MapMarkers {
                 markers: map_data.markers,
             },
             environmental_colliders: map_data.colliders,
+            grid: map_data.grid,
         }
     }
 }
@@ -200,24 +153,26 @@ mod tests {
         }
     }
 
-    fn render(tiles: &[Vec<TileType>]) -> String {
-        let Some(first) = tiles.first() else {
+    fn render(grid: &TileGrid) -> String {
+        let width = grid.map_size().x as usize;
+        let height = grid.map_size().y as usize;
+        if width == 0 || height == 0 {
             return String::new();
-        };
-        let height = first.len();
-        assert!(
-            tiles.iter().all(|col| col.len() == first.len()),
-            "All columns must have the same length"
-        );
+        }
 
-        let mut output = (0..height)
-            .rev()
-            .map(|y| tiles.iter().map(|col| to_char(&col[y])).collect::<String>())
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        output.push('\n');
-        output
+        (0..height)
+        .rev()                                      // top row first
+        .map(|y| {
+            (0..width)
+                .map(|x| {
+                    let tile = grid.get(x as i32, y as i32).unwrap_or(TileType::DeadZone);
+                    to_char(&tile)
+                })
+                .collect::<String>()                // collect row chars into a String
+        })
+        .collect::<Vec<String>>()                   // collect all rows
+        .join("\n")                                 // join with newline
+        + "\n"
     }
 
     #[test]
@@ -232,7 +187,7 @@ mod tests {
             .with_exits(0)
             .with_prefab(PrefabType::NPCHub)
             .build(&mut rng);
-        let rendered_hub_layout = render(&hub_layout.tiles);
+        let rendered_hub_layout = render(&hub_layout.grid);
 
         if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
             std::fs::write(SNAPSHOT_PATH, &rendered_hub_layout).expect("Failed to write _PATH");
@@ -268,8 +223,8 @@ mod tests {
             .with_prefab(PrefabType::NPCHub)
             .build(&mut rng2);
 
-        let rendered_layout_1 = render(&hub_layout1.tiles);
-        let rendered_layout_2 = render(&hub_layout2.tiles);
+        let rendered_layout_1 = render(&hub_layout1.grid);
+        let rendered_layout_2 = render(&hub_layout2.grid);
         assert_eq!(rendered_layout_1, rendered_layout_2);
     }
 

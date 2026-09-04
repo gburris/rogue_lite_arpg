@@ -34,7 +34,7 @@ fn add_vertical_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {
         false,
         0..map_size.y as usize,
         map_size.x as usize - 1,
-        map_size.x - 1,
+        map_size.x as u32 - 1,
     );
 }
 
@@ -50,13 +50,12 @@ fn add_wall_section(
 
     for i in range {
         let (x, y) = if is_horizontal {
-            (i, position)
+            (i as i32, position as i32)
         } else {
-            (position, i)
+            (position as i32, i as i32)
         };
 
-        if map_data.tiles[x][y] != TileType::DeadZone {
-            map_data.tiles[x][y] = TileType::Wall;
+        if map_data.grid.set(x, y, TileType::Wall).is_some() {
             if current_length == 0 {
                 wall_start = i;
             }

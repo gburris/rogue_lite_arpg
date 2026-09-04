@@ -25,8 +25,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_observer(despawn_all::<CleanupZone, TilemapId>)
-        .add_observer(despawn_all::<CleanupZone, Wall>)
-        .add_observer(despawn_all::<CleanupZone, Water>);
+        .add_observer(despawn_all::<CleanupZone, Wall>);
 }
 
 #[derive(Event)]

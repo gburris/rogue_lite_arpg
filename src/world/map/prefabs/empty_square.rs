@@ -1,6 +1,6 @@
 use bevy::{
     log::warn,
-    math::{IVec2, Rect, UVec2, Vec2},
+    math::{IVec2, UVec2, Vec2},
 };
 use rand::RngExt;
 use std::collections::HashMap;

@@ -88,7 +88,7 @@ impl WorldSpaceConfig {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct TileGrid {
     map_size: UVec2, // Size of the grid in tiles
     pub cells: Vec<TileType>,
@@ -110,10 +110,10 @@ impl TileGrid {
         (x < self.width() && y < self.height()).then(|| y * self.width() + x)
     }
 
-    pub fn new(map_size: UVec2) -> Self {
+    pub fn new(map_size: UVec2, fill: TileType) -> Self {
         TileGrid {
             map_size,
-            cells: vec![TileType::default(); (map_size.x * map_size.y) as usize],
+            cells: vec![fill; (map_size.x * map_size.y) as usize],
         }
     }
 

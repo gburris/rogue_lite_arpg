@@ -37,14 +37,10 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(WorldSpaceConfig::default());
 }
 
-#[derive(Component)]
-pub struct Water;
-
-#[derive(Default, Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum TileType {
     Wood,
     Ground,
-    #[default]
     Grass,
     Wall,
     Water,
@@ -87,7 +83,7 @@ pub struct EnvironmentalMapCollider {
     pub height: f32,
 }
 
-#[derive(Resource, Default, Clone)]
+#[derive(Resource, Clone)]
 pub struct MapLayout {
     pub size: TilemapSize,
     pub markers: MapMarkers,
@@ -118,8 +114,7 @@ fn insert_hub_layout(
     let (mut zone_rng, zone_seed) = rng.zone();
     info!("Generating hub zone with seed: {}", zone_seed);
 
-    let map_data = MapDataBuilder::new(map_size)
-        .with_floor(TileType::Grass)
+    let map_data = MapDataBuilder::new(map_size, TileType::Grass)
         .with_exterior_walls()
         .with_exits(0)
         .with_prefab(PrefabType::NPCHub)
@@ -181,8 +176,7 @@ mod tests {
         let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let map_size = TilemapSize { x: 100, y: 100 };
-        let hub_layout = MapDataBuilder::new(map_size)
-            .with_floor(TileType::Grass)
+        let hub_layout = MapDataBuilder::new(map_size, TileType::Grass)
             .with_exterior_walls()
             .with_exits(0)
             .with_prefab(PrefabType::NPCHub)
@@ -210,14 +204,12 @@ mod tests {
         let mut rng2 = ChaCha8Rng::seed_from_u64(42);
 
         let map_size = TilemapSize { x: 100, y: 100 };
-        let hub_layout1 = MapDataBuilder::new(map_size)
-            .with_floor(TileType::Grass)
+        let hub_layout1 = MapDataBuilder::new(map_size, TileType::Grass)
             .with_exterior_walls()
             .with_exits(0)
             .with_prefab(PrefabType::NPCHub)
             .build(&mut rng1);
-        let hub_layout2 = MapDataBuilder::new(map_size)
-            .with_floor(TileType::Grass)
+        let hub_layout2 = MapDataBuilder::new(map_size, TileType::Grass)
             .with_exterior_walls()
             .with_exits(0)
             .with_prefab(PrefabType::NPCHub)

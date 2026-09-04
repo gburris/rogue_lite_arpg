@@ -44,27 +44,21 @@ impl Prefab for Hub {
 
     fn get_markers(&self, tile_rect: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {
         let mut markers: HashMap<MarkerType, Vec<Vec2>> = HashMap::new();
-        let center_of_hub = tile_rect.size.as_vec2() / 2.0;
+        let hub_center = tile_rect.min.as_vec2() + tile_rect.size.as_vec2() / 2.0;
 
         // Generate player spawn
-        let player_spawn = Vec2::new(
-            center_of_hub.x,
-            tile_rect.min.y as f32 + PLAYER_SPAWN_Y_OFFSET,
-        );
+        let player_spawn = Vec2::new(hub_center.x, tile_rect.min.y as f32 + PLAYER_SPAWN_Y_OFFSET);
         markers.insert(MarkerType::PlayerSpawns, vec![player_spawn]);
 
         // Generate level exit
-        let level_exit = Vec2::new(
-            center_of_hub.x,
-            tile_rect.min.y as f32 + LEVEL_EXIT_Y_OFFSET,
-        );
+        let level_exit = Vec2::new(hub_center.x, tile_rect.min.y as f32 + LEVEL_EXIT_Y_OFFSET);
         markers.insert(MarkerType::LevelExits, vec![level_exit]);
 
         // Generate NPC positions
         let npc_positions = vec![
-            Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y + NPC_OFFSET),
-            Vec2::new(center_of_hub.x - NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
-            Vec2::new(center_of_hub.x + NPC_OFFSET, center_of_hub.y - NPC_OFFSET),
+            Vec2::new(hub_center.x + NPC_OFFSET, hub_center.y + NPC_OFFSET),
+            Vec2::new(hub_center.x - NPC_OFFSET, hub_center.y - NPC_OFFSET),
+            Vec2::new(hub_center.x + NPC_OFFSET, hub_center.y - NPC_OFFSET),
         ];
         markers.insert(MarkerType::NPCSpawns, npc_positions);
 

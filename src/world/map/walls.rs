@@ -6,7 +6,6 @@ use bevy_ecs_tilemap::prelude::*;
 use crate::world::map::{TileType, map_data::MapData};
 
 #[derive(Component)]
-#[require()]
 pub struct Wall;
 
 pub fn add_exterior_walls(map_data: &mut MapData, map_size: TilemapSize) {

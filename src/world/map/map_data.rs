@@ -24,22 +24,13 @@ pub struct MapData {
 }
 
 impl MapData {
-    pub fn new(size: TilemapSize) -> Self {
+    pub fn new(size: TilemapSize, fill: TileType) -> Self {
         Self {
             size,
-            grid: TileGrid::new(size.into()),
+            grid: TileGrid::new(size.into(), fill),
             colliders: Vec::new(),
             markers: HashMap::new(),
         }
-    }
-
-    // Updates all ground tiles to the new floor type while preserving other tile types
-    pub fn set_floor(&mut self, floor_type: TileType) {
-        self.grid.cells.iter_mut().for_each(|tile| {
-            if *tile == TileType::Ground {
-                *tile = floor_type;
-            }
-        });
     }
 
     pub fn add_wall_collider(&mut self, start: (u32, u32), is_horizontal: bool, length: u32) {
@@ -68,20 +59,15 @@ pub struct MapDataBuilder {
 }
 
 impl MapDataBuilder {
-    pub fn new(size: TilemapSize) -> Self {
+    pub fn new(size: TilemapSize, fill: TileType) -> Self {
         Self {
-            map_data: MapData::new(size),
+            map_data: MapData::new(size, fill),
             size,
             prefabs: Vec::new(),
             num_enemies: None,
             num_chests: None,
             num_exits: 0,
         }
-    }
-
-    pub fn with_floor(mut self, floor_type: TileType) -> Self {
-        self.map_data.set_floor(floor_type);
-        self
     }
 
     pub fn with_prefab(mut self, prefab: PrefabType) -> Self {
@@ -124,15 +110,23 @@ impl MapDataBuilder {
             markers.insert(MarkerType::ChestSpawns, chest_positions);
         }
 
+        let has_player_spawn = self
+            .map_data
+            .markers
+            .get(&MarkerType::PlayerSpawns)
+            .is_some_and(|pos| !pos.is_empty());
+
         // Always generate entrance/exit positions for random sprite_layouts
         let (player_pos, exit_positions) =
             generate_entrance_exit_positions(self.map_data.grid.map_size(), self.num_exits, rng);
 
-        info!(
-            "New player position determined: {}",
-            player_pos.first().unwrap()
-        );
-        markers.insert(MarkerType::PlayerSpawns, player_pos);
+        if !has_player_spawn {
+            info!(
+                "New player position determined: {}",
+                player_pos.first().unwrap()
+            );
+            markers.insert(MarkerType::PlayerSpawns, player_pos);
+        }
         markers.insert(MarkerType::LevelExits, exit_positions);
 
         markers

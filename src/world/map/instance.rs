@@ -63,7 +63,7 @@ impl InstanceAssets {
             }
         };
 
-        let mut builder = MapDataBuilder::new(map_size);
+        let mut builder = MapDataBuilder::new(map_size, floor_type);
 
         for prefab_str in &instance_type.prefabs {
             match prefab_str.parse() {
@@ -73,7 +73,6 @@ impl InstanceAssets {
         }
 
         let map_data = builder
-            .with_floor(floor_type) //Floor really needs to go first, you don't wanna know what happens if it doesn't
             .with_exterior_walls()
             .with_chests(num_chests)
             .with_exits(instance_type.num_exits)

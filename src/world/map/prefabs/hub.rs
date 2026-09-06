@@ -9,7 +9,7 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use crate::{
     prelude::Prefab,
     world::map::{
-        EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, map_data::MapData,
+        EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, generation::MapData,
         space::TileRect, utils::calculate_center_rect,
     },
 };

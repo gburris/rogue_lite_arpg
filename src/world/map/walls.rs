@@ -3,7 +3,7 @@ use std::ops::Range;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::world::map::{TileType, map_data::MapData};
+use crate::world::map::{TileType, generation::MapData};
 
 #[derive(Component)]
 pub struct Wall;

@@ -107,7 +107,7 @@ fn setup_instance_data(mut commands: Commands) {
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
 
-use crate::world::map::{MapLayout, TileType, map_data::MapDataBuilder};
+use crate::world::map::{MapLayout, TileType, generation::MapDataBuilder};
 
 #[cfg(not(target_arch = "wasm32"))]
 fn fetch_instance_data() -> File {

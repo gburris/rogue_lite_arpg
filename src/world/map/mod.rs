@@ -1,5 +1,5 @@
+mod generation;
 mod instance;
-mod map_data;
 mod prefabs;
 mod space;
 mod utils;
@@ -17,7 +17,7 @@ use crate::{
     world::{
         MapRng,
         map::{
-            map_data::{MapData, MapDataBuilder},
+            generation::{MapData, MapDataBuilder},
             space::{TileGrid, WorldSpaceConfig},
         },
     },
@@ -46,6 +46,26 @@ pub enum TileType {
     Water,
     Cobblestone,
     DeadZone, //Marker for DO NOT RENDER for empty space in the map
+}
+
+impl TileType {
+    pub fn blocks_ground(&self) -> bool {
+        match self {
+            TileType::Wall | TileType::Water => true,
+            _ => false,
+        }
+    }
+
+    pub fn should_render(&self) -> bool {
+        match self {
+            TileType::DeadZone => false,
+            _ => true,
+        }
+    }
+
+    pub fn can_spawn(&self) -> bool {
+        !self.blocks_ground() && self.should_render()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

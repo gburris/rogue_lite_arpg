@@ -10,7 +10,7 @@ pub use empty_square::EmptySquare;
 pub use hub::Hub;
 pub use temple::Temple;
 
-use crate::world::map::{MarkerType, map_data::MapData, space::TileRect};
+use crate::world::map::{MarkerType, generation::MapData, space::TileRect};
 
 /// A trait for prefabricated map structures that can be placed in the game world
 pub trait Prefab {

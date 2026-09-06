@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::world::map::{
     MarkerType, TileType,
-    map_data::MapData,
+    generation::MapData,
     prefabs::Prefab,
     space::{TileGrid, TileRect},
 };
@@ -63,22 +63,14 @@ fn find_dead_zone_position(map: &TileGrid) -> Option<TileRect> {
 }
 
 fn can_place_dead_zone(grid: &TileGrid, bounds: &TileRect) -> bool {
-    let buffer = 2;
+    let padded_bounds = bounds.padded(2);
 
-    let scan_min = bounds.min - IVec2::splat(buffer);
-    let scan_max = bounds.min + bounds.size.as_ivec2() + IVec2::splat(buffer);
-
-    for y in scan_min.y..scan_max.y {
-        for x in scan_min.x..scan_max.x {
-            // Check if the position is within the grid bounds
-            if let Some(tile_type) = grid.get(x, y) {
-                if matches!(tile_type, TileType::DeadZone | TileType::Wall) {
-                    return false;
-                }
-            }
-        }
+    if !grid.contains_rect(&padded_bounds) {
+        return false;
     }
-    true
+
+    grid.rect_iter(&padded_bounds)
+        .all(|(_, tile_type)| tile_type.can_spawn())
 }
 
 fn add_dead_zone_structure(map_data: &mut MapData, bounds: &TileRect) {

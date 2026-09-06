@@ -10,7 +10,7 @@ use crate::{
     prelude::Prefab,
     world::map::{
         MarkerType, TileType,
-        map_data::MapData,
+        generation::MapData,
         space::{TileGrid, TileRect},
         utils::{calculate_center_rect, is_position_valid},
     },

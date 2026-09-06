@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
-use bevy::{
-    math::{IVec2, UVec2, Vec2},
-    transform::components::Transform,
-};
+use bevy::{math::Vec2, transform::components::Transform};
 use bevy_ecs_tilemap::map::TilemapSize;
 
 use crate::{
     prelude::Prefab,
     world::map::{
         EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, generation::MapData,
-        space::TileRect, utils::calculate_center_rect,
+        space::TileRect,
     },
 };
 
@@ -29,17 +26,14 @@ impl Prefab for Hub {
             x: HUB_WIDTH,
             y: HUB_HEIGHT,
         };
-        let hub_bounds = calculate_center_rect(map_data.size, hub_size);
-        let tile_rect = TileRect {
-            min: IVec2::new(hub_bounds.min.x as i32, hub_bounds.min.y as i32),
-            size: UVec2::new(hub_size.x as u32, hub_size.y as u32),
-        };
 
-        add_hub_cobblestone(map_data, &tile_rect);
-        add_hub_walls(map_data, &tile_rect);
-        add_hub_entrance(map_data, &tile_rect);
+        let hub_bounds = TileRect::new_centered_in(map_data.size.into(), hub_size.into())?;
 
-        Some(tile_rect)
+        add_hub_cobblestone(map_data, &hub_bounds);
+        add_hub_walls(map_data, &hub_bounds);
+        add_hub_entrance(map_data, &hub_bounds);
+
+        Some(hub_bounds)
     }
 
     fn get_markers(&self, tile_rect: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {

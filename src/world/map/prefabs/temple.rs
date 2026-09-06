@@ -1,6 +1,6 @@
 use bevy::{
     log::warn,
-    math::{IVec2, UVec2, Vec2},
+    math::{IVec2, Vec2},
 };
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::RngExt;
@@ -12,7 +12,6 @@ use crate::{
         MarkerType, TileType,
         generation::MapData,
         space::{TileGrid, TileRect},
-        utils::{calculate_center_rect, is_position_valid},
     },
 };
 
@@ -56,40 +55,24 @@ fn find_temple_position(grid: &TileGrid) -> Option<TileRect> {
         y: TEMPLE_HEIGHT,
     };
 
+    let base_bounds = TileRect::new_centered_in(grid.map_size(), temple_size.into())?;
+
     for _ in 0..max_attempts {
         let offset_x =
             rng.random_range(-(grid.map_size().x as i32 / 4)..(grid.map_size().x as i32 / 4));
         let offset_y =
             rng.random_range(-(grid.map_size().y as i32 / 4)..(grid.map_size().y as i32 / 4));
 
-        let base_bounds = calculate_center_rect(grid.map_size().into(), temple_size);
-        let min_x = base_bounds.min.x + offset_x as f32;
-        let min_y = base_bounds.min.y + offset_y as f32;
+        let bounds = base_bounds.offset_from(IVec2::new(offset_x, offset_y));
 
-        let bounds = TileRect {
-            min: IVec2::new(min_x as i32, min_y as i32),
-            size: UVec2::new(TEMPLE_WIDTH, TEMPLE_HEIGHT),
-        };
-
-        if can_place_temple(grid, &bounds) {
+        if grid
+            .rect_iter(&bounds)
+            .all(|(_, tile_type)| tile_type.can_spawn())
+        {
             return Some(bounds);
         }
     }
     None
-}
-
-fn can_place_temple(grid: &TileGrid, bounds: &TileRect) -> bool {
-    for x in (bounds.min.x as i32 - 1)..=(bounds.min.x + bounds.size.x as i32) as i32 + 1 {
-        for y in (bounds.min.y as i32 - 1)..=(bounds.min.y + bounds.size.y as i32) as i32 + 1 {
-            if x >= grid.map_size().x as i32 || y >= grid.map_size().y as i32 || x < 0 || y < 0 {
-                return false;
-            }
-            if !is_position_valid(grid, x, y) {
-                return false;
-            }
-        }
-    }
-    true
 }
 
 fn add_temple_structure(map_data: &mut MapData, bounds: &TileRect) {

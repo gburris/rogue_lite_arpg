@@ -1,5 +1,4 @@
-use bevy::math::{Rect, UVec2, Vec2};
-use bevy_ecs_tilemap::map::TilemapSize;
+use bevy::math::{UVec2, Vec2};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 
@@ -10,11 +9,6 @@ enum MapOrientation {
     Horizontal,
     Vertical,
     Square,
-}
-
-pub fn calculate_center_rect(map_size: TilemapSize, size: TilemapSize) -> Rect {
-    let center = Vec2::new((map_size.x / 2) as f32, (map_size.y / 2) as f32);
-    Rect::from_center_size(center, Vec2::new(size.x as f32, size.y as f32))
 }
 
 pub fn calculate_wall_dimensions(is_horizontal: bool, length: f32) -> (f32, f32) {
@@ -79,7 +73,7 @@ pub fn find_multiple_positions(
 
 const INVALID_SPAWN_TILES: [TileType; 2] = [TileType::Wall, TileType::DeadZone];
 
-pub fn is_position_valid(grid: &TileGrid, x: i32, y: i32) -> bool {
+fn is_position_valid(grid: &TileGrid, x: i32, y: i32) -> bool {
     !INVALID_SPAWN_TILES.contains(&grid.get(x, y).unwrap_or(TileType::DeadZone))
 }
 

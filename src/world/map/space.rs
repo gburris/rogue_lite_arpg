@@ -9,14 +9,26 @@ pub struct TileRect {
 }
 
 impl TileRect {
-    pub fn new_centered_in(map_size: UVec2, rect_size: UVec2) -> Self {
+    pub fn new_centered_in(map_size: UVec2, rect_size: UVec2) -> Option<Self> {
+        if !rect_size.cmple(map_size).all() {
+            return None;
+        }
+
         let min = IVec2::new(
             ((map_size.x - rect_size.x) / 2) as i32,
             ((map_size.y - rect_size.y) / 2) as i32,
         );
-        TileRect {
+
+        Some(TileRect {
             min,
             size: rect_size,
+        })
+    }
+
+    pub fn offset_from(&self, offset: IVec2) -> Self {
+        TileRect {
+            min: self.min + offset,
+            size: self.size,
         }
     }
 

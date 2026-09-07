@@ -1,32 +1,19 @@
 use bevy::{
     log::warn,
-    math::{IVec2, UVec2, Vec2},
+    math::{IVec2, UVec2},
 };
 use rand::RngExt;
-use std::collections::HashMap;
 
 use crate::world::map::{
-    MarkerType, TileType,
-    generation::MapData,
-    prefabs::Prefab,
-    space::{TileGrid, TileRect},
+    TileType,
+    blueprint::{MapBlueprint, TileGrid, TileRect},
 };
 
-pub struct EmptySquare;
-
-impl Prefab for EmptySquare {
-    fn build(&self, map_data: &mut MapData) -> Option<TileRect> {
-        if let Some(bounds) = find_dead_zone_position(&map_data.grid) {
-            add_dead_zone_structure(map_data, &bounds);
-            Some(bounds)
-        } else {
-            warn!("No valid dead zone position was found");
-            None
-        }
-    }
-
-    fn get_markers(&self, _bounds: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {
-        HashMap::new()
+pub fn build_empty_square(blueprint: &mut MapBlueprint) {
+    if let Some(bounds) = find_dead_zone_position(&blueprint.tiles) {
+        add_dead_zone_structure(blueprint, &bounds);
+    } else {
+        warn!("No valid dead zone position was found");
     }
 }
 
@@ -73,59 +60,33 @@ fn can_place_dead_zone(grid: &TileGrid, bounds: &TileRect) -> bool {
         .all(|(_, tile_type)| tile_type.can_spawn())
 }
 
-fn add_dead_zone_structure(map_data: &mut MapData, bounds: &TileRect) {
+fn add_dead_zone_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
     let start_x = bounds.min.x as i32;
     let start_y = bounds.min.y as i32;
     let size = (bounds.size.x as i32).max(3);
 
-    // Fill interior with DeadZone tiles
-    for x in start_x..(start_x + size) {
-        for y in start_y..(start_y + size) {
-            map_data.grid.set(x, y, TileType::DeadZone);
-        }
-    }
+    blueprint.tiles.fill_rect(bounds, TileType::DeadZone);
 
     // Add walls and colliders around perimeter
-    let wall_size = size + 2;
     if start_x > 0 && start_y > 0 {
         // Top wall
         for x in (start_x - 1)..=(start_x + size) {
-            map_data.grid.set(x, start_y - 1, TileType::Wall);
+            blueprint.tiles.set(x, start_y - 1, TileType::Wall);
         }
-        map_data.add_wall_collider(
-            (start_x as u32 - 1, start_y as u32 - 1),
-            true,
-            wall_size as u32,
-        );
 
         // Bottom wall
         for x in (start_x - 1)..=(start_x + size) {
-            map_data.grid.set(x, start_y + size, TileType::Wall);
+            blueprint.tiles.set(x, start_y + size, TileType::Wall);
         }
-        map_data.add_wall_collider(
-            (start_x as u32 - 1, start_y as u32 + size as u32),
-            true,
-            wall_size as u32,
-        );
 
         // Left wall
         for y in (start_y - 1)..=(start_y + size) {
-            map_data.grid.set(start_x - 1, y, TileType::Wall);
+            blueprint.tiles.set(start_x - 1, y, TileType::Wall);
         }
-        map_data.add_wall_collider(
-            (start_x as u32 - 1, start_y as u32 - 1),
-            false,
-            wall_size as u32,
-        );
 
         // Right wall
         for y in (start_y - 1)..=(start_y + size) {
-            map_data.grid.set(start_x + size, y, TileType::Wall);
+            blueprint.tiles.set(start_x + size, y, TileType::Wall);
         }
-        map_data.add_wall_collider(
-            (start_x as u32 + size as u32, start_y as u32 - 1),
-            false,
-            wall_size as u32,
-        );
     }
 }

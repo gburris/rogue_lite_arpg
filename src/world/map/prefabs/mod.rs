@@ -2,41 +2,17 @@ mod empty_square;
 mod hub;
 mod temple;
 
-use bevy::math::Vec2;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
-pub use empty_square::EmptySquare;
-pub use hub::Hub;
-pub use temple::Temple;
-
-use crate::world::map::{MarkerType, generation::MapData, space::TileRect};
-
-/// A trait for prefabricated map structures that can be placed in the game world
-pub trait Prefab {
-    /// Builds the prefab structure in the given map data
-    ///
-    /// # Arguments
-    /// * `map_data` - The map data to build the structure in
-    ///
-    /// # Returns
-    /// * `Option<Rect>` - The bounds of the built structure, if successful
-    fn build(&self, map_data: &mut MapData) -> Option<TileRect>;
-
-    /// Gets the marker positions for this prefab
-    ///
-    /// # Arguments
-    /// * `bounds` - The bounds of the built structure
-    ///
-    /// # Returns
-    /// * `HashMap<MarkerType, Vec<Vec2>>` - A mapping of marker types to their positions
-    fn get_markers(&self, bounds: &TileRect) -> HashMap<MarkerType, Vec<Vec2>>;
-}
+pub use empty_square::build_empty_square;
+pub use hub::build_hub;
+pub use temple::build_temple;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 
 pub enum PrefabType {
-    NPCHub,
+    NpcHub,
     Temple,
     EmptySquare,
 }
@@ -46,7 +22,7 @@ impl FromStr for PrefabType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "NPCHub" => Ok(PrefabType::NPCHub),
+            "NpcHub" => Ok(PrefabType::NpcHub),
             "Temple" => Ok(PrefabType::Temple),
             "EmptySquare" => Ok(PrefabType::EmptySquare),
             _ => Err(format!("Unknown prefab type: {s}")),

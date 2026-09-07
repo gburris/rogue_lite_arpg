@@ -1,11 +1,8 @@
-use std::{collections::HashMap, io::BufReader};
+use std::io::BufReader;
 
+use crate::world::map::{blueprint::MapBlueprint, generation::generate_zone, prefabs::PrefabType};
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
-use rand::{
-    RngExt,
-    distr::{Distribution, weighted::WeightedIndex},
-};
+use rand::distr::{Distribution, weighted::WeightedIndex};
 use rand_chacha::ChaCha8Rng;
 use ron::de::from_reader;
 use serde::Deserialize;
@@ -15,117 +12,75 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Resource)]
-pub struct InstanceAssets {
-    instance_config: HashMap<String, InstanceType>,
+pub struct MapRecipeCatalog {
+    recipes: Vec<MapRecipe>,
 }
 
-impl InstanceAssets {
-    pub fn generate_map_layout(&self, mut rng: &mut ChaCha8Rng) -> Result<MapLayout> {
-        let instance_names = [
-            "Swamp",
-            "SwampWithALotOfEmptySquares",
-            "LongHallway",
-            "TreasureRoom",
-        ];
-        let weights = [40, 25, 25, 10];
-
+impl MapRecipeCatalog {
+    pub fn generate_blueprint(
+        &self,
+        mut rng: &mut ChaCha8Rng,
+        zone_seed: u64,
+    ) -> Result<MapBlueprint> {
+        let weights: Vec<u32> = self.recipes.iter().map(|i| i.weight).collect();
         let dist = WeightedIndex::new(weights)?;
         let selected_index = dist.sample(&mut rng);
-        let instance_type = self
-            .instance_config
-            .get(instance_names[selected_index])
-            .ok_or(BevyError::from("Instance name not found"))?;
+        let map_recipe = self
+            .recipes
+            .get(selected_index)
+            .ok_or(BevyError::from("Instance not found"))?;
 
-        let size_x =
-            rng.random_range(instance_type.size_x_range.0..=instance_type.size_x_range.1) as u32;
-        let size_y =
-            rng.random_range(instance_type.size_y_range.0..=instance_type.size_y_range.1) as u32;
-        let map_size = TilemapSize {
-            x: size_x,
-            y: size_y,
-        };
-        let num_enemies = rng.random_range(
-            instance_type.number_of_enemies_range.0..=instance_type.number_of_enemies_range.1,
-        ) as u32;
-        let num_chests =
-            rng.random_range(instance_type.chest_range.0..=instance_type.chest_range.1) as u32;
+        let blueprint = generate_zone(map_recipe, &mut rng, zone_seed)?;
 
-        let floor_type = match instance_type.floor_type.as_str() {
-            "Ground" => TileType::Ground,
-            "Cobblestone" => TileType::Cobblestone,
-            "Grass" => TileType::Grass,
-            _ => {
-                warn!(
-                    "Unknown floor type: {}, defaulting to Grass",
-                    instance_type.floor_type
-                );
-                TileType::Grass
-            }
-        };
-
-        let mut builder = MapDataBuilder::new(map_size, floor_type);
-
-        for prefab_str in &instance_type.prefabs {
-            match prefab_str.parse() {
-                Ok(prefab) => builder = builder.with_prefab(prefab),
-                Err(e) => warn!("{}", e),
-            }
-        }
-
-        let map_data = builder
-            .with_exterior_walls()
-            .with_chests(num_chests)
-            .with_exits(instance_type.num_exits)
-            .with_enemies(num_enemies)
-            .build(rng);
-
-        Ok(MapLayout::from(map_data))
+        Ok(blueprint)
     }
 }
 
 #[derive(Deserialize, Debug)]
-struct InstanceConfig {
-    pub instances: HashMap<String, InstanceType>,
+#[serde(deny_unknown_fields)]
+struct MapConfig {
+    pub recipes: Vec<MapRecipe>,
 }
 
 #[derive(Deserialize, Debug)]
-struct InstanceType {
+#[serde(deny_unknown_fields)]
+pub struct MapRecipe {
+    name: String,
+    weight: u32,
     pub size_x_range: (f32, f32),
     pub size_y_range: (f32, f32),
     pub number_of_enemies_range: (f32, f32),
-    pub num_exits: u32,
     pub chest_range: (f32, f32),
-    pub prefabs: Vec<String>,
+    pub num_exits: u32,
+    pub prefabs: Vec<PrefabType>,
     pub floor_type: String,
 }
 
 fn setup_instance_data(mut commands: Commands) {
-    let instance_config = load_instance_data();
-    commands.insert_resource(InstanceAssets { instance_config });
+    let recipes = load_instance_data();
+    commands.insert_resource(MapRecipeCatalog { recipes });
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
 
-use crate::world::map::{MapLayout, TileType, generation::MapDataBuilder};
-
 #[cfg(not(target_arch = "wasm32"))]
 fn fetch_instance_data() -> File {
-    File::open("assets/config/instances.ron").expect("Failed to open RON file")
+    File::open("assets/config/map_recipes.ron").expect("Failed to open RON file")
 }
 
 #[cfg(target_arch = "wasm32")]
 fn fetch_instance_data() -> &'static [u8] {
-    include_bytes!("../../../assets/config/instances.ron")
+    include_bytes!("../../../assets/config/map_recipes.ron")
 }
 
-fn load_instance_data() -> HashMap<String, InstanceType> {
+fn load_instance_data() -> Vec<MapRecipe> {
     let reader = BufReader::new(fetch_instance_data());
 
-    from_reader::<_, InstanceConfig>(reader)
+    from_reader::<_, MapConfig>(reader)
         .unwrap_or_else(|e| {
             error!("Failed to parse RON file: {:?}", e);
             panic!("RON parsing error");
         })
-        .instances
+        .recipes
 }

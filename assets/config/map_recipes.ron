@@ -1,24 +1,30 @@
-InstanceConfig(
-    instances: {
-        "Swamp": InstanceType(
+MapConfig(
+    recipes: [    
+        MapRecipe(
+            name: "Swamp",
+            weight: 40,
             size_x_range: (50.0, 100.0),
             size_y_range: (50.0, 100.0),
             number_of_enemies_range: (10.0, 15.0),
             chest_range: (0.0, 0.0),
             num_exits: 2,
-            prefabs: ["Temple", "EmptySquare"],
+            prefabs: [Temple, EmptySquare],
             floor_type: "Ground",
         ),
-        "SwampWithALotOfEmptySquares": InstanceType(
+        MapRecipe(
+            name: "SwampWithALotOfEmptySquares",
+            weight: 25,
             size_x_range: (50.0, 100.0),
             size_y_range: (50.0, 100.0),
             number_of_enemies_range: (10.0, 15.0),
             num_exits: 2,
             chest_range: (0.0, 0.0),
-            prefabs: ["Temple", "EmptySquare", "EmptySquare", "EmptySquare", "EmptySquare", "EmptySquare"],
+            prefabs: [Temple, EmptySquare, EmptySquare, EmptySquare, EmptySquare, EmptySquare],
             floor_type: "Ground",
         ),
-        "LongHallway": InstanceType(
+        MapRecipe(
+            name: "LongHallway",
+            weight: 25,
             size_x_range: (100.0, 200.0),
             size_y_range: (15.0, 35.0),
             number_of_enemies_range: (10.0, 15.0),
@@ -27,7 +33,9 @@ InstanceConfig(
             prefabs: [],
             floor_type: "Cobblestone",
         ),
-        "TreasureRoom": InstanceType(
+        MapRecipe(
+            name: "TreasureRoom",
+            weight: 10,
             size_x_range: (50.0, 50.0),
             size_y_range: (50.0, 50.0),
             number_of_enemies_range: (0.0, 0.0),
@@ -36,5 +44,5 @@ InstanceConfig(
             prefabs: [],
             floor_type: "Cobblestone",
         ),
-    }
+    ]
 )

@@ -20,14 +20,20 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Event)]
-pub struct SpawnNpcs(pub Vec<Vec2>);
+pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
+
+#[derive(Debug, Clone)]
+pub struct NpcSpawnData {
+    pub position: Vec2,
+    pub npc_type: NpcType,
+}
 
 #[derive(Component)]
 #[require(Character)]
 pub struct NPC;
 
-#[derive(Clone, Copy, Debug)]
-enum NPCType {
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum NpcType {
     Helper,
     Shopkeeper,
     StatTrainer,
@@ -43,15 +49,14 @@ fn spawn_npcs(
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
-    // Define the NPC types we want to spawn in order
-    let npc_types = [NPCType::Helper, NPCType::Shopkeeper, NPCType::StatTrainer];
-    let npc_spawn_positions = npc_spawn_trigger.0.clone();
-
-    // Zip the positions with NPC types and spawn them
-    for (spawn_position, &npc_type) in npc_spawn_positions.iter().zip(npc_types.iter()) {
+    for NpcSpawnData {
+        position: spawn_position,
+        npc_type,
+    } in npc_spawn_trigger.0.iter()
+    {
         spawn_npc(
             &mut commands,
-            npc_type,
+            *npc_type,
             *spawn_position,
             &sprites,
             &sprite_layouts,
@@ -62,14 +67,14 @@ fn spawn_npcs(
 
 fn spawn_npc(
     commands: &mut Commands,
-    npc_type: NPCType,
+    npc_type: NpcType,
     spawn_position: Vec2,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
     match npc_type {
-        NPCType::Helper => spawn_npc_with_equipment(
+        NpcType::Helper => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),
@@ -77,7 +82,7 @@ fn spawn_npc(
             ),
             ice_staff(sprites, sprite_layouts),
         ),
-        NPCType::Shopkeeper => spawn_npc_with_equipment(
+        NpcType::Shopkeeper => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),
@@ -85,7 +90,7 @@ fn spawn_npc(
             ),
             axe(sprites),
         ),
-        NPCType::StatTrainer => spawn_npc_with_equipment(
+        NpcType::StatTrainer => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),

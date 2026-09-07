@@ -1,44 +1,25 @@
-use bevy::{
-    log::warn,
-    math::{IVec2, Vec2},
-};
+use bevy::{log::warn, math::IVec2};
 use bevy_ecs_tilemap::map::TilemapSize;
 use rand::RngExt;
-use std::collections::HashMap;
 
-use crate::{
-    prelude::Prefab,
-    world::map::{
-        MarkerType, TileType,
-        generation::MapData,
-        space::{TileGrid, TileRect},
-    },
+use crate::world::map::{
+    TileType,
+    blueprint::{MapBlueprint, Placement, PlacementType, TileGrid, TileRect},
 };
 
-pub struct Temple;
+pub fn build_temple(blueprint: &mut MapBlueprint) {
+    if let Some(bounds) = find_temple_position(&blueprint.tiles) {
+        add_temple_structure(blueprint, &bounds);
 
-impl Prefab for Temple {
-    fn build(&self, map_data: &mut MapData) -> Option<TileRect> {
-        if let Some(bounds) = find_temple_position(&map_data.grid) {
-            add_temple_structure(map_data, &bounds);
-            Some(bounds)
-        } else {
-            warn!("No valid temple position was found");
-            None
-        }
-    }
-
-    fn get_markers(&self, bounds: &TileRect) -> HashMap<MarkerType, Vec<Vec2>> {
-        let mut markers = HashMap::new();
-
-        let chest_pos = Vec2::new(
-            bounds.min.x as f32 + TEMPLE_WIDTH as f32 / 2.0,
-            bounds.min.y as f32 + TEMPLE_HEIGHT as f32 / 2.0,
-        );
-
-        markers.insert(MarkerType::ChestSpawns, vec![chest_pos]);
-
-        markers
+        blueprint.placements.extend([Placement {
+            kind: PlacementType::Chest,
+            tile: IVec2::new(
+                bounds.min.x + (TEMPLE_WIDTH / 2) as i32,
+                bounds.min.y + (TEMPLE_HEIGHT / 2) as i32,
+            ),
+        }]);
+    } else {
+        warn!("No valid temple position was found");
     }
 }
 
@@ -75,36 +56,15 @@ fn find_temple_position(grid: &TileGrid) -> Option<TileRect> {
     None
 }
 
-fn add_temple_structure(map_data: &mut MapData, bounds: &TileRect) {
+fn add_temple_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
     let start_x = bounds.min.x as u32;
     let start_y = bounds.min.y as u32;
 
-    map_data.grid.fill_rect(bounds, TileType::Cobblestone);
-
-    map_data.add_wall_collider((start_x, start_y), true, TEMPLE_WIDTH);
+    blueprint.tiles.fill_rect(bounds, TileType::Cobblestone);
 
     let entrance_start = start_x + (TEMPLE_WIDTH - ENTRANCE_WIDTH) / 2;
-    if entrance_start > start_x {
-        map_data.add_wall_collider(
-            (start_x, start_y + TEMPLE_HEIGHT - 1),
-            true,
-            entrance_start - start_x,
-        );
-    }
 
-    let after_entrance = entrance_start + ENTRANCE_WIDTH;
-    if after_entrance < start_x + TEMPLE_WIDTH {
-        map_data.add_wall_collider(
-            (after_entrance, start_y + TEMPLE_HEIGHT - 1),
-            true,
-            (start_x + TEMPLE_WIDTH) - after_entrance,
-        );
-    }
-
-    map_data.add_wall_collider((start_x, start_y), false, TEMPLE_HEIGHT);
-    map_data.add_wall_collider((start_x + TEMPLE_WIDTH - 1, start_y), false, TEMPLE_HEIGHT);
-
-    let grid_size = map_data.grid.map_size();
+    let grid_size = blueprint.map_size();
     for x in start_x..start_x + TEMPLE_WIDTH {
         for y in start_y..start_y + TEMPLE_HEIGHT {
             // Bounds check using map_size()
@@ -115,7 +75,7 @@ fn add_temple_structure(map_data: &mut MapData, bounds: &TileRect) {
                     || (y == start_y + TEMPLE_HEIGHT - 1
                         && (x < entrance_start || x >= entrance_start + ENTRANCE_WIDTH));
                 if is_wall {
-                    let _ = map_data.grid.set(x as i32, y as i32, TileType::Wall);
+                    let _ = blueprint.tiles.set(x as i32, y as i32, TileType::Wall);
                 }
             }
         }

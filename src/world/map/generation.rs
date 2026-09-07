@@ -1,168 +1,227 @@
 use bevy::{log::warn, math::Vec2, prelude::*};
-use bevy_ecs_tilemap::map::TilemapSize;
+use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
-use std::collections::HashMap;
 
 use crate::{
-    prelude::{EmptySquare, Hub, Prefab, PrefabType, Temple},
+    prelude::{EnemyType, PrefabType},
     world::map::{
-        EnvironmentalMapCollider, EnvironmentalType, MarkerType, TileType, space::TileGrid,
-        walls::add_exterior_walls,
+        TileType,
+        blueprint::{MapBlueprint, Placement, PlacementType, TileGrid},
+        instance::MapRecipe,
+        prefabs::{build_empty_square, build_hub, build_temple},
     },
 };
 
-use super::utils::{
-    calculate_collider_position, calculate_wall_dimensions, find_multiple_positions,
-    generate_entrance_exit_positions,
-};
+pub fn generate_zone(
+    map_recipe: &MapRecipe,
+    rng: &mut ChaCha8Rng,
+    zone_seed: u64,
+) -> Result<MapBlueprint> {
+    let size_x = rng.random_range(map_recipe.size_x_range.0..=map_recipe.size_x_range.1) as u32;
+    let size_y = rng.random_range(map_recipe.size_y_range.0..=map_recipe.size_y_range.1) as u32;
 
-pub struct MapData {
-    pub size: TilemapSize,
-    pub grid: TileGrid,
-    pub colliders: Vec<EnvironmentalMapCollider>,
-    pub markers: HashMap<MarkerType, Vec<Vec2>>,
-}
+    let floor_type = match map_recipe.floor_type.as_str() {
+        "Ground" => TileType::Ground,
+        "Cobblestone" => TileType::Cobblestone,
+        "Grass" => TileType::Grass,
+        _ => {
+            warn!(
+                "Unknown floor type: {}, defaulting to Grass",
+                map_recipe.floor_type
+            );
+            TileType::Grass
+        }
+    };
 
-impl MapData {
-    pub fn new(size: TilemapSize, fill: TileType) -> Self {
-        Self {
-            size,
-            grid: TileGrid::new(size.into(), fill),
-            colliders: Vec::new(),
-            markers: HashMap::new(),
+    let mut blueprint = MapBlueprint::new(UVec2::new(size_x, size_y), floor_type, zone_seed);
+
+    // Build prefabs
+    for prefab in &map_recipe.prefabs {
+        match prefab {
+            PrefabType::Temple => build_temple(&mut blueprint),
+            PrefabType::EmptySquare => build_empty_square(&mut blueprint),
+            PrefabType::NpcHub => build_hub(&mut blueprint),
         }
     }
 
-    pub fn add_wall_collider(&mut self, start: (u32, u32), is_horizontal: bool, length: u32) {
-        let start_pos = Vec2::new(start.0 as f32, start.1 as f32);
-        let length = length as f32;
+    // Determine number of enemies and chests from the recipe ranges
+    let num_enemies = rng
+        .random_range(map_recipe.number_of_enemies_range.0..=map_recipe.number_of_enemies_range.1)
+        as u32;
+    let num_chests = rng.random_range(map_recipe.chest_range.0..=map_recipe.chest_range.1) as u32;
 
-        let (width, height) = calculate_wall_dimensions(is_horizontal, length);
-        let collider_pos = calculate_collider_position(start_pos, width, height, is_horizontal);
+    // Helper to convert Vec2 positions to IVec2 tile indices (clamped to grid)
+    let to_tile_index = |pos: Vec2| -> IVec2 {
+        let x = pos.x.clamp(0.0, (size_x - 1) as f32) as i32;
+        let y = pos.y.clamp(0.0, (size_y - 1) as f32) as i32;
+        IVec2::new(x, y)
+    };
 
-        self.colliders.push(EnvironmentalMapCollider {
-            collider_type: EnvironmentalType::Wall,
-            transform: Transform::from_xyz(collider_pos.x, collider_pos.y, 1.0),
-            width,
-            height,
+    // Generate enemy positions (avoid walls)
+    let enemy_positions = find_multiple_positions(&blueprint.tiles, 0.2..0.8, num_enemies, rng);
+    for pos in enemy_positions {
+        // Randomly choose an enemy type (or use a fixed set; here we pick randomly)
+        let enemy_type = match rng.random_range(0..3) {
+            0 => EnemyType::FireMage,
+            1 => EnemyType::IceMage,
+            _ => EnemyType::Warrior,
+        };
+        blueprint.placements.push(Placement {
+            tile: to_tile_index(pos),
+            kind: PlacementType::Enemy(enemy_type),
         });
     }
+
+    // Generate chest positions
+    let chest_positions = find_multiple_positions(&blueprint.tiles, 0.1..0.9, num_chests, rng);
+    for pos in chest_positions {
+        blueprint.placements.push(Placement {
+            tile: to_tile_index(pos),
+            kind: PlacementType::Chest,
+        });
+    }
+
+    // Generate player spawn and exits
+    let (player_positions, exit_positions) =
+        generate_entrance_exit_positions(blueprint.map_size(), map_recipe.num_exits, rng);
+
+    // Player spawn (take the first, there should be exactly one)
+    if let Some(player_pos) = player_positions.first() {
+        blueprint.placements.push(Placement {
+            tile: to_tile_index(*player_pos),
+            kind: PlacementType::PlayerSpawn,
+        });
+    }
+
+    // Exits
+    for pos in exit_positions {
+        blueprint.placements.push(Placement {
+            tile: to_tile_index(pos),
+            kind: PlacementType::LevelExit,
+        });
+    }
+
+    Ok(blueprint)
 }
 
-pub struct MapDataBuilder {
-    map_data: MapData,
-    size: TilemapSize,
-    prefabs: Vec<PrefabType>,
-    num_enemies: Option<u32>,
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum MapOrientation {
+    Horizontal,
+    Vertical,
+    Square,
+}
+
+pub fn generate_entrance_exit_positions(
+    map_size: UVec2,
     num_exits: u32,
-    num_chests: Option<u32>,
-}
-
-impl MapDataBuilder {
-    pub fn new(size: TilemapSize, fill: TileType) -> Self {
-        Self {
-            map_data: MapData::new(size, fill),
-            size,
-            prefabs: Vec::new(),
-            num_enemies: None,
-            num_chests: None,
-            num_exits: 0,
+    rng: &mut ChaCha8Rng,
+) -> (Vec<Vec2>, Vec<Vec2>) {
+    let player_spawn = match determine_map_orientation(map_size) {
+        MapOrientation::Horizontal => {
+            // For horizontal maps: left to right
+            let player_x = 1.0; // One tile in from left wall
+            let player_y = rng.random_range(1.0..(map_size.y - 1) as f32);
+            vec![Vec2::new(player_x, player_y)]
         }
-    }
-
-    pub fn with_prefab(mut self, prefab: PrefabType) -> Self {
-        self.prefabs.push(prefab);
-        self
-    }
-
-    pub fn with_enemies(mut self, count: u32) -> Self {
-        self.num_enemies = Some(count);
-        self
-    }
-
-    pub fn with_chests(mut self, count: u32) -> Self {
-        self.num_chests = Some(count);
-        self
-    }
-
-    pub fn with_exits(mut self, count: u32) -> Self {
-        self.num_exits = count;
-        self
-    }
-
-    pub fn with_exterior_walls(mut self) -> Self {
-        add_exterior_walls(&mut self.map_data, self.size);
-        self
-    }
-
-    fn generate_random_markers(&self, rng: &mut ChaCha8Rng) -> HashMap<MarkerType, Vec<Vec2>> {
-        let mut markers = HashMap::new();
-
-        if let Some(num_enemies) = self.num_enemies {
-            let enemy_positions =
-                find_multiple_positions(&self.map_data.grid, 0.3..0.7, num_enemies, rng);
-            markers.insert(MarkerType::EnemySpawns, enemy_positions);
+        MapOrientation::Vertical => {
+            // For vertical maps: top to bottom
+            let player_y = map_size.y as f32 - 2.0; // One tile down from top wall
+            let player_x = rng.random_range(1.0..(map_size.x - 1) as f32);
+            vec![Vec2::new(player_x, player_y)]
         }
-
-        if let Some(num_chests) = self.num_chests {
-            let chest_positions =
-                find_multiple_positions(&self.map_data.grid, 0.2..0.8, num_chests, rng);
-            markers.insert(MarkerType::ChestSpawns, chest_positions);
+        MapOrientation::Square => {
+            // For square maps: default to left to right
+            let player_x = 1.0;
+            let player_y = rng.random_range(1.0..(map_size.y - 1) as f32);
+            vec![Vec2::new(player_x, player_y)]
         }
+    };
 
-        let has_player_spawn = self
-            .map_data
-            .markers
-            .get(&MarkerType::PlayerSpawns)
-            .is_some_and(|pos| !pos.is_empty());
-
-        // Always generate entrance/exit positions for random sprite_layouts
-        let (player_pos, exit_positions) =
-            generate_entrance_exit_positions(self.map_data.grid.map_size(), self.num_exits, rng);
-
-        if !has_player_spawn {
-            info!(
-                "New player position determined: {}",
-                player_pos.first().unwrap()
-            );
-            markers.insert(MarkerType::PlayerSpawns, player_pos);
+    let exits = match determine_map_orientation(map_size) {
+        MapOrientation::Horizontal => {
+            // Two exits on the right side
+            let exit_x = map_size.x as f32 - 1.0;
+            let exit_y1 = rng.random_range(1.0..(map_size.y / 2) as f32);
+            let exit_y2 = rng.random_range((map_size.y / 2) as f32..(map_size.y - 1) as f32);
+            vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
         }
-        markers.insert(MarkerType::LevelExits, exit_positions);
-
-        markers
-    }
-
-    pub fn build(mut self, rng: &mut ChaCha8Rng) -> MapData {
-        for prefab_type in &self.prefabs {
-            let prefab: Box<dyn Prefab> = match prefab_type {
-                PrefabType::Temple => Box::new(Temple),
-                PrefabType::NPCHub => Box::new(Hub),
-                PrefabType::EmptySquare => Box::new(EmptySquare),
-            };
-
-            if let Some(bounds) = prefab.build(&mut self.map_data) {
-                let markers = prefab.get_markers(&bounds);
-                merge_markers(&mut self.map_data.markers, markers);
-            } else {
-                warn!("Failed to build prefab: ");
-            }
+        MapOrientation::Vertical => {
+            // Two exits at the bottom
+            let exit_y = 1.0;
+            let exit_x1 = rng.random_range(1.0..(map_size.x / 2) as f32);
+            let exit_x2 = rng.random_range((map_size.x / 2) as f32..(map_size.x - 1) as f32);
+            vec![Vec2::new(exit_x1, exit_y), Vec2::new(exit_x2, exit_y)]
         }
-        //Add all other map markers
-        let random_markers = self.generate_random_markers(rng);
-        merge_markers(&mut self.map_data.markers, random_markers);
-
-        self.map_data
+        MapOrientation::Square => {
+            // Two exits on the right side for square maps
+            let exit_x = map_size.x as f32 - 1.0;
+            let exit_y1 = rng.random_range(1.0..(map_size.y / 2) as f32);
+            let exit_y2 = rng.random_range((map_size.y / 2) as f32..(map_size.y - 1) as f32);
+            vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
+        }
+    };
+    if num_exits == 0 {
+        (player_spawn, [].to_vec())
+    } else if num_exits == 1 {
+        (player_spawn, vec![exits[0]])
+    } else {
+        (player_spawn, exits)
     }
 }
 
-fn merge_markers(
-    existing_markers: &mut HashMap<MarkerType, Vec<Vec2>>,
-    new_markers: HashMap<MarkerType, Vec<Vec2>>,
-) {
-    for (marker_type, positions) in new_markers {
-        existing_markers
-            .entry(marker_type)
-            .or_default()
-            .extend(positions);
+fn determine_map_orientation(map_size: UVec2) -> MapOrientation {
+    let aspect_ratio = map_size.x as f32 / map_size.y as f32;
+
+    if (aspect_ratio - 1.0).abs() < 0.1 {
+        MapOrientation::Square
+    } else if aspect_ratio > 1.0 {
+        MapOrientation::Horizontal
+    } else {
+        MapOrientation::Vertical
     }
+}
+
+fn find_valid_position(
+    grid: &TileGrid,
+    x_range: std::ops::Range<f32>,
+    rng: &mut ChaCha8Rng,
+) -> Option<Vec2> {
+    let x_start = grid.map_size().x as f32 * x_range.start;
+    let x_end = grid.map_size().x as f32 * x_range.end;
+    for _ in 0..100 {
+        let x = rng.random_range(x_start..x_end);
+        let y = rng.random_range(1.0..grid.map_size().y as f32 - 1.0); // Avoid spawning in exterior walls
+
+        if is_position_valid(grid, x as i32, y as i32) {
+            return Some(Vec2::new(x, y));
+        }
+    }
+    None
+}
+
+fn find_multiple_positions(
+    grid: &TileGrid,
+    x_range: std::ops::Range<f32>,
+    count: u32,
+    rng: &mut ChaCha8Rng,
+) -> Vec<Vec2> {
+    let mut positions = Vec::new();
+    let mut attempts = 0;
+
+    while positions.len() < count as usize && attempts < 100 {
+        if let Some(pos) = find_valid_position(grid, x_range.clone(), rng)
+            && !positions.iter().any(|p: &Vec2| p.distance(pos) < 5.0)
+        {
+            positions.push(pos);
+        }
+        attempts += 1;
+    }
+
+    positions
+}
+
+const INVALID_SPAWN_TILES: [TileType; 2] = [TileType::Wall, TileType::DeadZone];
+
+fn is_position_valid(grid: &TileGrid, x: i32, y: i32) -> bool {
+    !INVALID_SPAWN_TILES.contains(&grid.get(x, y).unwrap_or(TileType::DeadZone))
 }

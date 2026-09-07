@@ -37,7 +37,7 @@ pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Bundle {
 
 fn handle_portal_collisions(
     mut commands: Commands,
-    instance: Res<InstanceAssets>,
+    instance: Res<MapRecipeCatalog>,
     portal_query: Query<&CollidingEntities, With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
     mut game_state: ResMut<NextState<AppState>>,
@@ -48,7 +48,11 @@ fn handle_portal_collisions(
             if colliding_entity == *player_collider {
                 let (mut zone_rng, zone_seed) = rng.zone();
                 info!("Generating portal zone with seed: {}", zone_seed);
-                commands.insert_resource(instance.generate_map_layout(&mut zone_rng).unwrap());
+                commands.insert_resource(
+                    instance
+                        .generate_blueprint(&mut zone_rng, zone_seed)
+                        .unwrap(),
+                );
                 game_state.set(AppState::Transition);
             }
         }

@@ -61,12 +61,12 @@ impl YSort {
 
 fn ysort_transforms(
     mut transform_query: Query<(&mut Transform, &YSort)>,
-    world_space_config: Res<WorldSpaceConfig>,
-    map_layout: Res<MapLayout>,
+    map_coordinates: Res<MapCoordinates>,
+    map_blueprint: Res<MapBlueprint>,
 ) {
     for (mut transform, ysort) in &mut transform_query {
         let relative_height_on_map = (transform.translation.y + ysort.height_offset)
-            / (map_layout.size.y as f32 * world_space_config.tile_size.y);
+            / (map_blueprint.map_size().y as f32 * map_coordinates.tile_size.y);
 
         transform.translation.z = ysort.z - relative_height_on_map;
     }

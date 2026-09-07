@@ -38,7 +38,7 @@ pub struct EnemySpawnData {
 )]
 pub struct Enemy;
 
-#[derive(Component, PartialEq, Clone, Debug)]
+#[derive(Component, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum EnemyType {
     Warrior,
     IceMage,

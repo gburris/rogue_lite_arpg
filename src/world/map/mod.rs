@@ -1,40 +1,36 @@
+mod blueprint;
+mod collisions;
+mod coordinates;
 mod generation;
 mod instance;
 mod prefabs;
-mod space;
-mod utils;
+mod spawn;
 mod walls;
-mod zone;
-
-use std::collections::HashMap;
 
 use ::bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    prelude::{AppState, PrefabType},
+    prelude::AppState,
     world::{
         MapRng,
-        map::{
-            generation::{MapData, MapDataBuilder},
-            space::{TileGrid, WorldSpaceConfig},
-        },
+        map::{blueprint::MapBlueprint, coordinates::MapCoordinates, prefabs::build_hub},
     },
 };
 
 pub mod prelude {
+    pub use super::blueprint::MapBlueprint;
+    pub use super::coordinates::MapCoordinates;
     pub use super::instance::*;
     pub use super::prefabs::*;
-    pub use super::space::WorldSpaceConfig;
-    pub use super::zone::*;
+    pub use super::spawn::*;
     pub use super::*;
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((instance::plugin, zone::plugin))
-        .add_systems(OnEnter(AppState::CreateHub), insert_hub_layout)
-        .insert_resource(WorldSpaceConfig::default());
+    app.add_plugins((instance::plugin, spawn::plugin))
+        .add_systems(OnEnter(AppState::CreateHub), generate_hub_layout)
+        .insert_resource(MapCoordinates::default());
 }
 
 #[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
@@ -68,87 +64,29 @@ impl TileType {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum MarkerType {
-    EnemySpawns,
-    BossSpawns,
-    ChestSpawns,
-    NPCSpawns,
-    PlayerSpawns,
-    LevelExits,
-}
+const HUB_MAP_SIZE: UVec2 = UVec2::new(100, 100);
 
-#[derive(Clone, Default, Debug)]
-pub struct MapMarkers {
-    pub markers: HashMap<MarkerType, Vec<Vec2>>,
-}
-
-impl MapMarkers {
-    pub fn get_markers(&self, marker_type: MarkerType) -> Option<&Vec<Vec2>> {
-        self.markers.get(&marker_type)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum EnvironmentalType {
-    Wall,
-    Water,
-}
-
-#[derive(Debug, Clone)]
-pub struct EnvironmentalMapCollider {
-    pub collider_type: EnvironmentalType,
-    pub transform: Transform,
-    pub width: f32,
-    pub height: f32,
-}
-
-#[derive(Resource, Clone)]
-pub struct MapLayout {
-    pub size: TilemapSize,
-    pub markers: MapMarkers,
-    pub environmental_colliders: Vec<EnvironmentalMapCollider>,
-    pub grid: TileGrid,
-}
-
-impl From<MapData> for MapLayout {
-    fn from(map_data: MapData) -> Self {
-        MapLayout {
-            size: map_data.size,
-            markers: MapMarkers {
-                markers: map_data.markers,
-            },
-            environmental_colliders: map_data.colliders,
-            grid: map_data.grid,
-        }
-    }
-}
-
-fn insert_hub_layout(
+fn generate_hub_layout(
     mut commands: Commands,
     mut game_state: ResMut<NextState<AppState>>,
     mut rng: ResMut<MapRng>,
 ) {
-    let map_size = TilemapSize { x: 100, y: 100 };
-
-    let (mut zone_rng, zone_seed) = rng.zone();
+    let (_, zone_seed) = rng.zone();
     info!("Generating hub zone with seed: {}", zone_seed);
 
-    let map_data = MapDataBuilder::new(map_size, TileType::Grass)
-        .with_exterior_walls()
-        .with_exits(0)
-        .with_prefab(PrefabType::NPCHub)
-        .build(&mut zone_rng);
-    let map_layout = MapLayout::from(map_data);
+    let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, zone_seed);
+    build_hub(&mut blueprint);
 
-    commands.insert_resource(map_layout);
+    commands.insert_resource(blueprint);
     game_state.set(AppState::SpawnZone);
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::world::map::blueprint::TileGrid;
+
     use super::*;
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
     use rand_chacha::ChaCha8Rng;
 
     const SNAPSHOT_PATH: &str = concat!(
@@ -194,14 +132,11 @@ mod tests {
     fn hub_layout_matches_snapshot() {
         // see isn't used for hub, so if it becomes seed-sensitive we want to know
         let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let zone_seed: u64 = rng.next_u64();
 
-        let map_size = TilemapSize { x: 100, y: 100 };
-        let hub_layout = MapDataBuilder::new(map_size, TileType::Grass)
-            .with_exterior_walls()
-            .with_exits(0)
-            .with_prefab(PrefabType::NPCHub)
-            .build(&mut rng);
-        let rendered_hub_layout = render(&hub_layout.grid);
+        let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, zone_seed);
+        build_hub(&mut blueprint);
+        let rendered_hub_layout = render(&blueprint.tiles);
 
         if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
             std::fs::write(SNAPSHOT_PATH, &rendered_hub_layout).expect("Failed to write _PATH");
@@ -220,23 +155,18 @@ mod tests {
 
     #[test]
     fn hub_is_deterministic() {
-        let mut rng1 = ChaCha8Rng::seed_from_u64(42);
-        let mut rng2 = ChaCha8Rng::seed_from_u64(42);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        let map_size = TilemapSize { x: 100, y: 100 };
-        let hub_layout1 = MapDataBuilder::new(map_size, TileType::Grass)
-            .with_exterior_walls()
-            .with_exits(0)
-            .with_prefab(PrefabType::NPCHub)
-            .build(&mut rng1);
-        let hub_layout2 = MapDataBuilder::new(map_size, TileType::Grass)
-            .with_exterior_walls()
-            .with_exits(0)
-            .with_prefab(PrefabType::NPCHub)
-            .build(&mut rng2);
+        let zone_seed: u64 = rng.next_u64();
+        let mut blueprint1 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, zone_seed);
+        let mut blueprint2 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, zone_seed);
 
-        let rendered_layout_1 = render(&hub_layout1.grid);
-        let rendered_layout_2 = render(&hub_layout2.grid);
+        build_hub(&mut blueprint1);
+        build_hub(&mut blueprint2);
+
+        let rendered_layout_1 = render(&blueprint1.tiles);
+        let rendered_layout_2 = render(&blueprint2.tiles);
+
         assert_eq!(rendered_layout_1, rendered_layout_2);
     }
 

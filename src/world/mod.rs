@@ -21,6 +21,8 @@ pub(super) fn plugin(app: &mut App) {
         .ok()
         .and_then(|s| s.parse::<u64>().ok())
         .unwrap_or_else(|| rand::random());
+
+    info!("Root seed for map: {seed}");
     app.insert_resource(MapRng::seeded(seed));
 }
 

@@ -71,22 +71,30 @@ fn add_dead_zone_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
     if start_x > 0 && start_y > 0 {
         // Top wall
         for x in (start_x - 1)..=(start_x + size) {
-            blueprint.tiles.set(x, start_y - 1, TileType::Wall);
+            let tile_index = IVec2::new(x, start_y - 1);
+
+            blueprint.tiles.set(tile_index, TileType::Wall);
         }
 
         // Bottom wall
         for x in (start_x - 1)..=(start_x + size) {
-            blueprint.tiles.set(x, start_y + size, TileType::Wall);
+            let tile_index = IVec2::new(x, start_y + size);
+
+            blueprint.tiles.set(tile_index, TileType::Wall);
         }
 
         // Left wall
         for y in (start_y - 1)..=(start_y + size) {
-            blueprint.tiles.set(start_x - 1, y, TileType::Wall);
+            let tile_index = IVec2::new(start_x - 1, y);
+
+            blueprint.tiles.set(tile_index, TileType::Wall);
         }
 
         // Right wall
         for y in (start_y - 1)..=(start_y + size) {
-            blueprint.tiles.set(start_x + size, y, TileType::Wall);
+            let tile_index = IVec2::new(start_x + size, y);
+
+            blueprint.tiles.set(tile_index, TileType::Wall);
         }
     }
 }

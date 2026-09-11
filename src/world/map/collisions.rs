@@ -32,7 +32,7 @@ pub fn derive_collider_rects(grid: &TileGrid) -> Vec<TileRect> {
         }
 
         // Any rectangles that remain in previous_runs did not have a matching run
-        //in the current row, so they are complete and can be added to the final list.
+        // in the current row, so they are complete and can be added to the final list.
         completed_collider_rects.extend(previous_runs.into_values());
         previous_runs = continued_runs;
     }

@@ -8,7 +8,7 @@ mod spawn;
 mod walls;
 
 use ::bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
     prelude::AppState,
@@ -33,7 +33,7 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(MapCoordinates::default());
 }
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Deserialize, Debug)]
 pub enum TileType {
     Wood,
     Ground,
@@ -46,21 +46,30 @@ pub enum TileType {
 
 impl TileType {
     pub fn blocks_ground(&self) -> bool {
-        match self {
-            TileType::Wall | TileType::Water => true,
-            _ => false,
-        }
+        matches!(self, Self::Wall | Self::DeadZone)
     }
 
     pub fn should_render(&self) -> bool {
-        match self {
-            TileType::DeadZone => false,
-            _ => true,
-        }
+        !matches!(self, Self::DeadZone)
     }
 
     pub fn can_spawn(&self) -> bool {
-        !self.blocks_ground() && self.should_render()
+        matches!(
+            self,
+            Self::Ground | Self::Cobblestone | Self::Grass | Self::Wood
+        )
+    }
+
+    pub fn ascii_char(&self) -> char {
+        match self {
+            Self::Wood => 'w',
+            Self::Ground => '.',
+            Self::Grass => ',',
+            Self::Wall => '#',
+            Self::Water => '~',
+            Self::Cobblestone => 'c',
+            Self::DeadZone => '_',
+        }
     }
 }
 
@@ -107,8 +116,8 @@ mod tests {
     }
 
     fn render(grid: &TileGrid) -> String {
-        let width = grid.map_size().x as usize;
-        let height = grid.map_size().y as usize;
+        let width = grid.map_size().x as i32;
+        let height = grid.map_size().y as i32;
         if width == 0 || height == 0 {
             return String::new();
         }
@@ -118,7 +127,7 @@ mod tests {
         .map(|y| {
             (0..width)
                 .map(|x| {
-                    let tile = grid.get(x as i32, y as i32).unwrap_or(TileType::DeadZone);
+                    let tile = grid.get(IVec2::new(x, y)).unwrap_or(TileType::DeadZone);
                     to_char(&tile)
                 })
                 .collect::<String>()                // collect row chars into a String

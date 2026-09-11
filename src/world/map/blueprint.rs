@@ -51,9 +51,21 @@ impl TileGrid {
     }
 
     pub fn new(map_size: UVec2, fill: TileType) -> Self {
+        assert!(
+            map_size.x > 0 && map_size.y > 0,
+            "tile grid dimensions must be non-zero"
+        );
+
+        let width = usize::try_from(map_size.x).expect("map width fits usize");
+        let height = usize::try_from(map_size.y).expect("map height fits usize");
+
+        let capacity = width
+            .checked_mul(height)
+            .expect("total tiles in map fits usize");
+
         TileGrid {
             map_size,
-            cells: vec![fill; (map_size.x * map_size.y) as usize],
+            cells: vec![fill; capacity],
         }
     }
 
@@ -72,16 +84,17 @@ impl TileGrid {
         self.contains(min_index) && self.contains(max_index)
     }
 
-    pub fn get(&self, x: i32, y: i32) -> Option<TileType> {
-        self.cell_index(IVec2::new(x, y))
-            .map(|index| self.cells[index])
+    pub fn get(&self, tile_index: IVec2) -> Option<TileType> {
+        self.cell_index(tile_index).map(|index| self.cells[index])
     }
 
-    pub fn set(&mut self, x: i32, y: i32, tile_type: TileType) -> Option<()> {
-        self.cell_index(IVec2::new(x, y))
+    #[must_use]
+    pub fn set(&mut self, tile_index: IVec2, tile_type: TileType) -> Option<()> {
+        self.cell_index(tile_index)
             .map(|index| self.cells[index] = tile_type)
     }
 
+    #[must_use]
     pub fn fill_rect(&mut self, tile_rect: &TileRect, tile_type: TileType) -> Option<()> {
         if !self.contains_rect(tile_rect) {
             return None;
@@ -89,7 +102,7 @@ impl TileGrid {
 
         for x in tile_rect.min.x..(tile_rect.min.x + tile_rect.size.x as i32) {
             for y in tile_rect.min.y..(tile_rect.min.y + tile_rect.size.y as i32) {
-                self.set(x, y, tile_type);
+                self.set(IVec2::new(x, y), tile_type);
             }
         }
         Some(())
@@ -113,8 +126,10 @@ impl TileGrid {
 
         (min.x..max.x).flat_map(move |x| {
             (min.y..max.y).filter_map(move |y| {
-                self.get(x, y)
-                    .map(|tile_type| (IVec2::new(x, y), tile_type))
+                let tile_index = IVec2::new(x, y);
+
+                self.get(tile_index)
+                    .map(|tile_type| (tile_index, tile_type))
             })
         })
     }

@@ -18,7 +18,8 @@ pub fn build_hub(blueprint: &mut MapBlueprint) {
     let hub_bounds = TileRect::new_centered_in(blueprint.map_size(), HUB_SIZE).unwrap();
     blueprint
         .tiles
-        .fill_rect(&hub_bounds, TileType::Cobblestone);
+        .fill_rect(&hub_bounds, TileType::Cobblestone)
+        .expect("Map size should fit hub");
 
     add_hub_walls(&mut blueprint.tiles, &hub_bounds);
     add_hub_entrance(&mut blueprint.tiles, &hub_bounds);

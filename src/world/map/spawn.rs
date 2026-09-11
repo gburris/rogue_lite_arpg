@@ -46,18 +46,12 @@ fn spawn_zone_colliders(
     derive_collider_rects(&blueprint.tiles)
         .into_iter()
         .for_each(|rect| {
-            let collider_pos = coordinates
-                .tile_space_to_world_pos(blueprint.map_size().into(), rect.center_tile().as_vec2());
-
-            let scaled_collider = Collider::rectangle(
-                rect.size.x as f32 * coordinates.tile_size.x,
-                rect.size.y as f32 * coordinates.tile_size.y,
-            );
+            let (position, size) = coordinates.tile_rect_to_world_rect(blueprint.map_size(), rect);
 
             commands.spawn((
                 RigidBody::Static,
-                scaled_collider,
-                Transform::from_xyz(collider_pos.x, collider_pos.y, ZLayer::OnGround.z()),
+                Collider::rectangle(size.x, size.y),
+                Transform::from_xyz(position.x, position.y, ZLayer::OnGround.z()),
                 GlobalTransform::default(),
                 Wall,
                 CollisionLayers::new(

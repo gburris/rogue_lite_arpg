@@ -48,7 +48,7 @@ fn blocking_runs(tiles: &TileGrid, y: i32, map_width: i32) -> Vec<(i32, i32)> {
     while x < map_width {
         while x < map_width
             && !tiles
-                .get(x, y)
+                .get(IVec2::new(x, y))
                 .is_some_and(|tile_type| tile_type.blocks_ground())
         {
             x += 1;
@@ -58,7 +58,7 @@ fn blocking_runs(tiles: &TileGrid, y: i32, map_width: i32) -> Vec<(i32, i32)> {
 
         while x < map_width
             && tiles
-                .get(x, y)
+                .get(IVec2::new(x, y))
                 .is_some_and(|tile_type| tile_type.blocks_ground())
         {
             x += 1;

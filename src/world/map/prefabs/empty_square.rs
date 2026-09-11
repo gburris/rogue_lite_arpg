@@ -50,14 +50,16 @@ fn find_dead_zone_position(map: &TileGrid) -> Option<TileRect> {
 }
 
 fn can_place_dead_zone(grid: &TileGrid, bounds: &TileRect) -> bool {
-    let padded_bounds = bounds.padded(2);
+    let Some(padded_bounds) = bounds.padded(2) else {
+        return false;
+    };
 
     if !grid.contains_rect(&padded_bounds) {
         return false;
     }
 
     grid.rect_iter(&padded_bounds)
-        .all(|(_, tile_type)| tile_type.can_spawn())
+        .is_some_and(|mut iter| iter.all(|(_, tile_type)| tile_type.can_spawn()))
 }
 
 fn add_dead_zone_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
@@ -71,30 +73,30 @@ fn add_dead_zone_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
     if start_x > 0 && start_y > 0 {
         // Top wall
         for x in (start_x - 1)..=(start_x + size) {
-            let tile_index = IVec2::new(x, start_y - 1);
-
-            blueprint.tiles.set(tile_index, TileType::Wall);
+            blueprint
+                .tiles
+                .set(IVec2::new(x, start_y - 1), TileType::Wall);
         }
 
         // Bottom wall
         for x in (start_x - 1)..=(start_x + size) {
-            let tile_index = IVec2::new(x, start_y + size);
-
-            blueprint.tiles.set(tile_index, TileType::Wall);
+            blueprint
+                .tiles
+                .set(IVec2::new(x, start_y + size), TileType::Wall);
         }
 
         // Left wall
         for y in (start_y - 1)..=(start_y + size) {
-            let tile_index = IVec2::new(start_x - 1, y);
-
-            blueprint.tiles.set(tile_index, TileType::Wall);
+            blueprint
+                .tiles
+                .set(IVec2::new(start_x - 1, y), TileType::Wall);
         }
 
         // Right wall
         for y in (start_y - 1)..=(start_y + size) {
-            let tile_index = IVec2::new(start_x + size, y);
-
-            blueprint.tiles.set(tile_index, TileType::Wall);
+            blueprint
+                .tiles
+                .set(IVec2::new(start_x + size, y), TileType::Wall);
         }
     }
 }

@@ -8,7 +8,7 @@ mod spawn;
 mod walls;
 
 use ::bevy::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     prelude::AppState,
@@ -19,7 +19,10 @@ use crate::{
 };
 
 pub mod prelude {
-    pub use super::blueprint::MapBlueprint;
+    pub use super::blueprint::{
+        MapBlueprint, MapPlacement, MapPlacementKind, MapValidationError, Placement, PlacementKind,
+        TileGrid, TileRect,
+    };
     pub use super::coordinates::MapCoordinates;
     pub use super::instance::*;
     pub use super::prefabs::*;
@@ -33,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(MapCoordinates::default());
 }
 
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Deserialize, Debug)]
+#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum TileType {
     Wood,
     Ground,
@@ -45,22 +48,7 @@ pub enum TileType {
 }
 
 impl TileType {
-    pub fn blocks_ground(&self) -> bool {
-        matches!(self, Self::Wall | Self::DeadZone)
-    }
-
-    pub fn should_render(&self) -> bool {
-        !matches!(self, Self::DeadZone)
-    }
-
-    pub fn can_spawn(&self) -> bool {
-        matches!(
-            self,
-            Self::Ground | Self::Cobblestone | Self::Grass | Self::Wood
-        )
-    }
-
-    pub fn ascii_char(&self) -> char {
+    pub const fn ascii_char(self) -> char {
         match self {
             Self::Wood => 'w',
             Self::Ground => '.',
@@ -70,6 +58,28 @@ impl TileType {
             Self::Cobblestone => 'c',
             Self::DeadZone => '_',
         }
+    }
+
+    pub const fn visual_key(self) -> char {
+        self.ascii_char()
+    }
+
+    pub fn blocks_ground(&self) -> bool {
+        match self {
+            TileType::Wall | TileType::Water => true,
+            _ => false,
+        }
+    }
+
+    pub fn should_render(&self) -> bool {
+        match self {
+            TileType::DeadZone => false,
+            _ => true,
+        }
+    }
+
+    pub fn can_spawn(&self) -> bool {
+        !self.blocks_ground() && self.should_render()
     }
 }
 
@@ -84,6 +94,7 @@ fn generate_hub_layout(
     info!("Generating hub zone with seed: {}", zone_seed);
 
     let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, zone_seed);
+
     build_hub(&mut blueprint);
 
     commands.insert_resource(blueprint);
@@ -116,8 +127,8 @@ mod tests {
     }
 
     fn render(grid: &TileGrid) -> String {
-        let width = grid.map_size().x as i32;
-        let height = grid.map_size().y as i32;
+        let width = grid.map_size().x as usize;
+        let height = grid.map_size().y as usize;
         if width == 0 || height == 0 {
             return String::new();
         }
@@ -127,7 +138,9 @@ mod tests {
         .map(|y| {
             (0..width)
                 .map(|x| {
-                    let tile = grid.get(IVec2::new(x, y)).unwrap_or(TileType::DeadZone);
+                    let tile = grid
+                        .get(IVec2::new(x as i32, y as i32))
+                        .unwrap_or(TileType::DeadZone);
                     to_char(&tile)
                 })
                 .collect::<String>()                // collect row chars into a String

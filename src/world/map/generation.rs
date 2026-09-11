@@ -1,4 +1,4 @@
-use bevy::{log::warn, math::Vec2, prelude::*};
+use bevy::prelude::*;
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 
@@ -6,7 +6,7 @@ use crate::{
     prelude::{EnemyType, PrefabType},
     world::map::{
         TileType,
-        blueprint::{MapBlueprint, Placement, PlacementType, TileGrid},
+        blueprint::{MapBlueprint, Placement, PlacementKind, TileGrid},
         instance::MapRecipe,
         prefabs::{build_empty_square, build_hub, build_temple},
     },
@@ -20,20 +20,11 @@ pub fn generate_zone(
     let size_x = rng.random_range(map_recipe.size_x_range.0..=map_recipe.size_x_range.1) as u32;
     let size_y = rng.random_range(map_recipe.size_y_range.0..=map_recipe.size_y_range.1) as u32;
 
-    let floor_type = match map_recipe.floor_type.as_str() {
-        "Ground" => TileType::Ground,
-        "Cobblestone" => TileType::Cobblestone,
-        "Grass" => TileType::Grass,
-        _ => {
-            warn!(
-                "Unknown floor type: {}, defaulting to Grass",
-                map_recipe.floor_type
-            );
-            TileType::Grass
-        }
-    };
+    let floor_type = map_recipe.floor_type;
 
     let mut blueprint = MapBlueprint::new(UVec2::new(size_x, size_y), floor_type, zone_seed);
+
+    blueprint.tiles.fill_border(TileType::Wall);
 
     // Build prefabs
     for prefab in &map_recipe.prefabs {
@@ -50,15 +41,8 @@ pub fn generate_zone(
         as u32;
     let num_chests = rng.random_range(map_recipe.chest_range.0..=map_recipe.chest_range.1) as u32;
 
-    // Helper to convert Vec2 positions to IVec2 tile indices (clamped to grid)
-    let to_tile_index = |pos: Vec2| -> IVec2 {
-        let x = pos.x.clamp(0.0, (size_x - 1) as f32) as i32;
-        let y = pos.y.clamp(0.0, (size_y - 1) as f32) as i32;
-        IVec2::new(x, y)
-    };
-
     // Generate enemy positions (avoid walls)
-    let enemy_positions = find_multiple_positions(&blueprint.tiles, 0.2..0.8, num_enemies, rng);
+    let enemy_positions = find_multiple_positions(&blueprint.tiles, 2..8, num_enemies, rng);
     for pos in enemy_positions {
         // Randomly choose an enemy type (or use a fixed set; here we pick randomly)
         let enemy_type = match rng.random_range(0..3) {
@@ -67,17 +51,17 @@ pub fn generate_zone(
             _ => EnemyType::Warrior,
         };
         blueprint.placements.push(Placement {
-            tile: to_tile_index(pos),
-            kind: PlacementType::Enemy(enemy_type),
+            tile: pos,
+            kind: PlacementKind::Enemy(enemy_type),
         });
     }
 
     // Generate chest positions
-    let chest_positions = find_multiple_positions(&blueprint.tiles, 0.1..0.9, num_chests, rng);
+    let chest_positions = find_multiple_positions(&blueprint.tiles, 1..9, num_chests, rng);
     for pos in chest_positions {
         blueprint.placements.push(Placement {
-            tile: to_tile_index(pos),
-            kind: PlacementType::Chest,
+            tile: pos,
+            kind: PlacementKind::Chest,
         });
     }
 
@@ -88,19 +72,20 @@ pub fn generate_zone(
     // Player spawn (take the first, there should be exactly one)
     if let Some(player_pos) = player_positions.first() {
         blueprint.placements.push(Placement {
-            tile: to_tile_index(*player_pos),
-            kind: PlacementType::PlayerSpawn,
+            tile: *player_pos,
+            kind: PlacementKind::PlayerStart,
         });
     }
 
     // Exits
     for pos in exit_positions {
         blueprint.placements.push(Placement {
-            tile: to_tile_index(pos),
-            kind: PlacementType::LevelExit,
+            tile: pos,
+            kind: PlacementKind::Exit,
         });
     }
 
+    blueprint.validate().map_err(|error| error.to_string())?;
     Ok(blueprint)
 }
 
@@ -115,49 +100,49 @@ pub fn generate_entrance_exit_positions(
     map_size: UVec2,
     num_exits: u32,
     rng: &mut ChaCha8Rng,
-) -> (Vec<Vec2>, Vec<Vec2>) {
+) -> (Vec<IVec2>, Vec<IVec2>) {
     let player_spawn = match determine_map_orientation(map_size) {
         MapOrientation::Horizontal => {
             // For horizontal maps: left to right
-            let player_x = 1.0; // One tile in from left wall
-            let player_y = rng.random_range(1.0..(map_size.y - 1) as f32);
-            vec![Vec2::new(player_x, player_y)]
+            let player_x = 1; // One tile in from left wall
+            let player_y = rng.random_range(1..map_size.y - 1) as i32;
+            vec![IVec2::new(player_x, player_y)]
         }
         MapOrientation::Vertical => {
             // For vertical maps: top to bottom
-            let player_y = map_size.y as f32 - 2.0; // One tile down from top wall
-            let player_x = rng.random_range(1.0..(map_size.x - 1) as f32);
-            vec![Vec2::new(player_x, player_y)]
+            let player_y = map_size.y as i32 - 2; // One tile down from top wall
+            let player_x = rng.random_range(1..map_size.x - 1) as i32;
+            vec![IVec2::new(player_x, player_y)]
         }
         MapOrientation::Square => {
             // For square maps: default to left to right
-            let player_x = 1.0;
-            let player_y = rng.random_range(1.0..(map_size.y - 1) as f32);
-            vec![Vec2::new(player_x, player_y)]
+            let player_x = 1;
+            let player_y = rng.random_range(1..map_size.y - 1) as i32;
+            vec![IVec2::new(player_x, player_y)]
         }
     };
 
     let exits = match determine_map_orientation(map_size) {
         MapOrientation::Horizontal => {
             // Two exits on the right side
-            let exit_x = map_size.x as f32 - 1.0;
-            let exit_y1 = rng.random_range(1.0..(map_size.y / 2) as f32);
-            let exit_y2 = rng.random_range((map_size.y / 2) as f32..(map_size.y - 1) as f32);
-            vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
+            let exit_x = map_size.x as i32 - 1;
+            let exit_y1 = rng.random_range(1..map_size.y / 2) as i32;
+            let exit_y2 = rng.random_range(map_size.y / 2..map_size.y - 1) as i32;
+            vec![IVec2::new(exit_x, exit_y1), IVec2::new(exit_x, exit_y2)]
         }
         MapOrientation::Vertical => {
             // Two exits at the bottom
-            let exit_y = 1.0;
-            let exit_x1 = rng.random_range(1.0..(map_size.x / 2) as f32);
-            let exit_x2 = rng.random_range((map_size.x / 2) as f32..(map_size.x - 1) as f32);
-            vec![Vec2::new(exit_x1, exit_y), Vec2::new(exit_x2, exit_y)]
+            let exit_y = 1;
+            let exit_x1 = rng.random_range(1..map_size.x / 2) as i32;
+            let exit_x2 = rng.random_range(map_size.x / 2..map_size.x - 1) as i32;
+            vec![IVec2::new(exit_x1, exit_y), IVec2::new(exit_x2, exit_y)]
         }
         MapOrientation::Square => {
             // Two exits on the right side for square maps
-            let exit_x = map_size.x as f32 - 1.0;
-            let exit_y1 = rng.random_range(1.0..(map_size.y / 2) as f32);
-            let exit_y2 = rng.random_range((map_size.y / 2) as f32..(map_size.y - 1) as f32);
-            vec![Vec2::new(exit_x, exit_y1), Vec2::new(exit_x, exit_y2)]
+            let exit_x = map_size.x as i32 - 1;
+            let exit_y1 = rng.random_range(1..map_size.y / 2) as i32;
+            let exit_y2 = rng.random_range(map_size.y / 2..map_size.y - 1) as i32;
+            vec![IVec2::new(exit_x, exit_y1), IVec2::new(exit_x, exit_y2)]
         }
     };
     if num_exits == 0 {
@@ -183,17 +168,17 @@ fn determine_map_orientation(map_size: UVec2) -> MapOrientation {
 
 fn find_valid_position(
     grid: &TileGrid,
-    x_range: std::ops::Range<f32>,
+    x_range: std::ops::Range<u32>,
     rng: &mut ChaCha8Rng,
-) -> Option<Vec2> {
-    let x_start = grid.map_size().x as f32 * x_range.start;
-    let x_end = grid.map_size().x as f32 * x_range.end;
+) -> Option<IVec2> {
+    let x_start = grid.map_size().x * x_range.start / 10;
+    let x_end = grid.map_size().x * x_range.end / 10;
     for _ in 0..100 {
-        let x = rng.random_range(x_start..x_end);
-        let y = rng.random_range(1.0..grid.map_size().y as f32 - 1.0); // Avoid spawning in exterior walls
+        let x = rng.random_range(x_start..x_end) as i32;
+        let y = rng.random_range(1..grid.map_size().y - 1) as i32;
 
         if is_position_valid(grid, x as i32, y as i32) {
-            return Some(Vec2::new(x, y));
+            return Some(IVec2::new(x, y));
         }
     }
     None
@@ -201,16 +186,16 @@ fn find_valid_position(
 
 fn find_multiple_positions(
     grid: &TileGrid,
-    x_range: std::ops::Range<f32>,
+    x_range: std::ops::Range<u32>,
     count: u32,
     rng: &mut ChaCha8Rng,
-) -> Vec<Vec2> {
-    let mut positions = Vec::new();
+) -> Vec<IVec2> {
+    let mut positions: Vec<IVec2> = Vec::new();
     let mut attempts = 0;
 
     while positions.len() < count as usize && attempts < 100 {
         if let Some(pos) = find_valid_position(grid, x_range.clone(), rng)
-            && !positions.iter().any(|p: &Vec2| p.distance(pos) < 5.0)
+            && !positions.iter().any(|p| (*p - pos).length_squared() < 25)
         {
             positions.push(pos);
         }
@@ -223,5 +208,5 @@ fn find_multiple_positions(
 const INVALID_SPAWN_TILES: [TileType; 2] = [TileType::Wall, TileType::DeadZone];
 
 fn is_position_valid(grid: &TileGrid, x: i32, y: i32) -> bool {
-    !INVALID_SPAWN_TILES.contains(&grid.get(x, y).unwrap_or(TileType::DeadZone))
+    !INVALID_SPAWN_TILES.contains(&grid.get(IVec2::new(x, y)).unwrap_or(TileType::DeadZone))
 }

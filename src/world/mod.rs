@@ -19,22 +19,21 @@ pub(super) fn plugin(app: &mut App) {
 
     let seed = std::env::var("MAP_SEED")
         .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or_else(|| rand::random());
-
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or_else(rand::random);
     info!("Root seed for map: {seed}");
     app.insert_resource(MapRng::seeded(seed));
 }
 
 #[derive(Resource)]
-struct MapRng(ChaCha8Rng);
+pub(crate) struct MapRng(ChaCha8Rng);
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
         Self(ChaCha8Rng::seed_from_u64(seed))
     }
 
-    fn zone(&mut self) -> (ChaCha8Rng, u64) {
+    pub(crate) fn zone(&mut self) -> (ChaCha8Rng, u64) {
         let seed = self.0.next_u64();
         (ChaCha8Rng::seed_from_u64(seed), seed)
     }

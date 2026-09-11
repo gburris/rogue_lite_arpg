@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
     world::map::{
         MapCoordinates, TileType,
-        blueprint::{MapBlueprint, PlacementType},
+        blueprint::{MapBlueprint, PlacementKind},
         collisions::derive_collider_rects,
         walls::Wall,
     },
@@ -47,7 +47,7 @@ fn spawn_zone_colliders(
         .into_iter()
         .for_each(|rect| {
             let collider_pos = coordinates
-                .tile_space_to_world_pos(blueprint.map_size().into(), rect.center().as_vec2());
+                .tile_space_to_world_pos(blueprint.map_size().into(), rect.center_tile().as_vec2());
 
             let scaled_collider = Collider::rectangle(
                 rect.size.x as f32 * coordinates.tile_size.x,
@@ -82,12 +82,12 @@ fn spawn_zone_entities(
             coordinates.tile_corner_to_world_pos(blueprint.map_size().into(), placement.tile);
 
         match &placement.kind {
-            PlacementType::PlayerSpawn => {
+            PlacementKind::PlayerStart => {
                 info!("moving player");
                 player_transform.translation =
                     world_spawn_pos.extend(player_transform.translation.z);
             }
-            PlacementType::Enemy(enemy_type) => {
+            PlacementKind::Enemy(enemy_type) => {
                 let enemy_spawn_data = EnemySpawnData {
                     position: world_spawn_pos,
                     enemy_type: enemy_type.clone(),
@@ -96,17 +96,17 @@ fn spawn_zone_entities(
                 info!("spawning enemy");
                 commands.trigger(SpawnEnemies(vec![enemy_spawn_data]));
             }
-            PlacementType::Npc(npc_type) => {
+            PlacementKind::Npc(npc_type) => {
                 info!("spawning npc");
                 commands.trigger(SpawnNpcs(vec![NpcSpawnData {
                     position: world_spawn_pos,
                     npc_type: *npc_type,
                 }]));
             }
-            PlacementType::Chest => {
+            PlacementKind::Chest => {
                 commands.trigger(SpawnChestsEvent(vec![world_spawn_pos]));
             }
-            PlacementType::LevelExit => {
+            PlacementKind::Exit => {
                 info!("spawning portal");
                 commands.spawn(portal(&sprites, world_spawn_pos));
             }
@@ -172,7 +172,7 @@ fn spawn_zone_tilemap(
         for y in 0..map_size.y {
             let tile_pos = TilePos { x, y };
 
-            if let Some(tile_type) = blueprint.tiles.get(x as i32, y as i32)
+            if let Some(tile_type) = blueprint.tiles.get(IVec2::new(x as i32, y as i32))
                 && let Some((tilemap_entity, storage)) = storages.get_mut(&tile_type)
                 && let Some(index_type) = tile_configurations().get(&tile_type)
             {

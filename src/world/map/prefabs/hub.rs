@@ -4,7 +4,7 @@ use crate::{
     prelude::NpcType,
     world::map::{
         TileType,
-        blueprint::{MapBlueprint, Placement, PlacementType, TileGrid, TileRect},
+        blueprint::{MapBlueprint, Placement, PlacementKind, TileGrid, TileRect},
     },
 };
 
@@ -15,49 +15,50 @@ const NPC_OFFSET: f32 = 5.0;
 const ENTRANCE_WIDTH: i32 = 5;
 
 pub fn build_hub(blueprint: &mut MapBlueprint) {
-    let hub_bounds = TileRect::new_centered_in(blueprint.map_size(), HUB_SIZE).unwrap();
+    let hub_bounds = TileRect::centered_in(blueprint.map_size(), HUB_SIZE).unwrap();
     blueprint
         .tiles
-        .fill_rect(&hub_bounds, TileType::Cobblestone)
-        .expect("Map size should fit hub");
+        .fill_rect(&hub_bounds, TileType::Cobblestone);
 
     add_hub_walls(&mut blueprint.tiles, &hub_bounds);
     add_hub_entrance(&mut blueprint.tiles, &hub_bounds);
 
+    blueprint.tiles.fill_border(TileType::Wall);
+
     blueprint.placements.extend([
         Placement {
-            kind: PlacementType::PlayerSpawn,
+            kind: PlacementKind::PlayerStart,
             tile: IVec2::new(
-                hub_bounds.center().x,
+                hub_bounds.center_tile().x,
                 hub_bounds.min.y + PLAYER_Y_TILE_OFFSET,
             ),
         },
         Placement {
-            kind: PlacementType::LevelExit,
+            kind: PlacementKind::Exit,
             tile: IVec2::new(
-                hub_bounds.center().x,
+                hub_bounds.center_tile().x,
                 hub_bounds.min.y + LEVEL_EXIT_Y_OFFSET as i32,
             ),
         },
         Placement {
-            kind: PlacementType::Npc(NpcType::Shopkeeper),
+            kind: PlacementKind::Npc(NpcType::Shopkeeper),
             tile: IVec2::new(
-                hub_bounds.center().x + NPC_OFFSET as i32,
-                hub_bounds.center().y + NPC_OFFSET as i32,
+                hub_bounds.center_tile().x + NPC_OFFSET as i32,
+                hub_bounds.center_tile().y + NPC_OFFSET as i32,
             ),
         },
         Placement {
-            kind: PlacementType::Npc(NpcType::Helper),
+            kind: PlacementKind::Npc(NpcType::Helper),
             tile: IVec2::new(
-                hub_bounds.center().x - NPC_OFFSET as i32,
-                hub_bounds.center().y - NPC_OFFSET as i32,
+                hub_bounds.center_tile().x - NPC_OFFSET as i32,
+                hub_bounds.center_tile().y - NPC_OFFSET as i32,
             ),
         },
         Placement {
-            kind: PlacementType::Npc(NpcType::StatTrainer),
+            kind: PlacementKind::Npc(NpcType::StatTrainer),
             tile: IVec2::new(
-                hub_bounds.center().x + NPC_OFFSET as i32,
-                hub_bounds.center().y - NPC_OFFSET as i32,
+                hub_bounds.center_tile().x + NPC_OFFSET as i32,
+                hub_bounds.center_tile().y - NPC_OFFSET as i32,
             ),
         },
     ]);
@@ -78,7 +79,7 @@ fn add_hub_walls(tiles: &mut TileGrid, tile_rect: &TileRect) {
             let y = min_y + wall_layer;
 
             for x in start_x..max_x {
-                tiles.set(x, y, TileType::Wall);
+                tiles.set(IVec2::new(x, y), TileType::Wall);
             }
         }
 
@@ -88,7 +89,7 @@ fn add_hub_walls(tiles: &mut TileGrid, tile_rect: &TileRect) {
             let y = max_y - wall_layer - 1;
 
             for x in start_x..max_x {
-                tiles.set(x, y, TileType::Wall);
+                tiles.set(IVec2::new(x, y), TileType::Wall);
             }
         }
     }
@@ -100,7 +101,7 @@ fn add_hub_walls(tiles: &mut TileGrid, tile_rect: &TileRect) {
             let x = min_x + wall_layer;
 
             for y in min_y..max_y {
-                tiles.set(x, y, TileType::Wall);
+                tiles.set(IVec2::new(x, y), TileType::Wall);
             }
         }
 
@@ -109,7 +110,7 @@ fn add_hub_walls(tiles: &mut TileGrid, tile_rect: &TileRect) {
             let x = max_x - wall_layer - 1;
 
             for y in min_y..max_y {
-                tiles.set(x, y, TileType::Wall);
+                tiles.set(IVec2::new(x, y), TileType::Wall);
             }
         }
     }

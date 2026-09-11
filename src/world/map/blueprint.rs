@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use std::collections::HashMap;
+use std::fmt;
 
 use crate::{
     prelude::{EnemyType, NpcType},
@@ -9,24 +11,88 @@ use crate::{
 pub struct MapBlueprint {
     pub tiles: TileGrid,
     pub placements: Vec<Placement>,
-    pub rng_seed: u64,
+    pub visual_seed: u64,
 }
 
 impl MapBlueprint {
-    pub fn new(map_size: UVec2, floor: TileType, rng_seed: u64) -> Self {
-        let tiles = TileGrid::new(map_size, floor);
-
+    pub fn new(map_size: UVec2, floor: TileType, visual_seed: u64) -> Self {
         Self {
-            tiles,
-            rng_seed,
+            tiles: TileGrid::new(map_size, floor),
+            visual_seed,
             placements: Vec::new(),
         }
+    }
+
+    pub fn player_start(&self) -> Result<IVec2, MapValidationError> {
+        let starts: Vec<_> = self
+            .placements
+            .iter()
+            .filter_map(|p| matches!(p.kind, PlacementKind::PlayerStart).then_some(p.tile))
+            .collect();
+        match starts.as_slice() {
+            [start] => Ok(*start),
+            [] => Err(MapValidationError::MissingPlayerStart),
+            _ => Err(MapValidationError::MultiplePlayerStarts(starts.len())),
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), MapValidationError> {
+        self.player_start()?;
+        let mut occupied = HashMap::<IVec2, usize>::new();
+        for (index, placement) in self.placements.iter().enumerate() {
+            let Some(tile_type) = self.tiles.get(placement.tile) else {
+                return Err(MapValidationError::PlacementOutOfBounds {
+                    index,
+                    tile: placement.tile,
+                });
+            };
+            if !tile_type.can_spawn() {
+                return Err(MapValidationError::PlacementNotSpawnable {
+                    index,
+                    tile: placement.tile,
+                    tile_type,
+                });
+            }
+            if let Some(previous) = occupied.insert(placement.tile, index) {
+                return Err(MapValidationError::OverlappingPlacements {
+                    tile: placement.tile,
+                    indexes: [previous, index],
+                });
+            }
+        }
+        Ok(())
     }
 
     pub fn map_size(&self) -> UVec2 {
         self.tiles.map_size()
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MapValidationError {
+    MissingPlayerStart,
+    MultiplePlayerStarts(usize),
+    PlacementOutOfBounds {
+        index: usize,
+        tile: IVec2,
+    },
+    PlacementNotSpawnable {
+        index: usize,
+        tile: IVec2,
+        tile_type: TileType,
+    },
+    OverlappingPlacements {
+        tile: IVec2,
+        indexes: [usize; 2],
+    },
+}
+
+impl fmt::Display for MapValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+impl std::error::Error for MapValidationError {}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TileGrid {
@@ -78,8 +144,19 @@ impl TileGrid {
     }
 
     pub fn contains_rect(&self, tile_rect: &TileRect) -> bool {
+        if tile_rect.size == UVec2::ZERO {
+            return tile_rect.min.x >= 0
+                && tile_rect.min.y >= 0
+                && tile_rect.min.x <= self.width() as i32
+                && tile_rect.min.y <= self.height() as i32;
+        }
         let min_index = tile_rect.min;
-        let max_index = tile_rect.max_exclusive() - IVec2::new(1, 1);
+        let Some(max_index) = tile_rect
+            .checked_max_exclusive()
+            .and_then(|max| max.checked_sub(IVec2::ONE))
+        else {
+            return false;
+        };
 
         self.contains(min_index) && self.contains(max_index)
     }
@@ -88,24 +165,68 @@ impl TileGrid {
         self.cell_index(tile_index).map(|index| self.cells[index])
     }
 
-    #[must_use]
-    pub fn set(&mut self, tile_index: IVec2, tile_type: TileType) -> Option<()> {
+    pub fn set(&mut self, tile_index: IVec2, tile_type: TileType) -> bool {
         self.cell_index(tile_index)
             .map(|index| self.cells[index] = tile_type)
+            .is_some()
     }
 
-    #[must_use]
-    pub fn fill_rect(&mut self, tile_rect: &TileRect, tile_type: TileType) -> Option<()> {
+    pub fn fill_rect(&mut self, tile_rect: &TileRect, tile_type: TileType) -> bool {
         if !self.contains_rect(tile_rect) {
-            return None;
+            return false;
         }
 
-        for x in tile_rect.min.x..(tile_rect.min.x + tile_rect.size.x as i32) {
-            for y in tile_rect.min.y..(tile_rect.min.y + tile_rect.size.y as i32) {
+        let Some(max) = tile_rect.checked_max_exclusive() else {
+            return false;
+        };
+        for x in tile_rect.min.x..max.x {
+            for y in tile_rect.min.y..max.y {
                 self.set(IVec2::new(x, y), tile_type);
             }
         }
-        Some(())
+        true
+    }
+
+    pub fn fill_border(&mut self, tile_type: TileType) {
+        let size = self.map_size;
+        if size.x == 0 || size.y == 0 {
+            return;
+        }
+
+        let w = size.x;
+        let h = size.y;
+
+        // Top and bottom rows
+        self.fill_rect(
+            &TileRect {
+                min: IVec2::new(0, 0),
+                size: UVec2::new(w, 1),
+            },
+            tile_type,
+        );
+        self.fill_rect(
+            &TileRect {
+                min: IVec2::new(0, h as i32 - 1),
+                size: UVec2::new(w, 1),
+            },
+            tile_type,
+        );
+
+        // Left and right columns
+        self.fill_rect(
+            &TileRect {
+                min: IVec2::new(0, 0),
+                size: UVec2::new(1, h),
+            },
+            tile_type,
+        );
+        self.fill_rect(
+            &TileRect {
+                min: IVec2::new(w as i32 - 1, 0),
+                size: UVec2::new(1, h),
+            },
+            tile_type,
+        );
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (IVec2, TileType)> + '_ {
@@ -120,28 +241,38 @@ impl TileGrid {
     }
 
     /// Returns an iterator over the tiles in the specified rectangle, yielding (tile_index, tile_type) pairs.
-    pub fn rect_iter(&self, rect: &TileRect) -> impl Iterator<Item = (IVec2, TileType)> + '_ {
+    pub fn rect_iter(
+        &self,
+        rect: &TileRect,
+    ) -> Option<impl Iterator<Item = (IVec2, TileType)> + '_> {
+        if !self.contains_rect(rect) {
+            return None;
+        }
         let min = rect.min;
-        let max = rect.min + rect.size.as_ivec2();
+        let max = rect.checked_max_exclusive()?;
 
-        (min.x..max.x).flat_map(move |x| {
+        Some((min.x..max.x).flat_map(move |x| {
             (min.y..max.y).filter_map(move |y| {
-                let tile_index = IVec2::new(x, y);
-
-                self.get(tile_index)
-                    .map(|tile_type| (tile_index, tile_type))
+                self.get(IVec2::new(x, y))
+                    .map(|tile_type| (IVec2::new(x, y), tile_type))
             })
-        })
+        }))
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TileRect {
     pub min: IVec2,
     pub size: UVec2,
 }
 
 impl TileRect {
-    pub fn new_centered_in(map_size: UVec2, rect_size: UVec2) -> Option<Self> {
+    pub fn new(min: IVec2, size: UVec2) -> Option<Self> {
+        min.checked_add(size.as_ivec2())?;
+        Some(Self { min, size })
+    }
+
+    pub fn centered_in(map_size: UVec2, rect_size: UVec2) -> Option<Self> {
         if !rect_size.cmple(map_size).all() {
             return None;
         }
@@ -157,21 +288,24 @@ impl TileRect {
         })
     }
 
-    pub fn offset_from(&self, offset: IVec2) -> Self {
-        TileRect {
-            min: self.min + offset,
+    pub fn translated(&self, offset: IVec2) -> Option<Self> {
+        Some(TileRect {
+            min: self.min.checked_add(offset)?,
             size: self.size,
-        }
+        })
     }
 
-    pub fn padded(&self, padding: i32) -> Self {
-        TileRect {
-            min: self.min - IVec2::splat(padding),
-            size: self.size + UVec2::splat((padding * 2) as u32),
-        }
+    pub fn padded(&self, padding: u32) -> Option<Self> {
+        let amount = padding.checked_mul(2)?;
+        Some(TileRect {
+            min: self
+                .min
+                .checked_sub(IVec2::splat(i32::try_from(padding).ok()?))?,
+            size: self.size.checked_add(UVec2::splat(amount))?,
+        })
     }
 
-    pub fn center(&self) -> IVec2 {
+    pub fn center_tile(&self) -> IVec2 {
         self.min + self.size.as_ivec2() / 2
     }
 
@@ -179,8 +313,14 @@ impl TileRect {
         self.min + self.size.as_ivec2()
     }
 
+    pub fn checked_max_exclusive(&self) -> Option<IVec2> {
+        self.min.checked_add(self.size.as_ivec2())
+    }
+
     pub fn contains(&self, tile_index: IVec2) -> bool {
-        let max_exclusive = self.max_exclusive();
+        let Some(max_exclusive) = self.checked_max_exclusive() else {
+            return false;
+        };
         tile_index.x >= self.min.x
             && tile_index.y >= self.min.y
             && tile_index.x < max_exclusive.x
@@ -188,17 +328,20 @@ impl TileRect {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+pub type MapPlacement = Placement;
+pub type MapPlacementKind = PlacementKind;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Placement {
     pub tile: IVec2,
-    pub kind: PlacementType,
+    pub kind: PlacementKind,
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum PlacementType {
-    PlayerSpawn,
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum PlacementKind {
+    PlayerStart,
     Enemy(EnemyType),
     Npc(NpcType),
     Chest,
-    LevelExit,
+    Exit,
 }

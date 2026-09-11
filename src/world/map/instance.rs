@@ -1,6 +1,8 @@
-use std::io::BufReader;
+use std::{collections::BTreeMap, io::BufReader};
 
-use crate::world::map::{blueprint::MapBlueprint, generation::generate_zone, prefabs::PrefabType};
+use crate::world::map::{
+    TileType, blueprint::MapBlueprint, generation::generate_zone, prefabs::PrefabType,
+};
 use bevy::prelude::*;
 use rand::distr::{Distribution, weighted::WeightedIndex};
 use rand_chacha::ChaCha8Rng;
@@ -13,26 +15,51 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource)]
 pub struct MapRecipeCatalog {
-    recipes: Vec<MapRecipe>,
+    recipes: BTreeMap<String, MapRecipe>,
 }
 
 impl MapRecipeCatalog {
-    pub fn generate_blueprint(
+    pub fn get(&self, name: &str) -> Option<&MapRecipe> {
+        self.recipes.get(name)
+    }
+
+    pub fn generate_named(
         &self,
-        mut rng: &mut ChaCha8Rng,
+        name: &str,
+        rng: &mut ChaCha8Rng,
         zone_seed: u64,
     ) -> Result<MapBlueprint> {
-        let weights: Vec<u32> = self.recipes.iter().map(|i| i.weight).collect();
+        let recipe = self
+            .get(name)
+            .ok_or_else(|| BevyError::from(format!("unknown map recipe: {name}")))?;
+        generate_zone(recipe, rng, zone_seed)
+    }
+
+    pub fn generate_random(&self, rng: &mut ChaCha8Rng, zone_seed: u64) -> Result<MapBlueprint> {
+        let weights: Vec<u32> = self.recipes.values().map(|i| i.weight).collect();
         let dist = WeightedIndex::new(weights)?;
-        let selected_index = dist.sample(&mut rng);
+        let selected_index = dist.sample(rng);
         let map_recipe = self
             .recipes
-            .get(selected_index)
-            .ok_or(BevyError::from("Instance not found"))?;
+            .values()
+            .nth(selected_index)
+            .ok_or(BevyError::from("instance not found"))?;
+        generate_zone(map_recipe, rng, zone_seed)
+    }
 
-        let blueprint = generate_zone(map_recipe, &mut rng, zone_seed)?;
+    pub fn generate_blueprint(&self, rng: &mut ChaCha8Rng, zone_seed: u64) -> Result<MapBlueprint> {
+        self.generate_random(rng, zone_seed)
+    }
+}
 
-        Ok(blueprint)
+impl From<Vec<MapRecipe>> for MapRecipeCatalog {
+    fn from(recipes: Vec<MapRecipe>) -> Self {
+        Self {
+            recipes: recipes
+                .into_iter()
+                .map(|recipe| (recipe.name.clone(), recipe))
+                .collect(),
+        }
     }
 }
 
@@ -41,24 +68,49 @@ impl MapRecipeCatalog {
 struct MapConfig {
     pub recipes: Vec<MapRecipe>,
 }
-
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct MapRecipe {
     name: String,
     weight: u32,
-    pub size_x_range: (f32, f32),
-    pub size_y_range: (f32, f32),
-    pub number_of_enemies_range: (f32, f32),
-    pub chest_range: (f32, f32),
+    pub size_x_range: (u32, u32),
+    pub size_y_range: (u32, u32),
+    pub number_of_enemies_range: (u32, u32),
+    pub chest_range: (u32, u32),
     pub num_exits: u32,
     pub prefabs: Vec<PrefabType>,
-    pub floor_type: String,
+    pub floor_type: TileType,
+}
+
+impl MapRecipe {
+    pub fn validate(&self) -> Result<()> {
+        if self.weight == 0 {
+            return Err("recipe weight must be positive".into());
+        }
+        for (name, range) in [("size_x", self.size_x_range), ("size_y", self.size_y_range)] {
+            if range.0 == 0 || range.0 > range.1 {
+                return Err(format!("invalid {name} range").into());
+            }
+        }
+        for (name, range) in [
+            ("enemies", self.number_of_enemies_range),
+            ("chests", self.chest_range),
+        ] {
+            if range.0 > range.1 {
+                return Err(format!("invalid {name} range").into());
+            }
+        }
+        if self.num_exits > 2 {
+            return Err("unsupported exit count".into());
+        }
+        Ok(())
+    }
 }
 
 fn setup_instance_data(mut commands: Commands) {
-    let recipes = load_instance_data();
-    commands.insert_resource(MapRecipeCatalog { recipes });
+    let recipes: Vec<MapRecipe> = load_instance_data();
+
+    commands.insert_resource(MapRecipeCatalog::from(recipes));
 }
 
 #[cfg(not(target_arch = "wasm32"))]

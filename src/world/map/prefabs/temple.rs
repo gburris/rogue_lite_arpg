@@ -4,7 +4,7 @@ use rand::RngExt;
 
 use crate::world::map::{
     TileType,
-    blueprint::{MapBlueprint, Placement, PlacementType, TileGrid, TileRect},
+    blueprint::{MapBlueprint, Placement, PlacementKind, TileGrid, TileRect},
 };
 
 pub fn build_temple(blueprint: &mut MapBlueprint) {
@@ -12,7 +12,7 @@ pub fn build_temple(blueprint: &mut MapBlueprint) {
         add_temple_structure(blueprint, &bounds);
 
         blueprint.placements.extend([Placement {
-            kind: PlacementType::Chest,
+            kind: PlacementKind::Chest,
             tile: IVec2::new(
                 bounds.min.x + (TEMPLE_WIDTH / 2) as i32,
                 bounds.min.y + (TEMPLE_HEIGHT / 2) as i32,
@@ -36,7 +36,7 @@ fn find_temple_position(grid: &TileGrid) -> Option<TileRect> {
         y: TEMPLE_HEIGHT,
     };
 
-    let base_bounds = TileRect::new_centered_in(grid.map_size(), temple_size.into())?;
+    let base_bounds = TileRect::centered_in(grid.map_size(), temple_size.into())?;
 
     for _ in 0..max_attempts {
         let offset_x =
@@ -44,11 +44,13 @@ fn find_temple_position(grid: &TileGrid) -> Option<TileRect> {
         let offset_y =
             rng.random_range(-(grid.map_size().y as i32 / 4)..(grid.map_size().y as i32 / 4));
 
-        let bounds = base_bounds.offset_from(IVec2::new(offset_x, offset_y));
+        let Some(bounds) = base_bounds.translated(IVec2::new(offset_x, offset_y)) else {
+            continue;
+        };
 
         if grid
             .rect_iter(&bounds)
-            .all(|(_, tile_type)| tile_type.can_spawn())
+            .is_some_and(|mut iter| iter.all(|(_, tile_type)| tile_type.can_spawn()))
         {
             return Some(bounds);
         }
@@ -75,7 +77,9 @@ fn add_temple_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
                     || (y == start_y + TEMPLE_HEIGHT - 1
                         && (x < entrance_start || x >= entrance_start + ENTRANCE_WIDTH));
                 if is_wall {
-                    let _ = blueprint.tiles.set(x as i32, y as i32, TileType::Wall);
+                    let _ = blueprint
+                        .tiles
+                        .set(IVec2::new(x as i32, y as i32), TileType::Wall);
                 }
             }
         }

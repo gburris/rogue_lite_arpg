@@ -2,12 +2,10 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::{
-    prelude::{EnemyType, NpcType},
-    world::map::TileType,
-};
+use crate::prelude::{AppState, EnemyType, NpcType, TileGrid, TileType};
 
-#[derive(Resource, Debug, PartialEq, Eq)]
+#[derive(Component, Debug, PartialEq, Eq)]
+#[require(Transform, Visibility)]
 pub struct MapBlueprint {
     pub tiles: TileGrid,
     pub placements: Vec<Placement>,
@@ -16,8 +14,13 @@ pub struct MapBlueprint {
 
 impl MapBlueprint {
     pub fn new(map_size: UVec2, floor: TileType, visual_seed: u64) -> Self {
+        let mut tiles = TileGrid::new(map_size, floor);
+
+        // For now every map has a wall border
+        tiles.fill_border(TileType::Wall);
+
         Self {
-            tiles: TileGrid::new(map_size, floor),
+            tiles,
             visual_seed,
             placements: Vec::new(),
         }
@@ -47,6 +50,8 @@ impl MapBlueprint {
                 });
             };
             if !tile_type.can_spawn() {
+                info!("Failed attempting to place: {:?}", placement.kind);
+
                 return Err(MapValidationError::PlacementNotSpawnable {
                     index,
                     tile: placement.tile,
@@ -94,240 +99,6 @@ impl fmt::Display for MapValidationError {
 }
 impl std::error::Error for MapValidationError {}
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct TileGrid {
-    map_size: UVec2, // Size of the grid in tiles
-    cells: Vec<TileType>,
-}
-
-impl TileGrid {
-    fn width(&self) -> usize {
-        self.map_size.x as usize
-    }
-
-    fn height(&self) -> usize {
-        self.map_size.y as usize
-    }
-
-    fn cell_index(&self, tile_index: IVec2) -> Option<usize> {
-        let x = usize::try_from(tile_index.x).ok()?;
-        let y = usize::try_from(tile_index.y).ok()?;
-
-        (x < self.width() && y < self.height()).then(|| y * self.width() + x)
-    }
-
-    pub fn new(map_size: UVec2, fill: TileType) -> Self {
-        assert!(
-            map_size.x > 0 && map_size.y > 0,
-            "tile grid dimensions must be non-zero"
-        );
-
-        let width = usize::try_from(map_size.x).expect("map width fits usize");
-        let height = usize::try_from(map_size.y).expect("map height fits usize");
-
-        let capacity = width
-            .checked_mul(height)
-            .expect("total tiles in map fits usize");
-
-        TileGrid {
-            map_size,
-            cells: vec![fill; capacity],
-        }
-    }
-
-    pub fn map_size(&self) -> UVec2 {
-        self.map_size
-    }
-
-    pub fn contains(&self, tile_index: IVec2) -> bool {
-        self.cell_index(tile_index).is_some()
-    }
-
-    pub fn contains_rect(&self, tile_rect: &TileRect) -> bool {
-        if tile_rect.size == UVec2::ZERO {
-            return tile_rect.min.x >= 0
-                && tile_rect.min.y >= 0
-                && tile_rect.min.x <= self.width() as i32
-                && tile_rect.min.y <= self.height() as i32;
-        }
-        let min_index = tile_rect.min;
-        let Some(max_index) = tile_rect
-            .checked_max_exclusive()
-            .and_then(|max| max.checked_sub(IVec2::ONE))
-        else {
-            return false;
-        };
-
-        self.contains(min_index) && self.contains(max_index)
-    }
-
-    pub fn get(&self, tile_index: IVec2) -> Option<TileType> {
-        self.cell_index(tile_index).map(|index| self.cells[index])
-    }
-
-    pub fn set(&mut self, tile_index: IVec2, tile_type: TileType) -> bool {
-        self.cell_index(tile_index)
-            .map(|index| self.cells[index] = tile_type)
-            .is_some()
-    }
-
-    pub fn fill_rect(&mut self, tile_rect: &TileRect, tile_type: TileType) -> bool {
-        if !self.contains_rect(tile_rect) {
-            return false;
-        }
-
-        let Some(max) = tile_rect.checked_max_exclusive() else {
-            return false;
-        };
-        for x in tile_rect.min.x..max.x {
-            for y in tile_rect.min.y..max.y {
-                self.set(IVec2::new(x, y), tile_type);
-            }
-        }
-        true
-    }
-
-    pub fn fill_border(&mut self, tile_type: TileType) {
-        let size = self.map_size;
-        if size.x == 0 || size.y == 0 {
-            return;
-        }
-
-        let w = size.x;
-        let h = size.y;
-
-        // Top and bottom rows
-        self.fill_rect(
-            &TileRect {
-                min: IVec2::new(0, 0),
-                size: UVec2::new(w, 1),
-            },
-            tile_type,
-        );
-        self.fill_rect(
-            &TileRect {
-                min: IVec2::new(0, h as i32 - 1),
-                size: UVec2::new(w, 1),
-            },
-            tile_type,
-        );
-
-        // Left and right columns
-        self.fill_rect(
-            &TileRect {
-                min: IVec2::new(0, 0),
-                size: UVec2::new(1, h),
-            },
-            tile_type,
-        );
-        self.fill_rect(
-            &TileRect {
-                min: IVec2::new(w as i32 - 1, 0),
-                size: UVec2::new(1, h),
-            },
-            tile_type,
-        );
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = (IVec2, TileType)> + '_ {
-        self.cells
-            .iter()
-            .enumerate()
-            .map(move |(index, &tile_type)| {
-                let x = index % self.width();
-                let y = index / self.width();
-                (IVec2::new(x as i32, y as i32), tile_type)
-            })
-    }
-
-    /// Returns an iterator over the tiles in the specified rectangle, yielding (tile_index, tile_type) pairs.
-    pub fn rect_iter(
-        &self,
-        rect: &TileRect,
-    ) -> Option<impl Iterator<Item = (IVec2, TileType)> + '_> {
-        if !self.contains_rect(rect) {
-            return None;
-        }
-        let min = rect.min;
-        let max = rect.checked_max_exclusive()?;
-
-        Some((min.x..max.x).flat_map(move |x| {
-            (min.y..max.y).filter_map(move |y| {
-                self.get(IVec2::new(x, y))
-                    .map(|tile_type| (IVec2::new(x, y), tile_type))
-            })
-        }))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TileRect {
-    pub min: IVec2,
-    pub size: UVec2,
-}
-
-impl TileRect {
-    pub fn new(min: IVec2, size: UVec2) -> Option<Self> {
-        min.checked_add(size.as_ivec2())?;
-        Some(Self { min, size })
-    }
-
-    pub fn centered_in(map_size: UVec2, rect_size: UVec2) -> Option<Self> {
-        if !rect_size.cmple(map_size).all() {
-            return None;
-        }
-
-        let min = IVec2::new(
-            ((map_size.x - rect_size.x) / 2) as i32,
-            ((map_size.y - rect_size.y) / 2) as i32,
-        );
-
-        Some(TileRect {
-            min,
-            size: rect_size,
-        })
-    }
-
-    pub fn translated(&self, offset: IVec2) -> Option<Self> {
-        Some(TileRect {
-            min: self.min.checked_add(offset)?,
-            size: self.size,
-        })
-    }
-
-    pub fn padded(&self, padding: u32) -> Option<Self> {
-        let amount = padding.checked_mul(2)?;
-        Some(TileRect {
-            min: self
-                .min
-                .checked_sub(IVec2::splat(i32::try_from(padding).ok()?))?,
-            size: self.size.checked_add(UVec2::splat(amount))?,
-        })
-    }
-
-    pub fn center_tile(&self) -> IVec2 {
-        self.min + self.size.as_ivec2() / 2
-    }
-
-    pub fn max_exclusive(&self) -> IVec2 {
-        self.min + self.size.as_ivec2()
-    }
-
-    pub fn checked_max_exclusive(&self) -> Option<IVec2> {
-        self.min.checked_add(self.size.as_ivec2())
-    }
-
-    pub fn contains(&self, tile_index: IVec2) -> bool {
-        let Some(max_exclusive) = self.checked_max_exclusive() else {
-            return false;
-        };
-        tile_index.x >= self.min.x
-            && tile_index.y >= self.min.y
-            && tile_index.x < max_exclusive.x
-            && tile_index.y < max_exclusive.y
-    }
-}
-
 pub type MapPlacement = Placement;
 pub type MapPlacementKind = PlacementKind;
 
@@ -344,4 +115,138 @@ pub enum PlacementKind {
     Npc(NpcType),
     Chest,
     Exit,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::world::map::prefabs::build_hub;
+
+    use super::*;
+    use rand::{Rng, SeedableRng};
+    use rand_chacha::ChaCha8Rng;
+
+    const SNAPSHOT_PATH: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/snapshots/hub_layout.txt"
+    );
+
+    fn to_char(tile: &TileType) -> char {
+        match tile {
+            TileType::Wood => 'w',
+            TileType::Ground => '.',
+            TileType::Grass => ',',
+            TileType::Wall => '#',
+            TileType::Water => '~',
+            TileType::Cobblestone => 'c',
+            TileType::DeadZone => '_',
+        }
+    }
+
+    fn render(tiles: &TileGrid) -> String {
+        let width = tiles.map_size().x as usize;
+        let height = tiles.map_size().y as usize;
+        if width == 0 || height == 0 {
+            return String::new();
+        }
+
+        (0..height)
+        .rev()                                      // top row first
+        .map(|y| {
+            (0..width)
+                .map(|x| {
+                    let tile = tiles
+                        .get(IVec2::new(x as i32, y as i32))
+                        .unwrap_or(TileType::DeadZone);
+                    to_char(&tile)
+                })
+                .collect::<String>()                // collect row chars into a String
+        })
+        .collect::<Vec<String>>()                   // collect all rows
+        .join("\n")                                 // join with newline
+        + "\n"
+    }
+
+    const HUB_MAP_SIZE: UVec2 = UVec2::new(100, 100);
+
+    #[test]
+    fn hub_layout_matches_snapshot() {
+        // see isn't used for hub, so if it becomes seed-sensitive we want to know
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        let map_seed: u64 = rng.next_u64();
+
+        let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
+        build_hub(&mut blueprint);
+        let rendered_hub_layout = render(&blueprint.tiles);
+
+        if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
+            std::fs::write(SNAPSHOT_PATH, &rendered_hub_layout).expect("Failed to write _PATH");
+            return;
+        }
+
+        let expected_hub_layout =
+            std::fs::read_to_string(SNAPSHOT_PATH).expect("Failed to read snapshot");
+        assert_eq!(
+            rendered_hub_layout,
+            expected_hub_layout,
+            "{}",
+            first_difference(&expected_hub_layout, &rendered_hub_layout)
+        );
+    }
+
+    #[test]
+    fn hub_is_deterministic() {
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        let map_seed: u64 = rng.next_u64();
+        let mut blueprint1 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
+        let mut blueprint2 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
+
+        build_hub(&mut blueprint1);
+        build_hub(&mut blueprint2);
+
+        let rendered_layout_1 = render(&blueprint1.tiles);
+        let rendered_layout_2 = render(&blueprint2.tiles);
+
+        assert_eq!(rendered_layout_1, rendered_layout_2);
+    }
+
+    fn first_difference(expected: &str, actual: &str) -> String {
+        if expected.is_empty() {
+            return format!(
+                "no snapshot at {SNAPSHOT_PATH}, create one by running the test with UPDATE_SNAPSHOTS=1"
+            );
+        }
+
+        let rows = actual.lines().count();
+
+        for (row, (e_row, a_row)) in expected.lines().zip(actual.lines()).enumerate() {
+            if e_row != a_row {
+                let least_column_amount = e_row.chars().count().min(a_row.chars().count());
+
+                let col = e_row
+                    .chars()
+                    .zip(a_row.chars())
+                    .position(|(ec, ac)| ec != ac)
+                    .unwrap_or(least_column_amount);
+
+                let mut msg = format!(
+                    "hub map changed at tile ({col}, {}) [snapshot line {}]\n",
+                    rows - 1 - row,
+                    row + 1,
+                );
+                msg.push_str(&format!("expected: {e_row}\n"));
+                msg.push_str(&format!("actual:   {a_row}\n"));
+                msg.push_str(&" ".repeat(12 + col));
+                msg.push('^');
+                msg.push('\n');
+                return msg;
+            }
+        }
+
+        format!(
+            "hub map changed in size, expected {} rows, actual {} rows",
+            expected.lines().count(),
+            actual.lines().count()
+        )
+    }
 }

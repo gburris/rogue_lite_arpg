@@ -9,10 +9,11 @@ pub use empty_square::build_empty_square;
 pub use hub::build_hub;
 pub use temple::build_temple;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]
 
 pub enum PrefabType {
-    NpcHub,
+    #[default]
+    HubTown,
     Temple,
     EmptySquare,
 }
@@ -22,7 +23,7 @@ impl FromStr for PrefabType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "NpcHub" => Ok(PrefabType::NpcHub),
+            "HubTown" => Ok(PrefabType::HubTown),
             "Temple" => Ok(PrefabType::Temple),
             "EmptySquare" => Ok(PrefabType::EmptySquare),
             _ => Err(format!("Unknown prefab type: {s}")),

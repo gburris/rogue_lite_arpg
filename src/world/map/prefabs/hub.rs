@@ -3,14 +3,14 @@ use bevy::math::{IVec2, UVec2};
 use crate::{
     prelude::NpcType,
     world::map::{
-        TileType,
-        blueprint::{MapBlueprint, Placement, PlacementKind, TileGrid, TileRect},
+        blueprint::{MapBlueprint, Placement, PlacementKind},
+        tiles::{TileGrid, TileRect, TileType},
     },
 };
 
 const HUB_SIZE: UVec2 = UVec2::new(25, 25);
 const PLAYER_Y_TILE_OFFSET: i32 = 5;
-const LEVEL_EXIT_Y_OFFSET: f32 = 24.0;
+const LEVEL_EXIT_Y_OFFSET: f32 = 22.0;
 const NPC_OFFSET: f32 = 5.0;
 const ENTRANCE_WIDTH: i32 = 5;
 
@@ -22,8 +22,6 @@ pub fn build_hub(blueprint: &mut MapBlueprint) {
 
     add_hub_walls(&mut blueprint.tiles, &hub_bounds);
     add_hub_entrance(&mut blueprint.tiles, &hub_bounds);
-
-    blueprint.tiles.fill_border(TileType::Wall);
 
     blueprint.placements.extend([
         Placement {

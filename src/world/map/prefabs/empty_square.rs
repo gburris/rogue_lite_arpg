@@ -5,8 +5,8 @@ use bevy::{
 use rand::RngExt;
 
 use crate::world::map::{
-    TileType,
-    blueprint::{MapBlueprint, TileGrid, TileRect},
+    blueprint::MapBlueprint,
+    tiles::{TileGrid, TileRect, TileType},
 };
 
 pub fn build_empty_square(blueprint: &mut MapBlueprint) {
@@ -49,16 +49,17 @@ fn find_dead_zone_position(map: &TileGrid) -> Option<TileRect> {
     None
 }
 
-fn can_place_dead_zone(grid: &TileGrid, bounds: &TileRect) -> bool {
+fn can_place_dead_zone(tiles: &TileGrid, bounds: &TileRect) -> bool {
     let Some(padded_bounds) = bounds.padded(2) else {
         return false;
     };
 
-    if !grid.contains_rect(&padded_bounds) {
+    if !tiles.contains_rect(&padded_bounds) {
         return false;
     }
 
-    grid.rect_iter(&padded_bounds)
+    tiles
+        .rect_iter(&padded_bounds)
         .is_some_and(|mut iter| iter.all(|(_, tile_type)| tile_type.can_spawn()))
 }
 

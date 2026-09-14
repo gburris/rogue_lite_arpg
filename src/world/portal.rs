@@ -1,15 +1,13 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{prelude::*, world::MapRng};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         handle_portal_collisions.in_set(InGameSystems::Collision),
     );
-
-    app.add_observer(despawn_all::<CleanupZone, Portal>);
 }
 
 /// Portals represent any "warping device" in the game, currently spawning a new zone when entered
@@ -22,7 +20,8 @@ pub(super) fn plugin(app: &mut App) {
         GameCollisionLayer::Interaction,
         GameCollisionLayer::PlayerInteractionRadius
     ),
-    YSort
+    YSort,
+    DespawnOnExit::<AppState>(AppState::Playing)
 )]
 struct Portal;
 
@@ -36,24 +35,16 @@ pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Bundle {
 }
 
 fn handle_portal_collisions(
-    mut commands: Commands,
-    instance: Res<MapRecipeCatalog>,
     portal_query: Query<&CollidingEntities, With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
-    mut game_state: ResMut<NextState<AppState>>,
-    mut rng: ResMut<MapRng>,
+    mut next_map: NextMap,
 ) {
     for portal_colliding_entities in portal_query.iter() {
         for &colliding_entity in portal_colliding_entities.iter() {
             if colliding_entity == *player_collider {
-                let (mut zone_rng, zone_seed) = rng.zone();
-                info!("Generating portal zone with seed: {}", zone_seed);
-                commands.insert_resource(
-                    instance
-                        .generate_blueprint(&mut zone_rng, zone_seed)
-                        .unwrap(),
-                );
-                game_state.set(AppState::Transition);
+                next_map
+                    .set(RecipeSelection::WeightedRandom)
+                    .expect("Shoud have no problem spawning random map im upset");
             }
         }
     }

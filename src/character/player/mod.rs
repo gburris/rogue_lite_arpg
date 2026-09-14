@@ -239,6 +239,8 @@ fn spawn_player(
     });
 }
 
-fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
-    game_state.set(AppState::CreateHub);
+fn transition_to_create_hub(mut next_map: NextMap) {
+    next_map
+        .set(RecipeSelection::Named("HubTown"))
+        .expect("Should have no problem with spawning hub");
 }

@@ -33,7 +33,7 @@ impl MapRng {
         Self(ChaCha8Rng::seed_from_u64(seed))
     }
 
-    pub(crate) fn zone(&mut self) -> (ChaCha8Rng, u64) {
+    pub(crate) fn map(&mut self) -> (ChaCha8Rng, u64) {
         let seed = self.0.next_u64();
         (ChaCha8Rng::seed_from_u64(seed), seed)
     }

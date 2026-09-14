@@ -10,8 +10,6 @@ pub(super) fn plugin(app: &mut App) {
         handle_gold_collisions.in_set(InGameSystems::Collision),
     )
     .add_observer(on_gold_drop_event);
-
-    app.add_observer(despawn_all::<CleanupZone, Gold>);
 }
 
 #[derive(Component)]
@@ -29,6 +27,7 @@ pub(super) fn plugin(app: &mut App) {
     // Don't let gold move the player upon collision
     Dominance(-1),
     YSort,
+    DespawnOnExit::<AppState>(AppState::Playing)
 )]
 struct Gold {
     pub value: u32,

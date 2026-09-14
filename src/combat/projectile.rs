@@ -14,8 +14,6 @@ use crate::{
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision))
         .add_observer(on_fire_projectile);
-
-    app.add_observer(despawn_all::<CleanupZone, Projectile>);
 }
 
 #[derive(Component, Clone)]
@@ -26,7 +24,8 @@ pub(super) fn plugin(app: &mut App) {
     CollidingEntities,
     AnimationIndices::Cycle((0..=4).cycle()),
     AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-    Disabled
+    Disabled,
+    DespawnOnExit::<AppState>(AppState::Playing)
 )]
 pub struct Projectile {
     pub damage: Damage,

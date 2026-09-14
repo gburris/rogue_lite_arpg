@@ -16,8 +16,6 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_enemies);
-
-    app.add_observer(despawn_all::<CleanupZone, Enemy>);
 }
 
 #[derive(Debug, Event)]
@@ -35,6 +33,7 @@ pub struct EnemySpawnData {
     Experience,
     VisionCapabilities,
     Purse { amount: 50 },
+    DespawnOnExit::<AppState>(AppState::Playing)
 )]
 pub struct Enemy;
 

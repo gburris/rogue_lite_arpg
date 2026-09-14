@@ -2,8 +2,6 @@ use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::prelude::*;
 use bevy_asset_loader::loading_state::LoadingStateSet;
 
-use crate::prelude::CleanupZone;
-
 pub(super) fn plugin(app: &mut App) {
     // initialize states
     app.init_state::<AppState>().add_sub_state::<PlayingState>();
@@ -47,8 +45,6 @@ pub(super) fn plugin(app: &mut App) {
     app.init_state::<Pause>()
         .add_systems(OnEnter(Pause(true)), pause_game)
         .add_systems(OnEnter(Pause(false)), resume_game);
-
-    app.add_systems(OnEnter(AppState::Transition), transition_zones);
 }
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
@@ -73,11 +69,9 @@ pub enum AppState {
     #[default]
     StartScreen,
     AssetLoading,
-    CreateHub,
+    SpawnMap,    // Used to 1. put a load screen on 2. Spawn everything in the map
     SpawnPlayer, // Also creates player overlay UI
-    SpawnZone,   //Used to 1. put a load screen on 2. Spawn everything in ur zone
     Playing,
-    Transition,
     GameOver,
 }
 
@@ -106,9 +100,4 @@ fn resume_game(mut time: ResMut<Time<Physics>>) {
 // Cleanup pause menu once we return to game, set it to hidden
 fn pause_game(mut time: ResMut<Time<Physics>>) {
     time.pause();
-}
-
-fn transition_zones(mut commands: Commands, mut game_state: ResMut<NextState<AppState>>) {
-    commands.trigger(CleanupZone);
-    game_state.set(AppState::SpawnZone);
 }

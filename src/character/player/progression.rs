@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::prelude::{AppState, CleanupZone, PlayerStats, RestartEvent};
+use crate::prelude::{AppState, PlayerStats, RestartEvent};
 
 pub(super) fn plugin(app: &mut App) {
     app.insert_resource(GameProgress::default());
@@ -32,7 +32,6 @@ impl Default for GameProgress {
 /// Triggers when restart is clicked after death in a run
 fn handle_restart_trigger(
     restart_event_trigger: On<RestartEvent>,
-    mut commands: Commands,
     mut game_progress: ResMut<GameProgress>,
     mut next_app_state: ResMut<NextState<AppState>>,
 ) {
@@ -40,6 +39,5 @@ fn handle_restart_trigger(
     game_progress.total_career_level += restart_event_trigger.player_level;
     game_progress.progress_points += restart_event_trigger.player_level;
 
-    commands.trigger(CleanupZone);
     next_app_state.set(AppState::SpawnPlayer);
 }

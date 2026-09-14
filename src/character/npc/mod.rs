@@ -15,8 +15,7 @@ use crate::{
 use super::behavior::{Anchor, Wander};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(spawn_npcs)
-        .add_observer(despawn_all::<CleanupZone, NPC>);
+    app.add_observer(spawn_npcs);
 }
 
 #[derive(Event)]
@@ -29,7 +28,7 @@ pub struct NpcSpawnData {
 }
 
 #[derive(Component)]
-#[require(Character)]
+#[require(Character, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct NPC;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]

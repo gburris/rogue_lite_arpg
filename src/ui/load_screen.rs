@@ -17,7 +17,7 @@ pub struct AnimatedText;
 pub fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
-        DespawnOnExit(AppState::SpawnZone),
+        DespawnOnExit(AppState::SpawnMap),
         Node {
             width: percent(100.0),
             height: percent(100.0),

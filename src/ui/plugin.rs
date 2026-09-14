@@ -11,10 +11,10 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         //Loading screen
-        app.add_systems(OnEnter(AppState::SpawnZone), load_screen::spawn)
+        app.add_systems(OnEnter(AppState::SpawnMap), load_screen::spawn)
             .add_systems(
                 Update,
-                (load_screen::animate_text).run_if(in_state(AppState::SpawnZone)),
+                (load_screen::animate_text).run_if(in_state(AppState::SpawnMap)),
             );
 
         // Start screen

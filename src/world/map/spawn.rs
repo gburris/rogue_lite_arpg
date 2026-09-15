@@ -226,7 +226,7 @@ fn spawn_map_entities(
 
     for placement in blueprint.placements.iter() {
         let world_spawn_pos =
-            coordinates.tile_corner_to_world_pos(blueprint.map_size().into(), placement.tile);
+            coordinates.tile_center_to_world_pos(blueprint.map_size().into(), placement.tile);
 
         match &placement.kind {
             PlacementKind::PlayerStart => {

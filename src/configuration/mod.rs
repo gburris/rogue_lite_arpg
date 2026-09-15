@@ -23,14 +23,6 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    // Setup and configuration
-    app.add_plugins((
-        assets::plugin,
-        physics::plugin,
-        schedule::plugin,
-        view::plugin,
-    ));
-
     #[cfg(feature = "dev")]
     app.add_plugins(debug::plugin);
 
@@ -47,6 +39,14 @@ pub(super) fn plugin(app: &mut App) {
             .set(view::get_window_plugin())
             .set(ImagePlugin::default_nearest()),
     );
+
+    // Setup and configuration
+    app.add_plugins((
+        assets::plugin,
+        physics::plugin,
+        schedule::plugin,
+        view::plugin,
+    ));
 
     // Third-party plugins
     app.add_plugins((

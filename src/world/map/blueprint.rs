@@ -117,9 +117,27 @@ pub enum PlacementKind {
     Exit,
 }
 
+impl PlacementKind {
+    pub const fn from_glyph(glyph: char) -> Option<Self> {
+        match glyph {
+            'P' => Some(Self::PlayerStart),
+            'X' => Some(Self::Exit),
+            'C' => Some(Self::Chest),
+            'S' => Some(Self::Npc(NpcType::Shopkeeper)),
+            'H' => Some(Self::Npc(NpcType::Helper)),
+            'T' => Some(Self::Npc(NpcType::StatTrainer)),
+            'W' => Some(Self::Enemy(EnemyType::Warrior)),
+            'F' => Some(Self::Enemy(EnemyType::FireMage)),
+            'I' => Some(Self::Enemy(EnemyType::IceMage)),
+            _ => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::world::map::prefabs::build_hub;
+    use crate::world::map::structures::{StructureKind, apply_structure};
+    use crate::world::map::tiles::TileRect;
 
     use super::*;
     use rand::{Rng, SeedableRng};
@@ -130,40 +148,27 @@ mod tests {
         "/tests/snapshots/hub_layout.txt"
     );
 
-    fn to_char(tile: &TileType) -> char {
-        match tile {
-            TileType::Wood => 'w',
-            TileType::Ground => '.',
-            TileType::Grass => ',',
-            TileType::Wall => '#',
-            TileType::Water => '~',
-            TileType::Cobblestone => 'c',
-            TileType::DeadZone => '_',
-        }
-    }
-
     fn render(tiles: &TileGrid) -> String {
         let width = tiles.map_size().x as usize;
         let height = tiles.map_size().y as usize;
         if width == 0 || height == 0 {
             return String::new();
         }
-
         (0..height)
-        .rev()                                      // top row first
-        .map(|y| {
-            (0..width)
-                .map(|x| {
-                    let tile = tiles
-                        .get(IVec2::new(x as i32, y as i32))
-                        .unwrap_or(TileType::DeadZone);
-                    to_char(&tile)
-                })
-                .collect::<String>()                // collect row chars into a String
-        })
-        .collect::<Vec<String>>()                   // collect all rows
-        .join("\n")                                 // join with newline
-        + "\n"
+            .rev()
+            .map(|y| {
+                (0..width)
+                    .map(|x| {
+                        tiles
+                            .get(IVec2::new(x as i32, y as i32))
+                            .unwrap_or(TileType::DeadZone)
+                            .glyph()
+                    })
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n"
     }
 
     const HUB_MAP_SIZE: UVec2 = UVec2::new(100, 100);
@@ -175,7 +180,9 @@ mod tests {
         let map_seed: u64 = rng.next_u64();
 
         let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
-        build_hub(&mut blueprint);
+        let size = StructureKind::HubTown.picture().size().as_uvec2();
+        let min = TileRect::centered_in(HUB_MAP_SIZE, size).unwrap().min + IVec2::new(0, -3);
+        assert!(apply_structure(&mut blueprint, StructureKind::HubTown.picture(), min).is_ok());
         let rendered_hub_layout = render(&blueprint.tiles);
 
         if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
@@ -195,14 +202,15 @@ mod tests {
 
     #[test]
     fn hub_is_deterministic() {
-        let mut rng = ChaCha8Rng::seed_from_u64(42);
-
-        let map_seed: u64 = rng.next_u64();
+        let map_seed = 42;
+        let structure = StructureKind::HubTown.picture();
+        let size = structure.size().as_uvec2();
+        let min = TileRect::centered_in(HUB_MAP_SIZE, size).unwrap().min + IVec2::new(0, -3);
         let mut blueprint1 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
         let mut blueprint2 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
 
-        build_hub(&mut blueprint1);
-        build_hub(&mut blueprint2);
+        assert!(apply_structure(&mut blueprint1, structure, min).is_ok());
+        assert!(apply_structure(&mut blueprint2, structure, min).is_ok());
 
         let rendered_layout_1 = render(&blueprint1.tiles);
         let rendered_layout_2 = render(&blueprint2.tiles);

@@ -15,8 +15,9 @@ use crate::{
         MapRng,
         map::{
             blueprint::{MapBlueprint, Placement, PlacementKind},
-            prefabs::{PrefabType, build_empty_square, build_hub, build_temple},
-            tiles::{TileGrid, TileType},
+            prefabs::{PrefabType, build_empty_square, build_temple},
+            structures::{StructureKind, apply_structure},
+            tiles::{TileGrid, TileRect, TileType},
         },
     },
 };
@@ -130,8 +131,8 @@ struct MapRecipe {
 
 impl MapRecipe {
     pub fn validate(&self) -> Result<()> {
-        if self.weight == 0 {
-            return Err("recipe weight must be positive".into());
+        if self.name != "HubTown" && self.weight == 0 {
+            return Err("dungeon recipe weight must be positive".into());
         }
         for (name, range) in [("size_x", self.size_x_range), ("size_y", self.size_y_range)] {
             if range.0 == 0 || range.0 > range.1 {
@@ -204,7 +205,14 @@ fn generate_zone(
         match prefab {
             PrefabType::Temple => build_temple(&mut blueprint),
             PrefabType::EmptySquare => build_empty_square(&mut blueprint),
-            PrefabType::HubTown => build_hub(&mut blueprint),
+            PrefabType::HubTown => {
+                let structure = StructureKind::HubTown.picture();
+                let min = TileRect::centered_in(blueprint.map_size(), structure.size().as_uvec2())
+                    .expect("hub town must fit within map bounds")
+                    .min
+                    + IVec2::new(0, -3);
+                assert!(apply_structure(&mut blueprint, structure, min).is_ok());
+            }
         }
     }
 

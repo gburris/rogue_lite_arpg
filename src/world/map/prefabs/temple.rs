@@ -3,21 +3,15 @@ use bevy_ecs_tilemap::map::TilemapSize;
 use rand::RngExt;
 
 use crate::world::map::{
-    blueprint::{MapBlueprint, Placement, PlacementKind},
-    tiles::{TileGrid, TileRect, TileType},
+    blueprint::MapBlueprint,
+    structures::{TEMPLE, apply_structure},
+    tiles::{TileGrid, TileRect},
 };
 
 pub fn build_temple(blueprint: &mut MapBlueprint) {
     if let Some(bounds) = find_temple_position(&blueprint.tiles) {
-        add_temple_structure(blueprint, &bounds);
-
-        blueprint.placements.extend([Placement {
-            kind: PlacementKind::Chest,
-            tile: IVec2::new(
-                bounds.min.x + (TEMPLE_WIDTH / 2) as i32,
-                bounds.min.y + (TEMPLE_HEIGHT / 2) as i32,
-            ),
-        }]);
+        let _ = apply_structure(blueprint, &TEMPLE, bounds.min);
+        // The C glyph in the temple picture adds its chest placement.
     } else {
         warn!("No valid temple position was found");
     }
@@ -25,7 +19,6 @@ pub fn build_temple(blueprint: &mut MapBlueprint) {
 
 const TEMPLE_WIDTH: u32 = 7;
 const TEMPLE_HEIGHT: u32 = 7;
-const ENTRANCE_WIDTH: u32 = 3;
 
 fn find_temple_position(tiles: &TileGrid) -> Option<TileRect> {
     let mut rng = rand::rng();
@@ -56,31 +49,4 @@ fn find_temple_position(tiles: &TileGrid) -> Option<TileRect> {
         }
     }
     None
-}
-
-fn add_temple_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
-    let start_x = bounds.min.x as u32;
-    let start_y = bounds.min.y as u32;
-
-    blueprint.tiles.fill_rect(bounds, TileType::Cobblestone);
-
-    let entrance_start = start_x + (TEMPLE_WIDTH - ENTRANCE_WIDTH) / 2;
-
-    let map_size = blueprint.map_size();
-    for x in start_x..start_x + TEMPLE_WIDTH {
-        for y in start_y..start_y + TEMPLE_HEIGHT {
-            if x < map_size.x && y < map_size.y {
-                let is_wall = x == start_x
-                    || x == start_x + TEMPLE_WIDTH - 1
-                    || y == start_y
-                    || (y == start_y + TEMPLE_HEIGHT - 1
-                        && (x < entrance_start || x >= entrance_start + ENTRANCE_WIDTH));
-                if is_wall {
-                    let _ = blueprint
-                        .tiles
-                        .set(IVec2::new(x as i32, y as i32), TileType::Wall);
-                }
-            }
-        }
-    }
 }

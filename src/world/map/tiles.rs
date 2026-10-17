@@ -247,7 +247,7 @@ pub enum TileType {
 }
 
 impl TileType {
-    pub const fn ascii_char(self) -> char {
+    pub const fn glyph(self) -> char {
         match self {
             Self::Wood => 'w',
             Self::Ground => '.',
@@ -259,8 +259,21 @@ impl TileType {
         }
     }
 
+    pub const fn from_glyph(glyph: char) -> Option<Self> {
+        match glyph {
+            'w' => Some(Self::Wood),
+            '.' => Some(Self::Ground),
+            ',' => Some(Self::Grass),
+            '#' => Some(Self::Wall),
+            '~' => Some(Self::Water),
+            'c' => Some(Self::Cobblestone),
+            '_' => Some(Self::DeadZone),
+            _ => None,
+        }
+    }
+
     pub const fn visual_key(self) -> char {
-        self.ascii_char()
+        self.glyph()
     }
 
     pub fn blocks_ground(&self) -> bool {

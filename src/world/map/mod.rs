@@ -2,8 +2,7 @@ mod blueprint;
 mod build;
 mod prefabs;
 mod spawn;
-#[allow(dead_code)]
-mod structure;
+mod structures;
 mod tiles;
 
 use ::bevy::prelude::*;
@@ -14,6 +13,7 @@ pub mod prelude {
     pub use super::build::*;
     pub use super::prefabs::*;
     pub use super::spawn::*;
+    pub use super::structures::*;
     pub use super::tiles::*;
 }
 

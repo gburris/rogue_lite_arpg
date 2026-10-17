@@ -1,12 +1,10 @@
 mod empty_square;
-mod hub;
 mod temple;
 
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 pub use empty_square::build_empty_square;
-pub use hub::build_hub;
 pub use temple::build_temple;
 
 #[derive(Default, Debug, Clone, Copy, Serialize, Deserialize)]

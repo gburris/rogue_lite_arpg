@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 #[require(
     RigidBody::Static,
-    Collider::rectangle(32.0, 64.0),
+    Collider::rectangle(TILE_SIZE, 2.0 * TILE_SIZE),
     CollidingEntities,
     CollisionLayers::new(
         GameCollisionLayer::Interaction,
@@ -38,14 +38,12 @@ fn handle_portal_collisions(
     portal_query: Query<&CollidingEntities, With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
     mut next_map: NextMap,
-) {
+) -> Result {
     for portal_colliding_entities in portal_query.iter() {
-        for &colliding_entity in portal_colliding_entities.iter() {
-            if colliding_entity == *player_collider {
-                next_map
-                    .set(RecipeSelection::WeightedRandom)
-                    .expect("Shoud have no problem spawning random map im upset");
-            }
+        if portal_colliding_entities.contains(&*player_collider) {
+            return next_map.set(RecipeSelection::WeightedRandom);
         }
     }
+
+    Ok(())
 }

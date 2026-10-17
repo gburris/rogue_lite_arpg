@@ -147,7 +147,7 @@ impl TileGrid {
             })
     }
 
-    /// Returns an iterator over the tiles in the specified rectangle, yielding (tile_index, tile_type) pairs.
+    /// Returns an iterator over the tiles in the specified rectangle, yielding (`tile_index`, `tile_type`) pairs.
     pub fn rect_iter(
         &self,
         rect: &TileRect,
@@ -264,17 +264,11 @@ impl TileType {
     }
 
     pub fn blocks_ground(&self) -> bool {
-        match self {
-            TileType::Wall | TileType::Water => true,
-            _ => false,
-        }
+        matches!(self, TileType::Wall | TileType::Water)
     }
 
     pub fn should_render(&self) -> bool {
-        match self {
-            TileType::DeadZone => false,
-            _ => true,
-        }
+        !matches!(self, TileType::DeadZone)
     }
 
     pub fn can_spawn(&self) -> bool {

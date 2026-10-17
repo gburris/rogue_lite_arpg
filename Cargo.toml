@@ -2,6 +2,7 @@
 name = "baba_yaga"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95.0"
 description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
 
 [dependencies]

@@ -37,12 +37,13 @@ fn transition_to_playing(mut game_state: ResMut<NextState<AppState>>) {
 fn spawn_map_tiles(
     mut commands: Commands,
     blueprint: Single<(&MapBlueprint, Entity)>,
-    coodinates: Res<MapCoordinates>,
+    mut coordinates: ResMut<MapCoordinates>,
     sprites: Res<SpriteAssets>,
 ) {
     let (blueprint, blueprint_entity) = blueprint.into_inner();
     let map_size = blueprint.map_size();
-    let tile_size = coodinates.tile_size;
+    coordinates.map_size = map_size;
+    let tile_size = coordinates.tile_size;
     let grid_size: TilemapGridSize = tile_size.into();
     let map_type = TilemapType::Square;
 
@@ -128,23 +129,21 @@ fn spawn_map_colliders(
     blueprint: Single<&MapBlueprint>,
     coordinates: Res<MapCoordinates>,
 ) {
-    derive_collider_rects(&blueprint.tiles)
-        .into_iter()
-        .for_each(|rect| {
-            let (position, size) = coordinates.tile_rect_to_world_rect(blueprint.map_size(), rect);
+    for rect in derive_collider_rects(&blueprint.tiles) {
+        let (position, size) = coordinates.tile_rect_to_world_rect(blueprint.map_size(), rect);
 
-            commands.spawn((
-                RigidBody::Static,
-                Collider::rectangle(size.x, size.y),
-                Transform::from_xyz(position.x, position.y, ZLayer::OnGround.z()),
-                GlobalTransform::default(),
-                MapCollider,
-                CollisionLayers::new(
-                    GameCollisionLayer::HighObstacle,
-                    GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
-                ),
-            ));
-        });
+        commands.spawn((
+            RigidBody::Static,
+            Collider::rectangle(size.x, size.y),
+            Transform::from_xyz(position.x, position.y, ZLayer::OnGround.z()),
+            GlobalTransform::default(),
+            MapCollider,
+            CollisionLayers::new(
+                GameCollisionLayer::HighObstacle,
+                GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
+            ),
+        ));
+    }
 }
 
 fn derive_collider_rects(tiles: &TileGrid) -> Vec<TileRect> {
@@ -224,9 +223,9 @@ fn spawn_map_entities(
 ) {
     let mut player_transform = player_query.into_inner();
 
-    for placement in blueprint.placements.iter() {
+    for placement in &blueprint.placements {
         let world_spawn_pos =
-            coordinates.tile_center_to_world_pos(blueprint.map_size().into(), placement.tile);
+            coordinates.tile_center_to_world_pos(blueprint.map_size(), placement.tile);
 
         match &placement.kind {
             PlacementKind::PlayerStart => {
@@ -286,8 +285,9 @@ fn tile_configurations() -> &'static HashMap<TileType, TileIndexType> {
 //This holds the concept of "Tiles are this big relative to world cordinaties"
 #[derive(Resource)]
 pub struct MapCoordinates {
-    pub tile_size: TilemapTileSize, // Size of each tile in world units
-    pub world_origin: Vec2,         // The world space position of the map center
+    pub tile_size: TilemapTileSize,
+    pub world_origin: Vec2,
+    pub map_size: UVec2,
 }
 
 //If we want to f with the scale of our tiles:world (e.g. have way more tiles in our world)
@@ -295,8 +295,9 @@ pub struct MapCoordinates {
 impl Default for MapCoordinates {
     fn default() -> Self {
         MapCoordinates {
-            tile_size: TilemapTileSize::new(32.0, 32.0),
+            tile_size: TilemapTileSize::new(TILE_SIZE, TILE_SIZE),
             world_origin: Vec2::ZERO,
+            map_size: UVec2::ZERO,
         }
     }
 }

@@ -2,18 +2,22 @@ mod blueprint;
 mod build;
 mod prefabs;
 mod spawn;
+#[allow(dead_code)]
 mod structure;
 mod tiles;
 
 use ::bevy::prelude::*;
 
 pub mod prelude {
+    pub use super::TILE_SIZE;
     pub use super::blueprint::*;
     pub use super::build::*;
     pub use super::prefabs::*;
     pub use super::spawn::*;
     pub use super::tiles::*;
 }
+
+pub const TILE_SIZE: f32 = 32.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((build::plugin, spawn::plugin));

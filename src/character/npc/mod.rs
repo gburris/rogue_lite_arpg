@@ -38,7 +38,6 @@ pub enum NpcType {
     StatTrainer,
 }
 
-const TILE_SIZE: f32 = 32.0;
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
 
 fn spawn_npcs(
@@ -51,7 +50,7 @@ fn spawn_npcs(
     for NpcSpawnData {
         position: spawn_position,
         npc_type,
-    } in npc_spawn_trigger.0.iter()
+    } in &npc_spawn_trigger.0
     {
         spawn_npc(
             &mut commands,

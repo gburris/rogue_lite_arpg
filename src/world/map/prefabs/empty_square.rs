@@ -64,8 +64,8 @@ fn can_place_dead_zone(tiles: &TileGrid, bounds: &TileRect) -> bool {
 }
 
 fn add_dead_zone_structure(blueprint: &mut MapBlueprint, bounds: &TileRect) {
-    let start_x = bounds.min.x as i32;
-    let start_y = bounds.min.y as i32;
+    let start_x = bounds.min.x;
+    let start_y = bounds.min.y;
     let size = (bounds.size.x as i32).max(3);
 
     blueprint.tiles.fill_rect(bounds, TileType::DeadZone);

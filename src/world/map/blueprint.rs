@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::prelude::{AppState, EnemyType, NpcType, TileGrid, TileType};
+use crate::prelude::{EnemyType, NpcType, TileGrid, TileType};
 
 #[derive(Component, Debug, PartialEq, Eq)]
 #[require(Transform, Visibility)]

@@ -167,7 +167,7 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-        Anchor::new(position, 256.0), // 8 tile radius
+        Anchor::new(position, 8.0 * TILE_SIZE),
         Mana::new(100.0, 10.0),
         // enemy vision distance
         RayCaster::default()

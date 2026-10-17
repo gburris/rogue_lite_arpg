@@ -34,15 +34,10 @@ pub struct NextMap<'w, 's> {
     rng: ResMut<'w, MapRng>,
 }
 
-impl<'w, 's> NextMap<'w, 's> {
+impl NextMap<'_, '_> {
     pub fn set(&mut self, recipe: RecipeSelection) -> Result<()> {
         let (mut map_rng, map_seed) = self.rng.map();
         info!("Generating map with seed: {}", map_seed);
-
-        if let Some(previous_map) = self.previous_map.as_ref() {
-            let previous_map = previous_map.entity();
-            self.commands.entity(previous_map).despawn();
-        }
 
         let blueprint = match recipe {
             RecipeSelection::WeightedRandom => self.catalog.generate_random(&mut map_rng, map_seed),
@@ -50,6 +45,10 @@ impl<'w, 's> NextMap<'w, 's> {
                 self.catalog.generate_named(name, &mut map_rng, map_seed)
             }
         }?;
+
+        if let Some(previous_map) = self.previous_map.as_ref() {
+            self.commands.entity(previous_map.entity()).despawn();
+        }
 
         self.commands.spawn(blueprint);
         self.next_state.set(AppState::SpawnMap);
@@ -154,10 +153,14 @@ impl MapRecipe {
     }
 }
 
-fn setup_instance_data(mut commands: Commands) {
+fn setup_instance_data(mut commands: Commands) -> Result {
     let recipes: Vec<MapRecipe> = load_map_recipes();
+    for recipe in &recipes {
+        recipe.validate()?;
+    }
 
     commands.insert_resource(MapRecipeCatalog::from(recipes));
+    Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -189,8 +192,8 @@ fn generate_zone(
     rng: &mut ChaCha8Rng,
     map_seed: u64,
 ) -> Result<MapBlueprint> {
-    let size_x = rng.random_range(map_recipe.size_x_range.0..=map_recipe.size_x_range.1) as u32;
-    let size_y = rng.random_range(map_recipe.size_y_range.0..=map_recipe.size_y_range.1) as u32;
+    let size_x = rng.random_range(map_recipe.size_x_range.0..=map_recipe.size_x_range.1);
+    let size_y = rng.random_range(map_recipe.size_y_range.0..=map_recipe.size_y_range.1);
 
     let floor_type = map_recipe.floor_type;
 
@@ -245,11 +248,11 @@ fn generate_zone(
             .get(player_start)
             .is_some_and(|t: TileType| t.can_spawn())
         {
-            return Err(format!("player start {:?} is not spawnable", player_start).into());
+            return Err(format!("player start {player_start:?} is not spawnable").into());
         }
 
         if !occupied.insert(player_start) {
-            return Err(format!("player start {:?} is already occupied", player_start).into());
+            return Err(format!("player start {player_start:?} is already occupied").into());
         }
 
         blueprint.placements.push(Placement {
@@ -260,9 +263,8 @@ fn generate_zone(
 
     // Determine number of enemies and chests from the recipe ranges
     let num_enemies = rng
-        .random_range(map_recipe.number_of_enemies_range.0..=map_recipe.number_of_enemies_range.1)
-        as u32;
-    let num_chests = rng.random_range(map_recipe.chest_range.0..=map_recipe.chest_range.1) as u32;
+        .random_range(map_recipe.number_of_enemies_range.0..=map_recipe.number_of_enemies_range.1);
+    let num_chests = rng.random_range(map_recipe.chest_range.0..=map_recipe.chest_range.1);
 
     // Generate enemy positions (avoid walls)
     let enemy_positions =
@@ -427,4 +429,51 @@ fn find_valid_position(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Resource, Default)]
+    struct RequestResult(Option<bool>);
+
+    fn request_unknown_recipe(mut next_map: NextMap, mut result: ResMut<RequestResult>) {
+        result.0 = Some(next_map.set(RecipeSelection::Named("missing")).is_err());
+    }
+
+    #[test]
+    fn unknown_recipe_keeps_current_map_and_does_not_request_transition() {
+        let mut app = App::new();
+        app.insert_resource(MapRecipeCatalog {
+            recipes: BTreeMap::new(),
+        });
+        app.insert_resource(MapRng::seeded(1));
+        app.insert_resource(NextState::<AppState>::Unchanged);
+        app.insert_resource(RequestResult::default());
+        app.world_mut()
+            .spawn(MapBlueprint::new(UVec2::ONE, TileType::Grass, 0));
+        app.add_systems(Update, request_unknown_recipe);
+
+        app.update();
+
+        assert_eq!(
+            app.world().resource::<RequestResult>().0,
+            Some(true),
+            "unknown recipe should return an error",
+        );
+        let mut maps = app.world_mut().query::<&MapBlueprint>();
+        assert_eq!(
+            maps.iter(app.world()).count(),
+            1,
+            "current map should remain"
+        );
+        assert!(
+            matches!(
+                app.world().resource::<NextState<AppState>>(),
+                NextState::Unchanged
+            ),
+            "failed build should not queue a transition",
+        );
+    }
 }

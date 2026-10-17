@@ -1,5 +1,6 @@
 mod blueprint;
 mod build;
+mod place;
 mod prefabs;
 mod spawn;
 mod structures;
@@ -11,6 +12,7 @@ pub mod prelude {
     pub use super::TILE_SIZE;
     pub use super::blueprint::*;
     pub use super::build::*;
+    pub use super::place::*;
     pub use super::prefabs::*;
     pub use super::spawn::*;
     pub use super::structures::*;

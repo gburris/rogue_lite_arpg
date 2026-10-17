@@ -277,7 +277,7 @@ impl TileType {
     }
 
     pub fn blocks_ground(&self) -> bool {
-        matches!(self, TileType::Wall | TileType::Water)
+        matches!(self, TileType::Wall | TileType::Water | TileType::DeadZone)
     }
 
     pub fn should_render(&self) -> bool {

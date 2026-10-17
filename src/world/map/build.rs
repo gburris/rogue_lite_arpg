@@ -1,23 +1,24 @@
 use rand::{
-    RngExt,
+    RngExt, SeedableRng,
     distr::{Distribution, weighted::WeightedIndex},
 };
 use rand_chacha::ChaCha8Rng;
-use ron::de::from_reader;
+use ron::{Options, extensions::Extensions};
 use serde::Deserialize;
 use std::{collections::BTreeMap, io::BufReader};
 
-use bevy::{ecs::system::SystemParam, platform::collections::HashSet, prelude::*};
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{
     prelude::{AppState, EnemyType},
     world::{
         MapRng,
         map::{
-            blueprint::{MapBlueprint, Placement, PlacementKind},
+            blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
+            place::{Anchor, CountRange, PlaceContext, PlaceRule, Side},
             prefabs::{PrefabType, build_empty_square, build_temple},
             structures::{StructureKind, apply_structure},
-            tiles::{TileGrid, TileRect, TileType},
+            tiles::TileType,
         },
     },
 };
@@ -31,136 +32,356 @@ pub struct NextMap<'w, 's> {
     commands: Commands<'w, 's>,
     previous_map: Option<Single<'w, 's, Entity, With<MapBlueprint>>>,
     next_state: ResMut<'w, NextState<AppState>>,
-    catalog: ResMut<'w, MapRecipeCatalog>,
+    catalog: Res<'w, RecipeCatalog>,
     rng: ResMut<'w, MapRng>,
 }
 
 impl NextMap<'_, '_> {
-    pub fn set(&mut self, recipe: RecipeSelection) -> Result<()> {
-        let (mut map_rng, map_seed) = self.rng.map();
-        info!("Generating map with seed: {}", map_seed);
-
-        let blueprint = match recipe {
-            RecipeSelection::WeightedRandom => self.catalog.generate_random(&mut map_rng, map_seed),
-            RecipeSelection::Named(name) => {
-                self.catalog.generate_named(name, &mut map_rng, map_seed)
+    pub fn set(&mut self, request: MapRequest) -> Result<()> {
+        let (recipe, seed) = match request {
+            MapRequest::Hub => (self.catalog.hub(), self.rng.map().1),
+            MapRequest::Weighted => {
+                let seed = self.rng.map().1;
+                let mut rng = ChaCha8Rng::seed_from_u64(seed);
+                (self.catalog.weighted(&mut rng)?, seed)
             }
-        }?;
+            MapRequest::Named { recipe, seed } => (self.catalog.named(&recipe)?, seed),
+        };
+        let blueprint = build_from_recipe(recipe, seed)?;
 
         if let Some(previous_map) = self.previous_map.as_ref() {
             self.commands.entity(previous_map.entity()).despawn();
         }
-
         self.commands.spawn(blueprint);
         self.next_state.set(AppState::SpawnMap);
-
         Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum RecipeSelection {
-    WeightedRandom,
-    Named(&'static str),
+pub enum MapRequest {
+    Hub,
+    Weighted,
+    Named { recipe: String, seed: u64 },
 }
 
-#[derive(Resource)]
-struct MapRecipeCatalog {
+#[derive(Resource, Debug)]
+pub struct RecipeCatalog {
+    hub: MapRecipe,
     recipes: BTreeMap<String, MapRecipe>,
+    weighted_names: Vec<String>,
 }
 
-impl MapRecipeCatalog {
-    fn get(&self, name: &str) -> Option<&MapRecipe> {
-        self.recipes.get(name)
+impl RecipeCatalog {
+    fn hub(&self) -> &MapRecipe {
+        &self.hub
     }
 
-    fn generate_named(
-        &self,
-        name: &str,
-        rng: &mut ChaCha8Rng,
-        map_seed: u64,
-    ) -> Result<MapBlueprint> {
-        let recipe = self
-            .get(name)
-            .ok_or_else(|| BevyError::from(format!("unknown map recipe: {name}")))?;
-        generate_zone(recipe, rng, map_seed)
-    }
-
-    fn generate_random(&self, rng: &mut ChaCha8Rng, map_seed: u64) -> Result<MapBlueprint> {
-        let weights: Vec<u32> = self.recipes.values().map(|i| i.weight).collect();
-        let dist = WeightedIndex::new(weights)?;
-        let selected_index = dist.sample(rng);
-        let map_recipe = self
-            .recipes
-            .values()
-            .nth(selected_index)
-            .ok_or(BevyError::from("instance not found"))?;
-        generate_zone(map_recipe, rng, map_seed)
-    }
-}
-
-impl From<Vec<MapRecipe>> for MapRecipeCatalog {
-    fn from(recipes: Vec<MapRecipe>) -> Self {
-        Self {
-            recipes: recipes
-                .into_iter()
-                .map(|recipe| (recipe.name.clone(), recipe))
-                .collect(),
+    fn named(&self, name: &str) -> Result<&MapRecipe> {
+        if name == self.hub.name {
+            return Ok(&self.hub);
         }
+        self.recipes
+            .get(name)
+            .ok_or_else(|| format!("unknown map recipe: {name}").into())
+    }
+
+    fn weighted(&self, rng: &mut ChaCha8Rng) -> Result<&MapRecipe> {
+        let weights = self
+            .weighted_names
+            .iter()
+            .map(|name| self.recipes[name].weight)
+            .collect::<Vec<_>>();
+        let index = WeightedIndex::new(weights)?;
+        let name = &self.weighted_names[index.sample(rng)];
+        self.recipes
+            .get(name)
+            .ok_or_else(|| "weighted recipe catalog is empty".into())
     }
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-struct MapConfig {
-    pub recipes: Vec<MapRecipe>,
+struct RecipeFile {
+    defaults: RecipeDefaults,
+    hub: RecipeEntry,
+    #[serde(default)]
+    dungeons: Vec<RecipeEntry>,
+    #[serde(default)]
+    arenas: Vec<RecipeEntry>,
 }
-#[derive(Deserialize, Debug)]
+
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-struct MapRecipe {
+struct RecipeDefaults {
+    size_x_range: (u32, u32),
+    size_y_range: (u32, u32),
+    floor_type: TileType,
+    structures: Vec<StructureEntry>,
+    player_start: PlayerStartPick,
+    exits: PlacementPick,
+    enemies: EnemyPlacement,
+    chests: RecipeCountRange,
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+struct RecipeEntry {
+    name: Option<String>,
+    weight: Option<u32>,
+    size_x_range: Option<(u32, u32)>,
+    size_y_range: Option<(u32, u32)>,
+    floor_type: Option<TileType>,
+    structures: Option<Vec<StructureEntry>>,
+    player_start: Option<PlayerStartPick>,
+    exits: Option<PlacementPick>,
+    enemies: Option<EnemyPlacement>,
+    chests: Option<RecipeCountRange>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MapRecipe {
     name: String,
     weight: u32,
-    pub size_x_range: (u32, u32),
-    pub size_y_range: (u32, u32),
-    pub number_of_enemies_range: (u32, u32),
-    pub chest_range: (u32, u32),
-    pub num_random_exits: u32,
-    pub prefabs: Vec<PrefabType>,
-    pub floor_type: TileType,
+    size_x_range: (u32, u32),
+    size_y_range: (u32, u32),
+    floor_type: TileType,
+    structures: Vec<StructureEntry>,
+    player_start: PlayerStartPick,
+    exits: PlacementPick,
+    enemies: EnemyPlacement,
+    chests: RecipeCountRange,
 }
 
-impl MapRecipe {
-    pub fn validate(&self) -> Result<()> {
-        if self.name != "HubTown" && self.weight == 0 {
-            return Err("dungeon recipe weight must be positive".into());
+impl RecipeEntry {
+    fn resolve(self, name: String, weight: u32, defaults: &RecipeDefaults) -> MapRecipe {
+        MapRecipe {
+            name,
+            weight,
+            size_x_range: self.size_x_range.unwrap_or(defaults.size_x_range),
+            size_y_range: self.size_y_range.unwrap_or(defaults.size_y_range),
+            floor_type: self.floor_type.unwrap_or(defaults.floor_type),
+            structures: self
+                .structures
+                .unwrap_or_else(|| defaults.structures.clone()),
+            player_start: self
+                .player_start
+                .unwrap_or_else(|| defaults.player_start.clone()),
+            exits: self.exits.unwrap_or_else(|| defaults.exits.clone()),
+            enemies: self.enemies.unwrap_or_else(|| defaults.enemies.clone()),
+            chests: self.chests.unwrap_or(defaults.chests),
         }
-        for (name, range) in [("size_x", self.size_x_range), ("size_y", self.size_y_range)] {
-            if range.0 == 0 || range.0 > range.1 {
-                return Err(format!("invalid {name} range").into());
-            }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+struct StructureEntry {
+    kind: PrefabType,
+    #[serde(default)]
+    anchor: StructureAnchor,
+    radius: Option<u32>,
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, Default)]
+enum StructureAnchor {
+    #[default]
+    Random,
+    Center,
+    CenterOffset(IVec2),
+    At(IVec2),
+    Near {
+        structure: usize,
+        offset: IVec2,
+    },
+}
+
+#[derive(Deserialize, Debug, Clone, Copy)]
+enum PlacementSide {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+impl From<PlacementSide> for Side {
+    fn from(value: PlacementSide) -> Self {
+        match value {
+            PlacementSide::Left => Self::Left,
+            PlacementSide::Right => Self::Right,
+            PlacementSide::Top => Self::Top,
+            PlacementSide::Bottom => Self::Bottom,
         }
-        for (name, range) in [
-            ("enemies", self.number_of_enemies_range),
-            ("chests", self.chest_range),
-        ] {
-            if range.0 > range.1 {
-                return Err(format!("invalid {name} range").into());
-            }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Copy)]
+enum PlacementAnchor {
+    Center,
+    CenterOffset(IVec2),
+    At(IVec2),
+}
+
+impl From<PlacementAnchor> for Anchor {
+    fn from(value: PlacementAnchor) -> Self {
+        match value {
+            PlacementAnchor::Center => Self::Center,
+            PlacementAnchor::CenterOffset(offset) => Self::CenterOffset(offset),
+            PlacementAnchor::At(position) => Self::At(position),
         }
-        if self.num_random_exits > 2 {
-            return Err("unsupported exit count".into());
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Copy)]
+struct RecipeCountRange(u32, u32);
+
+impl RecipeCountRange {
+    fn roll_size(self, rng: &mut ChaCha8Rng) -> u32 {
+        rng.random_range(self.0..=self.1)
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+enum PlayerStartPick {
+    Structure,
+    Placement(PlacementPick),
+}
+
+#[derive(Deserialize, Debug, Clone)]
+enum PlacementPick {
+    Fixed {
+        anchor: PlacementAnchor,
+    },
+    Random {
+        count: RecipeCountRange,
+        x_deciles: (u32, u32),
+        separation: u32,
+    },
+    Edge {
+        count: RecipeCountRange,
+        side: PlacementSide,
+    },
+    Choose(Vec<PlacementPick>),
+}
+
+impl PlacementPick {
+    fn resolve(&self, rng: &mut ChaCha8Rng) -> PlaceRule {
+        match self {
+            Self::Fixed { anchor } => PlaceRule::Fixed((*anchor).into()),
+            Self::Random {
+                count,
+                x_deciles,
+                separation,
+            } => PlaceRule::Random {
+                count: CountRange(count.0, count.1),
+                x_deciles: *x_deciles,
+                separation: *separation,
+            },
+            Self::Edge { count, side } => PlaceRule::Edge {
+                count: CountRange(count.0, count.1),
+                side: (*side).into(),
+            },
+            Self::Choose(picks) => picks[rng.random_range(0..picks.len())].resolve(rng),
         }
-        Ok(())
+    }
+
+    fn random_only(&self) -> bool {
+        match self {
+            Self::Random {
+                count, x_deciles, ..
+            } => count.0 == 1 && count.1 == 1 && x_deciles.0 < x_deciles.1 && x_deciles.1 <= 10,
+            Self::Choose(picks) => !picks.is_empty() && picks.iter().all(Self::random_only),
+            _ => false,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+struct EnemyPlacement {
+    count: RecipeCountRange,
+    #[serde(default)]
+    pick: EnemyPick,
+    #[serde(default = "default_enemy_x_deciles")]
+    x_deciles: (u32, u32),
+    #[serde(default)]
+    separation: u32,
+}
+
+fn default_enemy_x_deciles() -> (u32, u32) {
+    (2, 8)
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, Default)]
+enum EnemyPick {
+    #[default]
+    Warrior,
+    IceMage,
+    FireMage,
+    Random,
+}
+
+impl EnemyPick {
+    fn resolve(self, rng: &mut ChaCha8Rng) -> EnemyType {
+        match self {
+            Self::Warrior => EnemyType::Warrior,
+            Self::IceMage => EnemyType::IceMage,
+            Self::FireMage => EnemyType::FireMage,
+            Self::Random => match rng.random_range(0..3) {
+                0 => EnemyType::Warrior,
+                1 => EnemyType::IceMage,
+                _ => EnemyType::FireMage,
+            },
+        }
     }
 }
 
 fn setup_instance_data(mut commands: Commands) -> Result {
-    let recipes: Vec<MapRecipe> = load_map_recipes();
-    for recipe in &recipes {
-        recipe.validate()?;
+    let file = load_recipe_file()?;
+    let mut names = std::collections::HashSet::new();
+    let hub_name = file
+        .hub
+        .name
+        .clone()
+        .unwrap_or_else(|| "HubTown".to_owned());
+    if !names.insert(hub_name.clone()) {
+        return Err(format!("duplicate recipe name: {hub_name}").into());
+    }
+    let hub = file.hub.resolve(hub_name, 0, &file.defaults);
+    validate_recipe(&hub, true)?;
+    for seed in 0..=8 {
+        build_from_recipe(&hub, seed)?;
     }
 
-    commands.insert_resource(MapRecipeCatalog::from(recipes));
+    let mut recipes = BTreeMap::new();
+    let mut weighted_names = Vec::new();
+    for entry in file.dungeons.into_iter().chain(file.arenas) {
+        let name = entry.name.clone().ok_or("recipe name is required")?;
+        if !names.insert(name.clone()) {
+            return Err(format!("duplicate recipe name: {name}").into());
+        }
+        let weight = entry
+            .weight
+            .ok_or_else(|| format!("recipe {name} requires a weight"))?;
+        if weight == 0 {
+            return Err(format!("recipe {name} weight must be positive").into());
+        }
+        let recipe = entry.resolve(name.clone(), weight, &file.defaults);
+        validate_recipe(&recipe, false)?;
+        for seed in 0..=8 {
+            build_from_recipe(&recipe, seed)?;
+        }
+        weighted_names.push(name.clone());
+        recipes.insert(name, recipe);
+    }
+    if recipes.is_empty() {
+        return Err("at least one dungeon or arena recipe is required".into());
+    }
+    commands.insert_resource(RecipeCatalog {
+        hub,
+        recipes,
+        weighted_names,
+    });
     Ok(())
 }
 
@@ -168,8 +389,8 @@ fn setup_instance_data(mut commands: Commands) -> Result {
 use std::fs::File;
 
 #[cfg(not(target_arch = "wasm32"))]
-fn fetch_recipe_data() -> File {
-    File::open("assets/config/map_recipes.ron").expect("Failed to open RON file")
+fn fetch_recipe_data() -> Result<File> {
+    File::open("assets/config/map_recipes.ron").map_err(Into::into)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -177,311 +398,322 @@ fn fetch_recipe_data() -> &'static [u8] {
     include_bytes!("../../../assets/config/map_recipes.ron")
 }
 
-fn load_map_recipes() -> Vec<MapRecipe> {
+fn load_recipe_file() -> Result<RecipeFile> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let reader = BufReader::new(fetch_recipe_data()?);
+    #[cfg(target_arch = "wasm32")]
     let reader = BufReader::new(fetch_recipe_data());
-
-    from_reader::<_, MapConfig>(reader)
-        .unwrap_or_else(|e| {
-            error!("Failed to parse RON file: {:?}", e);
-            panic!("RON parsing error");
-        })
-        .recipes
+    Options::default()
+        .with_default_extension(Extensions::IMPLICIT_SOME)
+        .from_reader(reader)
+        .map_err(Into::into)
 }
 
-fn generate_zone(
-    map_recipe: &MapRecipe,
-    rng: &mut ChaCha8Rng,
-    map_seed: u64,
-) -> Result<MapBlueprint> {
-    let size_x = rng.random_range(map_recipe.size_x_range.0..=map_recipe.size_x_range.1);
-    let size_y = rng.random_range(map_recipe.size_y_range.0..=map_recipe.size_y_range.1);
-
-    let floor_type = map_recipe.floor_type;
-
-    let mut blueprint = MapBlueprint::new(UVec2::new(size_x, size_y), floor_type, map_seed);
-
-    // Build prefabs
-    for prefab in &map_recipe.prefabs {
-        match prefab {
-            PrefabType::Temple => build_temple(&mut blueprint),
-            PrefabType::EmptySquare => build_empty_square(&mut blueprint),
-            PrefabType::HubTown => {
-                let structure = StructureKind::HubTown.picture();
-                let min = TileRect::centered_in(blueprint.map_size(), structure.size().as_uvec2())
-                    .expect("hub town must fit within map bounds")
-                    .min
-                    + IVec2::new(0, -3);
-                assert!(apply_structure(&mut blueprint, structure, min).is_ok());
+fn validate_recipe(recipe: &MapRecipe, hub: bool) -> Result<()> {
+    for (name, range) in [
+        ("size_x", recipe.size_x_range),
+        ("size_y", recipe.size_y_range),
+    ] {
+        if range.0 == 0 || range.0 > range.1 || range.1 > 512 {
+            return Err(format!("recipe {} has invalid {name} range", recipe.name).into());
+        }
+    }
+    if recipe
+        .size_x_range
+        .1
+        .checked_mul(recipe.size_y_range.1)
+        .is_none_or(|area| area > 262_144)
+    {
+        return Err(format!("recipe {} exceeds the map tile cap", recipe.name).into());
+    }
+    let (enemy_min, enemy_max) = (recipe.enemies.count.0, recipe.enemies.count.1);
+    if enemy_min > enemy_max
+        || enemy_max > 512
+        || recipe.chests.0 > recipe.chests.1
+        || recipe.chests.1 > 512
+    {
+        return Err(format!("recipe {} has invalid placement count range", recipe.name).into());
+    }
+    if enemy_min > 0
+        && (recipe.enemies.x_deciles.0 >= recipe.enemies.x_deciles.1
+            || recipe.enemies.x_deciles.1 > 10)
+    {
+        return Err(format!("recipe {} has invalid enemy x-decile range", recipe.name).into());
+    }
+    if !matches!(&recipe.exits, PlacementPick::Edge { .. }) {
+        return Err(format!("recipe {} exits must use an Edge placement", recipe.name).into());
+    }
+    if let PlacementPick::Edge { count, .. } = &recipe.exits {
+        if count.0 == 0 || count.0 > count.1 || count.1 > 2 {
+            return Err(format!("recipe {} has invalid exit count range", recipe.name).into());
+        }
+    }
+    for (index, structure) in recipe.structures.iter().enumerate() {
+        if let StructureAnchor::Near {
+            structure: target, ..
+        } = structure.anchor
+        {
+            if target >= index {
+                return Err(format!(
+                    "recipe {} structure {index} anchors to a structure that is not earlier",
+                    recipe.name
+                )
+                .into());
+            }
+        } else if structure.radius.is_some() {
+            return Err(format!(
+                "recipe {} structure {index} radius requires a Near anchor",
+                recipe.name
+            )
+            .into());
+        }
+        if structure.radius.is_some_and(|radius| radius > 512) {
+            return Err(format!(
+                "recipe {} structure {index} radius exceeds the cap",
+                recipe.name
+            )
+            .into());
+        }
+    }
+    let structure_starts = recipe
+        .structures
+        .iter()
+        .any(|s| matches!(s.kind, PrefabType::HubTown));
+    if matches!(
+        (structure_starts, &recipe.player_start),
+        (true, PlayerStartPick::Placement(_)) | (false, PlayerStartPick::Structure)
+    ) {
+        return Err(format!(
+            "recipe {} must define exactly one PlayerStart source",
+            recipe.name
+        )
+        .into());
+    }
+    if let PlayerStartPick::Placement(PlacementPick::Choose(picks)) = &recipe.player_start {
+        if picks.is_empty() {
+            return Err(format!("recipe {} has an empty player-start choice", recipe.name).into());
+        }
+    }
+    if !hub {
+        if let PlayerStartPick::Placement(pick) = &recipe.player_start {
+            if !pick.random_only() {
+                return Err(format!(
+                    "recipe {} weighted player-start choices must use Random rules",
+                    recipe.name
+                )
+                .into());
             }
         }
     }
+    Ok(())
+}
 
-    let mut occupied: HashSet<IVec2> = blueprint.placements.iter().map(|p| p.tile).collect();
-
-    // Generate player spawn and exits
-    let (player_start, exits) =
-        generate_entrance_exit_positions(blueprint.map_size(), map_recipe.num_random_exits, rng);
-
-    for exit in exits {
-        if !blueprint
-            .tiles
-            .get(exit.tile)
-            .is_some_and(|t: TileType| t.can_spawn())
-        {
-            return Err(format!("exit tile {:?} is not spawnable", exit.tile).into());
+pub(crate) fn build_from_recipe(
+    recipe: &MapRecipe,
+    seed: u64,
+) -> std::result::Result<MapBlueprint, MapError> {
+    let mut rng = ChaCha8Rng::seed_from_u64(seed);
+    let size_x = rng.random_range(recipe.size_x_range.0..=recipe.size_x_range.1);
+    let size_y = rng.random_range(recipe.size_y_range.0..=recipe.size_y_range.1);
+    let mut blueprint = MapBlueprint::new(UVec2::new(size_x, size_y), recipe.floor_type, seed);
+    let mut placement_context = PlaceContext::new(blueprint.map_size());
+    let mut structure_centers = Vec::with_capacity(recipe.structures.len());
+    for (index, entry) in recipe.structures.iter().enumerate() {
+        let center_count = placement_context.structure_centers.len();
+        let rule = match entry.anchor {
+            StructureAnchor::Random => PlaceRule::Random {
+                count: CountRange(1, 1),
+                x_deciles: (1, 9),
+                separation: 0,
+            },
+            StructureAnchor::Center => PlaceRule::Fixed(Anchor::Center),
+            StructureAnchor::CenterOffset(offset) => PlaceRule::Fixed(Anchor::CenterOffset(offset)),
+            StructureAnchor::At(position) => PlaceRule::Fixed(Anchor::At(position)),
+            StructureAnchor::Near {
+                structure: earlier,
+                offset,
+            } => {
+                let center = structure_centers
+                    .get(earlier)
+                    .and_then(|center| *center)
+                    .ok_or("structure anchor missing")?;
+                let mut min = center + offset;
+                if let Some(radius) = entry.radius {
+                    let radius =
+                        i32::try_from(radius).map_err(|_| "structure radius is too large")?;
+                    min += IVec2::new(
+                        rng.random_range(-radius..=radius),
+                        rng.random_range(-radius..=radius),
+                    );
+                }
+                PlaceRule::Fixed(Anchor::At(min))
+            }
+        };
+        match entry.kind {
+            PrefabType::Temple => {
+                build_temple(&mut blueprint, &mut placement_context, &rule, &mut rng)?
+            }
+            PrefabType::EmptySquare => {
+                build_empty_square(&mut blueprint, &mut placement_context, &rule, &mut rng)?
+            }
+            PrefabType::HubTown => {
+                let structure = StructureKind::HubTown.picture();
+                let positions = super::place::place(
+                    &rule,
+                    structure.size().as_uvec2(),
+                    &blueprint.tiles,
+                    &mut placement_context,
+                    &mut rng,
+                )?;
+                if let Some(min) = positions.first() {
+                    apply_structure(&mut blueprint, structure, *min)
+                        .map_err(|error| format!("failed to place structure {index}: {error:?}"))?;
+                }
+            }
         }
-
-        if !occupied.insert(exit.tile) {
-            return Err(format!("exit tile {:?} is already occupied", exit.tile).into());
+        if placement_context.structure_centers.len() == center_count {
+            warn!(
+                "Recipe {} seed {} could not place structure {index} ({:?})",
+                recipe.name, seed, entry.kind
+            );
         }
+        structure_centers.push(
+            placement_context
+                .structure_centers
+                .get(center_count)
+                .copied(),
+        );
+    }
 
-        if !blueprint.tiles.contains(exit.doorway) {
-            return Err(format!("exit doorway {:?} is out of bounds", exit.doorway).into());
+    let mut occupied = blueprint
+        .placements
+        .iter()
+        .map(|placement| placement.tile)
+        .collect::<std::collections::HashSet<_>>();
+    placement_context.occupied.extend(occupied.iter().copied());
+    let player_start = match &recipe.player_start {
+        PlayerStartPick::Structure => None,
+        PlayerStartPick::Placement(pick) => {
+            let rule = pick.resolve(&mut rng);
+            Some(
+                super::place::place(
+                    &rule,
+                    UVec2::ONE,
+                    &blueprint.tiles,
+                    &mut placement_context,
+                    &mut rng,
+                )?
+                .into_iter()
+                .next()
+                .ok_or("failed to place player start")?,
+            )
         }
-
+    };
+    let exit_rule = recipe.exits.resolve(&mut rng);
+    let exits = super::place::place(
+        &exit_rule,
+        UVec2::ONE,
+        &blueprint.tiles,
+        &mut placement_context,
+        &mut rng,
+    )?;
+    for tile in exits {
+        let doorway = match &exit_rule {
+            PlaceRule::Edge {
+                side: Side::Left, ..
+            } => IVec2::ZERO.with_y(tile.y),
+            PlaceRule::Edge {
+                side: Side::Right, ..
+            } => IVec2::new(blueprint.map_size().x as i32 - 1, tile.y),
+            PlaceRule::Edge {
+                side: Side::Top, ..
+            } => IVec2::new(tile.x, 0),
+            PlaceRule::Edge {
+                side: Side::Bottom, ..
+            } => IVec2::new(tile.x, blueprint.map_size().y as i32 - 1),
+            _ => return Err("exit placement must use an Edge rule".into()),
+        };
+        if !occupied.insert(tile) {
+            return Err(format!("exit tile {tile:?} is already occupied").into());
+        }
+        if !blueprint.tiles.contains(doorway) {
+            return Err(format!("exit doorway {doorway:?} is out of bounds").into());
+        }
         blueprint.placements.push(Placement {
-            tile: exit.tile,
+            tile,
             kind: PlacementKind::Exit,
         });
     }
-
-    // Player start
-    let has_existing_player_start = blueprint
-        .placements
-        .iter()
-        .any(|p| matches!(p.kind, PlacementKind::PlayerStart));
-    if !has_existing_player_start {
-        if !blueprint
-            .tiles
-            .get(player_start)
-            .is_some_and(|t: TileType| t.can_spawn())
-        {
-            return Err(format!("player start {player_start:?} is not spawnable").into());
-        }
-
+    if let Some(player_start) = player_start {
         if !occupied.insert(player_start) {
             return Err(format!("player start {player_start:?} is already occupied").into());
         }
-
         blueprint.placements.push(Placement {
             tile: player_start,
             kind: PlacementKind::PlayerStart,
         });
+    } else if !blueprint
+        .placements
+        .iter()
+        .any(|p| matches!(p.kind, PlacementKind::PlayerStart))
+    {
+        return Err("structure-based PlayerStart source did not place a PlayerStart".into());
     }
 
-    // Determine number of enemies and chests from the recipe ranges
-    let num_enemies = rng
-        .random_range(map_recipe.number_of_enemies_range.0..=map_recipe.number_of_enemies_range.1);
-    let num_chests = rng.random_range(map_recipe.chest_range.0..=map_recipe.chest_range.1);
-
-    // Generate enemy positions (avoid walls)
-    let enemy_positions =
-        find_multiple_positions(&blueprint.tiles, 2..8, num_enemies, rng, &mut occupied);
-    for pos in enemy_positions {
-        // Randomly choose an enemy type (or use a fixed set; here we pick randomly)
-        let enemy_type = match rng.random_range(0..3) {
-            0 => EnemyType::FireMage,
-            1 => EnemyType::IceMage,
-            _ => EnemyType::Warrior,
-        };
+    let enemy_count = recipe.enemies.count.roll_size(&mut rng);
+    let enemy_positions = super::place::place(
+        &PlaceRule::Random {
+            count: CountRange(enemy_count, enemy_count),
+            x_deciles: recipe.enemies.x_deciles,
+            separation: recipe.enemies.separation,
+        },
+        UVec2::ONE,
+        &blueprint.tiles,
+        &mut placement_context,
+        &mut rng,
+    )?;
+    if enemy_positions.len() < enemy_count as usize {
+        warn!(
+            "Recipe {} seed {} placed {} of {} enemies",
+            recipe.name,
+            seed,
+            enemy_positions.len(),
+            enemy_count
+        );
+    }
+    for tile in enemy_positions {
         blueprint.placements.push(Placement {
-            tile: pos,
-            kind: PlacementKind::Enemy(enemy_type),
+            tile,
+            kind: PlacementKind::Enemy(recipe.enemies.pick.resolve(&mut rng)),
         });
     }
-
-    // Generate chest positions
-    let chest_positions =
-        find_multiple_positions(&blueprint.tiles, 1..9, num_chests, rng, &mut occupied);
-    for pos in chest_positions {
+    let chest_count = recipe.chests.roll_size(&mut rng);
+    let chest_positions = super::place::place(
+        &PlaceRule::Random {
+            count: CountRange(chest_count, chest_count),
+            x_deciles: (1, 9),
+            separation: 0,
+        },
+        UVec2::ONE,
+        &blueprint.tiles,
+        &mut placement_context,
+        &mut rng,
+    )?;
+    if chest_positions.len() < chest_count as usize {
+        warn!(
+            "Recipe {} seed {} placed {} of {} chests",
+            recipe.name,
+            seed,
+            chest_positions.len(),
+            chest_count
+        );
+    }
+    for tile in chest_positions {
         blueprint.placements.push(Placement {
-            tile: pos,
+            tile,
             kind: PlacementKind::Chest,
         });
     }
-
-    blueprint.validate().map_err(|error| error.to_string())?;
+    blueprint.validate().map_err(MapError::Validation)?;
     Ok(blueprint)
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum MapOrientation {
-    Horizontal,
-    Vertical,
-    Square,
-}
-
-struct ExitPlacement {
-    tile: IVec2,
-    doorway: IVec2,
-}
-
-fn generate_entrance_exit_positions(
-    map_size: UVec2,
-    num_random_exits: u32,
-    rng: &mut ChaCha8Rng,
-) -> (IVec2, Vec<ExitPlacement>) {
-    let orientation = determine_map_orientation(map_size);
-
-    let player_start = match orientation {
-        MapOrientation::Horizontal | MapOrientation::Square => {
-            // For horizontal and square maps: left to right
-            let player_x = 1; // One tile in from left wall
-            let player_y = rng.random_range(1..map_size.y - 1) as i32;
-            IVec2::new(player_x, player_y)
-        }
-        MapOrientation::Vertical => {
-            // For vertical maps: top to bottom
-            let player_y = map_size.y as i32 - 2; // One tile down from top wall
-            let player_x = rng.random_range(1..map_size.x - 1) as i32;
-            IVec2::new(player_x, player_y)
-        }
-    };
-
-    let mut exits = match orientation {
-        MapOrientation::Horizontal | MapOrientation::Square => {
-            // Two exits on the right side
-            let exit_y1 = rng.random_range(1..map_size.y / 2) as i32;
-            let exit_y2 = rng.random_range(map_size.y / 2..map_size.y - 1) as i32;
-
-            let interior_x = map_size.x as i32 - 2;
-            let boundary_x = map_size.x as i32 - 1;
-
-            vec![
-                ExitPlacement {
-                    tile: IVec2::new(interior_x, exit_y1),
-                    doorway: IVec2::new(boundary_x, exit_y1),
-                },
-                ExitPlacement {
-                    tile: IVec2::new(interior_x, exit_y2),
-                    doorway: IVec2::new(boundary_x, exit_y2),
-                },
-            ]
-        }
-        MapOrientation::Vertical => {
-            // Two exits at the bottom
-            let exit_x1 = rng.random_range(1..map_size.x / 2) as i32;
-            let exit_x2 = rng.random_range(map_size.x / 2..map_size.x - 1) as i32;
-
-            vec![
-                ExitPlacement {
-                    tile: IVec2::new(exit_x1, 1),
-                    doorway: IVec2::new(exit_x1, 0),
-                },
-                ExitPlacement {
-                    tile: IVec2::new(exit_x2, 1),
-                    doorway: IVec2::new(exit_x2, 0),
-                },
-            ]
-        }
-    };
-    exits.truncate(num_random_exits as usize);
-
-    (player_start, exits)
-}
-
-fn determine_map_orientation(map_size: UVec2) -> MapOrientation {
-    let aspect_ratio = map_size.x as f32 / map_size.y as f32;
-
-    if (aspect_ratio - 1.0).abs() < 0.1 {
-        MapOrientation::Square
-    } else if aspect_ratio > 1.0 {
-        MapOrientation::Horizontal
-    } else {
-        MapOrientation::Vertical
-    }
-}
-
-fn find_multiple_positions(
-    tiles: &TileGrid,
-    x_range: std::ops::Range<u32>,
-    count: u32,
-    rng: &mut ChaCha8Rng,
-    occupied: &mut HashSet<IVec2>,
-) -> Vec<IVec2> {
-    let mut positions: Vec<IVec2> = Vec::new();
-    let mut attempts = 0;
-
-    while positions.len() < count as usize && attempts < 100 {
-        if let Some(pos) = find_valid_position(tiles, x_range.clone(), rng, occupied)
-            && positions
-                .iter()
-                .all(|existing| (*existing - pos).length_squared() >= 25)
-        {
-            positions.push(pos);
-            occupied.insert(pos);
-        }
-        attempts += 1;
-    }
-
-    positions
-}
-
-fn find_valid_position(
-    tiles: &TileGrid,
-    x_range: std::ops::Range<u32>,
-    rng: &mut ChaCha8Rng,
-    occupied: &mut HashSet<IVec2>,
-) -> Option<IVec2> {
-    let x_start = tiles.map_size().x * x_range.start / 10;
-    let x_end = tiles.map_size().x * x_range.end / 10;
-    for _ in 0..100 {
-        let random_tile = IVec2::new(
-            rng.random_range(x_start..x_end) as i32,
-            rng.random_range(1..tiles.map_size().y - 1) as i32,
-        );
-
-        if !occupied.contains(&random_tile) && tiles.get(random_tile).is_some_and(|t| t.can_spawn())
-        {
-            return Some(random_tile);
-        }
-    }
-    None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(Resource, Default)]
-    struct RequestResult(Option<bool>);
-
-    fn request_unknown_recipe(mut next_map: NextMap, mut result: ResMut<RequestResult>) {
-        result.0 = Some(next_map.set(RecipeSelection::Named("missing")).is_err());
-    }
-
-    #[test]
-    fn unknown_recipe_keeps_current_map_and_does_not_request_transition() {
-        let mut app = App::new();
-        app.insert_resource(MapRecipeCatalog {
-            recipes: BTreeMap::new(),
-        });
-        app.insert_resource(MapRng::seeded(1));
-        app.insert_resource(NextState::<AppState>::Unchanged);
-        app.insert_resource(RequestResult::default());
-        app.world_mut()
-            .spawn(MapBlueprint::new(UVec2::ONE, TileType::Grass, 0));
-        app.add_systems(Update, request_unknown_recipe);
-
-        app.update();
-
-        assert_eq!(
-            app.world().resource::<RequestResult>().0,
-            Some(true),
-            "unknown recipe should return an error",
-        );
-        let mut maps = app.world_mut().query::<&MapBlueprint>();
-        assert_eq!(
-            maps.iter(app.world()).count(),
-            1,
-            "current map should remain"
-        );
-        assert!(
-            matches!(
-                app.world().resource::<NextState<AppState>>(),
-                NextState::Unchanged
-            ),
-            "failed build should not queue a transition",
-        );
-    }
 }

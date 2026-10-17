@@ -97,6 +97,7 @@ pub static TEMPLE: Structure = Structure {
 ",
 };
 
+#[derive(Debug)]
 pub enum StructureError {
     Empty,
     TooLarge,

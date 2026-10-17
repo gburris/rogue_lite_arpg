@@ -41,7 +41,7 @@ fn handle_portal_collisions(
 ) -> Result {
     for portal_colliding_entities in portal_query.iter() {
         if portal_colliding_entities.contains(&*player_collider) {
-            return next_map.set(RecipeSelection::WeightedRandom);
+            return next_map.set(MapRequest::Weighted);
         }
     }
 

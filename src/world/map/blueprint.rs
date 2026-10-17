@@ -41,6 +41,21 @@ impl MapBlueprint {
 
     pub fn validate(&self) -> Result<(), MapValidationError> {
         self.player_start()?;
+        if !self
+            .placements
+            .iter()
+            .any(|placement| matches!(placement.kind, PlacementKind::Exit))
+        {
+            return Err(MapValidationError::MissingExit);
+        }
+        for (tile, tile_type) in self.tiles.iter() {
+            let size = self.map_size().as_ivec2();
+            if (tile.x == 0 || tile.y == 0 || tile.x == size.x - 1 || tile.y == size.y - 1)
+                && !tile_type.blocks_ground()
+            {
+                return Err(MapValidationError::NonBlockingGroundBoundary { tile, tile_type });
+            }
+        }
         let mut occupied = HashMap::<IVec2, usize>::new();
         for (index, placement) in self.placements.iter().enumerate() {
             let Some(tile_type) = self.tiles.get(placement.tile) else {
@@ -50,8 +65,6 @@ impl MapBlueprint {
                 });
             };
             if !tile_type.can_spawn() {
-                info!("Failed attempting to place: {:?}", placement.kind);
-
                 return Err(MapValidationError::PlacementNotSpawnable {
                     index,
                     tile: placement.tile,
@@ -77,6 +90,12 @@ impl MapBlueprint {
 pub enum MapValidationError {
     MissingPlayerStart,
     MultiplePlayerStarts(usize),
+    MissingExit,
+    /// A map-edge tile is traversable; the entire outer ring must block ground movement.
+    NonBlockingGroundBoundary {
+        tile: IVec2,
+        tile_type: TileType,
+    },
     PlacementOutOfBounds {
         index: usize,
         tile: IVec2,
@@ -98,6 +117,34 @@ impl fmt::Display for MapValidationError {
     }
 }
 impl std::error::Error for MapValidationError {}
+#[derive(Debug)]
+pub enum MapError {
+    Generation(String),
+    Validation(MapValidationError),
+}
+
+impl fmt::Display for MapError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Generation(message) => f.write_str(message),
+            Self::Validation(error) => write!(f, "map validation failed: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for MapError {}
+
+impl From<String> for MapError {
+    fn from(message: String) -> Self {
+        Self::Generation(message)
+    }
+}
+
+impl From<&str> for MapError {
+    fn from(message: &str) -> Self {
+        Self::Generation(message.to_owned())
+    }
+}
 
 pub type MapPlacement = Placement;
 pub type MapPlacementKind = PlacementKind;

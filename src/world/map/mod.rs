@@ -2,6 +2,7 @@ mod blueprint;
 mod build;
 mod prefabs;
 mod spawn;
+mod structure;
 mod tiles;
 
 use ::bevy::prelude::*;

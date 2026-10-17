@@ -2,25 +2,27 @@ use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::prelude::{DamageDealt, Healed, Lifespan, ZLayer};
+use crate::prelude::{DamageDealt, Healed, Health, HurtBox, Lifespan, ZLayer};
 
 const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
 const HEALTH_TEXT_OFFSET: f32 = 10.0;
 
-fn spawn_health_change_text(
-    commands: &mut Commands,
+// Characters don't have a collider on their root entity, so we use their hurtbox to determine height
+fn entity_height(
     entity: Entity,
-    amount: f32,
-    color: Color,
-    collider_query: &Query<&ColliderAabb>,
-) {
-    let entity_height = if let Ok(collider) = collider_query.get(entity) {
-        collider.max.y - collider.min.y
-    } else {
-        32.0 // assume entity is 32 pixels tall if no collider can be found
-    };
+    children_query: &Query<&Children>,
+    hurt_box_query: &Query<&ColliderAabb, With<HurtBox>>,
+) -> f32 {
+    children_query
+        .get(entity)
+        .ok()
+        .and_then(|children| hurt_box_query.iter_many(children).next())
+        .map_or(32.0, |aabb| aabb.max.y - aabb.min.y) // assume entity is 32 pixels tall if no hurtbox can be found
+}
 
+/// Text is placed relative to `origin`, which is the center of the entity the text is for
+fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Bundle {
     // Create a quaternion for the random rotation
     let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
 
@@ -40,12 +42,12 @@ fn spawn_health_change_text(
         format!("{rounded_amount:.1}") // Display with one decimal place
     };
 
-    commands.entity(entity).with_child((
+    (
         Text2d::new(formatted_amount),
         TextColor::from(color),
         Lifespan::new(0.4),
-        Transform::from_translation(text_position),
-    ));
+        Transform::from_translation(origin + text_position),
+    )
 }
 
 // Generate a random angle between -angle_range and angle_range degrees (convert to radians)
@@ -57,27 +59,49 @@ fn random_angle(angle_range: f32) -> f32 {
 pub fn on_damage_overlay_amount(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
-    damaged_query: Query<&ColliderAabb>,
+    damaged_query: Query<(&Health, &Transform)>,
+    children_query: Query<&Children>,
+    hurt_box_query: Query<&ColliderAabb, With<HurtBox>>,
 ) {
-    spawn_health_change_text(
-        &mut commands,
-        damage_dealt.entity,
-        damage_dealt.damage,
-        RED_COLOR,
-        &damaged_query,
-    );
+    let entity = damage_dealt.entity;
+    let entity_height = entity_height(entity, &children_query, &hurt_box_query);
+
+    match damaged_query.get(entity) {
+        // Defeated characters have their children despawned, so text for the killing blow
+        // is spawned in world space rather than following the entity
+        Ok((health, transform)) if health.is_dead() => {
+            commands.spawn(health_change_text(
+                transform.translation,
+                entity_height,
+                damage_dealt.damage,
+                RED_COLOR,
+            ));
+        }
+        _ => {
+            commands.entity(entity).with_child(health_change_text(
+                Vec3::ZERO,
+                entity_height,
+                damage_dealt.damage,
+                RED_COLOR,
+            ));
+        }
+    }
 }
 
 pub fn on_healing_overlay_amount(
     healed: On<Healed>,
     mut commands: Commands,
-    healed_query: Query<&ColliderAabb>,
+    children_query: Query<&Children>,
+    hurt_box_query: Query<&ColliderAabb, With<HurtBox>>,
 ) {
-    spawn_health_change_text(
-        &mut commands,
-        healed.entity,
-        healed.amount,
-        GREEN_COLOR,
-        &healed_query,
-    );
+    let entity_height = entity_height(healed.entity, &children_query, &hurt_box_query);
+
+    commands
+        .entity(healed.entity)
+        .with_child(health_change_text(
+            Vec3::ZERO,
+            entity_height,
+            healed.amount,
+            GREEN_COLOR,
+        ));
 }

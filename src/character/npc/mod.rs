@@ -24,7 +24,7 @@ pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
 #[derive(Debug, Clone)]
 pub struct NpcSpawnData {
     pub position: Vec2,
-    pub npc_type: NpcType,
+    pub npc_kind: NpcKind,
 }
 
 #[derive(Component)]
@@ -32,13 +32,13 @@ pub struct NpcSpawnData {
 pub struct NPC;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub enum NpcType {
+pub enum NpcKind {
     Helper,
     Shopkeeper,
     StatTrainer,
 }
 
-const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE;
+const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
 
 fn spawn_npcs(
     npc_spawn_trigger: On<SpawnNpcs>,
@@ -49,12 +49,12 @@ fn spawn_npcs(
 ) {
     for NpcSpawnData {
         position: spawn_position,
-        npc_type,
+        npc_kind,
     } in &npc_spawn_trigger.0
     {
         spawn_npc(
             &mut commands,
-            *npc_type,
+            *npc_kind,
             *spawn_position,
             &sprites,
             &sprite_layouts,
@@ -65,14 +65,14 @@ fn spawn_npcs(
 
 fn spawn_npc(
     commands: &mut Commands,
-    npc_type: NpcType,
+    npc_kind: NpcKind,
     spawn_position: Vec2,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    match npc_type {
-        NpcType::Helper => spawn_npc_with_equipment(
+    match npc_kind {
+        NpcKind::Helper => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),
@@ -80,7 +80,7 @@ fn spawn_npc(
             ),
             ice_staff(sprites, sprite_layouts),
         ),
-        NpcType::Shopkeeper => spawn_npc_with_equipment(
+        NpcKind::Shopkeeper => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),
@@ -88,7 +88,7 @@ fn spawn_npc(
             ),
             axe(sprites),
         ),
-        NpcType::StatTrainer => spawn_npc_with_equipment(
+        NpcKind::StatTrainer => spawn_npc_with_equipment(
             commands,
             (
                 base_npc(spawn_position, shadows),

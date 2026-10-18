@@ -16,7 +16,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
-#[require(YSort::from_offset(BOTTOM_OF_CHEST))]
+#[require(YSort::from_offset(BOTTOM_OF_CHEST), DespawnOnExit::<AppState>(AppState::Playing))]
 struct Chest;
 
 #[derive(Component)]

@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+/// A row-major grid of tile data with a bottom-left origin.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct TileGrid {
+pub struct TileGrid<T = TileKind> {
     map_size: UVec2, // Size of the grid in tiles
-    cells: Vec<TileType>,
+    cells: Vec<T>,
 }
 
-impl TileGrid {
+impl<T: Copy> TileGrid<T> {
     fn width(&self) -> usize {
         self.map_size.x as usize
     }
@@ -23,162 +24,151 @@ impl TileGrid {
         (x < self.width() && y < self.height()).then(|| y * self.width() + x)
     }
 
-    pub fn new(map_size: UVec2, fill: TileType) -> Self {
+    /// Creates a grid filled with `fill`.
+    pub fn new(map_size: UVec2, fill: T) -> Self
+    where
+        T: Clone,
+    {
         assert!(
             map_size.x > 0 && map_size.y > 0,
             "tile grid dimensions must be non-zero"
         );
-
         let width = usize::try_from(map_size.x).expect("map width fits usize");
         let height = usize::try_from(map_size.y).expect("map height fits usize");
-
         let capacity = width
             .checked_mul(height)
             .expect("total tiles in map fits usize");
-
-        TileGrid {
+        Self {
             map_size,
             cells: vec![fill; capacity],
         }
     }
 
+    /// Returns the grid dimensions in tiles.
     pub fn map_size(&self) -> UVec2 {
         self.map_size
     }
 
+    /// Returns whether the grid contains the given tile coordinate.
     pub fn contains(&self, tile_index: IVec2) -> bool {
         self.cell_index(tile_index).is_some()
     }
 
+    /// Returns whether the entire rectangle lies within the grid.
     pub fn contains_rect(&self, tile_rect: &TileRect) -> bool {
-        if tile_rect.size == UVec2::ZERO {
-            return tile_rect.min.x >= 0
-                && tile_rect.min.y >= 0
-                && tile_rect.min.x <= self.width() as i32
-                && tile_rect.min.y <= self.height() as i32;
-        }
-        let min_index = tile_rect.min;
         let Some(max_index) = tile_rect
             .checked_max_exclusive()
             .and_then(|max| max.checked_sub(IVec2::ONE))
         else {
             return false;
         };
-
-        self.contains(min_index) && self.contains(max_index)
+        self.contains(tile_rect.min) && self.contains(max_index)
     }
 
-    pub fn get(&self, tile_index: IVec2) -> Option<TileType> {
+    /// Returns the tile value at a coordinate, or `None` when out of bounds.
+    pub fn get(&self, tile_index: IVec2) -> Option<T> {
         self.cell_index(tile_index).map(|index| self.cells[index])
     }
 
-    pub fn set(&mut self, tile_index: IVec2, tile_type: TileType) -> bool {
+    /// Sets a tile value; returns `false` when the coordinate is out of bounds.
+    pub fn set(&mut self, tile_index: IVec2, value: T) -> bool {
         self.cell_index(tile_index)
-            .map(|index| self.cells[index] = tile_type)
+            .map(|index| self.cells[index] = value)
             .is_some()
     }
 
-    pub fn fill_rect(&mut self, tile_rect: &TileRect, tile_type: TileType) -> bool {
+    /// Fills the rectangle; returns `false` when it is not fully in bounds.
+    pub fn fill_rect(&mut self, tile_rect: &TileRect, value: T) -> bool {
         if !self.contains_rect(tile_rect) {
             return false;
         }
-
         let Some(max) = tile_rect.checked_max_exclusive() else {
             return false;
         };
         for x in tile_rect.min.x..max.x {
             for y in tile_rect.min.y..max.y {
-                self.set(IVec2::new(x, y), tile_type);
+                self.set(IVec2::new(x, y), value);
             }
         }
         true
     }
 
-    pub fn fill_border(&mut self, tile_type: TileType) {
+    /// Fills the grid's outermost rows and columns.
+    pub fn fill_border(&mut self, value: T) {
         let size = self.map_size;
-        if size.x == 0 || size.y == 0 {
-            return;
-        }
-
-        let w = size.x;
-        let h = size.y;
-
-        // Top and bottom rows
         self.fill_rect(
             &TileRect {
-                min: IVec2::new(0, 0),
-                size: UVec2::new(w, 1),
+                min: IVec2::ZERO,
+                size: UVec2::new(size.x, 1),
             },
-            tile_type,
+            value,
         );
         self.fill_rect(
             &TileRect {
-                min: IVec2::new(0, h as i32 - 1),
-                size: UVec2::new(w, 1),
+                min: IVec2::new(0, size.y as i32 - 1),
+                size: UVec2::new(size.x, 1),
             },
-            tile_type,
-        );
-
-        // Left and right columns
-        self.fill_rect(
-            &TileRect {
-                min: IVec2::new(0, 0),
-                size: UVec2::new(1, h),
-            },
-            tile_type,
+            value,
         );
         self.fill_rect(
             &TileRect {
-                min: IVec2::new(w as i32 - 1, 0),
-                size: UVec2::new(1, h),
+                min: IVec2::ZERO,
+                size: UVec2::new(1, size.y),
             },
-            tile_type,
+            value,
+        );
+        self.fill_rect(
+            &TileRect {
+                min: IVec2::new(size.x as i32 - 1, 0),
+                size: UVec2::new(1, size.y),
+            },
+            value,
         );
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (IVec2, TileType)> + '_ {
-        self.cells
-            .iter()
-            .enumerate()
-            .map(move |(index, &tile_type)| {
-                let x = index % self.width();
-                let y = index / self.width();
-                (IVec2::new(x as i32, y as i32), tile_type)
-            })
+    /// Iterates over all tiles in row-major order with their coordinates.
+    pub fn iter(&self) -> impl Iterator<Item = (IVec2, T)> + '_ {
+        self.cells.iter().enumerate().map(move |(index, &value)| {
+            (
+                IVec2::new((index % self.width()) as i32, (index / self.width()) as i32),
+                value,
+            )
+        })
     }
 
-    /// Returns an iterator over the tiles in the specified rectangle, yielding (`tile_index`, `tile_type`) pairs.
-    pub fn rect_iter(
-        &self,
-        rect: &TileRect,
-    ) -> Option<impl Iterator<Item = (IVec2, TileType)> + '_> {
+    /// Iterates over tiles in a rectangle, or returns `None` if it is out of bounds.
+    pub fn rect_iter(&self, rect: &TileRect) -> Option<impl Iterator<Item = (IVec2, T)> + '_> {
         if !self.contains_rect(rect) {
             return None;
         }
         let min = rect.min;
         let max = rect.checked_max_exclusive()?;
-
         Some((min.x..max.x).flat_map(move |x| {
             (min.y..max.y).filter_map(move |y| {
                 self.get(IVec2::new(x, y))
-                    .map(|tile_type| (IVec2::new(x, y), tile_type))
+                    .map(|value| (IVec2::new(x, y), value))
             })
         }))
     }
 }
 
+/// An axis-aligned rectangle of tiles with an exclusive upper bound.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TileRect {
+    /// Bottom-left tile coordinate.
     pub min: IVec2,
+    /// Rectangle dimensions in tiles.
     pub size: UVec2,
 }
 
 impl TileRect {
+    /// Creates a rectangle if its exclusive upper bound is representable.
     pub fn new(min: IVec2, size: UVec2) -> Option<Self> {
         min.checked_add(size.as_ivec2())?;
         Some(Self { min, size })
     }
 
+    /// Creates a rectangle centered in a map, if it fits.
     pub fn centered_in(map_size: UVec2, rect_size: UVec2) -> Option<Self> {
         if !rect_size.cmple(map_size).all() {
             return None;
@@ -195,6 +185,7 @@ impl TileRect {
         })
     }
 
+    /// Returns the rectangle translated by an offset, or `None` on overflow.
     pub fn translated(&self, offset: IVec2) -> Option<Self> {
         Some(TileRect {
             min: self.min.checked_add(offset)?,
@@ -202,28 +193,22 @@ impl TileRect {
         })
     }
 
-    pub fn padded(&self, padding: u32) -> Option<Self> {
-        let amount = padding.checked_mul(2)?;
-        Some(TileRect {
-            min: self
-                .min
-                .checked_sub(IVec2::splat(i32::try_from(padding).ok()?))?,
-            size: self.size.checked_add(UVec2::splat(amount))?,
-        })
-    }
-
+    /// Returns the tile at the rectangle's integer midpoint.
     pub fn center_tile(&self) -> IVec2 {
         self.min + self.size.as_ivec2() / 2
     }
 
+    /// Returns the exclusive upper bound.
     pub fn max_exclusive(&self) -> IVec2 {
         self.min + self.size.as_ivec2()
     }
 
+    /// Returns the exclusive upper bound, or `None` on overflow.
     pub fn checked_max_exclusive(&self) -> Option<IVec2> {
         self.min.checked_add(self.size.as_ivec2())
     }
 
+    /// Returns whether the rectangle contains the tile coordinate.
     pub fn contains(&self, tile_index: IVec2) -> bool {
         let Some(max_exclusive) = self.checked_max_exclusive() else {
             return false;
@@ -235,18 +220,20 @@ impl TileRect {
     }
 }
 
+/// A tile material or special map marker.
 #[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
-pub enum TileType {
+pub enum TileKind {
     Wood,
     Ground,
     Grass,
     Wall,
     Water,
     Cobblestone,
-    DeadZone, //Marker for DO NOT RENDER for empty space in the map
+    DeadZone, // Marker for DO NOT RENDER for empty space in the map
 }
 
-impl TileType {
+impl TileKind {
+    /// Returns the glyph used to encode this tile.
     pub const fn glyph(self) -> char {
         match self {
             Self::Wood => 'w',
@@ -259,6 +246,7 @@ impl TileType {
         }
     }
 
+    /// Parses a tile glyph, returning `None` for unrecognized characters.
     pub const fn from_glyph(glyph: char) -> Option<Self> {
         match glyph {
             'w' => Some(Self::Wood),
@@ -272,18 +260,17 @@ impl TileType {
         }
     }
 
-    pub const fn visual_key(self) -> char {
-        self.glyph()
-    }
-
+    /// Returns whether this tile blocks ground placement.
     pub fn blocks_ground(&self) -> bool {
-        matches!(self, TileType::Wall | TileType::Water | TileType::DeadZone)
+        matches!(self, TileKind::Wall | TileKind::Water | TileKind::DeadZone)
     }
 
+    /// Returns whether this tile should be rendered.
     pub fn should_render(&self) -> bool {
-        !matches!(self, TileType::DeadZone)
+        !matches!(self, TileKind::DeadZone)
     }
 
+    /// Returns whether this tile can host a spawn.
     pub fn can_spawn(&self) -> bool {
         !self.blocks_ground() && self.should_render()
     }

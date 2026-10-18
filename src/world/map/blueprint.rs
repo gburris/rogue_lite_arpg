@@ -2,22 +2,27 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::prelude::{EnemyType, NpcType, TileGrid, TileType};
+use crate::prelude::{EnemyKind, NpcKind, TileGrid, TileKind};
 
+/// Generated map tiles, placements, and visual seed; insertion requires transform and visibility.
 #[derive(Component, Debug, PartialEq, Eq)]
 #[require(Transform, Visibility)]
 pub struct MapBlueprint {
+    /// Tile grid containing the map terrain.
     pub tiles: TileGrid,
+    /// Entity placements associated with this map.
     pub placements: Vec<Placement>,
+    /// Seed used to generate map visuals.
     pub visual_seed: u64,
 }
 
 impl MapBlueprint {
-    pub fn new(map_size: UVec2, floor: TileType, visual_seed: u64) -> Self {
+    /// Creates a map with a blocking wall border.
+    pub fn new(map_size: UVec2, floor: TileKind, visual_seed: u64) -> Self {
         let mut tiles = TileGrid::new(map_size, floor);
 
         // For now every map has a wall border
-        tiles.fill_border(TileType::Wall);
+        tiles.fill_border(TileKind::Wall);
 
         Self {
             tiles,
@@ -26,11 +31,14 @@ impl MapBlueprint {
         }
     }
 
+    /// Returns the sole player start, or an error if it is missing or duplicated.
     pub fn player_start(&self) -> Result<IVec2, MapValidationError> {
         let starts: Vec<_> = self
             .placements
             .iter()
-            .filter_map(|p| matches!(p.kind, PlacementKind::PlayerStart).then_some(p.tile))
+            .filter_map(|placement| {
+                matches!(placement.kind, PlacementKind::PlayerStart).then_some(placement.tile)
+            })
             .collect();
         match starts.as_slice() {
             [start] => Ok(*start),
@@ -39,6 +47,7 @@ impl MapBlueprint {
         }
     }
 
+    /// Checks required placements, map boundaries, and placement tile validity.
     pub fn validate(&self) -> Result<(), MapValidationError> {
         self.player_start()?;
         if !self
@@ -48,44 +57,53 @@ impl MapBlueprint {
         {
             return Err(MapValidationError::MissingExit);
         }
-        for (tile, tile_type) in self.tiles.iter() {
-            let size = self.map_size().as_ivec2();
-            if (tile.x == 0 || tile.y == 0 || tile.x == size.x - 1 || tile.y == size.y - 1)
-                && !tile_type.blocks_ground()
+        for (tile_position, tile_kind) in self.tiles.iter() {
+            let map_size = self.map_size().as_ivec2();
+            if (tile_position.x == 0
+                || tile_position.y == 0
+                || tile_position.x == map_size.x - 1
+                || tile_position.y == map_size.y - 1)
+                && !tile_kind.blocks_ground()
             {
-                return Err(MapValidationError::NonBlockingGroundBoundary { tile, tile_type });
+                return Err(MapValidationError::NonBlockingGroundBoundary {
+                    tile: tile_position,
+                    tile_kind,
+                });
             }
         }
         let mut occupied = HashMap::<IVec2, usize>::new();
-        for (index, placement) in self.placements.iter().enumerate() {
-            let Some(tile_type) = self.tiles.get(placement.tile) else {
+        for (placement_index, placement) in self.placements.iter().enumerate() {
+            let Some(tile_kind) = self.tiles.get(placement.tile) else {
                 return Err(MapValidationError::PlacementOutOfBounds {
-                    index,
+                    placement_index,
                     tile: placement.tile,
                 });
             };
-            if !tile_type.can_spawn() {
+            if !tile_kind.can_spawn() {
                 return Err(MapValidationError::PlacementNotSpawnable {
-                    index,
+                    placement_index,
                     tile: placement.tile,
-                    tile_type,
+                    tile_kind,
                 });
             }
-            if let Some(previous) = occupied.insert(placement.tile, index) {
+            if let Some(previous_placement_index) = occupied.insert(placement.tile, placement_index)
+            {
                 return Err(MapValidationError::OverlappingPlacements {
                     tile: placement.tile,
-                    indexes: [previous, index],
+                    placement_indices: [previous_placement_index, placement_index],
                 });
             }
         }
         Ok(())
     }
 
+    /// Returns the dimensions of this map in tiles.
     pub fn map_size(&self) -> UVec2 {
         self.tiles.map_size()
     }
 }
 
+/// Describes why a generated map failed validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MapValidationError {
     MissingPlayerStart,
@@ -94,29 +112,63 @@ pub enum MapValidationError {
     /// A map-edge tile is traversable; the entire outer ring must block ground movement.
     NonBlockingGroundBoundary {
         tile: IVec2,
-        tile_type: TileType,
+        tile_kind: TileKind,
     },
     PlacementOutOfBounds {
-        index: usize,
+        placement_index: usize,
         tile: IVec2,
     },
     PlacementNotSpawnable {
-        index: usize,
+        placement_index: usize,
         tile: IVec2,
-        tile_type: TileType,
+        tile_kind: TileKind,
     },
     OverlappingPlacements {
         tile: IVec2,
-        indexes: [usize; 2],
+        placement_indices: [usize; 2],
     },
 }
 
 impl fmt::Display for MapValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self:?}")
+        match self {
+            Self::MissingPlayerStart => write!(f, "map is missing its player start"),
+            Self::MultiplePlayerStarts(count) => {
+                write!(f, "map has {count} player starts, expected exactly one")
+            }
+            Self::MissingExit => write!(f, "map is missing its exit"),
+            Self::NonBlockingGroundBoundary { tile, tile_kind } => write!(
+                f,
+                "map border tile {tile} is {tile_kind:?}, which does not block ground movement"
+            ),
+            Self::PlacementOutOfBounds {
+                placement_index,
+                tile,
+            } => write!(
+                f,
+                "placement {placement_index} at {tile} lies outside the map"
+            ),
+            Self::PlacementNotSpawnable {
+                placement_index,
+                tile,
+                tile_kind,
+            } => write!(
+                f,
+                "placement {placement_index} at {tile} sits on {tile_kind:?}, which cannot host a spawn"
+            ),
+            Self::OverlappingPlacements {
+                tile,
+                placement_indices,
+            } => write!(
+                f,
+                "placements {} and {} overlap on tile {tile}",
+                placement_indices[0], placement_indices[1]
+            ),
+        }
     }
 }
 impl std::error::Error for MapValidationError {}
+/// An error raised while generating or validating a map.
 #[derive(Debug)]
 pub enum MapError {
     Generation(String),
@@ -146,36 +198,37 @@ impl From<&str> for MapError {
     }
 }
 
-pub type MapPlacement = Placement;
-pub type MapPlacementKind = PlacementKind;
-
+/// A placed map entity and its tile coordinate.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Placement {
     pub tile: IVec2,
+    /// Entity kind represented by this placement.
     pub kind: PlacementKind,
 }
 
+/// Kind of entity placed in a map.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PlacementKind {
     PlayerStart,
-    Enemy(EnemyType),
-    Npc(NpcType),
+    Enemy(EnemyKind),
+    Npc(NpcKind),
     Chest,
     Exit,
 }
 
 impl PlacementKind {
+    /// Converts a placement glyph to its entity kind, if recognized.
     pub const fn from_glyph(glyph: char) -> Option<Self> {
         match glyph {
             'P' => Some(Self::PlayerStart),
             'X' => Some(Self::Exit),
             'C' => Some(Self::Chest),
-            'S' => Some(Self::Npc(NpcType::Shopkeeper)),
-            'H' => Some(Self::Npc(NpcType::Helper)),
-            'T' => Some(Self::Npc(NpcType::StatTrainer)),
-            'W' => Some(Self::Enemy(EnemyType::Warrior)),
-            'F' => Some(Self::Enemy(EnemyType::FireMage)),
-            'I' => Some(Self::Enemy(EnemyType::IceMage)),
+            'S' => Some(Self::Npc(NpcKind::Shopkeeper)),
+            'H' => Some(Self::Npc(NpcKind::Helper)),
+            'T' => Some(Self::Npc(NpcKind::StatTrainer)),
+            'W' => Some(Self::Enemy(EnemyKind::Warrior)),
+            'F' => Some(Self::Enemy(EnemyKind::FireMage)),
+            'I' => Some(Self::Enemy(EnemyKind::IceMage)),
             _ => None,
         }
     }
@@ -183,125 +236,24 @@ impl PlacementKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::world::map::structures::{StructureKind, apply_structure};
-    use crate::world::map::tiles::TileRect;
-
     use super::*;
-    use rand::{Rng, SeedableRng};
-    use rand_chacha::ChaCha8Rng;
-
-    const SNAPSHOT_PATH: &str = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/snapshots/hub_layout.txt"
-    );
-
-    fn render(tiles: &TileGrid) -> String {
-        let width = tiles.map_size().x as usize;
-        let height = tiles.map_size().y as usize;
-        if width == 0 || height == 0 {
-            return String::new();
-        }
-        (0..height)
-            .rev()
-            .map(|y| {
-                (0..width)
-                    .map(|x| {
-                        tiles
-                            .get(IVec2::new(x as i32, y as i32))
-                            .unwrap_or(TileType::DeadZone)
-                            .glyph()
-                    })
-                    .collect::<String>()
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-            + "\n"
-    }
-
-    const HUB_MAP_SIZE: UVec2 = UVec2::new(100, 100);
+    use crate::world::map::structures::{apply_structure, structure_from_glyphs};
 
     #[test]
-    fn hub_layout_matches_snapshot() {
-        // see isn't used for hub, so if it becomes seed-sensitive we want to know
-        let mut rng = ChaCha8Rng::seed_from_u64(42);
-        let map_seed: u64 = rng.next_u64();
-
-        let mut blueprint = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
-        let size = StructureKind::HubTown.picture().size().as_uvec2();
-        let min = TileRect::centered_in(HUB_MAP_SIZE, size).unwrap().min + IVec2::new(0, -3);
-        assert!(apply_structure(&mut blueprint, StructureKind::HubTown.picture(), min).is_ok());
-        let rendered_hub_layout = render(&blueprint.tiles);
-
-        if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
-            std::fs::write(SNAPSHOT_PATH, &rendered_hub_layout).expect("Failed to write _PATH");
-            return;
-        }
-
-        let expected_hub_layout =
-            std::fs::read_to_string(SNAPSHOT_PATH).expect("Failed to read snapshot");
+    fn structure_markers_preserve_destination_tiles() {
+        let structure = structure_from_glyphs(TileKind::Cobblestone, "#:P").unwrap();
+        let mut blueprint = MapBlueprint::new(UVec2::new(5, 5), TileKind::Grass, 1);
+        apply_structure(&mut blueprint, &structure, IVec2::new(1, 1)).unwrap();
+        assert_eq!(blueprint.tiles.get(IVec2::new(2, 1)), Some(TileKind::Grass));
         assert_eq!(
-            rendered_hub_layout,
-            expected_hub_layout,
-            "{}",
-            first_difference(&expected_hub_layout, &rendered_hub_layout)
+            blueprint.tiles.get(IVec2::new(3, 1)),
+            Some(TileKind::Cobblestone)
         );
-    }
-
-    #[test]
-    fn hub_is_deterministic() {
-        let map_seed = 42;
-        let structure = StructureKind::HubTown.picture();
-        let size = structure.size().as_uvec2();
-        let min = TileRect::centered_in(HUB_MAP_SIZE, size).unwrap().min + IVec2::new(0, -3);
-        let mut blueprint1 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
-        let mut blueprint2 = MapBlueprint::new(HUB_MAP_SIZE, TileType::Grass, map_seed);
-
-        assert!(apply_structure(&mut blueprint1, structure, min).is_ok());
-        assert!(apply_structure(&mut blueprint2, structure, min).is_ok());
-
-        let rendered_layout_1 = render(&blueprint1.tiles);
-        let rendered_layout_2 = render(&blueprint2.tiles);
-
-        assert_eq!(rendered_layout_1, rendered_layout_2);
-    }
-
-    fn first_difference(expected: &str, actual: &str) -> String {
-        if expected.is_empty() {
-            return format!(
-                "no snapshot at {SNAPSHOT_PATH}, create one by running the test with UPDATE_SNAPSHOTS=1"
-            );
-        }
-
-        let rows = actual.lines().count();
-
-        for (row, (e_row, a_row)) in expected.lines().zip(actual.lines()).enumerate() {
-            if e_row != a_row {
-                let least_column_amount = e_row.chars().count().min(a_row.chars().count());
-
-                let col = e_row
-                    .chars()
-                    .zip(a_row.chars())
-                    .position(|(ec, ac)| ec != ac)
-                    .unwrap_or(least_column_amount);
-
-                let mut msg = format!(
-                    "hub map changed at tile ({col}, {}) [snapshot line {}]\n",
-                    rows - 1 - row,
-                    row + 1,
-                );
-                msg.push_str(&format!("expected: {e_row}\n"));
-                msg.push_str(&format!("actual:   {a_row}\n"));
-                msg.push_str(&" ".repeat(12 + col));
-                msg.push('^');
-                msg.push('\n');
-                return msg;
-            }
-        }
-
-        format!(
-            "hub map changed in size, expected {} rows, actual {} rows",
-            expected.lines().count(),
-            actual.lines().count()
-        )
+        assert!(
+            blueprint
+                .placements
+                .iter()
+                .any(|placement| matches!(placement.kind, PlacementKind::PlayerStart))
+        );
     }
 }

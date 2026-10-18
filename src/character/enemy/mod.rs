@@ -24,7 +24,7 @@ pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
 #[derive(Debug, Clone)]
 pub struct EnemySpawnData {
     pub position: Vec2,
-    pub enemy_type: EnemyType,
+    pub enemy_kind: EnemyKind,
 }
 
 #[derive(Component)]
@@ -38,7 +38,7 @@ pub struct EnemySpawnData {
 pub struct Enemy;
 
 #[derive(Component, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum EnemyType {
+pub enum EnemyKind {
     Warrior,
     IceMage,
     FireMage,
@@ -119,8 +119,8 @@ fn spawn_enemy(
         }
     };
 
-    match spawn_data.enemy_type {
-        EnemyType::Warrior => spawn_enemy_with_equipment(
+    match spawn_data.enemy_kind {
+        EnemyKind::Warrior => spawn_enemy_with_equipment(
             commands,
             (
                 warrior(sprites, sprite_layouts),
@@ -130,7 +130,7 @@ fn spawn_enemy(
             sword(sprites),
         ),
 
-        EnemyType::IceMage => spawn_enemy_with_equipment(
+        EnemyKind::IceMage => spawn_enemy_with_equipment(
             commands,
             (
                 ice_mage(sprites, sprite_layouts),
@@ -140,7 +140,7 @@ fn spawn_enemy(
             ice_staff(sprites, sprite_layouts),
         ),
 
-        EnemyType::FireMage => spawn_enemy_with_equipment(
+        EnemyKind::FireMage => spawn_enemy_with_equipment(
             commands,
             (
                 fire_mage(sprites, sprite_layouts),
@@ -167,7 +167,7 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-        Anchor::new(position, 8.0 * TILE_SIZE),
+        Anchor::new(position, 8.0 * TILE_SIZE as f32),
         Mana::new(100.0, 10.0),
         // enemy vision distance
         RayCaster::default()

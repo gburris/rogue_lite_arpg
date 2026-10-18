@@ -1,59 +1,52 @@
 mod blueprint;
 mod build;
-mod place;
-mod prefabs;
+mod placement;
 mod spawn;
 mod structures;
 mod tiles;
 
 use ::bevy::prelude::*;
 
+/// Convenient exports for map recipe, blueprint, structure, tile, and spawn APIs.
 pub mod prelude {
-    pub use super::TILE_SIZE;
     pub use super::blueprint::*;
     pub use super::build::*;
-    pub use super::place::*;
-    pub use super::prefabs::*;
+    pub use super::placement::*;
     pub use super::spawn::*;
     pub use super::structures::*;
     pub use super::tiles::*;
 }
 
-pub const TILE_SIZE: f32 = 32.0;
-
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((build::plugin, spawn::plugin));
 }
 
-// High level build -> blueprint -> spawn
-// build can be: from ron, from ascii, from ldtk, from in-code procedural
-// blueprint is defined interface
-// spawn today is bevy_ecs_tilemap but could later be built in bevy tilemap, custom, or something else entirely
-
-// most of complexity is going from build -> blueprint
-// what if we want randomization? what if we want hand crafted level? what if we want a static building within random world
-
-// ELEMENTS OF BUILD
-
-// Structure: Predefined tiles in a specific layout and optionally placements within/around said tiles
-// Examples: hub town, temple
-
-// Feature: Tiles taking a certain shape and behaving a certain way, but procedurally generated
-// Examples: walled off square of random size, walls, ponds, other random tile hazards like traps of various sizes
-
-// MapParameters: Things that can be tuned per-map, can be Random or Static
-// Examples: number & location of enemies, chests, npcs, size of map
-
-// Layout: Describes list of MapParameters to make a MapBlueprint
-
-// HubTown Layout:
-// size: (100, 100)
-// structures: [Static(HubTown, (0,0))]
-// npcs: Static([(Shopkeeper, (10, 5)), (Blacksmith, (-10,5)), ...])
+// Map pipeline: recipe -> blueprint -> spawned world.
 //
-// SwampDungeon Layout:
-// size: (200, 400) // make non-rectangle maps later
-// structure: [Static(Temple, location=(10, 20))]
-// features: [Random(WallSquare, amount[3,8]), ]
-
-// Element of every blueprint: build of tiles, has a defined size, has walls around the border, has an initial floor type (can be changed obv)
+// ```text
+// map_recipes.ron ──load──▶ RecipeCatalog { recipes, structures }
+//                               │ MapRequest (Hub | Weighted | Named)
+//                               ▼
+// build_from_recipe(recipe, seed) ──▶ MapBlueprint { tiles, placements, visual_seed }
+//   │ PlaceRule::{Fixed, Random, NearStructure, Edge}
+//   │ + PlaceContext { reserved, occupied, structure_centers_by_name } (no-overlap arbitration)
+//   ▼ OnEnter(SpawnMap), chained:
+//   populate_map_tiles ─▶ "Tiles" child (bevy_ecs_tilemap, one tile_atlas.png,
+//   │                        variant picked by (visual_seed, glyph, tile))
+//   spawn_colliders    ─▶ merged Static rects over blocking runs (Wall/Water/DeadZone)
+//   spawn_placements   ─▶ player transform │ SpawnEnemies/Npcs/Chests │ portal Exit
+//   TileToWorld: tile ◄──► world conversions (single source of truth)
+// ```
+//
+// Design notes:
+// - build.rs owns determinism: one ChaCha8Rng(seed) threads through size rolls,
+//   structure choice, and every PlaceRule. Same (recipe, seed) maps to the same blueprint.
+// - MapBlueprint is renderer-agnostic data (TileGrid<TileKind> + placements).
+//   All backend detail (TilemapBundle, atlas slots) stays inside spawn.rs.
+// - Structures are glyph grids (: = transparent, letters = placements over floor);
+//   builtin features (EmptySquare, Pond, ...) are picked by reserved kind name and
+//   share footprint reservation. Portals sit one tile inside a solid wall border;
+//   no doorway is carved.
+// - validate() (single PlayerStart, at least one Exit, solid border, spawnable
+//   disjoint placements) runs at generation time; startup additionally rebuilds
+//   seeds 0..=8 per recipe as a smoke test.

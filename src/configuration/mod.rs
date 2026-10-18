@@ -10,7 +10,6 @@ use bevy::asset::AssetMetaCheck;
 
 use bevy::prelude::*;
 use bevy_behave::prelude::BehavePlugin;
-use bevy_ecs_tilemap::prelude::TilemapPlugin;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
 use bevy_lit::prelude::Lighting2dPlugin;
 use bevy_tweening::TweeningPlugin;
@@ -53,7 +52,6 @@ pub(super) fn plugin(app: &mut App) {
         BehavePlugin::default(),
         EnhancedInputPlugin,
         Lighting2dPlugin,
-        TilemapPlugin,
         TweeningPlugin,
     ));
 }

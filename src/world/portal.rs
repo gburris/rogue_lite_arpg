@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 #[require(
     RigidBody::Static,
-    Collider::rectangle(TILE_SIZE, 2.0 * TILE_SIZE),
+    Collider::rectangle(TILE_SIZE as f32, 2.0 * TILE_SIZE as f32),
     CollidingEntities,
     CollisionLayers::new(
         GameCollisionLayer::Interaction,

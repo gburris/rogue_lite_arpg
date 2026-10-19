@@ -104,8 +104,8 @@ impl Default for AttemptDamage {
     }
 }
 
-/// While `AttemptDamageEvent` is sent any time a damage source interacts with an entity,
-///this event represents when that damage attempt succeeds
+/// While `AttemptDamage` is sent any time a damage source interacts with an entity,
+/// this event represents when that damage attempt succeeds
 #[derive(EntityEvent)]
 pub struct DamageDealt {
     pub entity: Entity,
@@ -138,8 +138,12 @@ pub(super) fn on_damage_event(
 
     if let Ok((mut health, has_iframes)) = damaged_query.get_mut(damaged_entity) {
         // Entities have to "opt-in" to having iframes. Right now that is only the player
-        if let Some(mut iframes) = has_iframes {
-            if iframes.is_invulnerable && !attempt_damage.ignore_invulnerable {
+        // Damage that ignores invulnerability (ex: burn ticks) shouldn't grant iframes either,
+        // otherwise damage-over-time effects would shield the player from regular hits
+        if let Some(mut iframes) = has_iframes
+            && !attempt_damage.ignore_invulnerable
+        {
+            if iframes.is_invulnerable {
                 return;
             }
 
@@ -154,7 +158,7 @@ pub(super) fn on_damage_event(
         let damage = attempt_damage.damage.to_float();
         health.take_damage(damage);
 
-        // Because AttemptDamageEvent may not result in damage being applied (invulnerable or entity without health)
+        // Because AttemptDamage may not result in damage being applied (invulnerable or entity without health)
         // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
         commands.trigger(DamageDealt {
             entity: damaged_entity,
@@ -211,7 +215,8 @@ pub(super) fn tick_and_remove_damage_flash(
     damage_flash_query
         .par_iter_mut()
         .for_each(|(mut flash, mut sprite)| {
-            if flash.0.tick(time.delta()).is_finished() {
+            // Only reset color the frame the flash ends, otherwise we overwrite sprite color every frame
+            if flash.0.tick(time.delta()).just_finished() {
                 sprite.color = Color::WHITE;
             }
         });

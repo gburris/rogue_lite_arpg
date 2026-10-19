@@ -9,8 +9,9 @@ pub(super) fn plugin(app: &mut App) {
             .continue_to_state(AppState::SpawnPlayer)
             .load_collection::<SpriteAssets>()
             .load_collection::<SpriteSheetLayouts>()
-            .load_collection::<GameIcons>()
-            .load_collection::<Shadows>(),
+            .load_collection::<TileAssets>()
+            .load_collection::<Shadows>()
+            .load_collection::<GameIcons>(),
     );
 }
 
@@ -50,6 +51,15 @@ pub struct SpriteSheetLayouts {
     pub shield_layout: Handle<TextureAtlasLayout>,
 }
 
+/// Holds the shared tile atlas used by the map renderer.
+#[derive(AssetCollection, Resource)]
+pub struct TileAssets {
+    /// Handle to the organized grid atlas (10-tile rows with blank separators)
+    /// containing every map tile variant, wall piece, and bank transition.
+    #[asset(path = "tilesets/tile_atlas.png")]
+    pub atlas: Handle<Image>,
+}
+
 #[derive(AssetCollection, Resource)]
 pub struct SpriteAssets {
     #[asset(path = "coin.png")]
@@ -76,18 +86,6 @@ pub struct SpriteAssets {
     pub fire_ball: Handle<Image>,
     #[asset(path = "door.png")]
     pub exit_door: Handle<Image>,
-    #[asset(path = "tilesets/ground_tiles.png")]
-    pub ground_tiles: Handle<Image>,
-    #[asset(path = "tilesets/grass_tiles.png")]
-    pub grass_tiles: Handle<Image>,
-    #[asset(path = "tilesets/water_tiles.png")]
-    pub water_tiles: Handle<Image>,
-    #[asset(path = "tilesets/wall_tiles.png")]
-    pub wall_tiles: Handle<Image>,
-    #[asset(path = "tilesets/wood_tiles.png")]
-    pub wood_tiles: Handle<Image>,
-    #[asset(path = "tilesets/cobblestone_tiles.png")]
-    pub cobblestone_tiles: Handle<Image>,
     #[asset(path = "door.png")]
     pub run_start_door: Handle<Image>,
     #[asset(path = "chests.png")]

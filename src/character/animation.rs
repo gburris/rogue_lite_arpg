@@ -40,7 +40,7 @@ fn update_animation_state(
     for (motion, attack_state, health, mut animation_state, mut facing_direction) in
         &mut character_query
     {
-        if health.is_none() || health.is_some_and(|h| h.hp <= 0.0) {
+        if health.is_none_or(|h| h.hp <= 0.0) {
             animation_state.set_if_neq(CharacterAnimationState::Dying);
             continue;
         }

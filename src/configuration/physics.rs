@@ -1,3 +1,4 @@
+use crate::prelude::TILE_SIZE;
 use avian2d::prelude::*;
 use bevy::prelude::App;
 
@@ -5,8 +6,8 @@ pub(super) fn plugin(app: &mut App) {
     // setup avian physics (used for forces, collision, etc...)
     // length unit here represents "pixels per meter" and is a way to indicate the
     // scale of your world to the physics engine for performance optimizations
-    // In this case, our tiles are currently 32 x 32 pixels so we set the scale accordingly
-    app.add_plugins(PhysicsPlugins::default().with_length_unit(32.0));
+    // In this case, our tiles are currently TILE_SIZE x TILE_SIZE pixels so we set the scale accordingly
+    app.add_plugins(PhysicsPlugins::default().with_length_unit(TILE_SIZE as f32));
 
     // no gravity since this is top-down game
     app.insert_resource(Gravity::ZERO);

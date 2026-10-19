@@ -18,6 +18,8 @@ pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_camera);
+    app.init_resource::<IntegerScale>();
+    app.add_systems(Update, fit_integer_scale);
 
     // avian recommendeds ordering camera following logic in PostUpdate after transform prop
     app.add_systems(
@@ -61,12 +63,11 @@ impl YSort {
 
 fn ysort_transforms(
     mut transform_query: Query<(&mut Transform, &YSort)>,
-    world_space_config: Res<WorldSpaceConfig>,
-    map_layout: Res<MapLayout>,
+    tile_to_world: Res<TileToWorld>,
 ) {
     for (mut transform, ysort) in &mut transform_query {
         let relative_height_on_map = (transform.translation.y + ysort.height_offset)
-            / (map_layout.size.y as f32 * world_space_config.tile_size.y);
+            / (tile_to_world.map_size.y.min(MAX_MAP_TILES) as f32 * tile_to_world.tile_size.y);
 
         transform.translation.z = ysort.z - relative_height_on_map;
     }
@@ -122,9 +123,11 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Projection::Orthographic(OrthographicProjection {
+            // Initial view; fit_integer_scale snaps it to exact integer
+            // scaling on the first frame (and every resize after that).
             scaling_mode: ScalingMode::Fixed {
-                width: 960.0,
-                height: 540.0,
+                width: 1280.0,
+                height: 720.0,
             },
             ..OrthographicProjection::default_2d()
         }),
@@ -140,6 +143,54 @@ fn spawn_camera(mut commands: Commands) {
     ));
 }
 
+/// Target vertical view size in world units. The shown height snaps to the
+/// nearest value that maps physical window pixels onto whole art texels.
+/// 720 shows ~40x22 tiles at 1x on a 720p window; smaller values zoom in.
+const VIEW_HEIGHT: f32 = 720.0;
+
+/// Screen pixels per world unit; one art texel spans this many screen pixels.
+#[derive(Resource, Clone, Copy)]
+struct IntegerScale {
+    steps: u32,
+    seen_width: u32,
+    seen_height: u32,
+}
+
+impl Default for IntegerScale {
+    fn default() -> Self {
+        Self {
+            steps: 2,
+            seen_width: 0,
+            seen_height: 0,
+        }
+    }
+}
+
+/// Picks the integer scale nearest the target view whenever the window size
+/// changes, so 1px tile lines sample evenly at any window size or OS scaling.
+fn fit_integer_scale(
+    window: Single<&Window>,
+    mut projection: Single<&mut Projection, With<Camera>>,
+    mut scale: ResMut<IntegerScale>,
+) {
+    let physical_width = window.resolution.physical_width();
+    let physical_height = window.resolution.physical_height();
+    if (physical_width, physical_height) == (scale.seen_width, scale.seen_height) {
+        return;
+    }
+    scale.seen_width = physical_width;
+    scale.seen_height = physical_height;
+    scale.steps = ((physical_height as f32 / VIEW_HEIGHT).round().max(1.0)) as u32;
+    let shown_height = physical_height as f32 / scale.steps as f32;
+    let aspect = physical_width as f32 / physical_height as f32;
+    if let Projection::Orthographic(ortho) = &mut **projection {
+        ortho.scaling_mode = ScalingMode::Fixed {
+            width: shown_height * aspect,
+            height: shown_height,
+        };
+    }
+}
+
 const DECAY_RATE: f32 = 2.3; // f32::ln(10.0);
 const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
@@ -149,6 +200,7 @@ fn camera_follow_system(
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut camera: Single<&mut Transform, (With<Camera>, Without<PlayerAim>, Without<Player>)>,
     time: Res<Time>,
+    scale: Res<IntegerScale>,
 ) {
     let z = camera.translation.z;
     let aim: Vec3 = player_aim.translation.with_z(z);
@@ -162,6 +214,11 @@ fn camera_follow_system(
     camera
         .translation
         .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
+    // Snap to whole screen pixels so the tilemap never sits at a fractional
+    // offset, which shimmers 1px lines while moving.
+    let step = 1.0 / scale.steps as f32;
+    camera.translation.x = (camera.translation.x / step).round() * step;
+    camera.translation.y = (camera.translation.y / step).round() * step;
 }
 
 pub(super) fn camera_debug_system(

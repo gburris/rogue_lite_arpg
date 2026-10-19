@@ -29,6 +29,7 @@ use crate::{
         },
         vision::TargetInfo,
     },
+    menu::{PauseControl, pause_actions},
     prelude::*,
 };
 
@@ -180,6 +181,8 @@ fn spawn_player(
     let player = commands
         .spawn((
             Player::default(),
+            PauseControl,
+            pause_actions(),
             player_actions(),
             Mana::new(100.0, 10.0),
             game_progress.base_stats.clone(),
@@ -236,6 +239,6 @@ fn spawn_player(
     });
 }
 
-fn transition_to_create_hub(mut game_state: ResMut<NextState<AppState>>) {
-    game_state.set(AppState::CreateHub);
+fn transition_to_create_hub(mut next_map: NextMap) -> Result {
+    next_map.set(MapRequest::Hub)
 }

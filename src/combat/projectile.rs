@@ -14,8 +14,6 @@ use crate::{
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision))
         .add_observer(on_fire_projectile);
-
-    app.add_observer(despawn_all::<CleanupZone, Projectile>);
 }
 
 #[derive(Component, Clone)]
@@ -26,7 +24,7 @@ pub(super) fn plugin(app: &mut App) {
     CollidingEntities,
     AnimationIndices::Cycle((0..=4).cycle()),
     AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-    Disabled
+    Disabled,
 )]
 pub struct Projectile {
     pub damage: Damage,
@@ -184,24 +182,29 @@ fn on_fire_projectile(
 
     let position = fire.position + (projectile_direction * projectile.spawn_offset);
 
-    commands
-        .entity(fire.projectile)
-        .clone_and_spawn_with_opt_out(|builder| {
-            builder.linked_cloning(true);
-        })
-        .remove::<(ProjectileOf, Disabled)>()
-        .insert((
-            Position(position),
-            Rotation::radians(projectile_direction.to_angle()),
-            Transform {
-                translation: position.extend(ZLayer::InAir.z()),
-                rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
-                ..default()
-            },
-            LinearVelocity(projectile_direction * projectile.speed),
-            CollisionLayers::new(
-                GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                LayerMask::from(fire.damage_source) | GameCollisionLayer::HighObstacle,
-            ),
-        ));
+    let mut template = commands.entity(fire.projectile);
+    let mut new_projectile = template.clone_and_spawn_with_opt_out(|builder| {
+        builder.linked_cloning(true);
+    });
+
+    let projectile_entity = new_projectile.id();
+
+    new_projectile.remove::<(ProjectileOf, Disabled)>().insert((
+        ColliderOf {
+            body: projectile_entity,
+        },
+        Position(position),
+        Rotation::radians(projectile_direction.to_angle()),
+        Transform {
+            translation: position.extend(ZLayer::InAir.z()),
+            rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
+            ..default()
+        },
+        LinearVelocity(projectile_direction * projectile.speed),
+        CollisionLayers::new(
+            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+            LayerMask::from(fire.damage_source) | GameCollisionLayer::HighObstacle,
+        ),
+        DespawnOnExit(AppState::Playing),
+    ));
 }

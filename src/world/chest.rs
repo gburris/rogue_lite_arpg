@@ -10,15 +10,13 @@ const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_spawn_chests_event);
-
-    app.add_observer(despawn_all::<CleanupZone, Chest>);
 }
 
 #[derive(Debug, Event)]
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]
-#[require(YSort::from_offset(BOTTOM_OF_CHEST))]
+#[require(YSort::from_offset(BOTTOM_OF_CHEST), DespawnOnExit::<AppState>(AppState::Playing))]
 struct Chest;
 
 #[derive(Component)]
@@ -29,7 +27,8 @@ struct Chest;
         GameCollisionLayer::LowObstacle,
         GameCollisionLayer::LOW_OBSTACLE_FILTERS
     ),
-    Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0))
+    Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
+    DespawnOnExit::<AppState>(AppState::Playing)
 )]
 struct ChestCollider;
 

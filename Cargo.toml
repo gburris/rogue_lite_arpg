@@ -2,21 +2,23 @@
 name = "baba_yaga"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95.0"
 description = "Baba Yaga is a 2D platformer game about a witch who wants to eat you."
 
 [dependencies]
-bevy = { version = "0.18.1", features = ["experimental_bevy_feathers", "webgpu"] }
-bevy_ecs_tilemap = "0.18.1"
-bevy_asset_loader = { version = "0.25", features = ["2d"] }
-bevy_behave = "0.5.0"
-bevy_enhanced_input = "0.24.1"
-bevy_lit =  { git = "https://github.com/Totobird-Creations/bevy_lit.git", branch = "bevy_018" }
-bevy_tweening = "0.15"
-accesskit = "0.24.0"
-avian2d = "0.5.0"
-rand = "0.10.0"
+bevy = { version = "0.19.1", features = ["bevy_feathers", "webgpu"] }
+bevy_ecs_tilemap = "0.19.0"
+bevy_asset_loader = { version = "0.27.0", features = ["2d"] }
+bevy_behave = { git = "https://github.com/RJ/bevy_behave.git", branch = "main" }
+bevy_enhanced_input = "0.26.0"
+bevy_lit = "0.11"
+bevy_tweening = "0.16.0"
+accesskit = "0.24.0" 
+avian2d = "0.7.0"
+rand = "0.10.2"
 ron = "0.12.0"
-serde = "1.0.228"
+serde = "1.0.229"
+rand_chacha = "0.10"
 # Compile out low-severity logs to improve performance.
 # Remove these features if you want to profile your game with tracy.
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
@@ -26,7 +28,7 @@ tracing = { version = "0.1.44", features = [
 ] }
 
 [target.wasm32-unknown-unknown.dependencies]
-getrandom = { version = "0.4.2", features = ["wasm_js"] }
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
 
 [features]
 # Default to a native dev build.
@@ -38,6 +40,7 @@ dev = [
     "bevy/bevy_ui_debug",
     # Improve error messages coming from Bevy
     "bevy/track_location",
+    "bevy/debug",
 ]
 dev_native = [
     "dev",

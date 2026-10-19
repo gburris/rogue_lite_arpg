@@ -10,7 +10,6 @@ use bevy::asset::AssetMetaCheck;
 
 use bevy::prelude::*;
 use bevy_behave::prelude::BehavePlugin;
-use bevy_ecs_tilemap::prelude::TilemapPlugin;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
 use bevy_lit::prelude::Lighting2dPlugin;
 use bevy_tweening::TweeningPlugin;
@@ -23,14 +22,6 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    // Setup and configuration
-    app.add_plugins((
-        assets::plugin,
-        physics::plugin,
-        schedule::plugin,
-        view::plugin,
-    ));
-
     #[cfg(feature = "dev")]
     app.add_plugins(debug::plugin);
 
@@ -48,12 +39,19 @@ pub(super) fn plugin(app: &mut App) {
             .set(ImagePlugin::default_nearest()),
     );
 
+    // Setup and configuration
+    app.add_plugins((
+        assets::plugin,
+        physics::plugin,
+        schedule::plugin,
+        view::plugin,
+    ));
+
     // Third-party plugins
     app.add_plugins((
         BehavePlugin::default(),
         EnhancedInputPlugin,
         Lighting2dPlugin,
-        TilemapPlugin,
         TweeningPlugin,
     ));
 }

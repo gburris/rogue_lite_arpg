@@ -10,8 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, glow_and_rotate_lootables.in_set(InGameSystems::Vfx));
 
     app.add_observer(on_item_added_make_lootable)
-        .add_observer(on_drop_event)
-        .add_observer(despawn_all::<CleanupZone, Lootable>);
+        .add_observer(on_drop_event);
 }
 
 #[derive(Component, Clone, Debug, Default)]
@@ -77,6 +76,7 @@ fn on_drop_event(
             },
             Visibility::Visible,
             Transform::from_translation(final_position),
+            DespawnOnExit(AppState::Playing),
         ))
         .with_child(InteractionZone::ITEM_PICKUP);
 }
@@ -91,7 +91,13 @@ fn on_lootable_item_interaction(
     // Make sure item doesn't despawn and is hidden (since its in inventory)
     commands
         .entity(item_entity)
-        .remove::<(YSort, Lifespan, Lootable, PointLight2d)>()
+        .remove::<(
+            YSort,
+            Lifespan,
+            Lootable,
+            PointLight2d,
+            DespawnOnExit<AppState>,
+        )>()
         .insert((ItemOf(*player), Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up

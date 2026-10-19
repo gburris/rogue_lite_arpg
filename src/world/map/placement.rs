@@ -99,9 +99,9 @@ impl PlaceContext {
 
     fn available(&self, tiles: &TileGrid, rect: TileRect) -> bool {
         tiles.contains_rect(&rect)
-            && tiles.rect_iter(&rect).is_some_and(|mut iter| {
-                iter.all(|(_, tile_kind)| tile_kind.can_spawn())
-            })
+            && tiles
+                .rect_iter(&rect)
+                .is_some_and(|mut iter| iter.all(|(_, tile_kind)| tile_kind.can_spawn()))
             && !self
                 .reserved
                 .iter()
@@ -155,14 +155,9 @@ pub fn place(
             context,
             random_generator,
         ),
-        PlaceRule::Edge { count, side } => place_edge(
-            count,
-            *side,
-            footprint,
-            tiles,
-            context,
-            random_generator,
-        ),
+        PlaceRule::Edge { count, side } => {
+            place_edge(count, *side, footprint, tiles, context, random_generator)
+        }
     }
 }
 
@@ -253,12 +248,10 @@ fn place_near_structure(
     random_generator: &mut ChaCha8Rng,
 ) -> Result<Vec<IVec2>, MapError> {
     let target_count = count.roll_size(random_generator);
-    let Some(structure_center) = context.structure_centers_by_name.get(structure).copied()
-    else {
+    let Some(structure_center) = context.structure_centers_by_name.get(structure).copied() else {
         return Err(format!("missing structure anchor {structure}").into());
     };
-    let radius_tiles =
-        i32::try_from(radius).map_err(|_| "placement radius is too large")?;
+    let radius_tiles = i32::try_from(radius).map_err(|_| "placement radius is too large")?;
     if context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)
     {
@@ -354,8 +347,7 @@ fn scatter_footprints(
         };
         if context.available(tiles, candidate_rect)
             && positions.iter().all(|existing_origin: &IVec2| {
-                existing_origin.distance_squared(candidate_origin)
-                    >= (separation as i32).pow(2)
+                existing_origin.distance_squared(candidate_origin) >= (separation as i32).pow(2)
             })
         {
             context.reserved.push(candidate_rect);

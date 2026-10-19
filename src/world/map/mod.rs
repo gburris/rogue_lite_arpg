@@ -4,6 +4,7 @@ mod placement;
 mod spawn;
 mod structures;
 mod tiles;
+mod tiling;
 
 use ::bevy::prelude::*;
 

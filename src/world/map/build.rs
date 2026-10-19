@@ -16,7 +16,10 @@ use crate::{
         map::{
             blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
             placement::{Anchor, CountRange, PlaceContext, PlaceRule, Side, place},
-            structures::{BuiltinFeature, FeatureShape, FeatureSize, Structure, apply_structure, build_empty_square, build_pond, build_rubble, structure_from_glyphs},
+            structures::{
+                BuiltinFeature, FeatureShape, FeatureSize, Structure, apply_structure,
+                build_empty_square, build_pond, build_rubble, structure_from_glyphs,
+            },
             tiles::TileKind,
         },
     },
@@ -363,7 +366,9 @@ fn load_recipe_catalog() -> Result<RecipeCatalog> {
         .keys()
         .find(|name| BuiltinFeature::from_kind(name).is_some())
     {
-        return Err(format!("structure name {reserved:?} is reserved for a builtin feature").into());
+        return Err(
+            format!("structure name {reserved:?} is reserved for a builtin feature").into(),
+        );
     }
     let mut names = std::collections::HashSet::new();
     let hub_name = file
@@ -503,7 +508,9 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     }
     let mut earlier_names = std::collections::HashSet::new();
     for (index, structure) in recipe.structures.iter().enumerate() {
-        if !structures.contains_key(&structure.kind) && BuiltinFeature::from_kind(&structure.kind).is_none() {
+        if !structures.contains_key(&structure.kind)
+            && BuiltinFeature::from_kind(&structure.kind).is_none()
+        {
             return Err(format!(
                 "recipe {} references unknown structure {}",
                 recipe.name, structure.kind
@@ -705,15 +712,28 @@ fn place_structures(
         let resolved_name = resolved_name(&entry.kind, index, &entry.name);
         let rule = structure_rule(entry, placement_context, random_generator)?;
         let placed_center = match BuiltinFeature::from_kind(&entry.kind) {
-            Some(BuiltinFeature::EmptySquare) => {
-                build_empty_square(blueprint, placement_context, &rule, entry.size, random_generator)?
-            }
-            Some(BuiltinFeature::Pond) => {
-                build_pond(blueprint, placement_context, &rule, entry.size, entry.shape, random_generator)?
-            }
-            Some(BuiltinFeature::Rubble) => {
-                build_rubble(blueprint, placement_context, &rule, entry.size, random_generator)?
-            }
+            Some(BuiltinFeature::EmptySquare) => build_empty_square(
+                blueprint,
+                placement_context,
+                &rule,
+                entry.size,
+                random_generator,
+            )?,
+            Some(BuiltinFeature::Pond) => build_pond(
+                blueprint,
+                placement_context,
+                &rule,
+                entry.size,
+                entry.shape,
+                random_generator,
+            )?,
+            Some(BuiltinFeature::Rubble) => build_rubble(
+                blueprint,
+                placement_context,
+                &rule,
+                entry.size,
+                random_generator,
+            )?,
             None => {
                 let structure = structures.get(&entry.kind).ok_or_else(|| {
                     format!("structure {:?} is missing from the catalog", entry.kind)
@@ -730,7 +750,10 @@ fn place_structures(
                 .next();
                 if let Some(origin) = placed_origin {
                     apply_structure(blueprint, structure, origin).map_err(|error| {
-                        format!("failed to place structure {index} ({:?}): {error}", entry.kind)
+                        format!(
+                            "failed to place structure {index} ({:?}): {error}",
+                            entry.kind
+                        )
                     })?;
                     Some(origin + footprint.as_ivec2() / 2)
                 } else {
@@ -778,7 +801,9 @@ fn structure_rule(
                     .structure_centers_by_name
                     .get(earlier)
                     .copied()
-                    .ok_or_else(|| format!("structure anchor {earlier:?} is missing or was never placed"))?;
+                    .ok_or_else(|| {
+                        format!("structure anchor {earlier:?} is missing or was never placed")
+                    })?;
                 let mut minimum = center + *offset;
                 if let Some(radius) = entry.radius {
                     let radius = i32::try_from(radius)

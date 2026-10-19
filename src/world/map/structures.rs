@@ -1,12 +1,12 @@
-use bevy::prelude::{IVec2, UVec2, Vec2};
-use rand::RngExt;
-use rand_chacha::ChaCha8Rng;
-use serde::Deserialize;
 use crate::world::map::{
     blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
     placement::{PlaceContext, PlaceRule, place},
     tiles::{TileGrid, TileKind, TileRect},
 };
+use bevy::prelude::{IVec2, UVec2, Vec2};
+use rand::RngExt;
+use rand_chacha::ChaCha8Rng;
+use serde::Deserialize;
 
 /// Tile data and placement markers for a reusable map structure.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -169,9 +169,7 @@ fn claim_feature_footprint(
             random_generator.random_range(minimum.0..=maximum.0),
             random_generator.random_range(minimum.1..=maximum.1),
         ),
-        None => {
-            UVec2::splat(random_generator.random_range(default_min_size..=default_max_size))
-        }
+        None => UVec2::splat(random_generator.random_range(default_min_size..=default_max_size)),
     };
     let placed_origins = place(rule, footprint, &blueprint.tiles, context, random_generator)?;
     let Some(feature_origin) = placed_origins.first().copied() else {
@@ -192,7 +190,14 @@ pub fn build_empty_square(
     random_generator: &mut ChaCha8Rng,
 ) -> Result<Option<IVec2>, MapError> {
     let Some(square_rect) = claim_feature_footprint(
-        blueprint, context, rule, random_generator, "dead-zone", size, 3, 10,
+        blueprint,
+        context,
+        rule,
+        random_generator,
+        "dead-zone",
+        size,
+        3,
+        10,
     )?
     else {
         return Ok(None);
@@ -237,7 +242,14 @@ pub fn build_pond(
     random_generator: &mut ChaCha8Rng,
 ) -> Result<Option<IVec2>, MapError> {
     let Some(pond_rect) = claim_feature_footprint(
-        blueprint, context, rule, random_generator, "pond", size, 3, 8,
+        blueprint,
+        context,
+        rule,
+        random_generator,
+        "pond",
+        size,
+        3,
+        8,
     )?
     else {
         return Ok(None);
@@ -249,7 +261,12 @@ pub fn build_pond(
             }
         }
         FeatureShape::Blob => {
-            paint_blob(&mut blueprint.tiles, pond_rect, random_generator, TileKind::Water);
+            paint_blob(
+                &mut blueprint.tiles,
+                pond_rect,
+                random_generator,
+                TileKind::Water,
+            );
         }
     }
 
@@ -267,7 +284,14 @@ pub fn build_rubble(
     random_generator: &mut ChaCha8Rng,
 ) -> Result<Option<IVec2>, MapError> {
     let Some(rubble_rect) = claim_feature_footprint(
-        blueprint, context, rule, random_generator, "rubble", size, 1, 1,
+        blueprint,
+        context,
+        rule,
+        random_generator,
+        "rubble",
+        size,
+        1,
+        1,
     )?
     else {
         return Ok(None);

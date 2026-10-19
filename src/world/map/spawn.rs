@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use crate::{
     prelude::*,
     world::map::blueprint::{MapBlueprint, PlacementKind},
+    world::map::tiling::tile_appearance,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -56,7 +57,7 @@ fn spawn_tiles(
             let Some(tile_kind) = blueprint.tiles.get(tile_index) else {
                 continue;
             };
-            let Some(texture_index) = tile_texture_index(
+            let Some(appearance) = tile_appearance(
                 &blueprint.tiles,
                 blueprint.visual_seed,
                 tile_index,
@@ -66,13 +67,20 @@ fn spawn_tiles(
             };
 
             let tile_position = TilePos { x, y };
+            // Seeded tint comes from tiling; nothing else varies per tile.
+            let color = appearance
+                .brightness
+                .map_or_else(TileColor::default, |brightness| {
+                    TileColor(Color::srgb(brightness, brightness, brightness))
+                });
             let tile_entity = commands
                 .spawn((
                     Name::new("Tile"),
                     TileBundle {
                         position: tile_position,
                         tilemap_id: TilemapId(tilemap_entity),
-                        texture_index: TileTextureIndex(u32::from(texture_index)),
+                        texture_index: TileTextureIndex(appearance.texture_index),
+                        color,
                         ..default()
                     },
                     ChildOf(tilemap_entity),
@@ -98,188 +106,6 @@ fn spawn_tiles(
         ChildOf(map),
         DespawnOnExit::<AppState>(AppState::Playing),
     ));
-}
-
-// ---------------------------------------------------------------------------
-// Tile atlas mapping
-// ---------------------------------------------------------------------------
-
-/// First flat index of each 10-tile art row (blank separator rows between types):
-/// ground, grass, cobble, water, wood.
-const CENTRE_ROW_FIRST: [u32; 5] = [0, 20, 40, 60, 80];
-/// Wall pieces (row 10): 4 top caps, 3 straight faces, ends, singles.
-const WALL_TOP_STRAIGHT: u32 = 100;
-const WALL_TOP_END_WEST: u32 = 101;
-const WALL_TOP_END_EAST: u32 = 102;
-const WALL_TOP_SINGLE: u32 = 103;
-const WALL_FACE_STRAIGHTS: [u32; 3] = [104, 105, 109];
-const WALL_FACE_END_WEST: u32 = 106;
-const WALL_FACE_END_EAST: u32 = 107;
-const WALL_FACE_SINGLE: u32 = 108;
-/// One-sided bank pieces (water row 12, grass-dirt row 14):
-/// N/S/W/E edge, NE/NW/SE/SW convex corners, horizontal/vertical channels.
-const WATER_BANK_FIRST: u32 = 120;
-const GRASS_DIRT_FIRST: u32 = 140;
-
-/// Maps a tile to its atlas texture index, or `None` when it should not render.
-///
-/// **If a kind renders as the wrong art, this function is the first place to
-/// check.** Plain kinds roll a deterministic variant; walls pick a top/face
-/// piece from wall neighbours; water and grass pick bank pieces where they
-/// meet land.
-fn tile_texture_index(
-    tiles: &TileGrid<TileKind>,
-    seed: u64,
-    tile: IVec2,
-    tile_kind: TileKind,
-) -> Option<u32> {
-    match tile_kind {
-        TileKind::Ground | TileKind::Cobblestone | TileKind::Wood => {
-            let first = match tile_kind {
-                TileKind::Ground => CENTRE_ROW_FIRST[0],
-                TileKind::Cobblestone => CENTRE_ROW_FIRST[2],
-                _ => CENTRE_ROW_FIRST[4],
-            };
-            Some(first + u32::from(tile_variant(seed, tile_kind.glyph(), tile, 10)))
-        }
-        TileKind::Grass => Some(bank_texture_index(
-            tiles,
-            seed,
-            tile,
-            TileKind::Grass,
-            CENTRE_ROW_FIRST[1],
-            GRASS_DIRT_FIRST,
-        )),
-        TileKind::Water => Some(bank_texture_index(
-            tiles,
-            seed,
-            tile,
-            TileKind::Water,
-            CENTRE_ROW_FIRST[3],
-            WATER_BANK_FIRST,
-        )),
-        TileKind::Wall => Some(wall_texture_index(tiles, seed, tile)),
-        TileKind::DeadZone => None,
-    }
-}
-
-/// Returns the kind at an offset, treating off-map tiles as `fallback`.
-///
-/// Walls fall back to `Wall` so the map border ring renders closed ends;
-/// banks fall back to their own kind so no transition draws at the map edge.
-fn neighbour_kind(
-    tiles: &TileGrid<TileKind>,
-    tile: IVec2,
-    offset_x: i32,
-    offset_y: i32,
-    fallback: TileKind,
-) -> TileKind {
-    tiles
-        .get(tile + IVec2::new(offset_x, offset_y))
-        .unwrap_or(fallback)
-}
-
-/// Picks a side-view wall piece from wall neighbours (`+y` is north).
-///
-/// A wall with more mass to the south shows its cap; north-south runs show only
-/// their caps (the camera never sees their faces); otherwise the brick face
-/// with a cap lip shows. East/west neighbours pick runs, ends, or singles.
-fn wall_texture_index(tiles: &TileGrid<TileKind>, seed: u64, tile: IVec2) -> u32 {
-    let north_wall = neighbour_kind(tiles, tile, 0, 1, TileKind::Wall) == TileKind::Wall;
-    let south_wall = neighbour_kind(tiles, tile, 0, -1, TileKind::Wall) == TileKind::Wall;
-    let east_wall = neighbour_kind(tiles, tile, 1, 0, TileKind::Wall) == TileKind::Wall;
-    let west_wall = neighbour_kind(tiles, tile, -1, 0, TileKind::Wall) == TileKind::Wall;
-    if north_wall && south_wall && east_wall && west_wall {
-        // Deep interior sees no open side: unbroken cap, no lip striping.
-        return WALL_TOP_STRAIGHT;
-    }
-    if south_wall && !north_wall {
-        match (west_wall, east_wall) {
-            (true, true) => WALL_TOP_STRAIGHT,
-            (false, true) => WALL_TOP_END_WEST,
-            (true, false) => WALL_TOP_END_EAST,
-            (false, false) => WALL_TOP_SINGLE,
-        }
-    } else if north_wall && south_wall && !(east_wall && west_wall) {
-        WALL_TOP_STRAIGHT
-    } else {
-        match (west_wall, east_wall) {
-            (true, true) => {
-                let pick = tile_variant(seed, TileKind::Wall.glyph(), tile, 3);
-                WALL_FACE_STRAIGHTS[pick as usize]
-            }
-            (false, true) => WALL_FACE_END_WEST,
-            (true, false) => WALL_FACE_END_EAST,
-            (false, false) => WALL_FACE_SINGLE,
-        }
-    }
-}
-
-/// Picks a centre variant or a one-sided bank piece where `tile_kind` meets land.
-///
-/// Water rims grass directly with no dirt in between; grass breaks only onto
-/// ground, staying plain beside water and walls.
-fn bank_texture_index(
-    tiles: &TileGrid<TileKind>,
-    seed: u64,
-    tile: IVec2,
-    tile_kind: TileKind,
-    centre_first: u32,
-    bank_first: u32,
-) -> u32 {
-    let is_land = |kind: TileKind| match tile_kind {
-        TileKind::Water => kind != TileKind::Water && kind != TileKind::DeadZone,
-        _ => kind == TileKind::Ground,
-    };
-    let north_land = is_land(neighbour_kind(tiles, tile, 0, 1, tile_kind));
-    let south_land = is_land(neighbour_kind(tiles, tile, 0, -1, tile_kind));
-    let west_land = is_land(neighbour_kind(tiles, tile, -1, 0, tile_kind));
-    let east_land = is_land(neighbour_kind(tiles, tile, 1, 0, tile_kind));
-    let centre = || centre_first + u32::from(tile_variant(seed, tile_kind.glyph(), tile, 10));
-    match (north_land, south_land, west_land, east_land) {
-        (false, false, false, false) => centre(),
-        (true, false, false, false) => bank_first,
-        (false, true, false, false) => bank_first + 1,
-        (false, false, true, false) => bank_first + 2,
-        (false, false, false, true) => bank_first + 3,
-        (true, false, false, true) => bank_first + 4,
-        (true, false, true, false) => bank_first + 5,
-        (false, true, false, true) => bank_first + 6,
-        (false, true, true, false) => bank_first + 7,
-        // Narrow runs reuse the channel along their open axis.
-        (true, true, false, false) => bank_first + 8,
-        (false, false, true, true) => bank_first + 9,
-        // Three-sided dead ends get pocket pieces (rows 16/18) open to water.
-        (true, true, true, false) => bank_first + 40,
-        (true, true, false, true) => bank_first + 41,
-        (false, true, true, true) => bank_first + 42,
-        (true, false, true, true) => bank_first + 43,
-        // Fully surrounded: keep the middle stripe, never a hard full tile.
-        (true, true, true, true) => bank_first + 8,
-        _ => centre(),
-    }
-}
-/// Returns a deterministic variant in `0..variant_count` for a tile.
-///
-/// Identical `(seed, glyph, tile)` triples always map to the same variant;
-/// adjacent tiles get decorrelated values. The splitmix64 finalizer is what
-/// spreads the low bits of `tile.x`/`tile.y` so neighbouring tiles don't all
-/// pick the same variant.
-fn tile_variant(seed: u64, glyph: char, tile: IVec2, variant_count: u16) -> u16 {
-    debug_assert!(variant_count > 0, "variant_count must be non-zero");
-
-    let mut hash = seed
-        ^ u64::from(glyph as u32).wrapping_mul(0x9E37_79B1_85EB_CA87)
-        ^ u64::from(tile.x as u32).wrapping_mul(0xC2B2_AE3D_27D4_EB4F)
-        ^ u64::from(tile.y as u32).wrapping_mul(0x1656_67B1_9E37_79F9);
-
-    hash ^= hash >> 30;
-    hash = hash.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    hash ^= hash >> 27;
-    hash = hash.wrapping_mul(0x94D0_49BB_1331_11EB);
-    hash ^= hash >> 31;
-
-    (hash % u64::from(variant_count)) as u16
 }
 
 // ---------------------------------------------------------------------------

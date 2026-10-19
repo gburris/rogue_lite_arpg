@@ -54,7 +54,8 @@ pub struct SpriteSheetLayouts {
 /// Holds the shared tile atlas used by the map renderer.
 #[derive(AssetCollection, Resource)]
 pub struct TileAssets {
-    /// Handle to the vertical column atlas containing every map tile variant.
+    /// Handle to the organized grid atlas (10-tile rows with blank separators)
+    /// containing every map tile variant, wall piece, and bank transition.
     #[asset(path = "tilesets/tile_atlas.png")]
     pub atlas: Handle<Image>,
 }

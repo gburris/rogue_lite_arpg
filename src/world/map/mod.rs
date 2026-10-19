@@ -32,7 +32,8 @@ pub(super) fn plugin(app: &mut App) {
 //   │ + PlaceContext { reserved, occupied, structure_centers_by_name } (no-overlap arbitration)
 //   ▼ OnEnter(SpawnMap), chained:
 //   populate_map_tiles ─▶ "Tiles" child (bevy_ecs_tilemap, one tile_atlas.png,
-//   │                        variant picked by (visual_seed, glyph, tile))
+//   │                        texture picked by (visual_seed, tile, neighbours):
+//   │                        centre variants, wall top/face pieces, bank edges)
 //   spawn_colliders    ─▶ merged Static rects over blocking runs (Wall/Water/DeadZone)
 //   spawn_placements   ─▶ player transform │ SpawnEnemies/Npcs/Chests │ portal Exit
 //   TileToWorld: tile ◄──► world conversions (single source of truth)

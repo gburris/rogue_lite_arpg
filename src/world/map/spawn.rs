@@ -56,16 +56,14 @@ fn spawn_tiles(
             let Some(tile_kind) = blueprint.tiles.get(tile_index) else {
                 continue;
             };
-            let Some(slot) = atlas_slot(tile_kind) else {
+            let Some(texture_index) = tile_texture_index(
+                &blueprint.tiles,
+                blueprint.visual_seed,
+                tile_index,
+                tile_kind,
+            ) else {
                 continue;
             };
-            let variant = tile_variant(
-                blueprint.visual_seed,
-                tile_kind.glyph(),
-                tile_index,
-                slot.variant_count,
-            );
-            let texture_index = slot.first_variant + variant;
 
             let tile_position = TilePos { x, y };
             let tile_entity = commands
@@ -106,39 +104,159 @@ fn spawn_tiles(
 // Tile atlas mapping
 // ---------------------------------------------------------------------------
 
-/// Where one tile kind's art lives in the tile atlas.
+/// First flat index of each 10-tile art row (blank separator rows between types):
+/// ground, grass, cobble, water, wood.
+const CENTRE_ROW_FIRST: [u32; 5] = [0, 20, 40, 60, 80];
+/// Wall pieces (row 10): 4 top caps, 3 straight faces, ends, singles.
+const WALL_TOP_STRAIGHT: u32 = 100;
+const WALL_TOP_END_WEST: u32 = 101;
+const WALL_TOP_END_EAST: u32 = 102;
+const WALL_TOP_SINGLE: u32 = 103;
+const WALL_FACE_STRAIGHTS: [u32; 3] = [104, 105, 109];
+const WALL_FACE_END_WEST: u32 = 106;
+const WALL_FACE_END_EAST: u32 = 107;
+const WALL_FACE_SINGLE: u32 = 108;
+/// One-sided bank pieces (water row 12, grass-dirt row 14):
+/// N/S/W/E edge, NE/NW/SE/SW convex corners, horizontal/vertical channels.
+const WATER_BANK_FIRST: u32 = 120;
+const GRASS_DIRT_FIRST: u32 = 140;
+
+/// Maps a tile to its atlas texture index, or `None` when it should not render.
 ///
-/// The atlas is indexed row-major as a flat `u32`. Each kind owns a contiguous
-/// block of `variant_count` texture indices starting at `first_variant`.
-#[derive(Clone, Copy, Debug)]
-struct AtlasSlot {
-    first_variant: u16,
-    variant_count: u16,
+/// **If a kind renders as the wrong art, this function is the first place to
+/// check.** Plain kinds roll a deterministic variant; walls pick a top/face
+/// piece from wall neighbours; water and grass pick bank pieces where they
+/// meet land.
+fn tile_texture_index(
+    tiles: &TileGrid<TileKind>,
+    seed: u64,
+    tile: IVec2,
+    tile_kind: TileKind,
+) -> Option<u32> {
+    match tile_kind {
+        TileKind::Ground | TileKind::Cobblestone | TileKind::Wood => {
+            let first = match tile_kind {
+                TileKind::Ground => CENTRE_ROW_FIRST[0],
+                TileKind::Cobblestone => CENTRE_ROW_FIRST[2],
+                _ => CENTRE_ROW_FIRST[4],
+            };
+            Some(first + u32::from(tile_variant(seed, tile_kind.glyph(), tile, 10)))
+        }
+        TileKind::Grass => Some(bank_texture_index(
+            tiles,
+            seed,
+            tile,
+            TileKind::Grass,
+            CENTRE_ROW_FIRST[1],
+            GRASS_DIRT_FIRST,
+        )),
+        TileKind::Water => Some(bank_texture_index(
+            tiles,
+            seed,
+            tile,
+            TileKind::Water,
+            CENTRE_ROW_FIRST[3],
+            WATER_BANK_FIRST,
+        )),
+        TileKind::Wall => Some(wall_texture_index(tiles, seed, tile)),
+        TileKind::DeadZone => None,
+    }
 }
 
-impl AtlasSlot {
-    const fn new(first_variant: u16, variant_count: u16) -> Self {
-        Self {
-            first_variant,
-            variant_count,
+/// Returns the kind at an offset, treating off-map tiles as `fallback`.
+///
+/// Walls fall back to `Wall` so the map border ring renders closed ends;
+/// banks fall back to their own kind so no transition draws at the map edge.
+fn neighbour_kind(
+    tiles: &TileGrid<TileKind>,
+    tile: IVec2,
+    offset_x: i32,
+    offset_y: i32,
+    fallback: TileKind,
+) -> TileKind {
+    tiles
+        .get(tile + IVec2::new(offset_x, offset_y))
+        .unwrap_or(fallback)
+}
+
+/// Picks a side-view wall piece from wall neighbours (`+y` is north).
+///
+/// A wall with more mass to the south shows its cap; north-south runs show only
+/// their caps (the camera never sees their faces); otherwise the brick face
+/// with a cap lip shows. East/west neighbours pick runs, ends, or singles.
+fn wall_texture_index(tiles: &TileGrid<TileKind>, seed: u64, tile: IVec2) -> u32 {
+    let north_wall = neighbour_kind(tiles, tile, 0, 1, TileKind::Wall) == TileKind::Wall;
+    let south_wall = neighbour_kind(tiles, tile, 0, -1, TileKind::Wall) == TileKind::Wall;
+    let east_wall = neighbour_kind(tiles, tile, 1, 0, TileKind::Wall) == TileKind::Wall;
+    let west_wall = neighbour_kind(tiles, tile, -1, 0, TileKind::Wall) == TileKind::Wall;
+    if north_wall && south_wall && east_wall && west_wall {
+        // Deep interior sees no open side: unbroken cap, no lip striping.
+        return WALL_TOP_STRAIGHT;
+    }
+    if south_wall && !north_wall {
+        match (west_wall, east_wall) {
+            (true, true) => WALL_TOP_STRAIGHT,
+            (false, true) => WALL_TOP_END_WEST,
+            (true, false) => WALL_TOP_END_EAST,
+            (false, false) => WALL_TOP_SINGLE,
+        }
+    } else if north_wall && south_wall && !(east_wall && west_wall) {
+        WALL_TOP_STRAIGHT
+    } else {
+        match (west_wall, east_wall) {
+            (true, true) => {
+                let pick = tile_variant(seed, TileKind::Wall.glyph(), tile, 3);
+                WALL_FACE_STRAIGHTS[pick as usize]
+            }
+            (false, true) => WALL_FACE_END_WEST,
+            (true, false) => WALL_FACE_END_EAST,
+            (false, false) => WALL_FACE_SINGLE,
         }
     }
 }
 
-/// Maps a logical tile kind to its block of atlas variants.
+/// Picks a centre variant or a one-sided bank piece where `tile_kind` meets land.
 ///
-/// **If a kind renders as the wrong art, this table is the first place to
-/// check.** The atlas is a single vertical column of 60 tiles — 10 variants
-/// stacked per kind — so the flat texture index equals the row index:
-fn atlas_slot(tile_kind: TileKind) -> Option<AtlasSlot> {
-    match tile_kind {
-        TileKind::Ground => Some(AtlasSlot::new(0, 10)),
-        TileKind::Grass => Some(AtlasSlot::new(10, 10)),
-        TileKind::Cobblestone => Some(AtlasSlot::new(20, 10)),
-        TileKind::Water => Some(AtlasSlot::new(30, 10)),
-        TileKind::Wood => Some(AtlasSlot::new(40, 10)),
-        TileKind::Wall => Some(AtlasSlot::new(50, 10)),
-        TileKind::DeadZone => None,
+/// Water rims grass directly with no dirt in between; grass breaks only onto
+/// ground, staying plain beside water and walls.
+fn bank_texture_index(
+    tiles: &TileGrid<TileKind>,
+    seed: u64,
+    tile: IVec2,
+    tile_kind: TileKind,
+    centre_first: u32,
+    bank_first: u32,
+) -> u32 {
+    let is_land = |kind: TileKind| match tile_kind {
+        TileKind::Water => kind != TileKind::Water && kind != TileKind::DeadZone,
+        _ => kind == TileKind::Ground,
+    };
+    let north_land = is_land(neighbour_kind(tiles, tile, 0, 1, tile_kind));
+    let south_land = is_land(neighbour_kind(tiles, tile, 0, -1, tile_kind));
+    let west_land = is_land(neighbour_kind(tiles, tile, -1, 0, tile_kind));
+    let east_land = is_land(neighbour_kind(tiles, tile, 1, 0, tile_kind));
+    let centre = || centre_first + u32::from(tile_variant(seed, tile_kind.glyph(), tile, 10));
+    match (north_land, south_land, west_land, east_land) {
+        (false, false, false, false) => centre(),
+        (true, false, false, false) => bank_first,
+        (false, true, false, false) => bank_first + 1,
+        (false, false, true, false) => bank_first + 2,
+        (false, false, false, true) => bank_first + 3,
+        (true, false, false, true) => bank_first + 4,
+        (true, false, true, false) => bank_first + 5,
+        (false, true, false, true) => bank_first + 6,
+        (false, true, true, false) => bank_first + 7,
+        // Narrow runs reuse the channel along their open axis.
+        (true, true, false, false) => bank_first + 8,
+        (false, false, true, true) => bank_first + 9,
+        // Three-sided dead ends get pocket pieces (rows 16/18) open to water.
+        (true, true, true, false) => bank_first + 40,
+        (true, true, false, true) => bank_first + 41,
+        (false, true, true, true) => bank_first + 42,
+        (true, false, true, true) => bank_first + 43,
+        // Fully surrounded: keep the middle stripe, never a hard full tile.
+        (true, true, true, true) => bank_first + 8,
+        _ => centre(),
     }
 }
 /// Returns a deterministic variant in `0..variant_count` for a tile.

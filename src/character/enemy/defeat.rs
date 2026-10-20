@@ -37,9 +37,7 @@ pub(super) fn on_enemy_defeated(
                 if let Ok(item_result) = item_query.get(item_entity) {
                     let roll = rng.random_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger(ItemDrop {
-                            entity: item_entity,
-                        });
+                        commands.trigger(ItemDrop { item: item_entity });
                     }
                 }
             }

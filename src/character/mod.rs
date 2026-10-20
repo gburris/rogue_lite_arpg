@@ -31,6 +31,11 @@ impl Plugin for CharacterPlugin {
             FixedUpdate,
             state::motion_to_velocity.in_set(MainSystems::InGame),
         );
+
+        app.add_systems(
+            Update,
+            state::sync_attack_state_from_equipment.in_set(SimulationSystems::Derive),
+        );
     }
 }
 

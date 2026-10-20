@@ -6,17 +6,18 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    // Vision + Perception
+    // Vision + Perception + Targeting, chained: fresh target data feeds
+    // sight checks, which feed targeting, which feeds aim.
     app.add_systems(
         Update,
-        (update_aim_position, update_target_info, is_target_in_sight)
+        (
+            update_target_info,
+            is_target_in_sight,
+            (should_target_watched, should_stop_targeting),
+            update_aim_position,
+        )
+            .chain()
             .in_set(InGameSystems::Simulation),
-    );
-
-    // Targeting
-    app.add_systems(
-        Update,
-        (should_target_watched, should_stop_targeting).in_set(InGameSystems::Simulation),
     )
     .add_observer(on_damage_aggro);
 }
@@ -210,8 +211,8 @@ fn is_target_in_sight(
 
 /// Handles auto-targeting when an entity is attacked.
 /// Ignores line of sight or cone checks — instant rage response.
-/// For now, this will just target the entity the AI is watching, not necessarily the entity that damaged them.
-/// TODO: Refactor projectiles/melee/damage to hold the "original source" entity so this can be improved
+/// Targets the actual attacker carried by the damage; falls back to the
+/// watched entity for attacker-less damage (environment, damage over time).
 fn on_damage_aggro(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
@@ -219,14 +220,18 @@ fn on_damage_aggro(
 ) {
     let damaged_entity = damage_dealt.entity;
 
-    if let Ok(watching) = target_query.get(damaged_entity) {
-        debug!(
-            "I've been hit: {}, attacking: {}",
-            damaged_entity, watching.0
-        );
+    let attacker_or_watched = damage_dealt.attacker.or_else(|| {
+        target_query
+            .get(damaged_entity)
+            .ok()
+            .map(|watching| watching.0)
+    });
+
+    if let Some(target) = attacker_or_watched {
+        debug!("I've been hit: {damaged_entity}, attacking: {target}");
         commands
             .entity(damaged_entity)
-            .insert((TargetLock, Targeting(watching.0)));
+            .insert((TargetLock, Targeting(target)));
 
         schedule_component_removal::<TargetLock>(&mut commands, damaged_entity, 6.0);
     }

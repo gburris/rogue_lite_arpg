@@ -126,7 +126,8 @@ struct RecipeFile {
 #[serde(deny_unknown_fields)]
 struct StructureDefinition {
     floor: TileKind,
-    glyphs: String,
+    /// One map row per entry; joined with `'\n'` when the catalog loads.
+    glyphs: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -357,7 +358,7 @@ fn load_recipe_catalog() -> Result<RecipeCatalog> {
         .structures
         .into_iter()
         .map(|(name, definition)| {
-            structure_from_glyphs(definition.floor, &definition.glyphs)
+            structure_from_glyphs(definition.floor, &definition.glyphs.join("\n"))
                 .map(|structure| (name, structure))
                 .map_err(|error| format!("invalid structure glyphs: {error:?}"))
         })

@@ -17,7 +17,7 @@ impl Default for Slowed {
     }
 }
 
-pub fn apply_slowed(
+pub(crate) fn apply_slowed(
     mut commands: Commands,
     status_query: Query<(Entity, &StatusOf, &Slowed), Without<StatusApplied>>,
     mut motion_query: Query<&mut SimpleMotion>,

@@ -7,7 +7,7 @@ mod defeat;
 use crate::{
     character::{
         Character, Purse,
-        behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
+        behavior::{Anchor, AttemptUseSlot, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
         physical_collider,
         vision::{VisionCapabilities, Watching},
     },
@@ -33,6 +33,7 @@ pub struct EnemySpawnData {
     Experience,
     VisionCapabilities,
     Purse { amount: 50 },
+    CombatSide = CombatSide::Enemy,
     DespawnOnExit::<AppState>(AppState::Playing)
 )]
 pub struct Enemy;
@@ -89,7 +90,7 @@ fn spawn_enemy(
     let chase_behavior = behave! {
         Behave::While => {
             Behave::spawn_named("Chase", Chase),
-            Behave::trigger(AttemptMelee)
+            Behave::trigger(AttemptUseSlot { slot: EquipmentSlot::Mainhand })
         }
     };
 

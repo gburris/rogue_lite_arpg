@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
 use crate::{
-    character::player::{AimInput, PlayerMovement, overlay::PlayerEquipmentUsed},
+    character::player::{AimInput, PlayerMovement},
     prelude::*,
 };
 
@@ -91,90 +91,16 @@ struct UseMainhand;
 #[action_output(bool)]
 struct UseOffhand;
 
-fn on_use_mainhand_input(
-    use_mainhand: On<Start<UseMainhand>>,
-    mut commands: Commands,
-    player: Option<Single<(&Mainhand, Option<&mut Mana>), With<Player>>>,
-    mut mainhand_query: Query<EquipmentUsed>,
-) {
-    let Some(player) = player else {
-        commands.trigger(EquipmentUseFailed {
-            holder: use_mainhand.context,
-            slot: EquipmentSlot::Mainhand,
-            reason: EquipmentUseFailure::NoneEquipped,
-        });
-        return;
-    };
-
-    let (mainhand, mut mana) = player.into_inner();
-
-    let failure_reason = mainhand_query
-        .get_mut(mainhand.get())
-        .expect("Player should have mainhand")
-        .attempt_use(mana.as_deref_mut());
-
-    if let Err(failure_reason) = failure_reason {
-        commands.trigger(EquipmentUseFailed {
-            holder: use_mainhand.context,
-            slot: EquipmentSlot::Mainhand,
-            reason: failure_reason,
-        });
-    } else {
-        commands.trigger(UseEquipment {
-            entity: mainhand.get(),
-        });
-        commands.trigger(PlayerEquipmentUsed {
-            entity: mainhand.get(),
-        });
-    }
+fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut equipment: EquipmentUsage) {
+    // Discarded: failures are already queued as `EquipmentUseFailed` for the HUD.
+    let _ = equipment.try_use(use_mainhand.context, EquipmentSlot::Mainhand);
 }
 
-fn on_use_offhand_input(
-    use_offhand: On<Start<UseOffhand>>,
-    mut commands: Commands,
-    player: Option<Single<(&Offhand, Option<&mut Mana>), With<Player>>>,
-    mut offhand_query: Query<EquipmentUsed>,
-) {
-    let Some(player) = player else {
-        commands.trigger(EquipmentUseFailed {
-            holder: use_offhand.context,
-            slot: EquipmentSlot::Offhand,
-            reason: EquipmentUseFailure::NoneEquipped,
-        });
-        return;
-    };
-
-    let (offhand, mut mana) = player.into_inner();
-
-    let failure_reason = offhand_query
-        .get_mut(offhand.get())
-        .expect("Player should have offhand")
-        .attempt_use(mana.as_deref_mut());
-
-    if let Err(failure_reason) = failure_reason {
-        commands.trigger(EquipmentUseFailed {
-            holder: use_offhand.context,
-            slot: EquipmentSlot::Offhand,
-            reason: failure_reason,
-        });
-    } else {
-        commands.trigger(UseEquipment {
-            entity: offhand.get(),
-        });
-        commands.trigger(PlayerEquipmentUsed {
-            entity: offhand.get(),
-        });
-    }
+fn on_use_offhand_input(use_offhand: On<Start<UseOffhand>>, mut equipment: EquipmentUsage) {
+    // Discarded: failures are already queued as `EquipmentUseFailed` for the HUD.
+    let _ = equipment.try_use(use_offhand.context, EquipmentSlot::Offhand);
 }
 
-fn on_use_offhand_complete(
-    _: On<Complete<UseOffhand>>,
-    mut commands: Commands,
-    player_offhand: Option<Single<&Offhand, With<Player>>>,
-) {
-    if let Some(player_offhand) = player_offhand {
-        commands.trigger(StopUsingEquipment {
-            entity: player_offhand.get(),
-        });
-    }
+fn on_use_offhand_complete(use_offhand: On<Complete<UseOffhand>>, mut equipment: EquipmentUsage) {
+    equipment.stop_using(use_offhand.context, EquipmentSlot::Offhand);
 }

@@ -5,6 +5,7 @@ mod slow;
 pub mod prelude {
     pub use super::burn::*;
     pub use super::freeze::*;
+    pub use super::slow::*;
     pub use super::{EffectOf, Effects, StatusOf};
 }
 
@@ -47,7 +48,7 @@ pub struct StatusOf(pub Entity);
 pub struct Statuses(Vec<Entity>);
 
 #[derive(Component, Clone)]
-struct StatusApplied;
+pub(crate) struct StatusApplied;
 
 #[derive(Component, Clone, Hash, Eq, PartialEq, Debug)]
 enum StatusType {

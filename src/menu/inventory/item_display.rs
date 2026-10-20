@@ -128,9 +128,7 @@ pub fn on_slot_clicked(
         if pointer_click.button == PointerButton::Primary {
             if equippable {
                 if is_equipped {
-                    commands.trigger(Unequip {
-                        entity: item_entity,
-                    });
+                    commands.trigger(Unequip { item: item_entity });
                 } else {
                     commands.trigger(Equip {
                         item: item_entity,
@@ -146,9 +144,7 @@ pub fn on_slot_clicked(
 
         // Right click drops items from inventory
         } else if pointer_click.button == PointerButton::Secondary {
-            commands.trigger(ItemDrop {
-                entity: item_entity,
-            });
+            commands.trigger(ItemDrop { item: item_entity });
         }
 
         commands.trigger(UpdateDisplayCase { entity: *player });

@@ -28,7 +28,7 @@ pub struct NpcSpawnData {
 }
 
 #[derive(Component)]
-#[require(Character, DespawnOnExit::<AppState>(AppState::Playing))]
+#[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct NPC;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]

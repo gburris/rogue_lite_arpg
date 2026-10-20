@@ -28,7 +28,7 @@ pub struct NpcSpawnData {
 }
 
 #[derive(Component)]
-#[require(Character, DespawnOnExit::<AppState>(AppState::Playing))]
+#[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct NPC;
 
 /// Recipes name these directly, e.g. `(what: Npc(Shopkeeper), ...)` in `map_recipes.ron`.

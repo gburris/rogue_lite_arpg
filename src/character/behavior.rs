@@ -13,17 +13,21 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            while_chasing,
+            while_chasing.after(apply_slowed),
             while_idling,
             while_wandering,
-            while_retreating,
-            while_keeping_distance_and_firing,
+            while_retreating.after(apply_slowed),
+            while_keeping_distance_and_firing
+                .in_set(SimulationSystems::Logic)
+                .after(apply_slowed)
+                // Mana must regen before AI use attempts, or attacks falsely fail with `OutOfMana`.
+                .after(crate::combat::mana::regenerate_mana),
         )
             .in_set(InGameSystems::Simulation),
     )
     .add_observer(on_idle_start)
     .add_observer(on_wander_start)
-    .add_observer(on_attempt_melee);
+    .add_observer(on_attempt_use_slot);
 }
 
 #[derive(Component, Clone)]
@@ -213,28 +217,28 @@ fn random_direction() -> Vec2 {
     Vec2::new(angle.cos(), angle.sin())
 }
 
+/// Behave request to use the holder's item in `slot`. Succeeds only while targeting.
 #[derive(Clone)]
-pub struct AttemptMelee;
+pub struct AttemptUseSlot {
+    pub slot: EquipmentSlot,
+}
 
-pub fn on_attempt_melee(
-    attempt_melee: On<BehaveTrigger<AttemptMelee>>,
+pub fn on_attempt_use_slot(
+    attempt: On<BehaveTrigger<AttemptUseSlot>>,
     mut commands: Commands,
-    target_query: Query<(Option<&Mainhand>, Has<Targeting>), With<TargetInfo>>,
+    mut equipment: EquipmentUsage,
+    has_target: Query<Has<Targeting>, With<TargetInfo>>,
 ) -> Result {
-    let ctx = attempt_melee.ctx();
+    let ctx = attempt.ctx();
 
-    let (mainhand, has_target) = target_query.get(ctx.target_entity())?;
+    if !has_target.get(ctx.target_entity())? {
+        commands.trigger(ctx.failure());
+        return Ok(());
+    }
 
-    if !has_target {
-        commands.trigger(ctx.failure());
-    } else if let Some(mainhand) = mainhand {
-        commands.trigger(AIUseEquipment {
-            entity: mainhand.get(),
-        });
-        commands.trigger(ctx.success());
-    } else {
-        // No mainhand equipped
-        commands.trigger(ctx.failure());
+    match equipment.try_use(ctx.target_entity(), attempt.inner().slot) {
+        Ok(_) => commands.trigger(ctx.success()),
+        Err(_) => commands.trigger(ctx.failure()),
     }
 
     Ok(())
@@ -245,24 +249,24 @@ pub struct KeepDistanceAndFire;
 
 pub fn while_keeping_distance_and_firing(
     mut commands: Commands,
+    mut equipment: EquipmentUsage,
     mut behave_query: Query<&BehaveCtx, With<KeepDistanceAndFire>>,
-    mut target_query: Query<(
-        &mut SimpleMotion,
-        &TargetInfo,
-        Option<&Mainhand>,
-        Has<Targeting>,
-    )>,
+    mut target_query: Query<(&mut SimpleMotion, &TargetInfo, Has<Targeting>)>,
 ) -> Result {
     behave_query.iter_mut().try_for_each(|ctx| {
-        let (mut motion, target_info, mainhand, has_target) =
-            target_query.get_mut(ctx.target_entity())?;
+        let (mut motion, target_info, has_target) = target_query.get_mut(ctx.target_entity())?;
 
         if !has_target {
             commands.trigger(ctx.failure());
-        } else if let Some(mainhand) = mainhand {
-            commands.trigger(AIUseEquipment {
-                entity: mainhand.get(),
-            });
+        } else {
+            if equipment
+                .item_in_slot(ctx.target_entity(), EquipmentSlot::Mainhand)
+                .is_none()
+            {
+                commands.trigger(ctx.failure());
+                return Ok(());
+            }
+            let _ = equipment.try_use(ctx.target_entity(), EquipmentSlot::Mainhand);
 
             if target_info.distance < 200.0 {
                 // If target is too close we try to move away
@@ -270,9 +274,6 @@ pub fn while_keeping_distance_and_firing(
             } else if target_info.distance > 300.0 {
                 motion.start_moving(target_info.direction);
             }
-        } else {
-            // No mainhand equipped
-            commands.trigger(ctx.failure());
         }
         Ok(())
     })

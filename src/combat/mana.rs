@@ -40,7 +40,7 @@ pub struct ManaCost(pub f32);
 pub struct ManaDrainRate(pub f32);
 
 /// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration rate
-pub(super) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
+pub(crate) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     let delta_time = time.delta_secs();
     for mut mana in &mut query {
         mana.regenerate(delta_time);

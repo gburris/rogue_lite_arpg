@@ -41,6 +41,15 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(MainSystems::InGame),
     );
 
+    // Order within Simulation: logic that may (transitively, via observers)
+    // start or stop equipment use runs before state derived from it.
+    app.configure_sets(
+        Update,
+        (SimulationSystems::Logic, SimulationSystems::Derive)
+            .chain()
+            .in_set(InGameSystems::Simulation),
+    );
+
     // Setup Pausing!
     app.init_state::<Pause>()
         .add_systems(OnEnter(Pause(true)), pause_game)
@@ -62,6 +71,21 @@ pub enum InGameSystems {
     Collision,  // Finally detect collisions using avian based on velocity changed
     Vfx,        // Any visual change that should not affect physics or collisions
     HudOverlay, // Render UI overlay based on simulation
+}
+
+/// Ordered phases within [`InGameSystems::Simulation`].
+///
+/// Producers that may start or stop equipment use (directly, or via queued
+/// `StartUsingEquipment` / `StopUsingEquipment` observers, which flush between
+/// systems) belong in `Logic`. State derived from the `EquipmentInUse` marker, such as
+/// attack animation state, belongs in `Derive` and is guaranteed to see every
+/// same-frame use and cancellation.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum SimulationSystems {
+    /// Game logic that may queue equipment use or cancellation.
+    Logic,
+    /// State derived from simulation results.
+    Derive,
 }
 
 #[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]

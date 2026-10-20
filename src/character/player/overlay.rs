@@ -15,8 +15,6 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::HudOverlay),
     );
 
-    app.add_observer(on_equipment_use_add_cooldown_line);
-
     app.add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
 }
 
@@ -347,10 +345,7 @@ fn update_action_bar(
         let (mainhand, offhand) = player_inventory_result.into_inner();
 
         for (action_box, children) in action_box_query.iter() {
-            let equipment: Option<Entity> = match action_box.slot {
-                EquipmentSlot::Mainhand => mainhand.map(crate::prelude::Mainhand::get),
-                EquipmentSlot::Offhand => offhand.map(crate::prelude::Offhand::get),
-            };
+            let equipment: Option<Entity> = action_box.slot.get_equipped(mainhand, offhand);
 
             if let Some(&image_entity) = children.first()
                 && let Ok(mut image_node) = image_query.get_mut(image_entity)
@@ -374,21 +369,17 @@ fn update_action_bar(
     }
 }
 
-#[derive(EntityEvent)]
-pub(super) struct PlayerEquipmentUsed {
-    pub entity: Entity,
-}
-
-fn on_equipment_use_add_cooldown_line(
-    equipment_used: On<PlayerEquipmentUsed>,
+/// Adds a cooldown indicator to the action box for the used slot.
+pub(super) fn on_equipment_use_succeeded(
+    equipment_used: On<EquipmentUseSucceeded>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
     equipment_query: Query<&Equippable, With<Equipped>>,
 ) {
-    if let Ok(equipmemnt) = equipment_query.get(equipment_used.entity)
+    if let Ok(equippable) = equipment_query.get(equipment_used.item)
         && let Some((box_entity, _)) = action_box_query
             .iter()
-            .find(|(_, action_box)| action_box.slot == equipmemnt.slot)
+            .find(|(_, action_box)| action_box.slot == equipment_used.slot)
     {
         commands.entity(box_entity).with_children(|parent| {
             parent.spawn((
@@ -401,7 +392,7 @@ fn on_equipment_use_add_cooldown_line(
                     top: px(0.0),
                     ..default()
                 },
-                Lifespan::new(equipmemnt.use_rate.remaining_secs()),
+                Lifespan::new(equippable.cooldown.remaining_secs()),
                 BackgroundColor::from(COOLDOWN_LINE_COLOR),
             ));
         });

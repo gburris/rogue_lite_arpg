@@ -21,8 +21,11 @@ pub(super) fn plugin(app: &mut App) {
         (
             update_active_shields
                 .in_set(SimulationSystems::Logic)
-                .after(crate::combat::mana::regenerate_mana),
-            reflect_projectiles.in_set(InGameSystems::Simulation),
+                .after(crate::combat::mana::regenerate_mana)
+                .before(crate::character::AiSet::Decision),
+            reflect_projectiles
+                .in_set(InGameSystems::Simulation)
+                .after(crate::character::AiSet::Motion),
         ),
     );
 }
@@ -108,6 +111,7 @@ struct ActiveShield {
     projectiles_reflected: HashSet<Entity>,
 }
 
+/// Drains mana and updates sprite/transform for every active shield.
 fn update_active_shields(
     mut commands: Commands,
     time: Res<Time>,

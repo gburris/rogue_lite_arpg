@@ -64,10 +64,8 @@ pub struct EquipmentUseSucceeded {
     pub item: Entity,
 }
 
-pub(super) fn tick_equippable_cooldown(
-    mut equippable_query: Query<&mut Equippable>,
-    time: Res<Time>,
-) {
+/// Advances every equipped item's cooldown timer.
+pub fn tick_equippable_cooldown(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
     for mut equippable in &mut equippable_query {
         equippable.cooldown.tick(time.delta());
     }
@@ -88,7 +86,7 @@ pub struct UsableItem {
 impl UsableItemItem<'_, '_> {
     /// Whether the item is ready and affordable, without consuming anything.
     pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
-        can_use_item(&self.equippable, self.mana_cost, holder_mana)
+        can_use_item(&self.equippable, self.mana_cost, holder_mana, true)
     }
 
     /// Checks every gate before consuming mana or resetting the cooldown.
@@ -110,33 +108,41 @@ impl UsableItemItem<'_, '_> {
 impl UsableItemReadOnlyItem<'_, '_> {
     /// Whether the item is ready and affordable, without consuming anything.
     pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
-        can_use_item(self.equippable, self.mana_cost, holder_mana)
+        can_use_item(self.equippable, self.mana_cost, holder_mana, false)
     }
 }
 
 /// Shared readiness gate for both query views: cooldown first, then mana.
+/// `report_missing_mana` is false for passive planning checks so an AI
+/// inspecting a slot does not log a player-facing warning every tick.
 fn can_use_item(
     equippable: &Equippable,
     mana_cost: Option<&ManaCost>,
     holder_mana: Option<&Mana>,
+    report_missing_mana: bool,
 ) -> Result<(), EquipmentUseFailure> {
     if !equippable.cooldown.is_finished() {
         return Err(EquipmentUseFailure::OnCooldown);
     }
-    check_mana(mana_cost, holder_mana)
+    check_mana(mana_cost, holder_mana, report_missing_mana)
 }
 
 fn check_mana(
     mana_cost: Option<&ManaCost>,
     mana: Option<&Mana>,
+    report_missing_mana: bool,
 ) -> Result<(), EquipmentUseFailure> {
     if let (Some(mana), Some(mana_cost)) = (mana, mana_cost) {
         if !mana.has_enough_mana(mana_cost) {
-            debug!("Not enough mana!");
+            if report_missing_mana {
+                debug!("Not enough mana!");
+            }
             return Err(EquipmentUseFailure::OutOfMana);
         }
     } else if mana.is_none() && mana_cost.is_some() {
-        warn!("This wielder is not skilled in the arts of the arcane");
+        if report_missing_mana {
+            warn!("This wielder is not skilled in the arts of the arcane");
+        }
         return Err(EquipmentUseFailure::OutOfMana);
     }
     Ok(())
@@ -249,6 +255,42 @@ impl EquipmentUsage<'_, '_> {
     }
 }
 
+/// Read-only view of equipment state for planners. It never requests mutable
+/// `Mana` or `Equippable`, so decision systems can run alongside regeneration
+/// and cooldown ticks without conflicts.
+#[derive(SystemParam)]
+pub struct EquipmentRead<'w, 's> {
+    holders: Query<
+        'w,
+        's,
+        (
+            Option<&'static Mainhand>,
+            Option<&'static Offhand>,
+            Option<&'static Mana>,
+        ),
+        With<Character>,
+    >,
+    equipment: Query<'w, 's, UsableItemReadOnly>,
+}
+
+impl EquipmentRead<'_, '_> {
+    /// Whether the holder could use the slot now, without consuming anything.
+    pub fn can_use(&self, holder: Entity, slot: EquipmentSlot) -> Result<(), EquipmentUseFailure> {
+        let (mainhand, offhand, mana) = self
+            .holders
+            .get(holder)
+            .map_err(|_| EquipmentUseFailure::NoHolder)?;
+        let item = slot
+            .get_equipped(mainhand, offhand)
+            .ok_or(EquipmentUseFailure::EmptySlot)?;
+        let usable = self
+            .equipment
+            .get(item)
+            .map_err(|_| EquipmentUseFailure::UnusableItem)?;
+        usable.can_use(mana)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -334,7 +376,8 @@ mod tests {
         );
         assert_eq!(world.resource::<Seen>().succeeded, vec![holder]);
         assert!(world.resource::<Seen>().failed.is_empty());
-        assert_eq!(world.get::<Mana>(holder).unwrap().current_mana, 6.0);
+        let remaining_mana = world.get::<Mana>(holder).unwrap().current_mana;
+        assert!((remaining_mana - 6.0).abs() < f32::EPSILON);
         assert!(
             !world
                 .get::<Equippable>(sword)
@@ -364,7 +407,8 @@ mod tests {
             Err(EquipmentUseFailure::EmptySlot)
         );
         assert!(world.resource::<Seen>().uses.is_empty());
-        assert_eq!(world.get::<Mana>(holder).unwrap().current_mana, 6.0);
+        let remaining_mana = world.get::<Mana>(holder).unwrap().current_mana;
+        assert!((remaining_mana - 6.0).abs() < f32::EPSILON);
 
         let (mut poor_world, poor_holder, _) = setup_world(2.0);
         assert_eq!(
@@ -372,9 +416,7 @@ mod tests {
             Err(EquipmentUseFailure::OutOfMana)
         );
         assert!(poor_world.resource::<Seen>().uses.is_empty());
-        assert_eq!(
-            poor_world.get::<Mana>(poor_holder).unwrap().current_mana,
-            2.0
-        );
+        let poor_remaining_mana = poor_world.get::<Mana>(poor_holder).unwrap().current_mana;
+        assert!((poor_remaining_mana - 2.0).abs() < f32::EPSILON);
     }
 }

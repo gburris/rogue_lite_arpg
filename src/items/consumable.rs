@@ -10,7 +10,7 @@ pub struct Consumable {
 }
 
 pub enum ConsumableType {
-    Heal(f32), // Heal player for a specific amount
+    Heal(f32), // Heals player for a specific amount
 }
 
 #[derive(EntityEvent)]
@@ -19,6 +19,8 @@ pub struct Consume {
     pub item_entity: Entity,
 }
 
+/// A healing potion. Potions live in the inventory and are consumed directly
+/// via `Consume` (the same path the player uses); they are never equipped.
 pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
     (
         Name::new("Health Potion"),

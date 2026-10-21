@@ -9,7 +9,6 @@ mod view;
 use bevy::asset::AssetMetaCheck;
 
 use bevy::prelude::*;
-use bevy_behave::prelude::BehavePlugin;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
 use bevy_lit::prelude::Lighting2dPlugin;
 use bevy_tweening::TweeningPlugin;
@@ -48,10 +47,5 @@ pub(super) fn plugin(app: &mut App) {
     ));
 
     // Third-party plugins
-    app.add_plugins((
-        BehavePlugin::default(),
-        EnhancedInputPlugin,
-        Lighting2dPlugin,
-        TweeningPlugin,
-    ));
+    app.add_plugins((EnhancedInputPlugin, Lighting2dPlugin, TweeningPlugin));
 }

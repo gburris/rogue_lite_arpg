@@ -1,5 +1,6 @@
+mod anchor;
 mod animation;
-mod behavior;
+mod brain;
 mod enemy;
 mod npc;
 mod player;
@@ -7,11 +8,23 @@ mod state;
 mod vision;
 
 pub mod prelude {
+    pub use super::brain::BrainKind;
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;
     pub use super::state::*;
     pub use super::vision::*;
+}
+
+/// Ordered AI phases. Perception feeds targeting, aim, decisions, and finally
+/// the motion driver.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum AiSet {
+    Perception,
+    Targeting,
+    Aim,
+    Decision,
+    Motion,
 }
 
 use avian2d::prelude::*;
@@ -25,7 +38,20 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-        app.add_plugins((animation::plugin, behavior::plugin, vision::plugin));
+        app.add_plugins((animation::plugin, vision::plugin, brain::plugin));
+
+        app.configure_sets(
+            Update,
+            (
+                AiSet::Perception,
+                AiSet::Targeting,
+                AiSet::Aim,
+                AiSet::Decision,
+                AiSet::Motion,
+            )
+                .chain()
+                .in_set(SimulationSystems::Logic),
+        );
 
         app.add_systems(
             FixedUpdate,

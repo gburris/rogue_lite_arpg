@@ -43,6 +43,12 @@ impl SimpleMotion {
         self.current_speed = self.max_speed;
         self.direction = direction;
     }
+    /// Starts moving at a fraction of max speed, for gaits like wandering
+    /// that should read as unhurried next to full-speed combat movement.
+    pub fn start_moving_scaled(&mut self, direction: Vec2, scale: f32) {
+        self.current_speed = self.max_speed * scale.clamp(0.0, 1.0);
+        self.direction = direction;
+    }
 
     pub fn stop_moving(&mut self) {
         self.current_speed = 0.0;

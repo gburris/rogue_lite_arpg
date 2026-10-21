@@ -151,7 +151,9 @@ fn update_health_bar(
     let (mut health_lost_node, mut health_lost) = health_lost_bar.into_inner();
 
     if let Some(player_health) = player_health {
-        health_bar.width = get_amount_left_in_pixels(player_health.hp, player_health.max_hp);
+        health_bar.width = player_health.fraction().map_or(px(0.0), |fraction| {
+            px(fraction * player_health.max_hp * ATTRIBUTE_TO_PIXEL_SCALE)
+        });
         health_lost_node.width = get_amount_lost_in_pixels(
             health_lost.previous_hp,
             player_health.hp,
@@ -169,7 +171,9 @@ fn update_mana_bar(
 ) {
     let (mut mana_lost_node, mut mana_lost) = mana_lost_bar.into_inner();
 
-    mana_bar.width = get_amount_left_in_pixels(player_mana.current_mana, player_mana.max_mana);
+    mana_bar.width = player_mana.fraction().map_or(px(0.0), |fraction| {
+        px(fraction * player_mana.max_mana * ATTRIBUTE_TO_PIXEL_SCALE)
+    });
     mana_lost_node.width = get_amount_lost_in_pixels(
         mana_lost.previous_mana,
         player_mana.current_mana,
@@ -198,13 +202,6 @@ fn update_lost_health_bar(
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
     health_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
-}
-
-// Gets length in px of bar representing amount of mana or health left
-fn get_amount_left_in_pixels(current_amount: f32, max_amount: f32) -> Val {
-    let max_bar_length = max_amount * ATTRIBUTE_TO_PIXEL_SCALE;
-    let ratio_remaining = current_amount / max_amount;
-    px(ratio_remaining * max_bar_length)
 }
 
 // Gets length in px of yellow bar representing amount of mana or health lost

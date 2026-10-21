@@ -7,6 +7,9 @@ use crate::prelude::*;
 /// Center of chest relative to its sprite's anchor point
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
 const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
+/// Delay before coins pop: the open animation runs 9 frames at 0.1 s each,
+/// so the burst lands as the lid finishes opening.
+const COIN_DROP_DELAY_SECS: f32 = 0.9;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_spawn_chests_event);
@@ -94,11 +97,13 @@ fn on_interaction_open_chest(
     commands
         .entity(chest_opened.interaction_zone_entity)
         .despawn();
-
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
-        commands.trigger(GoldDrop {
-            amount: 999,
-            location: chest_transform.translation.truncate(),
-        });
+        commands
+            .delayed()
+            .secs(COIN_DROP_DELAY_SECS)
+            .trigger(GoldDrop {
+                amount: 999,
+                location: chest_transform.translation.truncate(),
+            });
     }
 }

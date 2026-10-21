@@ -215,7 +215,7 @@ fn spawn_placements(
     coordinates: Res<TileToWorld>,
     player: Option<Single<&mut Transform, With<Player>>>,
 ) {
-    let mut player_transform = player.map(|player| player.into_inner());
+    let mut player_transform = player.map(Single::into_inner);
     let mut enemies = Vec::new();
     let mut npcs = Vec::new();
     let mut chests = Vec::new();

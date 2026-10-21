@@ -1,12 +1,7 @@
+#[cfg(feature = "dev")]
+use bevy::color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700};
 use bevy::{
-    camera::ScalingMode,
-    color::palettes::{
-        basic::RED,
-        css::BLUE,
-        tailwind::{BLUE_300, PURPLE_700},
-    },
-    prelude::*,
-    window::WindowResolution,
+    camera::ScalingMode, color::palettes::tailwind::BLUE_300, prelude::*, window::WindowResolution,
 };
 use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings};
 
@@ -221,6 +216,7 @@ fn camera_follow_system(
     camera.translation.y = (camera.translation.y / step).round() * step;
 }
 
+#[cfg(feature = "dev")]
 pub(super) fn camera_debug_system(
     player: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
     player_aim: Single<&Transform, With<PlayerAim>>,

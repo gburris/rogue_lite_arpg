@@ -31,6 +31,16 @@ impl Health {
         self.hp <= 0.0
     }
 
+    /// Current health as a `0.0..=1.0` fraction, or `None` when the health
+    /// values cannot describe a valid fraction.
+    pub fn fraction(&self) -> Option<f32> {
+        if self.hp.is_finite() && self.max_hp.is_finite() && self.max_hp > 0.0 {
+            Some((self.hp / self.max_hp).clamp(0.0, 1.0))
+        } else {
+            None
+        }
+    }
+
     fn add_health(&mut self, amount: f32) -> f32 {
         let before = self.hp;
         self.hp += amount;

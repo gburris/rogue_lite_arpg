@@ -70,11 +70,11 @@ fn on_unequip(
     unequip: On<Unequip>,
     mut commands: Commands,
     mut items: Query<(&ItemOf, &mut Visibility, Has<EquipmentInUse>), With<Equipped>>,
-) -> Result {
+) {
     let Ok((item_of, mut visibility, in_use)) = items.get_mut(unequip.item) else {
         // Expected race: equipment was despawned prior to unequip.
         info!("Equipment was despawned prior to unequip");
-        return Ok(());
+        return;
     };
     if in_use {
         commands.trigger(StopUsingEquipment {
@@ -86,7 +86,6 @@ fn on_unequip(
     commands
         .entity(unequip.item)
         .remove::<(Equipped, MainhandOf, OffhandOf, ChildOf)>();
-    Ok(())
 }
 
 #[cfg(test)]

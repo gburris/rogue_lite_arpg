@@ -45,9 +45,9 @@ impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
         let (recipe, seed) = match request {
-            MapRequest::Hub => (self.catalog.hub(), self.root_rng.map().1),
+            MapRequest::Hub => (self.catalog.hub(), self.root_rng.next_seed()),
             MapRequest::Weighted => {
-                let seed = self.root_rng.map().1;
+                let seed = self.root_rng.next_seed();
                 let mut random_generator = ChaCha8Rng::seed_from_u64(seed);
                 (self.catalog.weighted(&mut random_generator)?, seed)
             }
@@ -465,8 +465,16 @@ fn load_recipe_file() -> Result<RecipeFile> {
         .map_err(|error| format!("failed to parse assets/config/map_recipes.ron: {error}").into())
 }
 
-#[allow(clippy::too_many_lines)]
 fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>) -> Result<()> {
+    validate_recipe_layout(recipe)?;
+    let mut earlier_names = std::collections::HashSet::new();
+    validate_recipe_structures(recipe, structures, &mut earlier_names)?;
+    validate_recipe_enemy_placement(recipe, &earlier_names)?;
+    validate_recipe_player_start(recipe, structures)?;
+    Ok(())
+}
+
+fn validate_recipe_layout(recipe: &MapRecipe) -> Result<()> {
     for (name, range) in [
         ("size_x", recipe.size_x_range),
         ("size_y", recipe.size_y_range),
@@ -507,7 +515,14 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     {
         return Err(format!("recipe {} has invalid exit count range", recipe.name).into());
     }
-    let mut earlier_names = std::collections::HashSet::new();
+    Ok(())
+}
+
+fn validate_recipe_structures(
+    recipe: &MapRecipe,
+    structures: &BTreeMap<String, Structure>,
+    earlier_names: &mut std::collections::HashSet<String>,
+) -> Result<()> {
     for (index, structure) in recipe.structures.iter().enumerate() {
         if !structures.contains_key(&structure.kind)
             && BuiltinFeature::from_kind(&structure.kind).is_none()
@@ -583,6 +598,13 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
             return Err(format!("recipe {} repeats structure name {name}", recipe.name).into());
         }
     }
+    Ok(())
+}
+
+fn validate_recipe_enemy_placement(
+    recipe: &MapRecipe,
+    earlier_names: &std::collections::HashSet<String>,
+) -> Result<()> {
     if let Some(near) = &recipe.enemies.near {
         if !earlier_names.contains(&near.structure) {
             return Err(format!(
@@ -598,6 +620,13 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     if recipe.enemies.separation > 512 {
         return Err(format!("recipe {} enemy separation exceeds the cap", recipe.name).into());
     }
+    Ok(())
+}
+
+fn validate_recipe_player_start(
+    recipe: &MapRecipe,
+    structures: &BTreeMap<String, Structure>,
+) -> Result<()> {
     let structure_starts = recipe.structures.iter().any(|structure_entry| {
         structures
             .get(&structure_entry.kind)

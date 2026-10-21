@@ -1,18 +1,11 @@
 use bevy::{prelude::*, ui_widgets::observe};
-use bevy_behave::prelude::*;
 
 mod interaction;
 
 use crate::{
-    character::{
-        Character,
-        behavior::{Idle, Retreat},
-        physical_collider,
-    },
+    character::{Character, anchor::Anchor, physical_collider},
     prelude::*,
 };
-
-use super::behavior::{Anchor, Wander};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_npcs);
@@ -36,6 +29,13 @@ pub enum NpcKind {
     Helper,
     Shopkeeper,
     StatTrainer,
+}
+
+impl NpcKind {
+    /// Brain used by this NPC kind.
+    pub fn brain_kind(&self) -> BrainKind {
+        BrainKind::Villager
+    }
 }
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
@@ -71,11 +71,13 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
+    let brain = npc_kind.brain_kind();
+
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 helper(sprites, sprite_layouts),
             ),
             ice_staff(sprites, sprite_layouts),
@@ -83,7 +85,7 @@ fn spawn_npc(
         NpcKind::Shopkeeper => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 shopkeeper(sprites, sprite_layouts),
             ),
             axe(sprites),
@@ -91,7 +93,7 @@ fn spawn_npc(
         NpcKind::StatTrainer => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 stat_trainer(sprites, sprite_layouts),
             ),
             sword(sprites),
@@ -110,9 +112,10 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand:
     });
 }
 
-fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
+fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: BrainKind) -> impl Bundle {
     (
         NPC,
+        brain,
         Anchor::new(spawn_position, WANDER_RADIUS),
         SimpleMotion::new(100.0),
         Health::new(1000.0),
@@ -125,7 +128,6 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             ),
             hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
             physical_collider(),
-            BehaveTree::new(wander_and_retreat_behavior()),
         ],
     )
 }
@@ -167,18 +169,4 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
         ),
         observe(interaction::on_stat_trainer_store_open),
     )
-}
-
-fn wander_and_retreat_behavior() -> Tree<Behave> {
-    behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Idle", Idle::default().timer_range(1.0..4.0)),
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.5)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-            }
-        }
-    }
 }

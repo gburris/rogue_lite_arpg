@@ -25,16 +25,28 @@ pub(super) fn plugin(app: &mut App) {
     app.insert_resource(MapRng::seeded(seed));
 }
 
+/// Deterministic source of map seeds derived from the game's root seed.
 #[derive(Resource)]
-pub(crate) struct MapRng(ChaCha8Rng);
+pub(crate) struct MapRng {
+    rng: ChaCha8Rng,
+    root_seed: u64,
+}
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
-        Self(ChaCha8Rng::seed_from_u64(seed))
+        Self {
+            rng: ChaCha8Rng::seed_from_u64(seed),
+            root_seed: seed,
+        }
     }
 
-    pub(crate) fn map(&mut self) -> (ChaCha8Rng, u64) {
-        let seed = self.0.next_u64();
-        (ChaCha8Rng::seed_from_u64(seed), seed)
+    /// Advances the map stream and returns the next map seed.
+    pub(crate) fn next_seed(&mut self) -> u64 {
+        self.rng.next_u64()
+    }
+
+    /// The root seed without advancing map generation.
+    pub(crate) fn root_seed(&self) -> u64 {
+        self.root_seed
     }
 }

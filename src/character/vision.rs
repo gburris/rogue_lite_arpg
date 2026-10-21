@@ -5,21 +5,19 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
+use super::AiSet;
+
 pub(super) fn plugin(app: &mut App) {
-    // Vision + Perception + Targeting, chained: fresh target data feeds
-    // sight checks, which feed targeting, which feeds aim.
-    app.add_systems(
+    app.add_observer(on_damage_aggro).add_systems(
         Update,
         (
-            update_target_info,
-            is_target_in_sight,
-            (should_target_watched, should_stop_targeting),
-            update_aim_position,
-        )
-            .chain()
-            .in_set(InGameSystems::Simulation),
-    )
-    .add_observer(on_damage_aggro);
+            (update_target_info, is_target_in_sight)
+                .chain()
+                .in_set(AiSet::Perception),
+            (should_target_watched, should_stop_targeting).in_set(AiSet::Targeting),
+            update_aim_position.in_set(AiSet::Aim),
+        ),
+    );
 }
 
 /// Represents the current direction an entity is aiming toward (e.g., cursor for player, target for AI).
@@ -89,7 +87,7 @@ pub(super) struct WatchedBy(Vec<Entity>);
 /// Indicates a temporary target lock.
 /// Automatically removed after a certain duration via `Lifespan`.
 #[derive(Component)]
-struct TargetLock;
+pub(super) struct TargetLock;
 
 // ---------------------
 // VISION + PERCEPTION
@@ -98,7 +96,7 @@ struct TargetLock;
 /// Updates the `Vision` component's direction for each entity:
 /// - If the entity is actively targeting something, aim at it.
 /// - Otherwise, aim in the direction it is facing.
-fn update_aim_position(
+pub(super) fn update_aim_position(
     mut character_query: Query<
         (&mut Vision, &TargetInfo, Has<Targeting>, &FacingDirection),
         Without<Player>,
@@ -117,7 +115,7 @@ fn update_aim_position(
 
 /// Updates the direction and distance of the watched (or targeted) entity,
 /// and points the `RayCaster` in that direction.
-fn update_target_info(
+pub(super) fn update_target_info(
     mut npc_query: Query<
         (
             &mut TargetInfo,
@@ -164,7 +162,7 @@ fn update_target_info(
 /// Requirements:
 /// - The NPC must have a `Watching` component referencing the target
 /// - The target must have a `WatchedBy` component and optionally `Children` (e.g. for colliders)
-fn is_target_in_sight(
+pub(super) fn is_target_in_sight(
     mut npc_query: Query<(
         &mut TargetInfo,
         &RayHits,
@@ -238,7 +236,7 @@ fn on_damage_aggro(
 }
 
 /// Starts targeting the watched entity if it is in sight and in the vision cone.
-fn should_target_watched(
+pub(super) fn should_target_watched(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
@@ -252,7 +250,7 @@ fn should_target_watched(
 }
 
 /// Stops targeting if the entity loses sight of the target or the target lock has expired.
-fn should_stop_targeting(
+pub(super) fn should_stop_targeting(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, Has<TargetLock>, Entity), With<Targeting>>,
 ) {

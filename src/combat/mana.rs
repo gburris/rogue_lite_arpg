@@ -20,6 +20,15 @@ impl Mana {
         self.current_mana >= cost.0
     }
 
+    /// Current mana as a `0.0..=1.0` fraction, or `None` for an invalid maximum.
+    pub fn fraction(&self) -> Option<f32> {
+        if self.max_mana.is_finite() && self.max_mana > 0.0 {
+            Some((self.current_mana / self.max_mana).clamp(0.0, 1.0))
+        } else {
+            None
+        }
+    }
+
     pub fn use_mana(&mut self, cost: &ManaCost) {
         self.current_mana = (self.current_mana - cost.0).max(0.0);
     }

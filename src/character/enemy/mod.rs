@@ -1,13 +1,12 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::{prelude::*, ui_widgets::observe};
-use bevy_behave::prelude::*;
 
 mod defeat;
 
 use crate::{
     character::{
         Character, Purse,
-        behavior::{Anchor, AttemptUseSlot, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
+        anchor::Anchor,
         physical_collider,
         vision::{VisionCapabilities, Watching},
     },
@@ -43,6 +42,16 @@ pub enum EnemyKind {
     Warrior,
     IceMage,
     FireMage,
+}
+
+impl EnemyKind {
+    /// Brain used by this enemy kind.
+    pub fn brain_kind(&self) -> BrainKind {
+        match self {
+            Self::Warrior => BrainKind::Warrior,
+            Self::IceMage | Self::FireMage => BrainKind::RangedMage,
+        }
+    }
 }
 
 //Experience granted by the enemy when player defeats it
@@ -87,73 +96,53 @@ fn spawn_enemy(
 ) {
     trace!("Spawning enemy at: {}", spawn_data.position);
 
-    let chase_behavior = behave! {
-        Behave::While => {
-            Behave::spawn_named("Chase", Chase),
-            Behave::trigger(AttemptUseSlot { slot: EquipmentSlot::Mainhand })
-        }
-    };
-
-    let melee_enemy_behavior = behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
-                    Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-                @chase_behavior
-            }
-        }
-    };
-
-    let ranged_enemy_behavior = behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
-                    Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-                Behave::spawn_named("Keep distance and fire", KeepDistanceAndFire)
-            }
-        }
-    };
-
+    let brain = spawn_data.enemy_kind.brain_kind();
     match spawn_data.enemy_kind {
-        EnemyKind::Warrior => spawn_enemy_with_equipment(
-            commands,
-            (
-                warrior(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(melee_enemy_behavior, shadows),
-            ),
-            sword(sprites),
-        ),
+        EnemyKind::Warrior => {
+            // Warriors drink the potion they already carry in their inventory
+            // once their flee opens safe distance.
+            spawn_enemy_with_equipment(
+                commands,
+                (
+                    warrior(sprites, sprite_layouts),
+                    base_enemy(spawn_data.position, player, brain),
+                    enemy_children(shadows),
+                ),
+                sword(sprites),
+            );
+        }
 
-        EnemyKind::IceMage => spawn_enemy_with_equipment(
-            commands,
-            (
-                ice_mage(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(ranged_enemy_behavior, shadows),
-            ),
-            ice_staff(sprites, sprite_layouts),
-        ),
+        EnemyKind::IceMage => {
+            spawn_enemy_with_equipment(
+                commands,
+                (
+                    ice_mage(sprites, sprite_layouts),
+                    base_enemy(spawn_data.position, player, brain),
+                    enemy_children(shadows),
+                ),
+                ice_staff(sprites, sprite_layouts),
+            );
+        }
 
-        EnemyKind::FireMage => spawn_enemy_with_equipment(
-            commands,
-            (
-                fire_mage(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(ranged_enemy_behavior, shadows),
-            ),
-            fire_staff(sprites, sprite_layouts),
-        ),
+        EnemyKind::FireMage => {
+            spawn_enemy_with_equipment(
+                commands,
+                (
+                    fire_mage(sprites, sprite_layouts),
+                    base_enemy(spawn_data.position, player, brain),
+                    enemy_children(shadows),
+                ),
+                fire_staff(sprites, sprite_layouts),
+            );
+        }
     }
 }
 
-fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainhand: impl Bundle) {
+fn spawn_enemy_with_equipment(
+    commands: &mut Commands,
+    enemy: impl Bundle,
+    mainhand: impl Bundle,
+) -> Entity {
     let enemy = commands.spawn(enemy).id();
 
     let mainhand = commands.spawn(mainhand).id();
@@ -162,13 +151,16 @@ fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainh
         item: mainhand,
         holder: enemy,
     });
+
+    enemy
 }
 
-fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
+fn base_enemy(position: Vec2, player: Entity, brain: BrainKind) -> impl Bundle {
     (
         Enemy,
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 8.0 * TILE_SIZE as f32),
+        brain,
         Mana::new(100.0, 10.0),
         // enemy vision distance
         RayCaster::default()
@@ -183,12 +175,11 @@ fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
     )
 }
 
-fn enemy_children(behavior: Tree<Behave>, shadows: &Shadows) -> impl Bundle {
+fn enemy_children(shadows: &Shadows) -> impl Bundle {
     children![
         shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
         physical_collider(),
         hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
-        BehaveTree::new(behavior.clone()),
     ]
 }
 

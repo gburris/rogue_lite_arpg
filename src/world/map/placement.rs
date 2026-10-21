@@ -131,22 +131,22 @@ pub fn place(
             count,
             x_deciles,
             separation,
-        } => place_random(
-            count,
+        } => Ok(place_random(
+            *count,
             *x_deciles,
             *separation,
             footprint,
             tiles,
             context,
             random_generator,
-        ),
+        )),
         PlaceRule::NearStructure {
             count,
             structure,
             radius,
             separation,
         } => place_near_structure(
-            count,
+            *count,
             structure,
             *radius,
             *separation,
@@ -155,9 +155,14 @@ pub fn place(
             context,
             random_generator,
         ),
-        PlaceRule::Edge { count, side } => {
-            place_edge(count, *side, footprint, tiles, context, random_generator)
-        }
+        PlaceRule::Edge { count, side } => Ok(place_edge(
+            *count,
+            *side,
+            footprint,
+            tiles,
+            context,
+            random_generator,
+        )),
     }
 }
 
@@ -202,14 +207,14 @@ fn place_fixed(
 }
 
 fn place_random(
-    count: &CountRange,
+    count: CountRange,
     x_deciles: (u32, u32),
     separation: u32,
     footprint: UVec2,
     tiles: &TileGrid,
     context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
-) -> Result<Vec<IVec2>, MapError> {
+) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
     let x_start = context.map_size.x * x_deciles.0 / 10;
     let x_end = context.map_size.x * x_deciles.1 / 10;
@@ -217,11 +222,11 @@ fn place_random(
         || context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)
     {
-        return Ok(Vec::new());
+        return Vec::new();
     }
     // Guarded above: `map_size.y - 1 >= 2`, so this range is non-empty.
     let y_end = context.map_size.y - 1;
-    Ok(scatter_footprints(
+    scatter_footprints(
         target_count,
         separation,
         footprint,
@@ -234,11 +239,11 @@ fn place_random(
                 random_generator.random_range(1..y_end) as i32,
             )
         },
-    ))
+    )
 }
 
 fn place_near_structure(
-    count: &CountRange,
+    count: CountRange,
     structure: &str,
     radius: u32,
     separation: u32,
@@ -275,18 +280,18 @@ fn place_near_structure(
 }
 
 fn place_edge(
-    count: &CountRange,
+    count: CountRange,
     side: Side,
     footprint: UVec2,
     tiles: &TileGrid,
     context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
-) -> Result<Vec<IVec2>, MapError> {
+) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
     let mut positions = Vec::new();
     let maximum_origin = context.map_size.as_ivec2() - IVec2::ONE - footprint.as_ivec2();
     if maximum_origin.x < 1 || maximum_origin.y < 1 {
-        return Ok(positions);
+        return positions;
     }
     let (candidate_start, candidate_end) = match side {
         Side::Left | Side::Right => (1, maximum_origin.y),
@@ -322,7 +327,7 @@ fn place_edge(
             positions.push(position);
         }
     }
-    Ok(positions)
+    positions
 }
 
 /// Retries sampled origins until `target_count` footprints are claimed or attempts run out.

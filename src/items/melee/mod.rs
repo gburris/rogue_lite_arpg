@@ -25,7 +25,10 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (swing::process_melee_attacks, end_melee_attacks)
+        (
+            swing::process_melee_attacks.before(crate::character::AiSet::Perception),
+            end_melee_attacks,
+        )
             .chain()
             .in_set(SimulationSystems::Logic),
     );

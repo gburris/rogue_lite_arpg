@@ -71,13 +71,22 @@ impl Default for Damage {
 pub struct HurtBox;
 
 pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
+    hurtbox_at(size, membership, HURTBOX_OFFSET)
+}
+
+/// Hurtbox with a custom vertical centre, for sheets whose body does not sit
+/// at the humanoid offset.
+pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> impl Bundle {
     (
         HurtBox,
         Collider::rectangle(size.x, size.y),
-        Transform::from_xyz(0.0, -8.0, 0.0),
+        Transform::from_xyz(0.0, y_offset, 0.0),
         CollisionLayers::new(membership, [GameCollisionLayer::HitBox]),
     )
 }
+
+/// Default hurtbox centre relative to the character transform.
+const HURTBOX_OFFSET: f32 = -8.0;
 
 #[derive(EntityEvent)]
 pub struct AttemptDamage {

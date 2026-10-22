@@ -4,7 +4,7 @@ mod map;
 mod portal;
 
 use bevy::prelude::*;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
@@ -43,6 +43,11 @@ impl MapRng {
     /// Advances the map stream and returns the next map seed.
     pub(crate) fn next_seed(&mut self) -> u64 {
         self.rng.next_u64()
+    }
+
+    /// Deterministic coin flip on the map stream for spawn-time variants.
+    pub(crate) fn flip(&mut self) -> bool {
+        self.rng.random_bool(0.5)
     }
 
     /// The root seed without advancing map generation.

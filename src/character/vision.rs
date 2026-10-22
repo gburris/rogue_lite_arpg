@@ -56,6 +56,8 @@ pub struct TargetInfo {
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
     pub direction: Vec2,
+    /// Intended world velocity of the observed entity.
+    pub target_velocity: Vec2,
     /// Whether the observed entity is within an unobstructed line of sight (based on `RayCaster`).
     pub line_of_sight: bool,
     /// Whether the observed entity is within the entity’s vision cone angle.
@@ -126,14 +128,14 @@ pub(super) fn update_target_info(
         ),
         Without<Player>,
     >,
-    target_query: Query<&Transform>,
+    target_query: Query<(&Transform, Option<&SimpleMotion>)>,
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, mut ray_caster, transform, watching, targeting)| {
             // Track distance and direction to target if there is one, otherwise track watching
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
-            if let Ok(target_transform) = target_query.get(target_entity) {
+            if let Ok((target_transform, target_motion)) = target_query.get(target_entity) {
                 let target_direction = (target_transform.translation.xy()
                     - transform.translation.xy())
                 .normalize_or_zero();
@@ -145,6 +147,8 @@ pub(super) fn update_target_info(
 
                 target_info.direction = target_direction;
                 target_info.distance = target_distance;
+                target_info.target_velocity =
+                    target_motion.map_or(Vec2::ZERO, |motion| motion.get_velocity());
 
                 ray_caster.direction = Dir2::new(target_direction).unwrap_or(Dir2::X);
             }

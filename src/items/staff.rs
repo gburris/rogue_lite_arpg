@@ -26,9 +26,65 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+/// Fraction of the standard fireball speed used by the fire mage's single-bolt staff.
+const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
+/// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
+const MAGE_FAN_SPEED_FACTOR: f32 = 0.2;
+
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Staff of Flames"),
+        flame_staff_core(sprites),
+        related!(
+            Projectiles [
+                fireball(sprites, sprite_layouts, -FRAC_PI_8),
+                fireball(sprites, sprite_layouts, 0.0),
+                fireball(sprites, sprite_layouts, FRAC_PI_8)
+            ]
+        ),
+    )
+}
+
+/// Fire-mage staff variant that fires a single bolt at 70% of the standard speed.
+pub fn mage_fire_staff_single_bolt(
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+) -> impl Bundle {
+    (
+        Name::new("Staff of Flames"),
+        flame_staff_core(sprites),
+        Projectiles::spawn_one(fireball_with_speed(
+            sprites,
+            sprite_layouts,
+            0.0,
+            FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR,
+        )),
+    )
+}
+
+/// Fire-mage staff variant that fires the full three-bolt fan at 20% of the standard speed.
+pub fn mage_fire_staff_fan(
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+) -> impl Bundle {
+    let fan_speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
+
+    (
+        Name::new("Staff of Wildfire"),
+        flame_staff_core(sprites),
+        related!(
+            Projectiles [
+                fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, fan_speed),
+                fireball_with_speed(sprites, sprite_layouts, 0.0, fan_speed),
+                fireball_with_speed(sprites, sprite_layouts, FRAC_PI_8, fan_speed)
+            ]
+        ),
+    )
+}
+
+/// Shared layout, item data, sprite, and cast observers for every flame staff.
+fn flame_staff_core(sprites: &SpriteAssets) -> impl Bundle {
+    (
         Staff {
             source_offset: Vec2::new(0.0, 26.0),
             fire_time: 0.1,
@@ -38,13 +94,6 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
         Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_TRANSFORMS),
         ManaCost(6.0),
         Sprite::from_image(sprites.fire_staff.clone()),
-        related!(
-            Projectiles [
-                fireball(sprites, sprite_layouts, -FRAC_PI_8),
-                fireball(sprites, sprite_layouts, 0.0),
-                fireball(sprites, sprite_layouts, FRAC_PI_8)
-            ]
-        ),
         observe(on_start_staff),
         observe(on_stop_staff),
     )

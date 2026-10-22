@@ -104,6 +104,8 @@ pub struct SpriteAssets {
     pub warrior_enemy_sprite_sheet: Handle<Image>,
     #[asset(path = "enemies/fire_mage_enemy.png")]
     pub fire_mage_enemy_sprite_sheet: Handle<Image>,
+    #[asset(path = "enemies/bat.png")]
+    pub bat_enemy_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/shop_keeper.png")]
     pub shop_keeper_sprite_sheet: Handle<Image>,
     #[asset(path = "npcs/game_guide.png")]

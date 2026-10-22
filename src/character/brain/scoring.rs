@@ -1,32 +1,15 @@
-//! Scoring math for the utility brains.
-//!
-//! [`select_best`] picks the winning option, [`score_option`] prices one
-//! option, and [`decide`] produces a full [`BrainDecision`] for a tick.
-//! [`validate_brain`] rejects malformed definitions at startup, before they
-//! can silently produce nonsense.
-//!
-//! Arbitration is two-level, reasoner-style: [`decide`] first scores each
-//! [`BehaviorGroup`] on pure merit and only then picks the best option inside
-//! the winning group. Groups never compete on tuned priorities, so calm
-//! stickiness cannot suppress a reactive move.
+//! Scoring math for the utility brains. [`decide`] prices every option,
+//! arbitration is two-level: groups compete on merit before options compete
+//! within the winning group, so calm stickiness cannot suppress a reactive move.
 
 use super::model::{
-    BehaviorGroup, Brain, BrainDecision, Consideration, DecisionContext, MotionMode, ScoredOption,
+    BandEdge, BehaviorGroup, Brain, BrainDecision, CommitWindow, Consideration, DecisionContext,
+    Gate, MotionMode, ScoredOption,
 };
 use crate::items::prelude::EquipmentSlot;
 
-/// Flat score bonus for staying in the current mode while its commitment lasts.
-///
-/// The bonus only breaks ties *within* the already-winning group: groups
-/// are arbitrated on bonus-free merit first, so a committed calm mode can
-/// never outbid a reactive move. For shipped brains the passive group never
-/// fields two live options at once (the calm phase admits exactly one), which
-/// keeps idle/wander alternation crisp without dithering.
-const COMMITMENT_BONUS: f32 = 2.0;
-
-/// Selects the best option index. Options scoring zero or lower are not
-/// selectable, and ties go to the first definition because comparison is strict
-/// (`>`).
+/// Selects the best option index. Zero or negative scores are not selectable;
+/// ties go to the first definition.
 pub fn select_best<T>(
     options: &[ScoredOption<T>],
     ctx: &DecisionContext,
@@ -63,7 +46,7 @@ fn select_best_where<T>(
     best.map(|(index, _)| index)
 }
 
-/// Final bounded score for one option, including commitment stickiness.
+/// Final bounded score for one option. Gates use exit thresholds when current.
 pub fn score_option<T>(
     option: &ScoredOption<T>,
     ctx: &DecisionContext,
@@ -73,16 +56,54 @@ pub fn score_option<T>(
         return None;
     }
 
-    let mut score = option.priority;
-    for consideration in option.considerations {
-        score *= score_consideration(consideration, ctx)?;
+    for gate in option.gates {
+        if !pass_gate(gate, ctx, is_current) {
+            return None;
+        }
     }
 
-    if is_current && ctx.within_commitment && score > 0.0 {
-        score += COMMITMENT_BONUS;
+    // IAUS compensation: the geometric mean over considerations keeps options
+    // with different consideration counts on a comparable scale, while a zero
+    // anywhere still vetoes. Options without considerations score priority.
+    let mut product = 1.0;
+    let mut count = 0;
+    for consideration in option.considerations {
+        product *= score_consideration(consideration, ctx)?;
+        count += 1;
+    }
+    let mut score = option.priority;
+    if count > 0 {
+        score *= product.powf(1.0 / (count as f32));
     }
 
     (score.is_finite() && score >= 0.0).then_some(score)
+}
+
+fn pass_gate(gate: &Gate, ctx: &DecisionContext, is_current: bool) -> bool {
+    let Some(distance) = ctx.target.map(|target| target.distance) else {
+        return true;
+    };
+    let Some(band) = ctx.strafe_band else {
+        return true;
+    };
+    if !distance.is_finite() {
+        return false;
+    }
+    let edge = match gate.edge {
+        BandEdge::Min => band.min(),
+        BandEdge::Max => band.max(),
+    };
+    let offset = distance - edge;
+    let threshold = if is_current {
+        gate.exit_offset
+    } else {
+        gate.enter_offset
+    };
+    if gate.exit_offset < gate.enter_offset {
+        offset >= threshold
+    } else {
+        offset <= threshold
+    }
 }
 
 /// Whether the brain wants to use the item in `slot` this tick.
@@ -97,6 +118,7 @@ pub fn decide(brain: &Brain, ctx: &DecisionContext, current: MotionMode) -> Brai
         slot_intents[slot as usize] = choose_slot(brain, slot, ctx);
     }
     let wants_heal = select_best(brain.heal_options, ctx, None).is_some();
+    let wants_breathe = select_best(brain.breath_options, ctx, None).is_some();
 
     let current_index = brain
         .motion_options
@@ -115,7 +137,7 @@ pub fn decide(brain: &Brain, ctx: &DecisionContext, current: MotionMode) -> Brai
     let selected = if keep_returning {
         current_index.and_then(|index| brain.motion_options.get(index))
     } else {
-        let group = pick_group(brain.motion_options, ctx);
+        let group = pick_group(brain.motion_options, ctx, current_index);
         select_best_where(brain.motion_options, ctx, current_index, |mode| {
             mode.group() == group
         })
@@ -124,27 +146,27 @@ pub fn decide(brain: &Brain, ctx: &DecisionContext, current: MotionMode) -> Brai
 
     BrainDecision {
         motion: selected.map_or(current, |option| option.value),
-        commit: selected.and_then(|option| option.commit),
         slot_intents,
         wants_heal,
+        wants_breathe,
     }
 }
 
-/// Picks the winning behavior group on bonus-free merit. Structural order
-/// breaks ties — a live target always means [`BehaviorGroup::Aggro`] — and an
-/// empty field defaults to [`BehaviorGroup::Passive`], which hands control back to
-/// the current mode downstream when nothing scores.
-fn pick_group(options: &[ScoredOption<MotionMode>], ctx: &DecisionContext) -> BehaviorGroup {
+fn pick_group(
+    options: &[ScoredOption<MotionMode>],
+    ctx: &DecisionContext,
+    current: Option<usize>,
+) -> BehaviorGroup {
     let mut scores = [
         (BehaviorGroup::Aggro, 0.0f32),
         (BehaviorGroup::Return, 0.0f32),
         (BehaviorGroup::Passive, 0.0f32),
     ];
-    for option in options {
+    for (index, option) in options.iter().enumerate() {
         if let Some(entry) = scores
             .iter_mut()
             .find(|(group, _)| *group == option.value.group())
-            && let Some(score) = score_option(option, ctx, false)
+            && let Some(score) = score_option(option, ctx, current == Some(index))
         {
             entry.1 = entry.1.max(score);
         }
@@ -159,6 +181,91 @@ fn pick_group(options: &[ScoredOption<MotionMode>], ctx: &DecisionContext) -> Be
         }
     }
     winner
+}
+
+pub(crate) const MIN_DWELL_SECS: f32 = 0.3;
+pub(crate) const CHALLENGER_MARGIN: f32 = 0.25;
+
+/// Temporal arbiter over the memoryless [`decide`] proposal. Group changes go
+/// through at once; only moves within the winning group face the dwell and
+/// the challenger margin. Ineligible incumbents never hold.
+pub fn arbitrate(
+    current: MotionMode,
+    proposed: MotionMode,
+    current_score: Option<f32>,
+    proposed_score: Option<f32>,
+    dwell_remaining: f32,
+) -> MotionMode {
+    if proposed == current {
+        return current;
+    }
+    if proposed.group() != current.group() {
+        return proposed;
+    }
+    // A called swoop, kite break, fire burst, or ice slide is a committed move,
+    // not a sustained mode: it ends itself by clearing its call latch and the
+    // lottery (or the swing) spaces attempts, so it cannot flicker. Holding it
+    // for the intra-group dwell would only burn the call while boundary churn
+    // keeps the dwell fresh.
+    if proposed.is_commitment() && proposed_score.is_some_and(|score| score > 0.0) {
+        return proposed;
+    }
+    let Some(current_score) = current_score.filter(|score| *score > 0.0) else {
+        return proposed;
+    };
+    let Some(proposed_score) = proposed_score.filter(|score| *score > 0.0) else {
+        return current;
+    };
+    if dwell_remaining > 0.0 {
+        return current;
+    }
+    if proposed_score > current_score + CHALLENGER_MARGIN {
+        proposed
+    } else {
+        current
+    }
+}
+
+/// Runs one scored tick and lets the arbiter accept or reject the proposal.
+pub fn decide_with_arbiter(
+    brain: &Brain,
+    ctx: &DecisionContext,
+    current: MotionMode,
+    dwell_remaining: f32,
+) -> (BrainDecision, MotionMode) {
+    let decision = decide(brain, ctx, current);
+    let current_score = score_mode(brain, ctx, current, true);
+    let proposed_score = score_mode(brain, ctx, decision.motion, false);
+    let accepted = arbitrate(
+        current,
+        decision.motion,
+        current_score,
+        proposed_score,
+        dwell_remaining,
+    );
+    (decision, accepted)
+}
+
+fn score_mode(
+    brain: &Brain,
+    ctx: &DecisionContext,
+    mode: MotionMode,
+    is_current: bool,
+) -> Option<f32> {
+    brain
+        .motion_options
+        .iter()
+        .find(|option| option.value == mode)
+        .and_then(|option| score_option(option, ctx, is_current))
+}
+
+/// Commit window of the option driving `mode`, if any.
+pub fn commit_for(brain: &Brain, mode: MotionMode) -> Option<CommitWindow> {
+    brain
+        .motion_options
+        .iter()
+        .find(|option| option.value == mode)
+        .and_then(|option| option.commit)
 }
 
 /// Rejects malformed brains before they can silently produce nonsense.
@@ -186,8 +293,11 @@ pub fn validate_brain(brain: &Brain) -> Result<(), String> {
         }
     }
     for (option_index, option) in brain.heal_options.iter().enumerate() {
+        validate_option(option).map_err(|error| format!("heal option {option_index}: {error}"))?;
+    }
+    for (option_index, option) in brain.breath_options.iter().enumerate() {
         validate_option(option)
-            .map_err(|error| format!("heal option {option_index}: {error}"))?;
+            .map_err(|error| format!("breath option {option_index}: {error}"))?;
     }
 
     Ok(())
@@ -199,21 +309,36 @@ fn validate_option<T>(option: &ScoredOption<T>) -> Result<(), String> {
     }
 
     if let Some(window) = option.commit
-        && (!window.min.is_finite()
-            || !window.max.is_finite()
-            || window.min < 0.0
-            || window.max < 0.0
-            || window.min > window.max)
+        && (!window.min().is_finite()
+            || !window.max().is_finite()
+            || window.min() < 0.0
+            || window.max() < 0.0
+            || window.min() > window.max())
     {
         return Err("commit bounds must be finite, non-negative, and ordered".to_string());
     }
 
     for consideration in option.considerations {
-        let (min, max) = consideration.range;
-        if !min.is_finite() || !max.is_finite() || min >= max {
+        let range = consideration.range;
+        if !range.min().is_finite() || !range.max().is_finite() || range.min() >= range.max() {
             return Err(format!(
                 "consideration '{}' has an invalid range",
                 consideration.name
+            ));
+        }
+    }
+
+    for gate in option.gates {
+        if !gate.enter_offset.is_finite() || !gate.exit_offset.is_finite() {
+            return Err(format!(
+                "gate '{}' needs finite enter/exit offsets",
+                gate.name
+            ));
+        }
+        if (gate.enter_offset - gate.exit_offset).abs() <= f32::EPSILON {
+            return Err(format!(
+                "gate '{}' needs distinct enter/exit offsets",
+                gate.name
             ));
         }
     }
@@ -222,8 +347,8 @@ fn validate_option<T>(option: &ScoredOption<T>) -> Result<(), String> {
 }
 
 fn validate_motion(motion: MotionMode) -> Result<(), String> {
-    if let MotionMode::KeepDistance { min, max } = motion
-        && (!min.is_finite() || !max.is_finite() || min >= max)
+    if let MotionMode::KeepDistance(band) = motion
+        && (!band.min().is_finite() || !band.max().is_finite() || band.min() >= band.max())
     {
         return Err("KeepDistance requires finite min < max".to_string());
     }
@@ -257,27 +382,19 @@ fn score_consideration(consideration: &Consideration, ctx: &DecisionContext) -> 
 }
 
 fn normalize_raw(consideration: &Consideration, raw: f32) -> Option<f32> {
-    if !raw.is_finite() {
-        return None;
-    }
-
-    let (min, max) = consideration.range;
-    if !min.is_finite() || !max.is_finite() || min >= max {
-        return None;
-    }
-
-    let normalized = ((raw - min) / (max - min)).clamp(0.0, 1.0);
-    if !normalized.is_finite() {
-        return None;
-    }
-
-    consideration.curve.apply(normalized)
+    let normalized = consideration.range.normalize(raw)?;
+    Some(consideration.curve.apply(normalized))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::brains::{RANGED_MAGE, VILLAGER, WARRIOR};
-    use super::super::model::{HEAL_SAFE_DISTANCE, MAGE_MAX_RANGE, MAGE_MIN_RANGE, MELEE_RANGE, TargetView};
+    use bevy::prelude::Vec2;
+
+    use super::super::brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
+    use super::super::considerations::{HAS_TARGET, MAINHAND_READY};
+    use super::super::model::{
+        CAST_BAND, CAST_CORE_BAND, HEAL_SAFE_DISTANCE, MELEE_BAND, TargetView,
+    };
     use super::*;
 
     fn context() -> DecisionContext {
@@ -294,6 +411,9 @@ mod tests {
         TargetView {
             distance,
             line_of_sight: true,
+            bearing: Vec2::X,
+            velocity: Vec2::ZERO,
+            tangential_velocity: 0.0,
         }
     }
 
@@ -301,6 +421,16 @@ mod tests {
         DecisionContext {
             target: Some(visible_target(30.0)),
             slot_ready: mainhand_ready(),
+            strafe_band: Some(MELEE_BAND),
+            ..context()
+        }
+    }
+
+    fn mage_context(distance: f32) -> DecisionContext {
+        DecisionContext {
+            target: Some(visible_target(distance)),
+            slot_ready: mainhand_ready(),
+            strafe_band: Some(CAST_BAND),
             ..context()
         }
     }
@@ -316,11 +446,11 @@ mod tests {
     }
 
     #[test]
-    fn warrior_in_reach_strafes_and_requests_mainhand() {
+    fn warrior_in_reach_holds_and_requests_mainhand() {
         let ctx = warrior_context();
         let decision = decide(&WARRIOR, &ctx, MotionMode::Chase);
 
-        assert_eq!(decision.motion, MotionMode::Strafe);
+        assert_eq!(decision.motion, MotionMode::KeepDistance(MELEE_BAND));
         assert!(decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
@@ -344,13 +474,7 @@ mod tests {
         };
         let decision = decide(&WARRIOR, &ctx, MotionMode::Idle);
 
-        assert_eq!(
-            decision.motion,
-            MotionMode::KeepDistance {
-                min: 0.0,
-                max: MELEE_RANGE
-            }
-        );
+        assert_eq!(decision.motion, MotionMode::KeepDistance(MELEE_BAND));
         assert!(!decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
@@ -362,7 +486,7 @@ mod tests {
             health_fraction: 0.1,
             anchor_overshoot_fraction: Some(0.0),
             anchor_arrived: Some(false),
-            ..context()
+            ..warrior_context()
         };
         let decision = decide(&WARRIOR, &fleeing, MotionMode::Chase);
         assert_eq!(decision.motion, MotionMode::Flee);
@@ -373,58 +497,105 @@ mod tests {
             ..fleeing
         };
         let decision = decide(&WARRIOR, &scratched, MotionMode::Chase);
-        assert_eq!(decision.motion, MotionMode::Strafe);
+        assert_eq!(decision.motion, MotionMode::KeepDistance(MELEE_BAND));
     }
 
     #[test]
-    fn mage_strafes_while_ready_and_fires() {
-        let ctx = DecisionContext {
-            target: Some(visible_target(250.0)),
-            slot_ready: mainhand_ready(),
-            ..context()
-        };
-        let decision = decide(&RANGED_MAGE, &ctx, MotionMode::Idle);
+    fn fire_mage_orbits_and_fires() {
+        let ctx = mage_context(250.0);
+        let decision = decide(&FIRE_MAGE, &ctx, MotionMode::Idle);
 
         assert_eq!(decision.motion, MotionMode::Strafe);
         assert!(decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
     #[test]
-    fn mage_holds_range_while_cooling_down() {
+    fn ice_mage_plants_while_cooling_down() {
+        // Readiness gates the trigger finger, never the stance: the cooldown
+        // must not make the planted ice mage twitch on its firing lane.
         let ctx = DecisionContext {
-            target: Some(visible_target(250.0)),
             slot_ready: [false; EquipmentSlot::ALL.len()],
-            ..context()
+            ..mage_context(250.0)
         };
-        let decision = decide(&RANGED_MAGE, &ctx, MotionMode::Strafe);
+        let decision = decide(&ICE_MAGE, &ctx, MotionMode::Hold);
 
-        assert_eq!(
-            decision.motion,
-            MotionMode::KeepDistance {
-                min: MAGE_MIN_RANGE,
-                max: MAGE_MAX_RANGE
-            }
-        );
+        assert_eq!(decision.motion, MotionMode::Hold);
         assert!(!decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
     #[test]
-    fn mage_chases_beyond_its_band() {
-        let ctx = DecisionContext {
-            target: Some(visible_target(MAGE_MAX_RANGE + 50.0)),
-            slot_ready: mainhand_ready(),
+    fn both_mages_chase_beyond_their_band() {
+        let ctx = mage_context(CAST_BAND.max() + 50.0);
+        for brain in [&FIRE_MAGE, &ICE_MAGE] {
+            let decision = decide(brain, &ctx, MotionMode::KeepDistance(CAST_BAND));
+            assert_eq!(decision.motion, MotionMode::Chase);
+        }
+    }
+
+    #[test]
+    fn bat_strafes_in_band_and_breathes() {
+        let in_band = DecisionContext {
+            target: Some(visible_target(CAST_BAND.max() - 50.0)),
+            strafe_band: Some(CAST_BAND),
             ..context()
         };
-        let decision = decide(
-            &RANGED_MAGE,
-            &ctx,
-            MotionMode::KeepDistance {
-                min: MAGE_MIN_RANGE,
-                max: MAGE_MAX_RANGE,
-            },
-        );
+        let decision = decide(&BAT, &in_band, MotionMode::Idle);
+        assert_eq!(decision.motion, MotionMode::Strafe);
+        assert!(decision.wants_breathe);
 
+        let too_far = DecisionContext {
+            target: Some(visible_target(CAST_BAND.max() + 50.0)),
+            ..in_band
+        };
+        let decision = decide(&BAT, &too_far, MotionMode::Strafe);
         assert_eq!(decision.motion, MotionMode::Chase);
+        assert!(!decision.wants_breathe);
+
+        let too_close = DecisionContext {
+            target: Some(visible_target(CAST_BAND.min() - 50.0)),
+            ..in_band
+        };
+        let decision = decide(&BAT, &too_close, MotionMode::Idle);
+        assert_eq!(decision.motion, MotionMode::KeepDistance(CAST_CORE_BAND));
+    }
+
+    #[test]
+    fn bat_swoops_only_when_called() {
+        let circling = DecisionContext {
+            target: Some(visible_target(CAST_BAND.max() - 50.0)),
+            strafe_band: Some(CAST_BAND),
+            swoop_called: true,
+            ..context()
+        };
+        assert_eq!(
+            decide(&BAT, &circling, MotionMode::Strafe).motion,
+            MotionMode::Swoop
+        );
+        // No call, no dive: the circle holds.
+        let uncalled = DecisionContext {
+            swoop_called: false,
+            ..circling
+        };
+        assert_eq!(
+            decide(&BAT, &uncalled, MotionMode::Strafe).motion,
+            MotionMode::Strafe
+        );
+        // A cleared call (the dive ended) hands an incumbent dive back at
+        // once instead of re-firing on a stale latch.
+        assert_eq!(
+            decide(&BAT, &uncalled, MotionMode::Swoop).motion,
+            MotionMode::Strafe
+        );
+        // A called dive stays eligible as it closes past the inner band edge:
+        // gating it by band distance would cancel the dive mid-flight.
+        let closed_in = DecisionContext {
+            target: Some(visible_target(CAST_BAND.min() - 100.0)),
+            ..circling
+        };
+        assert_eq!(
+            decide(&BAT, &closed_in, MotionMode::Swoop).motion,
+            MotionMode::Swoop
+        );
     }
 
     #[test]
@@ -433,13 +604,17 @@ mod tests {
             target: Some(TargetView {
                 distance: 250.0,
                 line_of_sight: false,
+                bearing: Vec2::X,
+                velocity: Vec2::ZERO,
+                tangential_velocity: 0.0,
             }),
             slot_ready: mainhand_ready(),
             ..context()
         };
-        let decision = decide(&RANGED_MAGE, &ctx, MotionMode::Idle);
-
-        assert!(!decision.slot_intents[EquipmentSlot::Mainhand as usize]);
+        for brain in [&FIRE_MAGE, &ICE_MAGE] {
+            let decision = decide(brain, &ctx, MotionMode::Idle);
+            assert!(!decision.slot_intents[EquipmentSlot::Mainhand as usize]);
+        }
     }
     #[test]
     fn villager_calm_phase_and_anchor_choose_expected_modes() {
@@ -506,9 +681,8 @@ mod tests {
 
         let contact = DecisionContext {
             target: Some(visible_target(120.0)),
-            slot_ready: mainhand_ready(),
             anchor_arrived: Some(false),
-            ..context()
+            ..warrior_context()
         };
         assert_eq!(
             decide(&WARRIOR, &contact, MotionMode::ReturnToAnchor).motion,
@@ -517,96 +691,32 @@ mod tests {
     }
 
     #[test]
-    fn committed_calm_does_not_delay_return() {
-        let ctx = DecisionContext {
-            calm_phase: MotionMode::Wander,
-            anchor_overshoot_fraction: Some(0.3),
-            anchor_arrived: Some(false),
-            within_commitment: true,
-            ..context()
-        };
-        assert_eq!(
-            decide(&VILLAGER, &ctx, MotionMode::Wander).motion,
-            MotionMode::ReturnToAnchor
-        );
-    }
-
-    #[test]
-    fn commitment_breaks_a_marginal_score_difference() {
-        static STICKY_MOTION: &[ScoredOption<MotionMode>] = &[
-            ScoredOption {
-                value: MotionMode::Idle,
-                priority: 0.5,
-                commit: None,
-                considerations: &[],
-            },
-            ScoredOption {
-                value: MotionMode::Wander,
-                priority: 0.6,
-                commit: None,
-                considerations: &[],
-            },
-        ];
-        static STICKY: Brain = Brain {
-            motion_options: STICKY_MOTION,
-            slot_options: super::super::brains::NO_SLOTS,
-            heal_options: &[],
-        };
-
-        let committed = DecisionContext {
-            within_commitment: true,
-            ..context()
-        };
-        assert_eq!(
-            decide(&STICKY, &committed, MotionMode::Idle).motion,
-            MotionMode::Idle
-        );
-        assert_eq!(
-            decide(&STICKY, &context(), MotionMode::Idle).motion,
-            MotionMode::Wander
-        );
-    }
-
-    #[test]
     fn anchorless_warrior_still_flees() {
         // Fleeing is about the target, not home: no anchor needed.
         let hurt = DecisionContext {
-            target: Some(visible_target(30.0)),
-            slot_ready: mainhand_ready(),
             health_fraction: 0.1,
-            ..context()
+            ..warrior_context()
         };
         let decision = decide(&WARRIOR, &hurt, MotionMode::Chase);
         assert_eq!(decision.motion, MotionMode::Flee);
     }
 
     #[test]
-    fn warrior_strafes_while_sword_ready() {
-        let ctx = DecisionContext {
-            target: Some(visible_target(30.0)),
-            slot_ready: mainhand_ready(),
-            ..context()
-        };
+    fn warrior_holds_reach_while_sword_ready() {
+        let ctx = warrior_context();
         let decision = decide(&WARRIOR, &ctx, MotionMode::Idle);
-        assert_eq!(decision.motion, MotionMode::Strafe);
+        assert_eq!(decision.motion, MotionMode::KeepDistance(MELEE_BAND));
         assert!(decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
     #[test]
     fn warrior_holds_while_sword_cooling() {
         let ctx = DecisionContext {
-            target: Some(visible_target(30.0)),
             slot_ready: [false; EquipmentSlot::ALL.len()],
-            ..context()
+            ..warrior_context()
         };
-        let decision = decide(&WARRIOR, &ctx, MotionMode::Strafe);
-        assert_eq!(
-            decision.motion,
-            MotionMode::KeepDistance {
-                min: 0.0,
-                max: MELEE_RANGE
-            }
-        );
+        let decision = decide(&WARRIOR, &ctx, MotionMode::KeepDistance(MELEE_BAND));
+        assert_eq!(decision.motion, MotionMode::KeepDistance(MELEE_BAND));
         assert!(!decision.slot_intents[EquipmentSlot::Mainhand as usize]);
     }
 
@@ -637,5 +747,180 @@ mod tests {
         };
         let decision = decide(&WARRIOR, &healthy, MotionMode::Idle);
         assert!(!decision.wants_heal);
+    }
+
+    const TEST_MELEE_HOLD_GATE: Gate = Gate::new("inside melee edge", BandEdge::Max, 0.0, 4.0);
+
+    /// No chase option: group scoring has to keep the incumbent's aggro group
+    /// alive while it sits inside its stay band but outside its enter band.
+    static STRAFE_KEEP_ONLY: &[ScoredOption<MotionMode>] = &[
+        ScoredOption {
+            value: MotionMode::Strafe,
+            priority: 5.5,
+            commit: None,
+            considerations: &[HAS_TARGET, MAINHAND_READY],
+            gates: &[TEST_MELEE_HOLD_GATE],
+        },
+        ScoredOption {
+            value: MotionMode::KeepDistance(MELEE_BAND),
+            priority: 5.0,
+            commit: None,
+            considerations: &[HAS_TARGET],
+            gates: &[TEST_MELEE_HOLD_GATE],
+        },
+    ];
+
+    #[test]
+    fn group_scoring_keeps_an_incumbent_inside_its_stay_band() {
+        let ctx = DecisionContext {
+            target: Some(visible_target(66.0)),
+            slot_ready: mainhand_ready(),
+            strafe_band: Some(MELEE_BAND),
+            ..context()
+        };
+
+        // 66 is past the 64 px enter edge but inside the keeper's 68 px exit.
+        assert_eq!(
+            pick_group(STRAFE_KEEP_ONLY, &ctx, Some(1)),
+            BehaviorGroup::Aggro
+        );
+        // As a challenger neither option can enter, so there is no merit.
+        assert_eq!(
+            pick_group(STRAFE_KEEP_ONLY, &ctx, None),
+            BehaviorGroup::Passive
+        );
+    }
+
+    #[test]
+    fn approach_and_hold_share_the_melee_deadband() {
+        let near_edge = DecisionContext {
+            target: Some(visible_target(66.0)),
+            ..warrior_context()
+        };
+        let keeper = MotionMode::KeepDistance(MELEE_BAND);
+
+        // Whichever option reaches the shared band first persists in it.
+        assert_eq!(
+            decide_with_arbiter(&WARRIOR, &near_edge, MotionMode::Chase, 0.0).1,
+            MotionMode::Chase
+        );
+        assert_eq!(
+            decide_with_arbiter(&WARRIOR, &near_edge, keeper, 0.0).1,
+            keeper
+        );
+
+        // Past the exit edge the approach option takes over.
+        let beyond = DecisionContext {
+            target: Some(visible_target(69.0)),
+            ..near_edge
+        };
+        assert_eq!(
+            decide_with_arbiter(&WARRIOR, &beyond, keeper, 0.0).1,
+            MotionMode::Chase
+        );
+    }
+
+    #[test]
+    fn approach_and_hold_share_the_cast_deadband() {
+        let near_edge = DecisionContext {
+            target: Some(visible_target(CAST_BAND.max() - 1.0)),
+            strafe_band: Some(CAST_BAND),
+            ..context()
+        };
+
+        assert_eq!(
+            decide_with_arbiter(&BAT, &near_edge, MotionMode::Chase, 0.0).1,
+            MotionMode::Chase
+        );
+        assert_eq!(
+            decide_with_arbiter(&BAT, &near_edge, MotionMode::Strafe, 0.0).1,
+            MotionMode::Strafe
+        );
+
+        let beyond = DecisionContext {
+            target: Some(visible_target(CAST_BAND.max() + 6.0)),
+            ..near_edge
+        };
+        assert_eq!(
+            decide_with_arbiter(&BAT, &beyond, MotionMode::Strafe, 0.0).1,
+            MotionMode::Chase
+        );
+    }
+
+    #[test]
+    fn ice_mage_holds_its_lane_inside_the_band() {
+        let planted = MotionMode::Hold;
+
+        // Inside the inner edge, at the edge, and near the outer edge the ice
+        // mage keeps its firing stance instead of switching into an orbit.
+        let (_, held) = decide_with_arbiter(&ICE_MAGE, &mage_context(200.0), planted, 0.0);
+        assert_eq!(held, planted);
+        let (_, still_held) = decide_with_arbiter(&ICE_MAGE, &mage_context(220.0), held, 0.0);
+        assert_eq!(still_held, planted);
+        let (_, at_outer_edge) =
+            decide_with_arbiter(&ICE_MAGE, &mage_context(350.0), still_held, 0.0);
+        assert_eq!(at_outer_edge, planted);
+    }
+
+    #[test]
+    fn arbiter_holds_during_the_dwell() {
+        let keeper = MotionMode::KeepDistance(CAST_CORE_BAND);
+        assert_eq!(
+            arbitrate(MotionMode::Strafe, keeper, Some(5.5), Some(9.0), 0.1),
+            MotionMode::Strafe
+        );
+    }
+    #[test]
+    fn arbiter_releases_a_called_swoop_through_the_dwell() {
+        assert_eq!(
+            arbitrate(
+                MotionMode::Strafe,
+                MotionMode::Swoop,
+                Some(5.5),
+                Some(6.0),
+                0.2
+            ),
+            MotionMode::Swoop
+        );
+    }
+
+    #[test]
+    fn arbiter_ignores_a_zero_score_incumbent() {
+        let keeper = MotionMode::KeepDistance(CAST_CORE_BAND);
+        assert_eq!(
+            arbitrate(keeper, MotionMode::Strafe, Some(0.0), Some(5.5), 1.0),
+            MotionMode::Strafe
+        );
+        assert_eq!(
+            arbitrate(keeper, MotionMode::Strafe, None, Some(5.5), 1.0),
+            MotionMode::Strafe
+        );
+    }
+
+    #[test]
+    fn arbiter_requires_a_real_margin() {
+        let keeper = MotionMode::KeepDistance(CAST_CORE_BAND);
+        assert_eq!(
+            arbitrate(keeper, MotionMode::Strafe, Some(5.0), Some(5.2), 0.0),
+            keeper
+        );
+        assert_eq!(
+            arbitrate(keeper, MotionMode::Strafe, Some(5.0), Some(5.3), 0.0),
+            MotionMode::Strafe
+        );
+    }
+
+    #[test]
+    fn arbiter_accepts_group_changes_immediately() {
+        assert_eq!(
+            arbitrate(
+                MotionMode::Idle,
+                MotionMode::Chase,
+                Some(0.0),
+                Some(1.0),
+                10.0
+            ),
+            MotionMode::Chase
+        );
     }
 }

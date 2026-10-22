@@ -329,6 +329,7 @@ enum EnemyPick {
     Warrior,
     IceMage,
     FireMage,
+    Bat,
     Random,
 }
 
@@ -338,11 +339,11 @@ impl EnemyPick {
             Self::Warrior => EnemyKind::Warrior,
             Self::IceMage => EnemyKind::IceMage,
             Self::FireMage => EnemyKind::FireMage,
-            Self::Random => match random_generator.random_range(0..3) {
-                0 => EnemyKind::Warrior,
-                1 => EnemyKind::IceMage,
-                _ => EnemyKind::FireMage,
-            },
+            Self::Bat => EnemyKind::Bat,
+            Self::Random => {
+                let index = random_generator.random_range(0..EnemyKind::ALL.len());
+                EnemyKind::ALL[index]
+            }
         }
     }
 }

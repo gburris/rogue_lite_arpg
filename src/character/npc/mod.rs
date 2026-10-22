@@ -2,6 +2,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod interaction;
 
+use super::brain::Wander;
 use crate::{
     character::{Character, anchor::Anchor, physical_collider},
     prelude::*,
@@ -116,6 +117,7 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: BrainKind) -> impl B
     (
         NPC,
         brain,
+        Wander::new(1.0, 2.5),
         Anchor::new(spawn_position, WANDER_RADIUS),
         SimpleMotion::new(100.0),
         Health::new(1000.0),

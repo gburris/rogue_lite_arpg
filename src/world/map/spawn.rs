@@ -234,7 +234,7 @@ fn spawn_placements(
             PlacementKind::Enemy(enemy_kind) => {
                 enemies.push(EnemySpawnData {
                     position: world_spawn_position,
-                    enemy_kind: enemy_kind.clone(),
+                    enemy_kind: *enemy_kind,
                 });
             }
             PlacementKind::Npc(npc_kind) => {

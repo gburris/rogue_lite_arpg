@@ -7,30 +7,99 @@
 //! the math, [`super::considerations`] holds what brains can sense, and
 //! [`super::brains`] holds the shipped definitions.
 
+use bevy::prelude::Vec2;
+
 use crate::items::prelude::EquipmentSlot;
 
 /// Distance at which a melee brain considers a target to be in reach.
 pub const MELEE_RANGE: f32 = 64.0;
-/// Preferred minimum distance a ranged brain keeps from its target.
-pub const MAGE_MIN_RANGE: f32 = 200.0;
-/// Preferred maximum distance a ranged brain keeps from its target.
-pub const MAGE_MAX_RANGE: f32 = 300.0;
+/// Preferred minimum distance a ranged or flying brain keeps from its target.
+pub const CAST_MIN_RANGE: f32 = 200.0;
+/// Preferred maximum distance a ranged or flying brain keeps from its target.
+pub const CAST_MAX_RANGE: f32 = 360.0;
+pub const MELEE_BAND: DistanceBand = DistanceBand::new(0.0, MELEE_RANGE);
+pub const CAST_BAND: DistanceBand = DistanceBand::new(CAST_MIN_RANGE, CAST_MAX_RANGE);
+/// Core of the cast band where shot quality stays full.
+pub const CAST_CORE_BAND: DistanceBand =
+    DistanceBand::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
+/// Distance a caster opens before it stops casting to regenerate mana.
+pub const RECOVERY_BAND: DistanceBand = DistanceBand::new(300.0, 340.0);
 /// Distance from the target at which a wounded warrior may drink its potion.
-/// Opening this much ground takes a few seconds of fleeing, so healing
-/// never fires the instant health drops under the threshold.
 pub const HEAL_SAFE_DISTANCE: f32 = 200.0;
+/// Speed below which a target counts as holding still rather than orbiting.
+pub const TARGET_MOVING_SPEED: f32 = 20.0;
 
-/// A uniformly rolled commitment duration entered when an option becomes current.
+/// An ordered `min < max` distance interval in world units.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CommitWindow {
-    pub min: f32,
-    pub max: f32,
+pub struct DistanceBand {
+    min: f32,
+    max: f32,
 }
 
-/// Motion selected by a brain. This never represents attack execution; that
-/// remains owned by `AttackState` and the equipment use observers.
-/// Keep this vocabulary to generic locomotion: new enemy behaviors should be
-/// new scored options over these modes (plus considerations), not new variants.
+impl DistanceBand {
+    /// Builds a band, rejecting bad bounds at compile time.
+    pub const fn new(min: f32, max: f32) -> Self {
+        assert!(
+            min.is_finite() && max.is_finite() && min < max,
+            "distance band needs finite min < max"
+        );
+        Self { min, max }
+    }
+
+    pub const fn min(self) -> f32 {
+        self.min
+    }
+
+    pub const fn max(self) -> f32 {
+        self.max
+    }
+
+    pub fn error(self, distance: f32) -> f32 {
+        if distance < self.min {
+            distance - self.min
+        } else if distance > self.max {
+            distance - self.max
+        } else {
+            0.0
+        }
+    }
+
+    pub fn center_error(self, distance: f32) -> f32 {
+        let half_width = (self.max - self.min) * 0.5;
+        ((distance - (self.min + self.max) * 0.5) / half_width).clamp(-1.0, 1.0)
+    }
+}
+
+/// A uniformly rolled duration entered when an option becomes current.
+/// Only calm options use this today.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CommitWindow {
+    min: f32,
+    max: f32,
+}
+
+impl CommitWindow {
+    /// Builds a window, rejecting bad bounds at compile time.
+    pub const fn new(min: f32, max: f32) -> Self {
+        assert!(
+            min.is_finite() && max.is_finite() && min >= 0.0 && min <= max,
+            "commit window needs finite, non-negative, ordered bounds"
+        );
+        Self { min, max }
+    }
+
+    pub const fn min(self) -> f32 {
+        self.min
+    }
+
+    pub const fn max(self) -> f32 {
+        self.max
+    }
+}
+
+/// Motion selected by a brain. Attack execution stays with `AttackState`.
+/// New behaviors should be scored options over these modes, not new variants,
+/// unless the steering contract itself is new.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MotionMode {
     #[default]
@@ -38,71 +107,88 @@ pub enum MotionMode {
     Chase,
     ReturnToAnchor,
     /// Wounded break: still in the fight, just getting away from the target.
-    /// Going home happens only once the target is lost (see ReturnToAnchor).
     Flee,
-    KeepDistance {
-        min: f32,
-        max: f32,
-    },
+    KeepDistance(DistanceBand),
+    /// Plants in place with a live target: the ice mage's firing stance.
+    Hold,
     /// Firing-line sidestep: orbits the target while equipment stays hot.
     Strafe,
+    /// Committed bite dive through a snapshot of the target and back out.
+    Swoop,
+    /// Committed break away from the target along a bearing fixed at the call.
+    Kite,
+    /// Committed tangent hop after a completed fire volley.
+    Burst,
+    /// Committed straight slide away from a target that crossed the danger ring.
+    Slide,
     Wander,
 }
 
-/// Behavior groups used for reasoner-style arbitration in [`super::scoring`].
-///
-/// Groups are scored against each other before options compete within one,
-/// so a passive commitment can never outbid a reactive move no matter how the
-/// priorities are tuned.
+/// Behavior groups for arbitration in [`super::scoring`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BehaviorGroup {
-    /// Fighting: chase, spacing, strafing, fleeing. Wins whenever a target is live.
     Aggro,
-    /// Going home once disengaged. Wins on anchor-range overshoot.
     Return,
-    /// Neither engaged nor going home: the wander/idle cycle. Wins when nothing else scores.
     Passive,
 }
 
 impl MotionMode {
-    /// Whether this mode needs a live target to be driven safely.
-    pub fn needs_target(self) -> bool {
-        matches!(
-            self,
-            Self::Chase | Self::KeepDistance { .. } | Self::Strafe | Self::Flee
-        )
+    /// Whether this mode is a one-shot commitment that ends by clearing its
+    /// call latch rather than by re-scoring. Commitments are always Aggro and
+    /// always need a target.
+    pub fn is_commitment(self) -> bool {
+        matches!(self, Self::Swoop | Self::Kite | Self::Burst | Self::Slide)
     }
 
-    /// Whether this mode is part of the idle/wander calm cycle.
+    pub fn needs_target(self) -> bool {
+        self.is_commitment()
+            || matches!(
+                self,
+                Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe | Self::Flee
+            )
+    }
+
     pub fn is_calm(self) -> bool {
         matches!(self, Self::Idle | Self::Wander)
     }
 
-    /// Which behavior group this mode belongs to.
+    pub fn next_calm(self) -> MotionMode {
+        match self {
+            Self::Idle => Self::Wander,
+            _ => Self::Idle,
+        }
+    }
+
     pub fn group(self) -> BehaviorGroup {
         // Flee is still fighting: the target is live, the goal is just
         // distance. Going home is Return and only scores disengaged.
+        // Commitments (`is_commitment`) are Aggro moves: clearing their call
+        // latch zeroes their score, which the arbiter treats as an ineligible
+        // incumbent and exits at once.
         match self {
-            Self::Chase | Self::KeepDistance { .. } | Self::Strafe | Self::Flee => {
-                BehaviorGroup::Aggro
-            }
+            Self::Chase
+            | Self::KeepDistance(_)
+            | Self::Hold
+            | Self::Strafe
+            | Self::Swoop
+            | Self::Kite
+            | Self::Burst
+            | Self::Slide
+            | Self::Flee => BehaviorGroup::Aggro,
             Self::ReturnToAnchor => BehaviorGroup::Return,
             Self::Idle | Self::Wander => BehaviorGroup::Passive,
         }
     }
 }
 
-/// The complete output of one brain tick. Movement and slot intents are
-/// independent so a character can keep moving while an item is in use.
-/// Healing is separate from equipment: potions are consumed from the
-/// inventory, never equipped.
+/// The complete output of one brain tick. Movement, equipment, healing, and
+/// breathing intents are independent.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BrainDecision {
     pub motion: MotionMode,
-    pub commit: Option<CommitWindow>,
     pub slot_intents: [bool; EquipmentSlot::ALL.len()],
-    /// Whether the brain wants to drink a carried potion this tick.
     pub wants_heal: bool,
+    pub wants_breathe: bool,
 }
 
 /// Target data visible to a brain this tick.
@@ -110,24 +196,36 @@ pub struct BrainDecision {
 pub struct TargetView {
     pub distance: f32,
     pub line_of_sight: bool,
+    /// Unit direction from the viewer to the target.
+    pub bearing: Vec2,
+    /// Intended world velocity of the target, read from its locomotion.
+    pub velocity: Vec2,
+    /// Signed tangential component of the target's velocity around the viewer.
+    /// Positive means the target circles counter-clockwise.
+    pub tangential_velocity: f32,
 }
 
 /// Everything a pure brain is allowed to look at during one decision tick.
 #[derive(Clone, Copy, Debug)]
 pub struct DecisionContext {
     pub target: Option<TargetView>,
-    /// Health as a `0.0..=1.0` fraction (`1.0` is unhurt).
     pub health_fraction: f32,
+    /// Current mana as a `0.0..=1.0` fraction, or `1.0` for a non-caster.
+    pub mana_fraction: f32,
+    /// Whether a caster is running out a latched mana break.
+    pub mana_recovering: bool,
     pub slot_ready: [bool; EquipmentSlot::ALL.len()],
-    /// Overshoot beyond the anchor range as a fraction of that range (`0.0`
-    /// at the boundary, `1.0` one full range out), or `None` without an anchor.
     pub anchor_overshoot_fraction: Option<f32>,
-    /// Whether the character has reached the anchor origin, or `None` without
-    /// an anchor.
     pub anchor_arrived: Option<bool>,
-    /// Which half of the calm idle/wander cycle should run next.
     pub calm_phase: MotionMode,
-    pub within_commitment: bool,
+    pub strafe_band: Option<DistanceBand>,
+    pub swoop_called: bool,
+    /// A warrior is currently running out a break from its target.
+    pub kite_called: bool,
+    /// A fire mage has a tangent burst left over from its last volley.
+    pub burst_called: bool,
+    /// An ice mage has been pushed inside its danger ring and called a slide.
+    pub slide_called: bool,
 }
 
 impl Default for DecisionContext {
@@ -135,11 +233,17 @@ impl Default for DecisionContext {
         Self {
             target: None,
             health_fraction: 1.0,
+            mana_fraction: 1.0,
+            mana_recovering: false,
             slot_ready: [false; EquipmentSlot::ALL.len()],
             anchor_overshoot_fraction: None,
             anchor_arrived: None,
             calm_phase: MotionMode::Idle,
-            within_commitment: false,
+            strafe_band: None,
+            swoop_called: false,
+            kite_called: false,
+            burst_called: false,
+            slide_called: false,
         }
     }
 }
@@ -149,9 +253,8 @@ impl Default for DecisionContext {
 pub struct Brain {
     pub motion_options: &'static [ScoredOption<MotionMode>],
     pub slot_options: [&'static [ScoredOption<()>]; EquipmentSlot::ALL.len()],
-    /// When to drink a carried potion, taken straight from the inventory.
-    /// Empty for brains that never heal.
     pub heal_options: &'static [ScoredOption<()>],
+    pub breath_options: &'static [ScoredOption<()>],
 }
 
 /// One candidate motion or slot request.
@@ -159,9 +262,44 @@ pub struct Brain {
 pub struct ScoredOption<T> {
     pub value: T,
     pub priority: f32,
-    /// Uniform roll made when this option is entered. `None` is reactive.
     pub commit: Option<CommitWindow>,
     pub considerations: &'static [Consideration],
+    pub gates: &'static [Gate],
+}
+
+/// Which edge of the character's distance band a [`Gate`] measures from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BandEdge {
+    Min,
+    Max,
+}
+
+/// Dual-threshold eligibility gate over target distance. Offsets measure from
+/// one edge of the character's band; challengers enter at `enter_offset`,
+/// incumbents leave past `exit_offset`, and the gap between them holds the mode.
+#[derive(Clone, Copy, Debug)]
+pub struct Gate {
+    pub name: &'static str,
+    pub edge: BandEdge,
+    pub enter_offset: f32,
+    pub exit_offset: f32,
+}
+
+impl Gate {
+    /// Builds a band-relative gate.
+    pub const fn new(
+        name: &'static str,
+        edge: BandEdge,
+        enter_offset: f32,
+        exit_offset: f32,
+    ) -> Self {
+        Self {
+            name,
+            edge,
+            enter_offset,
+            exit_offset,
+        }
+    }
 }
 
 /// One normalized input to an option's score.
@@ -169,22 +307,83 @@ pub struct ScoredOption<T> {
 pub struct Consideration {
     pub name: &'static str,
     pub read: fn(&DecisionContext) -> Option<f32>,
-    pub range: (f32, f32),
+    pub range: NormalizedRange,
     pub curve: Curve,
+}
+
+/// An ordered `min < max` raw-value range that normalizes to `0.0..=1.0`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NormalizedRange {
+    min: f32,
+    max: f32,
+}
+
+impl NormalizedRange {
+    /// Builds a range, rejecting bad bounds at compile time.
+    pub const fn new(min: f32, max: f32) -> Self {
+        assert!(
+            min.is_finite() && max.is_finite() && min < max,
+            "consideration range needs finite min < max"
+        );
+        Self { min, max }
+    }
+
+    pub const fn min(self) -> f32 {
+        self.min
+    }
+
+    pub const fn max(self) -> f32 {
+        self.max
+    }
+
+    pub fn normalize(self, raw: f32) -> Option<f32> {
+        if !raw.is_finite() {
+            return None;
+        }
+        let normalized = ((raw - self.min) / (self.max - self.min)).clamp(0.0, 1.0);
+        normalized.is_finite().then_some(normalized)
+    }
 }
 
 /// Response curve applied after normalizing a consideration's raw value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Curve {
     Linear,
+    /// Steepens a partial input (`x^3`).
+    Cubic,
+    /// Full score through the middle, easing to zero at each end.
+    Plateau {
+        edge: f32,
+    },
 }
 
 impl Curve {
-    pub(crate) fn apply(self, normalized: f32) -> Option<f32> {
+    pub(crate) fn apply(self, normalized: f32) -> f32 {
         let value = match self {
             Self::Linear => normalized,
+            Self::Cubic => normalized * normalized * normalized,
+            Self::Plateau { edge } => {
+                let edge = edge.clamp(0.0, 0.5);
+                if edge <= 0.0 {
+                    1.0
+                } else {
+                    let ramp = if normalized < edge {
+                        normalized / edge
+                    } else if normalized > 1.0 - edge {
+                        (1.0 - normalized) / edge
+                    } else {
+                        1.0
+                    };
+                    smoothstep(ramp)
+                }
+            }
         };
 
-        value.is_finite().then(|| value.clamp(0.0, 1.0))
+        value.clamp(0.0, 1.0)
     }
+}
+
+fn smoothstep(value: f32) -> f32 {
+    let value = value.clamp(0.0, 1.0);
+    value * value * (3.0 - 2.0 * value)
 }

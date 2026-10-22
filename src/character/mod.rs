@@ -16,21 +16,25 @@ pub mod prelude {
     pub use super::vision::*;
 }
 
-/// Ordered AI phases. Perception feeds targeting, aim, decisions, and finally
-/// the motion driver.
+/// Ordered AI phases. Perception feeds targeting, aim, decisions, execution
+/// of those decisions, and finally the motion driver.
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum AiSet {
     Perception,
     Targeting,
     Aim,
     Decision,
+    Execute,
     Motion,
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{character::animation::CharacterAnimationState, prelude::*};
+use crate::{
+    character::animation::{AnimationSheet, CharacterAnimationState},
+    prelude::*,
+};
 
 pub struct CharacterPlugin;
 
@@ -47,6 +51,7 @@ impl Plugin for CharacterPlugin {
                 AiSet::Targeting,
                 AiSet::Aim,
                 AiSet::Decision,
+                AiSet::Execute,
                 AiSet::Motion,
             )
                 .chain()
@@ -76,6 +81,7 @@ impl Plugin for CharacterPlugin {
     Vision,
     ItemCapacity(10),
     AnimationTimer,
+    AnimationSheet,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]
 pub struct Character;
 

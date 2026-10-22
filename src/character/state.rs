@@ -3,14 +3,15 @@ use bevy::prelude::*;
 
 use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
 
-/// Simple motion has no acceleration and assumes all entities move at max speed unless altered by `slowed_percentage`
-/// by Movement
+/// Simple motion has no acceleration and assumes all entities move at max
+/// speed unless `slowed_percentage` reduces it.
 #[derive(Component, Clone)]
 #[require(FacingDirection, AttackState)]
 pub struct SimpleMotion {
     pub direction: Vec2,
     pub max_speed: f32,
     current_speed: f32,
+    speed_boost: f32,
     /// Applied on top of `max_speed`, `slowed_percentage` of 1.0 represents being "stunned"
     slowed_percentage: f32,
 }
@@ -20,6 +21,7 @@ impl SimpleMotion {
         SimpleMotion {
             max_speed,
             current_speed: 0.0,
+            speed_boost: 1.0,
             direction: Vec2::ZERO,
             slowed_percentage: 0.0,
         }
@@ -40,17 +42,26 @@ impl SimpleMotion {
     }
 
     pub fn start_moving(&mut self, direction: Vec2) {
+        self.speed_boost = 1.0;
         self.current_speed = self.max_speed;
         self.direction = direction;
     }
     /// Starts moving at a fraction of max speed, for gaits like wandering
     /// that should read as unhurried next to full-speed combat movement.
     pub fn start_moving_scaled(&mut self, direction: Vec2, scale: f32) {
+        self.speed_boost = 1.0;
         self.current_speed = self.max_speed * scale.clamp(0.0, 1.0);
+        self.direction = direction;
+    }
+    /// Starts moving at a multiple of max speed for committed bursts.
+    pub fn start_moving_boosted(&mut self, direction: Vec2, speed_boost: f32) {
+        self.speed_boost = speed_boost.max(1.0);
+        self.current_speed = self.max_speed * self.speed_boost;
         self.direction = direction;
     }
 
     pub fn stop_moving(&mut self) {
+        self.speed_boost = 1.0;
         self.current_speed = 0.0;
         self.direction = Vec2::ZERO;
     }
@@ -59,12 +70,31 @@ impl SimpleMotion {
         self.slowed_percentage >= 1.0
     }
 
+    /// Fraction of movement speed retained after the current slow: `1.0` is
+    /// full speed and `0.0` is stunned.
+    pub fn speed_scale(&self) -> f32 {
+        (1.0 - self.slowed_percentage).clamp(0.0, 1.0)
+    }
+
     pub fn is_moving(&self) -> bool {
         self.current_speed > 0.0 && !self.is_stunned()
     }
 
+    /// Already fully stopped: lets per-frame drivers skip a no-op write that
+    /// would mark `Changed<SimpleMotion>` and defeat downstream filters.
+    pub fn is_idle(&self) -> bool {
+        self.current_speed == 0.0 && self.direction == Vec2::ZERO
+    }
+
     pub fn get_velocity(&self) -> Vec2 {
-        (self.direction * self.current_speed).clamp_length_max(self.max_speed)
+        // A stunned body holds its pre-stun vector in `direction`, but its
+        // locomotion is frozen: report zero so target-velocity consumers do
+        // not chase a phantom.
+        if self.is_stunned() {
+            return Vec2::ZERO;
+        }
+        (self.direction * self.current_speed * self.speed_scale())
+            .clamp_length_max(self.max_speed * self.speed_boost)
     }
 }
 
@@ -119,12 +149,15 @@ impl FacingDirection {
     }
 }
 
-/// Animation/physics flag mirroring whether an instant-use item is active.
+/// Animation/physics flag mirroring whether an instant-use item is active,
+/// plus a one-shot end-of-attack latch consumed by the decision tick.
 /// Never written by AI; only synced from `EquipmentInUse` by
 /// `sync_attack_state_from_equipment`.
 #[derive(Component, Clone, Default, PartialEq)]
 pub struct AttackState {
     pub is_attacking: bool,
+    /// Set when an attack ends, cleared by the decision tick that consumes it.
+    pub finished_since_decision: bool,
 }
 
 /// Syncs whether a holder is attacking from `EquipmentInUse` items. Items decide
@@ -140,8 +173,11 @@ pub(super) fn sync_attack_state_from_equipment(
             .filter(|equipment| equipment.is_instant_use())
             .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
+        let finished = state.is_attacking && !attacking;
+        let finished_since_decision = state.finished_since_decision || finished;
         state.set_if_neq(AttackState {
             is_attacking: attacking,
+            finished_since_decision,
         });
     }
 }

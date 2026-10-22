@@ -147,11 +147,11 @@ fn handle_melee_collisions(
             {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    ignore_invulnerable: false,
                     damage: Damage::Range(melee_weapon.damage),
                     source_item: Some(weapon_entity),
                     attacker: Some(item_of.holder),
                     direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),
+                    ..default()
                 });
                 active_melee_attack
                     .entities_damaged

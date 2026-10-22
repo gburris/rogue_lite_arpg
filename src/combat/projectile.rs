@@ -52,18 +52,35 @@ pub struct ProjectileOf(Entity);
 #[relationship_target(relationship = ProjectileOf, linked_spawn)]
 pub struct Projectiles(Vec<Entity>);
 
+/// Travel speed of a standard fireball, in world units per second.
+pub const FIREBALL_SPEED: f32 = 450.0;
+/// Distance a standard fireball covers during its one-second default lifespan.
+pub const FIREBALL_RANGE: f32 = 450.0;
+
 pub fn fireball(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
 ) -> impl Bundle {
+    fireball_with_speed(sprites, sprite_layouts, angle_offset, FIREBALL_SPEED)
+}
+
+/// Builds a fireball at a custom speed, scaling its lifespan so it still covers
+/// the standard fireball's travel distance.
+pub fn fireball_with_speed(
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+    angle_offset: f32,
+    speed: f32,
+) -> impl Bundle {
     (
         Projectile {
             damage: Damage::Single(3.0),
-            speed: 450.0,
+            speed,
             spawn_offset: 20.0,
             angle_offset,
         },
+        Lifespan::new(FIREBALL_RANGE / speed),
         Sprite::from_atlas_image(
             sprites.fire_ball.clone(),
             TextureAtlas {
@@ -176,7 +193,13 @@ fn on_fire_projectile(
     mut commands: Commands,
     projectile_query: Query<&Projectile, Allow<Disabled>>,
 ) {
-    let projectile = projectile_query.get(fire.item).unwrap();
+    let Ok(projectile) = projectile_query.get(fire.item) else {
+        warn!(
+            "Tried to fire projectile from missing template {:?}",
+            fire.item
+        );
+        return;
+    };
     let aim_direction = fire.aim_direction.normalize();
 
     // Rotate the aim direction by the projectile’s angle offset

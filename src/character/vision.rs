@@ -69,12 +69,12 @@ pub struct TargetInfo {
 /// Added when both line of sight and vision cone are satisfied.
 #[derive(Component)]
 #[relationship(relationship_target = TargetedBy)]
-pub(super) struct Targeting(pub Entity);
+pub(crate) struct Targeting(pub Entity);
 
 /// Inverse of `Targeting` — tracked by the targeted entity.
 #[derive(Component)]
 #[relationship_target(relationship = Targeting)]
-pub(super) struct TargetedBy(Vec<Entity>);
+pub(crate) struct TargetedBy(Vec<Entity>);
 
 /// Tracks which entity the NPC is currently watching or trying to detect.
 #[derive(Component)]

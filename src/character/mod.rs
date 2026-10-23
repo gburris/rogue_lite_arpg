@@ -8,7 +8,7 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use super::brain::BrainKind;
+    pub use super::brain::{BrainKind, MotionMode, MotionState};
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;

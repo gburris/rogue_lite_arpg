@@ -150,14 +150,14 @@ impl FacingDirection {
 }
 
 /// Animation/physics flag mirroring whether an instant-use item is active,
-/// plus a one-shot end-of-attack latch consumed by the decision tick.
-/// Never written by AI; only synced from `EquipmentInUse` by
-/// `sync_attack_state_from_equipment`.
+/// plus a running count of finished attacks. Written only by
+/// `sync_attack_state_from_equipment`; readers such as the AI keep their own
+/// last-seen count to notice a new finish.
 #[derive(Component, Clone, Default, PartialEq)]
 pub struct AttackState {
     pub is_attacking: bool,
-    /// Set when an attack ends, cleared by the decision tick that consumes it.
-    pub finished_since_decision: bool,
+    /// Attacks that have ended since spawn; wraps rather than overflows.
+    pub attacks_finished: u32,
 }
 
 /// Syncs whether a holder is attacking from `EquipmentInUse` items. Items decide
@@ -174,10 +174,10 @@ pub(super) fn sync_attack_state_from_equipment(
             .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
         let finished = state.is_attacking && !attacking;
-        let finished_since_decision = state.finished_since_decision || finished;
+        let attacks_finished = state.attacks_finished.wrapping_add(u32::from(finished));
         state.set_if_neq(AttackState {
             is_attacking: attacking,
-            finished_since_decision,
+            attacks_finished,
         });
     }
 }

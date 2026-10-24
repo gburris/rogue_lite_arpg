@@ -3,8 +3,8 @@
 //! within the winning group, so calm stickiness cannot suppress a reactive move.
 
 use super::model::{
-    BandEdge, BehaviorGroup, BrainDefinition, BrainDecision, CommitWindow, Consideration,
-    DecisionContext, Gate, MotionMode, ScoredOption,
+    Ability, BandEdge, BehaviorGroup, BrainDecision, BrainDefinition, CommitWindow, Consideration,
+    DecisionContext, DistanceBand, Gate, Maneuver, MotionMode, ScoredOption,
 };
 use crate::items::prelude::EquipmentSlot;
 
@@ -13,14 +13,16 @@ use crate::items::prelude::EquipmentSlot;
 pub fn select_best<T>(
     options: &[ScoredOption<T>],
     ctx: &DecisionContext,
+    band: Option<DistanceBand>,
     current: Option<usize>,
 ) -> Option<usize> {
-    select_best_where(options, ctx, current, |_| true)
+    select_best_where(options, ctx, band, current, |_| true)
 }
 
 fn select_best_where<T>(
     options: &[ScoredOption<T>],
     ctx: &DecisionContext,
+    band: Option<DistanceBand>,
     current: Option<usize>,
     mut include: impl FnMut(&T) -> bool,
 ) -> Option<usize> {
@@ -30,7 +32,7 @@ fn select_best_where<T>(
         if !include(&option.value) {
             continue;
         }
-        let Some(score) = score_option(option, ctx, current == Some(index)) else {
+        let Some(score) = score_option(option, ctx, band, current == Some(index)) else {
             continue;
         };
         if score <= 0.0 {
@@ -46,10 +48,12 @@ fn select_best_where<T>(
     best.map(|(index, _)| index)
 }
 
-/// Final bounded score for one option. Gates use exit thresholds when current.
+/// Final bounded score for one option. Gates measure against `band` and use
+/// exit thresholds when current.
 pub fn score_option<T>(
     option: &ScoredOption<T>,
     ctx: &DecisionContext,
+    band: Option<DistanceBand>,
     is_current: bool,
 ) -> Option<f32> {
     if !option.priority.is_finite() || option.priority < 0.0 {
@@ -57,7 +61,7 @@ pub fn score_option<T>(
     }
 
     for gate in option.gates {
-        if !pass_gate(gate, ctx, is_current) {
+        if !pass_gate(gate, ctx, band, is_current) {
             return None;
         }
     }
@@ -79,11 +83,16 @@ pub fn score_option<T>(
     (score.is_finite() && score >= 0.0).then_some(score)
 }
 
-fn pass_gate(gate: &Gate, ctx: &DecisionContext, is_current: bool) -> bool {
+fn pass_gate(
+    gate: &Gate,
+    ctx: &DecisionContext,
+    band: Option<DistanceBand>,
+    is_current: bool,
+) -> bool {
     let Some(distance) = ctx.target.map(|target| target.distance) else {
         return true;
     };
-    let Some(band) = ctx.strafe_band else {
+    let Some(band) = band else {
         return true;
     };
     if !distance.is_finite() {
@@ -108,24 +117,46 @@ fn pass_gate(gate: &Gate, ctx: &DecisionContext, is_current: bool) -> bool {
 
 /// Whether the brain wants to use the item in `slot` this tick.
 pub fn choose_slot(brain: &BrainDefinition, slot: EquipmentSlot, ctx: &DecisionContext) -> bool {
-    select_best(brain.slot_options[slot as usize], ctx, None).is_some()
+    select_best(brain.slot_options[slot as usize], ctx, brain.band, None).is_some()
 }
 
-/// Produces the complete movement and slot-intent decision for one tick.
+/// Best ability option per ability. Abilities the entity cannot carry out are
+/// never selectable.
+fn choose_abilities(brain: &BrainDefinition, ctx: &DecisionContext) -> [bool; Ability::ALL.len()] {
+    let mut abilities = [false; Ability::ALL.len()];
+    for ability in Ability::ALL {
+        let index = ability as usize;
+        abilities[index] = ctx.self_state.ability_tuning[index].is_some()
+            && select_best(brain.ability_options[index], ctx, brain.band, None).is_some();
+    }
+    abilities
+}
+
+/// Best maneuver ready to start. A running maneuver is exclusive, so nothing
+/// else is proposed while one is active.
+fn choose_maneuver(brain: &BrainDefinition, ctx: &DecisionContext) -> Option<Maneuver> {
+    if ctx.self_state.active_maneuver.is_some() {
+        return None;
+    }
+    select_best_where(brain.maneuver_options, ctx, brain.band, None, |maneuver| {
+        ctx.self_state.maneuver_ready[*maneuver as usize]
+    })
+    .map(|index| brain.maneuver_options[index].value)
+}
+
+/// Produces the complete locomotion, maneuver, slot and ability decision for one tick.
 pub fn decide(brain: &BrainDefinition, ctx: &DecisionContext, current: MotionMode) -> BrainDecision {
     let mut slot_intents = [false; EquipmentSlot::ALL.len()];
     for slot in EquipmentSlot::ALL {
         slot_intents[slot as usize] = choose_slot(brain, slot, ctx);
     }
-    let wants_heal = select_best(brain.heal_options, ctx, None).is_some();
-    let wants_breathe = select_best(brain.breath_options, ctx, None).is_some();
 
     let current_index = brain
         .motion_options
         .iter()
         .position(|option| option.value == current);
 
-    // Once a character starts returning to its anchor, keep the mode latched
+    // Once a character starts returning to its anchor, keep the mode held
     // until it actually arrives. Re-scoring the anchor condition alone drops
     // the return score to zero the moment it crosses the anchor-range
     // boundary, which lets wander immediately pull it back out and produces
@@ -137,8 +168,8 @@ pub fn decide(brain: &BrainDefinition, ctx: &DecisionContext, current: MotionMod
     let selected = if keep_returning {
         current_index.and_then(|index| brain.motion_options.get(index))
     } else {
-        let group = pick_group(brain.motion_options, ctx, current_index);
-        select_best_where(brain.motion_options, ctx, current_index, |mode| {
+        let group = pick_group(brain.motion_options, ctx, brain.band, current_index);
+        select_best_where(brain.motion_options, ctx, brain.band, current_index, |mode| {
             mode.group() == group
         })
         .and_then(|index| brain.motion_options.get(index))
@@ -146,15 +177,16 @@ pub fn decide(brain: &BrainDefinition, ctx: &DecisionContext, current: MotionMod
 
     BrainDecision {
         motion: selected.map_or(current, |option| option.value),
+        maneuver: choose_maneuver(brain, ctx),
         slot_intents,
-        wants_heal,
-        wants_breathe,
+        abilities: choose_abilities(brain, ctx),
     }
 }
 
 fn pick_group(
     options: &[ScoredOption<MotionMode>],
     ctx: &DecisionContext,
+    band: Option<DistanceBand>,
     current: Option<usize>,
 ) -> BehaviorGroup {
     let mut scores = [
@@ -166,7 +198,7 @@ fn pick_group(
         if let Some(entry) = scores
             .iter_mut()
             .find(|(group, _)| *group == option.value.group())
-            && let Some(score) = score_option(option, ctx, current == Some(index))
+            && let Some(score) = score_option(option, ctx, band, current == Some(index))
         {
             entry.1 = entry.1.max(score);
         }
@@ -200,14 +232,6 @@ pub fn arbitrate(
         return current;
     }
     if proposed.group() != current.group() {
-        return proposed;
-    }
-    // A called swoop, kite break, fire burst, or ice slide is a committed move,
-    // not a sustained mode: it ends itself by clearing its call latch and the
-    // lottery (or the swing) spaces attempts, so it cannot flicker. Holding it
-    // for the intra-group dwell would only burn the call while boundary churn
-    // keeps the dwell fresh.
-    if proposed.is_commitment() && proposed_score.is_some_and(|score| score > 0.0) {
         return proposed;
     }
     let Some(current_score) = current_score.filter(|score| *score > 0.0) else {
@@ -256,7 +280,7 @@ fn score_mode(
         .motion_options
         .iter()
         .find(|option| option.value == mode)
-        .and_then(|option| score_option(option, ctx, is_current))
+        .and_then(|option| score_option(option, ctx, brain.band, is_current))
 }
 
 /// Commit window of the option driving `mode`, if any.
@@ -286,18 +310,28 @@ pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
         }
     }
 
+    for (index, option) in brain.maneuver_options.iter().enumerate() {
+        validate_option(option).map_err(|error| format!("maneuver option {index}: {error}"))?;
+
+        if brain.maneuver_options[..index]
+            .iter()
+            .any(|earlier| earlier.value == option.value)
+        {
+            return Err(format!("maneuver option {index} duplicates an earlier maneuver"));
+        }
+    }
+
     for (slot_index, options) in brain.slot_options.iter().enumerate() {
         for (option_index, option) in options.iter().enumerate() {
             validate_option(option)
                 .map_err(|error| format!("slot {slot_index} option {option_index}: {error}"))?;
         }
     }
-    for (option_index, option) in brain.heal_options.iter().enumerate() {
-        validate_option(option).map_err(|error| format!("heal option {option_index}: {error}"))?;
-    }
-    for (option_index, option) in brain.breath_options.iter().enumerate() {
-        validate_option(option)
-            .map_err(|error| format!("breath option {option_index}: {error}"))?;
+    for (ability_index, options) in brain.ability_options.iter().enumerate() {
+        for (option_index, option) in options.iter().enumerate() {
+            validate_option(option)
+                .map_err(|error| format!("ability {ability_index} option {option_index}: {error}"))?;
+        }
     }
 
     Ok(())
@@ -391,7 +425,7 @@ mod tests {
     use bevy::prelude::Vec2;
 
     use super::super::brains::{FIRE_MAGE, WARRIOR};
-    use super::super::model::{CAST_BAND, MELEE_BAND, TargetView};
+    use super::super::model::{MELEE_BAND, TargetView};
     use super::*;
 
     fn context() -> DecisionContext {
@@ -418,7 +452,6 @@ mod tests {
         DecisionContext {
             target: Some(visible_target(30.0)),
             slot_ready: mainhand_ready(),
-            strafe_band: Some(MELEE_BAND),
             ..context()
         }
     }
@@ -427,7 +460,6 @@ mod tests {
         DecisionContext {
             target: Some(visible_target(distance)),
             slot_ready: mainhand_ready(),
-            strafe_band: Some(CAST_BAND),
             ..context()
         }
     }

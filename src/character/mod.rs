@@ -1,3 +1,4 @@
+mod ability;
 mod anchor;
 mod animation;
 mod brain;
@@ -8,7 +9,7 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use super::brain::{Brain, BrainKind, MotionMode};
+    pub use super::brain::{Brain, Maneuver, MotionMode};
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;
@@ -40,7 +41,7 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
+        app.add_plugins((player::plugin, enemy::plugin, npc::plugin, ability::plugin));
 
         app.add_plugins((animation::plugin, vision::plugin, brain::plugin));
 

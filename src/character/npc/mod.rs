@@ -2,7 +2,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod interaction;
 
-use super::brain::{Brain, Wander};
+use super::brain::{Brain, BrainDefinition, VILLAGER, Wander};
 use crate::{
     character::{Character, anchor::Anchor, physical_collider},
     prelude::*,
@@ -34,9 +34,9 @@ pub enum NpcKind {
 }
 
 impl NpcKind {
-    /// Brain used by this NPC kind.
-    pub fn brain_kind(&self) -> BrainKind {
-        BrainKind::Villager
+    /// Brain definition used by this NPC kind.
+    pub fn brain(&self) -> &'static BrainDefinition {
+        &VILLAGER
     }
 }
 
@@ -73,7 +73,7 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let brain = npc_kind.brain_kind();
+    let brain = npc_kind.brain();
 
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
@@ -114,7 +114,7 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand:
     });
 }
 
-fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: BrainKind) -> impl Bundle {
+fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: &'static BrainDefinition) -> impl Bundle {
     (
         NPC,
         Brain::new(brain),

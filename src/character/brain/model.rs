@@ -97,7 +97,8 @@ impl CommitWindow {
     }
 }
 
-/// Motion selected by a brain. Attack execution stays with `AttackState`.
+/// Locomotion selected by a brain: where it wants to be. Attack execution
+/// stays with `AttackState`, and committed moves are a [`Maneuver`], not a mode.
 /// New behaviors should be scored options over these modes, not new variants,
 /// unless the steering contract itself is new.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -113,15 +114,54 @@ pub enum MotionMode {
     Hold,
     /// Firing-line sidestep: orbits the target while equipment stays hot.
     Strafe,
-    /// Committed bite dive through a snapshot of the target and back out.
-    Swoop,
-    /// Committed break away from the target along a bearing fixed at the call.
+    Wander,
+}
+
+/// A committed move that takes exclusive control of steering until it ends.
+/// It is chosen on its own channel, so it runs over whatever locomotion mode
+/// is current and hands steering back when the executor reports it finished.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Maneuver {
+    /// Committed break away from the target along a bearing fixed at the start.
     Kite,
     /// Committed tangent hop after a completed fire volley.
     Burst,
     /// Committed straight slide away from a target that crossed the danger ring.
     Slide,
-    Wander,
+    /// Committed dive through a snapshot of the target and back out.
+    Swoop,
+}
+
+impl Maneuver {
+    /// Every maneuver, in channel-array order.
+    pub const ALL: [Self; 4] = [Self::Kite, Self::Burst, Self::Slide, Self::Swoop];
+
+    /// One-word label for debug displays.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Kite => "Kite",
+            Self::Burst => "Burst",
+            Self::Slide => "Slide",
+            Self::Swoop => "Swoop",
+        }
+    }
+}
+
+/// Something a brain can ask its body to do besides move or use equipment.
+/// Each ability has its own channel, scored independently of the others.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ability {
+    /// Drink a carried potion.
+    Heal,
+    /// Loose an innate projectile with no weapon.
+    Breathe,
+    /// Damage a target in contact reach.
+    Bite,
+}
+
+impl Ability {
+    /// Every ability, in channel-array order.
+    pub const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
 }
 
 /// Behavior groups for arbitration in [`super::scoring`].
@@ -132,24 +172,51 @@ pub enum BehaviorGroup {
     Passive,
 }
 
+/// The static facts about a [`MotionMode`] that the arbiter and executor
+/// consult. Every mode picks exactly one row in [`MotionMode::traits`].
+#[derive(Clone, Copy, Debug)]
+struct ModeTraits {
+    group: BehaviorGroup,
+    needs_target: bool,
+}
+
+impl ModeTraits {
+    /// A sustained fighting mode: re-scored every tick against a live target.
+    const REACTIVE: Self = Self {
+        group: BehaviorGroup::Aggro,
+        needs_target: true,
+    };
+    /// Going home; only scores while disengaged.
+    const HOMEWARD: Self = Self {
+        group: BehaviorGroup::Return,
+        needs_target: false,
+    };
+    /// The idle/wander cycle.
+    const CALM: Self = Self {
+        group: BehaviorGroup::Passive,
+        needs_target: false,
+    };
+}
+
 impl MotionMode {
-    /// Whether this mode is a one-shot commitment that ends by clearing its
-    /// call latch rather than by re-scoring. Commitments are always Aggro and
-    /// always need a target.
-    pub fn is_commitment(self) -> bool {
-        matches!(self, Self::Swoop | Self::Kite | Self::Burst | Self::Slide)
+    /// The single place a mode declares its group and target need.
+    fn traits(self) -> ModeTraits {
+        match self {
+            // Flee is still fighting: the target is live, the goal is just distance.
+            Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe | Self::Flee => {
+                ModeTraits::REACTIVE
+            }
+            Self::ReturnToAnchor => ModeTraits::HOMEWARD,
+            Self::Idle | Self::Wander => ModeTraits::CALM,
+        }
     }
 
     pub fn needs_target(self) -> bool {
-        self.is_commitment()
-            || matches!(
-                self,
-                Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe | Self::Flee
-            )
+        self.traits().needs_target
     }
 
     pub fn is_calm(self) -> bool {
-        matches!(self, Self::Idle | Self::Wander)
+        self.traits().group == BehaviorGroup::Passive
     }
 
     pub fn next_calm(self) -> MotionMode {
@@ -160,35 +227,19 @@ impl MotionMode {
     }
 
     pub fn group(self) -> BehaviorGroup {
-        // Flee is still fighting: the target is live, the goal is just
-        // distance. Going home is Return and only scores disengaged.
-        // Commitments (`is_commitment`) are Aggro moves: clearing their call
-        // latch zeroes their score, which the arbiter treats as an ineligible
-        // incumbent and exits at once.
-        match self {
-            Self::Chase
-            | Self::KeepDistance(_)
-            | Self::Hold
-            | Self::Strafe
-            | Self::Swoop
-            | Self::Kite
-            | Self::Burst
-            | Self::Slide
-            | Self::Flee => BehaviorGroup::Aggro,
-            Self::ReturnToAnchor => BehaviorGroup::Return,
-            Self::Idle | Self::Wander => BehaviorGroup::Passive,
-        }
+        self.traits().group
     }
 }
 
-/// The complete output of one brain tick. Movement, equipment, healing, and
-/// breathing intents are independent.
+/// The complete output of one brain tick. Locomotion, maneuver, equipment and
+/// ability intents are independent channels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BrainDecision {
     pub motion: MotionMode,
+    /// The best maneuver ready to start, if none is already running.
+    pub maneuver: Option<Maneuver>,
     pub slot_intents: [bool; EquipmentSlot::ALL.len()],
-    pub wants_heal: bool,
-    pub wants_breathe: bool,
+    pub abilities: [bool; Ability::ALL.len()],
 }
 
 /// Target data visible to a brain this tick.
@@ -205,37 +256,74 @@ pub struct TargetView {
     pub tangential_velocity: f32,
 }
 
-/// Everything a pure brain is allowed to look at during one decision tick.
+/// Chance and spacing of one maneuver, copied from the capability component
+/// that executes it so the decision tick never reaches into executor state.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ManeuverTuning {
+    /// Probability that a ready, scored maneuver actually starts.
+    pub chance: f32,
+    /// Seconds before the maneuver may be tried again after it ends or misses.
+    pub cooldown: f32,
+    /// Target distance that triggers the maneuver, when it has one.
+    pub trigger_range: Option<f32>,
+}
+
+/// What the decision tick needs to know about an ability the entity can carry
+/// out, copied from the capability component that applies it.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct AbilityTuning {
+    /// Target distance at which the ability should be armed, when it has a reach.
+    pub reach: Option<f32>,
+}
+
+/// What the body reports about itself each tick: held calls, cooldowns, and
+/// copies of the tuning that considerations need. Unlike a sense, none of it
+/// comes from the world; it reflects the brain's own earlier decisions and the
+/// capabilities its entity carries.
+#[derive(Clone, Copy, Debug)]
+pub struct SelfState {
+    pub calm_phase: MotionMode,
+    /// The locomotion mode currently driving the body.
+    pub locomotion: MotionMode,
+    /// Whether a caster is running out a held mana break.
+    pub mana_recovering: bool,
+    pub active_maneuver: Option<Maneuver>,
+    /// `None` for a maneuver this entity has no capability for.
+    pub maneuver_tuning: [Option<ManeuverTuning>; Maneuver::ALL.len()],
+    /// Owned and off cooldown, so it may be scored and started.
+    pub maneuver_ready: [bool; Maneuver::ALL.len()],
+    /// `None` for an ability this entity has no capability for.
+    pub ability_tuning: [Option<AbilityTuning>; Ability::ALL.len()],
+}
+
+impl Default for SelfState {
+    fn default() -> Self {
+        Self {
+            calm_phase: MotionMode::Idle,
+            locomotion: MotionMode::Idle,
+            mana_recovering: false,
+            active_maneuver: None,
+            maneuver_tuning: [None; Maneuver::ALL.len()],
+            maneuver_ready: [false; Maneuver::ALL.len()],
+            ability_tuning: [Some(AbilityTuning::default()); Ability::ALL.len()],
+        }
+    }
+}
+
+/// Everything a pure brain is allowed to look at during one decision tick:
+/// facts sensed from the world plus the body's [`SelfState`].
 #[derive(Clone, Copy, Debug)]
 pub struct DecisionContext {
     pub target: Option<TargetView>,
     pub health_fraction: f32,
     /// Current mana as a `0.0..=1.0` fraction, or `1.0` for a non-caster.
     pub mana_fraction: f32,
-    /// Whether a caster is running out a latched mana break.
-    pub mana_recovering: bool,
     pub slot_ready: [bool; EquipmentSlot::ALL.len()],
     pub anchor_overshoot_fraction: Option<f32>,
     pub anchor_arrived: Option<bool>,
-    pub calm_phase: MotionMode,
-    pub strafe_band: Option<DistanceBand>,
-    pub swoop_called: bool,
-    /// A warrior is currently running out a break from its target.
-    pub kite_called: bool,
-    /// A fire mage has a tangent burst left over from its last volley.
-    pub burst_called: bool,
-    /// An ice mage has been pushed inside its danger ring and called a slide.
-    pub slide_called: bool,
-    /// An attack finished on the last tick; dashes latch their call off this.
+    /// An attack finished on the last tick; maneuvers key their start off this.
     pub attack_finished: bool,
-    /// A dash is currently latched, under any policy.
-    pub dash_called: bool,
-    /// The latched dash is off cooldown and may rearm.
-    pub dash_ready: bool,
-    /// Target distance calling an escape dash, when the brain dashes to escape.
-    pub dash_trigger_range: Option<f32>,
-    /// The swoop lottery is due for another roll.
-    pub swoop_due: bool,
+    pub self_state: SelfState,
 }
 
 impl Default for DecisionContext {
@@ -244,35 +332,30 @@ impl Default for DecisionContext {
             target: None,
             health_fraction: 1.0,
             mana_fraction: 1.0,
-            mana_recovering: false,
             slot_ready: [false; EquipmentSlot::ALL.len()],
             anchor_overshoot_fraction: None,
             anchor_arrived: None,
-            calm_phase: MotionMode::Idle,
-            strafe_band: None,
-            swoop_called: false,
-            kite_called: false,
-            burst_called: false,
-            slide_called: false,
             attack_finished: false,
-            dash_called: false,
-            dash_ready: true,
-            dash_trigger_range: None,
-            swoop_due: false,
+            self_state: SelfState::default(),
         }
     }
 }
 
-/// A complete static brain definition.
+/// A complete static brain definition: one scored option list per channel.
 #[derive(Debug)]
 pub struct BrainDefinition {
+    /// Distance band this brain's gates measure against.
+    pub band: Option<DistanceBand>,
     pub motion_options: &'static [ScoredOption<MotionMode>],
+    pub maneuver_options: &'static [ScoredOption<Maneuver>],
     pub slot_options: [&'static [ScoredOption<()>]; EquipmentSlot::ALL.len()],
-    pub heal_options: &'static [ScoredOption<()>],
-    pub breath_options: &'static [ScoredOption<()>],
+    pub ability_options: [&'static [ScoredOption<()>]; Ability::ALL.len()],
+    /// Farthest live target distance at which slot intents may fire. `None`
+    /// means the decision tick's verdict stands without a live range check.
+    pub slot_reach: Option<f32>,
 }
 
-/// One candidate motion or slot request.
+/// One candidate option on a channel.
 #[derive(Clone, Copy, Debug)]
 pub struct ScoredOption<T> {
     pub value: T,

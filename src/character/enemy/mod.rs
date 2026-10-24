@@ -3,17 +3,18 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod defeat;
 
+use super::ability::{Bite, Breath, Heal};
 use super::brain::{
-    Brain, CAST_BAND, CAST_MIN_RANGE, CastPlant, Dash, ManaRecovery, SlotIntent,
-    Strafe, Swoop, TurnRate, Wander, WantsToBreathe, WantsToHeal,
+    BAT, Brain, BrainDefinition, CAST_MIN_RANGE, CastPlant, Dash, FIRE_MAGE, ICE_MAGE,
+    ManaRecovery, SlotIntent, Strafe, Swoop, TurnRate, WARRIOR, Wander,
 };
-use super::{AiSet, animation::AnimationSheet};
+use super::animation::AnimationSheet;
 use crate::{
     character::{
         Character, Purse,
         anchor::Anchor,
         physical_collider,
-        vision::{Targeting, VisionCapabilities, Watching},
+        vision::{VisionCapabilities, Watching},
     },
     prelude::*,
     world::MapRng,
@@ -21,10 +22,6 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_enemies);
-    app.add_systems(
-        Update,
-        (apply_bat_fire, apply_bat_bite).in_set(AiSet::Execute),
-    );
 }
 
 #[derive(Debug, Event)]
@@ -67,13 +64,13 @@ impl EnemyKind {
     /// Every enemy kind, used for random spawns and exhaustive iteration.
     pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
 
-    /// Brain used by this enemy kind.
-    pub fn brain_kind(self) -> BrainKind {
+    /// Brain definition used by this enemy kind.
+    pub fn brain(self) -> &'static BrainDefinition {
         match self {
-            Self::Warrior => BrainKind::Warrior,
-            Self::IceMage => BrainKind::IceMage,
-            Self::FireMage => BrainKind::FireMage,
-            Self::Bat => BrainKind::Bat,
+            Self::Warrior => &WARRIOR,
+            Self::IceMage => &ICE_MAGE,
+            Self::FireMage => &FIRE_MAGE,
+            Self::Bat => &BAT,
         }
     }
 
@@ -249,6 +246,8 @@ fn spawn_enemy_with_equipment(
     enemy
 }
 
+/// Seconds between potions, so a hurt warrior drinks one at a time.
+const HEAL_COOLDOWN: f32 = 1.0;
 const ENEMY_SIGHT_RANGE: f32 = 350.0;
 const BAT_SIGHT_RANGE: f32 = 550.0;
 
@@ -260,7 +259,7 @@ fn base_enemy(position: Vec2, player: Entity, kind: EnemyKind) -> impl Bundle {
         },
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 8.0 * TILE_SIZE as f32),
-        Brain::new(kind.brain_kind()),
+        Brain::new(kind.brain()),
         sight_ray(kind),
         YSort::from_offset(kind.feet_offset()),
         Watching(player),
@@ -290,9 +289,9 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         // 80% of swings end in a break for a rolled 6-8 tile run inside a 90°
         // cone away from the target; the other 20% swing again.
         Dash::breakaway(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
+        Heal::new(HEAL_COOLDOWN),
         Wander::new(1.0, 2.0),
         SlotIntent::default(),
-        WantsToHeal::default(),
         Sprite::from_atlas_image(
             sprites.warrior_enemy_sprite_sheet.clone(),
             TextureAtlas {
@@ -350,7 +349,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ),
         // Stand through the 0.3 s fire volley so the wind-up is readable.
         CastPlant::new(0.3),
-        Strafe::smart(CAST_BAND),
+        Strafe::smart(),
         Wander::new(1.0, 2.0),
         SlotIntent::default(),
         Sprite::from_atlas_image(
@@ -371,27 +370,29 @@ const BAT_TURN_RATE: f32 = 6.0;
 const BAT_ORBIT_STANDOFF: f32 = 50.0;
 /// Contact range for a bite in world units. Anatomy, not tuning.
 const BITE_REACH: f32 = 30.0;
+const BITE_DAMAGE: f32 = 6.0;
+/// Seconds between bites; longer than a dive's time in reach, so a pass bites once.
+const BITE_COOLDOWN: f32 = 1.0;
 /// Bat sprites sort and clip at their own 32x32 frame edge.
 const BAT_FEET_POS_OFFSET: f32 = -16.0;
 const BAT_SHADOW_DROP: f32 = 4.0;
 const BAT_BODY_OFFSET: f32 = BAT_FEET_POS_OFFSET + 8.0;
 const BAT_HURTBOX_OFFSET: f32 = BAT_FEET_POS_OFFSET + 12.0;
 
-/// Breath cooldown for the innate attack, ticked every frame and reset on fire.
-#[derive(Component, Deref, DerefMut)]
-struct BreathCooldown(Timer);
-
 fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         EnemyKind::Bat.stats(),
         TurnRate(BAT_TURN_RATE),
-        Strafe::with_standoff(CAST_BAND, BAT_ORBIT_STANDOFF),
+        Strafe::with_standoff(BAT_ORBIT_STANDOFF),
         Wander::new(1.0, 2.0),
-        WantsToBreathe::default(),
         // 35% chance per roll; after a dive ends, wait 2 s before the next
-        // roll. The 6 dmg bite rides a twice-as-fast pass that flies through
-        // the target and back out to roughly the circling radius.
-        Swoop::new(0.35, 2.0, 6.0),
+        // roll. The dive is a twice-as-fast pass that flies through the target
+        // and back out to roughly the circling radius.
+        Swoop::new(0.35, 2.0),
+        // The bite is its own ability: it lands whenever a target is in reach,
+        // and a landed bite feeds the bat. The cooldown spans a whole pass so
+        // one dive bites once.
+        Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),
         Sprite::from_atlas_image(
             sprites.bat_enemy_sprite_sheet.clone(),
             TextureAtlas {
@@ -400,7 +401,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
             },
         ),
         AnimationSheet::bat(),
-        BreathCooldown(Timer::from_seconds(BAT_BREATH_PERIOD, TimerMode::Once)),
+        Breath::new(BAT_BREATH_PERIOD),
         related!(Projectiles[fireball(sprites, sprite_layouts, 0.0)]),
     )
 }
@@ -426,130 +427,4 @@ fn bat_collider() -> impl Bundle {
             [GameCollisionLayer::HighObstacle],
         ),
     )
-}
-
-/// Launches the bat's innate fireball whenever the brain wants to breathe at a
-/// sighted target. No staff or equipment is involved.
-fn apply_bat_fire(
-    mut commands: Commands,
-    time: Res<Time<Virtual>>,
-    mut bats: Query<(
-        Entity,
-        &Brain,
-        &WantsToBreathe,
-        Has<Targeting>,
-        &TargetInfo,
-        &Health,
-        &Transform,
-        &CombatSide,
-        &Projectiles,
-        &mut BreathCooldown,
-    )>,
-) {
-    for (
-        entity,
-        brain,
-        wants_breathe,
-        has_target,
-        target_info,
-        health,
-        transform,
-        side,
-        templates,
-        mut cooldown,
-    ) in &mut bats
-    {
-        if brain.kind != BrainKind::Bat {
-            continue;
-        }
-        // The defeated body lingers for its dying beat; the breath stops at 0 hp.
-        if health.hp <= 0.0 {
-            continue;
-        }
-        cooldown.tick(time.delta());
-        if !(has_target && target_info.line_of_sight && wants_breathe.0) {
-            continue;
-        }
-        if !cooldown.is_finished() {
-            continue;
-        }
-
-        // A bat can sit exactly on the player, where the bearing collapses to
-        // zero. There is no angle to fire along, so wait for separation
-        // instead of launching a NaN projectile.
-        let aim_direction = target_info.direction;
-        if aim_direction.length_squared() <= f32::EPSILON {
-            continue;
-        }
-
-        for template in templates.iter() {
-            commands.trigger(FireProjectile {
-                item: template,
-                side: *side,
-                holder: Some(entity),
-                position: transform.translation.xy(),
-                aim_direction,
-            });
-        }
-        cooldown.reset();
-    }
-}
-/// Lands a swooping bat's bite once per pass, healing the bat by the bite's
-/// damage; the dive ends past the target and back out, or on a timeout.
-///
-/// Commitment ownership: `Decision` arms a dive and clears one that lost its
-/// mode; the motion driver advances the pass; this applier ends a pass that
-/// physically completed or timed out. Appliers never start a commitment or
-/// change the mode.
-fn apply_bat_bite(
-    mut commands: Commands,
-    time: Res<Time<Virtual>>,
-    mut bats: Query<(
-        Entity,
-        &Brain,
-        &Transform,
-        &mut Swoop,
-        Option<&Targeting>,
-        &TargetInfo,
-        &Health,
-    )>,
-) {
-    for (entity, brain, transform, mut swoop, targeting, target_info, health) in &mut bats {
-        if brain.kind != BrainKind::Bat {
-            continue;
-        }
-        if !swoop.is_active() || health.hp <= 0.0 {
-            continue;
-        }
-        // No live target: the arbiter ends the dive on the next decision tick,
-        // so there is nothing to land against here.
-        let Some(targeting) = targeting else {
-            continue;
-        };
-        let position = transform.translation.xy();
-        // One hit per pass: flying through the target keeps the dive going,
-        // but it cannot tick damage every frame of contact.
-        if target_info.distance <= BITE_REACH && swoop.bite() {
-            commands.trigger(AttemptDamage {
-                entity: targeting.0,
-                damage: Damage::Single(swoop.damage),
-                source_item: None,
-                attacker: Some(entity),
-                direction: Some(target_info.direction),
-                ..default()
-            });
-            // A landed bite feeds the bat. Skip the event at full health so
-            // the heal overlay does not pop a zero.
-            if health.hp < health.max_hp {
-                commands.trigger(AttemptHeal {
-                    entity,
-                    amount: swoop.damage,
-                });
-            }
-        }
-        let now = time.elapsed_secs();
-        if swoop.cleared(position, target_info.distance) || swoop.timed_out(now) {
-            swoop.finish(now);
-        }
-    }
 }

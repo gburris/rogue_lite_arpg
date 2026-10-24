@@ -202,7 +202,7 @@ fn update_enemy_ai_labels(
             continue;
         };
         let attacking = attack_state.is_some_and(|attack| attack.is_attacking);
-        let mode = short_mode(motion.mode);
+        let mode = short_activity(motion);
         if has_target {
             let sight = if target_info.line_of_sight {
                 "sees you"
@@ -239,6 +239,15 @@ fn cleanup_enemy_ai_labels(
     }
 }
 
+/// One-word name for what the enemy is doing: its maneuver while one runs,
+/// otherwise its locomotion mode.
+fn short_activity(brain: &Brain) -> &'static str {
+    match brain.maneuver() {
+        Some(maneuver) => maneuver.name(),
+        None => short_mode(brain.mode()),
+    }
+}
+
 /// One-word name for the enemy's current motion mode.
 fn short_mode(mode: MotionMode) -> &'static str {
     match mode {
@@ -249,10 +258,6 @@ fn short_mode(mode: MotionMode) -> &'static str {
         MotionMode::KeepDistance(_) => "Keep",
         MotionMode::Hold => "Hold",
         MotionMode::Strafe => "Strafe",
-        MotionMode::Swoop => "Swoop",
-        MotionMode::Kite => "Kite",
-        MotionMode::Burst => "Burst",
-        MotionMode::Slide => "Slide",
         MotionMode::Wander => "Wander",
     }
 }

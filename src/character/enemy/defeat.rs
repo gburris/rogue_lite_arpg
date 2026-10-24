@@ -16,7 +16,12 @@ pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
     mut commands: Commands,
     mut defeated_enemy_query: Query<
-        (Option<&Experience>, &Transform, Option<&Items>, Option<&Purse>),
+        (
+            Option<&Experience>,
+            &Transform,
+            Option<&Items>,
+            Option<&Purse>,
+        ),
         With<Enemy>,
     >,
     player_query: Single<(&PlayerStats, &mut Player)>,
@@ -28,11 +33,11 @@ pub(super) fn on_enemy_defeated(
         defeated_enemy_query.get_mut(defeated.entity)
     {
         let (player_stats, mut player) = player_query.into_inner();
-        // XP is opt-in like the other drops: a missing `Experience` only
-        // skips the grant, never the teardown below.
+
         if let Some(experience_to_gain) = experience_to_gain {
             player.current_experience += experience_to_gain.base_exp;
         }
+
         if let Some(items) = items {
             for item_entity in items.iter() {
                 // Enemies drop their items based on drop rate

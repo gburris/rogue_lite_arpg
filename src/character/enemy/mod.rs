@@ -4,8 +4,8 @@ use bevy::{prelude::*, ui_widgets::observe};
 mod defeat;
 
 use super::brain::{
-    Burst, CAST_BAND, CAST_MIN_RANGE, CastPlant, Kite, ManaRecovery, Slide, SlotIntent, Strafe,
-    Swoop, TurnRate, Wander, WantsToBreathe, WantsToHeal,
+    Brain, CAST_BAND, CAST_MIN_RANGE, CastPlant, Dash, ManaRecovery, SlotIntent,
+    Strafe, Swoop, TurnRate, Wander, WantsToBreathe, WantsToHeal,
 };
 use super::{AiSet, animation::AnimationSheet};
 use crate::{
@@ -50,6 +50,8 @@ pub struct Enemy;
 #[derive(Component, Clone, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 
 #[derive(Component, Clone, Copy, Debug, Eq, PartialEq, Hash)]
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum EnemyKind {
     Warrior,
     IceMage,
@@ -258,7 +260,7 @@ fn base_enemy(position: Vec2, player: Entity, kind: EnemyKind) -> impl Bundle {
         },
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
         Anchor::new(position, 8.0 * TILE_SIZE as f32),
-        kind.brain_kind(),
+        Brain::new(kind.brain_kind()),
         sight_ray(kind),
         YSort::from_offset(kind.feet_offset()),
         Watching(player),
@@ -287,7 +289,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         EnemyKind::Warrior.stats(),
         // 80% of swings end in a break for a rolled 6-8 tile run inside a 90°
         // cone away from the target; the other 20% swing again.
-        Kite::new(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
+        Dash::breakaway(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
         Wander::new(1.0, 2.0),
         SlotIntent::default(),
         WantsToHeal::default(),
@@ -310,7 +312,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ManaRecovery::new(0.4, 0.75),
         // Three to four tiles of straight escape once the player crosses the
         // danger ring; the cooldown is the window to close again.
-        Slide::new(
+        Dash::escape(
             3.0 * TILE_SIZE as f32,
             4.0 * TILE_SIZE as f32,
             2.2,
@@ -340,7 +342,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ManaRecovery::new(0.2, 0.45),
         // Two to three tiles of tangent hop after every volley. Inside the
         // close ring a pinned target gets a step-in spread instead.
-        Burst::new(
+        Dash::volley(
             2.0 * TILE_SIZE as f32,
             3.0 * TILE_SIZE as f32,
             2.2,
@@ -362,9 +364,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
     )
 }
 
-/// Flying enemy marker. Bats collide as airborne, passing over low obstacles.
-#[derive(Component, Default)]
-pub(crate) struct Bat;
 
 const BAT_BREATH_PERIOD: f32 = 1.1;
 const BAT_TURN_RATE: f32 = 6.0;
@@ -385,7 +384,6 @@ struct BreathCooldown(Timer);
 fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         EnemyKind::Bat.stats(),
-        Bat,
         TurnRate(BAT_TURN_RATE),
         Strafe::with_standoff(CAST_BAND, BAT_ORBIT_STANDOFF),
         Wander::new(1.0, 2.0),
@@ -435,23 +433,22 @@ fn bat_collider() -> impl Bundle {
 fn apply_bat_fire(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut bats: Query<
-        (
-            Entity,
-            &WantsToBreathe,
-            Has<Targeting>,
-            &TargetInfo,
-            &Health,
-            &Transform,
-            &CombatSide,
-            &Projectiles,
-            &mut BreathCooldown,
-        ),
-        With<Bat>,
-    >,
+    mut bats: Query<(
+        Entity,
+        &Brain,
+        &WantsToBreathe,
+        Has<Targeting>,
+        &TargetInfo,
+        &Health,
+        &Transform,
+        &CombatSide,
+        &Projectiles,
+        &mut BreathCooldown,
+    )>,
 ) {
     for (
         entity,
+        brain,
         wants_breathe,
         has_target,
         target_info,
@@ -462,6 +459,9 @@ fn apply_bat_fire(
         mut cooldown,
     ) in &mut bats
     {
+        if brain.kind != BrainKind::Bat {
+            continue;
+        }
         // The defeated body lingers for its dying beat; the breath stops at 0 hp.
         if health.hp <= 0.0 {
             continue;
@@ -504,19 +504,20 @@ fn apply_bat_fire(
 fn apply_bat_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut bats: Query<
-        (
-            Entity,
-            &Transform,
-            &mut Swoop,
-            Option<&Targeting>,
-            &TargetInfo,
-            &Health,
-        ),
-        With<Bat>,
-    >,
+    mut bats: Query<(
+        Entity,
+        &Brain,
+        &Transform,
+        &mut Swoop,
+        Option<&Targeting>,
+        &TargetInfo,
+        &Health,
+    )>,
 ) {
-    for (entity, transform, mut swoop, targeting, target_info, health) in &mut bats {
+    for (entity, brain, transform, mut swoop, targeting, target_info, health) in &mut bats {
+        if brain.kind != BrainKind::Bat {
+            continue;
+        }
         if !swoop.is_active() || health.hp <= 0.0 {
             continue;
         }

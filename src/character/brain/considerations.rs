@@ -111,6 +111,29 @@ fn read_not_kiting(ctx: &DecisionContext) -> Option<f32> {
     Some(if ctx.kite_called { 0.0 } else { 1.0 })
 }
 
+fn read_attack_finished(ctx: &DecisionContext) -> Option<f32> {
+    Some(if ctx.attack_finished { 1.0 } else { 0.0 })
+}
+
+fn read_dash_idle(ctx: &DecisionContext) -> Option<f32> {
+    Some(if ctx.dash_called { 0.0 } else { 1.0 })
+}
+
+fn read_dash_ready(ctx: &DecisionContext) -> Option<f32> {
+    Some(if ctx.dash_ready { 1.0 } else { 0.0 })
+}
+
+fn read_in_danger_ring(ctx: &DecisionContext) -> Option<f32> {
+    let (Some(target), Some(range)) = (ctx.target, ctx.dash_trigger_range) else {
+        return Some(0.0);
+    };
+    Some(if target.distance <= range { 1.0 } else { 0.0 })
+}
+
+fn read_swoop_due(ctx: &DecisionContext) -> Option<f32> {
+    Some(if ctx.swoop_due { 1.0 } else { 0.0 })
+}
+
 fn read_burst_called(ctx: &DecisionContext) -> Option<f32> {
     Some(if ctx.burst_called { 1.0 } else { 0.0 })
 }
@@ -183,6 +206,11 @@ pub(crate) const BURST_CALLED: Consideration = flag("burst called", read_burst_c
 pub(crate) const SLIDE_CALLED: Consideration = flag("slide called", read_slide_called);
 pub(crate) const RECOVERING: Consideration = flag("recovering mana", read_recovering);
 pub(crate) const NOT_RECOVERING: Consideration = flag("not recovering mana", read_not_recovering);
+pub(crate) const ATTACK_FINISHED: Consideration = flag("attack finished", read_attack_finished);
+pub(crate) const DASH_IDLE: Consideration = flag("dash idle", read_dash_idle);
+pub(crate) const DASH_READY: Consideration = flag("dash off cooldown", read_dash_ready);
+pub(crate) const IN_DANGER_RING: Consideration = flag("in danger ring", read_in_danger_ring);
+pub(crate) const SWOOP_DUE: Consideration = flag("swoop roll due", read_swoop_due);
 
 const CAST_QUALITY_MARGIN: f32 = 20.0;
 const CAST_QUALITY_EDGE: f32 =

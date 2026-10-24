@@ -4,14 +4,15 @@
 //! facts each option weighs. The scoring math stays in [`super::scoring`].
 
 use super::considerations::{
-    BADLY_HURT, BEYOND_ANCHOR_RANGE, BURST_CALLED, CAST_QUALITY, FAR_FROM_TARGET, HAS_ANCHOR,
-    HAS_TARGET, IN_MELEE_RANGE, KITE_CALLED, LINE_OF_SIGHT, MAINHAND_READY, NO_TARGET, NOT_KITING,
-    NOT_RECOVERING, NOT_SWOOPING, PASSIVE_IDLE, PASSIVE_WANDER, RECOVERING, SLIDE_CALLED,
-    SWOOP_CALLED, WITHIN_CAST_RANGE,
+    ATTACK_FINISHED, BADLY_HURT, BEYOND_ANCHOR_RANGE, BURST_CALLED, CAST_QUALITY, DASH_IDLE,
+    DASH_READY, FAR_FROM_TARGET, HAS_ANCHOR, HAS_TARGET, IN_DANGER_RING, IN_MELEE_RANGE,
+    KITE_CALLED, LINE_OF_SIGHT, MAINHAND_READY, NO_TARGET, NOT_KITING, NOT_RECOVERING,
+    NOT_SWOOPING, PASSIVE_IDLE, PASSIVE_WANDER, RECOVERING, SLIDE_CALLED, SWOOP_CALLED,
+    SWOOP_DUE, WITHIN_CAST_RANGE,
 };
 use super::model::{
-    BandEdge, Brain, CAST_CORE_BAND, CommitWindow, Gate, MELEE_BAND, MotionMode, RECOVERY_BAND,
-    ScoredOption,
+    BandEdge, BrainDefinition, CAST_CORE_BAND, CommitWindow, Gate, MELEE_BAND, MotionMode,
+    RECOVERY_BAND, ScoredOption,
 };
 use crate::items::prelude::EquipmentSlot;
 
@@ -198,6 +199,41 @@ const BAT_SWOOP_OPTION: ScoredOption<MotionMode> = ScoredOption {
     gates: &[],
 };
 
+/// Triggers arming committed dashes off scored conditions instead of body
+/// conditionals: a passing trigger plus the policy's chance roll latches the
+/// call, and the shared driver aims it.
+pub(crate) const TRIGGER_BREAKAWAY: ScoredOption<()> = ScoredOption {
+    value: (),
+    priority: 1.0,
+    commit: None,
+    considerations: &[ATTACK_FINISHED, HAS_TARGET],
+    gates: &[],
+};
+pub(crate) const TRIGGER_VOLLEY_HOP: ScoredOption<()> = ScoredOption {
+    value: (),
+    priority: 1.0,
+    commit: None,
+    considerations: &[ATTACK_FINISHED, HAS_TARGET, NOT_RECOVERING],
+    gates: &[],
+};
+pub(crate) const TRIGGER_ESCAPE: ScoredOption<()> = ScoredOption {
+    value: (),
+    priority: 1.0,
+    commit: None,
+    considerations: &[HAS_TARGET, IN_DANGER_RING, DASH_IDLE, DASH_READY],
+    gates: &[],
+};
+pub(crate) const TRIGGER_SWOOP: ScoredOption<()> = ScoredOption {
+    value: (),
+    priority: 1.0,
+    commit: None,
+    // Requires a target: with no target the old lottery still rolled (and
+    // advanced the timer) for a call the motion vote could never take. Now
+    // the timer simply stays due until the target returns.
+    considerations: &[HAS_TARGET, SWOOP_DUE],
+    gates: &[],
+};
+
 const NO_ACTIONS: &[ScoredOption<()>] = &[];
 
 const WARRIOR_MAINHAND: &[ScoredOption<()>] = &[ScoredOption {
@@ -314,7 +350,7 @@ pub(crate) static NO_SLOTS: [&[ScoredOption<()>]; EquipmentSlot::ALL.len()] =
 
 /// Closes to melee reach, plants to swing, usually runs a break away after a
 /// swing, flees when badly hurt, and walks home once disengaged.
-pub static WARRIOR: Brain = Brain {
+pub static WARRIOR: BrainDefinition = BrainDefinition {
     motion_options: WARRIOR_MOTION,
     slot_options: WARRIOR_SLOTS,
     heal_options: WARRIOR_HEAL,
@@ -322,7 +358,7 @@ pub static WARRIOR: Brain = Brain {
 };
 /// Holds the cast band on a moving orbit, bursts to a fresh tangent after each
 /// volley, and backs off only long enough to refill a drained mana pool.
-pub static FIRE_MAGE: Brain = Brain {
+pub static FIRE_MAGE: BrainDefinition = BrainDefinition {
     motion_options: FIRE_MAGE_MOTION,
     slot_options: MAGE_SLOTS,
     heal_options: NO_ACTIONS,
@@ -330,21 +366,21 @@ pub static FIRE_MAGE: Brain = Brain {
 };
 /// Plants on a firing lane, slides straight out when the player crosses its
 /// danger ring, and retreats until its expensive bolts are affordable again.
-pub static ICE_MAGE: Brain = Brain {
+pub static ICE_MAGE: BrainDefinition = BrainDefinition {
     motion_options: ICE_MAGE_MOTION,
     slot_options: MAGE_SLOTS,
     heal_options: NO_ACTIONS,
     breath_options: NO_ACTIONS,
 };
 /// Wanders around its anchor and never requests equipment.
-pub static VILLAGER: Brain = Brain {
+pub static VILLAGER: BrainDefinition = BrainDefinition {
     motion_options: VILLAGER_MOTION,
     slot_options: NO_SLOTS,
     heal_options: NO_ACTIONS,
     breath_options: NO_ACTIONS,
 };
 /// Circles its target and breathes fireballs; no weapon needed.
-pub static BAT: Brain = Brain {
+pub static BAT: BrainDefinition = BrainDefinition {
     motion_options: BAT_MOTION,
     slot_options: NO_SLOTS,
     heal_options: NO_ACTIONS,

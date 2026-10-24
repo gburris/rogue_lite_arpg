@@ -2,7 +2,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod interaction;
 
-use super::brain::Wander;
+use super::brain::{Brain, Wander};
 use crate::{
     character::{Character, anchor::Anchor, physical_collider},
     prelude::*,
@@ -117,7 +117,7 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand:
 fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: BrainKind) -> impl Bundle {
     (
         NPC,
-        brain,
+        Brain::new(brain),
         Wander::new(1.0, 2.5),
         Anchor::new(spawn_position, WANDER_RADIUS),
         SimpleMotion::new(100.0),

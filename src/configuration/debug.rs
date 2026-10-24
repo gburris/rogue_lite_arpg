@@ -11,8 +11,8 @@ use bevy::{
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::prelude::{
-    AppState, AttackState, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu, MotionMode,
-    MotionState, Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision,
+    AppState, AttackState, Brain, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu, MotionMode,
+    Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision,
     ZLayer,
 };
 
@@ -187,7 +187,7 @@ fn spawn_enemy_ai_labels(
 fn update_enemy_ai_labels(
     enemies: Query<
         (
-            &MotionState,
+            &Brain,
             &TargetInfo,
             Has<Targeting>,
             Option<&AttackState>,

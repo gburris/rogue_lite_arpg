@@ -3,8 +3,8 @@
 //! within the winning group, so calm stickiness cannot suppress a reactive move.
 
 use super::model::{
-    BandEdge, BehaviorGroup, Brain, BrainDecision, CommitWindow, Consideration, DecisionContext,
-    Gate, MotionMode, ScoredOption,
+    BandEdge, BehaviorGroup, BrainDefinition, BrainDecision, CommitWindow, Consideration,
+    DecisionContext, Gate, MotionMode, ScoredOption,
 };
 use crate::items::prelude::EquipmentSlot;
 
@@ -107,12 +107,12 @@ fn pass_gate(gate: &Gate, ctx: &DecisionContext, is_current: bool) -> bool {
 }
 
 /// Whether the brain wants to use the item in `slot` this tick.
-pub fn choose_slot(brain: &Brain, slot: EquipmentSlot, ctx: &DecisionContext) -> bool {
+pub fn choose_slot(brain: &BrainDefinition, slot: EquipmentSlot, ctx: &DecisionContext) -> bool {
     select_best(brain.slot_options[slot as usize], ctx, None).is_some()
 }
 
 /// Produces the complete movement and slot-intent decision for one tick.
-pub fn decide(brain: &Brain, ctx: &DecisionContext, current: MotionMode) -> BrainDecision {
+pub fn decide(brain: &BrainDefinition, ctx: &DecisionContext, current: MotionMode) -> BrainDecision {
     let mut slot_intents = [false; EquipmentSlot::ALL.len()];
     for slot in EquipmentSlot::ALL {
         slot_intents[slot as usize] = choose_slot(brain, slot, ctx);
@@ -228,7 +228,7 @@ pub fn arbitrate(
 
 /// Runs one scored tick and lets the arbiter accept or reject the proposal.
 pub fn decide_with_arbiter(
-    brain: &Brain,
+    brain: &BrainDefinition,
     ctx: &DecisionContext,
     current: MotionMode,
     dwell_remaining: f32,
@@ -247,7 +247,7 @@ pub fn decide_with_arbiter(
 }
 
 fn score_mode(
-    brain: &Brain,
+    brain: &BrainDefinition,
     ctx: &DecisionContext,
     mode: MotionMode,
     is_current: bool,
@@ -260,7 +260,7 @@ fn score_mode(
 }
 
 /// Commit window of the option driving `mode`, if any.
-pub fn commit_for(brain: &Brain, mode: MotionMode) -> Option<CommitWindow> {
+pub fn commit_for(brain: &BrainDefinition, mode: MotionMode) -> Option<CommitWindow> {
     brain
         .motion_options
         .iter()
@@ -269,7 +269,7 @@ pub fn commit_for(brain: &Brain, mode: MotionMode) -> Option<CommitWindow> {
 }
 
 /// Rejects malformed brains before they can silently produce nonsense.
-pub fn validate_brain(brain: &Brain) -> Result<(), String> {
+pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
     if brain.motion_options.is_empty() {
         return Err("motion list is empty".to_string());
     }

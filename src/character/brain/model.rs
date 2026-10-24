@@ -2,7 +2,7 @@
 //!
 //! This module only holds plain data: what a brain can sense
 //! ([`DecisionContext`]), what it can decide ([`BrainDecision`]), and the
-//! static definitions it scores against ([`Brain`]). It knows nothing about
+//! static definitions it scores against ([`BrainDefinition`]). It knows nothing about
 //! ECS; [`super`] wires these types to components, [`super::scoring`] holds
 //! the math, [`super::considerations`] holds what brains can sense, and
 //! [`super::brains`] holds the shipped definitions.
@@ -226,6 +226,16 @@ pub struct DecisionContext {
     pub burst_called: bool,
     /// An ice mage has been pushed inside its danger ring and called a slide.
     pub slide_called: bool,
+    /// An attack finished on the last tick; dashes latch their call off this.
+    pub attack_finished: bool,
+    /// A dash is currently latched, under any policy.
+    pub dash_called: bool,
+    /// The latched dash is off cooldown and may rearm.
+    pub dash_ready: bool,
+    /// Target distance calling an escape dash, when the brain dashes to escape.
+    pub dash_trigger_range: Option<f32>,
+    /// The swoop lottery is due for another roll.
+    pub swoop_due: bool,
 }
 
 impl Default for DecisionContext {
@@ -244,13 +254,18 @@ impl Default for DecisionContext {
             kite_called: false,
             burst_called: false,
             slide_called: false,
+            attack_finished: false,
+            dash_called: false,
+            dash_ready: true,
+            dash_trigger_range: None,
+            swoop_due: false,
         }
     }
 }
 
 /// A complete static brain definition.
 #[derive(Debug)]
-pub struct Brain {
+pub struct BrainDefinition {
     pub motion_options: &'static [ScoredOption<MotionMode>],
     pub slot_options: [&'static [ScoredOption<()>]; EquipmentSlot::ALL.len()],
     pub heal_options: &'static [ScoredOption<()>],

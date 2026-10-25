@@ -11,9 +11,9 @@ use bevy::{
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::prelude::{
-    AppState, AttackState, Brain, Dash, Enemy, EnemyKind, InGameSystems, Maneuver, MapBlueprint,
-    Menu, MotionMode, Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision,
-    Wander, ZLayer,
+    AppState, AttackState, Brain, Dash, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu,
+    Motion, Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision, Wander,
+    ZLayer,
 };
 
 use super::view;
@@ -182,7 +182,7 @@ fn spawn_enemy_ai_labels(
     }
 }
 
-/// Refreshes each label in plain words: the motion mode, the target distance
+/// Refreshes each label in plain words: the motion, the target distance
 /// in world units, and whether the enemy sees you and is attacking.
 fn update_enemy_ai_labels(
     enemies: Query<
@@ -242,33 +242,19 @@ fn cleanup_enemy_ai_labels(
     }
 }
 
-/// One-word name for what the enemy is doing: its maneuver while one runs,
-/// otherwise its locomotion mode.
+/// One-word name for what the enemy is doing: its current motion, with a
+/// dash's own policy name and a calm enemy's wander or idle beat.
 fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
-    match brain.maneuver() {
-        Some(Maneuver::Dash) => dash.map_or(Maneuver::Dash.name(), Dash::name),
-        Some(maneuver) => maneuver.name(),
-        None if brain.mode() == MotionMode::Calm => {
+    match brain.motion() {
+        Motion::Dash => dash.map_or(Motion::Dash.name(), Dash::name),
+        Motion::Calm => {
             if wander.is_some_and(Wander::is_walking) {
                 "Wander"
             } else {
                 "Idle"
             }
         }
-        None => short_mode(brain.mode()),
-    }
-}
-
-/// One-word name for the enemy's current motion mode.
-fn short_mode(mode: MotionMode) -> &'static str {
-    match mode {
-        MotionMode::Calm => "Calm",
-        MotionMode::Chase => "Chase",
-        MotionMode::ReturnToAnchor => "Return",
-        MotionMode::Flee => "Flee",
-        MotionMode::KeepDistance(_) => "Keep",
-        MotionMode::Hold => "Hold",
-        MotionMode::Strafe(_) => "Strafe",
+        motion => motion.name(),
     }
 }
 

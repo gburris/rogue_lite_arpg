@@ -1,10 +1,10 @@
-//! The dive maneuver: a committed flight through a snapshot of the target and
+//! The dive: a committed flight through a snapshot of the target and
 //! back out. Biting is a separate ability; a dive only gets the body there.
 
 use bevy::prelude::*;
 
-use super::{Effort, ManeuverContext, ManeuverExecutor, ManeuverStep, RunTag};
-use crate::character::brain::{CAST_MAX_RANGE, Maneuver, Tuning};
+use super::{Effort, MotionContext, MotionExecutor, MotionStep, RunTag};
+use crate::character::brain::{CAST_MAX_RANGE, Motion, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -79,9 +79,9 @@ impl Swoop {
     }
 }
 
-impl ManeuverExecutor for Swoop {
-    fn maneuver(&self) -> Maneuver {
-        Maneuver::Swoop
+impl MotionExecutor for Swoop {
+    fn motion(&self) -> Motion {
+        Motion::Swoop
     }
 
     fn tuning(&self) -> Tuning {
@@ -107,9 +107,9 @@ impl ManeuverExecutor for Swoop {
 
     /// Advances the dive, building the pass on the first step after the brain
     /// starts it and ending it once it clears the target or times out.
-    fn step(&mut self, context: &mut ManeuverContext) -> ManeuverStep {
+    fn step(&mut self, context: &mut MotionContext) -> MotionStep {
         if self.tag.spent {
-            return ManeuverStep::Spent;
+            return MotionStep::Spent;
         }
         let input = context.input;
         let now = input.now;
@@ -119,7 +119,7 @@ impl ManeuverExecutor for Swoop {
         } else {
             1.0 + self.speed_boost
         };
-        let steer = |direction| ManeuverStep::Steer {
+        let steer = |direction| MotionStep::Steer {
             direction,
             effort: Effort::Boosted(speed_boost),
         };
@@ -134,7 +134,7 @@ impl ManeuverExecutor for Swoop {
         if cleared || now - started_at > SWOOP_TIMEOUT {
             self.finish(now);
             self.tag.spent = true;
-            return ManeuverStep::Finished;
+            return MotionStep::Finished;
         }
         // A collapsed (zero-bearing) snapshot builds the zero-length arc
         // `SwoopPass::new` already handles; only a non-finite distance blocks it.
@@ -147,7 +147,13 @@ impl ManeuverExecutor for Swoop {
         let live_target = input.position + info.direction * info.distance;
         let exit_turn = self.exit_turn;
         let pass = self.pass.get_or_insert_with(|| {
-            SwoopPass::new(input.position, live_target, info.distance, heading, exit_turn)
+            SwoopPass::new(
+                input.position,
+                live_target,
+                info.distance,
+                heading,
+                exit_turn,
+            )
         });
         pass.advance(flight_distance);
         pass.track(live_target, flight_distance * SWOOP_TRACK_RATIO);

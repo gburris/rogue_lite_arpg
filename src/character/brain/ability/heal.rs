@@ -40,12 +40,7 @@ impl AbilityCapability for Heal {
 pub(super) fn apply_heal(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut drinkers: Query<(
-        Entity,
-        &ActionIntent,
-        &mut Heal,
-        Option<&Items>,
-    )>,
+    mut drinkers: Query<(Entity, &ActionIntent, &mut Heal, Option<&Items>)>,
     consumables: Query<(), With<Consumable>>,
 ) {
     let now = time.elapsed_secs();

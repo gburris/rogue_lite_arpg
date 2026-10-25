@@ -5,7 +5,7 @@
 //! - A [`Consideration`] reads one input from it and maps it to `0.0..=1.0`.
 //! - A [`Decision`] pairs an action with a weight and its considerations.
 //! - A layer is a list of decisions with a selection rule. The movement layer
-//!   is exclusive: the best [`Movement`] wins, and the current mode keeps
+//!   is exclusive: the best [`Motion`] wins, and the current continuous motion keeps
 //!   momentum. The action layer is independent: every [`Action`] with a
 //!   scoring decision fires.
 //!
@@ -13,27 +13,27 @@
 //! 1. [`senses`] writes a [`DecisionContext`] from world state and from the
 //!    capability components the entity carries.
 //! 2. [`decide`] runs both layers with the pure [`scoring`] math and writes
-//!    only intents: the [`Brain`]'s mode and maneuver, and [`ActionIntent`].
+//!    only intents: the [`Brain`]'s motion, and [`ActionIntent`].
 //! 3. Executors read those intents. [`motion`] steers the body and reports a
-//!    [`ManeuverFinished`] message; [`execute`] and the `ability` module apply
+//!    [`MotionFinished`] message; [`execute`] and the `ability` module apply
 //!    equipment and ability use.
 //!
 //! The brains themselves never see an `Entity`: [`model`] holds their data,
 //! [`scoring`] holds the math, [`considerations`] holds what they can sense,
 //! and [`brains`] holds the shipped definitions.
 //!
-//! To add a locomotion behavior, touch these in order:
-//! 1. [`model`]: a `MotionMode` variant only for a new steering contract.
+//! To add a continuous motion, touch these in order:
+//! 1. [`model`]: a `Motion` variant only for a new steering contract.
 //! 2. [`motion`]: a behavior file with its component (tuning as pub fields,
 //!    memory as private fields) and a steering function.
 //! 3. [`model::DecisionContext`] fields filled in [`senses`], plus
 //!    [`considerations`] readers.
-//! 4. [`brains`]: movement decisions over the mode.
-//! 5. An arm in `motion::steer_locomotion`.
+//! 4. [`brains`]: movement decisions over the motion.
+//! 5. An arm in `motion::steer_motion`.
 //!
-//! A committed move is a [`Maneuver`] instead: a variant, a capability
-//! component in [`motion`] that implements `ManeuverExecutor` and is listed in
-//! `motion::Maneuvers`, and a movement decision over it. A new ability is the
+//! A committed move is a finite [`Motion`] instead: a variant, a capability
+//! component in [`motion`] that implements `MotionExecutor` and is listed in
+//! `motion::FiniteMotions`, and a movement decision over it. A new ability is the
 //! same shape: an [`Ability`] variant, a capability component in `ability`
 //! that implements `AbilityCapability` and is listed in
 //! `AbilityCapabilities`, an applier, and action decisions over it.
@@ -51,15 +51,14 @@ mod senses;
 pub use ability::{Bite, Breath, Heal};
 pub use brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
 pub use model::{
-    Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Maneuver,
-    MotionMode, Movement, Tuning,
+    Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Motion, Tuning,
 };
 pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
 
-use self::decide::{decide_behavior, end_finished_maneuvers};
+use self::decide::{decide_behavior, end_finished_motions};
 use self::execute::apply_slot_requests;
 use self::model::*;
-use self::motion::{ManeuverFinished, drive_motion};
+use self::motion::{MotionFinished, drive_motion};
 use self::scoring::*;
 use self::senses::{Perception, sense};
 
@@ -77,28 +76,30 @@ use crate::{
 
 use super::AiSet;
 
-/// A maneuver the brain started, stamped with a fresh epoch so an executor can
-/// tell a new run of the same maneuver from the one it just finished.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct ActiveManeuver {
-    maneuver: Maneuver,
+/// A finite motion the brain started, stamped with a fresh epoch so an
+/// executor can tell a new run of the same motion from the one it just finished.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ActiveMotion {
+    motion: Motion,
     epoch: u32,
 }
 
 /// A character's utility brain: which static definition it scores against, the
-/// mode and maneuver it is driving, and its decision timers.
+/// motion it is driving, and its decision timers.
 ///
 /// The definition never changes after spawn; decisions rewrite the rest at
 /// 10 Hz. Only the decision tick writes it: executors get a read-only view and
-/// answer with [`ManeuverFinished`]. Randomness lives apart, in [`BrainRng`].
+/// answer with [`MotionFinished`]. Randomness lives apart, in [`BrainRng`].
 #[derive(Component, Debug)]
 #[require(Perception, ActionIntent, BrainRng)]
 pub struct Brain {
     definition: &'static BrainDefinition,
-    mode: MotionMode,
-    active: Option<ActiveManeuver>,
+    /// The continuous motion underneath any running finite motion: it holds
+    /// momentum and steers the frames around one.
+    continuous_motion: Motion,
+    active: Option<ActiveMotion>,
     next_epoch: u32,
-    maneuver_ready_at: [f32; Maneuver::ALL.len()],
+    motion_ready_at: [f32; Motion::COUNT],
 }
 
 impl Brain {
@@ -106,10 +107,10 @@ impl Brain {
     pub fn new(definition: &'static BrainDefinition) -> Self {
         Self {
             definition,
-            mode: MotionMode::Calm,
+            continuous_motion: Motion::Calm,
             active: None,
             next_epoch: 0,
-            maneuver_ready_at: [0.0; Maneuver::ALL.len()],
+            motion_ready_at: [0.0; Motion::COUNT],
         }
     }
 
@@ -118,49 +119,46 @@ impl Brain {
         self.definition
     }
 
-    /// The locomotion mode currently driving the body.
-    pub fn mode(&self) -> MotionMode {
-        self.mode
+    /// The motion currently driving the body: the running finite motion if
+    /// there is one, otherwise the continuous motion.
+    pub fn motion(&self) -> Motion {
+        self.active
+            .map_or(self.continuous_motion, |active| active.motion)
     }
 
-    /// The maneuver currently holding exclusive control of steering.
-    pub fn maneuver(&self) -> Option<Maneuver> {
-        self.active.map(|active| active.maneuver)
-    }
-
-    fn active_maneuver(&self) -> Option<ActiveManeuver> {
+    fn active_motion(&self) -> Option<ActiveMotion> {
         self.active
     }
 
-    fn maneuver_ready(&self, maneuver: Maneuver, now: f32) -> bool {
-        now >= self.maneuver_ready_at[maneuver as usize]
+    fn motion_ready(&self, motion: Motion, now: f32) -> bool {
+        now >= self.motion_ready_at[motion.index()]
     }
 
-    fn start_maneuver(&mut self, maneuver: Maneuver) {
+    fn start_motion(&mut self, motion: Motion) {
         self.next_epoch = self.next_epoch.wrapping_add(1);
-        self.active = Some(ActiveManeuver {
-            maneuver,
+        self.active = Some(ActiveMotion {
+            motion,
             epoch: self.next_epoch,
         });
     }
 
-    /// Drops the running maneuver without a cooldown, because it never ran to
+    /// Drops the running finite motion without a cooldown, because it never ran to
     /// its end (the target vanished).
-    fn cancel_maneuver(&mut self) {
+    fn cancel_motion(&mut self) {
         self.active = None;
     }
 
-    /// Releases `maneuver` if it is the running one and holds off the next
+    /// Releases `motion` if it is the running one and holds off the next
     /// attempt until `ready_at`.
-    fn finish_maneuver(&mut self, maneuver: Maneuver, ready_at: f32) {
-        if self.maneuver() == Some(maneuver) {
+    fn finish_motion(&mut self, motion: Motion, ready_at: f32) {
+        if self.active.is_some_and(|active| active.motion == motion) {
             self.active = None;
-            self.defer_maneuver(maneuver, ready_at);
+            self.defer_motion(motion, ready_at);
         }
     }
 
-    fn defer_maneuver(&mut self, maneuver: Maneuver, ready_at: f32) {
-        self.maneuver_ready_at[maneuver as usize] = ready_at;
+    fn defer_motion(&mut self, motion: Motion, ready_at: f32) {
+        self.motion_ready_at[motion.index()] = ready_at;
     }
 }
 
@@ -297,11 +295,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(ability::plugin)
         .init_resource::<DecisionClock>()
         .init_resource::<AiSeed>()
-        .add_message::<ManeuverFinished>()
+        .add_message::<MotionFinished>()
         .add_systems(Startup, seed_ai_seed)
         .add_systems(
             Update,
-            (tick_decision_clock, end_finished_maneuvers)
+            (tick_decision_clock, end_finished_motions)
                 .chain()
                 .in_set(AiSet::Decision),
         )
@@ -310,7 +308,7 @@ pub(super) fn plugin(app: &mut App) {
             (update_mana_recovery, sense)
                 .chain()
                 .run_if(decision_tick_ready)
-                .after(end_finished_maneuvers)
+                .after(end_finished_motions)
                 .after(crate::combat::mana::regenerate_mana)
                 .after(tick_equippable_cooldown)
                 .in_set(AiSet::Decision),
@@ -369,7 +367,7 @@ mod tests {
         world.insert_resource(AiSeed::default());
         let target = world.spawn_empty().id();
         let mut brain = Brain::new(&BAT);
-        brain.mode = MotionMode::Strafe(CAST_BAND);
+        brain.continuous_motion = Motion::Strafe(CAST_BAND);
         let bat = world
             .spawn((
                 brain,
@@ -394,17 +392,19 @@ mod tests {
             .run_system_once(update_mana_recovery)
             .expect("mana break updated");
         world.run_system_once(sense).expect("brain sensed");
-        world.run_system_once(decide_behavior).expect("decisions run");
+        world
+            .run_system_once(decide_behavior)
+            .expect("decisions run");
     }
 
     /// The full loop holds: a ready, scored dive starts on the first tick and
-    /// leaves the locomotion mode alone.
+    /// leaves the continuous motion underneath it alone.
     #[test]
     fn swoop_lottery_starts_a_dive() {
         let (mut world, bat) = swooping_bat(1.0, 0.0);
         run_decision_tick(&mut world);
         let brain = world.get::<Brain>(bat).expect("brained bat");
-        assert_eq!(brain.maneuver(), Some(Maneuver::Swoop));
-        assert_eq!(brain.mode(), MotionMode::Strafe(CAST_BAND));
+        assert_eq!(brain.motion(), Motion::Swoop);
+        assert_eq!(brain.continuous_motion, Motion::Strafe(CAST_BAND));
     }
 }

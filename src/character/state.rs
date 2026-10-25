@@ -46,7 +46,7 @@ impl SimpleMotion {
         self.current_speed = self.max_speed;
         self.direction = direction;
     }
-    /// Starts moving at a fraction of max speed, for gaits like wandering
+    /// Starts moving at a fraction of max speed, for slow motion like wandering
     /// that should read as unhurried next to full-speed combat movement.
     pub fn start_moving_scaled(&mut self, direction: Vec2, scale: f32) {
         self.speed_boost = 1.0;
@@ -88,7 +88,7 @@ impl SimpleMotion {
 
     pub fn get_velocity(&self) -> Vec2 {
         // A stunned body holds its pre-stun vector in `direction`, but its
-        // locomotion is frozen: report zero so target-velocity consumers do
+        // movement is frozen: report zero so target-velocity consumers do
         // not chase a phantom.
         if self.is_stunned() {
             return Vec2::ZERO;

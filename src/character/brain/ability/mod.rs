@@ -1,7 +1,7 @@
 //! Abilities a brain can ask for besides moving or using equipment. Each one
 //! is an opt-in capability component plus an applier that reads the brain's
 //! [`ActionIntent`](super::ActionIntent), re-checks the live world,
-//! and does the work. Appliers never start a maneuver or change a mode. A
+//! and does the work. Appliers never change the brain's motion. A
 //! defeated body loses its intent, so appliers never see the dead.
 //!
 //! Capability components implement [`AbilityCapability`] and are listed once,
@@ -40,9 +40,12 @@ impl AbilityCapabilitiesItem<'_, '_> {
     /// Tuning of every ability this entity can carry out, by ability index.
     pub fn tuning(&self) -> [Option<Tuning>; Ability::ALL.len()] {
         let capabilities: [Option<&dyn AbilityCapability>; 3] = [
-            self.bite.map(|capability| capability as &dyn AbilityCapability),
-            self.breath.map(|capability| capability as &dyn AbilityCapability),
-            self.heal.map(|capability| capability as &dyn AbilityCapability),
+            self.bite
+                .map(|capability| capability as &dyn AbilityCapability),
+            self.breath
+                .map(|capability| capability as &dyn AbilityCapability),
+            self.heal
+                .map(|capability| capability as &dyn AbilityCapability),
         ];
         let mut tuning = [None; Ability::ALL.len()];
         for capability in capabilities.into_iter().flatten() {

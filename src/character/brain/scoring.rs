@@ -3,11 +3,9 @@
 //! single best decision, with momentum on the current mode; the action layer
 //! fires every action with a decision that clears [`ACTION_THRESHOLD`].
 
-use super::model::{
-    Action, BrainDefinition, Consideration, Decision, DecisionContext, MotionMode, Movement,
-};
+use super::model::{Action, BrainDefinition, Consideration, Decision, DecisionContext, Motion};
 
-/// Score multiplier the current mode keeps over challengers, so a near-tie
+/// Score multiplier the current continuous motion keeps over challengers, so a near-tie
 /// does not flip the body back and forth between ticks.
 pub(crate) const MOMENTUM: f32 = 1.25;
 
@@ -41,20 +39,20 @@ pub fn score_decision<T>(
     (score.is_finite() && score >= 0.0).then_some(score)
 }
 
-/// Best movement the body can start, or `None` when nothing scores. The
-/// current mode scores with [`MOMENTUM`]; ties go to the earlier decision.
+/// Best motion the body can start, or `None` when nothing scores. The
+/// current continuous motion scores with [`MOMENTUM`]; ties go to the earlier decision.
 pub fn choose_movement(
     brain: &BrainDefinition,
     ctx: &DecisionContext,
-    current: MotionMode,
-    mut can_start: impl FnMut(Movement) -> bool,
-) -> Option<Movement> {
-    let mut best: Option<(Movement, f32)> = None;
+    current: Motion,
+    mut can_start: impl FnMut(Motion) -> bool,
+) -> Option<Motion> {
+    let mut best: Option<(Motion, f32)> = None;
     for decision in brain.movement {
         if !can_start(decision.value) {
             continue;
         }
-        let is_current = decision.value == Movement::Mode(current);
+        let is_current = decision.value == current;
         let Some(mut score) = score_decision(decision, ctx, is_current) else {
             continue;
         };
@@ -69,7 +67,7 @@ pub fn choose_movement(
             _ => best = Some((decision.value, score)),
         }
     }
-    best.map(|(movement, _)| movement)
+    best.map(|(motion, _)| motion)
 }
 
 /// Every action the body can perform with a decision at or above [`ACTION_THRESHOLD`].
@@ -177,8 +175,8 @@ mod tests {
         armed(distance, &FIRE_MAGE)
     }
 
-    fn movement(brain: &BrainDefinition, ctx: &DecisionContext, current: MotionMode) -> Movement {
-        choose_movement(brain, ctx, current, |movement| ctx.can_start(movement))
+    fn movement(brain: &BrainDefinition, ctx: &DecisionContext, current: Motion) -> Motion {
+        choose_movement(brain, ctx, current, |motion| ctx.can_start(motion))
             .expect("a movement scores")
     }
 
@@ -187,8 +185,8 @@ mod tests {
         let ctx = warrior_context();
 
         assert_eq!(
-            movement(&WARRIOR, &ctx, MotionMode::Chase),
-            Movement::Mode(MotionMode::KeepDistance(MELEE_BAND))
+            movement(&WARRIOR, &ctx, Motion::Chase),
+            Motion::KeepDistance(MELEE_BAND)
         );
         assert!(choose_actions(&WARRIOR, &ctx)[MAINHAND]);
     }
@@ -203,10 +201,7 @@ mod tests {
             anchor_arrived: Some(false),
             ..warrior_context()
         };
-        assert_eq!(
-            movement(&WARRIOR, &fleeing, MotionMode::Chase),
-            Movement::Mode(MotionMode::Flee)
-        );
+        assert_eq!(movement(&WARRIOR, &fleeing, Motion::Chase), Motion::Flee);
         // Still swinging on the way out: a fighting retreat, not a rout.
         assert!(choose_actions(&WARRIOR, &fleeing)[MAINHAND]);
         let scratched = DecisionContext {
@@ -214,8 +209,8 @@ mod tests {
             ..fleeing
         };
         assert_eq!(
-            movement(&WARRIOR, &scratched, MotionMode::Chase),
-            Movement::Mode(MotionMode::KeepDistance(MELEE_BAND))
+            movement(&WARRIOR, &scratched, Motion::Chase),
+            Motion::KeepDistance(MELEE_BAND)
         );
     }
 
@@ -224,8 +219,8 @@ mod tests {
         let ctx = mage_context(250.0);
 
         assert_eq!(
-            movement(&FIRE_MAGE, &ctx, MotionMode::Calm),
-            Movement::Mode(MotionMode::Strafe(CAST_BAND))
+            movement(&FIRE_MAGE, &ctx, Motion::Calm),
+            Motion::Strafe(CAST_BAND)
         );
         assert!(choose_actions(&FIRE_MAGE, &ctx)[MAINHAND]);
     }

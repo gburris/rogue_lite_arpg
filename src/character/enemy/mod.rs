@@ -74,7 +74,7 @@ impl EnemyKind {
         }
     }
 
-    /// Base locomotion and health shared by every enemy kind. Casters add
+    /// Base movement and health shared by every enemy kind. Casters add
     /// their own `Mana`; nothing else spends it, so the bat and warrior do not
     /// carry an unused pool.
     fn stats(self) -> impl Bundle {

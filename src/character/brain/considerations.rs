@@ -5,7 +5,7 @@
 
 use super::model::{
     Ability, Action, CAST_MAX_RANGE, CAST_MIN_RANGE, Consideration, Curve, DecisionContext,
-    HEAL_SAFE_DISTANCE, Interval, MELEE_RANGE, Maneuver, MotionMode, Response, Tuning,
+    HEAL_SAFE_DISTANCE, Interval, MELEE_RANGE, Motion, Response, Tuning,
 };
 use crate::items::prelude::EquipmentSlot;
 
@@ -31,7 +31,7 @@ fn read_line_of_sight(ctx: &DecisionContext) -> Option<f32> {
 /// reads full until arrival, so crossing back inside the range mid-return
 /// cannot hand the body straight back to calm.
 fn read_anchor_pull(ctx: &DecisionContext) -> Option<f32> {
-    if ctx.mode == MotionMode::ReturnToAnchor {
+    if ctx.motion == Motion::ReturnToAnchor {
         ctx.anchor_arrived
             .map(|arrived| if arrived { 0.0 } else { 1.0 })
     } else {
@@ -51,9 +51,9 @@ fn read_target_distance(ctx: &DecisionContext) -> Option<f32> {
     ctx.target.map(|target| target.distance)
 }
 
-/// Whether the maneuver at index `MANEUVER` is the one running.
-fn read_running<const MANEUVER: usize>(ctx: &DecisionContext) -> Option<f32> {
-    flag_value(ctx.active_maneuver.map(|maneuver| maneuver as usize) == Some(MANEUVER))
+/// Whether the motion at index `MOTION` is the one running.
+fn read_running<const MOTION: usize>(ctx: &DecisionContext) -> Option<f32> {
+    flag_value(ctx.motion.index() == MOTION)
 }
 
 fn read_attack_finished(ctx: &DecisionContext) -> Option<f32> {
@@ -62,8 +62,8 @@ fn read_attack_finished(ctx: &DecisionContext) -> Option<f32> {
 
 fn read_circling(ctx: &DecisionContext) -> Option<f32> {
     flag_value(matches!(
-        ctx.mode,
-        MotionMode::Strafe(_) | MotionMode::KeepDistance(_)
+        ctx.motion,
+        Motion::Strafe(_) | Motion::KeepDistance(_)
     ))
 }
 
@@ -77,8 +77,8 @@ fn in_reach(ctx: &DecisionContext, tuning: Option<Tuning>) -> Option<f32> {
     flag_value(target.distance <= reach)
 }
 
-fn read_maneuver_in_reach<const MANEUVER: usize>(ctx: &DecisionContext) -> Option<f32> {
-    in_reach(ctx, ctx.maneuver_tuning[MANEUVER])
+fn read_motion_in_reach<const MOTION: usize>(ctx: &DecisionContext) -> Option<f32> {
+    in_reach(ctx, ctx.motion_tuning[MOTION])
 }
 
 fn read_action_in_reach<const ACTION: usize>(ctx: &DecisionContext) -> Option<f32> {
@@ -147,9 +147,9 @@ pub(crate) const BADLY_HURT: Consideration = consideration(
     Curve::Linear,
 );
 pub(crate) const NOT_DASHING: Consideration =
-    flag("dashing", read_running::<{ Maneuver::Dash as usize }>).inverted("not dashing");
+    flag("dashing", read_running::<{ Motion::Dash.index() }>).inverted("not dashing");
 pub(crate) const NOT_SWOOPING: Consideration =
-    flag("swooping", read_running::<{ Maneuver::Swoop as usize }>).inverted("not swooping");
+    flag("swooping", read_running::<{ Motion::Swoop.index() }>).inverted("not swooping");
 pub(crate) const FAR_FROM_TARGET: Consideration =
     within("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
 pub(crate) const RECOVERING: Consideration = flag("recovering mana", read_recovering);
@@ -160,11 +160,11 @@ pub(crate) const CIRCLING: Consideration = flag("circling", read_circling);
 /// For the ice mage's escape dash, its reach is the danger ring.
 pub(crate) const IN_DASH_REACH: Consideration = flag(
     "in dash reach",
-    read_maneuver_in_reach::<{ Maneuver::Dash as usize }>,
+    read_motion_in_reach::<{ Motion::Dash.index() }>,
 );
 pub(crate) const IN_SWOOP_REACH: Consideration = flag(
     "in swoop reach",
-    read_maneuver_in_reach::<{ Maneuver::Swoop as usize }>,
+    read_motion_in_reach::<{ Motion::Swoop.index() }>,
 );
 pub(crate) const IN_MAINHAND_REACH: Consideration = flag(
     "in mainhand reach",

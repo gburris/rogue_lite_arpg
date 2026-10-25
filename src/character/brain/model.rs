@@ -1,7 +1,7 @@
 //! Core data types for the utility brains.
 //!
 //! This module only holds plain data: what a brain can sense
-//! ([`DecisionContext`]), what it can choose ([`Movement`], [`Action`]), and
+//! ([`DecisionContext`]), what it can choose ([`Motion`], [`Action`]), and
 //! the static definitions it scores against ([`BrainDefinition`]). It knows nothing about
 //! ECS; [`super`] wires these types to components, [`super::scoring`] holds
 //! the math, [`super::considerations`] holds what brains can sense, and
@@ -81,12 +81,13 @@ impl Interval {
     }
 }
 
-/// Locomotion selected by a brain: where it wants to be. Attack execution
-/// stays with `AttackState`, and committed moves are a [`Maneuver`], not a mode.
-/// New behaviors should be decisions over these modes, not new variants,
-/// unless the steering contract itself is new.
+/// How a character moves: a continuous motion that runs until replaced, or a
+/// finite committed move that takes exclusive control of steering until its
+/// executor reports it finished and is never re-scored while it runs. Attack execution stays with `AttackState`. New behaviors
+/// should be decisions over these motions, not new variants, unless the
+/// steering contract itself is new.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum MotionMode {
+pub enum Motion {
     /// Disengaged: alternates standing and ambling, paced by the `Wander`
     /// component.
     #[default]
@@ -101,49 +102,69 @@ pub enum MotionMode {
     /// Firing-line sidestep: orbits the target inside the band while
     /// equipment stays hot.
     Strafe(Interval),
-}
-
-impl MotionMode {
-    /// Whether steering this mode needs a live target.
-    pub fn needs_target(self) -> bool {
-        // Flee is still fighting: the target is live, the goal is just distance.
-        matches!(
-            self,
-            Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe(_) | Self::Flee
-        )
-    }
-}
-
-/// A committed move that takes exclusive control of steering until its
-/// executor reports it finished. It competes with the modes on the movement
-/// layer but is never re-scored while it runs.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Maneuver {
     /// Committed straight run; the `Dash` component's policy sets its aim.
     Dash,
     /// Committed dive through a snapshot of the target and back out.
     Swoop,
 }
 
-impl Maneuver {
-    /// Every maneuver, in array order.
-    pub const ALL: [Self; 2] = [Self::Dash, Self::Swoop];
+impl Motion {
+    /// Number of distinct motions, for per-motion arrays.
+    pub const COUNT: usize = 9;
+
+    /// Every finite motion, the ones that need a capability to carry out.
+    pub const FINITE: [Self; 2] = [Self::Dash, Self::Swoop];
+
+    /// Position of this motion in per-motion arrays, ignoring any band.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Calm => 0,
+            Self::Chase => 1,
+            Self::ReturnToAnchor => 2,
+            Self::Flee => 3,
+            Self::KeepDistance(_) => 4,
+            Self::Hold => 5,
+            Self::Strafe(_) => 6,
+            Self::Dash => 7,
+            Self::Swoop => 8,
+        }
+    }
+
+    /// Whether this motion ends on its own and reports it, rather than
+    /// running until replaced.
+    pub const fn is_finite(self) -> bool {
+        matches!(self, Self::Dash | Self::Swoop)
+    }
+
+    /// Whether steering this motion needs a live target.
+    pub fn needs_target(self) -> bool {
+        // Flee is still fighting: the target is live, the goal is just distance.
+        matches!(
+            self,
+            Self::Chase
+                | Self::KeepDistance(_)
+                | Self::Hold
+                | Self::Strafe(_)
+                | Self::Flee
+                | Self::Dash
+                | Self::Swoop
+        )
+    }
 
     /// One-word label for debug displays.
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Calm => "Calm",
+            Self::Chase => "Chase",
+            Self::ReturnToAnchor => "Return",
+            Self::Flee => "Flee",
+            Self::KeepDistance(_) => "Keep",
+            Self::Hold => "Hold",
+            Self::Strafe(_) => "Strafe",
             Self::Dash => "Dash",
             Self::Swoop => "Swoop",
         }
     }
-}
-
-/// What the exclusive movement layer picks between: a sustained mode or a
-/// committed maneuver.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Movement {
-    Mode(MotionMode),
-    Maneuver(Maneuver),
 }
 
 /// An innate move a brain can ask its body for, carried out by a capability
@@ -192,7 +213,7 @@ pub struct TargetView {
     pub line_of_sight: bool,
     /// Unit direction from the viewer to the target.
     pub bearing: Vec2,
-    /// Intended world velocity of the target, read from its locomotion.
+    /// Intended world velocity of the target, read from its movement.
     pub velocity: Vec2,
     /// Signed tangential component of the target's velocity around the viewer.
     /// Positive means the target circles counter-clockwise.
@@ -205,9 +226,9 @@ pub struct TargetView {
 pub struct Tuning {
     /// Target distance within which the capability should be used, when it has one.
     pub reach: Option<f32>,
-    /// Probability that a winning maneuver actually starts.
+    /// Probability that a winning finite motion actually starts.
     pub chance: f32,
-    /// Seconds before a maneuver may be tried again after it ends or misses.
+    /// Seconds before a finite motion may be tried again after it ends or misses.
     pub cooldown: f32,
 }
 
@@ -233,17 +254,16 @@ pub struct DecisionContext {
     pub slot_ready: [bool; EquipmentSlot::ALL.len()],
     pub anchor_overshoot_fraction: Option<f32>,
     pub anchor_arrived: Option<bool>,
-    /// An attack finished on the last tick; maneuvers key their start off this.
+    /// An attack finished on the last tick; finite motions key their start off this.
     pub attack_finished: bool,
-    /// The mode currently driving the body.
-    pub mode: MotionMode,
+    /// The motion currently driving the body: a running finite motion, else the continuous one.
+    pub motion: Motion,
     /// Whether a caster is running out a held mana break.
     pub mana_recovering: bool,
-    pub active_maneuver: Option<Maneuver>,
-    /// `None` for a maneuver this entity has no capability for.
-    pub maneuver_tuning: [Option<Tuning>; Maneuver::ALL.len()],
+    /// `None` for a finite motion this entity has no capability for.
+    pub motion_tuning: [Option<Tuning>; Motion::COUNT],
     /// Owned and off cooldown, so it may be scored and started.
-    pub maneuver_ready: [bool; Maneuver::ALL.len()],
+    pub motion_ready: [bool; Motion::COUNT],
     /// `None` for an action this entity cannot carry out.
     pub action_tuning: [Option<Tuning>; Action::COUNT],
 }
@@ -258,24 +278,20 @@ impl Default for DecisionContext {
             anchor_overshoot_fraction: None,
             anchor_arrived: None,
             attack_finished: false,
-            mode: MotionMode::Calm,
+            motion: Motion::Calm,
             mana_recovering: false,
-            active_maneuver: None,
-            maneuver_tuning: [None; Maneuver::ALL.len()],
-            maneuver_ready: [false; Maneuver::ALL.len()],
+            motion_tuning: [None; Motion::COUNT],
+            motion_ready: [false; Motion::COUNT],
             action_tuning: [Some(Tuning::default()); Action::COUNT],
         }
     }
 }
 
 impl DecisionContext {
-    /// Whether the body can start `movement` right now: modes always, a
-    /// maneuver only when owned and off cooldown.
-    pub fn can_start(&self, movement: Movement) -> bool {
-        match movement {
-            Movement::Mode(_) => true,
-            Movement::Maneuver(maneuver) => self.maneuver_ready[maneuver as usize],
-        }
+    /// Whether the body can start `motion` right now: a continuous motion always, a
+    /// finite motion only when owned and off cooldown.
+    pub fn can_start(&self, motion: Motion) -> bool {
+        !motion.is_finite() || self.motion_ready[motion.index()]
     }
 
     /// Whether the body carries the capability for `action`.
@@ -287,8 +303,8 @@ impl DecisionContext {
 /// A complete static brain: one decision list per layer.
 #[derive(Debug)]
 pub struct BrainDefinition {
-    /// Exclusive layer: the best decision wins, and the current mode keeps momentum.
-    pub movement: &'static [Decision<Movement>],
+    /// Exclusive layer: the best decision wins, and the current continuous motion keeps momentum.
+    pub movement: &'static [Decision<Motion>],
     /// Independent layer: every action with a scoring decision fires.
     pub actions: &'static [Decision<Action>],
     /// Farthest target distance at which equipment use may fire. Scored as

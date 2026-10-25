@@ -1,11 +1,11 @@
 //! Committed straight runs: the warrior's kite, the fire mage's burst and the
-//! ice mage's slide are all one dash maneuver under different policies.
+//! ice mage's slide are all one dash under different policies.
 
 use bevy::prelude::*;
 
-use super::{Effort, ManeuverContext, ManeuverExecutor, ManeuverStep, RunTag};
+use super::{Effort, MotionContext, MotionExecutor, MotionStep, RunTag};
 use crate::character::brain::senses::target_view;
-use crate::character::brain::{BrainRng, Maneuver, TARGET_MOVING_SPEED, TargetView, Tuning};
+use crate::character::brain::{BrainRng, Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
 
 /// Half-angle of a warrior's break cone around straight away from its target.
 const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -18,7 +18,7 @@ const BURST_OUTWARD_BIAS: f32 = 0.15;
 
 /// What distinguishes one committed straight dash: its tuning and aim.
 /// Execution is shared, and what *starts* it is scored by the brain
-/// definition's maneuver decisions.
+/// definition's finite motion decisions.
 #[derive(Clone, Copy, Debug)]
 pub enum DashPolicy {
     /// Break away from the target along a fixed bearing after a swing.
@@ -179,9 +179,9 @@ impl Dash {
     }
 }
 
-impl ManeuverExecutor for Dash {
-    fn maneuver(&self) -> Maneuver {
-        Maneuver::Dash
+impl MotionExecutor for Dash {
+    fn motion(&self) -> Motion {
+        Motion::Dash
     }
 
     fn tuning(&self) -> Tuning {
@@ -198,9 +198,9 @@ impl ManeuverExecutor for Dash {
 
     /// Advances the run, aiming and rolling its length on the first step
     /// after the brain starts it.
-    fn step(&mut self, context: &mut ManeuverContext) -> ManeuverStep {
+    fn step(&mut self, context: &mut MotionContext) -> MotionStep {
         if self.tag.spent {
-            return ManeuverStep::Spent;
+            return MotionStep::Spent;
         }
         if !self.run.called {
             let policy = self.policy;
@@ -208,20 +208,20 @@ impl ManeuverExecutor for Dash {
                 .and_then(|target| policy.aim().aim(target, self, context.rng));
             let Some(direction) = aimed else {
                 self.tag.spent = true;
-                return ManeuverStep::Finished;
+                return MotionStep::Finished;
             };
             let run = context.rng.range(self.min_run, self.max_run);
             self.run.call(direction, run);
         }
         let distance = context.run_step(self.speed_boost);
         match self.run.step(distance) {
-            Some(direction) => ManeuverStep::Steer {
+            Some(direction) => MotionStep::Steer {
                 direction: Some(direction),
                 effort: Effort::Boosted(self.speed_boost),
             },
             None => {
                 self.tag.spent = true;
-                ManeuverStep::Finished
+                MotionStep::Finished
             }
         }
     }

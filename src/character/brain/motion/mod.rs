@@ -1,17 +1,17 @@
-//! Per-frame steering execution: translates [`Brain`](super::Brain) locomotion
-//! and maneuvers into [`SimpleMotion`].
+//! Per-frame steering execution: translates [`Brain`](super::Brain) motions into
+//! [`SimpleMotion`].
 //!
 //! [`super`] decides at ~10 Hz what to do; this module drives every frame how
 //! to move. Each behavior owns its component, its memory and its steering in
 //! one file: [`approach`] (stateless), [`strafe`], [`wander`], [`dash`],
 //! [`swoop`] and [`cast_plant`]. The memories are opt-in capabilities that
-//! persist across mode switches, so they stay separate components rather than
+//! persist across motion switches, so they stay separate components rather than
 //! one enum.
 //!
-//! A running maneuver takes exclusive control of steering. Maneuver
-//! components implement [`ManeuverExecutor`] and are listed once, in
-//! [`Maneuvers`]; the brain's active maneuver is the single source of truth,
-//! and an executor reports back only with [`ManeuverFinished`], never by
+//! A running finite motion takes exclusive control of steering. Finite motion
+//! components implement [`MotionExecutor`] and are listed once, in
+//! [`FiniteMotions`]; the brain's active motion is the single source of truth,
+//! and an executor reports back only with [`MotionFinished`], never by
 //! writing decision state.
 
 mod approach;
@@ -29,7 +29,7 @@ pub use strafe::Strafe;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
-use super::{ActiveManeuver, Brain, BrainRng, Maneuver, MotionMode, Tuning};
+use super::{ActiveMotion, Brain, BrainRng, Motion, Tuning};
 use crate::character::{
     anchor::Anchor,
     state::SimpleMotion,
@@ -43,12 +43,12 @@ pub(crate) const ANCHOR_ARRIVAL_RADIUS: f32 = TILE_SIZE as f32 / 2.0;
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TurnRate(pub f32);
 
-/// A maneuver ran to its end. The brain releases the maneuver and starts its
+/// A finite motion ran to its end. The brain releases it and starts its
 /// cooldown when it reads this.
 #[derive(Message, Clone, Copy, Debug)]
-pub struct ManeuverFinished {
+pub struct MotionFinished {
     pub entity: Entity,
-    pub maneuver: Maneuver,
+    pub motion: Motion,
 }
 
 /// Read-only world input shared by every steering behavior this frame.
@@ -60,15 +60,15 @@ pub(super) struct SteerInput<'a> {
 }
 
 /// How hard to push along the steered heading: a fraction of max speed for
-/// gaits, a multiple for committed bursts.
+/// continuous motions, a multiple for committed bursts.
 #[derive(Clone, Copy)]
 pub(super) enum Effort {
     Scaled(f32),
     Boosted(f32),
 }
 
-/// One frame of a maneuver executor.
-pub(super) enum ManeuverStep {
+/// One frame of a finite motion executor.
+pub(super) enum MotionStep {
     /// Still running: steer this way.
     Steer {
         direction: Option<Vec2>,
@@ -82,7 +82,7 @@ pub(super) enum ManeuverStep {
 
 /// Which brain-issued run an executor is carrying out. The brain stamps every
 /// start with a fresh epoch, so an executor can tell a new run of the same
-/// maneuver from the one it just finished, even with no frame in between.
+/// motion from the one it just finished, even with no frame in between.
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct RunTag {
     epoch: Option<u32>,
@@ -90,16 +90,16 @@ pub(super) struct RunTag {
     spent: bool,
 }
 
-/// Everything a maneuver step may look at this frame. The random stream is
+/// Everything a finite motion step may look at this frame. The random stream is
 /// the only thing it can mutate.
-pub(super) struct ManeuverContext<'a, 'w> {
+pub(super) struct MotionContext<'a, 'w> {
     pub input: &'a SteerInput<'w>,
     pub motion: &'a SimpleMotion,
     pub delta_secs: f32,
     pub rng: &'a mut BrainRng,
 }
 
-impl ManeuverContext<'_, '_> {
+impl MotionContext<'_, '_> {
     /// World units one straight-run steering step may consume this frame.
     /// Stunned bodies hold still so committed passes neither advance nor finish.
     pub fn run_step(&self, speed_boost: f32) -> f32 {
@@ -111,63 +111,66 @@ impl ManeuverContext<'_, '_> {
     }
 }
 
-/// A capability component that carries out one [`Maneuver`]. Implementing this
-/// and listing the component in [`Maneuvers`] is all the executor side of a
-/// new maneuver needs.
-pub(super) trait ManeuverExecutor {
-    fn maneuver(&self) -> Maneuver;
-    /// Chance, spacing and reach the decision tick applies to this maneuver.
+/// A capability component that carries out one finite [`Motion`]. Implementing this
+/// and listing the component in [`FiniteMotions`] is all the executor side of a
+/// new finite motion needs.
+pub(super) trait MotionExecutor {
+    fn motion(&self) -> Motion;
+    /// Chance, spacing and reach the decision tick applies to this motion.
     fn tuning(&self) -> Tuning;
     fn tag(&mut self) -> &mut RunTag;
     /// Forgets a run the brain is no longer asking for.
     fn reset(&mut self, now: f32);
-    fn step(&mut self, context: &mut ManeuverContext) -> ManeuverStep;
-    /// Extra speed locomotion should keep while settling out of the maneuver.
+    fn step(&mut self, context: &mut MotionContext) -> MotionStep;
+    /// Extra speed steering should keep while settling out of the motion.
     fn recovery_boost(&self, _now: f32) -> f32 {
         1.0
     }
 }
 
-/// Every maneuver executor an entity may carry. The one place to list a new one.
+/// Every finite motion executor an entity may carry. The one place to list a new one.
 #[derive(QueryData)]
 #[query_data(mutable)]
-pub(super) struct Maneuvers {
+pub(super) struct FiniteMotions {
     dash: Option<&'static mut Dash>,
     swoop: Option<&'static mut Swoop>,
 }
 
-impl ManeuversItem<'_, '_> {
-    fn executors(&mut self) -> impl Iterator<Item = &mut dyn ManeuverExecutor> {
+impl FiniteMotionsItem<'_, '_> {
+    fn executors(&mut self) -> impl Iterator<Item = &mut dyn MotionExecutor> {
         [
             self.dash
                 .as_deref_mut()
-                .map(|executor| executor as &mut dyn ManeuverExecutor),
+                .map(|executor| executor as &mut dyn MotionExecutor),
             self.swoop
                 .as_deref_mut()
-                .map(|executor| executor as &mut dyn ManeuverExecutor),
+                .map(|executor| executor as &mut dyn MotionExecutor),
         ]
         .into_iter()
         .flatten()
     }
 
     /// Resets any executor holding a run the brain no longer asks for, so the
-    /// brain's active maneuver stays the single source of truth.
-    fn sync(&mut self, active: Option<ActiveManeuver>, now: f32) {
+    /// brain's active motion stays the single source of truth.
+    fn sync(&mut self, active: Option<ActiveMotion>, now: f32) {
         for executor in self.executors() {
             let epoch = active
-                .filter(|active| active.maneuver == executor.maneuver())
+                .filter(|active| active.motion == executor.motion())
                 .map(|active| active.epoch);
             if executor.tag().epoch != epoch {
                 executor.reset(now);
-                *executor.tag() = RunTag { epoch, spent: false };
+                *executor.tag() = RunTag {
+                    epoch,
+                    spent: false,
+                };
             }
         }
     }
 
-    /// Runs the executor for `maneuver`, if this entity has one.
-    fn step(&mut self, maneuver: Maneuver, context: &mut ManeuverContext) -> Option<ManeuverStep> {
+    /// Runs the executor for `motion`, if this entity has one.
+    fn step(&mut self, motion: Motion, context: &mut MotionContext) -> Option<MotionStep> {
         self.executors()
-            .find(|executor| executor.maneuver() == maneuver)
+            .find(|executor| executor.motion() == motion)
             .map(|executor| executor.step(context))
     }
 
@@ -179,16 +182,16 @@ impl ManeuversItem<'_, '_> {
     }
 }
 
-impl ManeuversReadOnlyItem<'_, '_> {
-    /// Tuning of every maneuver this entity can carry out, by maneuver index.
-    pub(super) fn tuning(&self) -> [Option<Tuning>; Maneuver::ALL.len()] {
-        let executors: [Option<&dyn ManeuverExecutor>; 2] = [
-            self.dash.map(|executor| executor as &dyn ManeuverExecutor),
-            self.swoop.map(|executor| executor as &dyn ManeuverExecutor),
+impl FiniteMotionsReadOnlyItem<'_, '_> {
+    /// Tuning of every finite motion this entity can carry out, by motion index.
+    pub(super) fn tuning(&self) -> [Option<Tuning>; Motion::COUNT] {
+        let executors: [Option<&dyn MotionExecutor>; 2] = [
+            self.dash.map(|executor| executor as &dyn MotionExecutor),
+            self.swoop.map(|executor| executor as &dyn MotionExecutor),
         ];
-        let mut tuning = [None; Maneuver::ALL.len()];
+        let mut tuning = [None; Motion::COUNT];
         for executor in executors.into_iter().flatten() {
-            tuning[executor.maneuver() as usize] = Some(executor.tuning());
+            tuning[executor.motion().index()] = Some(executor.tuning());
         }
         tuning
     }
@@ -208,7 +211,7 @@ pub(super) struct Steered {
     anchor: Option<&'static Anchor>,
     turn_rate: Option<&'static TurnRate>,
     attack_state: Option<&'static AttackState>,
-    maneuvers: Maneuvers,
+    finite_motions: FiniteMotions,
     wander: Option<&'static mut Wander>,
     strafe: Option<&'static mut Strafe>,
     cast_plant: Option<&'static mut CastPlant>,
@@ -217,7 +220,7 @@ pub(super) struct Steered {
 pub(super) fn drive_motion(
     time: Res<Time<Virtual>>,
     mut characters: Query<Steered>,
-    mut finished: MessageWriter<ManeuverFinished>,
+    mut finished: MessageWriter<MotionFinished>,
 ) {
     let now = time.elapsed_secs();
     let delta_secs = time.delta_secs();
@@ -234,14 +237,14 @@ pub(super) fn drive_motion(
             anchor,
             turn_rate,
             attack_state,
-            mut maneuvers,
+            mut finite_motions,
             mut wander,
             mut strafe,
             mut cast_plant,
         } = character;
 
-        let active = brain.active_maneuver();
-        maneuvers.sync(active, now);
+        let active = brain.active_motion();
+        finite_motions.sync(active, now);
 
         // Casters plant through the read of their own wind-up. Keeping this
         // ahead of the steering also means a committed burst or slide
@@ -250,7 +253,7 @@ pub(super) fn drive_motion(
         let planted = cast_plant
             .as_deref_mut()
             .is_some_and(|plant| plant.update(attacking, now));
-        let missing_target = (active.is_some() || brain.mode().needs_target())
+        let missing_target = (active.is_some() || brain.motion().needs_target())
             && (!has_target || target_info.is_none());
         if planted || missing_target {
             stop(&mut motion);
@@ -266,34 +269,34 @@ pub(super) fn drive_motion(
         };
 
         if let Some(active) = active {
-            let mut context = ManeuverContext {
+            let mut context = MotionContext {
                 input: &input,
                 motion: &motion,
                 delta_secs,
                 rng: &mut rng,
             };
-            match maneuvers.step(active.maneuver, &mut context) {
-                Some(ManeuverStep::Steer { direction, effort }) => {
+            match finite_motions.step(active.motion, &mut context) {
+                Some(MotionStep::Steer { direction, effort }) => {
                     drive(&mut motion, direction, effort, turn_cap);
                     continue;
                 }
-                // Fall through to locomotion this frame so the body never
-                // coasts for a frame between a maneuver and its settle-out.
-                Some(ManeuverStep::Finished) => {
-                    finished.write(ManeuverFinished {
+                // Fall through to steering this frame so the body never
+                // coasts for a frame between a finite motion and its settle-out.
+                Some(MotionStep::Finished) => {
+                    finished.write(MotionFinished {
                         entity,
-                        maneuver: active.maneuver,
+                        motion: active.motion,
                     });
                 }
-                Some(ManeuverStep::Spent) | None => {}
+                Some(MotionStep::Spent) | None => {}
             }
         }
 
-        let recovery_boost = maneuvers.recovery_boost(now);
-        let (direction, effort) = steer_locomotion(
-            brain.mode(),
+        let recovery_boost = finite_motions.recovery_boost(now);
+        let (direction, effort) = steer_motion(
+            brain.continuous_motion,
             &input,
-            LocomotionMemory {
+            MotionMemory {
                 wander: wander.as_deref_mut(),
                 strafe: strafe.as_deref_mut(),
                 recovery_boost,
@@ -304,52 +307,54 @@ pub(super) fn drive_motion(
     }
 }
 
-/// The opt-in memories and tuning locomotion steering may use.
-struct LocomotionMemory<'a> {
+/// The opt-in memories and tuning continuous steering may use.
+struct MotionMemory<'a> {
     wander: Option<&'a mut Wander>,
     strafe: Option<&'a mut Strafe>,
-    /// Extra speed held while settling out of a maneuver; also freezes the
+    /// Extra speed held while settling out of a finite motion; also freezes the
     /// orbit side so re-entering the circle does not flip the tangent.
     recovery_boost: f32,
 }
 
-/// Where and how hard the current locomotion mode wants to push.
-fn steer_locomotion(
-    mode: MotionMode,
+/// Where and how hard the current continuous motion wants to push.
+fn steer_motion(
+    motion: Motion,
     input: &SteerInput,
-    memory: LocomotionMemory,
+    memory: MotionMemory,
     rng: &mut BrainRng,
 ) -> (Option<Vec2>, Effort) {
-    let LocomotionMemory {
+    let MotionMemory {
         mut wander,
         strafe,
         recovery_boost,
     } = memory;
-    if mode != MotionMode::Calm
+    if motion != Motion::Calm
         && let Some(wander) = wander.as_deref_mut()
     {
         wander.leave_calm();
     }
-    match mode {
-        MotionMode::Hold => (None, Effort::Scaled(1.0)),
-        MotionMode::Chase => (approach::chase(input), Effort::Scaled(1.0)),
+    match motion {
+        Motion::Hold => (None, Effort::Scaled(1.0)),
+        Motion::Chase => (approach::chase(input), Effort::Scaled(1.0)),
         // Still in the fight: run from the target, not toward home.
         // Going home happens only once the target is lost.
-        MotionMode::Flee => (approach::flee(input), Effort::Scaled(1.0)),
-        MotionMode::ReturnToAnchor => (approach::home(input), Effort::Scaled(1.0)),
-        MotionMode::KeepDistance(keep_band) => (
+        Motion::Flee => (approach::flee(input), Effort::Scaled(1.0)),
+        Motion::ReturnToAnchor => (approach::home(input), Effort::Scaled(1.0)),
+        Motion::KeepDistance(keep_band) => (
             approach::keep_distance(input, keep_band, wander, rng),
             Effort::Boosted(recovery_boost),
         ),
-        MotionMode::Strafe(band) => (
+        Motion::Strafe(band) => (
             strafe::steer(input, strafe, band, rng, recovery_boost > 1.0),
             Effort::Boosted(recovery_boost),
         ),
-        MotionMode::Calm => {
+        Motion::Calm => {
             let direction = wander::steer(input, wander.as_deref_mut(), rng);
             let scale = wander::speed_scale(wander.as_deref());
             (direction, Effort::Scaled(scale))
         }
+        // Finite motions steer through their executors, never as the continuous motion.
+        Motion::Dash | Motion::Swoop => (None, Effort::Scaled(1.0)),
     }
 }
 

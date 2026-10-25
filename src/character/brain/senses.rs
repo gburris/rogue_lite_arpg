@@ -5,10 +5,8 @@
 use bevy::{ecs::query::QueryData, prelude::*};
 
 use super::ability::AbilityCapabilities;
-use super::motion::{ANCHOR_ARRIVAL_RADIUS, ManeuversReadOnly};
-use super::{
-    Ability, Action, Brain, DecisionContext, ManaRecovery, Maneuver, TargetView, Tuning,
-};
+use super::motion::{ANCHOR_ARRIVAL_RADIUS, FiniteMotionsReadOnly};
+use super::{Ability, Action, Brain, DecisionContext, ManaRecovery, Motion, TargetView, Tuning};
 use crate::{
     character::{
         anchor::Anchor,
@@ -59,7 +57,7 @@ pub(super) struct Sensed {
     anchor: Option<&'static Anchor>,
     attack_state: Option<&'static AttackState>,
     recovery: Option<&'static ManaRecovery>,
-    maneuvers: ManeuversReadOnly,
+    finite_motions: FiniteMotionsReadOnly,
     abilities: AbilityCapabilities,
 }
 
@@ -80,7 +78,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
             anchor,
             attack_state,
             recovery,
-            maneuvers,
+            finite_motions,
             abilities,
         } = sensed;
         let position = transform.translation.xy();
@@ -89,10 +87,12 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
         let attack_finished = finished != perception.attacks_seen;
         perception.attacks_seen = finished;
 
-        let maneuver_tuning = maneuvers.tuning();
-        let maneuver_ready = Maneuver::ALL.map(|maneuver| {
-            maneuver_tuning[maneuver as usize].is_some() && brain.maneuver_ready(maneuver, now)
-        });
+        let motion_tuning = finite_motions.tuning();
+        let mut motion_ready = [false; Motion::COUNT];
+        for motion in Motion::FINITE {
+            motion_ready[motion.index()] =
+                motion_tuning[motion.index()].is_some() && brain.motion_ready(motion, now);
+        }
 
         // Equipment is always performable (readiness is scored separately) and
         // shares the definition's reach; abilities need their component.
@@ -118,11 +118,10 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
             anchor_arrived: anchor
                 .map(|anchor| anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS),
             attack_finished,
-            mode: brain.mode,
+            motion: brain.motion(),
             mana_recovering: recovery.is_some_and(ManaRecovery::recovering),
-            active_maneuver: brain.maneuver(),
-            maneuver_tuning,
-            maneuver_ready,
+            motion_tuning,
+            motion_ready,
             action_tuning,
         };
     }

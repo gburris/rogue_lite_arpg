@@ -178,6 +178,14 @@ pub(crate) const IN_BITE_REACH: Consideration = flag(
     "in bite reach",
     read_action_in_reach::<{ Action::Ability(Ability::Bite).index() }>,
 );
+/// Breath appeal rising with distance, from zero where a bite lands to full a
+/// short way past it, so the bat only breathes once biting stops being an option.
+pub(crate) const BREATH_DISTANCE: Consideration = consideration(
+    "breath distance",
+    read_target_distance,
+    Interval::new(70.0, 110.0),
+    Curve::Linear,
+);
 
 const CAST_QUALITY_MARGIN: f32 = 20.0;
 const CAST_QUALITY_EDGE: f32 =

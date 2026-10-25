@@ -56,7 +56,9 @@ pub use model::{
 };
 pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
 
-use self::decide::{decide_behavior, release_finished_motion, start_ability_cooldown};
+use self::decide::{
+    abort_failed_motion, decide_behavior, release_finished_motion, start_ability_cooldown,
+};
 use self::execute::apply_slot_requests;
 use self::model::*;
 use self::motion::drive_motion;
@@ -83,6 +85,9 @@ use super::AiSet;
 struct ActiveMotion {
     motion: Motion,
     epoch: u32,
+    started_at: f32,
+    /// When line of sight to the target was first lost, while it stays lost.
+    los_lost_since: Option<f32>,
 }
 
 /// Something a brain spaces out: a finite motion or an ability.
@@ -158,16 +163,18 @@ impl Brain {
         self.ready_at[cooldown.index()] = ready_at;
     }
 
-    fn start_motion(&mut self, motion: Motion) {
+    fn start_motion(&mut self, motion: Motion, now: f32) {
         self.next_epoch = self.next_epoch.wrapping_add(1);
         self.active = Some(ActiveMotion {
             motion,
             epoch: self.next_epoch,
+            started_at: now,
+            los_lost_since: None,
         });
     }
 
     /// Drops the running finite motion without a cooldown, because it never ran to
-    /// its end (the target vanished).
+    /// its end (an abort).
     fn cancel_motion(&mut self) {
         self.active = None;
     }
@@ -327,6 +334,7 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<DecisionClock>()
         .init_resource::<AiSeed>()
         .add_observer(release_finished_motion)
+        .add_observer(abort_failed_motion)
         .add_observer(start_ability_cooldown)
         .add_systems(Startup, seed_ai_seed)
         .add_systems(Update, tick_decision_clock.in_set(AiSet::Decision))

@@ -14,8 +14,6 @@ const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 /// Seconds over which the dive's speed boost fades after the pass ends.
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
-/// Longest a dive may run before it is cut off.
-const SWOOP_TIMEOUT: f32 = 5.0;
 
 /// How one biter dives. Opt-in at spawn; absent means never dives.
 ///
@@ -35,7 +33,6 @@ pub struct Swoop {
     pub speed_boost: f32,
     pub exit_turn: f32,
     pass: Option<SwoopPass>,
-    started_at: Option<f32>,
     recovery_until: f32,
     tag: RunTag,
 }
@@ -50,7 +47,6 @@ impl Swoop {
             speed_boost: SWOOP_SPEED_BOOST,
             exit_turn: SWOOP_EXIT_TURN,
             pass: None,
-            started_at: None,
             recovery_until: 0.0,
             tag: RunTag::default(),
         }
@@ -63,7 +59,6 @@ impl Swoop {
             self.recovery_until = now + SWOOP_RECOVERY_TIME;
         }
         self.pass = None;
-        self.started_at = None;
     }
 
     /// Extra speed still in effect while the biter settles out of a dive.
@@ -107,7 +102,7 @@ impl MotionExecutor for Swoop {
     }
 
     /// Advances the dive, building the pass on the first step after the brain
-    /// starts it and ending it once it clears the target or times out.
+    /// starts it and ending it once it clears the target.
     fn step(&mut self, context: &mut MotionContext) -> MotionStep {
         if self.tag.spent {
             return MotionStep::Spent;
@@ -124,7 +119,6 @@ impl MotionExecutor for Swoop {
             direction,
             effort: Effort::Boosted(speed_boost),
         };
-        let started_at = *self.started_at.get_or_insert(now);
         let Some(info) = input.target_info else {
             return steer(None);
         };
@@ -132,7 +126,7 @@ impl MotionExecutor for Swoop {
             .pass
             .as_ref()
             .is_some_and(|pass| pass.cleared(input.position, info.distance));
-        if cleared || now - started_at > SWOOP_TIMEOUT {
+        if cleared {
             self.finish(now);
             self.tag.spent = true;
             return MotionStep::Finished;

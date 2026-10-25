@@ -10,6 +10,7 @@ use super::{Ability, Action, Brain, Cooldown, DecisionContext, ManaRecovery, Mot
 use crate::{
     character::{
         anchor::Anchor,
+        state::SimpleMotion,
         vision::{TargetInfo, Targeting},
     },
     prelude::{AttackState, EquipmentRead, EquipmentSlot, Health, Mana},
@@ -70,6 +71,7 @@ pub(super) struct Sensed {
     mana: Option<&'static Mana>,
     anchor: Option<&'static Anchor>,
     attack_state: Option<&'static AttackState>,
+    body: Option<&'static SimpleMotion>,
     recovery: Option<&'static ManaRecovery>,
     finite_motions: FiniteMotionsReadOnly,
     abilities: AbilityCapabilities,
@@ -91,6 +93,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
             mana,
             anchor,
             attack_state,
+            body,
             recovery,
             finite_motions,
             abilities,
@@ -126,6 +129,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
                 .and_then(|anchor| anchor.overshoot_fraction(position)),
             anchor_arrived: anchor
                 .map(|anchor| anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS),
+            stunned: body.is_some_and(SimpleMotion::is_stunned),
             attack_finished,
             motion: brain.motion(),
             mana_recovering: recovery.is_some_and(ManaRecovery::recovering),

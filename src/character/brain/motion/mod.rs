@@ -11,7 +11,8 @@
 //! A running finite motion takes exclusive control of steering. Finite motion
 //! components implement [`MotionExecutor`] and are listed once, in
 //! [`FiniteMotions`]; the brain's active motion is the single source of truth,
-//! and an executor reports back only by triggering [`MotionFinished`], never by
+//! and an executor reports back only by triggering [`MotionFinished`] or
+//! [`MotionAborted`], never by
 //! writing decision state.
 
 mod approach;
@@ -51,6 +52,14 @@ pub struct MotionFinished {
     pub motion: Motion,
 }
 
+/// A finite motion could not start. The brain drops it without a cooldown and
+/// decides again on the spot.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct MotionAborted {
+    pub entity: Entity,
+    pub motion: Motion,
+}
+
 /// Read-only world input shared by every steering behavior this frame.
 pub(super) struct SteerInput<'a> {
     pub position: Vec2,
@@ -76,6 +85,8 @@ pub(super) enum MotionStep {
     },
     /// Ended this frame; the brain has not heard yet.
     Finished,
+    /// Could not start; the brain has not heard yet.
+    Aborted,
     /// Ended earlier and is waiting for the brain to release it.
     Spent,
 }
@@ -284,6 +295,12 @@ pub(super) fn drive_motion(
                 // coasts for a frame between a finite motion and its settle-out.
                 Some(MotionStep::Finished) => {
                     commands.trigger(MotionFinished {
+                        entity,
+                        motion: active.motion,
+                    });
+                }
+                Some(MotionStep::Aborted) => {
+                    commands.trigger(MotionAborted {
                         entity,
                         motion: active.motion,
                     });

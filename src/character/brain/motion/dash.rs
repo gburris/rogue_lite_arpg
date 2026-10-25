@@ -208,7 +208,7 @@ impl MotionExecutor for Dash {
                 .and_then(|target| policy.aim().aim(target, self, context.rng));
             let Some(direction) = aimed else {
                 self.tag.spent = true;
-                return MotionStep::Finished;
+                return MotionStep::Aborted;
             };
             let run = context.rng.range(self.min_run, self.max_run);
             self.run.call(direction, run);

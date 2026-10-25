@@ -4,11 +4,17 @@
 use bevy::prelude::*;
 
 use super::scoring::{choose_actions, choose_movement};
-use super::motion::MotionFinished;
+use super::motion::{MotionAborted, MotionFinished};
 use super::senses::{Perception, motion_readiness};
 use super::{
     Action, ActionFinished, ActionIntent, Brain, BrainRng, Cooldown, DecisionContext, Motion,
 };
+
+/// How long a swoop or dash may go without line of sight before it is
+/// dropped, so one that clips a pillar carries on.
+const LOS_GRACE_PERIOD: f32 = 1.0;
+/// Longest a locked motion may run, a safety net against a missing finish.
+const LOCK_TIMEOUT: f32 = 3.0;
 
 /// Releases a finite motion its executor reported finished, starts its
 /// cooldown, and decides again for that entity at once instead of waiting for
@@ -30,9 +36,49 @@ pub(super) fn release_finished_motion(
     if !brain.finish_motion(finished.motion, now + cooldown) {
         return;
     }
+    redecide(&mut brain, &mut rng, &mut perception, &mut action_intent, now);
+}
+
+/// Drops a finite motion its executor could not start, with no cooldown, and
+/// decides again for that entity at once.
+pub(super) fn abort_failed_motion(
+    aborted: On<MotionAborted>,
+    time: Res<Time<Virtual>>,
+    mut brains: Query<(&mut Brain, &mut BrainRng, &mut Perception, Mut<ActionIntent>)>,
+) {
+    let Ok((mut brain, mut rng, mut perception, mut action_intent)) =
+        brains.get_mut(aborted.entity)
+    else {
+        return;
+    };
+    if !brain
+        .active_motion()
+        .is_some_and(|active| active.motion == aborted.motion)
+    {
+        return;
+    }
+    brain.cancel_motion();
+    redecide(
+        &mut brain,
+        &mut rng,
+        &mut perception,
+        &mut action_intent,
+        time.elapsed_secs(),
+    );
+}
+
+/// Decides between ticks. The staged perception still describes the motion
+/// that just ended, so its motion state is refreshed first.
+fn redecide(
+    brain: &mut Brain,
+    rng: &mut BrainRng,
+    perception: &mut Perception,
+    action_intent: &mut Mut<ActionIntent>,
+    now: f32,
+) {
     perception.motion = brain.motion();
-    perception.motion_ready = motion_readiness(&brain, &perception.motion_tuning, now);
-    decide(&mut brain, &mut rng, &perception, &mut action_intent, now);
+    perception.motion_ready = motion_readiness(brain, &perception.motion_tuning, now);
+    decide(brain, rng, perception, action_intent, now);
 }
 
 /// Starts an ability's cooldown when its use finishes.
@@ -71,16 +117,42 @@ fn decide(
     now: f32,
 ) {
     let definition = brain.definition;
-    brain.continuous_motion = choose_motion(brain, rng, &perception.context, now);
-    let actions = choose_actions(definition, &perception.context);
+    let mut context = perception.context;
+    if lock_broken(brain, &context, now) {
+        brain.cancel_motion();
+        context.motion = brain.motion();
+    }
+    brain.continuous_motion = choose_motion(brain, rng, &context, now);
+    let actions = choose_actions(definition, &context);
     if action_intent.0 != actions {
         action_intent.0 = actions;
     }
 }
 
+/// Whether the running finite motion must give up: the target is gone, the
+/// body is stunned, line of sight has been lost past the grace period, or the
+/// lock has outlived its safety timeout. An abort starts no cooldown.
+fn lock_broken(brain: &mut Brain, context: &DecisionContext, now: f32) -> bool {
+    let Some(active) = brain.active.as_mut() else {
+        return false;
+    };
+    let Some(target) = context.target else {
+        return true;
+    };
+    if context.stunned || now - active.started_at > LOCK_TIMEOUT {
+        return true;
+    }
+    if target.line_of_sight {
+        active.los_lost_since = None;
+        return false;
+    }
+    let lost_since = *active.los_lost_since.get_or_insert(now);
+    now - lost_since > LOS_GRACE_PERIOD
+}
+
 /// Runs the movement layer and returns the continuous motion to drive. A running finite
 /// motion is committed: it is never re-scored and ends when its executor
-/// reports it, or here when the target is gone. A winning finite motion rolls
+/// reports it or [`lock_broken`] says so. A winning finite motion rolls
 /// its start chance; a miss waits out its cooldown and the layer picks again
 /// without it.
 fn choose_motion(
@@ -90,10 +162,7 @@ fn choose_motion(
     now: f32,
 ) -> Motion {
     if brain.active.is_some() {
-        if context.target.is_some() {
-            return brain.continuous_motion;
-        }
-        brain.cancel_motion();
+        return brain.continuous_motion;
     }
     let mut declined = [false; Motion::COUNT];
     loop {
@@ -112,7 +181,7 @@ fn choose_motion(
                     continue;
                 };
                 if tuning.chance >= 1.0 || rng.range(0.0, 1.0) < tuning.chance {
-                    brain.start_motion(motion);
+                    brain.start_motion(motion, now);
                     return brain.continuous_motion;
                 }
                 brain.start_cooldown(Cooldown::Motion(motion), now + tuning.cooldown);

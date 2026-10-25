@@ -258,6 +258,8 @@ pub struct DecisionContext {
     pub slot_ready: [bool; EquipmentSlot::ALL.len()],
     pub anchor_overshoot_fraction: Option<f32>,
     pub anchor_arrived: Option<bool>,
+    /// Whether the body is stunned and cannot carry out a committed move.
+    pub stunned: bool,
     /// An attack finished on the last tick; finite motions key their start off this.
     pub attack_finished: bool,
     /// The motion currently driving the body: a running finite motion, else the continuous one.
@@ -281,6 +283,7 @@ impl Default for DecisionContext {
             slot_ready: [false; EquipmentSlot::ALL.len()],
             anchor_overshoot_fraction: None,
             anchor_arrived: None,
+            stunned: false,
             attack_finished: false,
             motion: Motion::Calm,
             mana_recovering: false,

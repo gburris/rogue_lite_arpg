@@ -56,7 +56,7 @@ pub use model::{
 };
 pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
 
-use self::decide::{decide_behavior, release_finished_motion};
+use self::decide::{decide_behavior, release_finished_motion, start_ability_cooldown};
 use self::execute::apply_slot_requests;
 use self::model::*;
 use self::motion::drive_motion;
@@ -85,6 +85,24 @@ struct ActiveMotion {
     epoch: u32,
 }
 
+/// Something a brain spaces out: a finite motion or an ability.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Cooldown {
+    Motion(Motion),
+    Ability(Ability),
+}
+
+impl Cooldown {
+    const COUNT: usize = Motion::COUNT + Ability::ALL.len();
+
+    const fn index(self) -> usize {
+        match self {
+            Self::Motion(motion) => motion.index(),
+            Self::Ability(ability) => Motion::COUNT + ability as usize,
+        }
+    }
+}
+
 /// A character's utility brain: which static definition it scores against, the
 /// motion it is driving, and its decision timers.
 ///
@@ -100,7 +118,7 @@ pub struct Brain {
     continuous_motion: Motion,
     active: Option<ActiveMotion>,
     next_epoch: u32,
-    motion_ready_at: [f32; Motion::COUNT],
+    ready_at: [f32; Cooldown::COUNT],
 }
 
 impl Brain {
@@ -111,7 +129,7 @@ impl Brain {
             continuous_motion: Motion::Calm,
             active: None,
             next_epoch: 0,
-            motion_ready_at: [0.0; Motion::COUNT],
+            ready_at: [0.0; Cooldown::COUNT],
         }
     }
 
@@ -131,8 +149,13 @@ impl Brain {
         self.active
     }
 
-    fn motion_ready(&self, motion: Motion, now: f32) -> bool {
-        now >= self.motion_ready_at[motion.index()]
+    fn is_ready(&self, cooldown: Cooldown, now: f32) -> bool {
+        now >= self.ready_at[cooldown.index()]
+    }
+
+    /// Holds `cooldown` off until `ready_at`.
+    fn start_cooldown(&mut self, cooldown: Cooldown, ready_at: f32) {
+        self.ready_at[cooldown.index()] = ready_at;
     }
 
     fn start_motion(&mut self, motion: Motion) {
@@ -155,13 +178,9 @@ impl Brain {
         let running = self.active.is_some_and(|active| active.motion == motion);
         if running {
             self.active = None;
-            self.defer_motion(motion, ready_at);
+            self.start_cooldown(Cooldown::Motion(motion), ready_at);
         }
         running
-    }
-
-    fn defer_motion(&mut self, motion: Motion, ready_at: f32) {
-        self.motion_ready_at[motion.index()] = ready_at;
     }
 }
 
@@ -275,10 +294,12 @@ impl ActionIntent {
 }
 
 /// An equipment or ability use ran to its end. A character holds at most one
-/// action at a time, so the event names only the entity.
+/// action at a time, so `action` is only needed to start an ability's
+/// cooldown; equipment keeps its own cooldown and sends `None`.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFinished {
     pub entity: Entity,
+    pub action: Option<Action>,
 }
 
 /// Shared ~10 Hz decision clock.
@@ -306,6 +327,7 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<DecisionClock>()
         .init_resource::<AiSeed>()
         .add_observer(release_finished_motion)
+        .add_observer(start_ability_cooldown)
         .add_systems(Startup, seed_ai_seed)
         .add_systems(Update, tick_decision_clock.in_set(AiSet::Decision))
         .add_systems(

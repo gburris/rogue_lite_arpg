@@ -6,7 +6,7 @@ use bevy::{ecs::query::QueryData, prelude::*};
 
 use super::ability::AbilityCapabilities;
 use super::motion::{ANCHOR_ARRIVAL_RADIUS, FiniteMotionsReadOnly};
-use super::{Ability, Action, Brain, DecisionContext, ManaRecovery, Motion, TargetView, Tuning};
+use super::{Ability, Action, Brain, Cooldown, DecisionContext, ManaRecovery, Motion, TargetView, Tuning};
 use crate::{
     character::{
         anchor::Anchor,
@@ -51,7 +51,7 @@ pub(super) fn motion_readiness(
     let mut motion_ready = [false; Motion::COUNT];
     for motion in Motion::FINITE {
         motion_ready[motion.index()] =
-            motion_tuning[motion.index()].is_some() && brain.motion_ready(motion, now);
+            motion_tuning[motion.index()].is_some() && brain.is_ready(Cooldown::Motion(motion), now);
     }
     motion_ready
 }

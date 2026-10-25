@@ -18,7 +18,7 @@ pub use bite::Bite;
 pub use breath::Breath;
 pub use heal::Heal;
 
-use super::{Ability, Tuning};
+use super::{Ability, Brain, Cooldown, Tuning};
 use crate::character::AiSet;
 
 /// A capability component that carries out one [`Ability`].
@@ -55,45 +55,26 @@ impl AbilityCapabilitiesItem<'_, '_> {
     }
 }
 
-/// Spacing between uses of one ability, in virtual seconds.
-#[derive(Clone, Copy, Debug)]
-pub struct Cooldown {
-    pub seconds: f32,
-    /// `None` until first checked, for a cooldown that starts on its own.
-    ready_at: Option<f32>,
-}
-
-impl Cooldown {
-    /// Ready at once; each use waits `seconds`.
-    pub fn new(seconds: f32) -> Self {
-        Self {
-            seconds,
-            ready_at: Some(0.0),
+/// Arms each ability's opening delay when a brain is added, so a first use
+/// can wait from spawn rather than from the first wanted use.
+fn arm_initial_delays(
+    added: On<Add, Brain>,
+    time: Res<Time<Virtual>>,
+    mut brains: Query<(&mut Brain, AbilityCapabilities)>,
+) {
+    let Ok((mut brain, abilities)) = brains.get_mut(added.entity) else {
+        return;
+    };
+    let now = time.elapsed_secs();
+    for (ability, tuning) in Ability::ALL.into_iter().zip(abilities.tuning()) {
+        if let Some(tuning) = tuning {
+            brain.start_cooldown(Cooldown::Ability(ability), now + tuning.initial_delay);
         }
-    }
-
-    /// Like [`Cooldown::new`], but the first use also waits `seconds` from
-    /// the first check.
-    pub fn delayed(seconds: f32) -> Self {
-        Self {
-            seconds,
-            ready_at: None,
-        }
-    }
-
-    /// Whether the ability may be used at `now`.
-    pub fn is_ready(&mut self, now: f32) -> bool {
-        now >= *self.ready_at.get_or_insert(now + self.seconds)
-    }
-
-    /// Records a use at `now`.
-    pub fn start(&mut self, now: f32) {
-        self.ready_at = Some(now + self.seconds);
     }
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
+    app.add_observer(arm_initial_delays).add_systems(
         Update,
         (heal::apply_heal, breath::apply_breath, bite::apply_bite).in_set(AiSet::Execute),
     );

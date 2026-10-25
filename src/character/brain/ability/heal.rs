@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use super::{AbilityCapability, Cooldown};
+use super::AbilityCapability;
 use crate::{
-    character::brain::{Ability, Action, ActionFinished, ActionIntent, Tuning},
+    character::brain::{Ability, Action, ActionFinished, ActionIntent, Brain, Cooldown, Tuning},
     prelude::*,
 };
 
@@ -12,14 +12,14 @@ use crate::{
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Heal {
     /// Spacing between potions.
-    pub cooldown: Cooldown,
+    pub cooldown: f32,
 }
 
 impl Heal {
     /// Drinks at most one potion per `cooldown` seconds.
     pub fn new(cooldown: f32) -> Self {
         Self {
-            cooldown: Cooldown::new(cooldown),
+            cooldown,
         }
     }
 }
@@ -30,7 +30,10 @@ impl AbilityCapability for Heal {
     }
 
     fn tuning(&self) -> Tuning {
-        Tuning::default()
+        Tuning {
+            cooldown: self.cooldown,
+            ..Tuning::default()
+        }
     }
 }
 
@@ -40,12 +43,12 @@ impl AbilityCapability for Heal {
 pub(super) fn apply_heal(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut drinkers: Query<(Entity, &ActionIntent, &mut Heal, Option<&Items>)>,
+    drinkers: Query<(Entity, &ActionIntent, &Brain, Option<&Items>), With<Heal>>,
     consumables: Query<(), With<Consumable>>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, mut heal, items) in &mut drinkers {
-        if !intent.get(Action::Ability(Ability::Heal)) || !heal.cooldown.is_ready(now) {
+    for (entity, intent, brain, items) in &drinkers {
+        if !intent.get(Action::Ability(Ability::Heal)) || !brain.is_ready(Cooldown::Ability(Ability::Heal), now) {
             continue;
         }
         let potion = items
@@ -57,8 +60,10 @@ pub(super) fn apply_heal(
                 entity,
                 item_entity: potion,
             });
-            heal.cooldown.start(now);
-            commands.trigger(ActionFinished { entity });
+            commands.trigger(ActionFinished {
+                entity,
+                action: Some(Action::Ability(Ability::Heal)),
+            });
         }
     }
 }

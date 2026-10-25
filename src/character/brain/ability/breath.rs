@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
-use super::{AbilityCapability, Cooldown};
+use super::AbilityCapability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, ActionIntent, CAST_MAX_RANGE, Tuning},
+        brain::{
+            Ability, Action, ActionFinished, ActionIntent, Brain, CAST_MAX_RANGE, Cooldown, Tuning,
+        },
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -14,7 +16,9 @@ use crate::{
 /// means the entity never breathes.
 #[derive(Component, Debug)]
 pub struct Breath {
-    pub cooldown: Cooldown,
+    pub cooldown: f32,
+    /// Seconds from spawn before the first breath.
+    pub initial_delay: f32,
     /// Farthest target distance at which the brain breathes.
     pub reach: f32,
 }
@@ -24,7 +28,8 @@ impl Breath {
     /// first breath waits one period.
     pub fn new(period: f32) -> Self {
         Self {
-            cooldown: Cooldown::delayed(period),
+            cooldown: period,
+            initial_delay: period,
             reach: CAST_MAX_RANGE,
         }
     }
@@ -38,6 +43,8 @@ impl AbilityCapability for Breath {
     fn tuning(&self) -> Tuning {
         Tuning {
             reach: Some(self.reach),
+            cooldown: self.cooldown,
+            initial_delay: self.initial_delay,
             ..Tuning::default()
         }
     }
@@ -48,24 +55,20 @@ impl AbilityCapability for Breath {
 pub(super) fn apply_breath(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut breathers: Query<(
+    breathers: Query<(
         Entity,
         &ActionIntent,
+        &Brain,
         Has<Targeting>,
         &TargetInfo,
         &Transform,
         &CombatSide,
         &Projectiles,
-        &mut Breath,
     )>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, has_target, target_info, transform, side, templates, mut breath) in
-        &mut breathers
-    {
-        // Checked first so the opening delay counts from spawn, not from the
-        // first wanted breath.
-        let ready = breath.cooldown.is_ready(now);
+    for (entity, intent, brain, has_target, target_info, transform, side, templates) in &breathers {
+        let ready = brain.is_ready(Cooldown::Ability(Ability::Breathe), now);
         let wanted = intent.get(Action::Ability(Ability::Breathe));
         if !(ready && has_target && target_info.line_of_sight && wanted) {
             continue;
@@ -88,7 +91,9 @@ pub(super) fn apply_breath(
                 aim_direction,
             });
         }
-        breath.cooldown.start(now);
-        commands.trigger(ActionFinished { entity });
+        commands.trigger(ActionFinished {
+            entity,
+            action: Some(Action::Ability(Ability::Breathe)),
+        });
     }
 }

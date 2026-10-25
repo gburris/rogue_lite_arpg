@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::{AbilityCapability, Cooldown};
+use super::AbilityCapability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, ActionIntent, Tuning},
+        brain::{Ability, Action, ActionFinished, ActionIntent, Brain, Cooldown, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -23,7 +23,7 @@ pub struct Bite {
     pub damage: f32,
     /// Fraction of the damage dealt that heals the biter.
     pub life_steal: f32,
-    pub cooldown: Cooldown,
+    pub cooldown: f32,
 }
 
 impl Bite {
@@ -33,7 +33,7 @@ impl Bite {
             reach,
             damage,
             life_steal: 0.0,
-            cooldown: Cooldown::new(cooldown),
+            cooldown,
         }
     }
 
@@ -54,6 +54,7 @@ impl AbilityCapability for Bite {
     fn tuning(&self) -> Tuning {
         Tuning {
             reach: Some(self.reach + DECISION_LEAD),
+            cooldown: self.cooldown,
             ..Tuning::default()
         }
     }
@@ -64,18 +65,19 @@ impl AbilityCapability for Bite {
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut biters: Query<(
+    biters: Query<(
         Entity,
         &ActionIntent,
-        &mut Bite,
+        &Brain,
+        &Bite,
         &Targeting,
         &TargetInfo,
         Option<&Health>,
     )>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, mut bite, targeting, target_info, health) in &mut biters {
-        if !intent.get(Action::Ability(Ability::Bite)) || !bite.cooldown.is_ready(now) {
+    for (entity, intent, brain, bite, targeting, target_info, health) in &biters {
+        if !intent.get(Action::Ability(Ability::Bite)) || !brain.is_ready(Cooldown::Ability(Ability::Bite), now) {
             continue;
         }
         if !target_info.distance.is_finite() || target_info.distance > bite.reach {
@@ -96,7 +98,9 @@ pub(super) fn apply_bite(
                 amount: bite.damage * bite.life_steal,
             });
         }
-        bite.cooldown.start(now);
-        commands.trigger(ActionFinished { entity });
+        commands.trigger(ActionFinished {
+            entity,
+            action: Some(Action::Ability(Ability::Bite)),
+        });
     }
 }

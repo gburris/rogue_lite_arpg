@@ -228,8 +228,11 @@ pub struct Tuning {
     pub reach: Option<f32>,
     /// Probability that a winning finite motion actually starts.
     pub chance: f32,
-    /// Seconds before a finite motion may be tried again after it ends or misses.
+    /// Seconds before the capability may be tried again after it finishes (a
+    /// finite motion also waits this out after a missed start roll).
     pub cooldown: f32,
+    /// Seconds from spawn before the first use.
+    pub initial_delay: f32,
 }
 
 impl Default for Tuning {
@@ -238,6 +241,7 @@ impl Default for Tuning {
             reach: None,
             chance: 1.0,
             cooldown: 0.0,
+            initial_delay: 0.0,
         }
     }
 }

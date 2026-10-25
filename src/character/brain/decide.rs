@@ -6,7 +6,9 @@ use bevy::prelude::*;
 use super::scoring::{choose_actions, choose_movement};
 use super::motion::MotionFinished;
 use super::senses::{Perception, motion_readiness};
-use super::{ActionIntent, Brain, BrainRng, DecisionContext, Motion};
+use super::{
+    Action, ActionFinished, ActionIntent, Brain, BrainRng, Cooldown, DecisionContext, Motion,
+};
 
 /// Releases a finite motion its executor reported finished, starts its
 /// cooldown, and decides again for that entity at once instead of waiting for
@@ -31,6 +33,22 @@ pub(super) fn release_finished_motion(
     perception.motion = brain.motion();
     perception.motion_ready = motion_readiness(&brain, &perception.motion_tuning, now);
     decide(&mut brain, &mut rng, &perception, &mut action_intent, now);
+}
+
+/// Starts an ability's cooldown when its use finishes.
+pub(super) fn start_ability_cooldown(
+    finished: On<ActionFinished>,
+    time: Res<Time<Virtual>>,
+    mut brains: Query<(&mut Brain, &Perception)>,
+) {
+    let Some(action @ Action::Ability(ability)) = finished.action else {
+        return;
+    };
+    let Ok((mut brain, perception)) = brains.get_mut(finished.entity) else {
+        return;
+    };
+    let cooldown = perception.action_tuning[action.index()].map_or(0.0, |tuning| tuning.cooldown);
+    brain.start_cooldown(Cooldown::Ability(ability), time.elapsed_secs() + cooldown);
 }
 
 /// Scores the staged perception and writes the outcome back: the movement
@@ -97,7 +115,7 @@ fn choose_motion(
                     brain.start_motion(motion);
                     return brain.continuous_motion;
                 }
-                brain.defer_motion(motion, now + tuning.cooldown);
+                brain.start_cooldown(Cooldown::Motion(motion), now + tuning.cooldown);
                 declined[motion.index()] = true;
             }
         }

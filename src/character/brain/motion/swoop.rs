@@ -89,6 +89,7 @@ impl MotionExecutor for Swoop {
             reach: Some(self.reach),
             chance: self.chance,
             cooldown: self.interval,
+            ..Tuning::default()
         }
     }
 

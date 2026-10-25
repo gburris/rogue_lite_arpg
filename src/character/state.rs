@@ -183,7 +183,10 @@ pub(super) fn sync_attack_state_from_equipment(
             .any(|item| in_use.contains(item));
         let finished = state.is_attacking && !attacking;
         if finished {
-            commands.trigger(ActionFinished { entity });
+            commands.trigger(ActionFinished {
+                entity,
+                action: None,
+            });
         }
         let attacks_finished = state.attacks_finished.wrapping_add(u32::from(finished));
         state.set_if_neq(AttackState {

@@ -3,11 +3,11 @@
 
 use bevy::prelude::*;
 
-use super::scoring::{commit_for, decide_with_arbiter};
+use super::scoring::{choose_actions, choose_movement};
 use super::senses::Perception;
 use super::{
-    AbilityIntent, Brain, BrainDecision, BrainDefinition, BrainRng, DecisionContext,
-    MIN_DWELL_SECS, ManeuverFinished, MotionMode, SlotIntent,
+    ActionIntent, Brain, BrainRng, DecisionContext, Maneuver, ManeuverFinished, MotionMode,
+    Movement,
 };
 
 /// Releases maneuvers their executors reported finished and starts their
@@ -22,112 +22,66 @@ pub(super) fn end_finished_maneuvers(
         let Ok((mut brain, perception)) = brains.get_mut(message.entity) else {
             continue;
         };
-        let cooldown = perception.self_state.maneuver_tuning[message.maneuver as usize]
+        let cooldown = perception.maneuver_tuning[message.maneuver as usize]
             .map_or(0.0, |tuning| tuning.cooldown);
         brain.finish_maneuver(message.maneuver, now + cooldown);
     }
 }
 
-/// Scores the staged perception and writes the outcome back: locomotion mode,
-/// dwell and commit timers, the maneuver, and the intent components.
+/// Scores the staged perception and writes the outcome back: the movement
+/// layer's mode or maneuver, and the action intent.
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
-    mut brains: Query<(
-        &mut Brain,
-        &mut BrainRng,
-        &Perception,
-        &mut AbilityIntent,
-        Option<&mut SlotIntent>,
-    )>,
+    mut brains: Query<(&mut Brain, &mut BrainRng, &Perception, &mut ActionIntent)>,
 ) {
     let now = time.elapsed_secs();
-    for (mut brain, mut rng, perception, mut ability_intent, mut slot_intent) in &mut brains {
+    for (mut brain, mut rng, perception, mut action_intent) in &mut brains {
         let definition = brain.definition;
-        // The utility proposal is memoryless; the arbiter answers "is now a
-        // good time to actually switch?" Same-group jitter waits out the dwell
-        // or loses on the challenger margin, while group changes and an
-        // ineligible incumbent go through at once.
-        let (decision, accepted) = decide_with_arbiter(
-            definition,
-            &perception.context,
-            brain.mode,
-            brain.dwell_until - now,
-        );
-        settle_mode(&mut brain, &mut rng, accepted, definition, now);
-        advance_maneuver(&mut brain, &mut rng, &perception.context, &decision, now);
-        publish_intents(slot_intent.as_deref_mut(), &mut ability_intent, &decision);
+        brain.mode = choose_mode(&mut brain, &mut rng, &perception.context, now);
+        let actions = choose_actions(definition, &perception.context);
+        if action_intent.0 != actions {
+            action_intent.0 = actions;
+        }
     }
 }
 
-fn settle_mode(
-    brain: &mut Brain,
-    rng: &mut BrainRng,
-    accepted: MotionMode,
-    definition: &BrainDefinition,
-    now: f32,
-) {
-    let changed = accepted != brain.mode;
-    if changed {
-        brain.mode = accepted;
-        brain.dwell_until = now + MIN_DWELL_SECS;
-    }
-    // Arm the calm-cycle window on entry, and once on spawn when the
-    // initial mode is already calm. An expired window is not re-armed
-    // while the mode holds: expiry is what asks the phase to advance.
-    let unarmed_calm = accepted.is_calm() && brain.committed_until <= 0.0;
-    if changed || unarmed_calm {
-        brain.committed_until = commit_for(definition, accepted)
-            .map_or(now, |window| now + rng.range(window.min(), window.max()));
-    }
-    // A reactive mode hands the calm cycle back to idle, which is where the
-    // cycle always starts.
-    brain.calm_phase = Some(if accepted.is_calm() {
-        accepted
-    } else {
-        MotionMode::Idle
-    });
-}
-
-/// Starts, keeps or cancels the maneuver. A running maneuver is exclusive and
-/// ends when its executor reports it, or here when the target is gone. A
-/// ready candidate then rolls its chance; a miss waits out the cooldown.
-fn advance_maneuver(
+/// Runs the movement layer and returns the mode to drive. A running maneuver
+/// is committed: it is never re-scored and ends when its executor reports it,
+/// or here when the target is gone. A winning maneuver rolls its start chance;
+/// a miss waits out its cooldown and the layer picks again without it.
+fn choose_mode(
     brain: &mut Brain,
     rng: &mut BrainRng,
     context: &DecisionContext,
-    decision: &BrainDecision,
     now: f32,
-) {
+) -> MotionMode {
     if brain.maneuver().is_some() {
-        if context.target.is_none() {
-            brain.cancel_maneuver();
+        if context.target.is_some() {
+            return brain.mode;
         }
-        return;
+        brain.cancel_maneuver();
     }
-    let Some(candidate) = decision.maneuver else {
-        return;
-    };
-    let Some(tuning) = context.self_state.maneuver_tuning[candidate as usize] else {
-        return;
-    };
-    if tuning.chance >= 1.0 || rng.range(0.0, 1.0) < tuning.chance {
-        brain.start_maneuver(candidate);
-    } else {
-        brain.defer_maneuver(candidate, now + tuning.cooldown);
-    }
-}
-
-fn publish_intents(
-    slot_intent: Option<&mut SlotIntent>,
-    ability_intent: &mut AbilityIntent,
-    decision: &BrainDecision,
-) {
-    if let Some(slot_intent) = slot_intent
-        && slot_intent.0 != decision.slot_intents
-    {
-        slot_intent.set_all(decision.slot_intents);
-    }
-    if ability_intent.0 != decision.abilities {
-        ability_intent.set_all(decision.abilities);
+    let mut declined = [false; Maneuver::ALL.len()];
+    loop {
+        let can_start = |movement: Movement| {
+            context.can_start(movement)
+                && !matches!(movement, Movement::Maneuver(maneuver) if declined[maneuver as usize])
+        };
+        match choose_movement(brain.definition, context, brain.mode, can_start) {
+            Some(Movement::Mode(mode)) => return mode,
+            None => return brain.mode,
+            Some(Movement::Maneuver(maneuver)) => {
+                let Some(tuning) = context.maneuver_tuning[maneuver as usize] else {
+                    declined[maneuver as usize] = true;
+                    continue;
+                };
+                if tuning.chance >= 1.0 || rng.range(0.0, 1.0) < tuning.chance {
+                    brain.start_maneuver(maneuver);
+                    return brain.mode;
+                }
+                brain.defer_maneuver(maneuver, now + tuning.cooldown);
+                declined[maneuver as usize] = true;
+            }
+        }
     }
 }

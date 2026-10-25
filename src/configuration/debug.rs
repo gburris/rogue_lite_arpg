@@ -11,9 +11,9 @@ use bevy::{
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::prelude::{
-    AppState, AttackState, Brain, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu, MotionMode,
-    Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision,
-    ZLayer,
+    AppState, AttackState, Brain, Dash, Enemy, EnemyKind, InGameSystems, Maneuver, MapBlueprint,
+    Menu, MotionMode, Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision,
+    Wander, ZLayer,
 };
 
 use super::view;
@@ -191,18 +191,21 @@ fn update_enemy_ai_labels(
             &TargetInfo,
             Has<Targeting>,
             Option<&AttackState>,
+            Option<&Dash>,
+            Option<&Wander>,
         ),
         With<Enemy>,
     >,
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((motion, target_info, has_target, attack_state)) = enemies.get(parent.parent())
+        let Ok((brain, target_info, has_target, attack_state, dash, wander)) =
+            enemies.get(parent.parent())
         else {
             continue;
         };
         let attacking = attack_state.is_some_and(|attack| attack.is_attacking);
-        let mode = short_activity(motion);
+        let mode = short_activity(brain, dash, wander);
         if has_target {
             let sight = if target_info.line_of_sight {
                 "sees you"
@@ -241,9 +244,17 @@ fn cleanup_enemy_ai_labels(
 
 /// One-word name for what the enemy is doing: its maneuver while one runs,
 /// otherwise its locomotion mode.
-fn short_activity(brain: &Brain) -> &'static str {
+fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
     match brain.maneuver() {
+        Some(Maneuver::Dash) => dash.map_or(Maneuver::Dash.name(), Dash::name),
         Some(maneuver) => maneuver.name(),
+        None if brain.mode() == MotionMode::Calm => {
+            if wander.is_some_and(Wander::is_walking) {
+                "Wander"
+            } else {
+                "Idle"
+            }
+        }
         None => short_mode(brain.mode()),
     }
 }
@@ -251,14 +262,13 @@ fn short_activity(brain: &Brain) -> &'static str {
 /// One-word name for the enemy's current motion mode.
 fn short_mode(mode: MotionMode) -> &'static str {
     match mode {
-        MotionMode::Idle => "Idle",
+        MotionMode::Calm => "Calm",
         MotionMode::Chase => "Chase",
         MotionMode::ReturnToAnchor => "Return",
         MotionMode::Flee => "Flee",
         MotionMode::KeepDistance(_) => "Keep",
         MotionMode::Hold => "Hold",
-        MotionMode::Strafe => "Strafe",
-        MotionMode::Wander => "Wander",
+        MotionMode::Strafe(_) => "Strafe",
     }
 }
 

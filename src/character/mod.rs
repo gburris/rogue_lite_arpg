@@ -9,7 +9,7 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use super::brain::{Brain, Maneuver, MotionMode};
+    pub use super::brain::{Brain, Dash, Maneuver, MotionMode, Wander};
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;

@@ -1,12 +1,13 @@
-//! Sense systems: the only code that turns world state into the pure
-//! [`DecisionContext`]. They are read-only over the world; each writes a
-//! disjoint set of [`Perception`] fields, so every field has exactly one
-//! writer.
+//! The sense system: the only code that turns world state into the pure
+//! [`DecisionContext`]. It is read-only over the world and rewrites each
+//! brain's [`Perception`] once per decision tick.
 
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryData, prelude::*};
 
 use super::motion::{ANCHOR_ARRIVAL_RADIUS, ManeuversReadOnly};
-use super::{Brain, DecisionContext, ManaRecovery, Maneuver, MotionMode, SelfState, TargetView};
+use super::{
+    Ability, Action, Brain, DecisionContext, ManaRecovery, Maneuver, TargetView, Tuning,
+};
 use crate::{
     character::{
         ability::AbilityCapabilities,
@@ -16,9 +17,8 @@ use crate::{
     prelude::{AttackState, EquipmentRead, EquipmentSlot, Health, Mana},
 };
 
-/// Per-tick sensed state for one brain, written by the sense systems and read
-/// by `decide_behavior`. Keeps the pure [`DecisionContext`] as the shared
-/// staging copy so each sense owns only its fields.
+/// Per-tick sensed state for one brain, written by [`sense`] and read by
+/// `decide_behavior`.
 #[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
 pub(super) struct Perception {
     #[deref]
@@ -44,99 +44,86 @@ pub(super) fn target_view(has_target: bool, info: Option<&TargetInfo>) -> Option
     })
 }
 
-fn slot_readiness(equipment: &EquipmentRead, entity: Entity) -> [bool; EquipmentSlot::ALL.len()] {
-    let mut slot_ready = [false; EquipmentSlot::ALL.len()];
-    for slot in EquipmentSlot::ALL {
-        slot_ready[slot as usize] = equipment.can_use(entity, slot).is_ok();
-    }
-    slot_ready
+/// Everything one brain senses.
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub(super) struct Sensed {
+    entity: Entity,
+    brain: &'static Brain,
+    perception: &'static mut Perception,
+    transform: &'static Transform,
+    has_target: Has<Targeting>,
+    target_info: Option<&'static TargetInfo>,
+    health: Option<&'static Health>,
+    mana: Option<&'static Mana>,
+    anchor: Option<&'static Anchor>,
+    attack_state: Option<&'static AttackState>,
+    recovery: Option<&'static ManaRecovery>,
+    maneuvers: ManeuversReadOnly,
+    abilities: AbilityCapabilities,
 }
 
-fn current_calm_phase(brain: &Brain, now: f32) -> MotionMode {
-    let phase = brain.calm_phase.unwrap_or(MotionMode::Idle);
-    if brain.mode.is_calm() && brain.committed_until > 0.0 && now >= brain.committed_until {
-        brain.mode.next_calm()
-    } else {
-        phase
-    }
-}
-
-/// Writes target presence.
-pub(super) fn sense_target(
-    mut targets: Query<(Has<Targeting>, Option<&TargetInfo>, &mut Perception)>,
-) {
-    for (has_target, info, mut perception) in &mut targets {
-        perception.target = target_view(has_target, info);
-    }
-}
-
-/// Writes health and mana fractions.
-pub(super) fn sense_vitals(
-    mut vitals: Query<(Option<&Health>, Option<&Mana>, &mut Perception), With<Brain>>,
-) {
-    for (health, mana, mut perception) in &mut vitals {
-        perception.health_fraction = health.and_then(Health::fraction).unwrap_or(1.0);
-        perception.mana_fraction = mana.and_then(Mana::fraction).unwrap_or(1.0);
-    }
-}
-
-/// Writes equipment readiness plus anchor-relative fields.
-pub(super) fn sense_equipment_and_anchor(
-    equipment: EquipmentRead,
-    mut sensed: Query<(Entity, Option<&Anchor>, &Transform, &mut Perception), With<Brain>>,
-) {
-    for (entity, anchor, transform, mut perception) in &mut sensed {
-        perception.slot_ready = slot_readiness(&equipment, entity);
-        perception.anchor_overshoot_fraction =
-            anchor.and_then(|anchor| anchor.overshoot_fraction(transform.translation.xy()));
-        perception.anchor_arrived = anchor.map(|anchor| {
-            anchor.distance_from(transform.translation.xy()) <= ANCHOR_ARRIVAL_RADIUS
-        });
-    }
-}
-
-/// Writes the calm-cycle phase and whether an attack finished since the last
-/// decision tick.
-pub(super) fn sense_calm_and_attack(
-    time: Res<Time<Virtual>>,
-    mut sensed: Query<(&Brain, Option<&AttackState>, &mut Perception)>,
-) {
+/// Writes every brain's [`DecisionContext`] from its world state, its own
+/// earlier choices, and the capabilities it carries.
+pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brains: Query<Sensed>) {
     let now = time.elapsed_secs();
-    for (brain, attack_state, mut perception) in &mut sensed {
-        perception.self_state.calm_phase = current_calm_phase(brain, now);
+    for sensed in &mut brains {
+        let SensedItem {
+            entity,
+            brain,
+            mut perception,
+            transform,
+            has_target,
+            target_info,
+            health,
+            mana,
+            anchor,
+            attack_state,
+            recovery,
+            maneuvers,
+            abilities,
+        } = sensed;
+        let position = transform.translation.xy();
+
         let finished = attack_state.map_or(0, |state| state.attacks_finished);
-        perception.attack_finished = finished != perception.attacks_seen;
+        let attack_finished = finished != perception.attacks_seen;
         perception.attacks_seen = finished;
-    }
-}
 
-/// Writes the rest of [`SelfState`]: the capability components' tuning, which
-/// maneuvers are ready, and the held mana break. The calm phase is owned by
-/// `sense_calm_and_attack` and left untouched.
-pub(super) fn sense_self(
-    time: Res<Time<Virtual>>,
-    mut brains: Query<(
-        &Brain,
-        ManeuversReadOnly,
-        AbilityCapabilities,
-        Option<&ManaRecovery>,
-        &mut Perception,
-    )>,
-) {
-    let now = time.elapsed_secs();
-    for (brain, maneuvers, abilities, recovery, mut perception) in &mut brains {
         let maneuver_tuning = maneuvers.tuning();
         let maneuver_ready = Maneuver::ALL.map(|maneuver| {
             maneuver_tuning[maneuver as usize].is_some() && brain.maneuver_ready(maneuver, now)
         });
-        perception.self_state = SelfState {
-            calm_phase: perception.self_state.calm_phase,
-            locomotion: brain.mode,
+
+        // Equipment is always performable (readiness is scored separately) and
+        // shares the definition's reach; abilities need their component.
+        let mut action_tuning = [None; Action::COUNT];
+        for slot in EquipmentSlot::ALL {
+            action_tuning[Action::Use(slot).index()] = Some(Tuning {
+                reach: brain.definition.equipment_reach,
+                ..Tuning::default()
+            });
+        }
+        let ability_tuning = abilities.tuning();
+        for ability in Ability::ALL {
+            action_tuning[Action::Ability(ability).index()] = ability_tuning[ability as usize];
+        }
+
+        perception.context = DecisionContext {
+            target: target_view(has_target, target_info),
+            health_fraction: health.and_then(Health::fraction).unwrap_or(1.0),
+            mana_fraction: mana.and_then(Mana::fraction).unwrap_or(1.0),
+            slot_ready: EquipmentSlot::ALL.map(|slot| equipment.can_use(entity, slot).is_ok()),
+            anchor_overshoot_fraction: anchor
+                .and_then(|anchor| anchor.overshoot_fraction(position)),
+            anchor_arrived: anchor
+                .map(|anchor| anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS),
+            attack_finished,
+            mode: brain.mode,
             mana_recovering: recovery.is_some_and(ManaRecovery::recovering),
             active_maneuver: brain.maneuver(),
             maneuver_tuning,
             maneuver_ready,
-            ability_tuning: abilities.tuning(),
+            action_tuning,
         };
     }
 }

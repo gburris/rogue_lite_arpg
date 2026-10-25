@@ -2,38 +2,34 @@
 
 use bevy::prelude::*;
 
-use super::{Brain, SlotIntent};
+use super::{Action, ActionIntent, Brain};
 use crate::{
     character::vision::{TargetInfo, Targeting},
-    prelude::{EquipmentSlot, EquipmentUsage, Health},
+    prelude::{EquipmentSlot, EquipmentUsage},
 };
 
-/// Re-gates stale intent on the live target state; skips the dead. Decisions
-/// price range at 10 Hz but this runs every frame, so a target that drifted
+/// Re-gates stale intent on the live target state. Decisions price range at
+/// 10 Hz but this runs every frame, so a target that drifted
 /// out of reach between ticks must not keep a stale `try_use` alive.
 pub(super) fn apply_slot_requests(
     mut equipment: EquipmentUsage,
     requests: Query<(
         Entity,
         &Brain,
-        &SlotIntent,
+        &ActionIntent,
         Has<Targeting>,
         Option<&TargetInfo>,
-        Option<&Health>,
     )>,
 ) {
-    for (entity, brain, slot_intent, has_target, target_info, health) in &requests {
-        if health.is_some_and(|health| health.hp <= 0.0) {
-            continue;
-        }
-        // Live range check against the definition's reach, which mirrors the
-        // slot considerations. No reach keeps the decision-tick intent.
-        let in_range = brain.definition.slot_reach.is_none_or(|reach| {
+    for (entity, brain, action_intent, has_target, target_info) in &requests {
+        // The same reach the equipment considerations scored, checked live.
+        let in_range = brain.definition.equipment_reach.is_some_and(|reach| {
             target_info.is_some_and(|info| info.distance.is_finite() && info.distance <= reach)
         });
         for slot in EquipmentSlot::ALL {
             let sighted = target_info.is_some_and(|info| info.line_of_sight);
-            let requested = has_target && sighted && in_range && slot_intent.get(slot);
+            let requested =
+                has_target && sighted && in_range && action_intent.get(Action::Use(slot));
             let in_use = equipment.is_using(entity, slot);
 
             if requested && !in_use {

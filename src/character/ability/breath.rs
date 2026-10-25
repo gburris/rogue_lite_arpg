@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use super::{AbilityCapability, Cooldown};
 use crate::{
     character::{
-        brain::{Ability, AbilityIntent, AbilityTuning},
+        brain::{Ability, Action, ActionIntent, CAST_MAX_RANGE, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -14,14 +14,18 @@ use crate::{
 /// means the entity never breathes.
 #[derive(Component, Debug)]
 pub struct Breath {
-    cooldown: Timer,
+    pub cooldown: Cooldown,
+    /// Farthest target distance at which the brain breathes.
+    pub reach: f32,
 }
 
 impl Breath {
-    /// Breathes at most once per `period` seconds; the first breath waits one period.
+    /// Breathes at most once per `period` seconds within cast range; the
+    /// first breath waits one period.
     pub fn new(period: f32) -> Self {
         Self {
-            cooldown: Timer::from_seconds(period, TimerMode::Once),
+            cooldown: Cooldown::delayed(period),
+            reach: CAST_MAX_RANGE,
         }
     }
 }
@@ -31,8 +35,11 @@ impl AbilityCapability for Breath {
         Ability::Breathe
     }
 
-    fn tuning(&self) -> AbilityTuning {
-        AbilityTuning::default()
+    fn tuning(&self) -> Tuning {
+        Tuning {
+            reach: Some(self.reach),
+            ..Tuning::default()
+        }
     }
 }
 
@@ -43,28 +50,24 @@ pub(super) fn apply_breath(
     time: Res<Time<Virtual>>,
     mut breathers: Query<(
         Entity,
-        &AbilityIntent,
+        &ActionIntent,
         Has<Targeting>,
         &TargetInfo,
-        &Health,
         &Transform,
         &CombatSide,
         &Projectiles,
         &mut Breath,
     )>,
 ) {
-    for (entity, intent, has_target, target_info, health, transform, side, templates, mut breath) in
+    let now = time.elapsed_secs();
+    for (entity, intent, has_target, target_info, transform, side, templates, mut breath) in
         &mut breathers
     {
-        // The defeated body lingers for its dying beat; the breath stops at 0 hp.
-        if health.hp <= 0.0 {
-            continue;
-        }
-        breath.cooldown.tick(time.delta());
-        if !(has_target && target_info.line_of_sight && intent.get(Ability::Breathe)) {
-            continue;
-        }
-        if !breath.cooldown.is_finished() {
+        // Checked first so the opening delay counts from spawn, not from the
+        // first wanted breath.
+        let ready = breath.cooldown.is_ready(now);
+        let wanted = intent.get(Action::Ability(Ability::Breathe));
+        if !(ready && has_target && target_info.line_of_sight && wanted) {
             continue;
         }
 
@@ -85,6 +88,6 @@ pub(super) fn apply_breath(
                 aim_direction,
             });
         }
-        breath.cooldown.reset();
+        breath.cooldown.start(now);
     }
 }

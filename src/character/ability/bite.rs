@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use super::{AbilityCapability, Cooldown};
 use crate::{
     character::{
-        brain::{Ability, AbilityIntent, AbilityTuning},
+        brain::{Ability, Action, ActionIntent, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -23,8 +23,7 @@ pub struct Bite {
     pub damage: f32,
     /// Fraction of the damage dealt that heals the biter.
     pub life_steal: f32,
-    pub cooldown: f32,
-    ready_at: f32,
+    pub cooldown: Cooldown,
 }
 
 impl Bite {
@@ -34,8 +33,7 @@ impl Bite {
             reach,
             damage,
             life_steal: 0.0,
-            cooldown,
-            ready_at: 0.0,
+            cooldown: Cooldown::new(cooldown),
         }
     }
 
@@ -53,21 +51,22 @@ impl AbilityCapability for Bite {
         Ability::Bite
     }
 
-    fn tuning(&self) -> AbilityTuning {
-        AbilityTuning {
+    fn tuning(&self) -> Tuning {
+        Tuning {
             reach: Some(self.reach + DECISION_LEAD),
+            ..Tuning::default()
         }
     }
 }
 
 /// Lands a bite when the brain wants one and the target is within the true
-/// reach; skips the dead. The decision tick only arms the intent.
+/// reach. The decision tick only arms the intent.
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     mut biters: Query<(
         Entity,
-        &AbilityIntent,
+        &ActionIntent,
         &mut Bite,
         &Targeting,
         &TargetInfo,
@@ -76,10 +75,7 @@ pub(super) fn apply_bite(
 ) {
     let now = time.elapsed_secs();
     for (entity, intent, mut bite, targeting, target_info, health) in &mut biters {
-        if !intent.get(Ability::Bite) || now < bite.ready_at {
-            continue;
-        }
-        if health.is_some_and(|health| health.hp <= 0.0) {
+        if !intent.get(Action::Ability(Ability::Bite)) || !bite.cooldown.is_ready(now) {
             continue;
         }
         if !target_info.distance.is_finite() || target_info.distance > bite.reach {
@@ -100,6 +96,6 @@ pub(super) fn apply_bite(
                 amount: bite.damage * bite.life_steal,
             });
         }
-        bite.ready_at = now + bite.cooldown;
+        bite.cooldown.start(now);
     }
 }

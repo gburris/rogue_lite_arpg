@@ -29,7 +29,7 @@ pub use strafe::Strafe;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
-use super::{ActiveManeuver, Brain, BrainRng, DistanceBand, Maneuver, ManeuverTuning, MotionMode};
+use super::{ActiveManeuver, Brain, BrainRng, Maneuver, MotionMode, Tuning};
 use crate::character::{
     anchor::Anchor,
     state::SimpleMotion,
@@ -116,8 +116,8 @@ impl ManeuverContext<'_, '_> {
 /// new maneuver needs.
 pub(super) trait ManeuverExecutor {
     fn maneuver(&self) -> Maneuver;
-    /// Chance, spacing and trigger the decision tick applies to this maneuver.
-    fn tuning(&self) -> ManeuverTuning;
+    /// Chance, spacing and reach the decision tick applies to this maneuver.
+    fn tuning(&self) -> Tuning;
     fn tag(&mut self) -> &mut RunTag;
     /// Forgets a run the brain is no longer asking for.
     fn reset(&mut self, now: f32);
@@ -180,8 +180,8 @@ impl ManeuversItem<'_, '_> {
 }
 
 impl ManeuversReadOnlyItem<'_, '_> {
-    /// Tuning of every maneuver this entity can carry out, by channel index.
-    pub(super) fn tuning(&self) -> [Option<ManeuverTuning>; Maneuver::ALL.len()] {
+    /// Tuning of every maneuver this entity can carry out, by maneuver index.
+    pub(super) fn tuning(&self) -> [Option<Tuning>; Maneuver::ALL.len()] {
         let executors: [Option<&dyn ManeuverExecutor>; 2] = [
             self.dash.map(|executor| executor as &dyn ManeuverExecutor),
             self.swoop.map(|executor| executor as &dyn ManeuverExecutor),
@@ -296,7 +296,6 @@ pub(super) fn drive_motion(
             LocomotionMemory {
                 wander: wander.as_deref_mut(),
                 strafe: strafe.as_deref_mut(),
-                band: brain.definition().band,
                 recovery_boost,
             },
             &mut rng,
@@ -309,7 +308,6 @@ pub(super) fn drive_motion(
 struct LocomotionMemory<'a> {
     wander: Option<&'a mut Wander>,
     strafe: Option<&'a mut Strafe>,
-    band: Option<DistanceBand>,
     /// Extra speed held while settling out of a maneuver; also freezes the
     /// orbit side so re-entering the circle does not flip the tangent.
     recovery_boost: f32,
@@ -325,11 +323,15 @@ fn steer_locomotion(
     let LocomotionMemory {
         mut wander,
         strafe,
-        band,
         recovery_boost,
     } = memory;
+    if mode != MotionMode::Calm
+        && let Some(wander) = wander.as_deref_mut()
+    {
+        wander.leave_calm();
+    }
     match mode {
-        MotionMode::Idle | MotionMode::Hold => (None, Effort::Scaled(1.0)),
+        MotionMode::Hold => (None, Effort::Scaled(1.0)),
         MotionMode::Chase => (approach::chase(input), Effort::Scaled(1.0)),
         // Still in the fight: run from the target, not toward home.
         // Going home happens only once the target is lost.
@@ -339,11 +341,11 @@ fn steer_locomotion(
             approach::keep_distance(input, keep_band, wander, rng),
             Effort::Boosted(recovery_boost),
         ),
-        MotionMode::Strafe => (
+        MotionMode::Strafe(band) => (
             strafe::steer(input, strafe, band, rng, recovery_boost > 1.0),
             Effort::Boosted(recovery_boost),
         ),
-        MotionMode::Wander => {
+        MotionMode::Calm => {
             let direction = wander::steer(input, wander.as_deref_mut(), rng);
             let scale = wander::speed_scale(wander.as_deref());
             (direction, Effort::Scaled(scale))

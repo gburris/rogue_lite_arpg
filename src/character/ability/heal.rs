@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use super::{AbilityCapability, Cooldown};
 use crate::{
-    character::brain::{Ability, AbilityIntent, AbilityTuning},
+    character::brain::{Ability, Action, ActionIntent, Tuning},
     prelude::*,
 };
 
@@ -11,17 +11,15 @@ use crate::{
 /// body's capability and its pacing between potions.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Heal {
-    /// Seconds between potions.
-    pub cooldown: f32,
-    ready_at: f32,
+    /// Spacing between potions.
+    pub cooldown: Cooldown,
 }
 
 impl Heal {
     /// Drinks at most one potion per `cooldown` seconds.
     pub fn new(cooldown: f32) -> Self {
         Self {
-            cooldown,
-            ready_at: 0.0,
+            cooldown: Cooldown::new(cooldown),
         }
     }
 }
@@ -31,32 +29,28 @@ impl AbilityCapability for Heal {
         Ability::Heal
     }
 
-    fn tuning(&self) -> AbilityTuning {
-        AbilityTuning::default()
+    fn tuning(&self) -> Tuning {
+        Tuning::default()
     }
 }
 
-/// Drinks a carried potion straight from the inventory; skips the dead. The
-/// intent refreshes at the decision rate but this runs every frame, so the
-/// cooldown is what keeps one tick from draining the whole stack.
+/// Drinks a carried potion straight from the inventory. The intent refreshes
+/// at the decision rate but this runs every frame, so the cooldown is what
+/// keeps one tick from draining the whole stack.
 pub(super) fn apply_heal(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     mut drinkers: Query<(
         Entity,
-        &AbilityIntent,
+        &ActionIntent,
         &mut Heal,
         Option<&Items>,
-        Option<&Health>,
     )>,
     consumables: Query<(), With<Consumable>>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, mut heal, items, health) in &mut drinkers {
-        if !intent.get(Ability::Heal)
-            || now < heal.ready_at
-            || health.is_some_and(|health| health.hp <= 0.0)
-        {
+    for (entity, intent, mut heal, items) in &mut drinkers {
+        if !intent.get(Action::Ability(Ability::Heal)) || !heal.cooldown.is_ready(now) {
             continue;
         }
         let potion = items
@@ -68,7 +62,7 @@ pub(super) fn apply_heal(
                 entity,
                 item_entity: potion,
             });
-            heal.ready_at = now + heal.cooldown;
+            heal.cooldown.start(now);
         }
     }
 }

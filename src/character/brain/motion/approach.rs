@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::wander::Wander;
 use super::{ANCHOR_ARRIVAL_RADIUS, SteerInput};
-use crate::character::brain::{BrainRng, DistanceBand};
+use crate::character::brain::{BrainRng, Interval};
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
@@ -29,7 +29,7 @@ pub(super) fn home(input: &SteerInput) -> Option<Vec2> {
 /// Holds the band; a small deadband keeps the arrival from flickering.
 pub(super) fn keep_distance(
     input: &SteerInput,
-    band: DistanceBand,
+    band: Interval,
     wander: Option<&mut Wander>,
     random: &mut BrainRng,
 ) -> Option<Vec2> {

@@ -1,12 +1,11 @@
-//! Committed straight runs: the kite, burst and slide maneuvers.
+//! Committed straight runs: the warrior's kite, the fire mage's burst and the
+//! ice mage's slide are all one dash maneuver under different policies.
 
 use bevy::prelude::*;
 
 use super::{Effort, ManeuverContext, ManeuverExecutor, ManeuverStep, RunTag};
 use crate::character::brain::senses::target_view;
-use crate::character::brain::{
-    BrainRng, Maneuver, ManeuverTuning, TARGET_MOVING_SPEED, TargetView,
-};
+use crate::character::brain::{BrainRng, Maneuver, TARGET_MOVING_SPEED, TargetView, Tuning};
 
 /// Half-angle of a warrior's break cone around straight away from its target.
 const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
@@ -17,9 +16,9 @@ const BURST_STEP_IN_SPREAD: f32 = 0.35;
 /// into the target when the band is already tight.
 const BURST_OUTWARD_BIAS: f32 = 0.15;
 
-/// What distinguishes one committed straight dash: its maneuver, tuning and
-/// aim. Execution is shared, and what *starts* it is scored by the brain
-/// definition's maneuver options.
+/// What distinguishes one committed straight dash: its tuning and aim.
+/// Execution is shared, and what *starts* it is scored by the brain
+/// definition's maneuver decisions.
 #[derive(Clone, Copy, Debug)]
 pub enum DashPolicy {
     /// Break away from the target along a fixed bearing after a swing.
@@ -31,36 +30,31 @@ pub enum DashPolicy {
 }
 
 impl DashPolicy {
-    /// Maneuver that executes a dash under this policy.
-    pub(crate) fn maneuver(self) -> Maneuver {
+    /// One-word label for debug displays.
+    fn name(self) -> &'static str {
         match self {
-            Self::Breakaway { .. } => Maneuver::Kite,
-            Self::VolleyHop { .. } => Maneuver::Burst,
-            Self::Escape { .. } => Maneuver::Slide,
+            Self::Breakaway { .. } => "Kite",
+            Self::VolleyHop { .. } => "Burst",
+            Self::Escape { .. } => "Slide",
         }
     }
 
-    /// Chance and spacing the decision tick applies to this dash.
-    fn tuning(self) -> ManeuverTuning {
+    /// Chance, spacing and reach the decision tick applies to this dash.
+    fn tuning(self) -> Tuning {
         match self {
             // Only breakaways sometimes sit out a passed trigger.
-            Self::Breakaway { chance, .. } => ManeuverTuning {
+            Self::Breakaway { chance, .. } => Tuning {
                 chance,
-                cooldown: 0.0,
-                trigger_range: None,
+                ..Tuning::default()
             },
-            Self::VolleyHop { .. } => ManeuverTuning {
-                chance: 1.0,
-                cooldown: 0.0,
-                trigger_range: None,
-            },
+            Self::VolleyHop { .. } => Tuning::default(),
             Self::Escape {
                 danger_range,
                 cooldown,
-            } => ManeuverTuning {
-                chance: 1.0,
+            } => Tuning {
+                reach: Some(danger_range),
                 cooldown,
-                trigger_range: Some(danger_range),
+                ..Tuning::default()
             },
         }
     }
@@ -154,6 +148,11 @@ impl Dash {
         )
     }
 
+    /// What this dash is called under its policy, for debug displays.
+    pub fn name(&self) -> &'static str {
+        self.policy.name()
+    }
+
     /// A fresh tangent that cuts across the target's orbit when it circles, or
     /// flips sides when it holds still. A pinned target inside `close_range`
     /// gets the step-in spread instead of another sidestep.
@@ -182,10 +181,10 @@ impl Dash {
 
 impl ManeuverExecutor for Dash {
     fn maneuver(&self) -> Maneuver {
-        self.policy.maneuver()
+        Maneuver::Dash
     }
 
-    fn tuning(&self) -> ManeuverTuning {
+    fn tuning(&self) -> Tuning {
         self.policy.tuning()
     }
 

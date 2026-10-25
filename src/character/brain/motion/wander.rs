@@ -1,35 +1,59 @@
-//! Aimless drifting inside the anchor.
+//! Calm ambling inside the anchor: stand, walk one heading, stand again.
 
 use bevy::prelude::*;
 
 use super::SteerInput;
-use crate::character::brain::BrainRng;
+use crate::character::brain::{BrainRng, Interval};
 
 /// Wander speed as a fraction of max speed; ambling keeps steps inside small anchors.
 const WANDER_SPEED_SCALE: f32 = 0.4;
 /// Seconds between direction rerolls when a close target leaves no bearing.
 const JITTER_INTERVAL: f32 = 0.2;
 
-/// How one entity wanders. Opt-in at spawn; absent means that entity never wanders.
+/// How one entity spends calm time. Opt-in at spawn; absent means that entity
+/// stands still whenever it is calm.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
-    pub min: f32,
-    pub max: f32,
+    /// Seconds to stand between walks.
+    pub pause: Interval,
+    /// Seconds each walk lasts, on one rolled heading.
+    pub walk: Interval,
     pub speed_scale: f32,
     direction: Vec2,
     next_direction_at: f32,
+    /// The current stretch of the calm rhythm; `None` until calm starts.
+    stretch: Option<Stretch>,
+}
+
+/// One stretch of the calm rhythm: standing or walking until a time.
+#[derive(Clone, Copy, Debug)]
+struct Stretch {
+    walking: bool,
+    until: f32,
 }
 
 impl Wander {
-    /// Holds each direction for a uniform roll in `min..=max` seconds.
-    pub fn new(min: f32, max: f32) -> Self {
+    /// Alternates standing for a `pause` roll and walking for a `walk` roll,
+    /// always starting with a pause.
+    pub fn new(pause: Interval, walk: Interval) -> Self {
         Self {
-            min,
-            max,
+            pause,
+            walk,
             speed_scale: WANDER_SPEED_SCALE,
             direction: Vec2::ZERO,
             next_direction_at: 0.0,
+            stretch: None,
         }
+    }
+
+    /// Whether the calm rhythm is currently in a walk.
+    pub fn is_walking(&self) -> bool {
+        self.stretch.is_some_and(|stretch| stretch.walking)
+    }
+
+    /// Forgets the rhythm so the next calm spell starts with a fresh pause.
+    pub(super) fn leave_calm(&mut self) {
+        self.stretch = None;
     }
 
     /// A short-lived random heading, used to peel off a target the body is
@@ -48,18 +72,32 @@ pub(super) fn speed_scale(wander: Option<&Wander>) -> f32 {
     wander.map_or(WANDER_SPEED_SCALE, |wander| wander.speed_scale)
 }
 
-/// Holds a rolled direction, steering back toward the anchor near its edge.
+/// Advances the calm rhythm and returns the walk heading, or `None` while
+/// standing. Each walk rolls one heading, steering back toward the anchor
+/// near its edge.
 pub(super) fn steer(
     input: &SteerInput,
     wander: Option<&mut Wander>,
     random: &mut BrainRng,
 ) -> Option<Vec2> {
     let wander = wander?;
-    if input.now >= wander.next_direction_at {
-        wander.direction = pick_direction(input, random);
-        wander.next_direction_at = input.now + random.range(wander.min, wander.max);
-    }
-    Some(wander.direction)
+    let stretch = match wander.stretch {
+        Some(stretch) if input.now < stretch.until => stretch,
+        previous => {
+            let walking = previous.is_some_and(|stretch| !stretch.walking);
+            let span = if walking { wander.walk } else { wander.pause };
+            if walking {
+                wander.direction = pick_direction(input, random);
+            }
+            let stretch = Stretch {
+                walking,
+                until: input.now + random.range(span.min(), span.max()),
+            };
+            wander.stretch = Some(stretch);
+            stretch
+        }
+    };
+    stretch.walking.then_some(wander.direction)
 }
 
 fn pick_direction(input: &SteerInput, random: &mut BrainRng) -> Vec2 {

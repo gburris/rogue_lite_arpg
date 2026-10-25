@@ -1,8 +1,8 @@
 //! Core data types for the utility brains.
 //!
 //! This module only holds plain data: what a brain can sense
-//! ([`DecisionContext`]), what it can decide ([`BrainDecision`]), and the
-//! static definitions it scores against ([`BrainDefinition`]). It knows nothing about
+//! ([`DecisionContext`]), what it can choose ([`Movement`], [`Action`]), and
+//! the static definitions it scores against ([`BrainDefinition`]). It knows nothing about
 //! ECS; [`super`] wires these types to components, [`super::scoring`] holds
 //! the math, [`super::considerations`] holds what brains can sense, and
 //! [`super::brains`] holds the shipped definitions.
@@ -17,31 +17,31 @@ pub const MELEE_RANGE: f32 = 64.0;
 pub const CAST_MIN_RANGE: f32 = 200.0;
 /// Preferred maximum distance a ranged or flying brain keeps from its target.
 pub const CAST_MAX_RANGE: f32 = 360.0;
-pub const MELEE_BAND: DistanceBand = DistanceBand::new(0.0, MELEE_RANGE);
-pub const CAST_BAND: DistanceBand = DistanceBand::new(CAST_MIN_RANGE, CAST_MAX_RANGE);
+pub const MELEE_BAND: Interval = Interval::new(0.0, MELEE_RANGE);
+pub const CAST_BAND: Interval = Interval::new(CAST_MIN_RANGE, CAST_MAX_RANGE);
 /// Core of the cast band where shot quality stays full.
-pub const CAST_CORE_BAND: DistanceBand =
-    DistanceBand::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
+pub const CAST_CORE_BAND: Interval = Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 /// Distance a caster opens before it stops casting to regenerate mana.
-pub const RECOVERY_BAND: DistanceBand = DistanceBand::new(300.0, 340.0);
+pub const RECOVERY_BAND: Interval = Interval::new(300.0, 340.0);
 /// Distance from the target at which a wounded warrior may drink its potion.
 pub const HEAL_SAFE_DISTANCE: f32 = 200.0;
 /// Speed below which a target counts as holding still rather than orbiting.
 pub const TARGET_MOVING_SPEED: f32 = 20.0;
 
-/// An ordered `min < max` distance interval in world units.
+/// An ordered `min < max` interval: a distance band, a consideration's input
+/// range, or a span of seconds to roll from.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct DistanceBand {
+pub struct Interval {
     min: f32,
     max: f32,
 }
 
-impl DistanceBand {
-    /// Builds a band, rejecting bad bounds at compile time.
+impl Interval {
+    /// Builds an interval, rejecting bad bounds at compile time.
     pub const fn new(min: f32, max: f32) -> Self {
         assert!(
             min.is_finite() && max.is_finite() && min < max,
-            "distance band needs finite min < max"
+            "interval needs finite min < max"
         );
         Self { min, max }
     }
@@ -54,101 +54,100 @@ impl DistanceBand {
         self.max
     }
 
-    pub fn error(self, distance: f32) -> f32 {
-        if distance < self.min {
-            distance - self.min
-        } else if distance > self.max {
-            distance - self.max
+    /// Signed distance outside the interval; zero inside it.
+    pub fn error(self, value: f32) -> f32 {
+        if value < self.min {
+            value - self.min
+        } else if value > self.max {
+            value - self.max
         } else {
             0.0
         }
     }
 
-    pub fn center_error(self, distance: f32) -> f32 {
+    /// Offset from the center as a fraction of the half-width, clamped to `-1.0..=1.0`.
+    pub fn center_error(self, value: f32) -> f32 {
         let half_width = (self.max - self.min) * 0.5;
-        ((distance - (self.min + self.max) * 0.5) / half_width).clamp(-1.0, 1.0)
-    }
-}
-
-/// A uniformly rolled duration entered when an option becomes current.
-/// Only calm options use this today.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CommitWindow {
-    min: f32,
-    max: f32,
-}
-
-impl CommitWindow {
-    /// Builds a window, rejecting bad bounds at compile time.
-    pub const fn new(min: f32, max: f32) -> Self {
-        assert!(
-            min.is_finite() && max.is_finite() && min >= 0.0 && min <= max,
-            "commit window needs finite, non-negative, ordered bounds"
-        );
-        Self { min, max }
+        ((value - (self.min + self.max) * 0.5) / half_width).clamp(-1.0, 1.0)
     }
 
-    pub const fn min(self) -> f32 {
-        self.min
-    }
-
-    pub const fn max(self) -> f32 {
-        self.max
+    /// Maps `raw` onto `0.0..=1.0` across the interval, clamping outside it.
+    pub fn normalize(self, raw: f32) -> Option<f32> {
+        if !raw.is_finite() {
+            return None;
+        }
+        let normalized = ((raw - self.min) / (self.max - self.min)).clamp(0.0, 1.0);
+        normalized.is_finite().then_some(normalized)
     }
 }
 
 /// Locomotion selected by a brain: where it wants to be. Attack execution
 /// stays with `AttackState`, and committed moves are a [`Maneuver`], not a mode.
-/// New behaviors should be scored options over these modes, not new variants,
+/// New behaviors should be decisions over these modes, not new variants,
 /// unless the steering contract itself is new.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum MotionMode {
+    /// Disengaged: alternates standing and ambling, paced by the `Wander`
+    /// component.
     #[default]
-    Idle,
+    Calm,
     Chase,
     ReturnToAnchor,
     /// Wounded break: still in the fight, just getting away from the target.
     Flee,
-    KeepDistance(DistanceBand),
+    KeepDistance(Interval),
     /// Plants in place with a live target: the ice mage's firing stance.
     Hold,
-    /// Firing-line sidestep: orbits the target while equipment stays hot.
-    Strafe,
-    Wander,
+    /// Firing-line sidestep: orbits the target inside the band while
+    /// equipment stays hot.
+    Strafe(Interval),
 }
 
-/// A committed move that takes exclusive control of steering until it ends.
-/// It is chosen on its own channel, so it runs over whatever locomotion mode
-/// is current and hands steering back when the executor reports it finished.
+impl MotionMode {
+    /// Whether steering this mode needs a live target.
+    pub fn needs_target(self) -> bool {
+        // Flee is still fighting: the target is live, the goal is just distance.
+        matches!(
+            self,
+            Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe(_) | Self::Flee
+        )
+    }
+}
+
+/// A committed move that takes exclusive control of steering until its
+/// executor reports it finished. It competes with the modes on the movement
+/// layer but is never re-scored while it runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Maneuver {
-    /// Committed break away from the target along a bearing fixed at the start.
-    Kite,
-    /// Committed tangent hop after a completed fire volley.
-    Burst,
-    /// Committed straight slide away from a target that crossed the danger ring.
-    Slide,
+    /// Committed straight run; the `Dash` component's policy sets its aim.
+    Dash,
     /// Committed dive through a snapshot of the target and back out.
     Swoop,
 }
 
 impl Maneuver {
-    /// Every maneuver, in channel-array order.
-    pub const ALL: [Self; 4] = [Self::Kite, Self::Burst, Self::Slide, Self::Swoop];
+    /// Every maneuver, in array order.
+    pub const ALL: [Self; 2] = [Self::Dash, Self::Swoop];
 
     /// One-word label for debug displays.
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Kite => "Kite",
-            Self::Burst => "Burst",
-            Self::Slide => "Slide",
+            Self::Dash => "Dash",
             Self::Swoop => "Swoop",
         }
     }
 }
 
-/// Something a brain can ask its body to do besides move or use equipment.
-/// Each ability has its own channel, scored independently of the others.
+/// What the exclusive movement layer picks between: a sustained mode or a
+/// committed maneuver.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Movement {
+    Mode(MotionMode),
+    Maneuver(Maneuver),
+}
+
+/// An innate move a brain can ask its body for, carried out by a capability
+/// component in the `ability` module.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ability {
     /// Drink a carried potion.
@@ -160,86 +159,30 @@ pub enum Ability {
 }
 
 impl Ability {
-    /// Every ability, in channel-array order.
+    /// Every ability, in array order.
     pub const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
 }
 
-/// Behavior groups for arbitration in [`super::scoring`].
+/// What the independent action layer can request. Each action fires on its
+/// own whenever one of its decisions scores.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BehaviorGroup {
-    Aggro,
-    Return,
-    Passive,
+pub enum Action {
+    /// Use the item equipped in a slot.
+    Use(EquipmentSlot),
+    Ability(Ability),
 }
 
-/// The static facts about a [`MotionMode`] that the arbiter and executor
-/// consult. Every mode picks exactly one row in [`MotionMode::traits`].
-#[derive(Clone, Copy, Debug)]
-struct ModeTraits {
-    group: BehaviorGroup,
-    needs_target: bool,
-}
+impl Action {
+    /// Number of distinct actions, for per-action arrays.
+    pub const COUNT: usize = EquipmentSlot::ALL.len() + Ability::ALL.len();
 
-impl ModeTraits {
-    /// A sustained fighting mode: re-scored every tick against a live target.
-    const REACTIVE: Self = Self {
-        group: BehaviorGroup::Aggro,
-        needs_target: true,
-    };
-    /// Going home; only scores while disengaged.
-    const HOMEWARD: Self = Self {
-        group: BehaviorGroup::Return,
-        needs_target: false,
-    };
-    /// The idle/wander cycle.
-    const CALM: Self = Self {
-        group: BehaviorGroup::Passive,
-        needs_target: false,
-    };
-}
-
-impl MotionMode {
-    /// The single place a mode declares its group and target need.
-    fn traits(self) -> ModeTraits {
+    /// Position of this action in per-action arrays.
+    pub const fn index(self) -> usize {
         match self {
-            // Flee is still fighting: the target is live, the goal is just distance.
-            Self::Chase | Self::KeepDistance(_) | Self::Hold | Self::Strafe | Self::Flee => {
-                ModeTraits::REACTIVE
-            }
-            Self::ReturnToAnchor => ModeTraits::HOMEWARD,
-            Self::Idle | Self::Wander => ModeTraits::CALM,
+            Self::Use(slot) => slot as usize,
+            Self::Ability(ability) => EquipmentSlot::ALL.len() + ability as usize,
         }
     }
-
-    pub fn needs_target(self) -> bool {
-        self.traits().needs_target
-    }
-
-    pub fn is_calm(self) -> bool {
-        self.traits().group == BehaviorGroup::Passive
-    }
-
-    pub fn next_calm(self) -> MotionMode {
-        match self {
-            Self::Idle => Self::Wander,
-            _ => Self::Idle,
-        }
-    }
-
-    pub fn group(self) -> BehaviorGroup {
-        self.traits().group
-    }
-}
-
-/// The complete output of one brain tick. Locomotion, maneuver, equipment and
-/// ability intents are independent channels.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct BrainDecision {
-    pub motion: MotionMode,
-    /// The best maneuver ready to start, if none is already running.
-    pub maneuver: Option<Maneuver>,
-    pub slot_intents: [bool; EquipmentSlot::ALL.len()],
-    pub abilities: [bool; Ability::ALL.len()],
 }
 
 /// Target data visible to a brain this tick.
@@ -256,62 +199,31 @@ pub struct TargetView {
     pub tangential_velocity: f32,
 }
 
-/// Chance and spacing of one maneuver, copied from the capability component
-/// that executes it so the decision tick never reaches into executor state.
+/// What the decision tick needs to know about one capability, copied from the
+/// component that carries it out so scoring never reaches into executor state.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ManeuverTuning {
-    /// Probability that a ready, scored maneuver actually starts.
-    pub chance: f32,
-    /// Seconds before the maneuver may be tried again after it ends or misses.
-    pub cooldown: f32,
-    /// Target distance that triggers the maneuver, when it has one.
-    pub trigger_range: Option<f32>,
-}
-
-/// What the decision tick needs to know about an ability the entity can carry
-/// out, copied from the capability component that applies it.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct AbilityTuning {
-    /// Target distance at which the ability should be armed, when it has a reach.
+pub struct Tuning {
+    /// Target distance within which the capability should be used, when it has one.
     pub reach: Option<f32>,
+    /// Probability that a winning maneuver actually starts.
+    pub chance: f32,
+    /// Seconds before a maneuver may be tried again after it ends or misses.
+    pub cooldown: f32,
 }
 
-/// What the body reports about itself each tick: held calls, cooldowns, and
-/// copies of the tuning that considerations need. Unlike a sense, none of it
-/// comes from the world; it reflects the brain's own earlier decisions and the
-/// capabilities its entity carries.
-#[derive(Clone, Copy, Debug)]
-pub struct SelfState {
-    pub calm_phase: MotionMode,
-    /// The locomotion mode currently driving the body.
-    pub locomotion: MotionMode,
-    /// Whether a caster is running out a held mana break.
-    pub mana_recovering: bool,
-    pub active_maneuver: Option<Maneuver>,
-    /// `None` for a maneuver this entity has no capability for.
-    pub maneuver_tuning: [Option<ManeuverTuning>; Maneuver::ALL.len()],
-    /// Owned and off cooldown, so it may be scored and started.
-    pub maneuver_ready: [bool; Maneuver::ALL.len()],
-    /// `None` for an ability this entity has no capability for.
-    pub ability_tuning: [Option<AbilityTuning>; Ability::ALL.len()],
-}
-
-impl Default for SelfState {
+impl Default for Tuning {
     fn default() -> Self {
         Self {
-            calm_phase: MotionMode::Idle,
-            locomotion: MotionMode::Idle,
-            mana_recovering: false,
-            active_maneuver: None,
-            maneuver_tuning: [None; Maneuver::ALL.len()],
-            maneuver_ready: [false; Maneuver::ALL.len()],
-            ability_tuning: [Some(AbilityTuning::default()); Ability::ALL.len()],
+            reach: None,
+            chance: 1.0,
+            cooldown: 0.0,
         }
     }
 }
 
 /// Everything a pure brain is allowed to look at during one decision tick:
-/// facts sensed from the world plus the body's [`SelfState`].
+/// facts sensed from the world, the brain's own earlier choices, and the
+/// tuning of the capabilities its entity carries.
 #[derive(Clone, Copy, Debug)]
 pub struct DecisionContext {
     pub target: Option<TargetView>,
@@ -323,7 +235,17 @@ pub struct DecisionContext {
     pub anchor_arrived: Option<bool>,
     /// An attack finished on the last tick; maneuvers key their start off this.
     pub attack_finished: bool,
-    pub self_state: SelfState,
+    /// The mode currently driving the body.
+    pub mode: MotionMode,
+    /// Whether a caster is running out a held mana break.
+    pub mana_recovering: bool,
+    pub active_maneuver: Option<Maneuver>,
+    /// `None` for a maneuver this entity has no capability for.
+    pub maneuver_tuning: [Option<Tuning>; Maneuver::ALL.len()],
+    /// Owned and off cooldown, so it may be scored and started.
+    pub maneuver_ready: [bool; Maneuver::ALL.len()],
+    /// `None` for an action this entity cannot carry out.
+    pub action_tuning: [Option<Tuning>; Action::COUNT],
 }
 
 impl Default for DecisionContext {
@@ -336,110 +258,105 @@ impl Default for DecisionContext {
             anchor_overshoot_fraction: None,
             anchor_arrived: None,
             attack_finished: false,
-            self_state: SelfState::default(),
+            mode: MotionMode::Calm,
+            mana_recovering: false,
+            active_maneuver: None,
+            maneuver_tuning: [None; Maneuver::ALL.len()],
+            maneuver_ready: [false; Maneuver::ALL.len()],
+            action_tuning: [Some(Tuning::default()); Action::COUNT],
         }
     }
 }
 
-/// A complete static brain definition: one scored option list per channel.
+impl DecisionContext {
+    /// Whether the body can start `movement` right now: modes always, a
+    /// maneuver only when owned and off cooldown.
+    pub fn can_start(&self, movement: Movement) -> bool {
+        match movement {
+            Movement::Mode(_) => true,
+            Movement::Maneuver(maneuver) => self.maneuver_ready[maneuver as usize],
+        }
+    }
+
+    /// Whether the body carries the capability for `action`.
+    pub fn can_perform(&self, action: Action) -> bool {
+        self.action_tuning[action.index()].is_some()
+    }
+}
+
+/// A complete static brain: one decision list per layer.
 #[derive(Debug)]
 pub struct BrainDefinition {
-    /// Distance band this brain's gates measure against.
-    pub band: Option<DistanceBand>,
-    pub motion_options: &'static [ScoredOption<MotionMode>],
-    pub maneuver_options: &'static [ScoredOption<Maneuver>],
-    pub slot_options: [&'static [ScoredOption<()>]; EquipmentSlot::ALL.len()],
-    pub ability_options: [&'static [ScoredOption<()>]; Ability::ALL.len()],
-    /// Farthest live target distance at which slot intents may fire. `None`
-    /// means the decision tick's verdict stands without a live range check.
-    pub slot_reach: Option<f32>,
+    /// Exclusive layer: the best decision wins, and the current mode keeps momentum.
+    pub movement: &'static [Decision<Movement>],
+    /// Independent layer: every action with a scoring decision fires.
+    pub actions: &'static [Decision<Action>],
+    /// Farthest target distance at which equipment use may fire. Scored as
+    /// the equipment's reach and re-checked live by the applier. `None` means
+    /// the brain never uses equipment.
+    pub equipment_reach: Option<f32>,
 }
 
-/// One candidate option on a channel.
+/// One scored candidate on a layer: an action, its weight, and the
+/// considerations whose geometric mean scales that weight.
 #[derive(Clone, Copy, Debug)]
-pub struct ScoredOption<T> {
+pub struct Decision<T> {
     pub value: T,
-    pub priority: f32,
-    pub commit: Option<CommitWindow>,
+    pub weight: f32,
     pub considerations: &'static [Consideration],
-    pub gates: &'static [Gate],
 }
 
-/// Which edge of the character's distance band a [`Gate`] measures from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BandEdge {
-    Min,
-    Max,
-}
-
-/// Dual-threshold eligibility gate over target distance. Offsets measure from
-/// one edge of the character's band; challengers enter at `enter_offset`,
-/// incumbents leave past `exit_offset`, and the gap between them holds the mode.
-#[derive(Clone, Copy, Debug)]
-pub struct Gate {
-    pub name: &'static str,
-    pub edge: BandEdge,
-    pub enter_offset: f32,
-    pub exit_offset: f32,
-}
-
-impl Gate {
-    /// Builds a band-relative gate.
-    pub const fn new(
-        name: &'static str,
-        edge: BandEdge,
-        enter_offset: f32,
-        exit_offset: f32,
-    ) -> Self {
-        Self {
-            name,
-            edge,
-            enter_offset,
-            exit_offset,
-        }
-    }
-}
-
-/// One normalized input to an option's score.
+/// One normalized input to a decision's score.
 #[derive(Clone, Copy, Debug)]
 pub struct Consideration {
     pub name: &'static str,
     pub read: fn(&DecisionContext) -> Option<f32>,
-    pub range: NormalizedRange,
-    pub curve: Curve,
+    pub response: Response,
+    /// Scores `1 - response` instead, so one reader serves a fact and its opposite.
+    pub inverted: bool,
 }
 
-/// An ordered `min < max` raw-value range that normalizes to `0.0..=1.0`.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct NormalizedRange {
-    min: f32,
-    max: f32,
-}
-
-impl NormalizedRange {
-    /// Builds a range, rejecting bad bounds at compile time.
-    pub const fn new(min: f32, max: f32) -> Self {
-        assert!(
-            min.is_finite() && max.is_finite() && min < max,
-            "consideration range needs finite min < max"
-        );
-        Self { min, max }
-    }
-
-    pub const fn min(self) -> f32 {
-        self.min
-    }
-
-    pub const fn max(self) -> f32 {
-        self.max
-    }
-
-    pub fn normalize(self, raw: f32) -> Option<f32> {
-        if !raw.is_finite() {
-            return None;
+impl Consideration {
+    /// The opposite fact under a new name. A missing input stays neutral.
+    pub const fn inverted(self, name: &'static str) -> Self {
+        Self {
+            name,
+            inverted: !self.inverted,
+            ..self
         }
-        let normalized = ((raw - self.min) / (self.max - self.min)).clamp(0.0, 1.0);
-        normalized.is_finite().then_some(normalized)
+    }
+}
+
+/// How a consideration turns its raw reading into a `0.0..=1.0` score.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Response {
+    /// Normalize over `range`, then shape with `curve`.
+    Curve { range: Interval, curve: Curve },
+    /// Full once the reading crosses `enter`, zero before it. While its
+    /// decision is current the threshold is `exit` instead, so the gap holds
+    /// the decision. `exit < enter` passes readings at or above the threshold;
+    /// otherwise, including no gap at all, it passes readings at or below it.
+    Threshold { enter: f32, exit: f32 },
+}
+
+impl Response {
+    /// Score for `raw`, or `None` for a non-finite reading.
+    pub fn score(self, raw: f32, is_current: bool) -> Option<f32> {
+        match self {
+            Self::Curve { range, curve } => range.normalize(raw).map(|value| curve.apply(value)),
+            Self::Threshold { enter, exit } => {
+                if !raw.is_finite() {
+                    return None;
+                }
+                let threshold = if is_current { exit } else { enter };
+                let passes = if exit < enter {
+                    raw >= threshold
+                } else {
+                    raw <= threshold
+                };
+                Some(if passes { 1.0 } else { 0.0 })
+            }
+        }
     }
 }
 

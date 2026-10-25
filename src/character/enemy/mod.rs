@@ -6,7 +6,7 @@ mod defeat;
 use super::ability::{Bite, Breath, Heal};
 use super::brain::{
     BAT, Brain, BrainDefinition, CAST_MIN_RANGE, CastPlant, Dash, FIRE_MAGE, ICE_MAGE,
-    ManaRecovery, SlotIntent, Strafe, Swoop, TurnRate, WARRIOR, Wander,
+    Interval, ManaRecovery, Strafe, Swoop, TurnRate, WARRIOR, Wander,
 };
 use super::animation::AnimationSheet;
 use crate::{
@@ -248,6 +248,11 @@ fn spawn_enemy_with_equipment(
 
 /// Seconds between potions, so a hurt warrior drinks one at a time.
 const HEAL_COOLDOWN: f32 = 1.0;
+
+/// Enemies stand a while between short walks while disengaged.
+fn enemy_wander() -> Wander {
+    Wander::new(Interval::new(3.0, 5.0), Interval::new(1.0, 2.0))
+}
 const ENEMY_SIGHT_RANGE: f32 = 350.0;
 const BAT_SIGHT_RANGE: f32 = 550.0;
 
@@ -290,8 +295,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         // cone away from the target; the other 20% swing again.
         Dash::breakaway(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
         Heal::new(HEAL_COOLDOWN),
-        Wander::new(1.0, 2.0),
-        SlotIntent::default(),
+        enemy_wander(),
         Sprite::from_atlas_image(
             sprites.warrior_enemy_sprite_sheet.clone(),
             TextureAtlas {
@@ -320,8 +324,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ),
         // Stand through the 0.3 s ice bolt so the wind-up is readable.
         CastPlant::new(0.3),
-        Wander::new(1.0, 2.0),
-        SlotIntent::default(),
+        enemy_wander(),
         Sprite::from_atlas_image(
             sprites.ice_mage_enemy_sprite_sheet.clone(),
             TextureAtlas {
@@ -350,8 +353,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         // Stand through the 0.3 s fire volley so the wind-up is readable.
         CastPlant::new(0.3),
         Strafe::smart(),
-        Wander::new(1.0, 2.0),
-        SlotIntent::default(),
+        enemy_wander(),
         Sprite::from_atlas_image(
             sprites.fire_mage_enemy_sprite_sheet.clone(),
             TextureAtlas {
@@ -384,7 +386,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         EnemyKind::Bat.stats(),
         TurnRate(BAT_TURN_RATE),
         Strafe::with_standoff(BAT_ORBIT_STANDOFF),
-        Wander::new(1.0, 2.0),
+        enemy_wander(),
         // 35% chance per roll; after a dive ends, wait 2 s before the next
         // roll. The dive is a twice-as-fast pass that flies through the target
         // and back out to roughly the circling radius.

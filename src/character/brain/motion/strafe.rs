@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{SteerInput, approach};
 use crate::character::{
-    brain::{BrainRng, DistanceBand},
+    brain::{BrainRng, Interval},
     vision::TargetInfo,
 };
 
@@ -32,7 +32,7 @@ pub struct Strafe {
 }
 
 impl Strafe {
-    /// Orbits the brain's band with the default rhythm and no radius standoff.
+    /// Orbits the mode's band with the default rhythm and no radius standoff.
     pub fn new() -> Self {
         Self {
             reroll_min: STRAFE_REROLL_MIN,
@@ -97,20 +97,18 @@ impl Orbit {
     }
 }
 
-/// Tangent plus a radial correction toward `band`, which comes from the
-/// brain's definition so it cannot drift from the band its gates measure.
+/// Tangent plus a radial correction toward the strafe mode's `band`.
 /// `hold_orbit` freezes the
 /// side and standoff rerolls, used while a dive settles back into the circle
 /// so a flip does not reverse the tangent at the handoff.
 pub(super) fn steer(
     input: &SteerInput,
     strafe: Option<&mut Strafe>,
-    band: Option<DistanceBand>,
+    band: Interval,
     random: &mut BrainRng,
     hold_orbit: bool,
 ) -> Option<Vec2> {
     let info = input.target_info?;
-    let band = band?;
     let direction = approach::chase(input)?;
     let strafe = strafe?;
     let now = input.now;

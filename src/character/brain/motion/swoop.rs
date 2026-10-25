@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 
 use super::{Effort, ManeuverContext, ManeuverExecutor, ManeuverStep, RunTag};
-use crate::character::brain::{Maneuver, ManeuverTuning};
+use crate::character::brain::{CAST_MAX_RANGE, Maneuver, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -30,6 +30,8 @@ pub struct Swoop {
     pub chance: f32,
     /// Seconds before the next roll after a miss or after a dive ends.
     pub interval: f32,
+    /// Farthest target distance from which a dive may start.
+    pub reach: f32,
     pub speed_boost: f32,
     pub exit_turn: f32,
     pass: Option<SwoopPass>,
@@ -39,11 +41,12 @@ pub struct Swoop {
 }
 
 impl Swoop {
-    /// Rolls `chance` every `interval` seconds.
+    /// Rolls `chance` every `interval` seconds while the target is within cast range.
     pub fn new(chance: f32, interval: f32) -> Self {
         Self {
             chance,
             interval,
+            reach: CAST_MAX_RANGE,
             speed_boost: SWOOP_SPEED_BOOST,
             exit_turn: SWOOP_EXIT_TURN,
             pass: None,
@@ -81,11 +84,11 @@ impl ManeuverExecutor for Swoop {
         Maneuver::Swoop
     }
 
-    fn tuning(&self) -> ManeuverTuning {
-        ManeuverTuning {
+    fn tuning(&self) -> Tuning {
+        Tuning {
+            reach: Some(self.reach),
             chance: self.chance,
             cooldown: self.interval,
-            trigger_range: None,
         }
     }
 

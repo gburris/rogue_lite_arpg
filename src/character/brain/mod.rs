@@ -1,11 +1,19 @@
 //! ECS glue for the pure utility brains.
 //!
+//! The vocabulary is standard infinite axis utility:
+//! - A [`DecisionContext`] is everything a brain knows this tick.
+//! - A [`Consideration`] reads one input from it and maps it to `0.0..=1.0`.
+//! - A [`Decision`] pairs an action with a weight and its considerations.
+//! - A layer is a list of decisions with a selection rule. The movement layer
+//!   is exclusive: the best [`Movement`] wins, and the current mode keeps
+//!   momentum. The action layer is independent: every [`Action`] with a
+//!   scoring decision fires.
+//!
 //! Data flows one way around the loop, and every piece of data has one writer:
-//! 1. [`senses`] write a [`DecisionContext`] from world state and from the
+//! 1. [`senses`] writes a [`DecisionContext`] from world state and from the
 //!    capability components the entity carries.
-//! 2. [`decide`] scores it with the pure [`scoring`] math and writes only
-//!    intents: the [`Brain`]'s locomotion mode and maneuver, [`SlotIntent`]
-//!    and [`AbilityIntent`].
+//! 2. [`decide`] runs both layers with the pure [`scoring`] math and writes
+//!    only intents: the [`Brain`]'s mode and maneuver, and [`ActionIntent`].
 //! 3. Executors read those intents. [`motion`] steers the body and reports a
 //!    [`ManeuverFinished`] message; [`execute`] and the `ability` module apply
 //!    equipment and ability use.
@@ -15,22 +23,20 @@
 //! and [`brains`] holds the shipped definitions.
 //!
 //! To add a locomotion behavior, touch these in order:
-//! 1. [`model`]: a `MotionMode` variant only for a new steering contract, plus
-//!    its one row in `MotionMode::traits` (group, target need).
+//! 1. [`model`]: a `MotionMode` variant only for a new steering contract.
 //! 2. [`motion`]: a behavior file with its component (tuning as pub fields,
 //!    memory as private fields) and a steering function.
-//! 3. [`model::DecisionContext`] sense fields (or [`model::SelfState`] for
-//!    body state) plus [`considerations`] readers.
-//! 4. [`brains`]: static options over the mode.
+//! 3. [`model::DecisionContext`] fields filled in [`senses`], plus
+//!    [`considerations`] readers.
+//! 4. [`brains`]: movement decisions over the mode.
 //! 5. An arm in `motion::steer_locomotion`.
 //!
 //! A committed move is a [`Maneuver`] instead: a variant, a capability
 //! component in [`motion`] that implements `ManeuverExecutor` and is listed in
-//! `motion::Maneuvers`, and an option on the definition's maneuver channel.
-//! A new ability is the same shape: an [`Ability`] variant, a capability
-//! component in `ability` that implements `AbilityCapability` and is listed in
-//! `AbilityCapabilities`, an applier, and options on the definition's ability
-//! channel.
+//! `motion::Maneuvers`, and a movement decision over it. A new ability is the
+//! same shape: an [`Ability`] variant, a capability component in `ability`
+//! that implements `AbilityCapability` and is listed in
+//! `AbilityCapabilities`, an applier, and action decisions over it.
 
 mod brains;
 mod considerations;
@@ -43,7 +49,8 @@ mod senses;
 
 pub use brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
 pub use model::{
-    Ability, AbilityTuning, BrainDefinition, CAST_MIN_RANGE, Maneuver, MotionMode,
+    Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Maneuver,
+    MotionMode, Movement, Tuning,
 };
 pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
 
@@ -52,10 +59,7 @@ use self::execute::apply_slot_requests;
 use self::model::*;
 use self::motion::{ManeuverFinished, drive_motion};
 use self::scoring::*;
-use self::senses::{
-    Perception, sense_calm_and_attack, sense_equipment_and_anchor, sense_self, sense_target,
-    sense_vitals,
-};
+use self::senses::{Perception, sense};
 
 use bevy::{
     ecs::{lifecycle::HookContext, world::DeferredWorld},
@@ -65,7 +69,7 @@ use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 use crate::{
-    prelude::{EquipmentSlot, Mana, apply_slowed, tick_equippable_cooldown},
+    prelude::{Mana, apply_slowed, tick_equippable_cooldown},
     world::MapRng,
 };
 
@@ -80,33 +84,27 @@ struct ActiveManeuver {
 }
 
 /// A character's utility brain: which static definition it scores against, the
-/// locomotion mode and maneuver it is driving, and its decision timers.
+/// mode and maneuver it is driving, and its decision timers.
 ///
 /// The definition never changes after spawn; decisions rewrite the rest at
 /// 10 Hz. Only the decision tick writes it: executors get a read-only view and
 /// answer with [`ManeuverFinished`]. Randomness lives apart, in [`BrainRng`].
 #[derive(Component, Debug)]
-#[require(Perception, AbilityIntent, BrainRng)]
+#[require(Perception, ActionIntent, BrainRng)]
 pub struct Brain {
     definition: &'static BrainDefinition,
     mode: MotionMode,
-    committed_until: f32,
-    dwell_until: f32,
-    calm_phase: Option<MotionMode>,
     active: Option<ActiveManeuver>,
     next_epoch: u32,
     maneuver_ready_at: [f32; Maneuver::ALL.len()],
 }
 
 impl Brain {
-    /// Starts `definition` idle.
+    /// Starts `definition` calm.
     pub fn new(definition: &'static BrainDefinition) -> Self {
         Self {
             definition,
-            mode: MotionMode::Idle,
-            committed_until: 0.0,
-            dwell_until: 0.0,
-            calm_phase: None,
+            mode: MotionMode::Calm,
             active: None,
             next_epoch: 0,
             maneuver_ready_at: [0.0; Maneuver::ALL.len()],
@@ -254,40 +252,22 @@ impl ManaRecovery {
 }
 
 /// Advances every caster's mana break on the decision tick. The break is body
-/// state, so it has its own writer instead of living in a sense system.
+/// state, so it has its own writer instead of living in the sense system.
 fn update_mana_recovery(mut casters: Query<(&mut ManaRecovery, Option<&Mana>)>) {
     for (mut recovery, mana) in &mut casters {
         recovery.update(mana.and_then(Mana::fraction).unwrap_or(1.0));
     }
 }
 
-/// Per-tick equipment intent, written by `decide_behavior` when present.
+/// Per-tick action intent, written by `decide_behavior`. The equipment applier
+/// and the `ability` appliers read it and check the live world before acting.
 #[derive(Component, Clone, Copy, Debug, Default)]
-pub struct SlotIntent([bool; EquipmentSlot::ALL.len()]);
+pub struct ActionIntent([bool; Action::COUNT]);
 
-impl SlotIntent {
-    pub fn get(&self, slot: EquipmentSlot) -> bool {
-        self.0[slot as usize]
-    }
-
-    pub fn set_all(&mut self, intents: [bool; EquipmentSlot::ALL.len()]) {
-        self.0 = intents;
-    }
-}
-
-/// Per-tick ability intent, written by `decide_behavior`. Appliers in the
-/// `ability` module read it and check the live world before acting.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct AbilityIntent([bool; Ability::ALL.len()]);
-
-impl AbilityIntent {
-    /// Whether the brain wants `ability` used this tick.
-    pub fn get(&self, ability: Ability) -> bool {
-        self.0[ability as usize]
-    }
-
-    fn set_all(&mut self, intents: [bool; Ability::ALL.len()]) {
-        self.0 = intents;
+impl ActionIntent {
+    /// Whether the brain wants `action` performed this tick.
+    pub fn get(&self, action: Action) -> bool {
+        self.0[action.index()]
     }
 }
 
@@ -305,35 +285,9 @@ impl Default for DecisionClock {
 #[derive(Resource, Default, Clone, Copy, Debug)]
 pub struct AiSeed(pub u64);
 
-/// Rejects gated options on a brain without a distance band: `pass_gate` would
-/// otherwise treat every gate as open and silently ignore the eligibility rule.
-fn validate_band_usage(definition: &BrainDefinition) -> Result<(), String> {
-    let gated = |options: &[ScoredOption<_>]| options.iter().any(|option| !option.gates.is_empty());
-    let any_gated = definition
-        .motion_options
-        .iter()
-        .any(|option| !option.gates.is_empty())
-        || definition
-            .maneuver_options
-            .iter()
-            .any(|option| !option.gates.is_empty())
-        || definition.slot_options.iter().any(|options| gated(options))
-        || definition
-            .ability_options
-            .iter()
-            .any(|options| gated(options));
-    if any_gated && definition.band.is_none() {
-        return Err("gated options require a distance band".to_string());
-    }
-    Ok(())
-}
-
 pub(super) fn plugin(app: &mut App) {
     for (name, definition) in brains::all() {
         if let Err(error) = validate_brain(definition) {
-            panic!("{name} brain is invalid: {error}");
-        }
-        if let Err(error) = validate_band_usage(definition) {
             panic!("{name} brain is invalid: {error}");
         }
     }
@@ -350,14 +304,7 @@ pub(super) fn plugin(app: &mut App) {
         )
         .add_systems(
             Update,
-            (
-                sense_target,
-                sense_vitals,
-                sense_equipment_and_anchor,
-                sense_calm_and_attack,
-                update_mana_recovery,
-                sense_self,
-            )
+            (update_mana_recovery, sense)
                 .chain()
                 .run_if(decision_tick_ready)
                 .after(end_finished_maneuvers)
@@ -369,7 +316,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             decide_behavior
                 .run_if(decision_tick_ready)
-                .after(sense_self)
+                .after(sense)
                 .in_set(AiSet::Decision),
         )
         .add_systems(Update, apply_slot_requests.in_set(AiSet::Execute))
@@ -405,7 +352,6 @@ mod tests {
     fn every_brain_is_valid() {
         for (name, definition) in brains::all() {
             validate_brain(definition).unwrap_or_else(|error| panic!("{name}: {error}"));
-            validate_band_usage(definition).unwrap_or_else(|error| panic!("{name}: {error}"));
         }
     }
 
@@ -420,7 +366,7 @@ mod tests {
         world.insert_resource(AiSeed::default());
         let target = world.spawn_empty().id();
         let mut brain = Brain::new(&BAT);
-        brain.mode = MotionMode::Strafe;
+        brain.mode = MotionMode::Strafe(CAST_BAND);
         let bat = world
             .spawn((
                 brain,
@@ -441,18 +387,10 @@ mod tests {
     }
 
     fn run_decision_tick(world: &mut World) {
-        world.run_system_once(sense_target).expect("target sensed");
-        world.run_system_once(sense_vitals).expect("vitals sensed");
-        world
-            .run_system_once(sense_equipment_and_anchor)
-            .expect("equipment sensed");
-        world
-            .run_system_once(sense_calm_and_attack)
-            .expect("calm sensed");
         world
             .run_system_once(update_mana_recovery)
             .expect("mana break updated");
-        world.run_system_once(sense_self).expect("self sensed");
+        world.run_system_once(sense).expect("brain sensed");
         world.run_system_once(decide_behavior).expect("decisions run");
     }
 
@@ -464,6 +402,6 @@ mod tests {
         run_decision_tick(&mut world);
         let brain = world.get::<Brain>(bat).expect("brained bat");
         assert_eq!(brain.maneuver(), Some(Maneuver::Swoop));
-        assert_eq!(brain.mode(), MotionMode::Strafe);
+        assert_eq!(brain.mode(), MotionMode::Strafe(CAST_BAND));
     }
 }

@@ -11,7 +11,7 @@
 //! A running finite motion takes exclusive control of steering. Finite motion
 //! components implement [`MotionExecutor`] and are listed once, in
 //! [`FiniteMotions`]; the brain's active motion is the single source of truth,
-//! and an executor reports back only with [`MotionFinished`], never by
+//! and an executor reports back only by triggering [`MotionFinished`], never by
 //! writing decision state.
 
 mod approach;
@@ -43,9 +43,9 @@ pub(crate) const ANCHOR_ARRIVAL_RADIUS: f32 = TILE_SIZE as f32 / 2.0;
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TurnRate(pub f32);
 
-/// A finite motion ran to its end. The brain releases it and starts its
-/// cooldown when it reads this.
-#[derive(Message, Clone, Copy, Debug)]
+/// A finite motion ran to its end. The brain releases it, starts its cooldown
+/// and decides again on the spot.
+#[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
@@ -220,7 +220,7 @@ pub(super) struct Steered {
 pub(super) fn drive_motion(
     time: Res<Time<Virtual>>,
     mut characters: Query<Steered>,
-    mut finished: MessageWriter<MotionFinished>,
+    mut commands: Commands,
 ) {
     let now = time.elapsed_secs();
     let delta_secs = time.delta_secs();
@@ -283,7 +283,7 @@ pub(super) fn drive_motion(
                 // Fall through to steering this frame so the body never
                 // coasts for a frame between a finite motion and its settle-out.
                 Some(MotionStep::Finished) => {
-                    finished.write(MotionFinished {
+                    commands.trigger(MotionFinished {
                         entity,
                         motion: active.motion,
                     });

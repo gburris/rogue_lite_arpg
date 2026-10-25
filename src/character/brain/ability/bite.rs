@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::{AbilityCapability, Cooldown};
 use crate::{
     character::{
-        brain::{Ability, Action, ActionIntent, Tuning},
+        brain::{Ability, Action, ActionFinished, ActionIntent, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -97,5 +97,6 @@ pub(super) fn apply_bite(
             });
         }
         bite.cooldown.start(now);
+        commands.trigger(ActionFinished { entity });
     }
 }

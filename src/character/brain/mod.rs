@@ -15,8 +15,9 @@
 //! 2. [`decide`] runs both layers with the pure [`scoring`] math and writes
 //!    only intents: the [`Brain`]'s motion, and [`ActionIntent`].
 //! 3. Executors read those intents. [`motion`] steers the body and reports a
-//!    [`MotionFinished`] message; [`execute`] and the `ability` module apply
-//!    equipment and ability use.
+//!    [`MotionFinished`] event, which releases the motion and decides again at
+//!    once; [`execute`] and the `ability` module apply equipment and ability
+//!    use, and signal [`ActionFinished`] when a use ends.
 //!
 //! The brains themselves never see an `Entity`: [`model`] holds their data,
 //! [`scoring`] holds the math, [`considerations`] holds what they can sense,
@@ -55,10 +56,10 @@ pub use model::{
 };
 pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
 
-use self::decide::{decide_behavior, end_finished_motions};
+use self::decide::{decide_behavior, release_finished_motion};
 use self::execute::apply_slot_requests;
 use self::model::*;
-use self::motion::{MotionFinished, drive_motion};
+use self::motion::drive_motion;
 use self::scoring::*;
 use self::senses::{Perception, sense};
 
@@ -149,12 +150,14 @@ impl Brain {
     }
 
     /// Releases `motion` if it is the running one and holds off the next
-    /// attempt until `ready_at`.
-    fn finish_motion(&mut self, motion: Motion, ready_at: f32) {
-        if self.active.is_some_and(|active| active.motion == motion) {
+    /// attempt until `ready_at`. Returns whether it was released.
+    fn finish_motion(&mut self, motion: Motion, ready_at: f32) -> bool {
+        let running = self.active.is_some_and(|active| active.motion == motion);
+        if running {
             self.active = None;
             self.defer_motion(motion, ready_at);
         }
+        running
     }
 
     fn defer_motion(&mut self, motion: Motion, ready_at: f32) {
@@ -271,6 +274,13 @@ impl ActionIntent {
     }
 }
 
+/// An equipment or ability use ran to its end. A character holds at most one
+/// action at a time, so the event names only the entity.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct ActionFinished {
+    pub entity: Entity,
+}
+
 /// Shared ~10 Hz decision clock.
 #[derive(Resource)]
 pub struct DecisionClock(pub Timer);
@@ -295,20 +305,15 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(ability::plugin)
         .init_resource::<DecisionClock>()
         .init_resource::<AiSeed>()
-        .add_message::<MotionFinished>()
+        .add_observer(release_finished_motion)
         .add_systems(Startup, seed_ai_seed)
-        .add_systems(
-            Update,
-            (tick_decision_clock, end_finished_motions)
-                .chain()
-                .in_set(AiSet::Decision),
-        )
+        .add_systems(Update, tick_decision_clock.in_set(AiSet::Decision))
         .add_systems(
             Update,
             (update_mana_recovery, sense)
                 .chain()
                 .run_if(decision_tick_ready)
-                .after(end_finished_motions)
+                .after(tick_decision_clock)
                 .after(crate::combat::mana::regenerate_mana)
                 .after(tick_equippable_cooldown)
                 .in_set(AiSet::Decision),

@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::{AbilityCapability, Cooldown};
 use crate::{
     character::{
-        brain::{Ability, Action, ActionIntent, CAST_MAX_RANGE, Tuning},
+        brain::{Ability, Action, ActionFinished, ActionIntent, CAST_MAX_RANGE, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -89,5 +89,6 @@ pub(super) fn apply_breath(
             });
         }
         breath.cooldown.start(now);
+        commands.trigger(ActionFinished { entity });
     }
 }

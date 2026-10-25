@@ -1,6 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
+use super::brain::ActionFinished;
 use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
 
 /// Simple motion has no acceleration and assumes all entities move at max
@@ -163,17 +164,27 @@ pub struct AttackState {
 /// Syncs whether a holder is attacking from `EquipmentInUse` items. Items decide
 /// whether something started; AI only requests use and never writes this.
 /// Held slots (shield blocking) do not count as attacking for animation.
+/// Each finished attack also triggers [`ActionFinished`] for the brain.
 pub(super) fn sync_attack_state_from_equipment(
-    mut holders: Query<(&mut AttackState, Option<&Mainhand>, Option<&Offhand>)>,
+    mut commands: Commands,
+    mut holders: Query<(
+        Entity,
+        &mut AttackState,
+        Option<&Mainhand>,
+        Option<&Offhand>,
+    )>,
     in_use: Query<(), With<EquipmentInUse>>,
 ) {
-    for (mut state, mainhand, offhand) in &mut holders {
+    for (entity, mut state, mainhand, offhand) in &mut holders {
         let attacking = EquipmentSlot::ALL
             .into_iter()
             .filter(|equipment| equipment.is_instant_use())
             .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
         let finished = state.is_attacking && !attacking;
+        if finished {
+            commands.trigger(ActionFinished { entity });
+        }
         let attacks_finished = state.attacks_finished.wrapping_add(u32::from(finished));
         state.set_if_neq(AttackState {
             is_attacking: attacking,

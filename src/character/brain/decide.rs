@@ -4,41 +4,59 @@
 use bevy::prelude::*;
 
 use super::scoring::{choose_actions, choose_movement};
-use super::senses::Perception;
-use super::{ActionIntent, Brain, BrainRng, DecisionContext, Motion, MotionFinished};
+use super::motion::MotionFinished;
+use super::senses::{Perception, motion_readiness};
+use super::{ActionIntent, Brain, BrainRng, DecisionContext, Motion};
 
-/// Releases finite motions their executors reported finished and starts their
-/// cooldowns. Runs every frame so a finished motion never lingers a tick.
-pub(super) fn end_finished_motions(
+/// Releases a finite motion its executor reported finished, starts its
+/// cooldown, and decides again for that entity at once instead of waiting for
+/// the next tick. The perception is the one staged at the last tick, so the
+/// motion state it carries is refreshed first.
+pub(super) fn release_finished_motion(
+    finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
-    mut finished: MessageReader<MotionFinished>,
-    mut brains: Query<(&mut Brain, &Perception)>,
+    mut brains: Query<(&mut Brain, &mut BrainRng, &mut Perception, Mut<ActionIntent>)>,
 ) {
     let now = time.elapsed_secs();
-    for message in finished.read() {
-        let Ok((mut brain, perception)) = brains.get_mut(message.entity) else {
-            continue;
-        };
-        let cooldown =
-            perception.motion_tuning[message.motion.index()].map_or(0.0, |tuning| tuning.cooldown);
-        brain.finish_motion(message.motion, now + cooldown);
+    let Ok((mut brain, mut rng, mut perception, mut action_intent)) =
+        brains.get_mut(finished.entity)
+    else {
+        return;
+    };
+    let cooldown =
+        perception.motion_tuning[finished.motion.index()].map_or(0.0, |tuning| tuning.cooldown);
+    if !brain.finish_motion(finished.motion, now + cooldown) {
+        return;
     }
+    perception.motion = brain.motion();
+    perception.motion_ready = motion_readiness(&brain, &perception.motion_tuning, now);
+    decide(&mut brain, &mut rng, &perception, &mut action_intent, now);
 }
 
 /// Scores the staged perception and writes the outcome back: the movement
 /// layer's motion, and the action intent.
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
-    mut brains: Query<(&mut Brain, &mut BrainRng, &Perception, &mut ActionIntent)>,
+    mut brains: Query<(&mut Brain, &mut BrainRng, &Perception, Mut<ActionIntent>)>,
 ) {
     let now = time.elapsed_secs();
     for (mut brain, mut rng, perception, mut action_intent) in &mut brains {
-        let definition = brain.definition;
-        brain.continuous_motion = choose_motion(&mut brain, &mut rng, &perception.context, now);
-        let actions = choose_actions(definition, &perception.context);
-        if action_intent.0 != actions {
-            action_intent.0 = actions;
-        }
+        decide(&mut brain, &mut rng, perception, &mut action_intent, now);
+    }
+}
+
+fn decide(
+    brain: &mut Brain,
+    rng: &mut BrainRng,
+    perception: &Perception,
+    action_intent: &mut Mut<ActionIntent>,
+    now: f32,
+) {
+    let definition = brain.definition;
+    brain.continuous_motion = choose_motion(brain, rng, &perception.context, now);
+    let actions = choose_actions(definition, &perception.context);
+    if action_intent.0 != actions {
+        action_intent.0 = actions;
     }
 }
 

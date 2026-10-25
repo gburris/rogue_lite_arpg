@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{AbilityCapability, Cooldown};
 use crate::{
-    character::brain::{Ability, Action, ActionIntent, Tuning},
+    character::brain::{Ability, Action, ActionFinished, ActionIntent, Tuning},
     prelude::*,
 };
 
@@ -58,6 +58,7 @@ pub(super) fn apply_heal(
                 item_entity: potion,
             });
             heal.cooldown.start(now);
+            commands.trigger(ActionFinished { entity });
         }
     }
 }

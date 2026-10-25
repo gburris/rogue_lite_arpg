@@ -42,6 +42,20 @@ pub(super) fn target_view(has_target: bool, info: Option<&TargetInfo>) -> Option
     })
 }
 
+/// Which finite motions are owned and off cooldown at `now`.
+pub(super) fn motion_readiness(
+    brain: &Brain,
+    motion_tuning: &[Option<Tuning>; Motion::COUNT],
+    now: f32,
+) -> [bool; Motion::COUNT] {
+    let mut motion_ready = [false; Motion::COUNT];
+    for motion in Motion::FINITE {
+        motion_ready[motion.index()] =
+            motion_tuning[motion.index()].is_some() && brain.motion_ready(motion, now);
+    }
+    motion_ready
+}
+
 /// Everything one brain senses.
 #[derive(QueryData)]
 #[query_data(mutable)]
@@ -88,11 +102,6 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
         perception.attacks_seen = finished;
 
         let motion_tuning = finite_motions.tuning();
-        let mut motion_ready = [false; Motion::COUNT];
-        for motion in Motion::FINITE {
-            motion_ready[motion.index()] =
-                motion_tuning[motion.index()].is_some() && brain.motion_ready(motion, now);
-        }
 
         // Equipment is always performable (readiness is scored separately) and
         // shares the definition's reach; abilities need their component.
@@ -121,7 +130,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
             motion: brain.motion(),
             mana_recovering: recovery.is_some_and(ManaRecovery::recovering),
             motion_tuning,
-            motion_ready,
+            motion_ready: motion_readiness(brain, &motion_tuning, now),
             action_tuning,
         };
     }

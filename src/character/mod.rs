@@ -1,4 +1,3 @@
-mod ability;
 mod anchor;
 mod animation;
 mod brain;
@@ -41,7 +40,7 @@ pub struct CharacterPlugin;
 
 impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((player::plugin, enemy::plugin, npc::plugin, ability::plugin));
+        app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
         app.add_plugins((animation::plugin, vision::plugin, brain::plugin));
 

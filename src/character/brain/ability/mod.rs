@@ -1,6 +1,6 @@
 //! Abilities a brain can ask for besides moving or using equipment. Each one
 //! is an opt-in capability component plus an applier that reads the brain's
-//! [`ActionIntent`](super::brain::ActionIntent), re-checks the live world,
+//! [`ActionIntent`](super::ActionIntent), re-checks the live world,
 //! and does the work. Appliers never start a maneuver or change a mode. A
 //! defeated body loses its intent, so appliers never see the dead.
 //!
@@ -18,8 +18,8 @@ pub use bite::Bite;
 pub use breath::Breath;
 pub use heal::Heal;
 
-use super::AiSet;
-use super::brain::{Ability, Tuning};
+use super::{Ability, Tuning};
+use crate::character::AiSet;
 
 /// A capability component that carries out one [`Ability`].
 pub trait AbilityCapability {

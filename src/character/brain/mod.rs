@@ -38,6 +38,7 @@
 //! that implements `AbilityCapability` and is listed in
 //! `AbilityCapabilities`, an applier, and action decisions over it.
 
+mod ability;
 mod brains;
 mod considerations;
 mod decide;
@@ -47,6 +48,7 @@ mod motion;
 mod scoring;
 mod senses;
 
+pub use ability::{Bite, Breath, Heal};
 pub use brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
 pub use model::{
     Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Maneuver,
@@ -292,7 +294,8 @@ pub(super) fn plugin(app: &mut App) {
         }
     }
 
-    app.init_resource::<DecisionClock>()
+    app.add_plugins(ability::plugin)
+        .init_resource::<DecisionClock>()
         .init_resource::<AiSeed>()
         .add_message::<ManeuverFinished>()
         .add_systems(Startup, seed_ai_seed)

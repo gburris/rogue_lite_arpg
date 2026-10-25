@@ -3,7 +3,7 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod defeat;
 
-use super::ability::{Bite, Breath, Heal};
+use super::brain::{Bite, Breath, Heal};
 use super::brain::{
     BAT, Brain, BrainDefinition, CAST_MIN_RANGE, CastPlant, Dash, FIRE_MAGE, ICE_MAGE,
     Interval, ManaRecovery, Strafe, Swoop, TurnRate, WARRIOR, Wander,

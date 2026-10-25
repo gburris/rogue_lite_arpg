@@ -4,13 +4,13 @@
 
 use bevy::{ecs::query::QueryData, prelude::*};
 
+use super::ability::AbilityCapabilities;
 use super::motion::{ANCHOR_ARRIVAL_RADIUS, ManeuversReadOnly};
 use super::{
     Ability, Action, Brain, DecisionContext, ManaRecovery, Maneuver, TargetView, Tuning,
 };
 use crate::{
     character::{
-        ability::AbilityCapabilities,
         anchor::Anchor,
         vision::{TargetInfo, Targeting},
     },

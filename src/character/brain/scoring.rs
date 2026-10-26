@@ -185,7 +185,7 @@ mod tests {
         TargetView,
     };
     use super::*;
-    use crate::items::prelude::EquipmentSlot;
+    use crate::items::prelude::{EquipmentSlot, MELEE_WEAPON_REACH, STAFF_REACH};
 
     const MAINHAND: Action = Action::Use(EquipmentSlot::Mainhand);
 
@@ -212,23 +212,24 @@ mod tests {
         Availability(table)
     }
 
-    /// A target with the brain's equipment reach, as the senses stage it.
-    fn armed(distance: f32, brain: &BrainDefinition) -> DecisionContext {
+    /// A target against a mainhand item with `reach`, as the senses stage it.
+    fn armed(distance: f32, reach: f32) -> DecisionContext {
         let mut decision_context = DecisionContext {
             target: Some(visible_target(distance)),
             ..context()
         };
-        decision_context.in_reach[MAINHAND] =
-            brain.equipment_reach.is_some_and(|reach| distance <= reach);
+        decision_context.in_reach[MAINHAND] = distance <= reach;
         decision_context
     }
 
+    /// A warrior with a sword's reach.
     fn warrior_context() -> DecisionContext {
-        armed(30.0, &WARRIOR)
+        armed(30.0, MELEE_WEAPON_REACH)
     }
 
+    /// A mage with a staff's reach.
     fn mage_context(distance: f32) -> DecisionContext {
-        armed(distance, &FIRE_MAGE)
+        armed(distance, STAFF_REACH)
     }
 
     /// The motion and action the brain picks while `current` holds the motion slot.

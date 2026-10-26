@@ -30,14 +30,17 @@ pub(super) fn apply_equipment_use_requests(
     )>,
 ) {
     for (entity, brain, mut started, has_target, target_info) in &mut requests {
-        // The same reach the equipment considerations scored, checked live.
-        let in_range = brain.definition.equipment_reach.is_some_and(|reach| {
-            target_info.is_some_and(|info| info.distance.is_finite() && info.distance <= reach)
-        });
         let sighted = target_info.is_some_and(|info| info.line_of_sight);
-        let live = has_target && sighted && in_range;
         let locked = brain.active_action();
         for slot in EquipmentSlot::ALL {
+            // The same item reach the equipment considerations scored, checked live.
+            let reach = equipment
+                .equippable_in_slot(entity, slot)
+                .and_then(|equippable| equippable.reach);
+            let in_range = reach.is_some_and(|reach| {
+                target_info.is_some_and(|info| info.distance.is_finite() && info.distance <= reach)
+            });
+            let live = has_target && sighted && in_range;
             if let Some(active) = locked.filter(|active| active.action == Action::Use(slot)) {
                 if started.0 != Some(active.epoch) {
                     started.0 = Some(active.epoch);

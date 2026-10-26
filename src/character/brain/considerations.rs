@@ -11,7 +11,7 @@ use super::model::{
 use crate::items::prelude::EquipmentSlot;
 
 pub(crate) const MELEE_HYSTERESIS: f32 = 4.0;
-/// Melee reach including the hold threshold's hysteresis: where a parked warrior can still swing.
+/// Melee hold exit including hysteresis; melee weapon reach matches it.
 pub(crate) const MELEE_REACH: f32 = MELEE_RANGE + MELEE_HYSTERESIS;
 const CAST_HYSTERESIS: f32 = 5.0;
 

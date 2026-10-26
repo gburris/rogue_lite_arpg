@@ -253,6 +253,15 @@ impl EquipmentUsage<'_, '_> {
         self.item_in_slot(holder, slot)
             .is_some_and(|item| self.in_use.contains(item))
     }
+
+    /// The usable item data equipped in the holder's slot, if any.
+    pub fn equippable_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<&Equippable> {
+        let item = self.item_in_slot(holder, slot)?;
+        self.equipment
+            .get(item)
+            .ok()
+            .map(|usable| usable.equippable)
+    }
 }
 
 /// Read-only view of equipment state for planners. It never requests mutable
@@ -274,6 +283,21 @@ pub struct EquipmentRead<'w, 's> {
 }
 
 impl EquipmentRead<'_, '_> {
+    /// Item currently equipped in the holder's slot, if any.
+    pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
+        let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
+        slot.get_equipped(mainhand, offhand)
+    }
+
+    /// The usable item data equipped in the holder's slot, if any.
+    pub fn equippable_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<&Equippable> {
+        let item = self.item_in_slot(holder, slot)?;
+        self.equipment
+            .get(item)
+            .ok()
+            .map(|usable| usable.equippable)
+    }
+
     /// Whether the holder could use the slot now, without consuming anything.
     pub fn can_use(&self, holder: Entity, slot: EquipmentSlot) -> Result<(), EquipmentUseFailure> {
         let (mainhand, offhand, mana) = self

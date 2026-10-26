@@ -1,7 +1,7 @@
 mod swing;
 
 pub mod prelude {
-    pub use super::{ActiveMeleeAttack, axe, freeze_axe, sword};
+    pub use super::{ActiveMeleeAttack, MELEE_WEAPON_REACH, axe, freeze_axe, sword};
 }
 
 use std::sync::LazyLock;
@@ -19,6 +19,9 @@ use crate::{equipment_transforms, items::melee::swing::MeleeSwingType, prelude::
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change
 pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
+
+/// Farthest target distance at which an AI holder swings a melee weapon.
+pub const MELEE_WEAPON_REACH: f32 = 68.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_input_context::<MeleeWeapon>();
@@ -50,7 +53,8 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 15.0,
         },
         Knockback(10.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
         observe(on_stop_melee),
@@ -69,7 +73,8 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(20.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Sprite::from_image(sprites.axe.clone()),
         Item::new(220, ItemType::Melee),
         observe(on_stop_melee),
@@ -88,7 +93,8 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(2.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),

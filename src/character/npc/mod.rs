@@ -114,7 +114,11 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand:
     });
 }
 
-fn base_npc(spawn_position: Vec2, shadows: &Shadows, brain: &'static BrainDefinition) -> impl Bundle {
+fn base_npc(
+    spawn_position: Vec2,
+    shadows: &Shadows,
+    brain: &'static BrainDefinition,
+) -> impl Bundle {
     (
         NPC,
         Brain::new(brain),

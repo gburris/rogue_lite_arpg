@@ -392,10 +392,6 @@ pub struct Availability(pub MotionActionTable<bool>);
 #[derive(Debug)]
 pub struct BrainDefinition {
     pub behaviors: &'static [Decision<Behavior>],
-    /// Farthest target distance at which equipment use may fire. Scored as
-    /// the equipment's reach and re-checked live by the applier. `None` means
-    /// the brain never uses equipment.
-    pub equipment_reach: Option<f32>,
 }
 
 /// One scored candidate: a value, its weight, and the considerations whose

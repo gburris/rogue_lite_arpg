@@ -31,11 +31,14 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+/// An item that can be equipped and used from a slot. `reach` is the farthest
+/// target distance at which an AI holder uses it; `None` means AI never aims it.
 #[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub cooldown: Timer, // swing a sword, shoot a weapon, etc...
     pub transforms: &'static HashMap<FacingDirection, Transform>,
+    pub reach: Option<f32>,
 }
 
 impl Equippable {
@@ -48,6 +51,15 @@ impl Equippable {
             slot,
             transforms,
             cooldown: Timer::from_seconds(duration, TimerMode::Once),
+            reach: None,
+        }
+    }
+
+    /// Lets an AI holder use this item on targets up to `reach` away.
+    pub fn with_reach(self, reach: f32) -> Self {
+        Self {
+            reach: Some(reach),
+            ..self
         }
     }
 }

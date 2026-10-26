@@ -26,6 +26,8 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+/// Farthest target distance at which an AI holder casts a staff.
+pub const STAFF_REACH: f32 = 360.0;
 /// Fraction of the standard fireball speed used by the fire mage's single-bolt staff.
 const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
 /// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
@@ -91,7 +93,8 @@ fn flame_staff_core(sprites: &SpriteAssets) -> impl Bundle {
             return_time: 0.1,
         },
         Item::new(1340, ItemType::Staff),
-        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_TRANSFORMS)
+            .with_reach(STAFF_REACH),
         ManaCost(6.0),
         Sprite::from_image(sprites.fire_staff.clone()),
         observe(on_start_staff),
@@ -109,7 +112,8 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         },
         Item::new(2050, ItemType::Staff),
         ManaCost(15.0), // big mana cost
-        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_TRANSFORMS)
+            .with_reach(STAFF_REACH),
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
         observe(on_start_staff),

@@ -10,7 +10,7 @@ use super::model::{
     CAST_MAX_RANGE, CommitPolicy, Consideration, Decision, MELEE_DISTANCE_RANGE, Motion,
     RECOVERY_DISTANCE_RANGE,
 };
-use crate::items::prelude::EquipmentSlot;
+use crate::items::prelude::{EquipmentSlot, MELEE_WEAPON_REACH, STAFF_REACH};
 
 /// How long a cast holds its caster still from its start, so a short cast
 /// still leaves a readable beat before the next move.
@@ -118,6 +118,17 @@ const fn locked_motion_and_action(
 }
 
 const MAINHAND: Action = Action::Use(EquipmentSlot::Mainhand);
+
+// Brains hold distances their weapons must still reach: the warrior parks up
+// to its melee hold exit and the mages cast out to the cast range's edge.
+const _: () = assert!(
+    MELEE_REACH <= MELEE_WEAPON_REACH,
+    "melee weapons must reach the warrior's melee hold exit"
+);
+const _: () = assert!(
+    CAST_MAX_RANGE <= STAFF_REACH,
+    "staffs must reach the cast range's outer edge"
+);
 
 /// Disengaged ambling; each body's `Wander` component sets the rhythm.
 const CALM: Decision<Behavior> = momentum_motion(Motion::Calm, 1.0, &[NO_TARGET]);
@@ -271,31 +282,24 @@ static VILLAGER_BEHAVIORS: &[Decision<Behavior>] = &[CALM, RETURN_TO_ANCHOR];
 /// swing, flees when badly hurt, and walks home once disengaged.
 pub static WARRIOR: BrainDefinition = BrainDefinition {
     behaviors: WARRIOR_BEHAVIORS,
-    // Matches the hold threshold's exit: a warrior parked by the arrival
-    // deadband up to MELEE_REACH can still swing.
-    equipment_reach: Some(MELEE_REACH),
 };
 /// Holds the cast distance range on a moving orbit, hops to a fresh tangent after each
 /// volley, and backs off only long enough to refill a drained mana pool.
 pub static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,
-    equipment_reach: Some(CAST_MAX_RANGE),
 };
 /// Plants on a firing lane, slides straight out when the player crosses its
 /// danger ring, and retreats until its expensive bolts are affordable again.
 pub static ICE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: ICE_MAGE_BEHAVIORS,
-    equipment_reach: Some(CAST_MAX_RANGE),
 };
 /// Wanders around its anchor and never requests equipment.
 pub static VILLAGER: BrainDefinition = BrainDefinition {
     behaviors: VILLAGER_BEHAVIORS,
-    equipment_reach: None,
 };
 /// Circles its target, dives to bite, and breathes fireballs; no weapon needed.
 pub static BAT: BrainDefinition = BrainDefinition {
     behaviors: BAT_BEHAVIORS,
-    equipment_reach: None,
 };
 
 /// Every shipped brain with a name for validation errors.

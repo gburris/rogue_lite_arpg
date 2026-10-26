@@ -6,10 +6,10 @@ use bevy::{ecs::query::QueryData, prelude::*};
 use super::ability::AbilityCapabilities;
 use super::motion::FiniteMotionsReadOnly;
 use super::{
-    Ability, Action, Bite, Brain, BrainDefinition, Breath, Dash, Heal, Motion, MotionActionKey,
-    MotionActionTable, Swoop,
+    Ability, Action, Bite, Brain, Breath, Dash, Heal, Motion, MotionActionKey, MotionActionTable,
+    Swoop,
 };
-use crate::prelude::EquipmentSlot;
+use crate::prelude::{EquipmentRead, EquipmentSlot};
 
 /// What the decision tick needs to know about one capability, copied from the
 /// component that carries it out so scoring never reaches into executor state.
@@ -53,6 +53,7 @@ pub(super) struct Capabilities(pub MotionActionTable<Option<Tuning>>);
 /// Every capability component an entity may carry.
 #[derive(QueryData)]
 pub(super) struct CapabilityComponents {
+    entity: Entity,
     finite_motions: FiniteMotionsReadOnly,
     abilities: AbilityCapabilities,
 }
@@ -86,12 +87,13 @@ fn arm_initial_delay<C: Capability + Component>(
 fn arm_initial_delays(
     added: On<Add, Brain>,
     time: Res<Time<Virtual>>,
+    equipment: EquipmentRead,
     mut brains: Query<(&mut Brain, CapabilityComponents)>,
 ) {
     let Ok((mut brain, components)) = brains.get_mut(added.entity) else {
         return;
     };
-    let capabilities = build_capabilities(&components, brain.definition());
+    let capabilities = build_capabilities(&components, &equipment);
     let now = time.elapsed_secs();
     for motion in Motion::FINITE {
         if let Some(tuning) = capabilities[motion] {
@@ -114,18 +116,20 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(arm_initial_delay::<Heal>);
 }
 
-/// Collects the tuning of every capability the entity carries. Equipment is
-/// always usable and shares the definition's reach.
+/// Collects the tuning of every capability the entity carries. Each equipped
+/// item is a capability with the item's own reach.
 pub(super) fn build_capabilities(
     components: &CapabilityComponentsItem,
-    definition: &BrainDefinition,
+    equipment: &EquipmentRead,
 ) -> Capabilities {
     let mut capabilities = Capabilities::default();
     for slot in EquipmentSlot::ALL {
-        capabilities.0[Action::Use(slot)] = Some(Tuning {
-            reach: definition.equipment_reach,
-            ..Tuning::default()
-        });
+        capabilities.0[Action::Use(slot)] = equipment
+            .equippable_in_slot(components.entity, slot)
+            .map(|equippable| Tuning {
+                reach: equippable.reach,
+                ..Tuning::default()
+            });
     }
     components
         .finite_motions

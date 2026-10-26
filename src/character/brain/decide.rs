@@ -35,7 +35,7 @@ pub(super) fn release_finished_motion(
     let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(finished.entity) else {
         return;
     };
-    let capabilities = build_capabilities(&components, brain.definition());
+    let capabilities = build_capabilities(&components, &use_checks.equipment);
     let Some(released) = brain.finish_motion_part(finished.motion, now) else {
         return;
     };
@@ -65,7 +65,7 @@ pub(super) fn abort_failed_motion(
         return;
     }
     brain.abort_locked_behavior();
-    let capabilities = build_capabilities(&components, brain.definition());
+    let capabilities = build_capabilities(&components, &use_checks.equipment);
     let observation = observe_world_facts(&observed, &capabilities, &use_checks);
     decide_slot_assignments(
         &mut brain,
@@ -91,7 +91,7 @@ pub(super) fn abort_failed_action(
         return;
     }
     brain.abort_locked_behavior();
-    let capabilities = build_capabilities(&components, brain.definition());
+    let capabilities = build_capabilities(&components, &use_checks.equipment);
     let observation = observe_world_facts(&observed, &capabilities, &use_checks);
     decide_slot_assignments(
         &mut brain,
@@ -116,7 +116,7 @@ pub(super) fn finish_action(
     let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(finished.entity) else {
         return;
     };
-    let capabilities = build_capabilities(&components, brain.definition());
+    let capabilities = build_capabilities(&components, &use_checks.equipment);
     if let Some(Action::Ability(ability)) = finished.action {
         let cooldown = capabilities[ability].map_or(0.0, |tuning| tuning.cooldown);
         brain.start_cooldown(ability, now + cooldown);
@@ -135,7 +135,7 @@ pub(super) fn decide_behavior(
 ) {
     let now = time.elapsed_secs();
     for (mut brain, mut rng, observed, components) in &mut brains {
-        let capabilities = build_capabilities(&components, brain.definition());
+        let capabilities = build_capabilities(&components, &use_checks.equipment);
         let observation = observe_world_facts(&observed, &capabilities, &use_checks);
         decide_slot_assignments(&mut brain, &mut rng, &observation, &capabilities, now);
     }

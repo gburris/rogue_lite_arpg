@@ -6,7 +6,7 @@ mod defeat;
 use super::animation::AnimationSheet;
 use super::brain::{
     BAT, Brain, BrainDefinition, CAST_MIN_RANGE, Dash, FIRE_MAGE, ICE_MAGE, Interval, ManaRecovery,
-    Strafe, Swoop, TurnRate, WARRIOR, Wander,
+    Orbit, Swoop, TurnRate, WARRIOR, Wander,
 };
 use super::brain::{Bite, Breath, Heal};
 use crate::{
@@ -348,7 +348,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
             2.2,
             CAST_MIN_RANGE - 10.0,
         ),
-        Strafe::new(),
+        Orbit::new(),
         enemy_wander(),
         Sprite::from_atlas_image(
             sprites.fire_mage_enemy_sprite_sheet.clone(),
@@ -380,7 +380,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
     (
         EnemyKind::Bat.stats(),
         TurnRate(BAT_TURN_RATE),
-        Strafe::with_standoff(BAT_ORBIT_STANDOFF),
+        Orbit::with_standoff(BAT_ORBIT_STANDOFF),
         enemy_wander(),
         // 35% chance per roll; after a dive ends, wait 2 s before the next
         // roll. The dive is a twice-as-fast pass that flies through the target

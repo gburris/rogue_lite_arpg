@@ -135,10 +135,10 @@ const KEEP_MELEE_RANGE: Decision<Behavior> = momentum_motion(
 const CHASE_CAST_RANGE: Decision<Behavior> =
     momentum_motion(Motion::Chase, 4.0, &[BEYOND_CAST_DISTANCE_RANGE]);
 /// Sidesteps for a good firing lane. Each hop after a volley flips the orbit
-/// side, so the fire mage's turns come from its own volleys instead of the
-/// player's movement.
-const FIRE_STRAFE: Decision<Behavior> = momentum_motion(
-    Motion::Strafe(CAST_DISTANCE_RANGE),
+/// direction, so the fire mage's turns come from its own volleys instead of
+/// the player's movement.
+const FIRE_ORBIT: Decision<Behavior> = momentum_motion(
+    Motion::Orbit(CAST_DISTANCE_RANGE),
     5.5,
     &[INSIDE_OUTER_CAST_EDGE],
 );
@@ -159,8 +159,8 @@ const ICE_RECOVER: Decision<Behavior> = momentum_motion(
 );
 
 /// Orbits the casting distance range; the bat breathes innately, no ready weapon needed.
-const BAT_STRAFE: Decision<Behavior> = momentum_motion(
-    Motion::Strafe(CAST_DISTANCE_RANGE),
+const BAT_ORBIT: Decision<Behavior> = momentum_motion(
+    Motion::Orbit(CAST_DISTANCE_RANGE),
     5.5,
     &[PAST_INNER_CAST_EDGE, INSIDE_OUTER_CAST_EDGE],
 );
@@ -231,7 +231,7 @@ static FIRE_MAGE_BEHAVIORS: &[Decision<Behavior>] = &[
     RETURN_TO_ANCHOR,
     FIRE_RECOVER,
     CHASE_CAST_RANGE,
-    FIRE_STRAFE,
+    FIRE_ORBIT,
     FIRE_HOP,
     MAGE_CAST,
 ];
@@ -250,7 +250,7 @@ static BAT_BEHAVIORS: &[Decision<Behavior>] = &[
     CALM,
     RETURN_TO_ANCHOR,
     CHASE_CAST_RANGE,
-    BAT_STRAFE,
+    BAT_ORBIT,
     BAT_KEEP,
     BAT_SWOOP,
     momentum_action(

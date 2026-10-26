@@ -1,14 +1,14 @@
 //! Per-frame steering: turns the brain's chosen motion into [`SimpleMotion`].
 
 mod dash;
-mod strafe;
+mod orbit;
 mod swoop;
 mod wander;
 
 use bevy::{ecs::query::QueryData, prelude::*};
 
 pub use dash::Dash;
-pub use strafe::Strafe;
+pub use orbit::Orbit;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
@@ -27,6 +27,50 @@ const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TurnRate(pub f32);
 
+/// Which way a character circles its target. Motions share it so one can turn
+/// the orbit around without knowing the orbit motion exists.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct OrbitDirection {
+    clockwise: Option<bool>,
+    held_until: f32,
+}
+
+impl OrbitDirection {
+    /// Multiplier on `bearing.perp()` for this direction's tangent. Picks a
+    /// direction at random the first time it is read.
+    pub(super) fn sign(&mut self, random: &mut BrainRng) -> f32 {
+        let clockwise = *self
+            .clockwise
+            .get_or_insert_with(|| random_clockwise(random));
+        if clockwise { -1.0 } else { 1.0 }
+    }
+
+    pub(super) fn flip(&mut self, random: &mut BrainRng) {
+        let clockwise = self
+            .clockwise
+            .map_or_else(|| random_clockwise(random), |clockwise| !clockwise);
+        self.clockwise = Some(clockwise);
+    }
+
+    pub(super) fn reroll(&mut self, switch_chance: f32, random: &mut BrainRng) {
+        if self.clockwise.is_none() || random.range(0.0, 1.0) < switch_chance {
+            self.flip(random);
+        }
+    }
+
+    pub(super) fn hold_until(&mut self, until: f32) {
+        self.held_until = self.held_until.max(until);
+    }
+
+    pub(super) fn is_held(&self, now: f32) -> bool {
+        now < self.held_until
+    }
+}
+
+fn random_clockwise(random: &mut BrainRng) -> bool {
+    random.range(0.0, 1.0) < 0.5
+}
+
 /// A finite motion completed; the brain starts its cooldown and decides again.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
@@ -43,6 +87,7 @@ pub struct MotionAborted {
 
 pub(super) struct SteerInput<'a> {
     pub position: Vec2,
+    pub heading: Vec2,
     pub now: f32,
     pub target_info: Option<&'a TargetInfo>,
     pub anchor: Option<&'a Anchor>,
@@ -95,7 +140,7 @@ pub(super) struct MotionContext<'a, 'w> {
     pub movement: &'a SimpleMotion,
     pub delta_secs: f32,
     pub rng: &'a mut BrainRng,
-    pub strafe: Option<&'a mut Strafe>,
+    pub orbit_direction: Option<&'a mut OrbitDirection>,
 }
 
 impl MotionContext<'_, '_> {
@@ -198,7 +243,8 @@ pub(super) struct SteeredCharacter {
     turn_rate: Option<&'static TurnRate>,
     finite_motions: FiniteMotions,
     wander: Option<&'static mut Wander>,
-    strafe: Option<&'static mut Strafe>,
+    orbit: Option<&'static mut Orbit>,
+    orbit_direction: Option<&'static mut OrbitDirection>,
 }
 
 pub(super) fn steer_characters_from_brain_motion(
@@ -222,7 +268,8 @@ pub(super) fn steer_characters_from_brain_motion(
             turn_rate,
             mut finite_motions,
             mut wander,
-            mut strafe,
+            mut orbit,
+            mut orbit_direction,
         } = character;
 
         let active = brain.active_motion();
@@ -238,6 +285,7 @@ pub(super) fn steer_characters_from_brain_motion(
         let turn_cap = turn_rate.map(|rate| rate.0 * delta_secs);
         let input = SteerInput {
             position: transform.translation.xy(),
+            heading: movement.direction,
             now,
             target_info,
             anchor,
@@ -249,7 +297,7 @@ pub(super) fn steer_characters_from_brain_motion(
                 movement: &movement,
                 delta_secs,
                 rng: &mut rng,
-                strafe: strafe.as_deref_mut(),
+                orbit_direction: orbit_direction.as_deref_mut(),
             };
             match finite_motions.step(active.motion, &mut context) {
                 Some(MotionStep::Steer { direction, effort }) => {
@@ -280,7 +328,8 @@ pub(super) fn steer_characters_from_brain_motion(
             &input,
             MotionMemory {
                 wander: wander.as_deref_mut(),
-                strafe: strafe.as_deref_mut(),
+                orbit: orbit.as_deref_mut(),
+                orbit_direction: orbit_direction.as_deref_mut(),
                 recovery_boost,
             },
             &mut rng,
@@ -291,7 +340,8 @@ pub(super) fn steer_characters_from_brain_motion(
 
 struct MotionMemory<'a> {
     wander: Option<&'a mut Wander>,
-    strafe: Option<&'a mut Strafe>,
+    orbit: Option<&'a mut Orbit>,
+    orbit_direction: Option<&'a mut OrbitDirection>,
     recovery_boost: f32,
 }
 
@@ -303,7 +353,8 @@ fn steer_continuous_motion(
 ) -> (Option<Vec2>, SteeringEffort) {
     let MotionMemory {
         mut wander,
-        strafe,
+        orbit,
+        orbit_direction,
         recovery_boost,
     } = memory;
     if motion != Some(Motion::Calm)
@@ -320,11 +371,11 @@ fn steer_continuous_motion(
         Motion::Flee => (input.direction_from_target(), SteeringEffort::Scaled(1.0)),
         Motion::ReturnToAnchor => (input.direction_to_anchor(), SteeringEffort::Scaled(1.0)),
         Motion::KeepDistance(distance_range) => (
-            steer_to_hold_distance_range(input, distance_range, wander, rng),
+            steer_to_hold_distance_range(input, distance_range, rng),
             SteeringEffort::Boosted(recovery_boost),
         ),
-        Motion::Strafe(distance_range) => (
-            strafe::steer(input, strafe, distance_range, rng, recovery_boost > 1.0),
+        Motion::Orbit(distance_range) => (
+            orbit::steer(input, orbit, orbit_direction, distance_range, rng),
             SteeringEffort::Boosted(recovery_boost),
         ),
         Motion::Calm => {
@@ -339,13 +390,19 @@ fn steer_continuous_motion(
 fn steer_to_hold_distance_range(
     input: &SteerInput,
     distance_range: Interval,
-    wander: Option<&mut Wander>,
     random: &mut BrainRng,
 ) -> Option<Vec2> {
     let distance = input.target_info.map_or(0.0, |info| info.distance);
     let Some(direction) = input.direction_to_target() else {
+        // Sitting on the target leaves no bearing, so keep the current heading
+        // to peel off it.
         if distance < distance_range.min() {
-            return Some(wander?.jitter(input.now, random));
+            return Some(
+                input
+                    .heading
+                    .try_normalize()
+                    .unwrap_or_else(|| random.direction()),
+            );
         }
         return None;
     };

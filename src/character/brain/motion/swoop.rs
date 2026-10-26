@@ -108,6 +108,11 @@ impl MotionExecutor for Swoop {
             .is_some_and(|pass| pass.cleared(input.position, info.distance));
         if cleared {
             self.finish(now);
+            // Hold the orbit through the recovery so the circle resumes the way
+            // the dive left instead of rerolling at the handoff.
+            if let Some(orbit_direction) = context.orbit_direction.as_deref_mut() {
+                orbit_direction.hold_until(self.recovery_until);
+            }
             self.tag.spent = true;
             return MotionStep::Finished;
         }
@@ -151,8 +156,8 @@ struct SwoopPass {
 impl SwoopPass {
     fn new(start: Vec2, target: Vec2, exit_radius: f32, heading: Vec2, exit_turn: f32) -> Self {
         let entry_bearing = (start - target).normalize_or_zero();
-        let orbit = entry_bearing.perp().dot(heading);
-        let side = if orbit > 0.0 { -1.0 } else { 1.0 };
+        let heading_side = entry_bearing.perp().dot(heading);
+        let side = if heading_side > 0.0 { -1.0 } else { 1.0 };
         let exit_bearing = entry_bearing.rotate(Vec2::from_angle(side * exit_turn));
         let mut pass = Self {
             start,

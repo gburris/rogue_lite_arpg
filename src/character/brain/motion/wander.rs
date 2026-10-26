@@ -6,7 +6,6 @@ use super::SteerInput;
 use crate::character::brain::{BrainRng, Interval};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
-const JITTER_INTERVAL: f32 = 0.2;
 
 /// Alternates standing and walking one rolled heading while calm. Opt-in at spawn.
 #[derive(Component, Clone, Copy, Debug)]
@@ -15,7 +14,6 @@ pub struct Wander {
     pub walk: Interval,
     pub speed_scale: f32,
     direction: Vec2,
-    next_direction_at: f32,
     stretch: Option<Stretch>,
 }
 
@@ -32,7 +30,6 @@ impl Wander {
             walk,
             speed_scale: WANDER_SPEED_SCALE,
             direction: Vec2::ZERO,
-            next_direction_at: 0.0,
             stretch: None,
         }
     }
@@ -43,14 +40,6 @@ impl Wander {
 
     pub(super) fn leave_calm(&mut self) {
         self.stretch = None;
-    }
-
-    pub(super) fn jitter(&mut self, now: f32, random: &mut BrainRng) -> Vec2 {
-        if now >= self.next_direction_at {
-            self.direction = random.direction();
-            self.next_direction_at = now + JITTER_INTERVAL;
-        }
-        self.direction
     }
 }
 

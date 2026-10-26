@@ -102,9 +102,8 @@ pub enum Motion {
     /// slot and keep momentum; an empty slot also stands still, but nothing
     /// chose it.
     Idle,
-    /// Firing-line sidestep: orbits the target inside the distance range while
-    /// equipment stays hot.
-    Strafe(Interval),
+    /// Circles the target inside the distance range while equipment stays hot.
+    Orbit(Interval),
     /// Committed straight run; the `Dash` component's policy sets its aim.
     Dash,
     /// Committed dive through a snapshot of the target and back out.
@@ -128,7 +127,7 @@ impl Motion {
             Self::Flee => 3,
             Self::KeepDistance(_) => 4,
             Self::Idle => 5,
-            Self::Strafe(_) => 6,
+            Self::Orbit(_) => 6,
             Self::Dash => 7,
             Self::Swoop => 8,
         }
@@ -147,7 +146,7 @@ impl Motion {
             self,
             Self::Chase
                 | Self::KeepDistance(_)
-                | Self::Strafe(_)
+                | Self::Orbit(_)
                 | Self::Flee
                 | Self::Dash
                 | Self::Swoop
@@ -163,7 +162,7 @@ impl Motion {
             Self::Flee => "Flee",
             Self::KeepDistance(_) => "KeepDistance",
             Self::Idle => "Idle",
-            Self::Strafe(_) => "Strafe",
+            Self::Orbit(_) => "Orbit",
             Self::Dash => "Dash",
             Self::Swoop => "Swoop",
         }

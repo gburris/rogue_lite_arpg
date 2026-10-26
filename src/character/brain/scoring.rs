@@ -308,7 +308,7 @@ mod tests {
         };
         assert_eq!(
             choose(&FIRE_MAGE, &cooling, Motion::Calm),
-            (Motion::Strafe(CAST_DISTANCE_RANGE), None)
+            (Motion::Orbit(CAST_DISTANCE_RANGE), None)
         );
     }
 }

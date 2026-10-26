@@ -71,7 +71,7 @@ fn extract_attack_finished(decision_context: &DecisionContext) -> Option<f32> {
 fn extract_circling(decision_context: &DecisionContext) -> Option<f32> {
     normalize_boolean(matches!(
         decision_context.motion,
-        Some(Motion::Strafe(_) | Motion::KeepDistance(_))
+        Some(Motion::Orbit(_) | Motion::KeepDistance(_))
     ))
 }
 

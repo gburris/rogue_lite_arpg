@@ -54,7 +54,7 @@ pub use brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
 pub use model::{
     Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Motion, Tuning,
 };
-pub use motion::{Dash, Strafe, Swoop, TurnRate, Wander};
+pub use motion::{Dash, Orbit, Swoop, TurnRate, Wander};
 
 use self::decide::{
     abort_failed_action, abort_failed_motion, decide_behavior, finish_action,
@@ -547,14 +547,14 @@ mod tests {
         world.insert_resource(AiSeed::default());
         let target = world.spawn_empty().id();
         let mut brain = Brain::new(&BAT);
-        let strafe = BAT
+        let orbit = BAT
             .behaviors
             .iter()
-            .position(|decision| decision.value.motion == Some(Motion::Strafe(CAST_DISTANCE_RANGE)))
+            .position(|decision| decision.value.motion == Some(Motion::Orbit(CAST_DISTANCE_RANGE)))
             .expect("the bat lists its orbit");
         brain.assign_slots(
             Assignment {
-                motion: Some(strafe),
+                motion: Some(orbit),
                 action: None,
             },
             0.0,
@@ -571,7 +571,7 @@ mod tests {
                     in_vision_cone: true,
                 },
                 Transform::default(),
-                Strafe::new(),
+                Orbit::new(),
                 Swoop::new(chance, interval),
             ))
             .id();

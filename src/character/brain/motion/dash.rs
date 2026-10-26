@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::strafe::Orbit;
-use super::{MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
+use super::{MotionContext, MotionExecutor, MotionStep, OrbitDirection, RunTag, SteeringEffort};
 use crate::character::brain::senses::build_target_view;
 use crate::character::brain::{Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
 
@@ -11,6 +10,7 @@ const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 
 const HOP_STEP_IN_SPREAD: f32 = 0.35;
 const HOP_OUTWARD_BIAS: f32 = 0.15;
+const HOP_DIRECTION_HOLD: f32 = 2.0;
 
 /// What a dash is for, which sets its tuning and aim.
 #[derive(Clone, Copy, Debug)]
@@ -130,12 +130,14 @@ fn hop_direction(target: &TargetView, close_range: f32, context: &mut MotionCont
         let spread = context.rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
         return target.bearing.rotate(Vec2::from_angle(spread));
     }
-    let now = context.input.now;
-    let orbit = match context.strafe.as_deref_mut() {
-        Some(strafe) => strafe.flip_orbit(now, context.rng),
-        None => Orbit::random(context.rng),
-    };
-    let tangent = target.bearing.perp() * orbit.sign();
+    let mut unshared = OrbitDirection::default();
+    let orbit_direction = context
+        .orbit_direction
+        .as_deref_mut()
+        .unwrap_or(&mut unshared);
+    orbit_direction.flip(context.rng);
+    orbit_direction.hold_until(context.input.now + HOP_DIRECTION_HOLD);
+    let tangent = target.bearing.perp() * orbit_direction.sign(context.rng);
     (tangent - target.bearing * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 

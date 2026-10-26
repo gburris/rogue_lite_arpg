@@ -1,6 +1,7 @@
 mod blueprint;
 mod build;
 mod placement;
+mod recipe;
 mod spawn;
 mod structures;
 mod tiles;
@@ -25,7 +26,7 @@ pub(super) fn plugin(app: &mut App) {
 // Map pipeline: recipe -> blueprint -> spawned world.
 //
 // ```text
-// map_recipes.ron ──load──▶ RecipeCatalog { recipes, structures }
+// map_recipes.ron ──load (recipe.rs)──▶ RecipeCatalog { recipes, structures }
 //                               │ MapRequest (Hub | Weighted | Named)
 //                               ▼
 // build_from_recipe(recipe, seed) ──▶ MapBlueprint { tiles, placements, recipe, seed }

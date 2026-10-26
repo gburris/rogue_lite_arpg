@@ -101,6 +101,9 @@ fn spawn_tiles(
             ..default()
         },
         ChildOf(map),
+        // The one exception to "only NextMap::set despawns map pieces": game over clears
+        // the tiles so its screen shows no half-empty map. The map entity itself stays
+        // until the next NextMap::set.
         DespawnOnExit::<AppState>(AppState::Playing),
     ));
 }

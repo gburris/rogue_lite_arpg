@@ -1,19 +1,4 @@
-//! Per-frame steering execution: translates [`Brain`](super::Brain) motions into
-//! [`SimpleMotion`].
-//!
-//! [`super`] decides at ~10 Hz what to do; this module drives every frame how
-//! to move. Each behavior owns its component, its memory and its steering in
-//! one file: [`strafe`], [`wander`], [`dash`] and [`swoop`]. The
-//! stateless steering lives here. The memories are opt-in capabilities that
-//! persist across motion switches, so they stay separate components rather than
-//! one enum.
-//!
-//! A running finite motion takes exclusive control of steering. Finite motion
-//! components implement [`MotionExecutor`] and are listed once, in
-//! [`FiniteMotions`]; the brain's active motion is the single source of truth,
-//! and an executor reports back only by triggering [`MotionFinished`] or
-//! [`MotionAborted`], never by
-//! writing decision state.
+//! Per-frame steering: turns the brain's chosen motion into [`SimpleMotion`].
 
 mod dash;
 mod strafe;
@@ -38,27 +23,24 @@ use crate::prelude::TILE_SIZE;
 pub(crate) const ANCHOR_ARRIVAL_RADIUS: f32 = TILE_SIZE as f32 / 2.0;
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
-/// Maximum turn rate in radians per second. Absent means snap.
+/// Caps how fast a character turns, in radians per second. Absent means instant turns.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TurnRate(pub f32);
 
-/// A finite motion ran to its end. The brain releases it, starts its cooldown
-/// and decides again on the spot.
+/// A finite motion completed; the brain starts its cooldown and decides again.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
 }
 
-/// A finite motion could not start. The brain drops it without a cooldown and
-/// decides again on the spot.
+/// A finite motion could not start; the brain drops it without a cooldown.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionAborted {
     pub entity: Entity,
     pub motion: Motion,
 }
 
-/// Read-only world input shared by every steering behavior this frame.
 pub(super) struct SteerInput<'a> {
     pub position: Vec2,
     pub now: f32,
@@ -67,69 +49,56 @@ pub(super) struct SteerInput<'a> {
 }
 
 impl SteerInput<'_> {
-    /// Straight at the target, when it has a usable bearing.
     pub(super) fn direction_to_target(&self) -> Option<Vec2> {
         let direction = self.target_info.map_or(Vec2::ZERO, |info| info.direction);
         (direction.length_squared() > f32::EPSILON).then_some(direction)
     }
 
-    /// Straight away from the target.
     fn direction_from_target(&self) -> Option<Vec2> {
         self.direction_to_target().map(|direction| -direction)
     }
 
-    /// Toward the anchor until the arrival radius.
     fn direction_to_anchor(&self) -> Option<Vec2> {
         let to_anchor = self.anchor?.origin() - self.position;
         (to_anchor.length() > ANCHOR_ARRIVAL_RADIUS).then_some(to_anchor.normalize_or_zero())
     }
 }
 
-/// How hard to push along the steered heading: a fraction of max speed for
-/// continuous motions, a multiple for committed bursts.
 #[derive(Clone, Copy)]
 pub(super) enum SteeringEffort {
     Scaled(f32),
     Boosted(f32),
 }
 
-/// One frame of a finite motion executor.
 pub(super) enum MotionStep {
-    /// Still running: steer this way.
     Steer {
         direction: Option<Vec2>,
         effort: SteeringEffort,
     },
-    /// Ended this frame; the brain has not heard yet.
+    /// Ended this frame; the brain has not been told yet.
     Finished,
-    /// Could not start; the brain has not heard yet.
     Aborted,
-    /// Ended earlier and is waiting for the brain to release it.
+    /// Ended on an earlier frame; waiting for the brain to release it.
     Spent,
 }
 
-/// Which brain-issued run an executor is carrying out. The brain stamps every
-/// start with a fresh epoch, so an executor can tell a new run of the same
-/// motion from the one it just finished, even with no frame in between.
+/// The brain stamps each start with a fresh epoch, so an executor can tell a
+/// new run apart from the one it just finished.
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct RunTag {
     epoch: Option<u32>,
-    /// The run ended and the brain has not yet released it.
     spent: bool,
 }
 
-/// Everything a finite motion step may look at this frame. The random stream is
-/// the only thing it can mutate.
 pub(super) struct MotionContext<'a, 'w> {
     pub input: &'a SteerInput<'w>,
     pub movement: &'a SimpleMotion,
     pub delta_secs: f32,
     pub rng: &'a mut BrainRng,
+    pub strafe: Option<&'a mut Strafe>,
 }
 
 impl MotionContext<'_, '_> {
-    /// World units one straight-run steering step may consume this frame.
-    /// Stunned bodies hold still so committed passes neither advance nor finish.
     pub fn distance_this_frame(&self, speed_boost: f32) -> f32 {
         if self.movement.is_stunned() {
             0.0
@@ -139,24 +108,20 @@ impl MotionContext<'_, '_> {
     }
 }
 
-/// A capability component that carries out one finite [`Motion`]. Implementing this
-/// and listing the component in [`FiniteMotions`] is all the executor side of a
-/// new finite motion needs.
+/// A component that runs one finite [`Motion`]. List new ones in [`FiniteMotions`].
 pub(super) trait MotionExecutor {
     fn motion(&self) -> Motion;
-    /// Chance, spacing and reach the decision tick applies to this motion.
     fn tuning(&self) -> Tuning;
     fn tag(&mut self) -> &mut RunTag;
-    /// Forgets a run the brain is no longer asking for.
     fn reset(&mut self, now: f32);
     fn step(&mut self, context: &mut MotionContext) -> MotionStep;
-    /// Extra speed steering should keep while settling out of the motion.
     fn recovery_boost(&self, _now: f32) -> f32 {
         1.0
     }
 }
 
-/// Every finite motion executor an entity may carry. The one place to list a new one.
+/// Every finite motion executor an entity may carry. A new one also goes in
+/// `finite_executors!`.
 #[derive(QueryData)]
 #[query_data(mutable)]
 pub(super) struct FiniteMotions {
@@ -164,22 +129,23 @@ pub(super) struct FiniteMotions {
     swoop: Option<&'static mut Swoop>,
 }
 
-impl FiniteMotionsItem<'_, '_> {
-    fn executors(&mut self) -> impl Iterator<Item = &mut dyn MotionExecutor> {
+/// The executors a `FiniteMotions` item carries, as `$as_dyn` trait objects.
+macro_rules! finite_executors {
+    ($item:expr, $deref:ident, $as_dyn:ty) => {
         [
-            self.dash
-                .as_deref_mut()
-                .map(|executor| executor as &mut dyn MotionExecutor),
-            self.swoop
-                .as_deref_mut()
-                .map(|executor| executor as &mut dyn MotionExecutor),
+            $item.dash.$deref().map(|executor| executor as $as_dyn),
+            $item.swoop.$deref().map(|executor| executor as $as_dyn),
         ]
         .into_iter()
         .flatten()
+    };
+}
+
+impl FiniteMotionsItem<'_, '_> {
+    fn executors(&mut self) -> impl Iterator<Item = &mut dyn MotionExecutor> {
+        finite_executors!(self, as_deref_mut, &mut dyn MotionExecutor)
     }
 
-    /// Resets any executor holding a run the brain no longer asks for, so the
-    /// brain's active motion stays the single source of truth.
     fn sync(&mut self, active: Option<ActiveMotion>, now: f32) {
         for executor in self.executors() {
             let epoch = active
@@ -195,14 +161,12 @@ impl FiniteMotionsItem<'_, '_> {
         }
     }
 
-    /// Runs the executor for `motion`, if this entity has one.
     fn step(&mut self, motion: Motion, context: &mut MotionContext) -> Option<MotionStep> {
         self.executors()
             .find(|executor| executor.motion().index() == motion.index())
             .map(|executor| executor.step(context))
     }
 
-    /// Largest recovery boost any executor still holds.
     fn recovery_boost(&mut self, now: f32) -> f32 {
         self.executors()
             .map(|executor| executor.recovery_boost(now))
@@ -211,21 +175,15 @@ impl FiniteMotionsItem<'_, '_> {
 }
 
 impl FiniteMotionsReadOnlyItem<'_, '_> {
-    /// Tuning of every finite motion this entity can carry out, by motion index.
     pub(super) fn tuning(&self) -> [Option<Tuning>; Motion::COUNT] {
-        let executors: [Option<&dyn MotionExecutor>; 2] = [
-            self.dash.map(|executor| executor as &dyn MotionExecutor),
-            self.swoop.map(|executor| executor as &dyn MotionExecutor),
-        ];
         let mut tuning = [None; Motion::COUNT];
-        for executor in executors.into_iter().flatten() {
+        for executor in finite_executors!(self, as_deref, &dyn MotionExecutor) {
             tuning[executor.motion().index()] = Some(executor.tuning());
         }
         tuning
     }
 }
 
-/// Everything one steered character needs this frame.
 #[derive(QueryData)]
 #[query_data(mutable)]
 pub(super) struct SteeredCharacter {
@@ -291,17 +249,13 @@ pub(super) fn steer_characters_from_brain_motion(
                 movement: &movement,
                 delta_secs,
                 rng: &mut rng,
+                strafe: strafe.as_deref_mut(),
             };
             match finite_motions.step(active.motion, &mut context) {
                 Some(MotionStep::Steer { direction, effort }) => {
                     apply_steering_to_movement(&mut movement, direction, effort, turn_cap);
                     continue;
                 }
-                // Fall through to steering this frame so the body never
-                // coasts for a frame between a finite motion and its settle-out.
-                // Hold the last steer for this frame: the brain decides again at
-                // the next sync point, so the body never stops for a frame
-                // between a locked motion and the behavior that follows.
                 Some(MotionStep::Finished) => {
                     commands.trigger(MotionFinished {
                         entity,
@@ -335,16 +289,12 @@ pub(super) fn steer_characters_from_brain_motion(
     }
 }
 
-/// The opt-in memories and tuning continuous steering may use.
 struct MotionMemory<'a> {
     wander: Option<&'a mut Wander>,
     strafe: Option<&'a mut Strafe>,
-    /// Extra speed held while settling out of a finite motion; also freezes the
-    /// orbit side so re-entering the circle does not flip the tangent.
     recovery_boost: f32,
 }
 
-/// Where and how hard the current continuous motion wants to push.
 fn steer_continuous_motion(
     motion: Option<Motion>,
     input: &SteerInput,
@@ -361,15 +311,12 @@ fn steer_continuous_motion(
     {
         wander.leave_calm();
     }
-    // An empty slot stands still, the same as an idle motion.
     let Some(motion) = motion else {
         return (None, SteeringEffort::Scaled(1.0));
     };
     match motion {
         Motion::Idle => (None, SteeringEffort::Scaled(1.0)),
         Motion::Chase => (input.direction_to_target(), SteeringEffort::Scaled(1.0)),
-        // Still in the fight: run from the target, not toward home.
-        // Going home happens only once the target is lost.
         Motion::Flee => (input.direction_from_target(), SteeringEffort::Scaled(1.0)),
         Motion::ReturnToAnchor => (input.direction_to_anchor(), SteeringEffort::Scaled(1.0)),
         Motion::KeepDistance(distance_range) => (
@@ -385,12 +332,10 @@ fn steer_continuous_motion(
             let scale = wander::speed_scale(wander.as_deref());
             (direction, SteeringEffort::Scaled(scale))
         }
-        // Finite motions steer through their executors, never as the continuous motion.
         Motion::Dash | Motion::Swoop => (None, SteeringEffort::Scaled(1.0)),
     }
 }
 
-/// Holds the band; a small deadband keeps the arrival from flickering.
 fn steer_to_hold_distance_range(
     input: &SteerInput,
     distance_range: Interval,

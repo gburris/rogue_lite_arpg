@@ -159,9 +159,9 @@ impl Motion {
         match self {
             Self::Calm => "Calm",
             Self::Chase => "Chase",
-            Self::ReturnToAnchor => "Return",
+            Self::ReturnToAnchor => "ReturnToAnchor",
             Self::Flee => "Flee",
-            Self::KeepDistance(_) => "Keep",
+            Self::KeepDistance(_) => "KeepDistance",
             Self::Idle => "Idle",
             Self::Strafe(_) => "Strafe",
             Self::Dash => "Dash",
@@ -257,9 +257,6 @@ pub struct TargetView {
     pub bearing: Vec2,
     /// Intended world velocity of the target, read from its movement.
     pub velocity: Vec2,
-    /// Signed tangential component of the target's velocity around the viewer.
-    /// Positive means the target circles counter-clockwise.
-    pub tangential_velocity: f32,
 }
 
 /// What the decision tick needs to know about one capability, copied from the

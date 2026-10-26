@@ -1,5 +1,4 @@
-//! The dive: a committed flight through a snapshot of the target and
-//! back out. Biting is a separate ability; a dive only gets the body there.
+//! The bat's dive through the target and back out.
 
 use bevy::prelude::*;
 
@@ -12,23 +11,13 @@ const SWOOP_LOOKAHEAD: f32 = 40.0;
 const SWOOP_TRACK_LIMIT: f32 = 0.25;
 const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
-/// Seconds over which the dive's speed boost fades after the pass ends.
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
 
-/// How one biter dives. Opt-in at spawn; absent means never dives.
-///
-/// The brain rolls `chance` whenever the dive is ready and scored. A miss, or a
-/// finished dive, makes it wait `interval` seconds before the next roll, so a
-/// long pass does not return to a lottery that is already due. The exit also keeps a decaying
-/// speed boost for a short recovery window, which lets the biter settle back
-/// into its circle instead of snapping from the dive speed to normal.
+/// A committed curved dive through the target that eases off its speed boost. Opt-in at spawn.
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
-    /// Probability of a dive on each roll, `0.0..=1.0`.
     pub chance: f32,
-    /// Seconds before the next roll after a miss or after a dive ends.
     pub interval: f32,
-    /// Farthest target distance from which a dive may start.
     pub reach: f32,
     pub speed_boost: f32,
     pub exit_turn: f32,
@@ -38,7 +27,6 @@ pub struct Swoop {
 }
 
 impl Swoop {
-    /// Rolls `chance` every `interval` seconds while the target is within cast range.
     pub fn new(chance: f32, interval: f32) -> Self {
         Self {
             chance,
@@ -52,8 +40,6 @@ impl Swoop {
         }
     }
 
-    /// Ends the dive and opens the exit recovery window for dives that
-    /// actually flew.
     fn finish(&mut self, now: f32) {
         if self.pass.is_some() {
             self.recovery_until = now + SWOOP_RECOVERY_TIME;
@@ -61,9 +47,6 @@ impl Swoop {
         self.pass = None;
     }
 
-    /// Extra speed still in effect while the biter settles out of a dive.
-    /// Smoothstep keeps the first frames near full dive speed and lands on
-    /// exactly `1.0` at the end of the recovery window.
     fn boost_at(&self, now: f32) -> f32 {
         if now >= self.recovery_until {
             return 1.0;
@@ -92,7 +75,6 @@ impl MotionExecutor for Swoop {
         &mut self.tag
     }
 
-    /// Forgets a dive the brain is no longer asking for.
     fn reset(&mut self, now: f32) {
         self.finish(now);
     }
@@ -101,8 +83,6 @@ impl MotionExecutor for Swoop {
         self.boost_at(now)
     }
 
-    /// Advances the dive, building the pass on the first step after the brain
-    /// starts it and ending it once it clears the target.
     fn step(&mut self, context: &mut MotionContext) -> MotionStep {
         if self.tag.spent {
             return MotionStep::Spent;
@@ -131,12 +111,9 @@ impl MotionExecutor for Swoop {
             self.tag.spent = true;
             return MotionStep::Finished;
         }
-        // A collapsed (zero-bearing) snapshot builds the zero-length arc
-        // `SwoopPass::new` already handles; only a non-finite distance blocks it.
         if !info.distance.is_finite() {
             return steer(None);
         }
-        // Stunned biters hold their place on the arc.
         let flight_distance = context.distance_this_frame(speed_boost);
         let heading = context.movement.direction;
         let live_target = input.position + info.direction * info.distance;
@@ -157,7 +134,6 @@ impl MotionExecutor for Swoop {
     }
 }
 
-/// One dive's committed flight path through a target snapshot and back out.
 #[derive(Clone, Copy, Debug)]
 struct SwoopPass {
     start: Vec2,
@@ -175,8 +151,6 @@ struct SwoopPass {
 impl SwoopPass {
     fn new(start: Vec2, target: Vec2, exit_radius: f32, heading: Vec2, exit_turn: f32) -> Self {
         let entry_bearing = (start - target).normalize_or_zero();
-        // A zero bearing means the biter sits on the target: there is no arc
-        // to fly, and the pass collapses to a point that ends at once.
         let orbit = entry_bearing.perp().dot(heading);
         let side = if orbit > 0.0 { -1.0 } else { 1.0 };
         let exit_bearing = entry_bearing.rotate(Vec2::from_angle(side * exit_turn));
@@ -198,8 +172,7 @@ impl SwoopPass {
 
     fn rebuild(&mut self) {
         self.end = self.target + self.exit_bearing * self.exit_radius;
-        // Placing the control point here puts the arc's midpoint exactly on
-        // the aim point, which is what keeps the pass aimed through it.
+        // Puts the curve's midpoint exactly on the target.
         self.control = self.target * 2.0 - (self.start + self.end) * 0.5;
         self.length = self.estimate_length();
     }
@@ -232,7 +205,6 @@ impl SwoopPass {
             .sum()
     }
 
-    /// Advances the arc by `distance` world units, clamped to its end.
     fn advance(&mut self, distance: f32) {
         if self.length > f32::EPSILON {
             self.progress = (self.progress + distance / self.length).clamp(0.0, 1.0);
@@ -241,8 +213,6 @@ impl SwoopPass {
         }
     }
 
-    /// Point `distance` world units further along the arc from the current
-    /// progress, clamped to the end.
     fn lead(&self, distance: f32) -> Vec2 {
         let lead = if self.length > f32::EPSILON {
             self.progress + distance / self.length
@@ -252,8 +222,6 @@ impl SwoopPass {
         self.point(lead)
     }
 
-    /// Whether the biter has crossed to the far side of the target snapshot
-    /// and opened back out to the exit radius, or flown the whole arc.
     fn cleared(&self, position: Vec2, target_distance: f32) -> bool {
         if self.progress >= 1.0 {
             return true;

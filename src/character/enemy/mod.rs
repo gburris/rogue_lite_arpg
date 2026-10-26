@@ -293,7 +293,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         EnemyKind::Warrior.stats(),
         // 80% of swings end in a break for a rolled 6-8 tile run inside a 90°
         // cone away from the target; the other 20% swing again.
-        Dash::breakaway(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
+        Dash::kite(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
         Heal::new(HEAL_COOLDOWN),
         enemy_wander(),
         Sprite::from_atlas_image(
@@ -315,7 +315,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ManaRecovery::new(0.4, 0.75),
         // Three to four tiles of straight escape once the player crosses the
         // danger ring; the cooldown is the window to close again.
-        Dash::escape(
+        Dash::slide(
             3.0 * TILE_SIZE as f32,
             4.0 * TILE_SIZE as f32,
             2.2,
@@ -342,13 +342,13 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ManaRecovery::new(0.2, 0.45),
         // Two to three tiles of tangent hop after every volley. Inside the
         // close ring a pinned target gets a step-in spread instead.
-        Dash::volley(
+        Dash::hop(
             2.0 * TILE_SIZE as f32,
             3.0 * TILE_SIZE as f32,
             2.2,
             CAST_MIN_RANGE - 10.0,
         ),
-        Strafe::smart(),
+        Strafe::new(),
         enemy_wander(),
         Sprite::from_atlas_image(
             sprites.fire_mage_enemy_sprite_sheet.clone(),

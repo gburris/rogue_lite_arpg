@@ -1,54 +1,42 @@
-//! Committed straight runs: the warrior's kite, the fire mage's burst and the
-//! ice mage's slide are all one dash under different policies.
+//! Committed straight runs: the warrior's kite, the fire mage's hop and the ice mage's slide.
 
 use bevy::prelude::*;
 
+use super::strafe::Orbit;
 use super::{MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
 use crate::character::brain::senses::build_target_view;
-use crate::character::brain::{BrainRng, Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
+use crate::character::brain::{Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
 
-/// Half-angle of a warrior's break cone around straight away from its target.
 const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 
-/// Half-angle of the fire mage's step-in spread around the target bearing.
-const BURST_STEP_IN_SPREAD: f32 = 0.35;
-/// Small outward bias on a tangent burst so a volley does not walk the mage
-/// into the target when the distance range is already tight.
-const BURST_OUTWARD_BIAS: f32 = 0.15;
+const HOP_STEP_IN_SPREAD: f32 = 0.35;
+const HOP_OUTWARD_BIAS: f32 = 0.15;
 
-/// What distinguishes one committed straight dash: its tuning and aim.
-/// Execution is shared, and what *starts* it is scored by the brain
-/// definition's finite motion decisions.
+/// What a dash is for, which sets its tuning and aim.
 #[derive(Clone, Copy, Debug)]
 pub enum DashPolicy {
-    /// Break away from the target along a fixed bearing after a swing.
-    Breakaway { chance: f32, spread: f32 },
-    /// Hop to a fresh tangent after a completed volley.
-    VolleyHop { close_range: f32 },
-    /// Escape straight out when the target crosses the danger ring.
-    Escape { danger_range: f32, cooldown: f32 },
+    Kite { chance: f32, spread: f32 },
+    Hop { close_range: f32 },
+    Slide { danger_range: f32, cooldown: f32 },
 }
 
 impl DashPolicy {
-    /// One-word label for debug displays.
     fn name(self) -> &'static str {
         match self {
-            Self::Breakaway { .. } => "Kite",
-            Self::VolleyHop { .. } => "Burst",
-            Self::Escape { .. } => "Slide",
+            Self::Kite { .. } => "Kite",
+            Self::Hop { .. } => "Hop",
+            Self::Slide { .. } => "Slide",
         }
     }
 
-    /// Chance, spacing and reach the decision tick applies to this dash.
     fn tuning(self) -> Tuning {
         match self {
-            // Only breakaways sometimes sit out a passed trigger.
-            Self::Breakaway { chance, .. } => Tuning {
+            Self::Kite { chance, .. } => Tuning {
                 chance,
                 ..Tuning::default()
             },
-            Self::VolleyHop { .. } => Tuning::default(),
-            Self::Escape {
+            Self::Hop { .. } => Tuning::default(),
+            Self::Slide {
                 danger_range,
                 cooldown,
             } => Tuning {
@@ -59,34 +47,23 @@ impl DashPolicy {
         }
     }
 
-    /// Aim shared by every start under this policy.
     fn aim(self) -> AimKind {
         match self {
-            Self::Breakaway { spread, .. } => AimKind::AwayCone { spread },
-            Self::VolleyHop { close_range } => AimKind::VolleyTangent { close_range },
-            Self::Escape { .. } => AimKind::DirectlyAway,
+            Self::Kite { spread, .. } => AimKind::Away { spread },
+            Self::Hop { close_range } => AimKind::HopTangent { close_range },
+            Self::Slide { .. } => AimKind::Away { spread: 0.0 },
         }
     }
 }
 
-/// One committed straight run along a bearing fixed at the start. Opt-in at
-/// spawn; absent means the entity never dashes.
-///
-/// A break fixes its bearing once, so the warrior runs a straight line out and
-/// then turns back instead of curving around its target. A volley hop fixes a
-/// fresh tangent so the mage keeps its new firing angle. An escape runs
-/// straight out on a speed boost so it reads as committed rather than another
-/// spacing adjustment.
+/// A committed straight run along a direction fixed at its start. Opt-in at spawn.
 #[derive(Component, Clone, Debug)]
 pub struct Dash {
-    /// Shortest and longest run of one dash, in world units.
     pub min_run: f32,
     pub max_run: f32,
-    /// Multiple of max speed while dashing.
     pub speed_boost: f32,
     policy: DashPolicy,
     run: StraightRun,
-    last_side: f32,
     tag: RunTag,
 }
 
@@ -98,39 +75,32 @@ impl Dash {
             speed_boost,
             policy,
             run: StraightRun::default(),
-            last_side: 1.0,
             tag: RunTag::default(),
         }
     }
 
-    /// Breaks away on `chance` of triggers for a rolled `min_run..max_run` run.
-    /// The chance is rolled once per completed swing, which keeps repeat
-    /// swings without a break rare.
-    pub fn breakaway(chance: f32, min_run: f32, max_run: f32) -> Self {
+    pub fn kite(chance: f32, min_run: f32, max_run: f32) -> Self {
         Self::with_policy(
             min_run,
             max_run,
             1.0,
-            DashPolicy::Breakaway {
+            DashPolicy::Kite {
                 chance,
                 spread: KITE_SPREAD,
             },
         )
     }
 
-    /// Hops `min_run..max_run` on every completed cast.
-    pub fn volley(min_run: f32, max_run: f32, speed_boost: f32, close_range: f32) -> Self {
+    pub fn hop(min_run: f32, max_run: f32, speed_boost: f32, close_range: f32) -> Self {
         Self::with_policy(
             min_run,
             max_run,
             speed_boost,
-            DashPolicy::VolleyHop { close_range },
+            DashPolicy::Hop { close_range },
         )
     }
 
-    /// Slides `min_run..max_run` whenever a target crosses `danger_range`,
-    /// allowing another `cooldown` seconds after the last slide ends.
-    pub fn escape(
+    pub fn slide(
         min_run: f32,
         max_run: f32,
         speed_boost: f32,
@@ -141,42 +111,32 @@ impl Dash {
             min_run,
             max_run,
             speed_boost,
-            DashPolicy::Escape {
+            DashPolicy::Slide {
                 danger_range,
                 cooldown,
             },
         )
     }
 
-    /// What this dash is called under its policy, for debug displays.
     pub fn name(&self) -> &'static str {
         self.policy.name()
     }
+}
 
-    /// A fresh tangent that cuts across the target's orbit when it circles, or
-    /// flips sides when it holds still. A pinned target inside `close_range`
-    /// gets the step-in spread instead of another sidestep.
-    fn volley_direction(
-        &mut self,
-        target: &TargetView,
-        close_range: f32,
-        brain: &mut BrainRng,
-    ) -> Vec2 {
-        if target.distance <= close_range
-            && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
-        {
-            let spread = brain.range(-BURST_STEP_IN_SPREAD, BURST_STEP_IN_SPREAD);
-            return target.bearing.rotate(Vec2::from_angle(spread));
-        }
-        let side = if target.tangential_velocity.abs() > TARGET_MOVING_SPEED {
-            -target.tangential_velocity.signum()
-        } else {
-            -self.last_side
-        };
-        self.last_side = side;
-        let tangent = target.bearing.perp() * side;
-        (tangent + target.bearing * BURST_OUTWARD_BIAS).normalize_or_zero()
+fn hop_direction(target: &TargetView, close_range: f32, context: &mut MotionContext) -> Vec2 {
+    if target.distance <= close_range
+        && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
+    {
+        let spread = context.rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
+        return target.bearing.rotate(Vec2::from_angle(spread));
     }
+    let now = context.input.now;
+    let orbit = match context.strafe.as_deref_mut() {
+        Some(strafe) => strafe.flip_orbit(now, context.rng),
+        None => Orbit::random(context.rng),
+    };
+    let tangent = target.bearing.perp() * orbit.sign();
+    (tangent - target.bearing * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
 impl MotionExecutor for Dash {
@@ -196,8 +156,6 @@ impl MotionExecutor for Dash {
         self.run.finish();
     }
 
-    /// Advances the run, aiming and rolling its length on the first step
-    /// after the brain starts it.
     fn step(&mut self, context: &mut MotionContext) -> MotionStep {
         if self.tag.spent {
             return MotionStep::Spent;
@@ -205,7 +163,7 @@ impl MotionExecutor for Dash {
         if !self.run.called {
             let policy = self.policy;
             let aimed = build_target_view(true, context.input.target_info)
-                .and_then(|target| policy.aim().aim(target, self, context.rng));
+                .and_then(|target| policy.aim().aim(target, context));
             let Some(direction) = aimed else {
                 self.tag.spent = true;
                 return MotionStep::Aborted;
@@ -227,44 +185,32 @@ impl MotionExecutor for Dash {
     }
 }
 
-/// Shared dash aim: picked from the policy when a dash starts.
 #[derive(Clone, Copy, Debug)]
 enum AimKind {
-    /// Straight away from the target inside a spread cone.
-    AwayCone { spread: f32 },
-    /// Fresh tangent after a volley, stepping in when the target is pinned.
-    VolleyTangent { close_range: f32 },
-    /// Straight away from the target's bearing.
-    DirectlyAway,
+    Away { spread: f32 },
+    HopTangent { close_range: f32 },
 }
 
 impl AimKind {
-    fn aim(self, target: TargetView, dash: &mut Dash, brain: &mut BrainRng) -> Option<Vec2> {
+    fn aim(self, target: TargetView, context: &mut MotionContext) -> Option<Vec2> {
+        let rng = &mut *context.rng;
         match self {
-            Self::AwayCone { spread } => {
+            Self::Away { spread } => {
                 let away = (-target.bearing).normalize_or_zero();
                 if away.length_squared() > f32::EPSILON {
-                    Some(away.rotate(Vec2::from_angle(brain.range(-spread, spread))))
+                    Some(away.rotate(Vec2::from_angle(rng.range(-spread, spread))))
                 } else {
-                    Some(brain.direction())
+                    Some(rng.direction())
                 }
             }
-            Self::VolleyTangent { close_range } => {
-                let direction = dash.volley_direction(&target, close_range, brain);
+            Self::HopTangent { close_range } => {
+                let direction = hop_direction(&target, close_range, context);
                 (direction.length_squared() > f32::EPSILON).then_some(direction)
-            }
-            Self::DirectlyAway => {
-                if target.bearing.length_squared() > f32::EPSILON {
-                    Some(-target.bearing)
-                } else {
-                    Some(brain.direction())
-                }
             }
         }
     }
 }
 
-/// One committed straight run along a bearing fixed at the start.
 #[derive(Clone, Copy, Debug, Default)]
 struct StraightRun {
     direction: Vec2,

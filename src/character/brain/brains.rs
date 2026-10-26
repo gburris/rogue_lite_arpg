@@ -17,7 +17,7 @@ use crate::items::prelude::EquipmentSlot;
 pub const CAST_LOCK_SECONDS: f32 = 0.3;
 
 /// Weight of a locked cast: above the in-range motions it interrupts (even with
-/// their momentum), below the escape and burst moves that may break contact.
+/// their momentum), below the slide and hop moves that may break contact.
 const CAST_WEIGHT: f32 = 8.0;
 
 /// Weight every locked motion carries: above any continuous motion's weight with momentum, so a
@@ -134,9 +134,8 @@ const KEEP_MELEE_RANGE: Decision<Behavior> = momentum_motion(
 );
 const CHASE_CAST_RANGE: Decision<Behavior> =
     momentum_motion(Motion::Chase, 4.0, &[BEYOND_CAST_DISTANCE_RANGE]);
-/// Sidesteps for a good firing lane; the target's tangent picks the orbit side
-/// in `strafe_direction`. The fire mage keeps this moving even against a
-/// stationary target, so its turns come from its own volleys instead of the
+/// Sidesteps for a good firing lane. Each hop after a volley flips the orbit
+/// side, so the fire mage's turns come from its own volleys instead of the
 /// player's movement.
 const FIRE_STRAFE: Decision<Behavior> = momentum_motion(
     Motion::Strafe(CAST_DISTANCE_RANGE),
@@ -180,7 +179,7 @@ const WARRIOR_KITE: Decision<Behavior> = locked_finite_motion(
     &[ATTACK_FINISHED, HAS_TARGET],
 );
 /// A tangent hop after the fire staff finishes a volley.
-const FIRE_BURST: Decision<Behavior> = locked_finite_motion(
+const FIRE_HOP: Decision<Behavior> = locked_finite_motion(
     Motion::Dash,
     LOCKED_MOTION_WEIGHT,
     &[ATTACK_FINISHED, HAS_TARGET, NOT_RECOVERING],
@@ -233,7 +232,7 @@ static FIRE_MAGE_BEHAVIORS: &[Decision<Behavior>] = &[
     FIRE_RECOVER,
     CHASE_CAST_RANGE,
     FIRE_STRAFE,
-    FIRE_BURST,
+    FIRE_HOP,
     MAGE_CAST,
 ];
 
@@ -277,7 +276,7 @@ pub static WARRIOR: BrainDefinition = BrainDefinition {
     // deadband up to MELEE_REACH can still swing.
     equipment_reach: Some(MELEE_REACH),
 };
-/// Holds the cast distance range on a moving orbit, bursts to a fresh tangent after each
+/// Holds the cast distance range on a moving orbit, hops to a fresh tangent after each
 /// volley, and backs off only long enough to refill a drained mana pool.
 pub static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,

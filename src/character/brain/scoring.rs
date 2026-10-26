@@ -205,7 +205,6 @@ mod tests {
             line_of_sight: true,
             bearing: Vec2::X,
             velocity: Vec2::ZERO,
-            tangential_velocity: 0.0,
         }
     }
 

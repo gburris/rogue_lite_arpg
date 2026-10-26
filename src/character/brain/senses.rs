@@ -40,7 +40,6 @@ pub(super) fn build_target_view(has_target: bool, info: Option<&TargetInfo>) -> 
             line_of_sight: info.line_of_sight,
             bearing: info.direction,
             velocity: info.target_velocity,
-            tangential_velocity: info.target_velocity.dot(info.direction.perp()),
         })
     })
 }

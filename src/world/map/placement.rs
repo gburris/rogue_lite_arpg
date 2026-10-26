@@ -54,14 +54,14 @@ pub enum PlaceRule {
     /// Place once at the given anchor; does not advance the RNG.
     Fixed(Anchor),
     /// Try to place an inclusive random count within the half-open x-decile interval.
-    /// `separation` is the minimum tile distance between origins returned by this call.
+    /// `separation` is the minimum tile distance from every point placed so far.
     Random {
         count: CountRange,
         x_deciles: (u32, u32),
         separation: u32,
     },
     /// Place an inclusive random count within a square around a named structure.
-    /// `separation` is the minimum tile distance between origins returned by this call.
+    /// `separation` is the minimum tile distance from every point placed so far.
     NearStructure {
         count: CountRange,
         structure: String,
@@ -81,6 +81,11 @@ pub struct PlaceContext {
     pub reserved: Vec<TileRect>,
     /// Structure centers indexed by structure name.
     pub structure_centers_by_name: BTreeMap<String, IVec2>,
+    /// Every point placement so far (player start, exits, enemies, chests and structure
+    /// glyphs). Random and near-structure `separation` is measured against all of them.
+    pub points: Vec<IVec2>,
+    /// Circles that sampled and edge placements must stay outside of, as `(center, radius)`.
+    pub keep_clear: Vec<(IVec2, u32)>,
 }
 
 impl PlaceContext {
@@ -95,6 +100,21 @@ impl PlaceContext {
     /// Records the named structure center for later anchored placements.
     pub fn record_structure_center(&mut self, name: String, center: IVec2) {
         self.structure_centers_by_name.insert(name, center);
+    }
+
+    /// Returns whether `tile` lies outside every keep-clear circle.
+    pub fn is_clear(&self, tile: IVec2) -> bool {
+        self.keep_clear
+            .iter()
+            .all(|(center, radius)| center.distance_squared(tile) >= (*radius as i32).pow(2))
+    }
+
+    fn separated(&self, tile: IVec2, separation: u32) -> bool {
+        separation == 0
+            || self
+                .points
+                .iter()
+                .all(|point| point.distance_squared(tile) >= (separation as i32).pow(2))
     }
 
     fn available(&self, tiles: &TileGrid, rect: TileRect) -> bool {
@@ -131,22 +151,22 @@ pub fn place(
             count,
             x_deciles,
             separation,
-        } => place_random(
-            count,
+        } => Ok(place_random(
+            *count,
             *x_deciles,
             *separation,
             footprint,
             tiles,
             context,
             random_generator,
-        ),
+        )),
         PlaceRule::NearStructure {
             count,
             structure,
             radius,
             separation,
         } => place_near_structure(
-            count,
+            *count,
             structure,
             *radius,
             *separation,
@@ -155,9 +175,14 @@ pub fn place(
             context,
             random_generator,
         ),
-        PlaceRule::Edge { count, side } => {
-            place_edge(count, *side, footprint, tiles, context, random_generator)
-        }
+        PlaceRule::Edge { count, side } => Ok(place_edge(
+            *count,
+            *side,
+            footprint,
+            tiles,
+            context,
+            random_generator,
+        )),
     }
 }
 
@@ -202,14 +227,14 @@ fn place_fixed(
 }
 
 fn place_random(
-    count: &CountRange,
+    count: CountRange,
     x_deciles: (u32, u32),
     separation: u32,
     footprint: UVec2,
     tiles: &TileGrid,
     context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
-) -> Result<Vec<IVec2>, MapError> {
+) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
     let x_start = context.map_size.x * x_deciles.0 / 10;
     let x_end = context.map_size.x * x_deciles.1 / 10;
@@ -217,11 +242,11 @@ fn place_random(
         || context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)
     {
-        return Ok(Vec::new());
+        return Vec::new();
     }
     // Guarded above: `map_size.y - 1 >= 2`, so this range is non-empty.
     let y_end = context.map_size.y - 1;
-    Ok(scatter_footprints(
+    scatter_footprints(
         target_count,
         separation,
         footprint,
@@ -234,11 +259,11 @@ fn place_random(
                 random_generator.random_range(1..y_end) as i32,
             )
         },
-    ))
+    )
 }
 
 fn place_near_structure(
-    count: &CountRange,
+    count: CountRange,
     structure: &str,
     radius: u32,
     separation: u32,
@@ -275,18 +300,18 @@ fn place_near_structure(
 }
 
 fn place_edge(
-    count: &CountRange,
+    count: CountRange,
     side: Side,
     footprint: UVec2,
     tiles: &TileGrid,
     context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
-) -> Result<Vec<IVec2>, MapError> {
+) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
     let mut positions = Vec::new();
     let maximum_origin = context.map_size.as_ivec2() - IVec2::ONE - footprint.as_ivec2();
     if maximum_origin.x < 1 || maximum_origin.y < 1 {
-        return Ok(positions);
+        return positions;
     }
     let (candidate_start, candidate_end) = match side {
         Side::Left | Side::Right => (1, maximum_origin.y),
@@ -312,8 +337,9 @@ fn place_edge(
             .take(candidates.len())
             .copied()
             .find(|position| {
-                TileRect::new(*position, footprint)
-                    .is_some_and(|candidate_rect| context.available(tiles, candidate_rect))
+                context.is_clear(*position)
+                    && TileRect::new(*position, footprint)
+                        .is_some_and(|candidate_rect| context.available(tiles, candidate_rect))
             })
         {
             let candidate_rect =
@@ -322,11 +348,13 @@ fn place_edge(
             positions.push(position);
         }
     }
-    Ok(positions)
+    positions
 }
 
 /// Retries sampled origins until `target_count` footprints are claimed or attempts run out.
-/// Claimed origins are recorded in the context; fewer may be returned when space runs out.
+/// Claimed footprints are reserved in the context; fewer may be returned when space runs out.
+/// Candidates must keep `separation` from this batch and from every recorded point, and
+/// stay outside every keep-clear circle.
 fn scatter_footprints(
     target_count: u32,
     separation: u32,
@@ -346,6 +374,8 @@ fn scatter_footprints(
             continue;
         };
         if context.available(tiles, candidate_rect)
+            && context.is_clear(candidate_origin)
+            && context.separated(candidate_origin, separation)
             && positions.iter().all(|existing_origin: &IVec2| {
                 existing_origin.distance_squared(candidate_origin) >= (separation as i32).pow(2)
             })

@@ -1,5 +1,5 @@
 use rand::{
-    RngExt, SeedableRng,
+    Rng, RngExt, SeedableRng,
     distr::{Distribution, weighted::WeightedIndex},
 };
 use rand_chacha::ChaCha8Rng;
@@ -44,17 +44,19 @@ pub struct NextMap<'w, 's> {
 impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
+        // The recipe pick draws from the root generator itself, so it never shares a draw
+        // with the build seed's own generator (which rolls the map size first).
         let (recipe, seed) = match request {
-            MapRequest::Hub => (self.catalog.hub(), self.root_rng.map().1),
+            MapRequest::Hub => (self.catalog.hub(), self.root_rng.next_map_seed()),
             MapRequest::Weighted => {
-                let seed = self.root_rng.map().1;
-                let mut random_generator = ChaCha8Rng::seed_from_u64(seed);
-                (self.catalog.weighted(&mut random_generator)?, seed)
+                let recipe = self.catalog.weighted(self.root_rng.rng())?;
+                (recipe, self.root_rng.next_map_seed())
             }
             MapRequest::Named { recipe, seed } => (self.catalog.named(&recipe)?, seed),
         };
         info!("Generating map {} with seed {seed}", recipe.name);
-        let blueprint = build_from_recipe(recipe, seed, &self.catalog.structures)?;
+        let blueprint = build_from_recipe(recipe, seed, &self.catalog.structures)
+            .map_err(|error| format!("map {} seed {seed}: {error}", recipe.name))?;
 
         if let Some(previous_map) = self.previous_map.as_ref() {
             self.commands.entity(previous_map.entity()).despawn();
@@ -96,7 +98,7 @@ impl RecipeCatalog {
             .ok_or_else(|| format!("unknown map recipe: {name}").into())
     }
 
-    fn weighted(&self, random_generator: &mut ChaCha8Rng) -> Result<&MapRecipe> {
+    fn weighted(&self, random_generator: &mut impl Rng) -> Result<&MapRecipe> {
         let weights = self
             .weighted_names
             .iter()
@@ -137,7 +139,7 @@ struct RecipeDefaults {
     floor: TileKind,
     structures: Vec<StructureEntry>,
     player_start: PlayerStartPick,
-    exits: PlacementPick,
+    exits: ExitPick,
     enemies: EnemyPlacement,
     chests: CountRange,
 }
@@ -152,7 +154,7 @@ struct RecipeEntry {
     floor: Option<TileKind>,
     structures: Option<Vec<StructureEntry>>,
     player_start: Option<PlayerStartPick>,
-    exits: Option<PlacementPick>,
+    exits: Option<ExitPick>,
     enemies: Option<EnemyPlacement>,
     chests: Option<CountRange>,
 }
@@ -167,7 +169,7 @@ pub(crate) struct MapRecipe {
     floor: TileKind,
     structures: Vec<StructureEntry>,
     player_start: PlayerStartPick,
-    exits: PlacementPick,
+    exits: ExitPick,
     enemies: EnemyPlacement,
     chests: CountRange,
 }
@@ -231,6 +233,13 @@ fn resolved_name(kind: &str, index: usize, explicit: &str) -> String {
 enum PlayerStartPick {
     Structure,
     Placement(PlacementPick),
+}
+
+/// Where a recipe's exits come from: `X` glyphs in its structures, or one map edge.
+#[derive(Deserialize, Debug, Clone)]
+enum ExitPick {
+    Structure,
+    Edge { count: CountRange, side: Side },
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -498,13 +507,23 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     {
         return Err(format!("recipe {} has invalid enemy x-decile range", recipe.name).into());
     }
-    if !matches!(&recipe.exits, PlacementPick::Edge { .. }) {
-        return Err(format!("recipe {} exits must use an Edge placement", recipe.name).into());
-    }
-    if let PlacementPick::Edge { count, .. } = &recipe.exits
+    if let ExitPick::Edge { count, .. } = &recipe.exits
         && (count.0 == 0 || count.0 > count.1 || count.1 > 2)
     {
         return Err(format!("recipe {} has invalid exit count range", recipe.name).into());
+    }
+    let structure_exits = structures_place(recipe, structures, |kind| {
+        matches!(kind, PlacementKind::Exit)
+    });
+    if matches!(
+        (structure_exits, &recipe.exits),
+        (true, ExitPick::Edge { .. }) | (false, ExitPick::Structure)
+    ) {
+        return Err(format!(
+            "recipe {} must define exactly one exit source, structure glyphs or an edge",
+            recipe.name
+        )
+        .into());
     }
     let mut earlier_names = std::collections::HashSet::new();
     for (index, structure) in recipe.structures.iter().enumerate() {
@@ -597,15 +616,8 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     if recipe.enemies.separation > 512 {
         return Err(format!("recipe {} enemy separation exceeds the cap", recipe.name).into());
     }
-    let structure_starts = recipe.structures.iter().any(|structure_entry| {
-        structures
-            .get(&structure_entry.kind)
-            .is_some_and(|structure| {
-                structure
-                    .placements
-                    .iter()
-                    .any(|placement| matches!(&placement.kind, PlacementKind::PlayerStart))
-            })
+    let structure_starts = structures_place(recipe, structures, |kind| {
+        matches!(kind, PlacementKind::PlayerStart)
     });
     if matches!(
         (structure_starts, &recipe.player_start),
@@ -634,8 +646,40 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     Ok(())
 }
 
+/// Returns whether any structure in the recipe carries a glyph placement matching `wanted`.
+fn structures_place(
+    recipe: &MapRecipe,
+    structures: &BTreeMap<String, Structure>,
+    wanted: impl Fn(&PlacementKind) -> bool,
+) -> bool {
+    recipe.structures.iter().any(|structure_entry| {
+        structures
+            .get(&structure_entry.kind)
+            .is_some_and(|structure| {
+                structure
+                    .placements
+                    .iter()
+                    .any(|placement| wanted(&placement.kind))
+            })
+    })
+}
+
 /// Shorthand for fallible map generation results.
 type MapResult<T> = std::result::Result<T, MapError>;
+
+/// Radius around the player start, in tiles, that no enemy may occupy.
+pub(crate) const PLAYER_START_CLEARANCE: u32 = 10;
+
+/// Records a point placement on the blueprint and in the placement context.
+fn push_point(
+    blueprint: &mut MapBlueprint,
+    placement_context: &mut PlaceContext,
+    tile: IVec2,
+    kind: PlacementKind,
+) {
+    placement_context.points.push(tile);
+    blueprint.placements.push(Placement { tile, kind });
+}
 
 /// Generates a map blueprint from a recipe and deterministic seed.
 pub(crate) fn build_from_recipe(
@@ -656,37 +700,37 @@ pub(crate) fn build_from_recipe(
         &mut placement_context,
         &mut random_generator,
     )?;
-
-    if let Some(player_start) = place_player_start(
+    // Fixed enemies go first so a placed player start can keep its distance from them.
+    place_fixed_enemies(
         recipe,
-        &blueprint,
+        &mut blueprint,
         &mut placement_context,
         &mut random_generator,
-    )? {
-        blueprint.placements.push(Placement {
-            tile: player_start,
-            kind: PlacementKind::PlayerStart,
-        });
-    } else if !blueprint
-        .placements
-        .iter()
-        .any(|placement| matches!(&placement.kind, PlacementKind::PlayerStart))
-    {
-        return Err("structure-based PlayerStart source did not place a PlayerStart".into());
-    }
+    )?;
+    place_player_start(
+        recipe,
+        &mut blueprint,
+        &mut placement_context,
+        &mut random_generator,
+    )?;
+    let player_start = blueprint.player_start().map_err(MapError::Validation)?;
     place_exits(
         recipe,
         &mut blueprint,
         &mut placement_context,
         &mut random_generator,
     )?;
-    place_enemies(
+    placement_context
+        .keep_clear
+        .push((player_start, PLAYER_START_CLEARANCE));
+    place_random_enemies(
         recipe,
         seed,
         &mut blueprint,
         &mut placement_context,
         &mut random_generator,
     )?;
+    placement_context.keep_clear.pop();
     place_chests(
         recipe,
         seed,
@@ -694,8 +738,25 @@ pub(crate) fn build_from_recipe(
         &mut placement_context,
         &mut random_generator,
     )?;
+    check_start_clearance(&blueprint, player_start)?;
     blueprint.validate().map_err(MapError::Validation)?;
     Ok(blueprint)
+}
+
+/// Fails if any enemy sits within `PLAYER_START_CLEARANCE` tiles of the player start.
+fn check_start_clearance(blueprint: &MapBlueprint, player_start: IVec2) -> MapResult<()> {
+    let limit = (PLAYER_START_CLEARANCE as i32).pow(2);
+    if let Some(enemy) = blueprint.placements.iter().find(|placement| {
+        matches!(placement.kind, PlacementKind::Enemy(_))
+            && placement.tile.distance_squared(player_start) < limit
+    }) {
+        return Err(format!(
+            "enemy at {} is within {PLAYER_START_CLEARANCE} tiles of the player start {player_start}",
+            enemy.tile
+        )
+        .into());
+    }
+    Ok(())
 }
 
 /// Places every structure in recipe order, recording each center by resolved name.
@@ -755,6 +816,12 @@ fn place_structures(
                             entry.kind
                         )
                     })?;
+                    placement_context.points.extend(
+                        structure
+                            .placements
+                            .iter()
+                            .map(|placement| origin + placement.tile),
+                    );
                     Some(origin + footprint.as_ivec2() / 2)
                 } else {
                     None
@@ -819,80 +886,74 @@ fn structure_rule(
     }
 }
 
-/// Places the player start, returning its tile; `None` means structures provide it.
+/// Places a recipe-chosen player start, keeping it clear of enemies already placed.
+/// A `Structure` start was already placed by its structure's glyph.
 fn place_player_start(
     recipe: &MapRecipe,
-    blueprint: &MapBlueprint,
+    blueprint: &mut MapBlueprint,
     placement_context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
-) -> MapResult<Option<IVec2>> {
-    match &recipe.player_start {
-        PlayerStartPick::Structure => Ok(None),
-        PlayerStartPick::Placement(pick) => {
-            let rule = pick.resolve(random_generator)?;
-            let tile = place(
-                &rule,
-                UVec2::ONE,
-                &blueprint.tiles,
-                placement_context,
-                random_generator,
-            )?
-            .into_iter()
-            .next()
-            .ok_or_else(|| "failed to place player start".to_owned())?;
-            Ok(Some(tile))
-        }
-    }
+) -> MapResult<()> {
+    let PlayerStartPick::Placement(pick) = &recipe.player_start else {
+        return Ok(());
+    };
+    let rule = pick.resolve(random_generator)?;
+    let keep_clear_len = placement_context.keep_clear.len();
+    placement_context.keep_clear.extend(
+        blueprint
+            .placements
+            .iter()
+            .filter(|placement| matches!(placement.kind, PlacementKind::Enemy(_)))
+            .map(|placement| (placement.tile, PLAYER_START_CLEARANCE)),
+    );
+    let placed = place(
+        &rule,
+        UVec2::ONE,
+        &blueprint.tiles,
+        placement_context,
+        random_generator,
+    );
+    placement_context.keep_clear.truncate(keep_clear_len);
+    let tile = placed?
+        .into_iter()
+        .next()
+        .ok_or_else(|| "failed to place player start".to_owned())?;
+    push_point(
+        blueprint,
+        placement_context,
+        tile,
+        PlacementKind::PlayerStart,
+    );
+    Ok(())
 }
 
-/// Places exits along the recipe's edge rule. Portals sit one tile inside the border,
-/// so the border tile is only bounds-checked, never carved.
+/// Places exits along the recipe's edge rule, one tile inside the solid border.
+/// A `Structure` exit was already placed by its structure's glyph.
 fn place_exits(
     recipe: &MapRecipe,
     blueprint: &mut MapBlueprint,
     placement_context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
 ) -> MapResult<()> {
-    let exit_rule = recipe.exits.resolve(random_generator)?;
+    let ExitPick::Edge { count, side } = recipe.exits else {
+        return Ok(());
+    };
     let exits = place(
-        &exit_rule,
+        &PlaceRule::Edge { count, side },
         UVec2::ONE,
         &blueprint.tiles,
         placement_context,
         random_generator,
     )?;
     for tile in exits {
-        let doorway = match &exit_rule {
-            PlaceRule::Edge {
-                side: Side::Left, ..
-            } => IVec2::ZERO.with_y(tile.y),
-            PlaceRule::Edge {
-                side: Side::Right, ..
-            } => IVec2::new(blueprint.map_size().x as i32 - 1, tile.y),
-            PlaceRule::Edge {
-                side: Side::Top, ..
-            } => IVec2::new(tile.x, blueprint.map_size().y as i32 - 1),
-            PlaceRule::Edge {
-                side: Side::Bottom, ..
-            } => IVec2::new(tile.x, 0),
-            _ => return Err("exit placement must use an Edge rule".to_owned().into()),
-        };
-        if !blueprint.tiles.contains(doorway) {
-            return Err(format!("exit doorway {doorway:?} is out of bounds").into());
-        }
-        blueprint.placements.push(Placement {
-            tile,
-            kind: PlacementKind::Exit,
-        });
+        push_point(blueprint, placement_context, tile, PlacementKind::Exit);
     }
     Ok(())
 }
 
-/// Places fixed enemies, then the random pack. A failed fixed placement aborts the map;
-/// a short random pack only warns, since open ground is never guaranteed.
-fn place_enemies(
+/// Places fixed enemies; a failed fixed placement aborts the map.
+fn place_fixed_enemies(
     recipe: &MapRecipe,
-    seed: u64,
     blueprint: &mut MapBlueprint,
     placement_context: &mut PlaceContext,
     random_generator: &mut ChaCha8Rng,
@@ -906,12 +967,22 @@ fn place_enemies(
             random_generator,
         )?;
         for tile in positions {
-            blueprint.placements.push(Placement {
-                tile,
-                kind: PlacementKind::Enemy(fixed.pick.resolve(random_generator)),
-            });
+            let kind = PlacementKind::Enemy(fixed.pick.resolve(random_generator));
+            push_point(blueprint, placement_context, tile, kind);
         }
     }
+    Ok(())
+}
+
+/// Places the random enemy pack. A short pack only warns, since open ground is never
+/// guaranteed.
+fn place_random_enemies(
+    recipe: &MapRecipe,
+    seed: u64,
+    blueprint: &mut MapBlueprint,
+    placement_context: &mut PlaceContext,
+    random_generator: &mut ChaCha8Rng,
+) -> MapResult<()> {
     let enemy_count = recipe.enemies.count.roll_size(random_generator);
     let enemy_rule = if let Some(nearby_enemy_placement) = &recipe.enemies.near {
         PlaceRule::NearStructure {
@@ -944,10 +1015,8 @@ fn place_enemies(
         );
     }
     for tile in enemy_positions {
-        blueprint.placements.push(Placement {
-            tile,
-            kind: PlacementKind::Enemy(recipe.enemies.pick.resolve(random_generator)),
-        });
+        let kind = PlacementKind::Enemy(recipe.enemies.pick.resolve(random_generator));
+        push_point(blueprint, placement_context, tile, kind);
     }
     Ok(())
 }
@@ -982,10 +1051,7 @@ fn place_chests(
         );
     }
     for tile in chest_positions {
-        blueprint.placements.push(Placement {
-            tile,
-            kind: PlacementKind::Chest,
-        });
+        push_point(blueprint, placement_context, tile, PlacementKind::Chest);
     }
     Ok(())
 }

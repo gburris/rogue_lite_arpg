@@ -16,6 +16,7 @@ use crate::{
         map::{
             blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
             placement::{Anchor, CountRange, PlaceContext, PlaceRule, Side, place},
+            spawn::MAX_MAP_TILES,
             structures::{
                 BuiltinFeature, FeatureShape, FeatureSize, Structure, apply_structure,
                 build_empty_square, build_pond, build_rubble, structure_from_glyphs,
@@ -27,15 +28,27 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, load_recipes);
-    #[cfg(not(target_arch = "wasm32"))]
-    app.add_systems(Update, reload_recipe_catalog);
+    #[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+    app.add_systems(
+        Update,
+        (
+            reload_recipe_catalog.run_if(bevy::time::common_conditions::on_timer(
+                std::time::Duration::from_millis(500),
+            )),
+            rebuild_current_map.run_if(resource_exists::<RebuildCurrentMap>),
+        )
+            .chain()
+            .run_if(in_state(AppState::Playing)),
+    );
+    #[cfg(feature = "dev")]
+    app.add_systems(Update, cycle_recipe.run_if(in_state(AppState::Playing)));
 }
 
 /// System parameters for requesting the next map.
 #[derive(SystemParam)]
 pub struct NextMap<'w, 's> {
     commands: Commands<'w, 's>,
-    previous_map: Option<Single<'w, 's, Entity, With<MapBlueprint>>>,
+    previous_maps: Query<'w, 's, Entity, With<MapBlueprint>>,
     next_state: ResMut<'w, NextState<AppState>>,
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
@@ -44,22 +57,14 @@ pub struct NextMap<'w, 's> {
 impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
-        // The recipe pick draws from the root generator itself, so it never shares a draw
-        // with the build seed's own generator (which rolls the map size first).
-        let (recipe, seed) = match request {
-            MapRequest::Hub => (self.catalog.hub(), self.root_rng.next_map_seed()),
-            MapRequest::Weighted => {
-                let recipe = self.catalog.weighted(self.root_rng.rng())?;
-                (recipe, self.root_rng.next_map_seed())
-            }
-            MapRequest::Named { recipe, seed } => (self.catalog.named(&recipe)?, seed),
-        };
+        let (recipe, seed) = self.catalog.resolve(request, &mut self.root_rng)?;
         info!("Generating map {} with seed {seed}", recipe.name);
         let blueprint = build_from_recipe(recipe, seed, &self.catalog.structures)
             .map_err(|error| format!("map {} seed {seed}: {error}", recipe.name))?;
 
-        if let Some(previous_map) = self.previous_map.as_ref() {
-            self.commands.entity(previous_map.entity()).despawn();
+        // Despawn every map, so a stray duplicate cleans itself up instead of wedging `set`.
+        for previous_map in &self.previous_maps {
+            self.commands.entity(previous_map).despawn();
         }
         self.commands.spawn(blueprint);
         self.next_state.set(AppState::SpawnMap);
@@ -71,8 +76,13 @@ impl NextMap<'_, '_> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MapRequest {
     Hub,
+    /// A dungeon picked by weight; arenas are never picked.
     Weighted,
-    Named { recipe: String, seed: u64 },
+    /// A recipe by name. `seed: None` draws a fresh seed from the root generator.
+    Named {
+        recipe: String,
+        seed: Option<u64>,
+    },
 }
 
 /// Loaded map recipes and the structures available to place in them.
@@ -82,11 +92,42 @@ pub struct RecipeCatalog {
     recipes: BTreeMap<String, MapRecipe>,
     structures: BTreeMap<String, Structure>,
     weighted_names: Vec<String>,
+    /// Every recipe name in file order: hub, dungeons, then arenas.
+    #[cfg_attr(not(feature = "dev"), allow(dead_code))]
+    order: Vec<String>,
 }
 
 impl RecipeCatalog {
     fn hub(&self) -> &MapRecipe {
         &self.hub
+    }
+
+    /// Chooses the recipe and build seed for a request.
+    /// The weighted pick draws from the root generator itself, so it never shares a draw
+    /// with the build seed's own generator (which rolls the map size first).
+    fn resolve(&self, request: MapRequest, root_rng: &mut MapRng) -> Result<(&MapRecipe, u64)> {
+        Ok(match request {
+            MapRequest::Hub => (self.hub(), root_rng.next_map_seed()),
+            MapRequest::Weighted => {
+                let recipe = self.weighted(root_rng.rng())?;
+                (recipe, root_rng.next_map_seed())
+            }
+            MapRequest::Named { recipe, seed } => (
+                self.named(&recipe)?,
+                seed.unwrap_or_else(|| root_rng.next_map_seed()),
+            ),
+        })
+    }
+
+    /// Returns the recipe after `current` in file order (hub, dungeons, arenas), wrapping.
+    #[cfg(feature = "dev")]
+    fn recipe_after(&self, current: &str) -> &str {
+        let index = self
+            .order
+            .iter()
+            .position(|name| name == current)
+            .map_or(0, |index| (index + 1) % self.order.len());
+        &self.order[index]
     }
 
     fn named(&self, name: &str) -> Result<&MapRecipe> {
@@ -361,7 +402,11 @@ fn load_recipes(mut commands: Commands) -> Result {
 }
 
 fn load_recipe_catalog() -> Result<RecipeCatalog> {
-    let file = load_recipe_file()?;
+    catalog_from_file(load_recipe_file()?)
+}
+
+/// Resolves, validates and smoke-builds every recipe in a parsed recipe file.
+fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
     let structures = file
         .structures
         .into_iter()
@@ -391,40 +436,60 @@ fn load_recipe_catalog() -> Result<RecipeCatalog> {
     let hub = file.hub.resolve(hub_name, 0, &file.defaults);
     validate_recipe(&hub, &structures)?;
     for seed in 0..=8 {
-        build_from_recipe(&hub, seed, &structures)?;
+        build_from_recipe(&hub, seed, &structures)
+            .map_err(|error| format!("map {} seed {seed}: {error}", hub.name))?;
     }
     let mut recipes = BTreeMap::new();
     let mut weighted_names = Vec::new();
-    for entry in file.dungeons.into_iter().chain(file.arenas) {
+    let mut order = vec![hub.name.clone()];
+    let dungeons = file.dungeons.into_iter().map(|entry| (entry, true));
+    let arenas = file.arenas.into_iter().map(|entry| (entry, false));
+    for (entry, is_dungeon) in dungeons.chain(arenas) {
         let name = entry.name.clone().ok_or("recipe name is required")?;
         if !names.insert(name.clone()) {
             return Err(format!("duplicate recipe name: {name}").into());
         }
-        let weight = entry
-            .weight
-            .ok_or_else(|| format!("recipe {name} requires a weight"))?;
-        if weight == 0 {
-            return Err(format!("recipe {name} weight must be positive").into());
-        }
+        // Only dungeons join the portal rotation; arenas are reached by name, so their
+        // weight is optional and unused.
+        let weight = if is_dungeon {
+            let weight = entry
+                .weight
+                .ok_or_else(|| format!("dungeon {name} requires a weight"))?;
+            if weight == 0 {
+                return Err(format!("dungeon {name} weight must be positive").into());
+            }
+            weighted_names.push(name.clone());
+            weight
+        } else {
+            entry.weight.unwrap_or(0)
+        };
         let recipe = entry.resolve(name.clone(), weight, &file.defaults);
         validate_recipe(&recipe, &structures)?;
         for seed in 0..=8 {
-            build_from_recipe(&recipe, seed, &structures)?;
+            build_from_recipe(&recipe, seed, &structures)
+                .map_err(|error| format!("map {name} seed {seed}: {error}"))?;
         }
-        weighted_names.push(name.clone());
+        order.push(name.clone());
         recipes.insert(name, recipe);
     }
-    if recipes.is_empty() {
-        return Err("at least one dungeon or arena recipe is required".into());
+    if weighted_names.is_empty() {
+        return Err("at least one dungeon recipe is required".into());
     }
     Ok(RecipeCatalog {
         hub,
         recipes,
         structures,
         weighted_names,
+        order,
     })
 }
-#[cfg(not(target_arch = "wasm32"))]
+/// Marks that the recipe catalog was just reloaded and the current map should be rebuilt.
+#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+#[derive(Resource)]
+struct RebuildCurrentMap;
+
+/// Dev only: polls the recipe file's timestamp and swaps in the catalog when it changes.
+#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
 fn reload_recipe_catalog(
     mut commands: Commands,
     mut observed: Local<Option<std::time::SystemTime>>,
@@ -443,9 +508,43 @@ fn reload_recipe_catalog(
     }
     *observed = Some(modified);
     match load_recipe_catalog() {
-        Ok(catalog) => commands.insert_resource(catalog),
+        Ok(catalog) => {
+            commands.insert_resource(catalog);
+            commands.insert_resource(RebuildCurrentMap);
+        }
         Err(error) => error!("Keeping previous recipe catalog after reload error: {error}"),
     }
+}
+
+/// Dev only: rebuilds the current map from the reloaded catalog with the same replay key.
+#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+fn rebuild_current_map(
+    mut commands: Commands,
+    blueprint: Single<&MapBlueprint>,
+    mut next_map: NextMap,
+) {
+    commands.remove_resource::<RebuildCurrentMap>();
+    let request = MapRequest::Named {
+        recipe: blueprint.recipe.clone(),
+        seed: Some(blueprint.seed),
+    };
+    if let Err(error) = next_map.set(request) {
+        error!("Keeping the current map after reload: {error}");
+    }
+}
+
+/// Dev only: F6 steps through every recipe in file order with a fresh seed.
+#[cfg(feature = "dev")]
+fn cycle_recipe(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    blueprint: Single<&MapBlueprint>,
+    mut next_map: NextMap,
+) -> Result {
+    if !keyboard_input.just_pressed(KeyCode::F6) {
+        return Ok(());
+    }
+    let recipe = next_map.catalog.recipe_after(&blueprint.recipe).to_owned();
+    next_map.set(MapRequest::Named { recipe, seed: None })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -467,10 +566,13 @@ fn load_recipe_file() -> Result<RecipeFile> {
     let reader = BufReader::new(fetch_recipe_data()?);
     #[cfg(target_arch = "wasm32")]
     let reader = BufReader::new(fetch_recipe_data());
-    Options::default()
-        .with_default_extension(Extensions::IMPLICIT_SOME)
+    recipe_options()
         .from_reader(reader)
         .map_err(|error| format!("failed to parse assets/config/map_recipes.ron: {error}").into())
+}
+
+fn recipe_options() -> Options {
+    Options::default().with_default_extension(Extensions::IMPLICIT_SOME)
 }
 
 #[allow(clippy::too_many_lines)]
@@ -479,24 +581,20 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
         ("size_x", recipe.size_x_range),
         ("size_y", recipe.size_y_range),
     ] {
-        if range.0 == 0 || range.0 > range.1 || range.1 > 512 {
-            return Err(format!("recipe {} has invalid {name} range", recipe.name).into());
+        if range.0 == 0 || range.0 > range.1 || range.1 > MAX_MAP_TILES {
+            return Err(format!(
+                "recipe {} has invalid {name} range (each side must be 1..={MAX_MAP_TILES})",
+                recipe.name
+            )
+            .into());
         }
-    }
-    if recipe
-        .size_x_range
-        .1
-        .checked_mul(recipe.size_y_range.1)
-        .is_none_or(|area| area > 262_144)
-    {
-        return Err(format!("recipe {} exceeds the map tile cap", recipe.name).into());
     }
     let (enemy_min, enemy_max) = (recipe.enemies.count.0, recipe.enemies.count.1);
     if enemy_min > enemy_max
-        || enemy_max > 512
-        || recipe.enemies.fixed.len() > 512
+        || enemy_max > MAX_MAP_TILES
+        || recipe.enemies.fixed.len() > MAX_MAP_TILES as usize
         || recipe.chests.0 > recipe.chests.1
-        || recipe.chests.1 > 512
+        || recipe.chests.1 > MAX_MAP_TILES
     {
         return Err(format!("recipe {} has invalid placement count range", recipe.name).into());
     }
@@ -554,7 +652,10 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
             )
             .into());
         }
-        if structure.radius.is_some_and(|radius| radius > 512) {
+        if structure
+            .radius
+            .is_some_and(|radius| radius > MAX_MAP_TILES)
+        {
             return Err(format!(
                 "recipe {} structure {index} radius exceeds the cap",
                 recipe.name
@@ -577,8 +678,8 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
                 || minimum.1 == 0
                 || minimum.0 > maximum.0
                 || minimum.1 > maximum.1
-                || maximum.0 > 512
-                || maximum.1 > 512
+                || maximum.0 > MAX_MAP_TILES
+                || maximum.1 > MAX_MAP_TILES
             {
                 return Err(format!(
                     "recipe {} structure {index} has an invalid feature size",
@@ -609,11 +710,11 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
             )
             .into());
         }
-        if near.radius > 512 {
+        if near.radius > MAX_MAP_TILES {
             return Err(format!("recipe {} enemy radius exceeds the cap", recipe.name).into());
         }
     }
-    if recipe.enemies.separation > 512 {
+    if recipe.enemies.separation > MAX_MAP_TILES {
         return Err(format!("recipe {} enemy separation exceeds the cap", recipe.name).into());
     }
     let structure_starts = structures_place(recipe, structures, |kind| {
@@ -690,7 +791,12 @@ pub(crate) fn build_from_recipe(
     let mut random_generator = ChaCha8Rng::seed_from_u64(seed);
     let size_x = random_generator.random_range(recipe.size_x_range.0..=recipe.size_x_range.1);
     let size_y = random_generator.random_range(recipe.size_y_range.0..=recipe.size_y_range.1);
-    let mut blueprint = MapBlueprint::new(UVec2::new(size_x, size_y), recipe.floor, seed);
+    let mut blueprint = MapBlueprint::new(
+        UVec2::new(size_x, size_y),
+        recipe.floor,
+        recipe.name.clone(),
+        seed,
+    );
     let mut placement_context = PlaceContext::new(blueprint.map_size());
     place_structures(
         recipe,
@@ -771,7 +877,7 @@ fn place_structures(
 ) -> MapResult<()> {
     for (index, entry) in recipe.structures.iter().enumerate() {
         let resolved_name = resolved_name(&entry.kind, index, &entry.name);
-        let rule = structure_rule(entry, placement_context, random_generator)?;
+        let rule = structure_rule(entry);
         let placed_center = match BuiltinFeature::from_kind(&entry.kind) {
             Some(BuiltinFeature::EmptySquare) => build_empty_square(
                 blueprint,
@@ -840,49 +946,31 @@ fn place_structures(
     Ok(())
 }
 
-/// Resolves a structure entry's anchor to a placement rule, rolling any radius offset.
-fn structure_rule(
-    entry: &StructureEntry,
-    placement_context: &PlaceContext,
-    random_generator: &mut ChaCha8Rng,
-) -> MapResult<PlaceRule> {
+/// Resolves a structure entry's anchor to a placement rule. A `Structure` anchor is
+/// measured between centers; with a radius it samples near that point instead.
+fn structure_rule(entry: &StructureEntry) -> PlaceRule {
     match &entry.anchor {
-        StructureAnchor::Random => Ok(PlaceRule::Random {
+        StructureAnchor::Random => PlaceRule::Random {
             count: CountRange(1, 1),
             x_deciles: (1, 9),
             separation: 0,
-        }),
-        StructureAnchor::Center => Ok(PlaceRule::Fixed(Anchor::Center)),
-        StructureAnchor::CenterOffset(offset) => {
-            Ok(PlaceRule::Fixed(Anchor::CenterOffset(*offset)))
-        }
-        StructureAnchor::MapMin(position) => Ok(PlaceRule::Fixed(Anchor::MapMin(*position))),
-        StructureAnchor::Structure {
-            structure: earlier,
-            offset,
-        } => {
-            if *offset == IVec2::ZERO && entry.radius.is_none() {
-                Ok(PlaceRule::Fixed(Anchor::Structure(earlier.clone())))
-            } else {
-                let center = placement_context
-                    .structure_centers_by_name
-                    .get(earlier)
-                    .copied()
-                    .ok_or_else(|| {
-                        format!("structure anchor {earlier:?} is missing or was never placed")
-                    })?;
-                let mut minimum = center + *offset;
-                if let Some(radius) = entry.radius {
-                    let radius = i32::try_from(radius)
-                        .map_err(|_| "structure radius is too large".to_owned())?;
-                    minimum += IVec2::new(
-                        random_generator.random_range(-radius..=radius),
-                        random_generator.random_range(-radius..=radius),
-                    );
-                }
-                Ok(PlaceRule::Fixed(Anchor::MapMin(minimum)))
-            }
-        }
+        },
+        StructureAnchor::Center => PlaceRule::Fixed(Anchor::Center),
+        StructureAnchor::CenterOffset(offset) => PlaceRule::Fixed(Anchor::CenterOffset(*offset)),
+        StructureAnchor::MapMin(position) => PlaceRule::Fixed(Anchor::MapMin(*position)),
+        StructureAnchor::Structure { structure, offset } => match entry.radius {
+            None => PlaceRule::Fixed(Anchor::Structure {
+                name: structure.clone(),
+                offset: *offset,
+            }),
+            Some(radius) => PlaceRule::NearStructure {
+                count: CountRange(1, 1),
+                structure: structure.clone(),
+                offset: *offset,
+                radius,
+                separation: 0,
+            },
+        },
     }
 }
 
@@ -988,6 +1076,7 @@ fn place_random_enemies(
         PlaceRule::NearStructure {
             count: CountRange(enemy_count, enemy_count),
             structure: nearby_enemy_placement.structure.clone(),
+            offset: IVec2::ZERO,
             radius: nearby_enemy_placement.radius,
             separation: recipe.enemies.separation,
         }
@@ -1054,4 +1143,218 @@ fn place_chests(
         push_point(blueprint, placement_context, tile, PlacementKind::Chest);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Seeds every recipe is built with; cheap enough to run on every `cargo test`.
+    const SEEDS: std::ops::Range<u64> = 0..64;
+    /// Seed whose hub layout is pinned in `tests/snapshots/hub_layout.txt`.
+    const HUB_SNAPSHOT_SEED: u64 = 0;
+    const HUB_SNAPSHOT_PATH: &str = "tests/snapshots/hub_layout.txt";
+
+    fn catalog() -> RecipeCatalog {
+        load_recipe_catalog().expect("assets/config/map_recipes.ron should load")
+    }
+
+    fn all_recipes(catalog: &RecipeCatalog) -> impl Iterator<Item = &MapRecipe> {
+        std::iter::once(&catalog.hub).chain(catalog.recipes.values())
+    }
+
+    fn build(catalog: &RecipeCatalog, recipe: &MapRecipe, seed: u64) -> MapBlueprint {
+        build_from_recipe(recipe, seed, &catalog.structures)
+            .unwrap_or_else(|error| panic!("map {} seed {seed}: {error}", recipe.name))
+    }
+
+    fn count(blueprint: &MapBlueprint, wanted: impl Fn(&PlacementKind) -> bool) -> usize {
+        blueprint
+            .placements
+            .iter()
+            .filter(|placement| wanted(&placement.kind))
+            .count()
+    }
+
+    /// Renders tiles top row first, one glyph per tile.
+    fn render(blueprint: &MapBlueprint) -> String {
+        let size = blueprint.map_size().as_ivec2();
+        let mut text = String::new();
+        for y in (0..size.y).rev() {
+            for x in 0..size.x {
+                let tile = blueprint
+                    .tiles
+                    .get(IVec2::new(x, y))
+                    .expect("tile is in bounds");
+                text.push(tile.glyph());
+            }
+            text.push('\n');
+        }
+        text
+    }
+
+    #[test]
+    fn every_recipe_builds() {
+        let catalog = catalog();
+        for recipe in all_recipes(&catalog) {
+            validate_recipe(recipe, &catalog.structures)
+                .unwrap_or_else(|error| panic!("recipe {} is invalid: {error}", recipe.name));
+            for seed in SEEDS {
+                let blueprint = build(&catalog, recipe, seed);
+                assert!(
+                    blueprint == build(&catalog, recipe, seed),
+                    "map {} seed {seed} is not deterministic",
+                    recipe.name
+                );
+                assert_eq!(blueprint.recipe, recipe.name);
+                assert_eq!(blueprint.seed, seed);
+            }
+        }
+    }
+
+    #[test]
+    fn weighted_maps_cover_their_full_size_range() {
+        let catalog = catalog();
+        let checked = ["LongHallway", "Swamp"];
+        let mut widths = BTreeMap::<&str, (u32, u32)>::new();
+        let mut root_rng = MapRng::seeded(0);
+        for _ in 0..1_000 {
+            let (recipe, seed) = catalog
+                .resolve(MapRequest::Weighted, &mut root_rng)
+                .expect("weighted pick succeeds");
+            if !checked.contains(&recipe.name.as_str()) {
+                continue;
+            }
+            let width = build(&catalog, recipe, seed).map_size().x;
+            let seen = widths.entry(recipe.name.as_str()).or_insert((u32::MAX, 0));
+            *seen = (seen.0.min(width), seen.1.max(width));
+        }
+        for name in checked {
+            let (low, high) = catalog.recipes[name].size_x_range;
+            let margin = (high - low) / 10;
+            let (seen_low, seen_high) = widths[name];
+            assert!(
+                seen_low <= low + margin && seen_high >= high - margin,
+                "{name} widths {seen_low}..={seen_high} do not cover {low}..={high}"
+            );
+        }
+    }
+
+    #[test]
+    fn enemies_keep_clear_of_the_player_start() {
+        let catalog = catalog();
+        let limit = (PLAYER_START_CLEARANCE as i32).pow(2);
+        for recipe in all_recipes(&catalog) {
+            for seed in SEEDS {
+                let blueprint = build(&catalog, recipe, seed);
+                let start = blueprint.player_start().expect("one player start");
+                for placement in &blueprint.placements {
+                    if matches!(placement.kind, PlacementKind::Enemy(_)) {
+                        assert!(
+                            placement.tile.distance_squared(start) >= limit,
+                            "map {} seed {seed}: enemy at {} is too close to the start {start}",
+                            recipe.name,
+                            placement.tile
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn hub_has_exactly_one_exit() {
+        let catalog = catalog();
+        for seed in SEEDS {
+            let blueprint = build(&catalog, &catalog.hub, seed);
+            let exits = count(&blueprint, |kind| matches!(kind, PlacementKind::Exit));
+            assert_eq!(exits, 1, "hub seed {seed} has {exits} exits");
+        }
+    }
+
+    #[test]
+    fn recipes_need_exactly_one_exit_source() {
+        let catalog = catalog();
+        let mut hub = catalog.hub.clone();
+        hub.exits = ExitPick::Edge {
+            count: CountRange(1, 1),
+            side: Side::Right,
+        };
+        assert!(validate_recipe(&hub, &catalog.structures).is_err());
+
+        let mut swamp = catalog.recipes["Swamp"].clone();
+        swamp.exits = ExitPick::Structure;
+        assert!(validate_recipe(&swamp, &catalog.structures).is_err());
+    }
+
+    #[test]
+    fn arenas_are_named_only_and_need_no_weight() {
+        let text = std::fs::read_to_string("assets/config/map_recipes.ron")
+            .expect("recipe file is readable");
+        let text = text.replace(
+            "arenas: [],",
+            "arenas: [(name: \"TestArena\", size_x_range: (40, 40), size_y_range: (40, 40))],",
+        );
+        assert!(
+            text.contains("TestArena"),
+            "recipe file has no empty arenas list"
+        );
+        let file: RecipeFile = recipe_options()
+            .from_str(&text)
+            .expect("edited recipe file parses");
+        let catalog = catalog_from_file(file).expect("catalog with an arena loads");
+
+        assert!(catalog.named("TestArena").is_ok());
+        assert!(
+            !catalog
+                .weighted_names
+                .iter()
+                .any(|name| name == "TestArena")
+        );
+        assert_eq!(catalog.order.last().map(String::as_str), Some("TestArena"));
+        let mut root_rng = MapRng::seeded(0);
+        for _ in 0..500 {
+            let (recipe, _) = catalog
+                .resolve(MapRequest::Weighted, &mut root_rng)
+                .expect("weighted pick succeeds");
+            assert_ne!(recipe.name, "TestArena");
+        }
+    }
+
+    #[test]
+    fn named_requests_replay_the_same_map() {
+        let catalog = catalog();
+        let mut root_rng = MapRng::seeded(5);
+        let request = MapRequest::Named {
+            recipe: "FireShrine".to_owned(),
+            seed: Some(42),
+        };
+        let (recipe, seed) = catalog.resolve(request, &mut root_rng).unwrap();
+        assert_eq!((recipe.name.as_str(), seed), ("FireShrine", 42));
+
+        let fresh = MapRequest::Named {
+            recipe: "FireShrine".to_owned(),
+            seed: None,
+        };
+        let (_, first) = catalog.resolve(fresh.clone(), &mut root_rng).unwrap();
+        let (_, second) = catalog.resolve(fresh, &mut root_rng).unwrap();
+        assert_ne!(first, second, "seed: None draws a fresh seed each time");
+    }
+
+    #[test]
+    fn hub_layout_matches_snapshot() {
+        let catalog = catalog();
+        let actual = render(&build(&catalog, &catalog.hub, HUB_SNAPSHOT_SEED));
+        if std::env::var_os("UPDATE_SNAPSHOTS").is_some() {
+            std::fs::write(HUB_SNAPSHOT_PATH, &actual).expect("snapshot is writable");
+            return;
+        }
+        let expected = std::fs::read_to_string(HUB_SNAPSHOT_PATH)
+            .expect("snapshot is readable")
+            .replace("\r\n", "\n");
+        assert!(
+            expected == actual,
+            "hub layout changed; if intended, rerun with UPDATE_SNAPSHOTS=1.\nactual:\n{actual}"
+        );
+    }
 }

@@ -30,8 +30,8 @@ pub enum Anchor {
     Center,
     /// Center on the map, then offset the footprint origin by this many tiles.
     CenterOffset(IVec2),
-    /// Position relative to a previously placed structure by its name.
-    Structure(String),
+    /// Center the footprint on a previously placed structure's center, plus `offset` tiles.
+    Structure { name: String, offset: IVec2 },
     /// Use this offset from the map's minimum (bottom-left) tile as the footprint origin.
     MapMin(IVec2),
     /// Offset from the map's maximum (top-right) tile; for example `MapMax((-6, -6))`
@@ -60,11 +60,13 @@ pub enum PlaceRule {
         x_deciles: (u32, u32),
         separation: u32,
     },
-    /// Place an inclusive random count within a square around a named structure.
+    /// Place an inclusive random count of footprints centered within `radius` tiles (a square)
+    /// of a named structure's center plus `offset`.
     /// `separation` is the minimum tile distance from every point placed so far.
     NearStructure {
         count: CountRange,
         structure: String,
+        offset: IVec2,
         radius: u32,
         separation: u32,
     },
@@ -163,11 +165,13 @@ pub fn place(
         PlaceRule::NearStructure {
             count,
             structure,
+            offset,
             radius,
             separation,
         } => place_near_structure(
             *count,
             structure,
+            *offset,
             *radius,
             *separation,
             footprint,
@@ -196,14 +200,10 @@ fn place_fixed(
         Anchor::Center => TileRect::centered_in(context.map_size, footprint),
         Anchor::CenterOffset(offset) => TileRect::centered_in(context.map_size, footprint)
             .and_then(|rect| rect.translated(*offset)),
-        Anchor::Structure(name) => {
-            context
-                .structure_centers_by_name
-                .get(name)
-                .and_then(|center| {
-                    TileRect::new(*center - footprint.as_ivec2() / 2, footprint)
-                })
-        }
+        Anchor::Structure { name, offset } => context
+            .structure_centers_by_name
+            .get(name)
+            .and_then(|center| TileRect::new(*center + *offset - footprint.as_ivec2() / 2, footprint)),
         Anchor::MapMin(offset) => TileRect::new(*offset, footprint),
         Anchor::MapMax(offset) => TileRect::new(
             context.map_size.as_ivec2() - IVec2::ONE + *offset,
@@ -265,6 +265,7 @@ fn place_random(
 fn place_near_structure(
     count: CountRange,
     structure: &str,
+    offset: IVec2,
     radius: u32,
     separation: u32,
     footprint: UVec2,
@@ -276,6 +277,9 @@ fn place_near_structure(
     let Some(structure_center) = context.structure_centers_by_name.get(structure).copied() else {
         return Err(format!("missing structure anchor {structure}").into());
     };
+    // Sample the footprint's center, then shift to its bottom-left origin.
+    let target_center = structure_center + offset;
+    let half_footprint = footprint.as_ivec2() / 2;
     let radius_tiles = i32::try_from(radius).map_err(|_| "placement radius is too large")?;
     if context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)
@@ -290,7 +294,7 @@ fn place_near_structure(
         context,
         random_generator,
         |random_generator| {
-            structure_center
+            target_center - half_footprint
                 + IVec2::new(
                     random_generator.random_range(-radius_tiles..=radius_tiles),
                     random_generator.random_range(-radius_tiles..=radius_tiles),
@@ -433,5 +437,87 @@ mod placement_tests {
         .unwrap();
 
         assert_eq!(random_generator, original_random_generator);
+    }
+
+    fn context_with_anchor(center: IVec2) -> (TileGrid, PlaceContext) {
+        let tiles = TileGrid::new(UVec2::new(40, 40), TileKind::Grass);
+        let mut context = PlaceContext::new(UVec2::new(40, 40));
+        context.record_structure_center("Anchor".to_owned(), center);
+        (tiles, context)
+    }
+
+    #[test]
+    fn structure_anchor_offset_is_measured_between_centers() {
+        let (tiles, mut context) = context_with_anchor(IVec2::new(20, 20));
+        let footprint = UVec2::new(5, 3);
+        let mut random_generator = ChaCha8Rng::seed_from_u64(7);
+
+        let origin = place(
+            &PlaceRule::Fixed(Anchor::Structure {
+                name: "Anchor".to_owned(),
+                offset: IVec2::new(4, -6),
+            }),
+            footprint,
+            &tiles,
+            &mut context,
+            &mut random_generator,
+        )
+        .unwrap()[0];
+
+        let placed = TileRect::new(origin, footprint).unwrap();
+        assert_eq!(placed.center_tile(), IVec2::new(24, 14));
+    }
+
+    #[test]
+    fn near_structure_with_zero_radius_centers_the_footprint() {
+        let (tiles, mut context) = context_with_anchor(IVec2::new(20, 20));
+        let footprint = UVec2::new(7, 7);
+        let mut random_generator = ChaCha8Rng::seed_from_u64(7);
+
+        let origins = place(
+            &PlaceRule::NearStructure {
+                count: CountRange(1, 1),
+                structure: "Anchor".to_owned(),
+                offset: IVec2::new(0, -10),
+                radius: 0,
+                separation: 0,
+            },
+            footprint,
+            &tiles,
+            &mut context,
+            &mut random_generator,
+        )
+        .unwrap();
+
+        let placed = TileRect::new(origins[0], footprint).unwrap();
+        assert_eq!(placed.center_tile(), IVec2::new(20, 10));
+    }
+
+    #[test]
+    fn separation_counts_points_from_earlier_batches() {
+        let tiles = TileGrid::new(UVec2::new(12, 12), TileKind::Grass);
+        let mut context = PlaceContext::new(UVec2::new(12, 12));
+        context.points.push(IVec2::new(6, 6));
+        context.keep_clear.push((IVec2::new(1, 1), 3));
+        let mut random_generator = ChaCha8Rng::seed_from_u64(3);
+
+        let placed = place(
+            &PlaceRule::Random {
+                count: CountRange(20, 20),
+                x_deciles: (0, 10),
+                separation: 4,
+            },
+            UVec2::ONE,
+            &tiles,
+            &mut context,
+            &mut random_generator,
+        )
+        .unwrap();
+
+        assert!(!placed.is_empty());
+        for tile in placed {
+            assert!(tile.distance_squared(IVec2::new(6, 6)) >= 16);
+            assert!(tile.distance_squared(IVec2::new(1, 1)) >= 9);
+        }
     }
 }

@@ -57,12 +57,9 @@ fn spawn_tiles(
             let Some(tile_kind) = blueprint.tiles.get(tile_index) else {
                 continue;
             };
-            let Some(appearance) = tile_appearance(
-                &blueprint.tiles,
-                blueprint.visual_seed,
-                tile_index,
-                tile_kind,
-            ) else {
+            let Some(appearance) =
+                tile_appearance(&blueprint.tiles, blueprint.seed, tile_index, tile_kind)
+            else {
                 continue;
             };
 
@@ -213,9 +210,9 @@ fn spawn_placements(
     sprites: Res<SpriteAssets>,
     blueprint: Single<&MapBlueprint>,
     coordinates: Res<TileToWorld>,
-    player: Option<Single<&mut Transform, With<Player>>>,
-) {
-    let mut player_transform = player.map(Single::into_inner);
+    mut player: Query<&mut Transform, With<Player>>,
+) -> Result {
+    let mut player_transform = player.single_mut()?;
     let mut enemies = Vec::new();
     let mut npcs = Vec::new();
     let mut chests = Vec::new();
@@ -225,11 +222,8 @@ fn spawn_placements(
 
         match &placement.kind {
             PlacementKind::PlayerStart => {
-                let Some(transform) = player_transform.as_deref_mut() else {
-                    warn!("PlayerStart placement found but no Player entity exists");
-                    continue;
-                };
-                transform.translation = world_spawn_position.extend(transform.translation.z);
+                player_transform.translation =
+                    world_spawn_position.extend(player_transform.translation.z);
             }
             PlacementKind::Enemy(enemy_kind) => {
                 enemies.push(EnemySpawnData {
@@ -259,13 +253,14 @@ fn spawn_placements(
     if !chests.is_empty() {
         commands.trigger(SpawnChestsEvent(chests));
     }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
 // Tile <-> world conversion
 // ---------------------------------------------------------------------------
 
-/// Normalization limit for map-depth sorting; not a gameplay size cap.
+/// Largest map width or height, in tiles, that recipe validation accepts.
 pub const MAX_MAP_TILES: u32 = 256;
 /// Width and height of a square map tile, in world units.
 pub const TILE_SIZE: u32 = 32;

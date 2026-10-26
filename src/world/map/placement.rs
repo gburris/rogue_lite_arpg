@@ -8,13 +8,32 @@ use super::blueprint::MapError;
 use super::tiles::{TileGrid, TileRect};
 
 /// Inclusive bounds for randomly rolling an element count or footprint size.
+/// Recipes spell it as a bare number (`count: 1`) or an inclusive pair (`count: (10, 15)`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(from = "CountRangeInput")]
 pub struct CountRange(
     /// Inclusive minimum value.
     pub u32,
     /// Inclusive maximum value.
     pub u32,
 );
+
+/// Recipe spelling of a [`CountRange`].
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum CountRangeInput {
+    Exact(u32),
+    Range(u32, u32),
+}
+
+impl From<CountRangeInput> for CountRange {
+    fn from(input: CountRangeInput) -> Self {
+        match input {
+            CountRangeInput::Exact(count) => Self(count, count),
+            CountRangeInput::Range(minimum, maximum) => Self(minimum, maximum),
+        }
+    }
+}
 
 impl CountRange {
     /// Uniformly rolls from `min..=max`; callers must validate that `min <= max`.
@@ -329,23 +348,17 @@ fn place_edge(
             Side::Bottom => IVec2::new(coordinate, 1),
         })
         .collect::<Vec<_>>();
-    for _ in 0..target_count {
-        if candidates.is_empty() {
-            break;
-        }
-        let candidate_offset = random_generator.random_range(0..candidates.len());
-        if let Some(position) = candidates
-            .iter()
-            .cycle()
-            .skip(candidate_offset)
-            .take(candidates.len())
-            .copied()
-            .find(|position| {
-                context.is_clear(*position)
-                    && TileRect::new(*position, footprint)
-                        .is_some_and(|candidate_rect| context.available(tiles, candidate_rect))
-            })
-        {
+    // Split the wall into one segment per footprint so several exits spread out instead of
+    // landing on adjacent rows. A blocked segment falls back to the whole wall.
+    let segment_count = target_count as usize;
+    for segment_index in 0..segment_count {
+        let segment = &candidates[segment_index * candidates.len() / segment_count
+            ..(segment_index + 1) * candidates.len() / segment_count];
+        let position = pick_edge_candidate(segment, footprint, tiles, context, random_generator)
+            .or_else(|| {
+                pick_edge_candidate(&candidates, footprint, tiles, context, random_generator)
+            });
+        if let Some(position) = position {
             let candidate_rect =
                 TileRect::new(position, footprint).expect("candidate rectangle validated above");
             context.reserved.push(candidate_rect);
@@ -353,6 +366,31 @@ fn place_edge(
         }
     }
     positions
+}
+
+/// Starting from a random candidate, returns the first one (wrapping) that is free and clear.
+fn pick_edge_candidate(
+    candidates: &[IVec2],
+    footprint: UVec2,
+    tiles: &TileGrid,
+    context: &PlaceContext,
+    random_generator: &mut ChaCha8Rng,
+) -> Option<IVec2> {
+    if candidates.is_empty() {
+        return None;
+    }
+    let candidate_offset = random_generator.random_range(0..candidates.len());
+    candidates
+        .iter()
+        .cycle()
+        .skip(candidate_offset)
+        .take(candidates.len())
+        .copied()
+        .find(|position| {
+            context.is_clear(*position)
+                && TileRect::new(*position, footprint)
+                    .is_some_and(|candidate_rect| context.available(tiles, candidate_rect))
+        })
 }
 
 /// Retries sampled origins until `target_count` footprints are claimed or attempts run out.
@@ -491,6 +529,32 @@ mod placement_tests {
 
         let placed = TileRect::new(origins[0], footprint).unwrap();
         assert_eq!(placed.center_tile(), IVec2::new(20, 10));
+    }
+
+    #[test]
+    fn multiple_edge_placements_spread_along_the_wall() {
+        let tiles = TileGrid::new(UVec2::new(10, 42), TileKind::Grass);
+        for seed in 0..32 {
+            let mut context = PlaceContext::new(UVec2::new(10, 42));
+            let mut random_generator = ChaCha8Rng::seed_from_u64(seed);
+            let mut rows = place(
+                &PlaceRule::Edge {
+                    count: CountRange(2, 2),
+                    side: Side::Right,
+                },
+                UVec2::ONE,
+                &tiles,
+                &mut context,
+                &mut random_generator,
+            )
+            .unwrap()
+            .into_iter()
+            .map(|tile| tile.y)
+            .collect::<Vec<_>>();
+            rows.sort_unstable();
+            // 40 candidate rows split into two halves: 1..=20 and 21..=40.
+            assert!(rows[0] <= 20 && rows[1] > 20, "seed {seed}: rows {rows:?}");
+        }
     }
 
     #[test]

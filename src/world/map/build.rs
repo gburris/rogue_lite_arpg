@@ -18,8 +18,8 @@ use crate::{
             placement::{Anchor, CountRange, PlaceContext, PlaceRule, Side, place},
             spawn::MAX_MAP_TILES,
             structures::{
-                BuiltinFeature, FeatureShape, FeatureSize, Structure, apply_structure,
-                build_empty_square, build_pond, build_rubble, structure_from_glyphs,
+                FeatureShape, FeatureSize, Structure, apply_structure, build_empty_square,
+                build_pond, build_rubble, structure_from_glyphs,
             },
             tiles::TileKind,
         },
@@ -190,6 +190,8 @@ struct RecipeDefaults {
 struct RecipeEntry {
     name: Option<String>,
     weight: Option<u32>,
+    /// Shorthand for a square map: `size: 60` sets both size ranges to `(60, 60)`.
+    size: Option<u32>,
     size_x_range: Option<(u32, u32)>,
     size_y_range: Option<(u32, u32)>,
     floor: Option<TileKind>,
@@ -216,38 +218,118 @@ pub(crate) struct MapRecipe {
 }
 
 impl RecipeEntry {
-    fn resolve(self, name: String, weight: u32, defaults: &RecipeDefaults) -> MapRecipe {
-        MapRecipe {
+    fn resolve(self, name: String, weight: u32, defaults: &RecipeDefaults) -> Result<MapRecipe> {
+        if self.size.is_some() && (self.size_x_range.is_some() || self.size_y_range.is_some()) {
+            return Err(format!(
+                "recipe {name} sets size together with size_x_range or size_y_range"
+            )
+            .into());
+        }
+        let square = self.size.map(|size| (size, size));
+        Ok(MapRecipe {
             name,
             weight,
-            size_x_range: self.size_x_range.unwrap_or(defaults.size_x_range),
-            size_y_range: self.size_y_range.unwrap_or(defaults.size_y_range),
+            size_x_range: self
+                .size_x_range
+                .or(square)
+                .unwrap_or(defaults.size_x_range),
+            size_y_range: self
+                .size_y_range
+                .or(square)
+                .unwrap_or(defaults.size_y_range),
             floor: self.floor.unwrap_or(defaults.floor),
-            structures: self
-                .structures
-                .unwrap_or_else(|| defaults.structures.clone()),
+            structures: expand_counts(
+                self.structures
+                    .unwrap_or_else(|| defaults.structures.clone()),
+            ),
             player_start: self
                 .player_start
                 .unwrap_or_else(|| defaults.player_start.clone()),
             exits: self.exits.unwrap_or_else(|| defaults.exits.clone()),
             enemies: self.enemies.unwrap_or_else(|| defaults.enemies.clone()),
             chests: self.chests.unwrap_or(defaults.chests),
-        }
+        })
     }
+}
+
+/// Replaces each entry with `count` single copies, as if the line were repeated.
+fn expand_counts(entries: Vec<StructureEntry>) -> Vec<StructureEntry> {
+    entries
+        .into_iter()
+        .flat_map(|entry| {
+            let copies = entry.count as usize;
+            std::iter::repeat_n(StructureEntry { count: 1, ..entry }, copies)
+        })
+        .collect()
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 struct StructureEntry {
-    kind: String,
+    kind: StructureKind,
     #[serde(default)]
     name: String,
     #[serde(default)]
     anchor: StructureAnchor,
     radius: Option<u32>,
-    size: Option<FeatureSize>,
-    #[serde(default)]
-    shape: FeatureShape,
+    /// Places this many copies, as if the entry were repeated; resolved names stay
+    /// `{kind}_{index}`, so a named entry must keep `count: 1`.
+    #[serde(default = "one")]
+    count: u32,
+}
+
+fn one() -> u32 {
+    1
+}
+
+/// What a structure entry places: a glyph structure from the file's `structures` table,
+/// or a builtin procedural feature. Each feature takes only the fields it uses.
+///
+/// To add a feature: add a variant with its fields, write its builder from
+/// `claim_feature_footprint` in structures.rs (see rubble for a one-tile feature), and
+/// handle the variant in the exhaustive `place_structures` match.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+enum StructureKind {
+    /// A named glyph structure: `Structure("Temple")`.
+    Structure(String),
+    /// Walled dead-zone square, a 3–10 tile square by default: `EmptySquare()`.
+    EmptySquare {
+        #[serde(default)]
+        size: Option<FeatureSize>,
+    },
+    /// Water that blocks ground movement and spawns, a 3–8 tile square by default:
+    /// `Pond(size: Exact((14, 9)), shape: Blob)`.
+    Pond {
+        #[serde(default)]
+        size: Option<FeatureSize>,
+        #[serde(default)]
+        shape: FeatureShape,
+    },
+    /// Wall rubble, a single tile by default: `Rubble()`.
+    Rubble {
+        #[serde(default)]
+        size: Option<FeatureSize>,
+    },
+}
+
+impl StructureKind {
+    /// Name used for `{kind}_{index}` structure names and in messages.
+    fn label(&self) -> &str {
+        match self {
+            Self::Structure(name) => name,
+            Self::EmptySquare { .. } => "EmptySquare",
+            Self::Pond { .. } => "Pond",
+            Self::Rubble { .. } => "Rubble",
+        }
+    }
+
+    fn feature_size(&self) -> Option<FeatureSize> {
+        match self {
+            Self::Structure(_) => None,
+            Self::EmptySquare { size } | Self::Pond { size, .. } | Self::Rubble { size } => *size,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -416,14 +498,6 @@ fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
                 .map_err(|error| format!("invalid structure glyphs: {error:?}"))
         })
         .collect::<std::result::Result<BTreeMap<_, _>, _>>()?;
-    if let Some(reserved) = structures
-        .keys()
-        .find(|name| BuiltinFeature::from_kind(name).is_some())
-    {
-        return Err(
-            format!("structure name {reserved:?} is reserved for a builtin feature").into(),
-        );
-    }
     let mut names = std::collections::HashSet::new();
     let hub_name = file
         .hub
@@ -433,7 +507,11 @@ fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
     if !names.insert(hub_name.clone()) {
         return Err(format!("duplicate recipe name: {hub_name}").into());
     }
-    let hub = file.hub.resolve(hub_name, 0, &file.defaults);
+    let defaults = RecipeDefaults {
+        structures: expand_counts(file.defaults.structures.clone()),
+        ..file.defaults
+    };
+    let hub = file.hub.resolve(hub_name, 0, &defaults)?;
     validate_recipe(&hub, &structures)?;
     for seed in 0..=8 {
         build_from_recipe(&hub, seed, &structures)
@@ -463,7 +541,7 @@ fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
         } else {
             entry.weight.unwrap_or(0)
         };
-        let recipe = entry.resolve(name.clone(), weight, &file.defaults);
+        let recipe = entry.resolve(name.clone(), weight, &defaults)?;
         validate_recipe(&recipe, &structures)?;
         for seed in 0..=8 {
             build_from_recipe(&recipe, seed, &structures)
@@ -625,14 +703,12 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
     }
     let mut earlier_names = std::collections::HashSet::new();
     for (index, structure) in recipe.structures.iter().enumerate() {
-        if !structures.contains_key(&structure.kind)
-            && BuiltinFeature::from_kind(&structure.kind).is_none()
+        if let StructureKind::Structure(kind) = &structure.kind
+            && !structures.contains_key(kind)
         {
-            return Err(format!(
-                "recipe {} references unknown structure {}",
-                recipe.name, structure.kind
-            )
-            .into());
+            return Err(
+                format!("recipe {} references unknown structure {kind}", recipe.name).into(),
+            );
         }
         if let StructureAnchor::Structure {
             structure: target, ..
@@ -662,14 +738,7 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
             )
             .into());
         }
-        if let Some(size) = structure.size {
-            if BuiltinFeature::from_kind(&structure.kind).is_none() {
-                return Err(format!(
-                    "recipe {} structure {index} size requires a builtin feature kind",
-                    recipe.name
-                )
-                .into());
-            }
+        if let Some(size) = structure.kind.feature_size() {
             let (minimum, maximum) = match size {
                 FeatureSize::Exact(dimensions) => (dimensions, dimensions),
                 FeatureSize::Ranged(minimum, maximum) => (minimum, maximum),
@@ -688,16 +757,7 @@ fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>)
                 .into());
             }
         }
-        if !matches!(structure.shape, FeatureShape::Square)
-            && BuiltinFeature::from_kind(&structure.kind) != Some(BuiltinFeature::Pond)
-        {
-            return Err(format!(
-                "recipe {} structure {index} shape requires the Pond feature",
-                recipe.name
-            )
-            .into());
-        }
-        let name = resolved_name(&structure.kind, index, &structure.name);
+        let name = resolved_name(structure.kind.label(), index, &structure.name);
         if !earlier_names.insert(name.clone()) {
             return Err(format!("recipe {} repeats structure name {name}", recipe.name).into());
         }
@@ -753,16 +813,19 @@ fn structures_place(
     structures: &BTreeMap<String, Structure>,
     wanted: impl Fn(&PlacementKind) -> bool,
 ) -> bool {
-    recipe.structures.iter().any(|structure_entry| {
-        structures
-            .get(&structure_entry.kind)
-            .is_some_and(|structure| {
-                structure
-                    .placements
-                    .iter()
-                    .any(|placement| wanted(&placement.kind))
-            })
-    })
+    recipe
+        .structures
+        .iter()
+        .filter_map(|structure_entry| match &structure_entry.kind {
+            StructureKind::Structure(kind) => structures.get(kind),
+            _ => None,
+        })
+        .any(|structure| {
+            structure
+                .placements
+                .iter()
+                .any(|placement| wanted(&placement.kind))
+        })
 }
 
 /// Shorthand for fallible map generation results.
@@ -876,35 +939,27 @@ fn place_structures(
     random_generator: &mut ChaCha8Rng,
 ) -> MapResult<()> {
     for (index, entry) in recipe.structures.iter().enumerate() {
-        let resolved_name = resolved_name(&entry.kind, index, &entry.name);
+        let resolved_name = resolved_name(entry.kind.label(), index, &entry.name);
         let rule = structure_rule(entry);
-        let placed_center = match BuiltinFeature::from_kind(&entry.kind) {
-            Some(BuiltinFeature::EmptySquare) => build_empty_square(
+        let placed_center = match &entry.kind {
+            StructureKind::EmptySquare { size } => {
+                build_empty_square(blueprint, placement_context, &rule, *size, random_generator)?
+            }
+            StructureKind::Pond { size, shape } => build_pond(
                 blueprint,
                 placement_context,
                 &rule,
-                entry.size,
+                *size,
+                *shape,
                 random_generator,
             )?,
-            Some(BuiltinFeature::Pond) => build_pond(
-                blueprint,
-                placement_context,
-                &rule,
-                entry.size,
-                entry.shape,
-                random_generator,
-            )?,
-            Some(BuiltinFeature::Rubble) => build_rubble(
-                blueprint,
-                placement_context,
-                &rule,
-                entry.size,
-                random_generator,
-            )?,
-            None => {
-                let structure = structures.get(&entry.kind).ok_or_else(|| {
-                    format!("structure {:?} is missing from the catalog", entry.kind)
-                })?;
+            StructureKind::Rubble { size } => {
+                build_rubble(blueprint, placement_context, &rule, *size, random_generator)?
+            }
+            StructureKind::Structure(kind) => {
+                let structure = structures
+                    .get(kind)
+                    .ok_or_else(|| format!("structure {kind:?} is missing from the catalog"))?;
                 let footprint = structure.tiles.map_size();
                 let placed_origin = place(
                     &rule,
@@ -917,10 +972,7 @@ fn place_structures(
                 .next();
                 if let Some(origin) = placed_origin {
                     apply_structure(blueprint, structure, origin).map_err(|error| {
-                        format!(
-                            "failed to place structure {index} ({:?}): {error}",
-                            entry.kind
-                        )
+                        format!("failed to place structure {index} ({kind:?}): {error}")
                     })?;
                     placement_context.points.extend(
                         structure
@@ -938,8 +990,10 @@ fn place_structures(
             placement_context.record_structure_center(resolved_name, center);
         } else {
             warn!(
-                "Recipe {} seed {} could not place structure {index} ({:?})",
-                recipe.name, seed, entry.kind
+                "Recipe {} seed {} could not place structure {index} ({})",
+                recipe.name,
+                seed,
+                entry.kind.label()
             );
         }
     }
@@ -1226,8 +1280,8 @@ mod tests {
                 continue;
             }
             let width = build(&catalog, recipe, seed).map_size().x;
-            let seen = widths.entry(recipe.name.as_str()).or_insert((u32::MAX, 0));
-            *seen = (seen.0.min(width), seen.1.max(width));
+            let observed = widths.entry(recipe.name.as_str()).or_insert((u32::MAX, 0));
+            *observed = (observed.0.min(width), observed.1.max(width));
         }
         for name in checked {
             let (low, high) = catalog.recipes[name].size_x_range;

@@ -173,11 +173,7 @@ fn spawn_enemy_ai_labels(
                 ..default()
             },
             TextColor::from(Color::WHITE),
-            Transform::from_translation(Vec3::new(
-                0.0,
-                AI_LABEL_HEIGHT,
-                ZLayer::AboveSprite.z(),
-            )),
+            Transform::from_translation(Vec3::new(0.0, AI_LABEL_HEIGHT, ZLayer::AboveSprite.z())),
         ));
     }
 }
@@ -243,18 +239,19 @@ fn cleanup_enemy_ai_labels(
 }
 
 /// One-word name for what the enemy is doing: its current motion, with a
-/// dash's own policy name and a calm enemy's wander or idle beat.
+/// dash's own policy name and a calm enemy's wander or rest beat.
 fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
     match brain.motion() {
-        Motion::Dash => dash.map_or(Motion::Dash.name(), Dash::name),
-        Motion::Calm => {
+        None => "Stopped",
+        Some(Motion::Dash) => dash.map_or(Motion::Dash.name(), Dash::name),
+        Some(Motion::Calm) => {
             if wander.is_some_and(Wander::is_walking) {
                 "Wander"
             } else {
-                "Idle"
+                "Rest"
             }
         }
-        motion => motion.name(),
+        Some(motion) => motion.name(),
     }
 }
 
@@ -317,10 +314,7 @@ fn build_test_arena_blueprint() -> MapBlueprint {
     // Enemy-free lobby opening straight into the hallway's west end.
     if let Some(rect) = TileRect::new(
         IVec2::new(1, hallway_min_y - 2),
-        UVec2::new(
-            ARENA_LOBBY_TILES as u32,
-            (ARENA_HALLWAY_TILES + 4) as u32,
-        ),
+        UVec2::new(ARENA_LOBBY_TILES as u32, (ARENA_HALLWAY_TILES + 4) as u32),
     ) {
         blueprint.tiles.fill_rect(&rect, TileKind::Ground);
     }
@@ -387,11 +381,7 @@ fn build_test_arena_blueprint() -> MapBlueprint {
         &mut blueprint,
         0,
         1,
-        &[
-            EnemyKind::Warrior,
-            EnemyKind::FireMage,
-            EnemyKind::IceMage,
-        ],
+        &[EnemyKind::Warrior, EnemyKind::FireMage, EnemyKind::IceMage],
         1,
     );
     place_enemies(

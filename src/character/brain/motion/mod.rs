@@ -3,8 +3,8 @@
 //!
 //! [`super`] decides at ~10 Hz what to do; this module drives every frame how
 //! to move. Each behavior owns its component, its memory and its steering in
-//! one file: [`approach`] (stateless), [`strafe`], [`wander`], [`dash`],
-//! [`swoop`] and [`cast_plant`]. The memories are opt-in capabilities that
+//! one file: [`strafe`], [`wander`], [`dash`] and [`swoop`]. The
+//! stateless steering lives here. The memories are opt-in capabilities that
 //! persist across motion switches, so they stay separate components rather than
 //! one enum.
 //!
@@ -15,8 +15,6 @@
 //! [`MotionAborted`], never by
 //! writing decision state.
 
-mod approach;
-mod cast_plant;
 mod dash;
 mod strafe;
 mod swoop;
@@ -24,21 +22,21 @@ mod wander;
 
 use bevy::{ecs::query::QueryData, prelude::*};
 
-pub use cast_plant::CastPlant;
 pub use dash::Dash;
 pub use strafe::Strafe;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
-use super::{ActiveMotion, Brain, BrainRng, Motion, Tuning};
+use super::{ActiveMotion, Brain, BrainRng, Interval, Motion, Tuning};
 use crate::character::{
     anchor::Anchor,
     state::SimpleMotion,
     vision::{TargetInfo, Targeting},
 };
-use crate::prelude::{AttackState, TILE_SIZE};
+use crate::prelude::TILE_SIZE;
 
 pub(crate) const ANCHOR_ARRIVAL_RADIUS: f32 = TILE_SIZE as f32 / 2.0;
+const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
 /// Maximum turn rate in radians per second. Absent means snap.
 #[derive(Component, Clone, Copy, Debug)]
@@ -68,10 +66,29 @@ pub(super) struct SteerInput<'a> {
     pub anchor: Option<&'a Anchor>,
 }
 
+impl SteerInput<'_> {
+    /// Straight at the target, when it has a usable bearing.
+    pub(super) fn direction_to_target(&self) -> Option<Vec2> {
+        let direction = self.target_info.map_or(Vec2::ZERO, |info| info.direction);
+        (direction.length_squared() > f32::EPSILON).then_some(direction)
+    }
+
+    /// Straight away from the target.
+    fn direction_from_target(&self) -> Option<Vec2> {
+        self.direction_to_target().map(|direction| -direction)
+    }
+
+    /// Toward the anchor until the arrival radius.
+    fn direction_to_anchor(&self) -> Option<Vec2> {
+        let to_anchor = self.anchor?.origin() - self.position;
+        (to_anchor.length() > ANCHOR_ARRIVAL_RADIUS).then_some(to_anchor.normalize_or_zero())
+    }
+}
+
 /// How hard to push along the steered heading: a fraction of max speed for
 /// continuous motions, a multiple for committed bursts.
 #[derive(Clone, Copy)]
-pub(super) enum Effort {
+pub(super) enum SteeringEffort {
     Scaled(f32),
     Boosted(f32),
 }
@@ -81,7 +98,7 @@ pub(super) enum MotionStep {
     /// Still running: steer this way.
     Steer {
         direction: Option<Vec2>,
-        effort: Effort,
+        effort: SteeringEffort,
     },
     /// Ended this frame; the brain has not heard yet.
     Finished,
@@ -105,7 +122,7 @@ pub(super) struct RunTag {
 /// the only thing it can mutate.
 pub(super) struct MotionContext<'a, 'w> {
     pub input: &'a SteerInput<'w>,
-    pub motion: &'a SimpleMotion,
+    pub movement: &'a SimpleMotion,
     pub delta_secs: f32,
     pub rng: &'a mut BrainRng,
 }
@@ -113,11 +130,11 @@ pub(super) struct MotionContext<'a, 'w> {
 impl MotionContext<'_, '_> {
     /// World units one straight-run steering step may consume this frame.
     /// Stunned bodies hold still so committed passes neither advance nor finish.
-    pub fn run_step(&self, speed_boost: f32) -> f32 {
-        if self.motion.is_stunned() {
+    pub fn distance_this_frame(&self, speed_boost: f32) -> f32 {
+        if self.movement.is_stunned() {
             0.0
         } else {
-            self.motion.max_speed * speed_boost * self.motion.speed_scale() * self.delta_secs
+            self.movement.max_speed * speed_boost * self.movement.speed_scale() * self.delta_secs
         }
     }
 }
@@ -166,7 +183,7 @@ impl FiniteMotionsItem<'_, '_> {
     fn sync(&mut self, active: Option<ActiveMotion>, now: f32) {
         for executor in self.executors() {
             let epoch = active
-                .filter(|active| active.motion == executor.motion())
+                .filter(|active| active.motion.index() == executor.motion().index())
                 .map(|active| active.epoch);
             if executor.tag().epoch != epoch {
                 executor.reset(now);
@@ -181,7 +198,7 @@ impl FiniteMotionsItem<'_, '_> {
     /// Runs the executor for `motion`, if this entity has one.
     fn step(&mut self, motion: Motion, context: &mut MotionContext) -> Option<MotionStep> {
         self.executors()
-            .find(|executor| executor.motion() == motion)
+            .find(|executor| executor.motion().index() == motion.index())
             .map(|executor| executor.step(context))
     }
 
@@ -211,63 +228,52 @@ impl FiniteMotionsReadOnlyItem<'_, '_> {
 /// Everything one steered character needs this frame.
 #[derive(QueryData)]
 #[query_data(mutable)]
-pub(super) struct Steered {
+pub(super) struct SteeredCharacter {
     entity: Entity,
     brain: &'static Brain,
     rng: &'static mut BrainRng,
-    motion: &'static mut SimpleMotion,
+    movement: &'static mut SimpleMotion,
     transform: &'static Transform,
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
     anchor: Option<&'static Anchor>,
     turn_rate: Option<&'static TurnRate>,
-    attack_state: Option<&'static AttackState>,
     finite_motions: FiniteMotions,
     wander: Option<&'static mut Wander>,
     strafe: Option<&'static mut Strafe>,
-    cast_plant: Option<&'static mut CastPlant>,
 }
 
-pub(super) fn drive_motion(
+pub(super) fn steer_characters_from_brain_motion(
     time: Res<Time<Virtual>>,
-    mut characters: Query<Steered>,
+    mut characters: Query<SteeredCharacter>,
     mut commands: Commands,
 ) {
     let now = time.elapsed_secs();
     let delta_secs = time.delta_secs();
 
     for character in &mut characters {
-        let SteeredItem {
+        let SteeredCharacterItem {
             entity,
             brain,
             mut rng,
-            mut motion,
+            mut movement,
             transform,
             target_info,
             has_target,
             anchor,
             turn_rate,
-            attack_state,
             mut finite_motions,
             mut wander,
             mut strafe,
-            mut cast_plant,
         } = character;
 
         let active = brain.active_motion();
         finite_motions.sync(active, now);
 
-        // Casters plant through the read of their own wind-up. Keeping this
-        // ahead of the steering also means a committed burst or slide
-        // cannot drag the caster out from under a staff that is already firing.
-        let attacking = attack_state.is_some_and(|state| state.is_attacking);
-        let planted = cast_plant
-            .as_deref_mut()
-            .is_some_and(|plant| plant.update(attacking, now));
-        let missing_target = (active.is_some() || brain.motion().needs_target())
+        let missing_target = brain.motion().is_some_and(Motion::needs_target)
             && (!has_target || target_info.is_none());
-        if planted || missing_target {
-            stop(&mut motion);
+        if missing_target {
+            halt_movement(&mut movement);
             continue;
         }
 
@@ -282,36 +288,41 @@ pub(super) fn drive_motion(
         if let Some(active) = active {
             let mut context = MotionContext {
                 input: &input,
-                motion: &motion,
+                movement: &movement,
                 delta_secs,
                 rng: &mut rng,
             };
             match finite_motions.step(active.motion, &mut context) {
                 Some(MotionStep::Steer { direction, effort }) => {
-                    drive(&mut motion, direction, effort, turn_cap);
+                    apply_steering_to_movement(&mut movement, direction, effort, turn_cap);
                     continue;
                 }
                 // Fall through to steering this frame so the body never
                 // coasts for a frame between a finite motion and its settle-out.
+                // Hold the last steer for this frame: the brain decides again at
+                // the next sync point, so the body never stops for a frame
+                // between a locked motion and the behavior that follows.
                 Some(MotionStep::Finished) => {
                     commands.trigger(MotionFinished {
                         entity,
                         motion: active.motion,
                     });
+                    continue;
                 }
                 Some(MotionStep::Aborted) => {
                     commands.trigger(MotionAborted {
                         entity,
                         motion: active.motion,
                     });
+                    continue;
                 }
                 Some(MotionStep::Spent) | None => {}
             }
         }
 
         let recovery_boost = finite_motions.recovery_boost(now);
-        let (direction, effort) = steer_motion(
-            brain.continuous_motion,
+        let (direction, effort) = steer_continuous_motion(
+            brain.motion(),
             &input,
             MotionMemory {
                 wander: wander.as_deref_mut(),
@@ -320,7 +331,7 @@ pub(super) fn drive_motion(
             },
             &mut rng,
         );
-        drive(&mut motion, direction, effort, turn_cap);
+        apply_steering_to_movement(&mut movement, direction, effort, turn_cap);
     }
 }
 
@@ -334,76 +345,108 @@ struct MotionMemory<'a> {
 }
 
 /// Where and how hard the current continuous motion wants to push.
-fn steer_motion(
-    motion: Motion,
+fn steer_continuous_motion(
+    motion: Option<Motion>,
     input: &SteerInput,
     memory: MotionMemory,
     rng: &mut BrainRng,
-) -> (Option<Vec2>, Effort) {
+) -> (Option<Vec2>, SteeringEffort) {
     let MotionMemory {
         mut wander,
         strafe,
         recovery_boost,
     } = memory;
-    if motion != Motion::Calm
+    if motion != Some(Motion::Calm)
         && let Some(wander) = wander.as_deref_mut()
     {
         wander.leave_calm();
     }
+    // An empty slot stands still, the same as an idle motion.
+    let Some(motion) = motion else {
+        return (None, SteeringEffort::Scaled(1.0));
+    };
     match motion {
-        Motion::Hold => (None, Effort::Scaled(1.0)),
-        Motion::Chase => (approach::chase(input), Effort::Scaled(1.0)),
+        Motion::Idle => (None, SteeringEffort::Scaled(1.0)),
+        Motion::Chase => (input.direction_to_target(), SteeringEffort::Scaled(1.0)),
         // Still in the fight: run from the target, not toward home.
         // Going home happens only once the target is lost.
-        Motion::Flee => (approach::flee(input), Effort::Scaled(1.0)),
-        Motion::ReturnToAnchor => (approach::home(input), Effort::Scaled(1.0)),
-        Motion::KeepDistance(keep_band) => (
-            approach::keep_distance(input, keep_band, wander, rng),
-            Effort::Boosted(recovery_boost),
+        Motion::Flee => (input.direction_from_target(), SteeringEffort::Scaled(1.0)),
+        Motion::ReturnToAnchor => (input.direction_to_anchor(), SteeringEffort::Scaled(1.0)),
+        Motion::KeepDistance(distance_range) => (
+            steer_to_hold_distance_range(input, distance_range, wander, rng),
+            SteeringEffort::Boosted(recovery_boost),
         ),
-        Motion::Strafe(band) => (
-            strafe::steer(input, strafe, band, rng, recovery_boost > 1.0),
-            Effort::Boosted(recovery_boost),
+        Motion::Strafe(distance_range) => (
+            strafe::steer(input, strafe, distance_range, rng, recovery_boost > 1.0),
+            SteeringEffort::Boosted(recovery_boost),
         ),
         Motion::Calm => {
             let direction = wander::steer(input, wander.as_deref_mut(), rng);
             let scale = wander::speed_scale(wander.as_deref());
-            (direction, Effort::Scaled(scale))
+            (direction, SteeringEffort::Scaled(scale))
         }
         // Finite motions steer through their executors, never as the continuous motion.
-        Motion::Dash | Motion::Swoop => (None, Effort::Scaled(1.0)),
+        Motion::Dash | Motion::Swoop => (None, SteeringEffort::Scaled(1.0)),
     }
 }
 
-fn stop(motion: &mut SimpleMotion) {
-    if !motion.is_idle() {
-        motion.stop_moving();
+/// Holds the band; a small deadband keeps the arrival from flickering.
+fn steer_to_hold_distance_range(
+    input: &SteerInput,
+    distance_range: Interval,
+    wander: Option<&mut Wander>,
+    random: &mut BrainRng,
+) -> Option<Vec2> {
+    let distance = input.target_info.map_or(0.0, |info| info.distance);
+    let Some(direction) = input.direction_to_target() else {
+        if distance < distance_range.min() {
+            return Some(wander?.jitter(input.now, random));
+        }
+        return None;
+    };
+    let error = distance_range.error(distance);
+    if error.abs() < KEEP_ARRIVAL_DEADBAND {
+        None
+    } else if error < 0.0 {
+        Some(-direction)
+    } else {
+        Some(direction)
     }
 }
 
-fn drive(
-    motion: &mut SimpleMotion,
+fn halt_movement(movement: &mut SimpleMotion) {
+    if !movement.is_idle() {
+        movement.stop_moving();
+    }
+}
+
+fn apply_steering_to_movement(
+    movement: &mut SimpleMotion,
     direction: Option<Vec2>,
-    effort: Effort,
+    effort: SteeringEffort,
     turn_cap: Option<f32>,
 ) {
     let Some(desired) = direction else {
-        stop(motion);
+        halt_movement(movement);
         return;
     };
-    let heading = turn_towards(motion, desired, turn_cap);
+    let heading = rotate_heading_toward_desired(movement, desired, turn_cap);
     match effort {
-        Effort::Scaled(scale) => motion.start_moving_scaled(heading, scale),
-        Effort::Boosted(speed_boost) => motion.start_moving_boosted(heading, speed_boost),
+        SteeringEffort::Scaled(scale) => movement.start_moving_scaled(heading, scale),
+        SteeringEffort::Boosted(speed_boost) => movement.start_moving_boosted(heading, speed_boost),
     }
 }
 
-fn turn_towards(motion: &SimpleMotion, desired: Vec2, turn_cap: Option<f32>) -> Vec2 {
+fn rotate_heading_toward_desired(
+    movement: &SimpleMotion,
+    desired: Vec2,
+    turn_cap: Option<f32>,
+) -> Vec2 {
     if let Some(max_angle) = turn_cap
-        && motion.direction.length_squared() > f32::EPSILON
+        && movement.direction.length_squared() > f32::EPSILON
         && desired.length_squared() > f32::EPSILON
     {
-        motion.direction.rotate_towards(desired, max_angle)
+        movement.direction.rotate_towards(desired, max_angle)
     } else {
         desired
     }

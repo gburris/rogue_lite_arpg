@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::AbilityCapability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, ActionIntent, Brain, Cooldown, Tuning},
+        brain::{Ability, Action, ActionFinished, Brain, Cooldown, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -61,13 +61,12 @@ impl AbilityCapability for Bite {
 }
 
 /// Lands a bite when the brain wants one and the target is within the true
-/// reach. The decision tick only arms the intent.
+/// reach. The decision tick only arms the action.
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     biters: Query<(
         Entity,
-        &ActionIntent,
         &Brain,
         &Bite,
         &Targeting,
@@ -76,8 +75,10 @@ pub(super) fn apply_bite(
     )>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, brain, bite, targeting, target_info, health) in &biters {
-        if !intent.get(Action::Ability(Ability::Bite)) || !brain.is_ready(Cooldown::Ability(Ability::Bite), now) {
+    for (entity, brain, bite, targeting, target_info, health) in &biters {
+        if brain.action() != Some(Action::Ability(Ability::Bite))
+            || !brain.is_cooldown_ready(Cooldown::Ability(Ability::Bite), now)
+        {
             continue;
         }
         if !target_info.distance.is_finite() || target_info.distance > bite.reach {

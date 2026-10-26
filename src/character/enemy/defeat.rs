@@ -11,7 +11,6 @@ use crate::{
 use crate::prelude::GoldDrop;
 
 use super::{Enemy, Experience};
-use crate::character::brain::ActionIntent;
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
@@ -64,7 +63,7 @@ pub(super) fn on_enemy_defeated(
         commands
             .entity(defeated.entity)
             .insert(Lifespan::new(2.0))
-            .remove::<(RigidBody, Brain, ActionIntent)>()
+            .remove::<(RigidBody, Brain)>()
             .despawn_related::<Children>();
     }
 }

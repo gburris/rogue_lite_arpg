@@ -1,7 +1,7 @@
 //! Core data types for the utility brains.
 //!
 //! This module only holds plain data: what a brain can sense
-//! ([`DecisionContext`]), what it can choose ([`Motion`], [`Action`]), and
+//! ([`DecisionContext`]), what it can choose ([`Behavior`]: a [`Motion`] and/or an [`Action`]), and
 //! the static definitions it scores against ([`BrainDefinition`]). It knows nothing about
 //! ECS; [`super`] wires these types to components, [`super::scoring`] holds
 //! the math, [`super::considerations`] holds what brains can sense, and
@@ -17,18 +17,19 @@ pub const MELEE_RANGE: f32 = 64.0;
 pub const CAST_MIN_RANGE: f32 = 200.0;
 /// Preferred maximum distance a ranged or flying brain keeps from its target.
 pub const CAST_MAX_RANGE: f32 = 360.0;
-pub const MELEE_BAND: Interval = Interval::new(0.0, MELEE_RANGE);
-pub const CAST_BAND: Interval = Interval::new(CAST_MIN_RANGE, CAST_MAX_RANGE);
-/// Core of the cast band where shot quality stays full.
-pub const CAST_CORE_BAND: Interval = Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
+pub const MELEE_DISTANCE_RANGE: Interval = Interval::new(0.0, MELEE_RANGE);
+pub const CAST_DISTANCE_RANGE: Interval = Interval::new(CAST_MIN_RANGE, CAST_MAX_RANGE);
+/// Core of the cast distance range where shot quality stays full.
+pub const CAST_CORE_DISTANCE_RANGE: Interval =
+    Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 /// Distance a caster opens before it stops casting to regenerate mana.
-pub const RECOVERY_BAND: Interval = Interval::new(300.0, 340.0);
+pub const RECOVERY_DISTANCE_RANGE: Interval = Interval::new(300.0, 340.0);
 /// Distance from the target at which a wounded warrior may drink its potion.
 pub const HEAL_SAFE_DISTANCE: f32 = 200.0;
 /// Speed below which a target counts as holding still rather than orbiting.
 pub const TARGET_MOVING_SPEED: f32 = 20.0;
 
-/// An ordered `min < max` interval: a distance band, a consideration's input
+/// An ordered `min < max` interval: a distance range, a consideration's input
 /// range, or a span of seconds to roll from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Interval {
@@ -97,9 +98,11 @@ pub enum Motion {
     /// Wounded break: still in the fight, just getting away from the target.
     Flee,
     KeepDistance(Interval),
-    /// Plants in place with a live target: the ice mage's firing stance.
-    Hold,
-    /// Firing-line sidestep: orbits the target inside the band while
+    /// Stands still on purpose. Scored like any motion, so it can win the
+    /// slot and keep momentum; an empty slot also stands still, but nothing
+    /// chose it.
+    Idle,
+    /// Firing-line sidestep: orbits the target inside the distance range while
     /// equipment stays hot.
     Strafe(Interval),
     /// Committed straight run; the `Dash` component's policy sets its aim.
@@ -112,10 +115,11 @@ impl Motion {
     /// Number of distinct motions, for per-motion arrays.
     pub const COUNT: usize = 9;
 
-    /// Every finite motion, the ones that need a capability to carry out.
+    /// Every finite motion, the ones that need a capability to carry out. A
+    /// payload here only stands in; arrays index by variant.
     pub const FINITE: [Self; 2] = [Self::Dash, Self::Swoop];
 
-    /// Position of this motion in per-motion arrays, ignoring any band.
+    /// Position of this motion in per-motion arrays, ignoring any distance range.
     pub const fn index(self) -> usize {
         match self {
             Self::Calm => 0,
@@ -123,7 +127,7 @@ impl Motion {
             Self::ReturnToAnchor => 2,
             Self::Flee => 3,
             Self::KeepDistance(_) => 4,
-            Self::Hold => 5,
+            Self::Idle => 5,
             Self::Strafe(_) => 6,
             Self::Dash => 7,
             Self::Swoop => 8,
@@ -143,7 +147,6 @@ impl Motion {
             self,
             Self::Chase
                 | Self::KeepDistance(_)
-                | Self::Hold
                 | Self::Strafe(_)
                 | Self::Flee
                 | Self::Dash
@@ -159,7 +162,7 @@ impl Motion {
             Self::ReturnToAnchor => "Return",
             Self::Flee => "Flee",
             Self::KeepDistance(_) => "Keep",
-            Self::Hold => "Hold",
+            Self::Idle => "Idle",
             Self::Strafe(_) => "Strafe",
             Self::Dash => "Dash",
             Self::Swoop => "Swoop",
@@ -184,8 +187,8 @@ impl Ability {
     pub const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
 }
 
-/// What the independent action layer can request. Each action fires on its
-/// own whenever one of its decisions scores.
+/// The one non-movement thing a character does at a time: use equipment or an
+/// ability.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Use the item equipped in a slot.
@@ -202,6 +205,45 @@ impl Action {
         match self {
             Self::Use(slot) => slot as usize,
             Self::Ability(ability) => EquipmentSlot::ALL.len() + ability as usize,
+        }
+    }
+}
+
+/// One candidate a brain can choose: how the character moves, what it does,
+/// and how firmly it holds on. A behavior claims the motion slot, the action
+/// slot, or both.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Behavior {
+    pub motion: Option<Motion>,
+    pub action: Option<Action>,
+    pub commit: CommitPolicy,
+}
+
+/// How firmly a behavior holds its slots once it wins them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CommitPolicy {
+    /// Re-scored every tick; the holder gets momentum and exit-side thresholds.
+    Momentum,
+    /// Not re-scored until its finite parts finish or an abort guard fails.
+    /// Even then it holds for at least `min_seconds` from its start, so a
+    /// short action still leaves a beat before the next move.
+    Lock { min_seconds: f32 },
+}
+
+impl CommitPolicy {
+    /// A lock with no minimum hold.
+    pub const LOCK: Self = Self::Lock { min_seconds: 0.0 };
+
+    /// Whether this is [`CommitPolicy::Lock`].
+    pub const fn is_lock(self) -> bool {
+        matches!(self, Self::Lock { .. })
+    }
+
+    /// Shortest time a lock holds its slots; zero for momentum.
+    pub const fn min_seconds(self) -> f32 {
+        match self {
+            Self::Lock { min_seconds } => min_seconds,
+            Self::Momentum => 0.0,
         }
     }
 }
@@ -262,8 +304,8 @@ pub struct DecisionContext {
     pub stunned: bool,
     /// An attack finished on the last tick; finite motions key their start off this.
     pub attack_finished: bool,
-    /// The motion currently driving the body: a running finite motion, else the continuous one.
-    pub motion: Motion,
+    /// The motion slot's holder, or `None` while the slot is empty.
+    pub motion: Option<Motion>,
     /// Whether a caster is running out a held mana break.
     pub mana_recovering: bool,
     /// `None` for a finite motion this entity has no capability for.
@@ -285,7 +327,7 @@ impl Default for DecisionContext {
             anchor_arrived: None,
             stunned: false,
             attack_finished: false,
-            motion: Motion::Calm,
+            motion: None,
             mana_recovering: false,
             motion_tuning: [None; Motion::COUNT],
             motion_ready: [false; Motion::COUNT],
@@ -307,21 +349,18 @@ impl DecisionContext {
     }
 }
 
-/// A complete static brain: one decision list per layer.
+/// A complete static brain: the list of behaviors it scores.
 #[derive(Debug)]
 pub struct BrainDefinition {
-    /// Exclusive layer: the best decision wins, and the current continuous motion keeps momentum.
-    pub movement: &'static [Decision<Motion>],
-    /// Independent layer: every action with a scoring decision fires.
-    pub actions: &'static [Decision<Action>],
+    pub behaviors: &'static [Decision<Behavior>],
     /// Farthest target distance at which equipment use may fire. Scored as
     /// the equipment's reach and re-checked live by the applier. `None` means
     /// the brain never uses equipment.
     pub equipment_reach: Option<f32>,
 }
 
-/// One scored candidate on a layer: an action, its weight, and the
-/// considerations whose geometric mean scales that weight.
+/// One scored candidate: a value, its weight, and the considerations whose
+/// geometric mean scales that weight.
 #[derive(Clone, Copy, Debug)]
 pub struct Decision<T> {
     pub value: T,
@@ -333,7 +372,7 @@ pub struct Decision<T> {
 #[derive(Clone, Copy, Debug)]
 pub struct Consideration {
     pub name: &'static str,
-    pub read: fn(&DecisionContext) -> Option<f32>,
+    pub extract_raw_input: fn(&DecisionContext) -> Option<f32>,
     pub response: Response,
     /// Scores `1 - response` instead, so one reader serves a fact and its opposite.
     pub inverted: bool,
@@ -350,20 +389,20 @@ impl Consideration {
     }
 }
 
-/// How a consideration turns its raw reading into a `0.0..=1.0` score.
+/// How a consideration turns its raw input into a `0.0..=1.0` score.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Response {
     /// Normalize over `range`, then shape with `curve`.
     Curve { range: Interval, curve: Curve },
-    /// Full once the reading crosses `enter`, zero before it. While its
+    /// Full once the raw input crosses `enter`, zero before it. While its
     /// decision is current the threshold is `exit` instead, so the gap holds
-    /// the decision. `exit < enter` passes readings at or above the threshold;
-    /// otherwise, including no gap at all, it passes readings at or below it.
+    /// the decision. `exit < enter` passes raw inputs at or above the threshold;
+    /// otherwise, including no gap at all, it passes raw inputs at or below it.
     Threshold { enter: f32, exit: f32 },
 }
 
 impl Response {
-    /// Score for `raw`, or `None` for a non-finite reading.
+    /// Score for `raw`, or `None` for a non-finite raw input.
     pub fn score(self, raw: f32, is_current: bool) -> Option<f32> {
         match self {
             Self::Curve { range, curve } => range.normalize(raw).map(|value| curve.apply(value)),

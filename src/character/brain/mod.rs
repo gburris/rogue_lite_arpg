@@ -2,22 +2,22 @@
 //!
 //! The vocabulary is standard infinite axis utility:
 //! - A [`DecisionContext`] is everything a brain knows this tick.
-//! - A [`Consideration`] reads one input from it and maps it to `0.0..=1.0`.
-//! - A [`Decision`] pairs an action with a weight and its considerations.
-//! - A layer is a list of decisions with a selection rule. The movement layer
-//!   is exclusive: the best [`Motion`] wins, and the current continuous motion keeps
-//!   momentum. The action layer is independent: every [`Action`] with a
-//!   scoring decision fires.
+//! - A [`Consideration`] extracts one raw input from it and maps it to `0.0..=1.0`.
+//! - A [`Decision`] pairs a [`Behavior`] with a weight and its considerations.
+//!   A behavior is a [`Motion`] and/or an [`Action`] plus a [`CommitPolicy`].
+//! - A brain holds at most one motion and one action at a time. Behaviors take
+//!   those two slots greedily from the highest score down; a holder keeps
+//!   momentum, and a locked holder is not re-scored at all.
 //!
 //! Data flows one way around the loop, and every piece of data has one writer:
 //! 1. [`senses`] writes a [`DecisionContext`] from world state and from the
 //!    capability components the entity carries.
-//! 2. [`decide`] runs both layers with the pure [`scoring`] math and writes
-//!    only intents: the [`Brain`]'s motion, and [`ActionIntent`].
-//! 3. Executors read those intents. [`motion`] steers the body and reports a
-//!    [`MotionFinished`] event, which releases the motion and decides again at
-//!    once; [`execute`] and the `ability` module apply equipment and ability
-//!    use, and signal [`ActionFinished`] when a use ends.
+//! 2. [`decide`] runs the pure [`scoring`] math and writes only which
+//!    behavior holds each slot on the [`Brain`].
+//! 3. Executors read the held motion and action. [`motion`] steers the body and
+//!    reports a [`MotionFinished`] event, which releases the motion and
+//!    decides again at once; [`execute`] and the `ability` module apply
+//!    equipment and ability use, and signal [`ActionFinished`] when a use ends.
 //!
 //! The brains themselves never see an `Entity`: [`model`] holds their data,
 //! [`scoring`] holds the math, [`considerations`] holds what they can sense,
@@ -28,16 +28,16 @@
 //! 2. [`motion`]: a behavior file with its component (tuning as pub fields,
 //!    memory as private fields) and a steering function.
 //! 3. [`model::DecisionContext`] fields filled in [`senses`], plus
-//!    [`considerations`] readers.
-//! 4. [`brains`]: movement decisions over the motion.
-//! 5. An arm in `motion::steer_motion`.
+//!    [`considerations`] input extractors.
+//! 4. [`brains`]: behaviors over the motion.
+//! 5. An arm in `motion::steer_continuous_motion`.
 //!
 //! A committed move is a finite [`Motion`] instead: a variant, a capability
 //! component in [`motion`] that implements `MotionExecutor` and is listed in
-//! `motion::FiniteMotions`, and a movement decision over it. A new ability is the
+//! `motion::FiniteMotions`, and a locked behavior over it. A new ability is the
 //! same shape: an [`Ability`] variant, a capability component in `ability`
 //! that implements `AbilityCapability` and is listed in
-//! `AbilityCapabilities`, an applier, and action decisions over it.
+//! `AbilityCapabilities`, an applier, and action behaviors over it.
 
 mod ability;
 mod brains;
@@ -54,14 +54,15 @@ pub use brains::{BAT, FIRE_MAGE, ICE_MAGE, VILLAGER, WARRIOR};
 pub use model::{
     Ability, Action, BrainDefinition, CAST_MAX_RANGE, CAST_MIN_RANGE, Interval, Motion, Tuning,
 };
-pub use motion::{CastPlant, Dash, Strafe, Swoop, TurnRate, Wander};
+pub use motion::{Dash, Strafe, Swoop, TurnRate, Wander};
 
 use self::decide::{
-    abort_failed_motion, decide_behavior, release_finished_motion, start_ability_cooldown,
+    abort_failed_action, abort_failed_motion, decide_behavior, finish_action,
+    release_finished_motion,
 };
-use self::execute::apply_slot_requests;
+use self::execute::{StartedLockedEquipmentUse, apply_equipment_use_requests};
 use self::model::*;
-use self::motion::drive_motion;
+use self::motion::steer_characters_from_brain_motion;
 use self::scoring::*;
 use self::senses::{Perception, sense};
 
@@ -79,15 +80,34 @@ use crate::{
 
 use super::AiSet;
 
-/// A finite motion the brain started, stamped with a fresh epoch so an
+/// A locked motion as executors see it, stamped with a fresh epoch so an
 /// executor can tell a new run of the same motion from the one it just finished.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ActiveMotion {
     motion: Motion,
     epoch: u32,
+}
+
+/// A locked action as the equipment applier sees it, stamped like [`ActiveMotion`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ActiveAction {
+    action: Action,
+    epoch: u32,
+}
+
+/// A behavior that won a slot, and how far its run has progressed. A bundle
+/// holds both slots, one record each.
+#[derive(Clone, Copy, Debug)]
+struct RunningBehavior {
+    /// Index into the definition; the identity momentum is keyed on.
+    behavior: usize,
+    epoch: u32,
+    locked: bool,
     started_at: f32,
     /// When line of sight to the target was first lost, while it stays lost.
     los_lost_since: Option<f32>,
+    /// This slot's finite part reported done.
+    finished: bool,
 }
 
 /// Something a brain spaces out: a finite motion or an ability.
@@ -109,30 +129,29 @@ impl Cooldown {
 }
 
 /// A character's utility brain: which static definition it scores against, the
-/// motion it is driving, and its decision timers.
+/// behaviors holding its motion and action slots, and its cooldowns.
 ///
 /// The definition never changes after spawn; decisions rewrite the rest at
-/// 10 Hz. Only the decision tick writes it: executors get a read-only view and
-/// answer with [`MotionFinished`]. Randomness lives apart, in [`BrainRng`].
+/// 10 Hz. Only the decision side writes it: executors get a read-only view and
+/// answer with [`MotionFinished`], [`MotionAborted`], [`ActionFinished`] or
+/// [`ActionAborted`]. Randomness lives apart, in [`BrainRng`].
 #[derive(Component, Debug)]
-#[require(Perception, ActionIntent, BrainRng)]
+#[require(Perception, BrainRng, StartedLockedEquipmentUse)]
 pub struct Brain {
     definition: &'static BrainDefinition,
-    /// The continuous motion underneath any running finite motion: it holds
-    /// momentum and steers the frames around one.
-    continuous_motion: Motion,
-    active: Option<ActiveMotion>,
+    motion: Option<RunningBehavior>,
+    action: Option<RunningBehavior>,
     next_epoch: u32,
     ready_at: [f32; Cooldown::COUNT],
 }
 
 impl Brain {
-    /// Starts `definition` calm.
+    /// Starts `definition` with both slots empty.
     pub fn new(definition: &'static BrainDefinition) -> Self {
         Self {
             definition,
-            continuous_motion: Motion::Calm,
-            active: None,
+            motion: None,
+            action: None,
             next_epoch: 0,
             ready_at: [0.0; Cooldown::COUNT],
         }
@@ -143,18 +162,50 @@ impl Brain {
         self.definition
     }
 
-    /// The motion currently driving the body: the running finite motion if
-    /// there is one, otherwise the continuous motion.
-    pub fn motion(&self) -> Motion {
-        self.active
-            .map_or(self.continuous_motion, |active| active.motion)
+    /// The motion currently driving the body: the motion slot's holder, or
+    /// `None` while the slot is empty and the body stands still.
+    pub fn motion(&self) -> Option<Motion> {
+        self.motion
+            .and_then(|running| self.behavior(running).motion)
     }
 
+    /// The action the brain currently wants performed, if any.
+    pub fn action(&self) -> Option<Action> {
+        self.action
+            .and_then(|running| self.behavior(running).action)
+    }
+
+    fn behavior(&self, running: RunningBehavior) -> Behavior {
+        self.definition.behaviors[running.behavior].value
+    }
+
+    /// The locked motion an executor is carrying out, if any.
     fn active_motion(&self) -> Option<ActiveMotion> {
-        self.active
+        let running = self.motion.filter(|running| running.locked)?;
+        Some(ActiveMotion {
+            motion: self.behavior(running).motion?,
+            epoch: running.epoch,
+        })
     }
 
-    fn is_ready(&self, cooldown: Cooldown, now: f32) -> bool {
+    /// The locked action an applier is carrying out, if any.
+    fn active_action(&self) -> Option<ActiveAction> {
+        let running = self.action.filter(|running| running.locked)?;
+        Some(ActiveAction {
+            action: self.behavior(running).action?,
+            epoch: running.epoch,
+        })
+    }
+
+    /// A run holding a lock. A bundle holds both slots, so either record serves.
+    fn locked_running_behavior_mut(&mut self) -> Option<&mut RunningBehavior> {
+        self.motion
+            .as_mut()
+            .filter(|running| running.locked)
+            .or(self.action.as_mut().filter(|running| running.locked))
+    }
+
+    fn is_cooldown_ready(&self, cooldown: Cooldown, now: f32) -> bool {
         now >= self.ready_at[cooldown.index()]
     }
 
@@ -163,31 +214,127 @@ impl Brain {
         self.ready_at[cooldown.index()] = ready_at;
     }
 
-    fn start_motion(&mut self, motion: Motion, now: f32) {
+    fn holders(&self) -> SlotHolders {
+        let holder = |running: RunningBehavior| SlotHolder {
+            behavior: running.behavior,
+            locked: running.locked,
+        };
+        SlotHolders {
+            motion: self.motion.map(holder),
+            action: self.action.map(holder),
+        }
+    }
+
+    /// Hands each slot to the behavior that won it. A slot nothing claimed
+    /// empties unless a lock holds it.
+    fn assign_slots(&mut self, assignment: Assignment, now: f32) {
+        match assignment.motion {
+            Some(index) => self.motion = self.run(self.motion, index, now),
+            None if self.motion.is_none_or(|running| !running.locked) => self.motion = None,
+            None => {}
+        }
+        match assignment.action {
+            Some(index) => self.action = self.run(self.action, index, now),
+            None if self.action.is_none_or(|running| !running.locked) => self.action = None,
+            None => {}
+        }
+    }
+
+    /// The run of behavior `index`: the current one if it already holds the
+    /// slot, otherwise a fresh one stamped with a new epoch.
+    fn run(
+        &mut self,
+        current: Option<RunningBehavior>,
+        index: usize,
+        now: f32,
+    ) -> Option<RunningBehavior> {
+        if current.is_some_and(|running| running.behavior == index) {
+            return current;
+        }
         self.next_epoch = self.next_epoch.wrapping_add(1);
-        self.active = Some(ActiveMotion {
-            motion,
+        Some(RunningBehavior {
+            behavior: index,
             epoch: self.next_epoch,
+            locked: self.definition.behaviors[index].value.commit.is_lock(),
             started_at: now,
             los_lost_since: None,
-        });
+            finished: false,
+        })
     }
 
-    /// Drops the running finite motion without a cooldown, because it never ran to
-    /// its end (an abort).
-    fn cancel_motion(&mut self) {
-        self.active = None;
-    }
-
-    /// Releases `motion` if it is the running one and holds off the next
-    /// attempt until `ready_at`. Returns whether it was released.
-    fn finish_motion(&mut self, motion: Motion, ready_at: f32) -> bool {
-        let running = self.active.is_some_and(|active| active.motion == motion);
-        if running {
-            self.active = None;
-            self.start_cooldown(Cooldown::Motion(motion), ready_at);
+    /// Drops the locked behavior from every slot it holds, without a cooldown,
+    /// because it never ran to its end (an abort).
+    fn abort_locked_behavior(&mut self) {
+        let locked = [self.motion, self.action]
+            .into_iter()
+            .flatten()
+            .find(|running| running.locked);
+        if let Some(running) = locked {
+            self.release(running.behavior);
         }
-        running
+    }
+
+    fn release(&mut self, behavior: usize) {
+        for slot in [&mut self.motion, &mut self.action] {
+            if slot.is_some_and(|running| running.behavior == behavior) {
+                *slot = None;
+            }
+        }
+    }
+
+    /// Marks the locked motion's part done if `motion` is it. Returns `None`
+    /// when it is not, otherwise whether that completed the lock and released it.
+    fn finish_motion_part(&mut self, motion: Motion, now: f32) -> Option<bool> {
+        let definition = self.definition;
+        let running = self.motion.as_mut().filter(|running| running.locked)?;
+        if definition.behaviors[running.behavior].value.motion != Some(motion) {
+            return None;
+        }
+        running.finished = true;
+        Some(self.release_if_complete(now))
+    }
+
+    /// Marks the locked action's part done if `action` is it (`None` stands for
+    /// any equipment use). Returns `None` when it is not, otherwise whether
+    /// that completed the lock and released it.
+    fn finish_action_part(&mut self, action: Option<Action>, now: f32) -> Option<bool> {
+        let definition = self.definition;
+        let running = self.action.as_mut().filter(|running| running.locked)?;
+        let held = definition.behaviors[running.behavior].value.action?;
+        let matches = match action {
+            Some(finished) => held == finished,
+            None => matches!(held, Action::Use(_)),
+        };
+        if !matches {
+            return None;
+        }
+        running.finished = true;
+        Some(self.release_if_complete(now))
+    }
+
+    /// Releases the locked behavior once every finite part it holds is done and
+    /// its minimum hold has passed. A lock that finished early is released by a
+    /// later call, which the decision tick makes.
+    fn release_if_complete(&mut self, now: f32) -> bool {
+        let Some(locked) = [self.motion, self.action]
+            .into_iter()
+            .flatten()
+            .find(|running| running.locked)
+        else {
+            return false;
+        };
+        let behavior = self.behavior(locked);
+        let finished = |slot: Option<RunningBehavior>| {
+            slot.is_some_and(|running| running.behavior == locked.behavior && running.finished)
+        };
+        let motion_done = !behavior.motion.is_some_and(Motion::is_finite) || finished(self.motion);
+        let action_done = behavior.action.is_none() || finished(self.action);
+        let released =
+            motion_done && action_done && now - locked.started_at >= behavior.commit.min_seconds();
+        if released {
+            self.release(locked.behavior);
+        }
+        released
     }
 }
 
@@ -288,18 +435,6 @@ fn update_mana_recovery(mut casters: Query<(&mut ManaRecovery, Option<&Mana>)>) 
     }
 }
 
-/// Per-tick action intent, written by `decide_behavior`. The equipment applier
-/// and the `ability` appliers read it and check the live world before acting.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct ActionIntent([bool; Action::COUNT]);
-
-impl ActionIntent {
-    /// Whether the brain wants `action` performed this tick.
-    pub fn get(&self, action: Action) -> bool {
-        self.0[action.index()]
-    }
-}
-
 /// An equipment or ability use ran to its end. A character holds at most one
 /// action at a time, so `action` is only needed to start an ability's
 /// cooldown; equipment keeps its own cooldown and sends `None`.
@@ -307,6 +442,13 @@ impl ActionIntent {
 pub struct ActionFinished {
     pub entity: Entity,
     pub action: Option<Action>,
+}
+
+/// A locked action could not start. The brain drops the lock without a
+/// cooldown and decides again on the spot.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct ActionAborted {
+    pub entity: Entity,
 }
 
 /// Shared ~10 Hz decision clock.
@@ -335,7 +477,8 @@ pub(super) fn plugin(app: &mut App) {
         .init_resource::<AiSeed>()
         .add_observer(release_finished_motion)
         .add_observer(abort_failed_motion)
-        .add_observer(start_ability_cooldown)
+        .add_observer(finish_action)
+        .add_observer(abort_failed_action)
         .add_systems(Startup, seed_ai_seed)
         .add_systems(Update, tick_decision_clock.in_set(AiSet::Decision))
         .add_systems(
@@ -355,10 +498,12 @@ pub(super) fn plugin(app: &mut App) {
                 .after(sense)
                 .in_set(AiSet::Decision),
         )
-        .add_systems(Update, apply_slot_requests.in_set(AiSet::Execute))
+        .add_systems(Update, apply_equipment_use_requests.in_set(AiSet::Execute))
         .add_systems(
             Update,
-            drive_motion.in_set(AiSet::Motion).after(apply_slowed),
+            steer_characters_from_brain_motion
+                .in_set(AiSet::Motion)
+                .after(apply_slowed),
         );
 }
 
@@ -392,7 +537,7 @@ mod tests {
     }
 
     /// Spawns a circling bat with a guaranteed lottery and a live target in
-    /// the cast band, then advances the clock past one decision tick.
+    /// the cast distance range, then advances the clock past one decision tick.
     fn swooping_bat(chance: f32, interval: f32) -> (World, Entity) {
         let mut world = World::new();
         let mut time = Time::<Virtual>::default();
@@ -402,13 +547,24 @@ mod tests {
         world.insert_resource(AiSeed::default());
         let target = world.spawn_empty().id();
         let mut brain = Brain::new(&BAT);
-        brain.continuous_motion = Motion::Strafe(CAST_BAND);
+        let strafe = BAT
+            .behaviors
+            .iter()
+            .position(|decision| decision.value.motion == Some(Motion::Strafe(CAST_DISTANCE_RANGE)))
+            .expect("the bat lists its orbit");
+        brain.assign_slots(
+            Assignment {
+                motion: Some(strafe),
+                action: None,
+            },
+            0.0,
+        );
         let bat = world
             .spawn((
                 brain,
                 Targeting(target),
                 TargetInfo {
-                    distance: CAST_BAND.max() - 50.0,
+                    distance: CAST_DISTANCE_RANGE.max() - 50.0,
                     direction: Vec2::X,
                     target_velocity: Vec2::ZERO,
                     line_of_sight: true,
@@ -433,13 +589,13 @@ mod tests {
     }
 
     /// The full loop holds: a ready, scored dive starts on the first tick and
-    /// leaves the continuous motion underneath it alone.
+    /// locks the motion slot.
     #[test]
     fn swoop_lottery_starts_a_dive() {
         let (mut world, bat) = swooping_bat(1.0, 0.0);
         run_decision_tick(&mut world);
         let brain = world.get::<Brain>(bat).expect("brained bat");
-        assert_eq!(brain.motion(), Motion::Swoop);
-        assert_eq!(brain.continuous_motion, Motion::Strafe(CAST_BAND));
+        assert_eq!(brain.motion(), Some(Motion::Swoop));
+        assert!(brain.active_motion().is_some());
     }
 }

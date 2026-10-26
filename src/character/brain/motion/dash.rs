@@ -3,8 +3,8 @@
 
 use bevy::prelude::*;
 
-use super::{Effort, MotionContext, MotionExecutor, MotionStep, RunTag};
-use crate::character::brain::senses::target_view;
+use super::{MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
+use crate::character::brain::senses::build_target_view;
 use crate::character::brain::{BrainRng, Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
 
 /// Half-angle of a warrior's break cone around straight away from its target.
@@ -13,7 +13,7 @@ const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 /// Half-angle of the fire mage's step-in spread around the target bearing.
 const BURST_STEP_IN_SPREAD: f32 = 0.35;
 /// Small outward bias on a tangent burst so a volley does not walk the mage
-/// into the target when the band is already tight.
+/// into the target when the distance range is already tight.
 const BURST_OUTWARD_BIAS: f32 = 0.15;
 
 /// What distinguishes one committed straight dash: its tuning and aim.
@@ -204,7 +204,7 @@ impl MotionExecutor for Dash {
         }
         if !self.run.called {
             let policy = self.policy;
-            let aimed = target_view(true, context.input.target_info)
+            let aimed = build_target_view(true, context.input.target_info)
                 .and_then(|target| policy.aim().aim(target, self, context.rng));
             let Some(direction) = aimed else {
                 self.tag.spent = true;
@@ -213,11 +213,11 @@ impl MotionExecutor for Dash {
             let run = context.rng.range(self.min_run, self.max_run);
             self.run.call(direction, run);
         }
-        let distance = context.run_step(self.speed_boost);
+        let distance = context.distance_this_frame(self.speed_boost);
         match self.run.step(distance) {
             Some(direction) => MotionStep::Steer {
                 direction: Some(direction),
-                effort: Effort::Boosted(self.speed_boost),
+                effort: SteeringEffort::Boosted(self.speed_boost),
             },
             None => {
                 self.tag.spent = true;

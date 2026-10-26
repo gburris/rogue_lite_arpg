@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::AbilityCapability;
 use crate::{
-    character::brain::{Ability, Action, ActionFinished, ActionIntent, Brain, Cooldown, Tuning},
+    character::brain::{Ability, Action, ActionFinished, Brain, Cooldown, Tuning},
     prelude::*,
 };
 
@@ -18,9 +18,7 @@ pub struct Heal {
 impl Heal {
     /// Drinks at most one potion per `cooldown` seconds.
     pub fn new(cooldown: f32) -> Self {
-        Self {
-            cooldown,
-        }
+        Self { cooldown }
     }
 }
 
@@ -37,18 +35,20 @@ impl AbilityCapability for Heal {
     }
 }
 
-/// Drinks a carried potion straight from the inventory. The intent refreshes
+/// Drinks a carried potion straight from the inventory. The action refreshes
 /// at the decision rate but this runs every frame, so the cooldown is what
 /// keeps one tick from draining the whole stack.
 pub(super) fn apply_heal(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    drinkers: Query<(Entity, &ActionIntent, &Brain, Option<&Items>), With<Heal>>,
+    drinkers: Query<(Entity, &Brain, Option<&Items>), With<Heal>>,
     consumables: Query<(), With<Consumable>>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, brain, items) in &drinkers {
-        if !intent.get(Action::Ability(Ability::Heal)) || !brain.is_ready(Cooldown::Ability(Ability::Heal), now) {
+    for (entity, brain, items) in &drinkers {
+        if brain.action() != Some(Action::Ability(Ability::Heal))
+            || !brain.is_cooldown_ready(Cooldown::Ability(Ability::Heal), now)
+        {
             continue;
         }
         let potion = items

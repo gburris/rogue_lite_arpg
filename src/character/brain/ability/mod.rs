@@ -1,8 +1,8 @@
 //! Abilities a brain can ask for besides moving or using equipment. Each one
 //! is an opt-in capability component plus an applier that reads the brain's
-//! [`ActionIntent`](super::ActionIntent), re-checks the live world,
+//! held action ([`Brain::action`](super::Brain::action)), re-checks the live world,
 //! and does the work. Appliers never change the brain's motion. A
-//! defeated body loses its intent, so appliers never see the dead.
+//! defeated body loses its brain, so appliers never see the dead.
 //!
 //! Capability components implement [`AbilityCapability`] and are listed once,
 //! in [`AbilityCapabilities`], which is how the brain's senses learn what an

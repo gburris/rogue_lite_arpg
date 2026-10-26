@@ -1,8 +1,8 @@
-//! Orbiting the target inside a distance band.
+//! Orbiting the target inside a distance range.
 
 use bevy::prelude::*;
 
-use super::{SteerInput, approach};
+use super::SteerInput;
 use crate::character::{
     brain::{BrainRng, Interval},
     vision::TargetInfo,
@@ -32,7 +32,7 @@ pub struct Strafe {
 }
 
 impl Strafe {
-    /// Orbits the mode's band with the default rhythm and no radius standoff.
+    /// Orbits the mode's distance range with the default rhythm and no radius standoff.
     pub fn new() -> Self {
         Self {
             reroll_min: STRAFE_REROLL_MIN,
@@ -97,19 +97,19 @@ impl Orbit {
     }
 }
 
-/// Tangent plus a radial correction toward the strafe mode's `band`.
+/// Tangent plus a radial correction toward the strafe mode's `distance_range`.
 /// `hold_orbit` freezes the
 /// side and standoff rerolls, used while a dive settles back into the circle
 /// so a flip does not reverse the tangent at the handoff.
 pub(super) fn steer(
     input: &SteerInput,
     strafe: Option<&mut Strafe>,
-    band: Interval,
+    distance_range: Interval,
     random: &mut BrainRng,
     hold_orbit: bool,
 ) -> Option<Vec2> {
     let info = input.target_info?;
-    let direction = approach::chase(input)?;
+    let direction = input.direction_to_target()?;
     let strafe = strafe?;
     let now = input.now;
     let orbit_due = now >= strafe.reroll_at;
@@ -137,8 +137,9 @@ pub(super) fn steer(
     let tangent = direction.perp() * strafe.orbit.unwrap_or_default().sign();
     // Positive error means too far from the shifted ring, so the correction
     // points at the target.
-    let radial =
-        direction * band.center_error(info.distance - strafe.standoff) * strafe.radial_gain;
+    let radial = direction
+        * distance_range.center_error(info.distance - strafe.standoff)
+        * strafe.radial_gain;
     Some((tangent + radial).normalize_or_zero())
 }
 

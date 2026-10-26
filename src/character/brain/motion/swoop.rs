@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use super::{Effort, MotionContext, MotionExecutor, MotionStep, RunTag};
+use super::{MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
 use crate::character::brain::{CAST_MAX_RANGE, Motion, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
@@ -117,7 +117,7 @@ impl MotionExecutor for Swoop {
         };
         let steer = |direction| MotionStep::Steer {
             direction,
-            effort: Effort::Boosted(speed_boost),
+            effort: SteeringEffort::Boosted(speed_boost),
         };
         let Some(info) = input.target_info else {
             return steer(None);
@@ -137,8 +137,8 @@ impl MotionExecutor for Swoop {
             return steer(None);
         }
         // Stunned biters hold their place on the arc.
-        let flight_distance = context.run_step(speed_boost);
-        let heading = context.motion.direction;
+        let flight_distance = context.distance_this_frame(speed_boost);
+        let heading = context.movement.direction;
         let live_target = input.position + info.direction * info.distance;
         let exit_turn = self.exit_turn;
         let pass = self.pass.get_or_insert_with(|| {

@@ -6,7 +6,9 @@ use bevy::{ecs::query::QueryData, prelude::*};
 
 use super::ability::AbilityCapabilities;
 use super::motion::{ANCHOR_ARRIVAL_RADIUS, FiniteMotionsReadOnly};
-use super::{Ability, Action, Brain, Cooldown, DecisionContext, ManaRecovery, Motion, TargetView, Tuning};
+use super::{
+    Ability, Action, Brain, Cooldown, DecisionContext, ManaRecovery, Motion, TargetView, Tuning,
+};
 use crate::{
     character::{
         anchor::Anchor,
@@ -28,7 +30,7 @@ pub(super) struct Perception {
 }
 
 /// Builds the pure view of a target from the vision system's observation.
-pub(super) fn target_view(has_target: bool, info: Option<&TargetInfo>) -> Option<TargetView> {
+pub(super) fn build_target_view(has_target: bool, info: Option<&TargetInfo>) -> Option<TargetView> {
     if !has_target {
         return None;
     }
@@ -44,15 +46,15 @@ pub(super) fn target_view(has_target: bool, info: Option<&TargetInfo>) -> Option
 }
 
 /// Which finite motions are owned and off cooldown at `now`.
-pub(super) fn motion_readiness(
+pub(super) fn finite_motion_readiness(
     brain: &Brain,
     motion_tuning: &[Option<Tuning>; Motion::COUNT],
     now: f32,
 ) -> [bool; Motion::COUNT] {
     let mut motion_ready = [false; Motion::COUNT];
     for motion in Motion::FINITE {
-        motion_ready[motion.index()] =
-            motion_tuning[motion.index()].is_some() && brain.is_ready(Cooldown::Motion(motion), now);
+        motion_ready[motion.index()] = motion_tuning[motion.index()].is_some()
+            && brain.is_cooldown_ready(Cooldown::Motion(motion), now);
     }
     motion_ready
 }
@@ -71,7 +73,7 @@ pub(super) struct Sensed {
     mana: Option<&'static Mana>,
     anchor: Option<&'static Anchor>,
     attack_state: Option<&'static AttackState>,
-    body: Option<&'static SimpleMotion>,
+    movement: Option<&'static SimpleMotion>,
     recovery: Option<&'static ManaRecovery>,
     finite_motions: FiniteMotionsReadOnly,
     abilities: AbilityCapabilities,
@@ -93,7 +95,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
             mana,
             anchor,
             attack_state,
-            body,
+            movement,
             recovery,
             finite_motions,
             abilities,
@@ -121,7 +123,7 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
         }
 
         perception.context = DecisionContext {
-            target: target_view(has_target, target_info),
+            target: build_target_view(has_target, target_info),
             health_fraction: health.and_then(Health::fraction).unwrap_or(1.0),
             mana_fraction: mana.and_then(Mana::fraction).unwrap_or(1.0),
             slot_ready: EquipmentSlot::ALL.map(|slot| equipment.can_use(entity, slot).is_ok()),
@@ -129,12 +131,12 @@ pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brai
                 .and_then(|anchor| anchor.overshoot_fraction(position)),
             anchor_arrived: anchor
                 .map(|anchor| anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS),
-            stunned: body.is_some_and(SimpleMotion::is_stunned),
+            stunned: movement.is_some_and(SimpleMotion::is_stunned),
             attack_finished,
             motion: brain.motion(),
             mana_recovering: recovery.is_some_and(ManaRecovery::recovering),
             motion_tuning,
-            motion_ready: motion_readiness(brain, &motion_tuning, now),
+            motion_ready: finite_motion_readiness(brain, &motion_tuning, now),
             action_tuning,
         };
     }

@@ -3,12 +3,12 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod defeat;
 
-use super::brain::{Bite, Breath, Heal};
-use super::brain::{
-    BAT, Brain, BrainDefinition, CAST_MIN_RANGE, CastPlant, Dash, FIRE_MAGE, ICE_MAGE,
-    Interval, ManaRecovery, Strafe, Swoop, TurnRate, WARRIOR, Wander,
-};
 use super::animation::AnimationSheet;
+use super::brain::{
+    BAT, Brain, BrainDefinition, CAST_MIN_RANGE, Dash, FIRE_MAGE, ICE_MAGE, Interval, ManaRecovery,
+    Strafe, Swoop, TurnRate, WARRIOR, Wander,
+};
+use super::brain::{Bite, Breath, Heal};
 use crate::{
     character::{
         Character, Purse,
@@ -322,8 +322,6 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             CAST_MIN_RANGE - 30.0,
             1.2,
         ),
-        // Stand through the 0.3 s ice bolt so the wind-up is readable.
-        CastPlant::new(0.3),
         enemy_wander(),
         Sprite::from_atlas_image(
             sprites.ice_mage_enemy_sprite_sheet.clone(),
@@ -350,8 +348,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
             2.2,
             CAST_MIN_RANGE - 10.0,
         ),
-        // Stand through the 0.3 s fire volley so the wind-up is readable.
-        CastPlant::new(0.3),
         Strafe::smart(),
         enemy_wander(),
         Sprite::from_atlas_image(
@@ -364,7 +360,6 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         related!(Items[health_potion(sprites)]),
     )
 }
-
 
 const BAT_BREATH_PERIOD: f32 = 1.1;
 const BAT_TURN_RATE: f32 = 6.0;

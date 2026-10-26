@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use super::AbilityCapability;
 use crate::{
     character::{
-        brain::{
-            Ability, Action, ActionFinished, ActionIntent, Brain, CAST_MAX_RANGE, Cooldown, Tuning,
-        },
+        brain::{Ability, Action, ActionFinished, Brain, CAST_MAX_RANGE, Cooldown, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -57,7 +55,6 @@ pub(super) fn apply_breath(
     time: Res<Time<Virtual>>,
     breathers: Query<(
         Entity,
-        &ActionIntent,
         &Brain,
         Has<Targeting>,
         &TargetInfo,
@@ -67,9 +64,9 @@ pub(super) fn apply_breath(
     )>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, intent, brain, has_target, target_info, transform, side, templates) in &breathers {
-        let ready = brain.is_ready(Cooldown::Ability(Ability::Breathe), now);
-        let wanted = intent.get(Action::Ability(Ability::Breathe));
+    for (entity, brain, has_target, target_info, transform, side, templates) in &breathers {
+        let ready = brain.is_cooldown_ready(Cooldown::Ability(Ability::Breathe), now);
+        let wanted = brain.action() == Some(Action::Ability(Ability::Breathe));
         if !(ready && has_target && target_info.line_of_sight && wanted) {
             continue;
         }

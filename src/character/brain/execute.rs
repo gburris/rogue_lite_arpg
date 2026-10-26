@@ -2,34 +2,56 @@
 
 use bevy::prelude::*;
 
-use super::{Action, ActionIntent, Brain};
+use super::{Action, ActionAborted, Brain};
 use crate::{
     character::vision::{TargetInfo, Targeting},
     prelude::{EquipmentSlot, EquipmentUsage},
 };
 
-/// Re-gates stale intent on the live target state. Decisions price range at
-/// 10 Hz but this runs every frame, so a target that drifted
-/// out of reach between ticks must not keep a stale `try_use` alive.
-pub(super) fn apply_slot_requests(
+/// The locked action run the applier already started, so a lock begins a use
+/// once and is never re-gated afterwards.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub(super) struct StartedLockedEquipmentUse(Option<u32>);
+
+/// Re-gates the brain's held action on the live target state. Decisions price
+/// range at 10 Hz but this runs every frame, so a target that drifted out of
+/// reach between ticks must not keep a stale `try_use` alive. A locked use is
+/// gated once, when it starts: a failed start aborts the lock, and a started
+/// one runs to its finish event.
+pub(super) fn apply_equipment_use_requests(
+    mut commands: Commands,
     mut equipment: EquipmentUsage,
-    requests: Query<(
+    mut requests: Query<(
         Entity,
         &Brain,
-        &ActionIntent,
+        &mut StartedLockedEquipmentUse,
         Has<Targeting>,
         Option<&TargetInfo>,
     )>,
 ) {
-    for (entity, brain, action_intent, has_target, target_info) in &requests {
+    for (entity, brain, mut started, has_target, target_info) in &mut requests {
         // The same reach the equipment considerations scored, checked live.
         let in_range = brain.definition.equipment_reach.is_some_and(|reach| {
             target_info.is_some_and(|info| info.distance.is_finite() && info.distance <= reach)
         });
+        let sighted = target_info.is_some_and(|info| info.line_of_sight);
+        let live = has_target && sighted && in_range;
+        let locked = brain.active_action();
         for slot in EquipmentSlot::ALL {
-            let sighted = target_info.is_some_and(|info| info.line_of_sight);
-            let requested =
-                has_target && sighted && in_range && action_intent.get(Action::Use(slot));
+            if let Some(active) = locked.filter(|active| active.action == Action::Use(slot)) {
+                if started.0 != Some(active.epoch) {
+                    started.0 = Some(active.epoch);
+                    let began = live
+                        && equipment.can_use(entity, slot).is_ok()
+                        && equipment.try_use(entity, slot).is_ok();
+                    if !began {
+                        commands.trigger(ActionAborted { entity });
+                    }
+                }
+                continue;
+            }
+
+            let requested = live && brain.action() == Some(Action::Use(slot));
             let in_use = equipment.is_using(entity, slot);
 
             if requested && !in_use {

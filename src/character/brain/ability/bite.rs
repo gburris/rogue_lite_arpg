@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use crate::character::brain::Capability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, Brain, Cooldown, Tuning},
+        brain::{Ability, Action, ActionFinished, Brain, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -46,8 +46,10 @@ impl Bite {
     }
 }
 
-impl AbilityCapability for Bite {
-    fn ability(&self) -> Ability {
+impl Capability for Bite {
+    type Key = Ability;
+
+    fn key(&self) -> Ability {
         Ability::Bite
     }
 
@@ -77,7 +79,7 @@ pub(super) fn apply_bite(
     let now = time.elapsed_secs();
     for (entity, brain, bite, targeting, target_info, health) in &biters {
         if brain.action() != Some(Action::Ability(Ability::Bite))
-            || !brain.is_cooldown_ready(Cooldown::Ability(Ability::Bite), now)
+            || !brain.is_cooldown_ready(Ability::Bite, now)
         {
             continue;
         }

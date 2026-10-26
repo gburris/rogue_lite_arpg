@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use crate::character::brain::Capability;
 use crate::{
-    character::brain::{Ability, Action, ActionFinished, Brain, Cooldown, Tuning},
+    character::brain::{Ability, Action, ActionFinished, Brain, Tuning},
     prelude::*,
 };
 
@@ -22,8 +22,10 @@ impl Heal {
     }
 }
 
-impl AbilityCapability for Heal {
-    fn ability(&self) -> Ability {
+impl Capability for Heal {
+    type Key = Ability;
+
+    fn key(&self) -> Ability {
         Ability::Heal
     }
 
@@ -33,6 +35,18 @@ impl AbilityCapability for Heal {
             ..Tuning::default()
         }
     }
+}
+
+/// The first consumable the entity carries, the one check both the decision
+/// and `apply_heal` use for whether a potion can be drunk.
+pub(in crate::character::brain) fn find_carried_potion(
+    items: Option<&Items>,
+    consumables: &Query<(), With<Consumable>>,
+) -> Option<Entity> {
+    items
+        .into_iter()
+        .flat_map(|items| items.iter())
+        .find(|item| consumables.contains(*item))
 }
 
 /// Drinks a carried potion straight from the inventory. The action refreshes
@@ -47,15 +61,11 @@ pub(super) fn apply_heal(
     let now = time.elapsed_secs();
     for (entity, brain, items) in &drinkers {
         if brain.action() != Some(Action::Ability(Ability::Heal))
-            || !brain.is_cooldown_ready(Cooldown::Ability(Ability::Heal), now)
+            || !brain.is_cooldown_ready(Ability::Heal, now)
         {
             continue;
         }
-        let potion = items
-            .iter()
-            .flat_map(|items| items.iter())
-            .find(|item| consumables.contains(*item));
-        if let Some(potion) = potion {
+        if let Some(potion) = find_carried_potion(items, &consumables) {
             commands.trigger(Consume {
                 entity,
                 item_entity: potion,

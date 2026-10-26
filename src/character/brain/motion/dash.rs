@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 
-use super::{MotionContext, MotionExecutor, MotionStep, OrbitDirection, RunTag, SteeringEffort};
+use super::{
+    Capability, MotionContext, MotionExecutor, MotionStep, OrbitDirection, RunTag, SteeringEffort,
+};
 use crate::character::brain::senses::build_target_view;
 use crate::character::brain::{Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
 
@@ -141,15 +143,19 @@ fn hop_direction(target: &TargetView, close_range: f32, context: &mut MotionCont
     (tangent - target.bearing * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
-impl MotionExecutor for Dash {
-    fn motion(&self) -> Motion {
+impl Capability for Dash {
+    type Key = Motion;
+
+    fn key(&self) -> Motion {
         Motion::Dash
     }
 
     fn tuning(&self) -> Tuning {
         self.policy.tuning()
     }
+}
 
+impl MotionExecutor for Dash {
     fn tag(&mut self) -> &mut RunTag {
         &mut self.tag
     }

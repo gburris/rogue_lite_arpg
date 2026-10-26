@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use super::AbilityCapability;
+use crate::character::brain::Capability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, Brain, CAST_MAX_RANGE, Cooldown, Tuning},
+        brain::{Ability, Action, ActionFinished, Brain, CAST_MAX_RANGE, Tuning},
         vision::{TargetInfo, Targeting},
     },
     prelude::*,
@@ -33,8 +33,10 @@ impl Breath {
     }
 }
 
-impl AbilityCapability for Breath {
-    fn ability(&self) -> Ability {
+impl Capability for Breath {
+    type Key = Ability;
+
+    fn key(&self) -> Ability {
         Ability::Breathe
     }
 
@@ -65,7 +67,7 @@ pub(super) fn apply_breath(
 ) {
     let now = time.elapsed_secs();
     for (entity, brain, has_target, target_info, transform, side, templates) in &breathers {
-        let ready = brain.is_cooldown_ready(Cooldown::Ability(Ability::Breathe), now);
+        let ready = brain.is_cooldown_ready(Ability::Breathe, now);
         let wanted = brain.action() == Some(Action::Ability(Ability::Breathe));
         if !(ready && has_target && target_info.line_of_sight && wanted) {
             continue;

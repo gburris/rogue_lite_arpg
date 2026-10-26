@@ -4,7 +4,9 @@
 //! already holds a slot scores with [`MOMENTUM`]. A slot nothing scores for
 //! stays empty.
 
-use super::model::{BrainDefinition, Consideration, Decision, DecisionContext, Motion};
+use super::model::{
+    Availability, BrainDefinition, Consideration, Decision, DecisionContext, Motion,
+};
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the body back and forth between ticks.
@@ -67,6 +69,7 @@ pub fn score_decision<T>(
 pub fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
     decision_context: &DecisionContext,
+    availability: &Availability,
     holders: SlotHolders,
     mut start: impl FnMut(usize) -> bool,
 ) -> Assignment {
@@ -78,12 +81,8 @@ pub fn assign_behaviors_to_slots(
         let behavior = decision.value;
         let blocked = (behavior.motion.is_some() && !motion_free)
             || (behavior.action.is_some() && !action_free);
-        let unable = behavior
-            .motion
-            .is_some_and(|motion| !decision_context.can_start(motion))
-            || behavior
-                .action
-                .is_some_and(|action| !decision_context.can_perform(action));
+        let unable = behavior.motion.is_some_and(|motion| !availability[motion])
+            || behavior.action.is_some_and(|action| !availability[action]);
         if blocked || unable {
             continue;
         }
@@ -182,7 +181,8 @@ mod tests {
 
     use super::super::brains::{FIRE_MAGE, WARRIOR};
     use super::super::model::{
-        Action, CAST_DISTANCE_RANGE, MELEE_DISTANCE_RANGE, TargetView, Tuning,
+        Action, AnchorView, CAST_DISTANCE_RANGE, MELEE_DISTANCE_RANGE, MotionActionTable, SelfView,
+        TargetView,
     };
     use super::*;
     use crate::items::prelude::EquipmentSlot;
@@ -191,12 +191,6 @@ mod tests {
 
     fn context() -> DecisionContext {
         DecisionContext::default()
-    }
-
-    fn mainhand_ready() -> [bool; EquipmentSlot::ALL.len()] {
-        let mut slot_ready = [false; EquipmentSlot::ALL.len()];
-        slot_ready[EquipmentSlot::Mainhand as usize] = true;
-        slot_ready
     }
 
     fn visible_target(distance: f32) -> TargetView {
@@ -208,17 +202,24 @@ mod tests {
         }
     }
 
-    /// A ready mainhand with the brain's equipment reach, as the senses stage it.
+    /// Every continuous motion and action, and no finite motion, as a body without
+    /// finite capabilities reports.
+    fn available() -> Availability {
+        let mut table = MotionActionTable::splat(true);
+        for motion in Motion::FINITE {
+            table[motion] = false;
+        }
+        Availability(table)
+    }
+
+    /// A target with the brain's equipment reach, as the senses stage it.
     fn armed(distance: f32, brain: &BrainDefinition) -> DecisionContext {
         let mut decision_context = DecisionContext {
             target: Some(visible_target(distance)),
-            slot_ready: mainhand_ready(),
             ..context()
         };
-        decision_context.action_tuning[MAINHAND.index()] = Some(Tuning {
-            reach: brain.equipment_reach,
-            ..Tuning::default()
-        });
+        decision_context.in_reach[MAINHAND] =
+            brain.equipment_reach.is_some_and(|reach| distance <= reach);
         decision_context
     }
 
@@ -236,6 +237,15 @@ mod tests {
         decision_context: &DecisionContext,
         current: Motion,
     ) -> (Motion, Option<Action>) {
+        choose_with(brain, decision_context, current, &available())
+    }
+
+    fn choose_with(
+        brain: &BrainDefinition,
+        decision_context: &DecisionContext,
+        current: Motion,
+        availability: &Availability,
+    ) -> (Motion, Option<Action>) {
         let holder = brain
             .behaviors
             .iter()
@@ -248,7 +258,8 @@ mod tests {
             }),
             action: None,
         };
-        let assignment = assign_behaviors_to_slots(brain, decision_context, holders, |_| true);
+        let assignment =
+            assign_behaviors_to_slots(brain, decision_context, availability, holders, |_| true);
         let motion = assignment
             .motion
             .and_then(|index| brain.behaviors[index].value.motion)
@@ -273,10 +284,14 @@ mod tests {
     fn warrior_flees_from_target_when_badly_hurt() {
         let fleeing = DecisionContext {
             target: Some(visible_target(30.0)),
-            slot_ready: mainhand_ready(),
-            health_fraction: 0.1,
-            anchor_overshoot_fraction: Some(0.0),
-            anchor_arrived: Some(false),
+            me: SelfView {
+                health_fraction: 0.1,
+                anchor: Some(AnchorView {
+                    overshoot_fraction: 0.0,
+                    arrived: false,
+                }),
+                ..SelfView::default()
+            },
             ..warrior_context()
         };
         // Still swinging on the way out: a fighting retreat, not a rout.
@@ -285,7 +300,10 @@ mod tests {
             (Motion::Flee, Some(MAINHAND))
         );
         let scratched = DecisionContext {
-            health_fraction: 0.5,
+            me: SelfView {
+                health_fraction: 0.5,
+                ..fleeing.me
+            },
             ..fleeing
         };
         assert_eq!(
@@ -302,12 +320,10 @@ mod tests {
             choose(&FIRE_MAGE, &decision_context, Motion::Calm),
             (Motion::Idle, Some(MAINHAND))
         );
-        let cooling = DecisionContext {
-            slot_ready: [false; EquipmentSlot::ALL.len()],
-            ..decision_context
-        };
+        let mut cooling = available();
+        cooling.0[MAINHAND] = false;
         assert_eq!(
-            choose(&FIRE_MAGE, &cooling, Motion::Calm),
+            choose_with(&FIRE_MAGE, &decision_context, Motion::Calm, &cooling),
             (Motion::Orbit(CAST_DISTANCE_RANGE), None)
         );
     }

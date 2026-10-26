@@ -5,7 +5,8 @@
 
 use super::model::{
     Ability, Action, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE, Consideration, Curve,
-    DecisionContext, HEAL_SAFE_DISTANCE, Interval, MELEE_RANGE, Motion, Response, Tuning,
+    DecisionContext, HEAL_SAFE_DISTANCE, Interval, MELEE_RANGE, Motion, Response,
+    action_table_index, motion_table_index,
 };
 use crate::items::prelude::EquipmentSlot;
 
@@ -32,21 +33,16 @@ fn extract_line_of_sight(decision_context: &DecisionContext) -> Option<f32> {
 /// reads full until arrival, so crossing back inside the range mid-return
 /// cannot hand the body straight back to calm.
 fn extract_anchor_pull(decision_context: &DecisionContext) -> Option<f32> {
-    if decision_context.motion == Some(Motion::ReturnToAnchor) {
-        decision_context
-            .anchor_arrived
-            .map(|arrived| if arrived { 0.0 } else { 1.0 })
+    let anchor = decision_context.me.anchor?;
+    if decision_context.memory.motion == Some(Motion::ReturnToAnchor) {
+        Some(if anchor.arrived { 0.0 } else { 1.0 })
     } else {
-        decision_context.anchor_overshoot_fraction
+        Some(anchor.overshoot_fraction)
     }
 }
 
 fn extract_missing_health(decision_context: &DecisionContext) -> Option<f32> {
-    Some(1.0 - decision_context.health_fraction)
-}
-
-fn extract_mainhand_ready(decision_context: &DecisionContext) -> Option<f32> {
-    normalize_boolean(decision_context.slot_ready[EquipmentSlot::Mainhand as usize])
+    Some(1.0 - decision_context.me.health_fraction)
 }
 
 fn extract_target_distance(decision_context: &DecisionContext) -> Option<f32> {
@@ -59,52 +55,35 @@ fn extract_motion_is_running<const MOTION: usize>(
 ) -> Option<f32> {
     normalize_boolean(
         decision_context
+            .memory
             .motion
             .is_some_and(|motion| motion.index() == MOTION),
     )
 }
 
 fn extract_attack_finished(decision_context: &DecisionContext) -> Option<f32> {
-    normalize_boolean(decision_context.attack_finished)
+    normalize_boolean(decision_context.memory.attack_finished)
 }
 
 fn extract_circling(decision_context: &DecisionContext) -> Option<f32> {
     normalize_boolean(matches!(
-        decision_context.motion,
+        decision_context.memory.motion,
         Some(Motion::Orbit(_) | Motion::KeepDistance(_))
     ))
 }
 
-/// Whether the target is inside a capability's reach. A capability without a
-/// reach, or no target at all, never reads as inside.
-fn extract_target_within_reach(
-    decision_context: &DecisionContext,
-    tuning: Option<Tuning>,
-) -> Option<f32> {
-    let reach = tuning.and_then(|tuning| tuning.reach);
-    let (Some(target), Some(reach)) = (decision_context.target, reach) else {
-        return Some(0.0);
-    };
-    normalize_boolean(target.distance <= reach)
-}
-
-fn extract_motion_target_within_reach<const MOTION: usize>(
-    decision_context: &DecisionContext,
-) -> Option<f32> {
-    extract_target_within_reach(decision_context, decision_context.motion_tuning[MOTION])
-}
-
-fn extract_action_target_within_reach<const ACTION: usize>(
-    decision_context: &DecisionContext,
-) -> Option<f32> {
-    extract_target_within_reach(decision_context, decision_context.action_tuning[ACTION])
+/// Whether the target is inside the reach of the capability at table index `INDEX`.
+fn extract_in_reach<const INDEX: usize>(decision_context: &DecisionContext) -> Option<f32> {
+    normalize_boolean(decision_context.in_reach[INDEX])
 }
 
 fn extract_recovering(decision_context: &DecisionContext) -> Option<f32> {
     // A mana break is only meaningful while the pool is still short; the
     // held state supplies the hysteresis and the fraction keeps the sense
     // honest if a caster ever starts a break from a full pool.
-    normalize_boolean(decision_context.mana_recovering && decision_context.mana_fraction < 1.0)
+    normalize_boolean(
+        decision_context.me.mana_recovering && decision_context.me.mana_fraction < 1.0,
+    )
 }
 
 const fn consideration(
@@ -155,7 +134,6 @@ const fn flag(
 pub(crate) const HAS_TARGET: Consideration = flag("has target", extract_has_target);
 pub(crate) const NO_TARGET: Consideration = HAS_TARGET.inverted("no target");
 pub(crate) const LINE_OF_SIGHT: Consideration = flag("line of sight", extract_line_of_sight);
-pub(crate) const MAINHAND_READY: Consideration = flag("mainhand ready", extract_mainhand_ready);
 pub(crate) const ANCHOR_PULL: Consideration = consideration(
     "anchor pull",
     extract_anchor_pull,
@@ -197,23 +175,23 @@ pub(crate) const CIRCLING: Consideration = flag("circling", extract_circling);
 /// For the ice mage's escape dash, its reach is the danger ring.
 pub(crate) const IN_DASH_REACH: Consideration = flag(
     "in dash reach",
-    extract_motion_target_within_reach::<{ Motion::Dash.index() }>,
+    extract_in_reach::<{ motion_table_index(Motion::Dash) }>,
 );
 pub(crate) const IN_SWOOP_REACH: Consideration = flag(
     "in swoop reach",
-    extract_motion_target_within_reach::<{ Motion::Swoop.index() }>,
+    extract_in_reach::<{ motion_table_index(Motion::Swoop) }>,
 );
 pub(crate) const IN_MAINHAND_REACH: Consideration = flag(
     "in mainhand reach",
-    extract_action_target_within_reach::<{ Action::Use(EquipmentSlot::Mainhand).index() }>,
+    extract_in_reach::<{ action_table_index(Action::Use(EquipmentSlot::Mainhand)) }>,
 );
 pub(crate) const IN_BREATH_REACH: Consideration = flag(
     "in breath reach",
-    extract_action_target_within_reach::<{ Action::Ability(Ability::Breathe).index() }>,
+    extract_in_reach::<{ action_table_index(Action::Ability(Ability::Breathe)) }>,
 );
 pub(crate) const IN_BITE_REACH: Consideration = flag(
     "in bite reach",
-    extract_action_target_within_reach::<{ Action::Ability(Ability::Bite).index() }>,
+    extract_in_reach::<{ action_table_index(Action::Ability(Ability::Bite)) }>,
 );
 /// Zero inside contact reach, full a few units past it, so the bat only
 /// breathes once biting stops being an option.

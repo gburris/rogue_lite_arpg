@@ -1,13 +1,13 @@
-//! The sense system: the only code that turns world state into the pure
-//! [`DecisionContext`]. It is read-only over the world and rewrites each
-//! brain's [`Perception`] once per decision tick.
+//! Observing the world: the only code that turns world state into the facts
+//! one decision reads. It is read-only and never looks at [`Brain`]'s state.
 
-use bevy::{ecs::query::QueryData, prelude::*};
+use bevy::{ecs::query::QueryData, ecs::system::SystemParam, prelude::*};
 
-use super::ability::AbilityCapabilities;
-use super::motion::{ANCHOR_ARRIVAL_RADIUS, FiniteMotionsReadOnly};
+use super::ability::find_carried_potion;
+use super::capability::{Capabilities, Tuning};
+use super::motion::ANCHOR_ARRIVAL_RADIUS;
 use super::{
-    Ability, Action, Brain, Cooldown, DecisionContext, ManaRecovery, Motion, TargetView, Tuning,
+    Ability, Action, AnchorView, ManaRecovery, Motion, MotionActionTable, SelfView, TargetView,
 };
 use crate::{
     character::{
@@ -15,18 +15,20 @@ use crate::{
         state::SimpleMotion,
         vision::{TargetInfo, Targeting},
     },
-    prelude::{AttackState, EquipmentRead, EquipmentSlot, Health, Mana},
+    prelude::{AttackState, Consumable, EquipmentRead, EquipmentSlot, Health, Items, Mana},
 };
 
-/// Per-tick sensed state for one brain, written by [`sense`] and read by
-/// `decide_behavior`.
-#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
-pub(super) struct Perception {
-    #[deref]
-    pub(super) context: DecisionContext,
-    /// Attacks finished as of the last decision tick; compared against
-    /// `AttackState::attacks_finished` to notice a new finish.
-    attacks_seen: u32,
+/// World facts for one decision, built without reading `Brain`'s mutable state.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Observation {
+    pub me: SelfView,
+    pub target: Option<TargetView>,
+    pub in_reach: MotionActionTable<bool>,
+    /// Whether the world lets each motion or action run now (equipment ready,
+    /// potion carried).
+    pub world_allows_use: MotionActionTable<bool>,
+    /// `AttackState::attacks_finished` as read this decision.
+    pub attacks_finished: u32,
 }
 
 /// Builds the pure view of a target from the vision system's observation.
@@ -44,27 +46,59 @@ pub(super) fn build_target_view(has_target: bool, info: Option<&TargetInfo>) -> 
     })
 }
 
-/// Which finite motions are owned and off cooldown at `now`.
-pub(super) fn finite_motion_readiness(
-    brain: &Brain,
-    motion_tuning: &[Option<Tuning>; Motion::COUNT],
-    now: f32,
-) -> [bool; Motion::COUNT] {
-    let mut motion_ready = [false; Motion::COUNT];
+/// Whether the target is inside each owned capability's reach.
+fn build_in_reach(
+    target: Option<TargetView>,
+    capabilities: &Capabilities,
+) -> MotionActionTable<bool> {
+    let mut in_reach = MotionActionTable::default();
+    let Some(target) = target else {
+        return in_reach;
+    };
+    let within_reach = |tuning: Option<Tuning>| {
+        tuning
+            .and_then(|tuning| tuning.reach)
+            .is_some_and(|reach| target.distance <= reach)
+    };
     for motion in Motion::FINITE {
-        motion_ready[motion.index()] = motion_tuning[motion.index()].is_some()
-            && brain.is_cooldown_ready(Cooldown::Motion(motion), now);
+        in_reach[motion] = within_reach(capabilities[motion]);
     }
-    motion_ready
+    for slot in EquipmentSlot::ALL {
+        in_reach[Action::Use(slot)] = within_reach(capabilities[Action::Use(slot)]);
+    }
+    for ability in Ability::ALL {
+        in_reach[ability] = within_reach(capabilities[ability]);
+    }
+    in_reach
 }
 
-/// Everything one brain senses.
-#[derive(QueryData)]
-#[query_data(mutable)]
-pub(super) struct Sensed {
+/// The queries behind each capability's world-allows-use check, shared by
+/// `observe_world_facts` and the appliers.
+#[derive(SystemParam)]
+pub(super) struct WorldUseChecks<'w, 's> {
+    pub equipment: EquipmentRead<'w, 's>,
+    pub consumables: Query<'w, 's, (), With<Consumable>>,
+}
+
+/// Whether the world lets each motion or action run now: equipment that can be
+/// used, and a carried potion for `Heal`. Everything else is always allowed.
+fn build_world_allows_use(
     entity: Entity,
-    brain: &'static Brain,
-    perception: &'static mut Perception,
+    items: Option<&Items>,
+    use_checks: &WorldUseChecks,
+) -> MotionActionTable<bool> {
+    let mut world_allows_use = MotionActionTable::splat(true);
+    for slot in EquipmentSlot::ALL {
+        world_allows_use[Action::Use(slot)] = use_checks.equipment.can_use(entity, slot).is_ok();
+    }
+    world_allows_use[Ability::Heal] = find_carried_potion(items, &use_checks.consumables).is_some();
+    world_allows_use
+}
+
+/// The world-fact components one decision reads.
+#[derive(QueryData)]
+pub(super) struct ObservedComponents {
+    entity: Entity,
     transform: &'static Transform,
     has_target: Has<Targeting>,
     target_info: Option<&'static TargetInfo>,
@@ -74,69 +108,37 @@ pub(super) struct Sensed {
     attack_state: Option<&'static AttackState>,
     movement: Option<&'static SimpleMotion>,
     recovery: Option<&'static ManaRecovery>,
-    finite_motions: FiniteMotionsReadOnly,
-    abilities: AbilityCapabilities,
+    items: Option<&'static Items>,
 }
 
-/// Writes every brain's [`DecisionContext`] from its world state, its own
-/// earlier choices, and the capabilities it carries.
-pub(super) fn sense(time: Res<Time<Virtual>>, equipment: EquipmentRead, mut brains: Query<Sensed>) {
-    let now = time.elapsed_secs();
-    for sensed in &mut brains {
-        let SensedItem {
-            entity,
-            brain,
-            mut perception,
-            transform,
-            has_target,
-            target_info,
-            health,
-            mana,
+/// Reads the world facts one decision needs from the entity's components and
+/// the capabilities it carries.
+pub(super) fn observe_world_facts(
+    components: &ObservedComponentsItem,
+    capabilities: &Capabilities,
+    use_checks: &WorldUseChecks,
+) -> Observation {
+    let position = components.transform.translation.xy();
+    let target = build_target_view(components.has_target, components.target_info);
+    let anchor = components.anchor.and_then(|anchor| {
+        Some(AnchorView {
+            overshoot_fraction: anchor.overshoot_fraction(position)?,
+            arrived: anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS,
+        })
+    });
+    Observation {
+        me: SelfView {
+            health_fraction: components.health.and_then(Health::fraction).unwrap_or(1.0),
+            mana_fraction: components.mana.and_then(Mana::fraction).unwrap_or(1.0),
+            mana_recovering: components.recovery.is_some_and(ManaRecovery::recovering),
+            stunned: components.movement.is_some_and(SimpleMotion::is_stunned),
             anchor,
-            attack_state,
-            movement,
-            recovery,
-            finite_motions,
-            abilities,
-        } = sensed;
-        let position = transform.translation.xy();
-
-        let finished = attack_state.map_or(0, |state| state.attacks_finished);
-        let attack_finished = finished != perception.attacks_seen;
-        perception.attacks_seen = finished;
-
-        let motion_tuning = finite_motions.tuning();
-
-        // Equipment is always performable (readiness is scored separately) and
-        // shares the definition's reach; abilities need their component.
-        let mut action_tuning = [None; Action::COUNT];
-        for slot in EquipmentSlot::ALL {
-            action_tuning[Action::Use(slot).index()] = Some(Tuning {
-                reach: brain.definition.equipment_reach,
-                ..Tuning::default()
-            });
-        }
-        let ability_tuning = abilities.tuning();
-        for ability in Ability::ALL {
-            action_tuning[Action::Ability(ability).index()] = ability_tuning[ability as usize];
-        }
-
-        perception.context = DecisionContext {
-            target: build_target_view(has_target, target_info),
-            health_fraction: health.and_then(Health::fraction).unwrap_or(1.0),
-            mana_fraction: mana.and_then(Mana::fraction).unwrap_or(1.0),
-            slot_ready: EquipmentSlot::ALL.map(|slot| equipment.can_use(entity, slot).is_ok()),
-            anchor_overshoot_fraction: anchor
-                .and_then(|anchor| anchor.overshoot_fraction(position)),
-            anchor_arrived: anchor
-                .map(|anchor| anchor.distance_from(position) <= ANCHOR_ARRIVAL_RADIUS),
-            stunned: movement.is_some_and(SimpleMotion::is_stunned),
-            attack_finished,
-            motion: brain.motion(),
-            mana_recovering: recovery.is_some_and(ManaRecovery::recovering),
-            motion_tuning,
-            motion_ready: finite_motion_readiness(brain, &motion_tuning, now),
-            action_tuning,
-        };
+        },
+        target,
+        in_reach: build_in_reach(target, capabilities),
+        world_allows_use: build_world_allows_use(components.entity, components.items, use_checks),
+        attacks_finished: components
+            .attack_state
+            .map_or(0, |state| state.attacks_finished),
     }
 }

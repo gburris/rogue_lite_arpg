@@ -12,7 +12,8 @@ pub use orbit::Orbit;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
-use super::{ActiveMotion, Brain, BrainRng, Interval, Motion, Tuning};
+use super::capability::{Capabilities, Capability, record_capability};
+use super::{ActiveMotion, Brain, BrainRng, Interval, Motion};
 use crate::character::{
     anchor::Anchor,
     state::SimpleMotion,
@@ -154,9 +155,7 @@ impl MotionContext<'_, '_> {
 }
 
 /// A component that runs one finite [`Motion`]. List new ones in [`FiniteMotions`].
-pub(super) trait MotionExecutor {
-    fn motion(&self) -> Motion;
-    fn tuning(&self) -> Tuning;
+pub(super) trait MotionExecutor: Capability<Key = Motion> {
     fn tag(&mut self) -> &mut RunTag;
     fn reset(&mut self, now: f32);
     fn step(&mut self, context: &mut MotionContext) -> MotionStep;
@@ -194,7 +193,7 @@ impl FiniteMotionsItem<'_, '_> {
     fn sync(&mut self, active: Option<ActiveMotion>, now: f32) {
         for executor in self.executors() {
             let epoch = active
-                .filter(|active| active.motion.index() == executor.motion().index())
+                .filter(|active| active.motion.index() == executor.key().index())
                 .map(|active| active.epoch);
             if executor.tag().epoch != epoch {
                 executor.reset(now);
@@ -208,7 +207,7 @@ impl FiniteMotionsItem<'_, '_> {
 
     fn step(&mut self, motion: Motion, context: &mut MotionContext) -> Option<MotionStep> {
         self.executors()
-            .find(|executor| executor.motion().index() == motion.index())
+            .find(|executor| executor.key().index() == motion.index())
             .map(|executor| executor.step(context))
     }
 
@@ -220,12 +219,10 @@ impl FiniteMotionsItem<'_, '_> {
 }
 
 impl FiniteMotionsReadOnlyItem<'_, '_> {
-    pub(super) fn tuning(&self) -> [Option<Tuning>; Motion::COUNT] {
-        let mut tuning = [None; Motion::COUNT];
+    pub(super) fn record_capabilities(&self, capabilities: &mut Capabilities) {
         for executor in finite_executors!(self, as_deref, &dyn MotionExecutor) {
-            tuning[executor.motion().index()] = Some(executor.tuning());
+            record_capability(capabilities, Some(executor));
         }
-        tuning
     }
 }
 

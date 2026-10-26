@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use super::{MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
+use super::{Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
 use crate::character::brain::{CAST_MAX_RANGE, Motion, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
@@ -57,8 +57,10 @@ impl Swoop {
     }
 }
 
-impl MotionExecutor for Swoop {
-    fn motion(&self) -> Motion {
+impl Capability for Swoop {
+    type Key = Motion;
+
+    fn key(&self) -> Motion {
         Motion::Swoop
     }
 
@@ -70,7 +72,9 @@ impl MotionExecutor for Swoop {
             ..Tuning::default()
         }
     }
+}
 
+impl MotionExecutor for Swoop {
     fn tag(&mut self) -> &mut RunTag {
         &mut self.tag
     }

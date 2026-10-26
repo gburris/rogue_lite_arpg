@@ -7,7 +7,7 @@
 //! the math, [`super::considerations`] holds what brains can sense, and
 //! [`super::brains`] holds the shipped definitions.
 
-use bevy::prelude::Vec2;
+use bevy::prelude::{Deref, Vec2};
 
 use crate::items::prelude::EquipmentSlot;
 
@@ -208,6 +208,78 @@ impl Action {
     }
 }
 
+/// Position of a motion in a [`MotionActionTable`]: motions come first.
+pub const fn motion_table_index(motion: Motion) -> usize {
+    motion.index()
+}
+
+/// Position of an action in a [`MotionActionTable`]: actions follow the motions.
+pub const fn action_table_index(action: Action) -> usize {
+    Motion::COUNT + action.index()
+}
+
+/// A type with its own entry in a [`MotionActionTable`].
+pub trait MotionActionKey: Copy {
+    /// Position of this key in a [`MotionActionTable`].
+    fn table_index(self) -> usize;
+}
+
+impl MotionActionKey for Motion {
+    fn table_index(self) -> usize {
+        motion_table_index(self)
+    }
+}
+
+impl MotionActionKey for Action {
+    fn table_index(self) -> usize {
+        action_table_index(self)
+    }
+}
+
+/// A raw table position, for extractors that pick their entry with a const generic.
+impl MotionActionKey for usize {
+    fn table_index(self) -> usize {
+        self
+    }
+}
+
+impl MotionActionKey for Ability {
+    fn table_index(self) -> usize {
+        Action::Ability(self).table_index()
+    }
+}
+
+/// One value per motion and per action, indexed by any [`MotionActionKey`].
+#[derive(Clone, Copy, Debug)]
+pub struct MotionActionTable<T>([T; Motion::COUNT + Action::COUNT]);
+
+impl<T: Copy> MotionActionTable<T> {
+    /// A table with every entry set to `value`.
+    pub fn splat(value: T) -> Self {
+        Self([value; Motion::COUNT + Action::COUNT])
+    }
+}
+
+impl<T: Default> Default for MotionActionTable<T> {
+    fn default() -> Self {
+        Self(std::array::from_fn(|_| T::default()))
+    }
+}
+
+impl<T, K: MotionActionKey> std::ops::Index<K> for MotionActionTable<T> {
+    type Output = T;
+
+    fn index(&self, key: K) -> &T {
+        &self.0[key.table_index()]
+    }
+}
+
+impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
+    fn index_mut(&mut self, key: K) -> &mut T {
+        &mut self.0[key.table_index()]
+    }
+}
+
 /// One candidate a brain can choose: how the character moves, what it does,
 /// and how firmly it holds on. A behavior claims the motion slot, the action
 /// slot, or both.
@@ -258,92 +330,63 @@ pub struct TargetView {
     pub velocity: Vec2,
 }
 
-/// What the decision tick needs to know about one capability, copied from the
-/// component that carries it out so scoring never reaches into executor state.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Tuning {
-    /// Target distance within which the capability should be used, when it has one.
-    pub reach: Option<f32>,
-    /// Probability that a winning finite motion actually starts.
-    pub chance: f32,
-    /// Seconds before the capability may be tried again after it finishes (a
-    /// finite motion also waits this out after a missed start roll).
-    pub cooldown: f32,
-    /// Seconds from spawn before the first use.
-    pub initial_delay: f32,
-}
-
-impl Default for Tuning {
-    fn default() -> Self {
-        Self {
-            reach: None,
-            chance: 1.0,
-            cooldown: 0.0,
-            initial_delay: 0.0,
-        }
-    }
-}
-
 /// Everything a pure brain is allowed to look at during one decision tick:
-/// facts sensed from the world, the brain's own earlier choices, and the
-/// tuning of the capabilities its entity carries.
-#[derive(Clone, Copy, Debug)]
+/// facts sensed from the world and the brain's own earlier choices.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DecisionContext {
+    pub me: SelfView,
     pub target: Option<TargetView>,
+    /// Whether the target is inside each owned capability's reach; all false
+    /// without a target.
+    pub in_reach: MotionActionTable<bool>,
+    pub memory: MemoryView,
+}
+
+/// The deciding character's own body state this tick.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SelfView {
     pub health_fraction: f32,
     /// Current mana as a `0.0..=1.0` fraction, or `1.0` for a non-caster.
     pub mana_fraction: f32,
-    pub slot_ready: [bool; EquipmentSlot::ALL.len()],
-    pub anchor_overshoot_fraction: Option<f32>,
-    pub anchor_arrived: Option<bool>,
-    /// Whether the body is stunned and cannot carry out a committed move.
-    pub stunned: bool,
-    /// An attack finished on the last tick; finite motions key their start off this.
-    pub attack_finished: bool,
-    /// The motion slot's holder, or `None` while the slot is empty.
-    pub motion: Option<Motion>,
     /// Whether a caster is running out a held mana break.
     pub mana_recovering: bool,
-    /// `None` for a finite motion this entity has no capability for.
-    pub motion_tuning: [Option<Tuning>; Motion::COUNT],
-    /// Owned and off cooldown, so it may be scored and started.
-    pub motion_ready: [bool; Motion::COUNT],
-    /// `None` for an action this entity cannot carry out.
-    pub action_tuning: [Option<Tuning>; Action::COUNT],
+    /// Whether the body is stunned and cannot carry out a committed move.
+    pub stunned: bool,
+    pub anchor: Option<AnchorView>,
 }
 
-impl Default for DecisionContext {
+impl Default for SelfView {
     fn default() -> Self {
         Self {
-            target: None,
             health_fraction: 1.0,
             mana_fraction: 1.0,
-            slot_ready: [false; EquipmentSlot::ALL.len()],
-            anchor_overshoot_fraction: None,
-            anchor_arrived: None,
-            stunned: false,
-            attack_finished: false,
-            motion: None,
             mana_recovering: false,
-            motion_tuning: [None; Motion::COUNT],
-            motion_ready: [false; Motion::COUNT],
-            action_tuning: [Some(Tuning::default()); Action::COUNT],
+            stunned: false,
+            anchor: None,
         }
     }
 }
 
-impl DecisionContext {
-    /// Whether the body can start `motion` right now: a continuous motion always, a
-    /// finite motion only when owned and off cooldown.
-    pub fn can_start(&self, motion: Motion) -> bool {
-        !motion.is_finite() || self.motion_ready[motion.index()]
-    }
-
-    /// Whether the body carries the capability for `action`.
-    pub fn can_perform(&self, action: Action) -> bool {
-        self.action_tuning[action.index()].is_some()
-    }
+/// Where the body stands relative to the anchor it is tethered to.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AnchorView {
+    pub overshoot_fraction: f32,
+    pub arrived: bool,
 }
+
+/// The brain's own earlier choices, as scoring sees them.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MemoryView {
+    /// The motion slot's holder, or `None` while the slot is empty.
+    pub motion: Option<Motion>,
+    /// An attack finished on the last tick; finite motions key their start off this.
+    pub attack_finished: bool,
+}
+
+/// Which motions and actions may start right now. Derefs to its table, so
+/// `availability[Motion::Swoop]` reads an entry directly.
+#[derive(Clone, Copy, Debug, Deref)]
+pub struct Availability(pub MotionActionTable<bool>);
 
 /// A complete static brain: the list of behaviors it scores.
 #[derive(Debug)]

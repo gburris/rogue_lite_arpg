@@ -34,16 +34,14 @@ jobs:
           echo "app=tmp/app/baba_yaga" >> "${GITHUB_ENV}"
           echo "package=baba_yaga-web.zip" >> "${GITHUB_ENV}"
 
-          # Rustflags:
-          RUSTFLAGS='-Zthreads=0'
-          RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }"'-Zshare-generics=y'
-          echo "RUSTFLAGS=${RUSTFLAGS}" >> "${GITHUB_ENV}"
-
       - uses: nschloe/action-cached-lfs-checkout@v1
 
+      # Keep in sync with rust-toolchain.toml, which overrides whatever toolchain is installed;
+      # nightly-only -Z flags would fail on it.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: 1.95.0
           targets: wasm32-unknown-unknown
 
       # Cache cargo dependencies

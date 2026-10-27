@@ -34,7 +34,7 @@ pub(super) fn plugin(app: &mut App) {
             .run_if(in_state(AppState::Playing)),
     );
     #[cfg(feature = "dev")]
-    app.add_systems(Update, cycle_recipe.run_if(in_state(AppState::Playing)));
+    app.add_systems(Update, dev_map_keys.run_if(in_state(AppState::Playing)));
 }
 
 /// System parameters for requesting the next map.
@@ -128,17 +128,25 @@ fn rebuild_current_map(
     }
 }
 
-/// Dev only: F6 steps through every recipe in file order with a fresh seed.
+/// Arena that F1 opens in dev builds.
 #[cfg(feature = "dev")]
-fn cycle_recipe(
+const AI_TEST_ARENA: &str = "AiTestArena";
+
+/// Dev only: F1 opens the AI test arena; F6 steps through every recipe in file order.
+/// Both use a fresh seed.
+#[cfg(feature = "dev")]
+fn dev_map_keys(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     blueprint: Single<&MapBlueprint>,
     mut next_map: NextMap,
 ) -> Result {
-    if !keyboard_input.just_pressed(KeyCode::F6) {
+    let recipe = if keyboard_input.just_pressed(KeyCode::F1) {
+        AI_TEST_ARENA.to_owned()
+    } else if keyboard_input.just_pressed(KeyCode::F6) {
+        next_map.catalog.recipe_after(&blueprint.recipe).to_owned()
+    } else {
         return Ok(());
-    }
-    let recipe = next_map.catalog.recipe_after(&blueprint.recipe).to_owned();
+    };
     next_map.set(MapRequest::Named { recipe, seed: None })
 }
 
@@ -622,13 +630,10 @@ mod tests {
     fn arenas_are_named_only_and_need_no_weight() {
         let text = std::fs::read_to_string("assets/config/map_recipes.ron")
             .expect("recipe file is readable");
+        assert_eq!(text.matches("arenas: [").count(), 1);
         let text = text.replace(
-            "arenas: [],",
-            "arenas: [(name: \"TestArena\", size_x_range: (40, 40), size_y_range: (40, 40))],",
-        );
-        assert!(
-            text.contains("TestArena"),
-            "recipe file has no empty arenas list"
+            "arenas: [",
+            "arenas: [(name: \"TestArena\", size_x_range: (40, 40), size_y_range: (40, 40)),",
         );
         let file: RecipeFile = recipe_options()
             .from_str(&text)
@@ -642,7 +647,9 @@ mod tests {
                 .iter()
                 .any(|name| name == "TestArena")
         );
-        assert_eq!(catalog.order.last().map(String::as_str), Some("TestArena"));
+        // File order: the hub, every dungeon, then arenas.
+        let first_arena = 1 + catalog.weighted_names.len();
+        assert_eq!(catalog.order[first_arena], "TestArena");
         let mut root_rng = MapRng::seeded(0);
         for _ in 0..500 {
             let (recipe, _) = catalog
@@ -650,6 +657,19 @@ mod tests {
                 .expect("weighted pick succeeds");
             assert_ne!(recipe.name, "TestArena");
         }
+    }
+
+    #[cfg(feature = "dev")]
+    #[test]
+    fn the_f1_arena_exists_and_is_not_in_rotation() {
+        let catalog = catalog();
+        assert!(catalog.named(AI_TEST_ARENA).is_ok());
+        assert!(
+            !catalog
+                .weighted_names
+                .iter()
+                .any(|name| name == AI_TEST_ARENA)
+        );
     }
 
     #[test]

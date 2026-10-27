@@ -63,5 +63,5 @@ pub(super) fn plugin(app: &mut App) {
 // - validate() (single PlayerStart, at least one Exit, solid border, spawnable
 //   disjoint placements) runs at generation time; startup additionally rebuilds
 //   seeds 0..=8 per recipe as a smoke test, and `cargo test` builds seeds 0..64.
-// - Dev builds: editing map_recipes.ron rebuilds the current map in place; F6 cycles
-//   through every recipe in file order.
+// - Dev builds: editing map_recipes.ron rebuilds the current map in place; F1 opens the
+//   AiTestArena arena; F6 cycles through every recipe in file order.

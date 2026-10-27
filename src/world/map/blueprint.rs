@@ -4,21 +4,23 @@ use std::fmt;
 
 use crate::prelude::{EnemyKind, NpcKind, TileGrid, TileKind};
 
-/// Generated map tiles, placements, and visual seed; insertion requires transform and visibility.
+/// Generated map tiles and placements, plus the replay key (`recipe`, `seed`) that built them.
 #[derive(Component, Debug, PartialEq, Eq)]
-#[require(Transform, Visibility)]
+#[require(Transform, Visibility, Name::new("Map"))]
 pub struct MapBlueprint {
     /// Tile grid containing the map terrain.
     pub tiles: TileGrid,
     /// Entity placements associated with this map.
     pub placements: Vec<Placement>,
-    /// Seed used to generate map visuals.
-    pub visual_seed: u64,
+    /// Name of the recipe that built this map.
+    pub recipe: String,
+    /// Seed that drove the whole build: layout, placements and visuals.
+    pub seed: u64,
 }
 
 impl MapBlueprint {
     /// Creates a map with a blocking wall border.
-    pub fn new(map_size: UVec2, floor: TileKind, visual_seed: u64) -> Self {
+    pub fn new(map_size: UVec2, floor: TileKind, recipe: String, seed: u64) -> Self {
         let mut tiles = TileGrid::new(map_size, floor);
 
         // For now every map has a wall border
@@ -26,8 +28,9 @@ impl MapBlueprint {
 
         Self {
             tiles,
-            visual_seed,
             placements: Vec::new(),
+            recipe,
+            seed,
         }
     }
 
@@ -242,7 +245,8 @@ mod tests {
     #[test]
     fn structure_markers_preserve_destination_tiles() {
         let structure = structure_from_glyphs(TileKind::Cobblestone, "#:P").unwrap();
-        let mut blueprint = MapBlueprint::new(UVec2::new(5, 5), TileKind::Grass, 1);
+        let mut blueprint =
+            MapBlueprint::new(UVec2::new(5, 5), TileKind::Grass, "Test".to_owned(), 1);
         apply_structure(&mut blueprint, &structure, IVec2::new(1, 1)).unwrap();
         assert_eq!(blueprint.tiles.get(IVec2::new(2, 1)), Some(TileKind::Grass));
         assert_eq!(

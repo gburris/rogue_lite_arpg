@@ -99,35 +99,6 @@ pub fn apply_structure(
     Ok(())
 }
 
-/// Builtin procedural feature selected by reserved structure kind name.
-///
-/// To add a feature: add a variant plus its reserved name below, write its builder
-/// from `claim_feature_footprint` (see rubble for a one-tile feature), and handle
-/// the variant in the exhaustive `place_structures` match — the compiler points
-/// at it. RON entries just name it: `(kind: "Pond")`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BuiltinFeature {
-    /// Walled dead-zone square carved out of the map.
-    EmptySquare,
-    /// Open water square: rendered, blocks ground movement and spawns.
-    Pond,
-    /// Single scattered wall tile; repeat the entry for scattered coverage.
-    Rubble,
-}
-
-impl BuiltinFeature {
-    /// Looks up a feature by kind name; anything else is a catalog structure.
-    /// The catalog loader rejects custom structures using these names.
-    pub fn from_kind(kind: &str) -> Option<Self> {
-        match kind {
-            "EmptySquare" => Some(Self::EmptySquare),
-            "Pond" => Some(Self::Pond),
-            "Rubble" => Some(Self::Rubble),
-            _ => None,
-        }
-    }
-}
-
 /// Footprint size for a builtin feature: an exact rectangle or an
 /// independently rolled rectangle between minimum and maximum corners.
 /// RON spells `size: Exact((14, 9))` or `size: Ranged((6, 4), (12, 8))`;
@@ -273,7 +244,7 @@ pub fn build_pond(
     Ok(Some(pond_rect.center_tile()))
 }
 
-/// Scatters wall rubble via the entry's rule: repeat the entry for scattered
+/// Scatters wall rubble via the entry's rule: use the entry's `count` for scattered
 /// coverage, or set `size` for a solid rubble chunk.
 /// Returns the chunk's center tile, or `None` when placement failed.
 pub fn build_rubble(

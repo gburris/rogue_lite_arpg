@@ -33,8 +33,13 @@ impl MapRng {
         Self(ChaCha8Rng::seed_from_u64(seed))
     }
 
-    pub(crate) fn map(&mut self) -> (ChaCha8Rng, u64) {
-        let seed = self.0.next_u64();
-        (ChaCha8Rng::seed_from_u64(seed), seed)
+    /// Draws the build seed for the next map.
+    pub(crate) fn next_map_seed(&mut self) -> u64 {
+        self.0.next_u64()
+    }
+
+    /// Root generator for choices made before a map is built, such as the weighted recipe pick.
+    pub(crate) fn rng(&mut self) -> &mut ChaCha8Rng {
+        &mut self.0
     }
 }

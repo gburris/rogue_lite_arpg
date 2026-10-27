@@ -233,6 +233,18 @@ pub enum TileKind {
 }
 
 impl TileKind {
+    /// Every tile kind. `from_glyph` searches this list, so a new kind must be added here
+    /// as well as to `glyph`; the round-trip test catches a missing or clashing glyph.
+    pub const ALL: [Self; 7] = [
+        Self::Wood,
+        Self::Ground,
+        Self::Grass,
+        Self::Wall,
+        Self::Water,
+        Self::Cobblestone,
+        Self::DeadZone,
+    ];
+
     /// Returns the glyph used to encode this tile.
     pub const fn glyph(self) -> char {
         match self {
@@ -248,16 +260,14 @@ impl TileKind {
 
     /// Parses a tile glyph, returning `None` for unrecognized characters.
     pub const fn from_glyph(glyph: char) -> Option<Self> {
-        match glyph {
-            'w' => Some(Self::Wood),
-            '.' => Some(Self::Ground),
-            ',' => Some(Self::Grass),
-            '#' => Some(Self::Wall),
-            '~' => Some(Self::Water),
-            'c' => Some(Self::Cobblestone),
-            '_' => Some(Self::DeadZone),
-            _ => None,
+        let mut index = 0;
+        while index < Self::ALL.len() {
+            if Self::ALL[index].glyph() == glyph {
+                return Some(Self::ALL[index]);
+            }
+            index += 1;
         }
+        None
     }
 
     /// Returns whether this tile blocks ground placement.
@@ -273,5 +283,27 @@ impl TileKind {
     /// Returns whether this tile can host a spawn.
     pub fn can_spawn(&self) -> bool {
         !self.blocks_ground() && self.should_render()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::world::map::blueprint::PlacementKind;
+
+    #[test]
+    fn tile_glyphs_round_trip_and_never_clash() {
+        let mut seen = std::collections::HashSet::new();
+        for kind in TileKind::ALL {
+            let glyph = kind.glyph();
+            assert_eq!(TileKind::from_glyph(glyph), Some(kind));
+            assert!(seen.insert(glyph), "{kind:?} reuses glyph {glyph:?}");
+            assert_eq!(
+                PlacementKind::from_glyph(glyph),
+                None,
+                "{glyph:?} is also a placement"
+            );
+            assert_ne!(glyph, ':', "':' marks a transparent structure cell");
+        }
     }
 }

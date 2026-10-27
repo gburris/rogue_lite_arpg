@@ -2,13 +2,13 @@ use bevy::prelude::*;
 
 use crate::character::brain::Capability;
 use crate::{
-    character::brain::{Ability, Action, ActionFinished, Brain, Tuning},
+    character::brain::{Ability, Action, Brain, Tuning},
     prelude::*,
 };
 
 /// Drinking carried potions to recover health. Opt-in at spawn; absent means
 /// the entity never drinks. The brain decides when; this component is the
-/// body's capability and its pacing between potions.
+/// character's capability and its pacing between potions.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Heal {
     /// Spacing between potions.
@@ -45,7 +45,7 @@ pub(in crate::character::brain) fn find_carried_potion(
 ) -> Option<Entity> {
     items
         .into_iter()
-        .flat_map(|items| items.iter())
+        .flat_map(Items::iter)
         .find(|item| consumables.contains(*item))
 }
 
@@ -60,20 +60,19 @@ pub(super) fn apply_heal(
 ) {
     let now = time.elapsed_secs();
     for (entity, brain, items) in &drinkers {
-        if brain.action() != Some(Action::Ability(Ability::Heal))
-            || !brain.is_cooldown_ready(Ability::Heal, now)
-        {
+        let Some(drinking) = brain.held_action(Action::Ability(Ability::Heal)) else {
             continue;
-        }
-        if let Some(potion) = find_carried_potion(items, &consumables) {
-            commands.trigger(Consume {
-                entity,
-                item_entity: potion,
-            });
-            commands.trigger(ActionFinished {
-                entity,
-                action: Some(Action::Ability(Ability::Heal)),
-            });
-        }
+        };
+        let potion = find_carried_potion(items, &consumables)
+            .filter(|_| brain.is_cooldown_ready(Ability::Heal, now));
+        let Some(potion) = potion else {
+            drinking.report_not_started(&mut commands, entity);
+            continue;
+        };
+        commands.trigger(Consume {
+            entity,
+            item_entity: potion,
+        });
+        drinking.report_completed(&mut commands, entity);
     }
 }

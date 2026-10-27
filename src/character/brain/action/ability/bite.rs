@@ -3,20 +3,15 @@ use bevy::prelude::*;
 use crate::character::brain::Capability;
 use crate::{
     character::{
-        brain::{Ability, Action, ActionFinished, Brain, Tuning},
-        vision::{TargetInfo, Targeting},
+        brain::{Ability, Action, Brain, Tuning, perception::Targeting},
+        vision::TargetInfo,
     },
     prelude::*,
 };
 
-/// Distance beyond a bite's live reach at which the decision tick arms it.
-/// Decisions sample at ~10 Hz, so a dive crossing the reach could otherwise
-/// fall between two samples; the applier still checks the true reach.
-const DECISION_LEAD: f32 = 40.0;
-
 /// Contact damage on a target within reach. Opt-in at spawn; absent means the
 /// entity never bites. The brain decides when to bite; this component is only
-/// the body's capability, so a bat bites whether it is diving or circling.
+/// the bat's capability, so a bat bites whether it is diving or circling.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Bite {
     pub reach: f32,
@@ -55,7 +50,7 @@ impl Capability for Bite {
 
     fn tuning(&self) -> Tuning {
         Tuning {
-            reach: Some(self.reach + DECISION_LEAD),
+            reach: Some(self.reach),
             cooldown: self.cooldown,
             ..Tuning::default()
         }
@@ -63,7 +58,8 @@ impl Capability for Bite {
 }
 
 /// Lands a bite when the brain wants one and the target is within the true
-/// reach. The decision tick only arms the action.
+/// reach; contact needs no line of sight. The decision tick only arms the
+/// action, so a momentum bite waits for reach.
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
@@ -78,12 +74,12 @@ pub(super) fn apply_bite(
 ) {
     let now = time.elapsed_secs();
     for (entity, brain, bite, targeting, target_info, health) in &biters {
-        if brain.action() != Some(Action::Ability(Ability::Bite))
-            || !brain.is_cooldown_ready(Ability::Bite, now)
-        {
+        let Some(biting) = brain.held_action(Action::Ability(Ability::Bite)) else {
             continue;
-        }
-        if !target_info.distance.is_finite() || target_info.distance > bite.reach {
+        };
+        let in_reach = target_info.distance.is_finite() && target_info.distance <= bite.reach;
+        if !(brain.is_cooldown_ready(Ability::Bite, now) && in_reach) {
+            biting.report_not_started(&mut commands, entity);
             continue;
         }
         commands.trigger(AttemptDamage {
@@ -101,9 +97,6 @@ pub(super) fn apply_bite(
                 amount: bite.damage * bite.life_steal,
             });
         }
-        commands.trigger(ActionFinished {
-            entity,
-            action: Some(Action::Ability(Ability::Bite)),
-        });
+        biting.report_completed(&mut commands, entity);
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use avian2d::prelude::*;
 use bevy::{
     color::palettes::css::{GREEN, RED, YELLOW},
@@ -5,6 +7,7 @@ use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     log::{Level, LogPlugin},
     prelude::*,
+    sprite::Anchor,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -12,8 +15,8 @@ use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::prelude::{
     AppState, AttackState, Brain, Dash, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu,
-    Motion, Placement, PlacementKind, TargetInfo, Targeting, TileKind, TileRect, Vision, Wander,
-    ZLayer,
+    Motion, Placement, PlacementKind, ScoreTrace, TargetInfo, Targeting, TileKind, TileRect,
+    Vision, Wander, ZLayer,
 };
 
 use super::view;
@@ -151,20 +154,24 @@ fn debug_target_lines(
 #[derive(Component)]
 struct EnemyAiLabel;
 
-/// Marker on enemies that already have a label child, so spawn runs once.
+/// Marker on enemies that already have a label child (and a [`ScoreTrace`]),
+/// so spawn runs once.
 #[derive(Component)]
 struct HasAiLabel;
 
 /// Height of the floating label above the enemy's center, in world units.
 const AI_LABEL_HEIGHT: f32 = 30.0;
 
-/// Spawns one floating label per enemy while the debug overlay is enabled.
+/// Spawns one floating label per enemy while the debug overlay is enabled,
+/// and starts tracing its brain's scores.
 fn spawn_enemy_ai_labels(
     mut commands: Commands,
     enemies: Query<Entity, (With<Enemy>, Without<HasAiLabel>)>,
 ) {
     for enemy in &enemies {
-        commands.entity(enemy).insert(HasAiLabel);
+        commands
+            .entity(enemy)
+            .insert((HasAiLabel, ScoreTrace::default()));
         commands.entity(enemy).with_child((
             EnemyAiLabel,
             Text2d::new("..."),
@@ -173,13 +180,16 @@ fn spawn_enemy_ai_labels(
                 ..default()
             },
             TextColor::from(Color::WHITE),
+            // Grows upward, so a long score trace stays clear of the enemy.
+            Anchor::BOTTOM_CENTER,
             Transform::from_translation(Vec3::new(0.0, AI_LABEL_HEIGHT, ZLayer::AboveSprite.z())),
         ));
     }
 }
 
 /// Refreshes each label in plain words: the motion, the target distance
-/// in world units, and whether the enemy sees you and is attacking.
+/// in world units, whether the enemy sees you and is attacking, and the score
+/// trace of its last decision.
 fn update_enemy_ai_labels(
     enemies: Query<
         (
@@ -189,13 +199,14 @@ fn update_enemy_ai_labels(
             Option<&AttackState>,
             Option<&Dash>,
             Option<&Wander>,
+            Option<&ScoreTrace>,
         ),
         With<Enemy>,
     >,
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((brain, target_info, has_target, attack_state, dash, wander)) =
+        let Ok((brain, target_info, has_target, attack_state, dash, wander, score_trace)) =
             enemies.get(parent.parent())
         else {
             continue;
@@ -221,10 +232,66 @@ fn update_enemy_ai_labels(
         } else {
             text.0 = mode.to_string();
         }
+        if let Some(score_trace) = score_trace {
+            append_score_trace(&mut text.0, brain, score_trace);
+        }
     }
 }
 
-/// Removes floating labels once the debug overlay is toggled off.
+/// Appends one line per behavior: its motion and action, then its final score
+/// and any momentum followed by each consideration's name, score, input and
+/// raw value, or why it sat out.
+fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrace) {
+    let format_value = |value: Option<f32>| {
+        // A missing or reachless capability reads as the largest fraction.
+        value.map_or_else(
+            || "none".to_string(),
+            |value| {
+                if value >= f32::MAX {
+                    "far".to_string()
+                } else {
+                    format!("{value:.2}")
+                }
+            },
+        )
+    };
+    for (behavior, explanation) in brain
+        .definition()
+        .behaviors
+        .iter()
+        .zip(&score_trace.behaviors)
+    {
+        let _ = write!(
+            label,
+            "
+{}",
+            behavior.motion.map_or("-", Motion::name)
+        );
+        if let Some(action) = behavior.action {
+            let _ = write!(label, " + {action:?}");
+        }
+        if let Some(reason) = explanation.skipped {
+            let _ = write!(label, ": {}", reason.label());
+            continue;
+        }
+        let _ = write!(label, ": {}", format_value(explanation.score));
+        if explanation.momentum > 1.0 {
+            let _ = write!(label, " (x{:.2})", explanation.momentum);
+        }
+        for consideration in &explanation.considerations {
+            let _ = write!(
+                label,
+                " | {} {} [{:?} = {}]",
+                consideration.name,
+                format_value(consideration.score),
+                consideration.input,
+                format_value(consideration.raw),
+            );
+        }
+    }
+}
+
+/// Removes floating labels and score traces once the debug overlay is toggled off.
 fn cleanup_enemy_ai_labels(
     mut commands: Commands,
     labels: Query<Entity, With<EnemyAiLabel>>,
@@ -234,7 +301,7 @@ fn cleanup_enemy_ai_labels(
         commands.entity(label).despawn();
     }
     for enemy in &marked {
-        commands.entity(enemy).remove::<HasAiLabel>();
+        commands.entity(enemy).remove::<(HasAiLabel, ScoreTrace)>();
     }
 }
 

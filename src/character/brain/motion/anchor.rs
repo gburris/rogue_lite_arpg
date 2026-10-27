@@ -1,20 +1,34 @@
 use bevy::prelude::*;
 
-/// Marks a character's home position and how far it may wander from it.
+/// Marks a character's home position, how far it may wander from it, and how
+/// close to home on return counts as being back home.
 #[derive(Component)]
 pub struct Anchor {
     origin: Vec2,
     radius: f32,
+    arrival_radius: f32,
 }
 
 impl Anchor {
-    /// Creates an anchor at `origin` with the given wander radius in world units.
-    pub fn new(origin: Vec2, radius: f32) -> Self {
+    pub fn new(origin: Vec2, radius: f32, arrival_radius: f32) -> Self {
         debug_assert!(
             radius.is_finite() && radius > 0.0,
             "anchor radius must be finite and positive"
         );
-        Self { origin, radius }
+        debug_assert!(
+            arrival_radius > 0.0 && arrival_radius < radius,
+            "anchor arrival radius must be positive and inside the wander radius"
+        );
+        Self {
+            origin,
+            radius,
+            arrival_radius,
+        }
+    }
+
+    /// How close to the origin counts as arrived, in world units.
+    pub fn arrival_radius(&self) -> f32 {
+        self.arrival_radius
     }
 
     /// Wander radius in world units.

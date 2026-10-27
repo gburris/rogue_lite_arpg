@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-use super::SteerInput;
-use crate::character::brain::{BrainRng, Interval};
+use super::{Capability, SteerInput};
+use crate::character::brain::{BrainRng, Interval, Motion, Tuning};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
@@ -43,16 +43,24 @@ impl Wander {
     }
 }
 
-pub(super) fn speed_scale(wander: Option<&Wander>) -> f32 {
-    wander.map_or(WANDER_SPEED_SCALE, |wander| wander.speed_scale)
+/// Makes `Motion::Calm` available only to a character that carries one.
+impl Capability for Wander {
+    type Key = Motion;
+
+    fn key(&self) -> Motion {
+        Motion::Calm
+    }
+
+    fn tuning(&self) -> Tuning {
+        Tuning::default()
+    }
 }
 
 pub(super) fn steer(
     input: &SteerInput,
-    wander: Option<&mut Wander>,
+    wander: &mut Wander,
     random: &mut BrainRng,
 ) -> Option<Vec2> {
-    let wander = wander?;
     let stretch = match wander.stretch {
         Some(stretch) if input.now < stretch.until => stretch,
         previous => {

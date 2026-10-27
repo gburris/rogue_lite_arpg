@@ -1,15 +1,21 @@
-//! The decision pipeline: observe the world, release or abort a stale lock,
+//! The decision pipeline: observe the world, drop a stale committed behavior,
 //! score, and commit. This is the only code that changes which behaviors a
 //! [`Brain`] holds.
 
 use bevy::prelude::*;
 
-use super::capability::{Capabilities, CapabilityComponents, build_capabilities};
-use super::model::Behavior;
-use super::motion::{MotionAborted, MotionFinished};
-use super::scoring::assign_behaviors_to_slots;
-use super::senses::{Observation, ObservedComponents, WorldUseChecks, observe_world_facts};
-use super::{Action, ActionAborted, ActionFinished, Brain, BrainRng, MotionActionTable};
+use super::capability::{
+    Capabilities, CapabilityComponents, MotionActionTable, build_capabilities,
+};
+use super::engine::{Behavior, assign_behaviors_to_slots, explain_behavior};
+use super::motion::MotionFinished;
+use super::perception::{
+    DecisionContext, ObservedComponents, ObservedComponentsItem, WorldUseChecks,
+    observe_world_facts,
+};
+use super::{
+    Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD, ScoreTrace,
+};
 
 type DecidingBrains<'world, 'state> = Query<
     'world,
@@ -19,12 +25,13 @@ type DecidingBrains<'world, 'state> = Query<
         &'static mut BrainRng,
         ObservedComponents,
         CapabilityComponents,
+        Option<&'static mut ScoreTrace>,
     ),
 >;
 
-/// Marks a locked motion's part finished and starts its cooldown. Once every
-/// finite part of the lock is done it releases, and the entity decides again
-/// at once instead of waiting for the next tick.
+/// Starts a finished motion's cooldown. A finish carrying the committed behavior's
+/// epoch ends that behavior, and the character decides again at once instead
+/// of waiting for the next tick.
 pub(super) fn release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -32,80 +39,33 @@ pub(super) fn release_finished_motion(
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, mut rng, observed, components, mut score_trace)) =
+        brains.get_mut(finished.entity)
+    else {
         return;
     };
     let capabilities = build_capabilities(&components, &use_checks.equipment);
-    let Some(released) = brain.finish_motion_part(finished.motion, now) else {
-        return;
-    };
     let cooldown = capabilities[finished.motion].map_or(0.0, |tuning| tuning.cooldown);
     brain.start_cooldown(finished.motion, now + cooldown);
-    if released {
-        let observation = observe_world_facts(&observed, &capabilities, &use_checks);
-        decide_slot_assignments(&mut brain, &mut rng, &observation, &capabilities, now);
+    if brain.finish_committed_behavior(finished.epoch) {
+        redecide_now(
+            &mut brain,
+            &mut rng,
+            &observed,
+            &capabilities,
+            &use_checks,
+            score_trace.as_deref_mut(),
+            now,
+        );
     }
 }
 
-/// Drops a finite motion its executor could not start, with no cooldown, and
-/// decides again for that entity at once.
-pub(super) fn abort_failed_motion(
-    aborted: On<MotionAborted>,
-    time: Res<Time<Virtual>>,
-    use_checks: WorldUseChecks,
-    mut brains: DecidingBrains,
-) {
-    let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(aborted.entity) else {
-        return;
-    };
-    if !brain
-        .active_motion()
-        .is_some_and(|active| active.motion == aborted.motion)
-    {
-        return;
-    }
-    brain.abort_locked_behavior();
-    let capabilities = build_capabilities(&components, &use_checks.equipment);
-    let observation = observe_world_facts(&observed, &capabilities, &use_checks);
-    decide_slot_assignments(
-        &mut brain,
-        &mut rng,
-        &observation,
-        &capabilities,
-        time.elapsed_secs(),
-    );
-}
-
-/// Drops a locked action its applier could not start, with no cooldown, and
-/// decides again for that entity at once.
-pub(super) fn abort_failed_action(
-    aborted: On<ActionAborted>,
-    time: Res<Time<Virtual>>,
-    use_checks: WorldUseChecks,
-    mut brains: DecidingBrains,
-) {
-    let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(aborted.entity) else {
-        return;
-    };
-    if brain.active_action().is_none() {
-        return;
-    }
-    brain.abort_locked_behavior();
-    let capabilities = build_capabilities(&components, &use_checks.equipment);
-    let observation = observe_world_facts(&observed, &capabilities, &use_checks);
-    decide_slot_assignments(
-        &mut brain,
-        &mut rng,
-        &observation,
-        &capabilities,
-        time.elapsed_secs(),
-    );
-}
-
-/// Starts an ability's cooldown when its use finishes, and marks a locked
-/// action's part finished. Once every finite part of the lock is done it
-/// releases and the entity decides again at once. An equipment finish needs no
-/// flag: the decision reads it from the observed attack count.
+/// Starts an ability's cooldown, or marks an attack finished for a completed
+/// instant equipment use (a released block or a use that never started is no
+/// attack), whether or not the finish is current. An ability that never started
+/// waits out its cooldown too, so the next decision can't pick it straight
+/// back. A finish carrying the committed behavior's epoch ends that behavior,
+/// and the character decides again at once.
 pub(super) fn finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
@@ -113,70 +73,145 @@ pub(super) fn finish_action(
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    let Ok((mut brain, mut rng, observed, components)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, mut rng, observed, components, mut score_trace)) =
+        brains.get_mut(finished.entity)
+    else {
         return;
     };
     let capabilities = build_capabilities(&components, &use_checks.equipment);
-    if let Some(Action::Ability(ability)) = finished.action {
-        let cooldown = capabilities[ability].map_or(0.0, |tuning| tuning.cooldown);
-        brain.start_cooldown(ability, now + cooldown);
+    match finished.action {
+        Action::Use(slot)
+            if slot.is_instant_use() && finished.outcome == ActionOutcome::Completed =>
+        {
+            brain.attack_finish_pending = true;
+        }
+        Action::Ability(ability) => {
+            let cooldown = capabilities[ability].map_or(0.0, |tuning| tuning.cooldown);
+            brain.start_cooldown(ability, now + cooldown);
+        }
+        // A held or unstarted use is no attack, and nothing reports an idle
+        // action's finish.
+        Action::Use(_) | Action::Idle => {}
     }
-    if brain.finish_action_part(finished.action, now) == Some(true) {
-        let observation = observe_world_facts(&observed, &capabilities, &use_checks);
-        decide_slot_assignments(&mut brain, &mut rng, &observation, &capabilities, now);
+    if brain.finish_committed_behavior(finished.epoch) {
+        redecide_now(
+            &mut brain,
+            &mut rng,
+            &observed,
+            &capabilities,
+            &use_checks,
+            score_trace.as_deref_mut(),
+            now,
+        );
     }
 }
 
-/// Observes every brain's world and fills its motion and action slots.
+/// Observes the world of every brain whose decision is due and fills its motion
+/// and action slots. Each due brain moves to its next period boundary after
+/// now, keeping its phase without a burst of catch-up decisions after a long
+/// frame.
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
     use_checks: WorldUseChecks,
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    for (mut brain, mut rng, observed, components) in &mut brains {
+    for (mut brain, mut rng, observed, components, mut score_trace) in &mut brains {
+        if now < brain.next_decision_at {
+            continue;
+        }
+        let periods_passed = ((now - brain.next_decision_at) / DECISION_PERIOD).floor() + 1.0;
+        brain.next_decision_at += periods_passed * DECISION_PERIOD;
+        // Rounding near an exact multiple can land the boundary on `now`.
+        if brain.next_decision_at <= now {
+            brain.next_decision_at += DECISION_PERIOD;
+        }
         let capabilities = build_capabilities(&components, &use_checks.equipment);
-        let observation = observe_world_facts(&observed, &capabilities, &use_checks);
-        decide_slot_assignments(&mut brain, &mut rng, &observation, &capabilities, now);
+        redecide_now(
+            &mut brain,
+            &mut rng,
+            &observed,
+            &capabilities,
+            &use_checks,
+            score_trace.as_deref_mut(),
+            now,
+        );
     }
 }
 
-/// Fills the free slots. A locked behavior is never re-scored: it ends when
-/// its executor reports it or the lock is aborted. A winning locked motion
+/// Observes one brain's world and fills its slots, explaining the scores into
+/// `score_trace` when the brain carries one.
+fn redecide_now(
+    brain: &mut Brain,
+    rng: &mut BrainRng,
+    observed: &ObservedComponentsItem,
+    capabilities: &Capabilities,
+    use_checks: &WorldUseChecks,
+    score_trace: Option<&mut ScoreTrace>,
+    now: f32,
+) {
+    let (observed_context, world_allows_use) =
+        observe_world_facts(observed, capabilities, use_checks, now);
+    decide_slot_assignments(
+        brain,
+        rng,
+        observed_context,
+        &world_allows_use,
+        capabilities,
+        score_trace,
+        now,
+    );
+}
+
+/// Fills the free slots. A committed behavior is never re-scored: it ends when
+/// its executor reports it, the brain drops it, or a committed behavior in a
+/// higher interrupt tier wins one of its slots. A winning committed motion
 /// rolls its start chance; a miss waits out its cooldown and the next best
-/// behavior takes the slot. A slot nothing claims keeps its holder.
+/// behavior takes the slot. A slot nothing claims empties unless a committed
+/// behavior still holds it.
 fn decide_slot_assignments(
     brain: &mut Brain,
     rng: &mut BrainRng,
-    observation: &Observation,
+    observed_context: DecisionContext,
+    world_allows_use: &MotionActionTable<bool>,
     capabilities: &Capabilities,
+    score_trace: Option<&mut ScoreTrace>,
     now: f32,
 ) {
-    brain.release_or_abort_lock(observation, now);
-    let (context, availability) = brain.build_scoring_inputs(observation, capabilities, now);
+    // A bundle's two records name one behavior, so it drops once.
+    let mut dropped = None;
+    for running in [brain.motion, brain.action].into_iter().flatten() {
+        if dropped != Some(running.behavior)
+            && running.should_drop_committed_behavior(&observed_context, now)
+        {
+            brain.drop_committed_behavior(running, capabilities, now);
+            dropped = Some(running.behavior);
+        }
+    }
+    let (context, availability) =
+        brain.build_scoring_inputs(observed_context, world_allows_use, capabilities, now);
     let definition = brain.definition();
+    let holders = brain.holders();
+    if let Some(score_trace) = score_trace {
+        score_trace.behaviors.clear();
+        score_trace
+            .behaviors
+            .extend((0..definition.behaviors.len()).map(|index| {
+                explain_behavior(definition, index, &context, &availability, holders)
+            }));
+    }
     let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
-    let assignment = assign_behaviors_to_slots(
-        definition,
-        &context,
-        &availability,
-        brain.holders(),
-        |index| {
+    let assignment =
+        assign_behaviors_to_slots(definition, &context, &availability, holders, |index| {
             passes_start_roll(
                 rng,
                 capabilities,
-                definition.behaviors[index].value,
+                definition.behaviors[index],
                 now,
                 &mut missed_start_cooldowns,
             )
-        },
-    );
-    brain.commit_decision(
-        assignment,
-        &missed_start_cooldowns,
-        observation.attacks_finished,
-        now,
-    );
+        });
+    brain.commit_decision(assignment, &missed_start_cooldowns, capabilities, now);
 }
 
 /// Whether a winning behavior actually starts: a finite motion rolls its

@@ -2,8 +2,10 @@
 
 use bevy::prelude::*;
 
-use super::{Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SteeringEffort};
-use crate::character::brain::{CAST_MAX_RANGE, Motion, Tuning};
+use super::{
+    Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SpeedBoost, SteeringEffort,
+};
+use crate::character::brain::{Motion, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -13,47 +15,44 @@ const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
 
-/// A committed curved dive through the target that eases off its speed boost. Opt-in at spawn.
+/// A committed curved dive through the target; on ending it hands steering a
+/// decaying [`SpeedBoost`]. Opt-in at spawn.
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
-    pub chance: f32,
-    pub interval: f32,
-    pub reach: f32,
+    pub tuning: Tuning,
     pub speed_boost: f32,
     pub exit_turn: f32,
     pass: Option<SwoopPass>,
-    recovery_until: f32,
     tag: RunTag,
 }
 
 impl Swoop {
-    pub fn new(chance: f32, interval: f32) -> Self {
+    /// Dives at targets within `reach`, rolling `chance` each time it wins and
+    /// waiting `cooldown` seconds after a dive ends.
+    pub fn new(chance: f32, reach: f32, cooldown: f32) -> Self {
         Self {
-            chance,
-            interval,
-            reach: CAST_MAX_RANGE,
+            tuning: Tuning {
+                reach: Some(reach),
+                chance,
+                cooldown,
+            },
             speed_boost: SWOOP_SPEED_BOOST,
             exit_turn: SWOOP_EXIT_TURN,
             pass: None,
-            recovery_until: 0.0,
             tag: RunTag::default(),
         }
     }
 
-    fn finish(&mut self, now: f32) {
-        if self.pass.is_some() {
-            self.recovery_until = now + SWOOP_RECOVERY_TIME;
-        }
-        self.pass = None;
-    }
-
-    fn boost_at(&self, now: f32) -> f32 {
-        if now >= self.recovery_until {
-            return 1.0;
-        }
-        let remaining = ((self.recovery_until - now) / SWOOP_RECOVERY_TIME).clamp(0.0, 1.0);
-        let eased = remaining * remaining * (3.0 - 2.0 * remaining);
-        1.0 + self.speed_boost * eased
+    fn finish(&mut self, now: f32) -> Option<SpeedBoost> {
+        // Cleared or cut short, a pass hands its boost to steering to ease off.
+        self.pass.take().map(|_| {
+            SpeedBoost::new(
+                self.speed_boost,
+                SWOOP_RECOVERY_TIME,
+                EaseFunction::SmoothStep,
+                now,
+            )
+        })
     }
 }
 
@@ -65,12 +64,7 @@ impl Capability for Swoop {
     }
 
     fn tuning(&self) -> Tuning {
-        Tuning {
-            reach: Some(self.reach),
-            chance: self.chance,
-            cooldown: self.interval,
-            ..Tuning::default()
-        }
+        self.tuning
     }
 }
 
@@ -79,26 +73,14 @@ impl MotionExecutor for Swoop {
         &mut self.tag
     }
 
-    fn reset(&mut self, now: f32) {
-        self.finish(now);
-    }
-
-    fn recovery_boost(&self, now: f32) -> f32 {
-        self.boost_at(now)
+    fn reset(&mut self, now: f32) -> Option<SpeedBoost> {
+        self.finish(now)
     }
 
     fn step(&mut self, context: &mut MotionContext) -> MotionStep {
-        if self.tag.spent {
-            return MotionStep::Spent;
-        }
         let input = context.input;
         let now = input.now;
-        let recovery = self.boost_at(now);
-        let speed_boost = if recovery > 1.0 {
-            recovery
-        } else {
-            1.0 + self.speed_boost
-        };
+        let speed_boost = 1.0 + self.speed_boost;
         let steer = |direction| MotionStep::Steer {
             direction,
             effort: SteeringEffort::Boosted(speed_boost),
@@ -111,14 +93,8 @@ impl MotionExecutor for Swoop {
             .as_ref()
             .is_some_and(|pass| pass.cleared(input.position, info.distance));
         if cleared {
-            self.finish(now);
-            // Hold the orbit through the recovery so the circle resumes the way
-            // the dive left instead of rerolling at the handoff.
-            if let Some(orbit_direction) = context.orbit_direction.as_deref_mut() {
-                orbit_direction.hold_until(self.recovery_until);
-            }
-            self.tag.spent = true;
-            return MotionStep::Finished;
+            let speed_boost = self.finish(now);
+            return MotionStep::Finished { speed_boost };
         }
         if !info.distance.is_finite() {
             return steer(None);

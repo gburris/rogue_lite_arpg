@@ -1,5 +1,6 @@
 //! Per-frame steering: turns the brain's chosen motion into [`SimpleMotion`].
 
+mod anchor;
 mod dash;
 mod orbit;
 mod swoop;
@@ -7,83 +8,191 @@ mod wander;
 
 use bevy::{ecs::query::QueryData, prelude::*};
 
+pub use anchor::Anchor;
 pub use dash::Dash;
 pub use orbit::Orbit;
 pub use swoop::Swoop;
 pub use wander::Wander;
 
 use super::capability::{Capabilities, Capability, record_capability};
-use super::{ActiveMotion, Brain, BrainRng, Interval, Motion};
-use crate::character::{
-    anchor::Anchor,
-    state::SimpleMotion,
-    vision::{TargetInfo, Targeting},
-};
-use crate::prelude::TILE_SIZE;
+use super::engine::Interval;
+use super::perception::Targeting;
+use super::{ActiveMotion, Brain, BrainRng};
+use crate::character::{state::SimpleMotion, vision::TargetInfo};
 
-pub(crate) const ANCHOR_ARRIVAL_RADIUS: f32 = TILE_SIZE as f32 / 2.0;
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
+
+/// How a character moves: a continuous motion that runs until replaced, or a
+/// finite committed move that takes exclusive control of steering until its
+/// executor reports it finished and is never re-scored while it runs. New behaviors
+/// should reuse these motions, not add new variants, unless the
+/// steering contract itself is new.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Motion {
+    /// Disengaged: alternates standing and ambling, paced by the `Wander`
+    /// component.
+    #[default]
+    Calm,
+    Chase,
+    ReturnToAnchor,
+    /// Wounded break: still in the fight, just getting away from the target.
+    Flee,
+    KeepDistance(Interval),
+    /// Stands still on purpose. Scored like any motion, so it can win the
+    /// slot and keep momentum; an empty slot also stands still, but nothing
+    /// chose it.
+    Idle,
+    /// Circles the target inside the distance range while equipment stays hot.
+    Orbit(Interval),
+    /// Committed straight run; its `Dash` constructor (kite, hop, slide) sets its aim.
+    Dash,
+    /// Committed dive through a snapshot of the target and back out.
+    Swoop,
+}
+
+impl Motion {
+    /// Every motion in array order. A payload here only stands in; arrays
+    /// index by variant.
+    pub const ALL: &'static [Self] = &[
+        Self::Calm,
+        Self::Chase,
+        Self::ReturnToAnchor,
+        Self::Flee,
+        Self::KeepDistance(Interval::new(0.0, 1.0)),
+        Self::Idle,
+        Self::Orbit(Interval::new(0.0, 1.0)),
+        Self::Dash,
+        Self::Swoop,
+    ];
+
+    /// Number of distinct motions, for per-motion arrays.
+    pub const COUNT: usize = Self::ALL.len();
+
+    /// Position of this motion in per-motion arrays, ignoring any distance range.
+    pub const fn index(self) -> usize {
+        match self {
+            Self::Calm => 0,
+            Self::Chase => 1,
+            Self::ReturnToAnchor => 2,
+            Self::Flee => 3,
+            Self::KeepDistance(_) => 4,
+            Self::Idle => 5,
+            Self::Orbit(_) => 6,
+            Self::Dash => 7,
+            Self::Swoop => 8,
+        }
+    }
+
+    /// Whether this motion ends on its own and reports it, rather than
+    /// running until replaced.
+    pub const fn is_finite(self) -> bool {
+        match self {
+            Self::Dash | Self::Swoop => true,
+            Self::Calm
+            | Self::Chase
+            | Self::ReturnToAnchor
+            | Self::Flee
+            | Self::KeepDistance(_)
+            | Self::Idle
+            | Self::Orbit(_) => false,
+        }
+    }
+
+    /// Whether steering this motion needs a live target.
+    pub fn needs_target(self) -> bool {
+        match self {
+            // Flee is still fighting: the target is live, the goal is just distance.
+            Self::Chase
+            | Self::KeepDistance(_)
+            | Self::Orbit(_)
+            | Self::Flee
+            | Self::Dash
+            | Self::Swoop => true,
+            Self::Calm | Self::ReturnToAnchor | Self::Idle => false,
+        }
+    }
+
+    /// One-word label for debug displays.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Calm => "Calm",
+            Self::Chase => "Chase",
+            Self::ReturnToAnchor => "ReturnToAnchor",
+            Self::Flee => "Flee",
+            Self::KeepDistance(_) => "KeepDistance",
+            Self::Idle => "Idle",
+            Self::Orbit(_) => "Orbit",
+            Self::Dash => "Dash",
+            Self::Swoop => "Swoop",
+        }
+    }
+}
+
+// `ALL` lists every motion in `index` order.
+const _: () = {
+    // A new variant fails to compile here: add it to this match and to `ALL`.
+    match Motion::Calm {
+        Motion::Calm
+        | Motion::Chase
+        | Motion::ReturnToAnchor
+        | Motion::Flee
+        | Motion::KeepDistance(_)
+        | Motion::Idle
+        | Motion::Orbit(_)
+        | Motion::Dash
+        | Motion::Swoop => {}
+    }
+    let mut position = 0;
+    while position < Motion::COUNT {
+        assert!(
+            Motion::ALL[position].index() == position,
+            "Motion::ALL is out of index order"
+        );
+        position += 1;
+    }
+};
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TurnRate(pub f32);
 
-/// Which way a character circles its target. Motions share it so one can turn
-/// the orbit around without knowing the orbit motion exists.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct OrbitDirection {
-    clockwise: Option<bool>,
-    held_until: f32,
+/// Extra speed left over from a finite motion's burst, easing off over
+/// `duration`. Steering owns it: it multiplies whatever effort the current
+/// continuous motion asks for and removes it once it has fully decayed.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct SpeedBoost {
+    extra_speed: f32,
+    duration: f32,
+    ends_at: f32,
+    easing: EaseFunction,
 }
 
-impl OrbitDirection {
-    /// Multiplier on `bearing.perp()` for this direction's tangent. Picks a
-    /// direction at random the first time it is read.
-    pub(super) fn sign(&mut self, random: &mut BrainRng) -> f32 {
-        let clockwise = *self
-            .clockwise
-            .get_or_insert_with(|| random_clockwise(random));
-        if clockwise { -1.0 } else { 1.0 }
-    }
-
-    pub(super) fn flip(&mut self, random: &mut BrainRng) {
-        let clockwise = self
-            .clockwise
-            .map_or_else(|| random_clockwise(random), |clockwise| !clockwise);
-        self.clockwise = Some(clockwise);
-    }
-
-    pub(super) fn reroll(&mut self, switch_chance: f32, random: &mut BrainRng) {
-        if self.clockwise.is_none() || random.range(0.0, 1.0) < switch_chance {
-            self.flip(random);
+impl SpeedBoost {
+    pub(super) fn new(extra_speed: f32, duration: f32, easing: EaseFunction, now: f32) -> Self {
+        Self {
+            extra_speed,
+            duration,
+            ends_at: now + duration,
+            easing,
         }
     }
 
-    pub(super) fn hold_until(&mut self, until: f32) {
-        self.held_until = self.held_until.max(until);
-    }
-
-    pub(super) fn is_held(&self, now: f32) -> bool {
-        now < self.held_until
+    fn compute_speed_multiplier(&self, now: f32) -> Option<f32> {
+        if now >= self.ends_at {
+            return None;
+        }
+        let remaining = ((self.ends_at - now) / self.duration).clamp(0.0, 1.0);
+        Some(1.0 + self.extra_speed * self.easing.sample_clamped(remaining))
     }
 }
 
-fn random_clockwise(random: &mut BrainRng) -> bool {
-    random.range(0.0, 1.0) < 0.5
-}
-
-/// A finite motion completed; the brain starts its cooldown and decides again.
+/// A finite motion completed; the brain starts its cooldown and, while `epoch`
+/// is still the motion slot's running behavior, ends it and decides again.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
-}
-
-/// A finite motion could not start; the brain drops it without a cooldown.
-#[derive(EntityEvent, Clone, Copy, Debug)]
-pub struct MotionAborted {
-    pub entity: Entity,
-    pub motion: Motion,
+    pub epoch: u32,
 }
 
 pub(super) struct SteerInput<'a> {
@@ -105,8 +214,9 @@ impl SteerInput<'_> {
     }
 
     fn direction_to_anchor(&self) -> Option<Vec2> {
-        let to_anchor = self.anchor?.origin() - self.position;
-        (to_anchor.length() > ANCHOR_ARRIVAL_RADIUS).then_some(to_anchor.normalize_or_zero())
+        let anchor = self.anchor?;
+        let to_anchor = anchor.origin() - self.position;
+        (to_anchor.length() > anchor.arrival_radius()).then_some(to_anchor.normalize_or_zero())
     }
 }
 
@@ -121,11 +231,10 @@ pub(super) enum MotionStep {
         direction: Option<Vec2>,
         effort: SteeringEffort,
     },
-    /// Ended this frame; the brain has not been told yet.
-    Finished,
-    Aborted,
-    /// Ended on an earlier frame; waiting for the brain to release it.
-    Spent,
+    /// Ended this frame, maybe leaving a boost to ease off. The brain clears
+    /// the slot when the finish flushes, so the next frame's `sync` resets the
+    /// executor before it could step the ended behavior again.
+    Finished { speed_boost: Option<SpeedBoost> },
 }
 
 /// The brain stamps each start with a fresh epoch, so an executor can tell a
@@ -133,7 +242,6 @@ pub(super) enum MotionStep {
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct RunTag {
     epoch: Option<u32>,
-    spent: bool,
 }
 
 pub(super) struct MotionContext<'a, 'w> {
@@ -141,7 +249,6 @@ pub(super) struct MotionContext<'a, 'w> {
     pub movement: &'a SimpleMotion,
     pub delta_secs: f32,
     pub rng: &'a mut BrainRng,
-    pub orbit_direction: Option<&'a mut OrbitDirection>,
 }
 
 impl MotionContext<'_, '_> {
@@ -157,11 +264,9 @@ impl MotionContext<'_, '_> {
 /// A component that runs one finite [`Motion`]. List new ones in [`FiniteMotions`].
 pub(super) trait MotionExecutor: Capability<Key = Motion> {
     fn tag(&mut self) -> &mut RunTag;
-    fn reset(&mut self, now: f32);
+    /// Drops any running state; returns a boost when an interrupted burst leaves one.
+    fn reset(&mut self, now: f32) -> Option<SpeedBoost>;
     fn step(&mut self, context: &mut MotionContext) -> MotionStep;
-    fn recovery_boost(&self, _now: f32) -> f32 {
-        1.0
-    }
 }
 
 /// Every finite motion executor an entity may carry. A new one also goes in
@@ -190,31 +295,24 @@ impl FiniteMotionsItem<'_, '_> {
         finite_executors!(self, as_deref_mut, &mut dyn MotionExecutor)
     }
 
-    fn sync(&mut self, active: Option<ActiveMotion>, now: f32) {
+    fn sync(&mut self, active: Option<ActiveMotion>, now: f32) -> Option<SpeedBoost> {
+        let mut speed_boost = None;
         for executor in self.executors() {
             let epoch = active
                 .filter(|active| active.motion.index() == executor.key().index())
                 .map(|active| active.epoch);
             if executor.tag().epoch != epoch {
-                executor.reset(now);
-                *executor.tag() = RunTag {
-                    epoch,
-                    spent: false,
-                };
+                speed_boost = executor.reset(now).or(speed_boost);
+                *executor.tag() = RunTag { epoch };
             }
         }
+        speed_boost
     }
 
     fn step(&mut self, motion: Motion, context: &mut MotionContext) -> Option<MotionStep> {
         self.executors()
             .find(|executor| executor.key().index() == motion.index())
             .map(|executor| executor.step(context))
-    }
-
-    fn recovery_boost(&mut self, now: f32) -> f32 {
-        self.executors()
-            .map(|executor| executor.recovery_boost(now))
-            .fold(1.0, f32::max)
     }
 }
 
@@ -239,9 +337,9 @@ pub(super) struct SteeredCharacter {
     anchor: Option<&'static Anchor>,
     turn_rate: Option<&'static TurnRate>,
     finite_motions: FiniteMotions,
+    speed_boost: Option<&'static SpeedBoost>,
     wander: Option<&'static mut Wander>,
     orbit: Option<&'static mut Orbit>,
-    orbit_direction: Option<&'static mut OrbitDirection>,
 }
 
 pub(super) fn steer_characters_from_brain_motion(
@@ -264,13 +362,32 @@ pub(super) fn steer_characters_from_brain_motion(
             anchor,
             turn_rate,
             mut finite_motions,
+            speed_boost,
             mut wander,
             mut orbit,
-            mut orbit_direction,
         } = character;
 
-        let active = brain.active_motion();
-        finite_motions.sync(active, now);
+        let active = brain
+            .current_motion_behavior()
+            .filter(|active| active.motion.is_finite());
+        let fresh_boost = finite_motions.sync(active, now);
+        // Ahead of any `continue`, so a decayed boost is always removed. A
+        // fresh boost from an interrupted burst applies this frame.
+        let speed_boost = fresh_boost.or(speed_boost.copied());
+        let boost_multiplier = speed_boost.and_then(|boost| boost.compute_speed_multiplier(now));
+        if let Some(fresh_boost) = fresh_boost {
+            commands.entity(entity).try_insert(fresh_boost);
+        } else if speed_boost.is_some() && boost_multiplier.is_none() {
+            commands.entity(entity).try_remove::<SpeedBoost>();
+        }
+        let boost_multiplier = boost_multiplier.unwrap_or(1.0);
+        // Ahead of the early `continue`s, so a finite motion between two orbits
+        // still makes the next one pick its side from the heading.
+        if !matches!(brain.motion(), Some(Motion::Orbit(_)))
+            && let Some(orbit) = orbit.as_deref_mut()
+        {
+            orbit.leave_orbit();
+        }
 
         let missing_target = brain.motion().is_some_and(Motion::needs_target)
             && (!has_target || target_info.is_none());
@@ -294,52 +411,45 @@ pub(super) fn steer_characters_from_brain_motion(
                 movement: &movement,
                 delta_secs,
                 rng: &mut rng,
-                orbit_direction: orbit_direction.as_deref_mut(),
             };
             match finite_motions.step(active.motion, &mut context) {
+                // A finite motion measures its own distance, so the boost
+                // stays out of it.
                 Some(MotionStep::Steer { direction, effort }) => {
-                    apply_steering_to_movement(&mut movement, direction, effort, turn_cap);
+                    apply_steering_to_movement(&mut movement, direction, effort, 1.0, turn_cap);
                     continue;
                 }
-                Some(MotionStep::Finished) => {
+                Some(MotionStep::Finished { speed_boost }) => {
+                    if let Some(speed_boost) = speed_boost {
+                        commands.entity(entity).try_insert(speed_boost);
+                    }
                     commands.trigger(MotionFinished {
                         entity,
                         motion: active.motion,
+                        epoch: active.epoch,
                     });
                     continue;
                 }
-                Some(MotionStep::Aborted) => {
-                    commands.trigger(MotionAborted {
-                        entity,
-                        motion: active.motion,
-                    });
-                    continue;
-                }
-                Some(MotionStep::Spent) | None => {}
+                None => {}
             }
         }
 
-        let recovery_boost = finite_motions.recovery_boost(now);
         let (direction, effort) = steer_continuous_motion(
             brain.motion(),
             &input,
             MotionMemory {
                 wander: wander.as_deref_mut(),
                 orbit: orbit.as_deref_mut(),
-                orbit_direction: orbit_direction.as_deref_mut(),
-                recovery_boost,
             },
             &mut rng,
         );
-        apply_steering_to_movement(&mut movement, direction, effort, turn_cap);
+        apply_steering_to_movement(&mut movement, direction, effort, boost_multiplier, turn_cap);
     }
 }
 
 struct MotionMemory<'a> {
     wander: Option<&'a mut Wander>,
     orbit: Option<&'a mut Orbit>,
-    orbit_direction: Option<&'a mut OrbitDirection>,
-    recovery_boost: f32,
 }
 
 fn steer_continuous_motion(
@@ -348,12 +458,7 @@ fn steer_continuous_motion(
     memory: MotionMemory,
     rng: &mut BrainRng,
 ) -> (Option<Vec2>, SteeringEffort) {
-    let MotionMemory {
-        mut wander,
-        orbit,
-        orbit_direction,
-        recovery_boost,
-    } = memory;
+    let MotionMemory { mut wander, orbit } = memory;
     if motion != Some(Motion::Calm)
         && let Some(wander) = wander.as_deref_mut()
     {
@@ -363,24 +468,27 @@ fn steer_continuous_motion(
         return (None, SteeringEffort::Scaled(1.0));
     };
     match motion {
-        Motion::Idle => (None, SteeringEffort::Scaled(1.0)),
+        // Finite motions steer through their executors, never here.
+        Motion::Idle | Motion::Dash | Motion::Swoop => (None, SteeringEffort::Scaled(1.0)),
         Motion::Chase => (input.direction_to_target(), SteeringEffort::Scaled(1.0)),
         Motion::Flee => (input.direction_from_target(), SteeringEffort::Scaled(1.0)),
         Motion::ReturnToAnchor => (input.direction_to_anchor(), SteeringEffort::Scaled(1.0)),
         Motion::KeepDistance(distance_range) => (
             steer_to_hold_distance_range(input, distance_range, rng),
-            SteeringEffort::Boosted(recovery_boost),
+            SteeringEffort::Scaled(1.0),
         ),
-        Motion::Orbit(distance_range) => (
-            orbit::steer(input, orbit, orbit_direction, distance_range, rng),
-            SteeringEffort::Boosted(recovery_boost),
-        ),
-        Motion::Calm => {
-            let direction = wander::steer(input, wander.as_deref_mut(), rng);
-            let scale = wander::speed_scale(wander.as_deref());
-            (direction, SteeringEffort::Scaled(scale))
+        Motion::Orbit(distance_range) => {
+            let orbit = orbit.expect("orbit is only available with an `Orbit` component");
+            (
+                orbit::steer(input, orbit, distance_range, rng),
+                SteeringEffort::Scaled(1.0),
+            )
         }
-        Motion::Dash | Motion::Swoop => (None, SteeringEffort::Scaled(1.0)),
+        Motion::Calm => {
+            let wander = wander.expect("calm is only available with a `Wander` component");
+            let direction = wander::steer(input, wander, rng);
+            (direction, SteeringEffort::Scaled(wander.speed_scale))
+        }
     }
 }
 
@@ -423,6 +531,7 @@ fn apply_steering_to_movement(
     movement: &mut SimpleMotion,
     direction: Option<Vec2>,
     effort: SteeringEffort,
+    boost_multiplier: f32,
     turn_cap: Option<f32>,
 ) {
     let Some(desired) = direction else {
@@ -430,9 +539,14 @@ fn apply_steering_to_movement(
         return;
     };
     let heading = rotate_heading_toward_desired(movement, desired, turn_cap);
-    match effort {
-        SteeringEffort::Scaled(scale) => movement.start_moving_scaled(heading, scale),
-        SteeringEffort::Boosted(speed_boost) => movement.start_moving_boosted(heading, speed_boost),
+    let speed_multiplier = match effort {
+        SteeringEffort::Scaled(scale) => scale.clamp(0.0, 1.0),
+        SteeringEffort::Boosted(speed_boost) => speed_boost.max(1.0),
+    } * boost_multiplier;
+    if speed_multiplier > 1.0 {
+        movement.start_moving_boosted(heading, speed_multiplier);
+    } else {
+        movement.start_moving_scaled(heading, speed_multiplier);
     }
 }
 

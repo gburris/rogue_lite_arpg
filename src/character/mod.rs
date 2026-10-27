@@ -1,4 +1,3 @@
-mod anchor;
 mod animation;
 mod brain;
 mod enemy;
@@ -8,7 +7,8 @@ mod state;
 mod vision;
 
 pub mod prelude {
-    pub use super::brain::{Brain, Dash, Motion, Wander};
+    pub(crate) use super::brain::Targeting;
+    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;
@@ -42,7 +42,7 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-        app.add_plugins((animation::plugin, vision::plugin, brain::plugin));
+        app.add_plugins((animation::plugin, brain::plugin));
 
         app.configure_sets(
             Update,

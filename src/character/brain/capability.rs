@@ -1,15 +1,74 @@
 //! What an entity can do, read from its capability components: one shared
-//! trait and the table built from every capability the entity carries.
+//! trait, the per-motion-and-action table and its keys, and the tables built
+//! from every capability the entity carries.
 
 use bevy::{ecs::query::QueryData, prelude::*};
 
-use super::ability::AbilityCapabilities;
-use super::motion::FiniteMotionsReadOnly;
-use super::{
-    Ability, Action, Bite, Brain, Breath, Dash, Heal, Motion, MotionActionKey, MotionActionTable,
-    Swoop,
-};
+use super::action::{Ability, AbilityCapabilities, Action};
+use super::motion::{FiniteMotionsReadOnly, Motion, Orbit, Wander};
 use crate::prelude::{EquipmentRead, EquipmentSlot};
+
+/// A type with its own entry in a [`MotionActionTable`].
+pub trait MotionActionKey: Copy {
+    /// Position of this key in a [`MotionActionTable`].
+    fn table_index(self) -> usize;
+}
+
+/// Motions come first in a [`MotionActionTable`].
+impl MotionActionKey for Motion {
+    fn table_index(self) -> usize {
+        self.index()
+    }
+}
+
+/// Actions follow the motions in a [`MotionActionTable`].
+impl MotionActionKey for Action {
+    fn table_index(self) -> usize {
+        Motion::COUNT + self.index()
+    }
+}
+
+impl MotionActionKey for Ability {
+    fn table_index(self) -> usize {
+        Action::Ability(self).table_index()
+    }
+}
+
+/// One value per motion and per action, indexed by any [`MotionActionKey`].
+#[derive(Clone, Copy, Debug)]
+pub struct MotionActionTable<T>([T; Motion::COUNT + Action::COUNT]);
+
+impl<T: Copy> MotionActionTable<T> {
+    /// A table with every entry set to `value`.
+    pub fn splat(value: T) -> Self {
+        Self([value; Motion::COUNT + Action::COUNT])
+    }
+}
+
+impl<T: Default> Default for MotionActionTable<T> {
+    fn default() -> Self {
+        Self(std::array::from_fn(|_| T::default()))
+    }
+}
+
+impl<T, K: MotionActionKey> std::ops::Index<K> for MotionActionTable<T> {
+    type Output = T;
+
+    fn index(&self, key: K) -> &T {
+        &self.0[key.table_index()]
+    }
+}
+
+impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
+    fn index_mut(&mut self, key: K) -> &mut T {
+        &mut self.0[key.table_index()]
+    }
+}
+
+/// Which motions and actions may start right now. Derefs to its table, so
+/// `availability[Motion::Swoop]` reads an entry directly.
+#[derive(Clone, Copy, Debug, Deref)]
+pub struct Availability(pub MotionActionTable<bool>);
 
 /// What the decision tick needs to know about one capability, copied from the
 /// component that carries it out so scoring never reaches into executor state.
@@ -22,8 +81,6 @@ pub struct Tuning {
     /// Seconds before the capability may be tried again after it finishes (a
     /// finite motion also waits this out after a missed start roll).
     pub cooldown: f32,
-    /// Seconds from spawn before the first use.
-    pub initial_delay: f32,
 }
 
 impl Default for Tuning {
@@ -32,9 +89,44 @@ impl Default for Tuning {
             reach: None,
             chance: 1.0,
             cooldown: 0.0,
-            initial_delay: 0.0,
         }
     }
+}
+
+/// A motion or action that only runs when a capability fills its entry.
+#[derive(Clone, Copy, Debug)]
+pub(super) enum CapabilityKey {
+    Motion(Motion),
+    Action(Action),
+}
+
+impl MotionActionKey for CapabilityKey {
+    fn table_index(self) -> usize {
+        match self {
+            Self::Motion(motion) => motion.table_index(),
+            Self::Action(action) => action.table_index(),
+        }
+    }
+}
+
+/// Every key a capability can fill: each motion that needs a component to
+/// steer, each equipment slot's use and each ability. `Action::Idle` needs none.
+pub(super) fn capability_keys() -> impl Iterator<Item = CapabilityKey> {
+    let motions = Motion::ALL.iter().copied().filter(|motion| match motion {
+        Motion::Calm | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => true,
+        Motion::Chase
+        | Motion::ReturnToAnchor
+        | Motion::Flee
+        | Motion::KeepDistance(_)
+        | Motion::Idle => false,
+    });
+    let actions = EquipmentSlot::ALL
+        .into_iter()
+        .map(Action::Use)
+        .chain(Ability::ALL.into_iter().map(Action::Ability));
+    motions
+        .map(CapabilityKey::Motion)
+        .chain(actions.map(CapabilityKey::Action))
 }
 
 /// A capability component: which `MotionActionTable` entry it fills and how it is tuned.
@@ -55,6 +147,8 @@ pub(super) struct Capabilities(pub MotionActionTable<Option<Tuning>>);
 pub(super) struct CapabilityComponents {
     entity: Entity,
     finite_motions: FiniteMotionsReadOnly,
+    orbit: Option<&'static Orbit>,
+    wander: Option<&'static Wander>,
     abilities: AbilityCapabilities,
 }
 
@@ -66,54 +160,6 @@ pub(super) fn record_capability<C: Capability + ?Sized>(
     if let Some(component) = component {
         capabilities.0[component.key()] = Some(component.tuning());
     }
-}
-
-/// Arms the opening delay of a capability added after its `Brain`, so a
-/// pickup granting it still waits out the delay. Re-adding re-arms it.
-fn arm_initial_delay<C: Capability + Component>(
-    added: On<Add, C>,
-    time: Res<Time<Virtual>>,
-    mut brains: Query<(&mut Brain, &C)>,
-) {
-    let Ok((mut brain, capability)) = brains.get_mut(added.entity) else {
-        return;
-    };
-    let now = time.elapsed_secs();
-    brain.start_cooldown(capability.key(), now + capability.tuning().initial_delay);
-}
-
-/// Arms the opening delay of every capability already present when a `Brain`
-/// is added.
-fn arm_initial_delays(
-    added: On<Add, Brain>,
-    time: Res<Time<Virtual>>,
-    equipment: EquipmentRead,
-    mut brains: Query<(&mut Brain, CapabilityComponents)>,
-) {
-    let Ok((mut brain, components)) = brains.get_mut(added.entity) else {
-        return;
-    };
-    let capabilities = build_capabilities(&components, &equipment);
-    let now = time.elapsed_secs();
-    for motion in Motion::FINITE {
-        if let Some(tuning) = capabilities[motion] {
-            brain.start_cooldown(motion, now + tuning.initial_delay);
-        }
-    }
-    for ability in Ability::ALL {
-        if let Some(tuning) = capabilities[ability] {
-            brain.start_cooldown(ability, now + tuning.initial_delay);
-        }
-    }
-}
-
-pub(super) fn plugin(app: &mut App) {
-    app.add_observer(arm_initial_delays)
-        .add_observer(arm_initial_delay::<Swoop>)
-        .add_observer(arm_initial_delay::<Dash>)
-        .add_observer(arm_initial_delay::<Bite>)
-        .add_observer(arm_initial_delay::<Breath>)
-        .add_observer(arm_initial_delay::<Heal>);
 }
 
 /// Collects the tuning of every capability the entity carries. Each equipped
@@ -134,6 +180,8 @@ pub(super) fn build_capabilities(
     components
         .finite_motions
         .record_capabilities(&mut capabilities);
+    record_capability(&mut capabilities, components.orbit);
+    record_capability(&mut capabilities, components.wander);
     components.abilities.record_capabilities(&mut capabilities);
     capabilities
 }

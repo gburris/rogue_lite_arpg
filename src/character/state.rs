@@ -1,7 +1,6 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use super::brain::ActionFinished;
 use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
 
 /// Simple motion has no acceleration and assumes all entities move at max
@@ -61,10 +60,11 @@ impl SimpleMotion {
         self.direction = direction;
     }
 
+    /// Stops in place. `direction` keeps the last heading, which steering
+    /// reads to continue the way the character was going.
     pub fn stop_moving(&mut self) {
         self.speed_boost = 1.0;
         self.current_speed = 0.0;
-        self.direction = Vec2::ZERO;
     }
 
     pub fn is_stunned(&self) -> bool {
@@ -84,7 +84,7 @@ impl SimpleMotion {
     /// Already fully stopped: lets per-frame drivers skip a no-op write that
     /// would mark `Changed<SimpleMotion>` and defeat downstream filters.
     pub fn is_idle(&self) -> bool {
-        self.current_speed == 0.0 && self.direction == Vec2::ZERO
+        self.current_speed == 0.0
     }
 
     pub fn get_velocity(&self) -> Vec2 {
@@ -150,48 +150,28 @@ impl FacingDirection {
     }
 }
 
-/// Animation/physics flag mirroring whether an instant-use item is active,
-/// plus a running count of finished attacks. Written only by
-/// `sync_attack_state_from_equipment`; readers such as the AI keep their own
-/// last-seen count to notice a new finish.
+/// Animation/physics flag mirroring whether an instant-use item is active.
+/// Written only by `sync_attack_state_from_equipment`.
 #[derive(Component, Clone, Default, PartialEq)]
 pub struct AttackState {
     pub is_attacking: bool,
-    /// Attacks that have ended since spawn; wraps rather than overflows.
-    pub attacks_finished: u32,
 }
 
 /// Syncs whether a holder is attacking from `EquipmentInUse` items. Items decide
 /// whether something started; AI only requests use and never writes this.
 /// Held slots (shield blocking) do not count as attacking for animation.
-/// Each finished attack also triggers [`ActionFinished`] for the brain.
 pub(super) fn sync_attack_state_from_equipment(
-    mut commands: Commands,
-    mut holders: Query<(
-        Entity,
-        &mut AttackState,
-        Option<&Mainhand>,
-        Option<&Offhand>,
-    )>,
+    mut holders: Query<(&mut AttackState, Option<&Mainhand>, Option<&Offhand>)>,
     in_use: Query<(), With<EquipmentInUse>>,
 ) {
-    for (entity, mut state, mainhand, offhand) in &mut holders {
+    for (mut state, mainhand, offhand) in &mut holders {
         let attacking = EquipmentSlot::ALL
             .into_iter()
             .filter(|equipment| equipment.is_instant_use())
             .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
-        let finished = state.is_attacking && !attacking;
-        if finished {
-            commands.trigger(ActionFinished {
-                entity,
-                action: None,
-            });
-        }
-        let attacks_finished = state.attacks_finished.wrapping_add(u32::from(finished));
         state.set_if_neq(AttackState {
             is_attacking: attacking,
-            attacks_finished,
         });
     }
 }

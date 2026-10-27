@@ -3,60 +3,18 @@
 use bevy::prelude::*;
 
 use super::{
-    Capability, MotionContext, MotionExecutor, MotionStep, OrbitDirection, RunTag, SteeringEffort,
+    Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SpeedBoost, SteeringEffort,
 };
-use crate::character::brain::senses::build_target_view;
-use crate::character::brain::{Motion, TARGET_MOVING_SPEED, TargetView, Tuning};
+use crate::character::brain::perception::{TargetView, build_target_view};
+use crate::character::brain::{Motion, Tuning};
+
+/// Speed below which a target counts as holding still rather than orbiting.
+const TARGET_MOVING_SPEED: f32 = 20.0;
 
 const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 
 const HOP_STEP_IN_SPREAD: f32 = 0.35;
 const HOP_OUTWARD_BIAS: f32 = 0.15;
-const HOP_DIRECTION_HOLD: f32 = 2.0;
-
-/// What a dash is for, which sets its tuning and aim.
-#[derive(Clone, Copy, Debug)]
-pub enum DashPolicy {
-    Kite { chance: f32, spread: f32 },
-    Hop { close_range: f32 },
-    Slide { danger_range: f32, cooldown: f32 },
-}
-
-impl DashPolicy {
-    fn name(self) -> &'static str {
-        match self {
-            Self::Kite { .. } => "Kite",
-            Self::Hop { .. } => "Hop",
-            Self::Slide { .. } => "Slide",
-        }
-    }
-
-    fn tuning(self) -> Tuning {
-        match self {
-            Self::Kite { chance, .. } => Tuning {
-                chance,
-                ..Tuning::default()
-            },
-            Self::Hop { .. } => Tuning::default(),
-            Self::Slide {
-                danger_range,
-                cooldown,
-            } => Tuning {
-                reach: Some(danger_range),
-                cooldown,
-                ..Tuning::default()
-            },
-        }
-    }
-
-    fn aim(self) -> AimKind {
-        match self {
-            Self::Kite { spread, .. } => AimKind::Away { spread },
-            Self::Hop { close_range } => AimKind::HopTangent { close_range },
-            Self::Slide { .. } => AimKind::Away { spread: 0.0 },
-        }
-    }
-}
 
 /// A committed straight run along a direction fixed at its start. Opt-in at spawn.
 #[derive(Component, Clone, Debug)]
@@ -64,41 +22,58 @@ pub struct Dash {
     pub min_run: f32,
     pub max_run: f32,
     pub speed_boost: f32,
-    policy: DashPolicy,
+    pub tuning: Tuning,
+    aim: AimKind,
+    debug_name: &'static str,
     run: StraightRun,
     tag: RunTag,
 }
 
 impl Dash {
-    fn with_policy(min_run: f32, max_run: f32, speed_boost: f32, policy: DashPolicy) -> Self {
+    fn with_aim(
+        min_run: f32,
+        max_run: f32,
+        speed_boost: f32,
+        tuning: Tuning,
+        aim: AimKind,
+        debug_name: &'static str,
+    ) -> Self {
         Self {
             min_run,
             max_run,
             speed_boost,
-            policy,
+            tuning,
+            aim,
+            debug_name,
             run: StraightRun::default(),
             tag: RunTag::default(),
         }
     }
 
     pub fn kite(chance: f32, min_run: f32, max_run: f32) -> Self {
-        Self::with_policy(
+        Self::with_aim(
             min_run,
             max_run,
             1.0,
-            DashPolicy::Kite {
+            Tuning {
                 chance,
+                ..Tuning::default()
+            },
+            AimKind::Away {
                 spread: KITE_SPREAD,
             },
+            "Kite",
         )
     }
 
     pub fn hop(min_run: f32, max_run: f32, speed_boost: f32, close_range: f32) -> Self {
-        Self::with_policy(
+        Self::with_aim(
             min_run,
             max_run,
             speed_boost,
-            DashPolicy::Hop { close_range },
+            Tuning::default(),
+            AimKind::HopTangent { close_range },
+            "Hop",
         )
     }
 
@@ -109,19 +84,22 @@ impl Dash {
         danger_range: f32,
         cooldown: f32,
     ) -> Self {
-        Self::with_policy(
+        Self::with_aim(
             min_run,
             max_run,
             speed_boost,
-            DashPolicy::Slide {
-                danger_range,
+            Tuning {
+                reach: Some(danger_range),
                 cooldown,
+                ..Tuning::default()
             },
+            AimKind::Away { spread: 0.0 },
+            "Slide",
         )
     }
 
     pub fn name(&self) -> &'static str {
-        self.policy.name()
+        self.debug_name
     }
 }
 
@@ -132,14 +110,17 @@ fn hop_direction(target: &TargetView, close_range: f32, context: &mut MotionCont
         let spread = context.rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
         return target.bearing.rotate(Vec2::from_angle(spread));
     }
-    let mut unshared = OrbitDirection::default();
-    let orbit_direction = context
-        .orbit_direction
-        .as_deref_mut()
-        .unwrap_or(&mut unshared);
-    orbit_direction.flip(context.rng);
-    orbit_direction.hold_until(context.input.now + HOP_DIRECTION_HOLD);
-    let tangent = target.bearing.perp() * orbit_direction.sign(context.rng);
+    // Cut across to the side opposite the current heading, so an orbit that
+    // follows reads the new heading and circles back the other way.
+    let heading_side = target.bearing.perp().dot(context.input.heading);
+    let tangent_sign = if heading_side.abs() > f32::EPSILON {
+        -heading_side.signum()
+    } else if context.rng.range(0.0, 1.0) < 0.5 {
+        1.0
+    } else {
+        -1.0
+    };
+    let tangent = target.bearing.perp() * tangent_sign;
     (tangent - target.bearing * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
@@ -151,7 +132,7 @@ impl Capability for Dash {
     }
 
     fn tuning(&self) -> Tuning {
-        self.policy.tuning()
+        self.tuning
     }
 }
 
@@ -160,22 +141,24 @@ impl MotionExecutor for Dash {
         &mut self.tag
     }
 
-    fn reset(&mut self, _now: f32) {
+    fn reset(&mut self, _now: f32) -> Option<SpeedBoost> {
         self.run.finish();
+        None
     }
 
     fn step(&mut self, context: &mut MotionContext) -> MotionStep {
-        if self.tag.spent {
-            return MotionStep::Spent;
-        }
         if !self.run.called {
-            let policy = self.policy;
-            let aimed = build_target_view(true, context.input.target_info)
-                .and_then(|target| policy.aim().aim(target, context));
-            let Some(direction) = aimed else {
-                self.tag.spent = true;
-                return MotionStep::Aborted;
+            // Steering halts a target-needing motion without a target, so this
+            // waits rather than aiming blind; the brain drops the behavior.
+            let Some(target) =
+                build_target_view(true, context.input.target_info, context.input.now)
+            else {
+                return MotionStep::Steer {
+                    direction: None,
+                    effort: SteeringEffort::Boosted(self.speed_boost),
+                };
             };
+            let direction = self.aim.aim(target, context);
             let run = context.rng.range(self.min_run, self.max_run);
             self.run.call(direction, run);
         }
@@ -185,10 +168,7 @@ impl MotionExecutor for Dash {
                 direction: Some(direction),
                 effort: SteeringEffort::Boosted(self.speed_boost),
             },
-            None => {
-                self.tag.spent = true;
-                MotionStep::Finished
-            }
+            None => MotionStep::Finished { speed_boost: None },
         }
     }
 }
@@ -200,21 +180,18 @@ enum AimKind {
 }
 
 impl AimKind {
-    fn aim(self, target: TargetView, context: &mut MotionContext) -> Option<Vec2> {
-        let rng = &mut *context.rng;
-        match self {
-            Self::Away { spread } => {
-                let away = (-target.bearing).normalize_or_zero();
-                if away.length_squared() > f32::EPSILON {
-                    Some(away.rotate(Vec2::from_angle(rng.range(-spread, spread))))
-                } else {
-                    Some(rng.direction())
-                }
-            }
-            Self::HopTangent { close_range } => {
-                let direction = hop_direction(&target, close_range, context);
-                (direction.length_squared() > f32::EPSILON).then_some(direction)
-            }
+    fn aim(self, target: TargetView, context: &mut MotionContext) -> Vec2 {
+        let direction = match self {
+            Self::Away { spread } => (-target.bearing)
+                .normalize_or_zero()
+                .rotate(Vec2::from_angle(context.rng.range(-spread, spread))),
+            Self::HopTangent { close_range } => hop_direction(&target, close_range, context),
+        };
+        // A zero bearing (the characters overlap) has no direction to aim along.
+        if direction.length_squared() > f32::EPSILON {
+            direction
+        } else {
+            context.rng.direction()
         }
     }
 }

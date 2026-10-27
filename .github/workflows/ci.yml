@@ -91,8 +91,12 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
+      # Each lint also becomes a GitHub annotation, shown inline on the PR's changed files.
       - name: Run Clippy lints
-        run: cargo clippy --locked --workspace --all-targets --profile ci --all-features
+        run: |
+          set -o pipefail
+          cargo clippy --locked --workspace --all-targets --profile ci --all-features --message-format=short 2>&1 \
+            | sed -E 's/^([^: ]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::\4 file=\1,line=\2,col=\3::\6/'
 
   # Run Bevy lints.
   # TODO: re-enable once a bevy_lint release supports Bevy 0.19 (lint-v0.6.0 targets Bevy 0.18).

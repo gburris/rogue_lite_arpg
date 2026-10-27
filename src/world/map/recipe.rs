@@ -101,6 +101,9 @@ impl RecipeCatalog {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeFile {
+    /// Named spawn lists that recipes include with `presets: ["Name"]`.
+    #[serde(default)]
+    pub(super) spawn_presets: BTreeMap<String, Vec<SpawnEntry>>,
     pub(super) defaults: RecipeDefaults,
     pub(super) structures: BTreeMap<String, StructureDefinition>,
     pub(super) hub: RecipeEntry,
@@ -125,6 +128,10 @@ pub(super) struct RecipeDefaults {
     pub(super) size_y_range: (u32, u32),
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
+    /// Radius around the player start, in tiles, that no enemy may occupy.
+    pub(super) start_clearance: u32,
+    #[serde(default)]
+    pub(super) presets: Vec<String>,
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
@@ -139,6 +146,9 @@ pub(super) struct RecipeEntry {
     pub(super) size_y_range: Option<(u32, u32)>,
     pub(super) floor: Option<TileKind>,
     pub(super) structures: Option<Vec<StructureEntry>>,
+    pub(super) start_clearance: Option<u32>,
+    /// Replaces the default presets; their spawns come before the recipe's own.
+    pub(super) presets: Option<Vec<String>>,
     /// Replaces the default spawns entirely, like `structures`.
     pub(super) spawns: Option<Vec<SpawnEntry>>,
 }
@@ -152,6 +162,9 @@ pub(crate) struct MapRecipe {
     pub(super) size_y_range: (u32, u32),
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
+    /// Radius around the player start, in tiles, that no enemy may occupy.
+    pub(super) start_clearance: u32,
+    /// Preset spawns followed by the recipe's own.
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
@@ -161,6 +174,7 @@ impl RecipeEntry {
         name: String,
         weight: u32,
         defaults: &RecipeDefaults,
+        spawn_presets: &BTreeMap<String, Vec<SpawnEntry>>,
     ) -> Result<MapRecipe> {
         if self.size.is_some() && (self.size_x_range.is_some() || self.size_y_range.is_some()) {
             return Err(format!(
@@ -169,6 +183,14 @@ impl RecipeEntry {
             .into());
         }
         let square = self.size.map(|size| (size, size));
+        let mut spawns = Vec::new();
+        for preset in self.presets.as_ref().unwrap_or(&defaults.presets) {
+            let preset_spawns = spawn_presets
+                .get(preset)
+                .ok_or_else(|| format!("recipe {name} uses unknown spawn preset {preset}"))?;
+            spawns.extend(preset_spawns.iter().cloned());
+        }
+        spawns.extend(self.spawns.unwrap_or_else(|| defaults.spawns.clone()));
         Ok(MapRecipe {
             name,
             weight,
@@ -185,7 +207,8 @@ impl RecipeEntry {
                 self.structures
                     .unwrap_or_else(|| defaults.structures.clone()),
             ),
-            spawns: self.spawns.unwrap_or_else(|| defaults.spawns.clone()),
+            start_clearance: self.start_clearance.unwrap_or(defaults.start_clearance),
+            spawns,
         })
     }
 }
@@ -207,9 +230,9 @@ pub(super) struct StructureEntry {
     pub(super) kind: StructureKind,
     #[serde(default)]
     pub(super) name: String,
-    #[serde(default)]
-    pub(super) anchor: StructureAnchor,
-    pub(super) radius: Option<u32>,
+    /// Where the structure goes, from the same options as spawns; `Random()` by default.
+    #[serde(default = "random_location")]
+    pub(super) at: Location,
     /// Places this many copies, as if the entry were repeated; resolved names stay
     /// `{kind}_{index}`, so a named entry must keep `count: 1`.
     #[serde(default = "one")]
@@ -270,18 +293,12 @@ impl StructureKind {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
-pub(super) enum StructureAnchor {
-    #[default]
-    Random,
-    Center,
-    CenterOffset(IVec2),
-    MapMin(IVec2),
-    Structure {
-        structure: String,
-        offset: IVec2,
-    },
+fn random_location() -> Location {
+    Location::Random {
+        x_deciles: interior_deciles(),
+    }
 }
+
 pub(super) fn resolved_name(kind: &str, index: usize, explicit: &str) -> String {
     if explicit.is_empty() {
         format!("{kind}_{index}")
@@ -305,7 +322,7 @@ pub(super) struct SpawnEntry {
     /// How many to place; a bare number or an inclusive `(min, max)`. Defaults to 1.
     #[serde(default = "one_spawn")]
     pub(super) count: CountRange,
-    pub(super) at: SpawnAt,
+    pub(super) at: Location,
     /// Minimum tile distance from every point placed so far (`Random` and `Near` only).
     #[serde(default)]
     pub(super) separation: u32,
@@ -355,10 +372,12 @@ impl SpawnKind {
     }
 }
 
-/// Where a spawn entry places things. `Random`, `Edge`, `Near` and `Choose` sample a spot;
-/// the rest are fixed anchors, which place exactly one.
+/// Where a spawn or structure goes. `Random`, `Edge`, `Near` and `Choose` sample a spot;
+/// the rest are fixed anchors, which place exactly one. Positions are measured to the
+/// center of what is placed, except the `Map*` anchors and `Edge`, which place its
+/// bottom-left corner.
 #[derive(Deserialize, Debug, Clone)]
-pub(super) enum SpawnAt {
+pub(super) enum Location {
     /// Anywhere inside the half-open x-decile band, `(1, 9)` by default: `Random()`.
     Random {
         #[serde(default = "interior_deciles")]
@@ -374,15 +393,15 @@ pub(super) enum SpawnAt {
         radius: u32,
     },
     /// One of these, picked per map.
-    Choose(Vec<SpawnAt>),
+    Choose(Vec<Location>),
     Center,
     CenterOffset(IVec2),
     MapMin(IVec2),
     /// Offset from the top-right tile: `MapMax((-6, -6))`.
     MapMax(IVec2),
-    /// A named structure's center plus `offset`.
+    /// An earlier structure's center plus `offset`.
     Structure {
-        name: String,
+        structure: String,
         #[serde(default)]
         offset: IVec2,
     },
@@ -392,7 +411,7 @@ fn interior_deciles() -> (u32, u32) {
     (1, 9)
 }
 
-impl SpawnAt {
+impl Location {
     /// Fixed anchors place exactly one and run before every sampled spawn.
     pub(super) fn is_fixed(&self) -> bool {
         !matches!(
@@ -441,8 +460,8 @@ impl SpawnAt {
             Self::CenterOffset(offset) => PlaceRule::Fixed(Anchor::CenterOffset(*offset)),
             Self::MapMin(offset) => PlaceRule::Fixed(Anchor::MapMin(*offset)),
             Self::MapMax(offset) => PlaceRule::Fixed(Anchor::MapMax(*offset)),
-            Self::Structure { name, offset } => PlaceRule::Fixed(Anchor::Structure {
-                name: name.clone(),
+            Self::Structure { structure, offset } => PlaceRule::Fixed(Anchor::Structure {
+                name: structure.clone(),
                 offset: *offset,
             }),
         })
@@ -482,7 +501,9 @@ pub(super) fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
         structures: expand_counts(file.defaults.structures.clone()),
         ..file.defaults
     };
-    let hub = file.hub.resolve(hub_name, 0, &defaults)?;
+    let hub = file
+        .hub
+        .resolve(hub_name, 0, &defaults, &file.spawn_presets)?;
     validate_recipe(&hub, &structures)?;
     for seed in 0..=8 {
         build_from_recipe(&hub, seed, &structures)
@@ -512,7 +533,7 @@ pub(super) fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
         } else {
             entry.weight.unwrap_or(0)
         };
-        let recipe = entry.resolve(name.clone(), weight, &defaults)?;
+        let recipe = entry.resolve(name.clone(), weight, &defaults, &file.spawn_presets)?;
         validate_recipe(&recipe, &structures)?;
         for seed in 0..=8 {
             build_from_recipe(&recipe, seed, &structures)
@@ -578,6 +599,9 @@ pub(super) fn validate_recipe(
             .into());
         }
     }
+    if recipe.start_clearance > MAX_MAP_TILES {
+        return Err(format!("recipe {} start_clearance exceeds the cap", recipe.name).into());
+    }
     let mut earlier_names = std::collections::HashSet::new();
     for (index, structure) in recipe.structures.iter().enumerate() {
         if let StructureKind::Structure(kind) = &structure.kind
@@ -587,34 +611,12 @@ pub(super) fn validate_recipe(
                 format!("recipe {} references unknown structure {kind}", recipe.name).into(),
             );
         }
-        if let StructureAnchor::Structure {
-            structure: target, ..
-        } = &structure.anchor
-        {
-            if !earlier_names.contains(target) {
-                return Err(format!(
-                    "recipe {} structure {index} anchors to missing or later structure {target}",
-                    recipe.name
-                )
-                .into());
-            }
-        } else if structure.radius.is_some() {
-            return Err(format!(
-                "recipe {} structure {index} radius requires a Structure anchor",
-                recipe.name
-            )
-            .into());
-        }
-        if structure
-            .radius
-            .is_some_and(|radius| radius > MAX_MAP_TILES)
-        {
-            return Err(format!(
-                "recipe {} structure {index} radius exceeds the cap",
-                recipe.name
-            )
-            .into());
-        }
+        validate_location(
+            &structure.at,
+            CountRange(1, 1),
+            &earlier_names,
+            &format!("recipe {} structure {index}", recipe.name),
+        )?;
         if let Some(size) = structure.kind.feature_size() {
             let (minimum, maximum) = match size {
                 FeatureSize::Exact(dimensions) => (dimensions, dimensions),
@@ -658,7 +660,7 @@ fn validate_spawns(
         if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange(1, 1) {
             return Err(format!("{context} must place exactly one player start").into());
         }
-        validate_spawn_at(&spawn.at, spawn.count, structure_names, &context)?;
+        validate_location(&spawn.at, spawn.count, structure_names, &context)?;
     }
     let structure_starts = structures_place(recipe, structures, |kind| {
         matches!(kind, PlacementKind::PlayerStart)
@@ -694,37 +696,39 @@ fn validate_spawns(
     Ok(())
 }
 
-fn validate_spawn_at(
-    at: &SpawnAt,
+fn validate_location(
+    at: &Location,
     count: CountRange,
     structure_names: &std::collections::HashSet<String>,
     context: &str,
 ) -> Result<()> {
     match at {
-        SpawnAt::Random { x_deciles } if x_deciles.0 >= x_deciles.1 || x_deciles.1 > 10 => {
+        Location::Random { x_deciles } if x_deciles.0 >= x_deciles.1 || x_deciles.1 > 10 => {
             Err(format!("{context} has an invalid x-decile range").into())
         }
-        SpawnAt::Near {
+        Location::Near {
             structure, radius, ..
         } => {
             if !structure_names.contains(structure) {
-                return Err(format!("{context} references missing structure {structure}").into());
+                return Err(
+                    format!("{context} references missing or later structure {structure}").into(),
+                );
             }
             if *radius > MAX_MAP_TILES {
                 return Err(format!("{context} radius exceeds the cap").into());
             }
             Ok(())
         }
-        SpawnAt::Choose(options) => {
+        Location::Choose(options) => {
             if options.is_empty() {
                 return Err(format!("{context} has an empty choice").into());
             }
             options
                 .iter()
-                .try_for_each(|option| validate_spawn_at(option, count, structure_names, context))
+                .try_for_each(|option| validate_location(option, count, structure_names, context))
         }
-        SpawnAt::Structure { name, .. } if !structure_names.contains(name) => {
-            Err(format!("{context} references missing structure {name}").into())
+        Location::Structure { structure, .. } if !structure_names.contains(structure) => {
+            Err(format!("{context} references missing or later structure {structure}").into())
         }
         fixed if fixed.is_fixed() && count != CountRange(1, 1) => {
             Err(format!("{context} uses a fixed anchor, so it must place exactly one").into())

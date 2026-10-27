@@ -1,13 +1,25 @@
 RecipeFile(
+    // Spawn lists that recipes include with `presets: [...]`, ahead of their own spawns.
+    spawn_presets: {
+        "LeftToRight": [
+            (what: PlayerStart, at: Edge(Left)),
+            (what: Exit, at: Edge(Right)),
+        ],
+        "BottomToTop": [
+            (what: PlayerStart, at: Edge(Bottom)),
+            (what: Exit, at: Edge(Top)),
+        ],
+    },
     defaults: (
         size_x_range: (50, 100),
         size_y_range: (50, 100),
         floor: Ground,
         structures: [],
-        // A recipe's own `spawns` list replaces this one entirely.
+        // No enemy spawns within this many tiles of the player start.
+        start_clearance: 10,
+        // A recipe's own `presets` or `spawns` replace these entirely.
+        presets: ["LeftToRight"],
         spawns: [
-            (what: PlayerStart, at: Edge(Left)),
-            (what: Exit, at: Edge(Right)),
             (what: RandomEnemy, count: (10, 15), at: Random(x_deciles: (2, 8)), separation: 5),
         ],
     ),
@@ -63,10 +75,11 @@ RecipeFile(
         size: 60,
         floor: Grass,
         structures: [
-            (kind: Structure("HubTown"), anchor: CenterOffset((0, -3))),
-            (kind: Pond(size: Exact((14, 9)), shape: Blob), anchor: MapMin((42, 4))),
+            (kind: Structure("HubTown"), at: CenterOffset((0, -3))),
+            (kind: Pond(size: Exact((14, 9)), shape: Blob), at: MapMin((42, 4))),
         ],
         // The town's P and X glyphs provide the start and the exit.
+        presets: [],
         spawns: [],
     ),
     dungeons: [
@@ -101,22 +114,16 @@ RecipeFile(
             weight: 10,
             size: 50,
             floor: Cobblestone,
-            structures: [(kind: Structure("Temple"), anchor: Center)],
-            spawns: [
-                (what: PlayerStart, at: Edge(Left)),
-                (what: Exit, at: Edge(Right)),
-                (what: Chest, count: (10, 15), at: Random()),
-            ],
+            structures: [(kind: Structure("Temple"), at: Center)],
+            spawns: [(what: Chest, count: (10, 15), at: Random())],
         ),
         (
             name: "FireShrine",
             weight: 10,
             size: 60,
             floor: Cobblestone,
-            structures: [(kind: Structure("Temple"), name: "Temple", anchor: Center)],
+            structures: [(kind: Structure("Temple"), name: "Temple", at: Center)],
             spawns: [
-                (what: PlayerStart, at: Edge(Left)),
-                (what: Exit, at: Edge(Right)),
                 (what: Enemy(FireMage), at: MapMin((5, 5))),
                 (what: Enemy(FireMage), at: MapMax((-6, -6))),
                 (what: RandomEnemy, count: (5, 10), at: Near(structure: "Temple", radius: 10)),
@@ -128,9 +135,8 @@ RecipeFile(
             size_x_range: (40, 60),
             size_y_range: (80, 120),
             floor: Ground,
+            presets: ["BottomToTop"],
             spawns: [
-                (what: PlayerStart, at: Edge(Bottom)),
-                (what: Exit, at: Edge(Top)),
                 (
                     what: RandomEnemy,
                     count: (8, 12),
@@ -140,12 +146,11 @@ RecipeFile(
                 (what: Chest, count: (3, 5), at: Random()),
             ],
             structures: [
-                (kind: Structure("Temple"), name: "SummitTemple", anchor: CenterOffset((0, 20))),
+                (kind: Structure("Temple"), name: "SummitTemple", at: CenterOffset((0, 20))),
                 (
                     kind: Structure("Temple"),
                     name: "LowerTemple",
-                    anchor: Structure(structure: "SummitTemple", offset: (0, -30)),
-                    radius: 6,
+                    at: Near(structure: "SummitTemple", offset: (0, -30), radius: 6),
                 ),
                 (kind: EmptySquare(), count: 2),
                 (kind: Rubble(), count: 4),

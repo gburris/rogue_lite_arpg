@@ -46,11 +46,14 @@ pub(super) fn plugin(app: &mut App) {
 //   structure choice, and every PlaceRule. Same (recipe, seed) maps to the same blueprint,
 //   and the blueprint keeps both, so MapRequest::Named { recipe, seed } replays it.
 //   The weighted recipe pick draws from the root MapRng, never from the build seed.
-// - Build order: structures, fixed enemies, player start (kept PLAYER_START_CLEARANCE
-//   tiles from enemies), exits, random enemies, chests. Separation is measured against
-//   every point placed so far, not just the current batch.
+// - Recipes list everything they place in `spawns` (what, count, at, separation);
+//   structures and spawns pick their location from the same `Location` options.
+// - Build order: size, structures, fixed-anchor spawns, player start (kept the recipe's
+//   start_clearance from enemies), exits, enemies, chests, NPCs. Each stage draws from
+//   its own ChaCha8 stream of the seed, so changing one stage never moves another.
+//   Separation is measured against every point placed so far.
 // - Exits and the player start each come from exactly one source: structure glyphs or
-//   a recipe rule.
+//   spawn entries.
 // - MapBlueprint is renderer-agnostic data (TileGrid<TileKind> + placements).
 //   All backend detail (TilemapBundle, atlas slots) stays inside spawn.rs.
 // - Structures are glyph grids (: = transparent, letters = placements over floor);

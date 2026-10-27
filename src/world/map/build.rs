@@ -10,11 +10,8 @@ use crate::{
         MapRng,
         map::{
             blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
-            placement::{Anchor, CountRange, PlaceContext, PlaceRule, place},
-            recipe::{
-                MapRecipe, RecipeCatalog, StructureAnchor, StructureEntry, StructureKind,
-                load_recipes, resolved_name,
-            },
+            placement::{PlaceContext, place},
+            recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name},
             structures::{
                 Structure, apply_structure, build_empty_square, build_pond, build_rubble,
             },
@@ -148,9 +145,6 @@ fn cycle_recipe(
 /// Shorthand for fallible map generation results.
 pub(super) type MapResult<T> = std::result::Result<T, MapError>;
 
-/// Radius around the player start, in tiles, that no enemy may occupy.
-pub(crate) const PLAYER_START_CLEARANCE: u32 = 10;
-
 /// Records a point placement on the blueprint and in the placement context.
 fn push_point(
     blueprint: &mut MapBlueprint,
@@ -230,13 +224,13 @@ pub(crate) fn build_from_recipe(
                     .placements
                     .iter()
                     .filter(|placement| matches!(placement.kind, PlacementKind::Enemy(_)))
-                    .map(|placement| (placement.tile, PLAYER_START_CLEARANCE)),
+                    .map(|placement| (placement.tile, recipe.start_clearance)),
             ),
             Stage::Enemies => {
                 let player_start = blueprint.player_start().map_err(MapError::Validation)?;
                 placement_context
                     .keep_clear
-                    .push((player_start, PLAYER_START_CLEARANCE));
+                    .push((player_start, recipe.start_clearance));
             }
             _ => {}
         }
@@ -244,7 +238,7 @@ pub(crate) fn build_from_recipe(
         placement_context.keep_clear.truncate(keep_clear_len);
     }
     let player_start = blueprint.player_start().map_err(MapError::Validation)?;
-    check_start_clearance(&blueprint, player_start)?;
+    check_start_clearance(&blueprint, player_start, recipe.start_clearance)?;
     blueprint.validate().map_err(MapError::Validation)?;
     Ok(blueprint)
 }
@@ -296,15 +290,19 @@ fn place_spawns(
     Ok(())
 }
 
-/// Fails if any enemy sits within `PLAYER_START_CLEARANCE` tiles of the player start.
-fn check_start_clearance(blueprint: &MapBlueprint, player_start: IVec2) -> MapResult<()> {
-    let limit = (PLAYER_START_CLEARANCE as i32).pow(2);
+/// Fails if any enemy sits within `clearance` tiles of the player start.
+fn check_start_clearance(
+    blueprint: &MapBlueprint,
+    player_start: IVec2,
+    clearance: u32,
+) -> MapResult<()> {
+    let limit = (clearance as i32).pow(2);
     if let Some(enemy) = blueprint.placements.iter().find(|placement| {
         matches!(placement.kind, PlacementKind::Enemy(_))
             && placement.tile.distance_squared(player_start) < limit
     }) {
         return Err(format!(
-            "enemy at {} is within {PLAYER_START_CLEARANCE} tiles of the player start {player_start}",
+            "enemy at {} is within {clearance} tiles of the player start {player_start}",
             enemy.tile
         )
         .into());
@@ -324,7 +322,7 @@ fn place_structures(
 ) -> MapResult<()> {
     for (index, entry) in recipe.structures.iter().enumerate() {
         let resolved_name = resolved_name(entry.kind.label(), index, &entry.name);
-        let rule = structure_rule(entry);
+        let rule = entry.at.rule(1, 0, random_generator)?;
         let placed_center = match &entry.kind {
             StructureKind::EmptySquare { size } => {
                 build_empty_square(blueprint, placement_context, &rule, *size, random_generator)?
@@ -384,44 +382,16 @@ fn place_structures(
     Ok(())
 }
 
-/// Resolves a structure entry's anchor to a placement rule. A `Structure` anchor is
-/// measured between centers; with a radius it samples near that point instead.
-fn structure_rule(entry: &StructureEntry) -> PlaceRule {
-    match &entry.anchor {
-        StructureAnchor::Random => PlaceRule::Random {
-            count: CountRange(1, 1),
-            x_deciles: (1, 9),
-            separation: 0,
-        },
-        StructureAnchor::Center => PlaceRule::Fixed(Anchor::Center),
-        StructureAnchor::CenterOffset(offset) => PlaceRule::Fixed(Anchor::CenterOffset(*offset)),
-        StructureAnchor::MapMin(position) => PlaceRule::Fixed(Anchor::MapMin(*position)),
-        StructureAnchor::Structure { structure, offset } => match entry.radius {
-            None => PlaceRule::Fixed(Anchor::Structure {
-                name: structure.clone(),
-                offset: *offset,
-            }),
-            Some(radius) => PlaceRule::NearStructure {
-                count: CountRange(1, 1),
-                structure: structure.clone(),
-                offset: *offset,
-                radius,
-                separation: 0,
-            },
-        },
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         prelude::EnemyKind,
         world::map::{
-            placement::Side,
+            placement::{CountRange, Side},
             recipe::{
-                RecipeFile, SpawnAt, SpawnEntry, SpawnKind, catalog_from_file, load_recipe_catalog,
-                recipe_options, validate_recipe,
+                Location, RecipeFile, SpawnEntry, SpawnKind, catalog_from_file,
+                load_recipe_catalog, recipe_options, validate_recipe,
             },
         },
     };
@@ -520,8 +490,8 @@ mod tests {
     #[test]
     fn enemies_keep_clear_of_the_player_start() {
         let catalog = catalog();
-        let limit = (PLAYER_START_CLEARANCE as i32).pow(2);
         for recipe in all_recipes(&catalog) {
+            let limit = (recipe.start_clearance as i32).pow(2);
             for seed in SEEDS {
                 let blueprint = build(&catalog, recipe, seed);
                 let start = blueprint.player_start().expect("one player start");
@@ -562,11 +532,11 @@ mod tests {
         // The hub's town already has an X and a P glyph.
         let mut hub = catalog.hub.clone();
         hub.spawns
-            .push(spawn(SpawnKind::Exit, SpawnAt::Edge(Side::Right)));
+            .push(spawn(SpawnKind::Exit, Location::Edge(Side::Right)));
         assert!(validate_recipe(&hub, &catalog.structures).is_err());
         let mut hub = catalog.hub.clone();
         hub.spawns
-            .push(spawn(SpawnKind::PlayerStart, SpawnAt::Edge(Side::Left)));
+            .push(spawn(SpawnKind::PlayerStart, Location::Edge(Side::Left)));
         assert!(validate_recipe(&hub, &catalog.structures).is_err());
 
         let mut swamp = catalog.recipes["Swamp"].clone();
@@ -577,7 +547,7 @@ mod tests {
         let mut swamp = catalog.recipes["Swamp"].clone();
         swamp
             .spawns
-            .push(spawn(SpawnKind::PlayerStart, SpawnAt::Edge(Side::Top)));
+            .push(spawn(SpawnKind::PlayerStart, Location::Edge(Side::Top)));
         assert!(validate_recipe(&swamp, &catalog.structures).is_err());
     }
 
@@ -588,7 +558,7 @@ mod tests {
         swamp.spawns.push(SpawnEntry {
             what: SpawnKind::Chest,
             count: CountRange(2, 2),
-            at: SpawnAt::Center,
+            at: Location::Center,
             separation: 0,
         });
         assert!(validate_recipe(&swamp, &catalog.structures).is_err());

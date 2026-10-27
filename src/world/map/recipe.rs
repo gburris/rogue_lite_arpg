@@ -12,12 +12,12 @@ use std::{collections::BTreeMap, io::BufReader};
 use bevy::prelude::*;
 
 use crate::{
-    prelude::EnemyKind,
+    prelude::{EnemyKind, NpcKind},
     world::{
         MapRng,
         map::{
             blueprint::PlacementKind,
-            build::{MapRequest, MapResult, build_from_recipe},
+            build::{MapRequest, MapResult, Stage, build_from_recipe},
             placement::{Anchor, CountRange, PlaceRule, Side},
             spawn::MAX_MAP_TILES,
             structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs},
@@ -125,10 +125,7 @@ pub(super) struct RecipeDefaults {
     pub(super) size_y_range: (u32, u32),
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
-    pub(super) player_start: PlayerStartPick,
-    pub(super) exits: ExitPick,
-    pub(super) enemies: EnemyPlacement,
-    pub(super) chests: CountRange,
+    pub(super) spawns: Vec<SpawnEntry>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -142,10 +139,8 @@ pub(super) struct RecipeEntry {
     pub(super) size_y_range: Option<(u32, u32)>,
     pub(super) floor: Option<TileKind>,
     pub(super) structures: Option<Vec<StructureEntry>>,
-    pub(super) player_start: Option<PlayerStartPick>,
-    pub(super) exits: Option<ExitPick>,
-    pub(super) enemies: Option<EnemyPlacement>,
-    pub(super) chests: Option<CountRange>,
+    /// Replaces the default spawns entirely, like `structures`.
+    pub(super) spawns: Option<Vec<SpawnEntry>>,
 }
 
 /// Resolved map generation settings loaded from a recipe definition.
@@ -157,10 +152,7 @@ pub(crate) struct MapRecipe {
     pub(super) size_y_range: (u32, u32),
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
-    pub(super) player_start: PlayerStartPick,
-    pub(super) exits: ExitPick,
-    pub(super) enemies: EnemyPlacement,
-    pub(super) chests: CountRange,
+    pub(super) spawns: Vec<SpawnEntry>,
 }
 
 impl RecipeEntry {
@@ -193,12 +185,7 @@ impl RecipeEntry {
                 self.structures
                     .unwrap_or_else(|| defaults.structures.clone()),
             ),
-            player_start: self
-                .player_start
-                .unwrap_or_else(|| defaults.player_start.clone()),
-            exits: self.exits.unwrap_or_else(|| defaults.exits.clone()),
-            enemies: self.enemies.unwrap_or_else(|| defaults.enemies.clone()),
-            chests: self.chests.unwrap_or(defaults.chests),
+            spawns: self.spawns.unwrap_or_else(|| defaults.spawns.clone()),
         })
     }
 }
@@ -303,129 +290,162 @@ pub(super) fn resolved_name(kind: &str, index: usize, explicit: &str) -> String 
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub(super) enum PlayerStartPick {
-    Structure,
-    Placement(PlacementPick),
-}
-
-/// Where a recipe's exits come from: `X` glyphs in its structures, or one map edge.
-#[derive(Deserialize, Debug, Clone)]
-pub(super) enum ExitPick {
-    Structure,
-    Edge { count: CountRange, side: Side },
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub(super) enum PlacementPick {
-    Fixed {
-        anchor: Anchor,
-    },
-    Random {
-        count: CountRange,
-        x_deciles: (u32, u32),
-        separation: u32,
-    },
-    Edge {
-        count: CountRange,
-        side: Side,
-    },
-    Choose(Vec<PlacementPick>),
-}
-
-impl PlacementPick {
-    pub(super) fn resolve(&self, random_generator: &mut ChaCha8Rng) -> MapResult<PlaceRule> {
-        match self {
-            Self::Fixed { anchor } => Ok(PlaceRule::Fixed(anchor.clone())),
-            Self::Random {
-                count,
-                x_deciles,
-                separation,
-            } => Ok(PlaceRule::Random {
-                count: *count,
-                x_deciles: *x_deciles,
-                separation: *separation,
-            }),
-            Self::Edge { count, side } => Ok(PlaceRule::Edge {
-                count: *count,
-                side: *side,
-            }),
-            Self::Choose(picks) => {
-                if picks.is_empty() {
-                    return Err("placement choice list is empty".to_owned().into());
-                }
-                Ok(picks[random_generator.random_range(0..picks.len())]
-                    .resolve(random_generator)?)
-            }
-        }
-    }
-
-    pub(super) fn valid_player_start(&self) -> bool {
-        match self {
-            Self::Random {
-                count, x_deciles, ..
-            } => count.0 == 1 && count.1 == 1 && x_deciles.0 < x_deciles.1 && x_deciles.1 <= 10,
-            Self::Edge { count, .. } => count.0 == 1 && count.1 == 1,
-            Self::Choose(picks) => !picks.is_empty() && picks.iter().all(Self::valid_player_start),
-            Self::Fixed { .. } => false,
-        }
-    }
-}
-
+/// One line of a recipe's `spawns`: what to place, where, and how many.
+///
+/// ```ron
+/// (what: PlayerStart, at: Edge(Left)),
+/// (what: Enemy(FireMage), at: MapMin((5, 5))),
+/// (what: RandomEnemy, count: (10, 15), at: Random(x_deciles: (2, 8)), separation: 5),
+/// (what: Chest, count: (3, 5), at: Near(structure: "Temple", radius: 6)),
+/// ```
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub(super) struct EnemyPlacement {
+pub(super) struct SpawnEntry {
+    pub(super) what: SpawnKind,
+    /// How many to place; a bare number or an inclusive `(min, max)`. Defaults to 1.
+    #[serde(default = "one_spawn")]
     pub(super) count: CountRange,
-    #[serde(default)]
-    pub(super) pick: EnemyPick,
-    #[serde(default = "default_enemy_x_deciles")]
-    pub(super) x_deciles: (u32, u32),
+    pub(super) at: SpawnAt,
+    /// Minimum tile distance from every point placed so far (`Random` and `Near` only).
     #[serde(default)]
     pub(super) separation: u32,
-    #[serde(default)]
-    pub(super) fixed: Vec<FixedEnemyPlacement>,
-    pub(super) near: Option<EnemyNearPlacement>,
 }
 
+fn one_spawn() -> CountRange {
+    CountRange(1, 1)
+}
+
+/// What a spawn entry places.
 #[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub(super) struct FixedEnemyPlacement {
-    pub(super) pick: EnemyPick,
-    pub(super) anchor: Anchor,
+pub(super) enum SpawnKind {
+    PlayerStart,
+    Exit,
+    Chest,
+    Enemy(EnemyKind),
+    /// An enemy picked uniformly from `EnemyKind::ALL`, rolled per spawn.
+    RandomEnemy,
+    Npc(NpcKind),
 }
 
-#[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub(super) struct EnemyNearPlacement {
-    pub(super) structure: String,
-    pub(super) radius: u32,
-}
-
-pub(super) fn default_enemy_x_deciles() -> (u32, u32) {
-    (2, 8)
-}
-
-#[derive(Deserialize, Debug, Clone, Copy, Default)]
-pub(super) enum EnemyPick {
-    #[default]
-    Warrior,
-    IceMage,
-    FireMage,
-    Random,
-}
-
-impl EnemyPick {
-    pub(super) fn resolve(self, random_generator: &mut ChaCha8Rng) -> EnemyKind {
+impl SpawnKind {
+    /// Build stage this kind's sampled (non-fixed) spawns run in.
+    pub(super) fn stage(&self) -> Stage {
         match self {
-            Self::Warrior => EnemyKind::Warrior,
-            Self::IceMage => EnemyKind::IceMage,
-            Self::FireMage => EnemyKind::FireMage,
-            Self::Random => match random_generator.random_range(0..3) {
-                0 => EnemyKind::Warrior,
-                1 => EnemyKind::IceMage,
-                _ => EnemyKind::FireMage,
-            },
+            Self::PlayerStart => Stage::PlayerStart,
+            Self::Exit => Stage::Exits,
+            Self::Enemy(_) | Self::RandomEnemy => Stage::Enemies,
+            Self::Chest => Stage::Chests,
+            Self::Npc(_) => Stage::Npcs,
         }
+    }
+
+    /// Resolves to a concrete placement, rolling `RandomEnemy`.
+    pub(super) fn placement(&self, random_generator: &mut ChaCha8Rng) -> PlacementKind {
+        match self {
+            Self::PlayerStart => PlacementKind::PlayerStart,
+            Self::Exit => PlacementKind::Exit,
+            Self::Chest => PlacementKind::Chest,
+            Self::Enemy(kind) => PlacementKind::Enemy(kind.clone()),
+            Self::RandomEnemy => {
+                let index = random_generator.random_range(0..EnemyKind::ALL.len());
+                PlacementKind::Enemy(EnemyKind::ALL[index].clone())
+            }
+            Self::Npc(kind) => PlacementKind::Npc(*kind),
+        }
+    }
+}
+
+/// Where a spawn entry places things. `Random`, `Edge`, `Near` and `Choose` sample a spot;
+/// the rest are fixed anchors, which place exactly one.
+#[derive(Deserialize, Debug, Clone)]
+pub(super) enum SpawnAt {
+    /// Anywhere inside the half-open x-decile band, `(1, 9)` by default: `Random()`.
+    Random {
+        #[serde(default = "interior_deciles")]
+        x_deciles: (u32, u32),
+    },
+    /// One tile inside a wall; several spawns spread along it: `Edge(Left)`.
+    Edge(Side),
+    /// Within `radius` tiles (a square) of a named structure's center plus `offset`.
+    Near {
+        structure: String,
+        #[serde(default)]
+        offset: IVec2,
+        radius: u32,
+    },
+    /// One of these, picked per map.
+    Choose(Vec<SpawnAt>),
+    Center,
+    CenterOffset(IVec2),
+    MapMin(IVec2),
+    /// Offset from the top-right tile: `MapMax((-6, -6))`.
+    MapMax(IVec2),
+    /// A named structure's center plus `offset`.
+    Structure {
+        name: String,
+        #[serde(default)]
+        offset: IVec2,
+    },
+}
+
+fn interior_deciles() -> (u32, u32) {
+    (1, 9)
+}
+
+impl SpawnAt {
+    /// Fixed anchors place exactly one and run before every sampled spawn.
+    pub(super) fn is_fixed(&self) -> bool {
+        !matches!(
+            self,
+            Self::Random { .. } | Self::Edge(_) | Self::Near { .. } | Self::Choose(_)
+        )
+    }
+
+    /// Builds the placement rule for `count` spawns, picking one option of a `Choose`.
+    pub(super) fn rule(
+        &self,
+        count: u32,
+        separation: u32,
+        random_generator: &mut ChaCha8Rng,
+    ) -> MapResult<PlaceRule> {
+        let count_range = CountRange(count, count);
+        Ok(match self {
+            Self::Random { x_deciles } => PlaceRule::Random {
+                count: count_range,
+                x_deciles: *x_deciles,
+                separation,
+            },
+            Self::Edge(side) => PlaceRule::Edge {
+                count: count_range,
+                side: *side,
+            },
+            Self::Near {
+                structure,
+                offset,
+                radius,
+            } => PlaceRule::NearStructure {
+                count: count_range,
+                structure: structure.clone(),
+                offset: *offset,
+                radius: *radius,
+                separation,
+            },
+            Self::Choose(options) => {
+                if options.is_empty() {
+                    return Err("spawn choice list is empty".into());
+                }
+                let index = random_generator.random_range(0..options.len());
+                return options[index].rule(count, separation, random_generator);
+            }
+            Self::Center => PlaceRule::Fixed(Anchor::Center),
+            Self::CenterOffset(offset) => PlaceRule::Fixed(Anchor::CenterOffset(*offset)),
+            Self::MapMin(offset) => PlaceRule::Fixed(Anchor::MapMin(*offset)),
+            Self::MapMax(offset) => PlaceRule::Fixed(Anchor::MapMax(*offset)),
+            Self::Structure { name, offset } => PlaceRule::Fixed(Anchor::Structure {
+                name: name.clone(),
+                offset: *offset,
+            }),
+        })
     }
 }
 
@@ -558,40 +578,6 @@ pub(super) fn validate_recipe(
             .into());
         }
     }
-    let (enemy_min, enemy_max) = (recipe.enemies.count.0, recipe.enemies.count.1);
-    if enemy_min > enemy_max
-        || enemy_max > MAX_MAP_TILES
-        || recipe.enemies.fixed.len() > MAX_MAP_TILES as usize
-        || recipe.chests.0 > recipe.chests.1
-        || recipe.chests.1 > MAX_MAP_TILES
-    {
-        return Err(format!("recipe {} has invalid placement count range", recipe.name).into());
-    }
-    if recipe.enemies.near.is_none()
-        && enemy_min > 0
-        && (recipe.enemies.x_deciles.0 >= recipe.enemies.x_deciles.1
-            || recipe.enemies.x_deciles.1 > 10)
-    {
-        return Err(format!("recipe {} has invalid enemy x-decile range", recipe.name).into());
-    }
-    if let ExitPick::Edge { count, .. } = &recipe.exits
-        && (count.0 == 0 || count.0 > count.1 || count.1 > 2)
-    {
-        return Err(format!("recipe {} has invalid exit count range", recipe.name).into());
-    }
-    let structure_exits = structures_place(recipe, structures, |kind| {
-        matches!(kind, PlacementKind::Exit)
-    });
-    if matches!(
-        (structure_exits, &recipe.exits),
-        (true, ExitPick::Edge { .. }) | (false, ExitPick::Structure)
-    ) {
-        return Err(format!(
-            "recipe {} must define exactly one exit source, structure glyphs or an edge",
-            recipe.name
-        )
-        .into());
-    }
     let mut earlier_names = std::collections::HashSet::new();
     for (index, structure) in recipe.structures.iter().enumerate() {
         if let StructureKind::Structure(kind) = &structure.kind
@@ -653,49 +639,98 @@ pub(super) fn validate_recipe(
             return Err(format!("recipe {} repeats structure name {name}", recipe.name).into());
         }
     }
-    if let Some(near) = &recipe.enemies.near {
-        if !earlier_names.contains(&near.structure) {
-            return Err(format!(
-                "recipe {} enemy placement references missing structure {}",
-                recipe.name, near.structure
-            )
-            .into());
+    validate_spawns(recipe, structures, &earlier_names)
+}
+
+/// Checks each spawn entry, and that the player start and exits each come from exactly
+/// one source: structure glyphs or spawn entries.
+fn validate_spawns(
+    recipe: &MapRecipe,
+    structures: &BTreeMap<String, Structure>,
+    structure_names: &std::collections::HashSet<String>,
+) -> Result<()> {
+    for (index, spawn) in recipe.spawns.iter().enumerate() {
+        let context = format!("recipe {} spawn {index}", recipe.name);
+        let CountRange(minimum, maximum) = spawn.count;
+        if minimum > maximum || maximum > MAX_MAP_TILES || spawn.separation > MAX_MAP_TILES {
+            return Err(format!("{context} has an invalid count or separation").into());
         }
-        if near.radius > MAX_MAP_TILES {
-            return Err(format!("recipe {} enemy radius exceeds the cap", recipe.name).into());
+        if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange(1, 1) {
+            return Err(format!("{context} must place exactly one player start").into());
         }
-    }
-    if recipe.enemies.separation > MAX_MAP_TILES {
-        return Err(format!("recipe {} enemy separation exceeds the cap", recipe.name).into());
+        validate_spawn_at(&spawn.at, spawn.count, structure_names, &context)?;
     }
     let structure_starts = structures_place(recipe, structures, |kind| {
         matches!(kind, PlacementKind::PlayerStart)
     });
-    if matches!(
-        (structure_starts, &recipe.player_start),
-        (true, PlayerStartPick::Placement(_)) | (false, PlayerStartPick::Structure)
-    ) {
+    let spawn_starts = recipe
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.what, SpawnKind::PlayerStart))
+        .count();
+    if (structure_starts && spawn_starts > 0) || (!structure_starts && spawn_starts != 1) {
         return Err(format!(
-            "recipe {} must define exactly one PlayerStart source",
+            "recipe {} must define exactly one player start source, a structure glyph or one spawn",
             recipe.name
         )
         .into());
     }
-    if let PlayerStartPick::Placement(PlacementPick::Choose(picks)) = &recipe.player_start
-        && picks.is_empty()
-    {
-        return Err(format!("recipe {} has an empty player-start choice", recipe.name).into());
-    }
-    if let PlayerStartPick::Placement(pick) = &recipe.player_start
-        && !pick.valid_player_start()
-    {
+    let structure_exits = structures_place(recipe, structures, |kind| {
+        matches!(kind, PlacementKind::Exit)
+    });
+    let exit_spawns = recipe
+        .spawns
+        .iter()
+        .filter(|spawn| matches!(spawn.what, SpawnKind::Exit));
+    let has_exit_spawns = exit_spawns.clone().next().is_some();
+    let guarantees_an_exit = exit_spawns.clone().any(|spawn| spawn.count.0 > 0);
+    if (structure_exits && has_exit_spawns) || (!structure_exits && !guarantees_an_exit) {
         return Err(format!(
-            "recipe {} player-start choices must use single-placement Random or Edge rules",
+            "recipe {} must define exactly one exit source, structure glyphs or exit spawns",
             recipe.name
         )
         .into());
     }
     Ok(())
+}
+
+fn validate_spawn_at(
+    at: &SpawnAt,
+    count: CountRange,
+    structure_names: &std::collections::HashSet<String>,
+    context: &str,
+) -> Result<()> {
+    match at {
+        SpawnAt::Random { x_deciles } if x_deciles.0 >= x_deciles.1 || x_deciles.1 > 10 => {
+            Err(format!("{context} has an invalid x-decile range").into())
+        }
+        SpawnAt::Near {
+            structure, radius, ..
+        } => {
+            if !structure_names.contains(structure) {
+                return Err(format!("{context} references missing structure {structure}").into());
+            }
+            if *radius > MAX_MAP_TILES {
+                return Err(format!("{context} radius exceeds the cap").into());
+            }
+            Ok(())
+        }
+        SpawnAt::Choose(options) => {
+            if options.is_empty() {
+                return Err(format!("{context} has an empty choice").into());
+            }
+            options
+                .iter()
+                .try_for_each(|option| validate_spawn_at(option, count, structure_names, context))
+        }
+        SpawnAt::Structure { name, .. } if !structure_names.contains(name) => {
+            Err(format!("{context} references missing structure {name}").into())
+        }
+        fixed if fixed.is_fixed() && count != CountRange(1, 1) => {
+            Err(format!("{context} uses a fixed anchor, so it must place exactly one").into())
+        }
+        _ => Ok(()),
+    }
 }
 
 /// Returns whether any structure in the recipe carries a glyph placement matching `wanted`.

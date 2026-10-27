@@ -4,10 +4,12 @@ RecipeFile(
         size_y_range: (50, 100),
         floor: Ground,
         structures: [],
-        player_start: Placement(Edge(count: 1, side: Left)),
-        exits: Edge(count: 1, side: Right),
-        enemies: (count: (10, 15), pick: Random, x_deciles: (2, 8), separation: 5),
-        chests: 0,
+        // A recipe's own `spawns` list replaces this one entirely.
+        spawns: [
+            (what: PlayerStart, at: Edge(Left)),
+            (what: Exit, at: Edge(Right)),
+            (what: RandomEnemy, count: (10, 15), at: Random(x_deciles: (2, 8)), separation: 5),
+        ],
     ),
     structures: {
         "HubTown": (
@@ -64,10 +66,8 @@ RecipeFile(
             (kind: Structure("HubTown"), anchor: CenterOffset((0, -3))),
             (kind: Pond(size: Exact((14, 9)), shape: Blob), anchor: MapMin((42, 4))),
         ],
-        player_start: Structure,
-        exits: Structure,
-        enemies: (count: 0, pick: Random),
-        chests: 0,
+        // The town's P and X glyphs provide the start and the exit.
+        spawns: [],
     ),
     dungeons: [
         (
@@ -101,28 +101,26 @@ RecipeFile(
             weight: 10,
             size: 50,
             floor: Cobblestone,
-            enemies: (count: 0, pick: Random),
-            chests: (10, 15),
             structures: [(kind: Structure("Temple"), anchor: Center)],
+            spawns: [
+                (what: PlayerStart, at: Edge(Left)),
+                (what: Exit, at: Edge(Right)),
+                (what: Chest, count: (10, 15), at: Random()),
+            ],
         ),
         (
             name: "FireShrine",
             weight: 10,
             size: 60,
             floor: Cobblestone,
-            player_start: Placement(Edge(count: 1, side: Left)),
-            exits: Edge(count: 1, side: Right),
-            enemies: (
-                count: (5, 10),
-                pick: Random,
-                fixed: [
-                    (pick: FireMage, anchor: MapMin((5, 5))),
-                    (pick: FireMage, anchor: MapMax((-6, -6))),
-                ],
-                near: (structure: "Temple", radius: 10),
-            ),
-            chests: 0,
             structures: [(kind: Structure("Temple"), name: "Temple", anchor: Center)],
+            spawns: [
+                (what: PlayerStart, at: Edge(Left)),
+                (what: Exit, at: Edge(Right)),
+                (what: Enemy(FireMage), at: MapMin((5, 5))),
+                (what: Enemy(FireMage), at: MapMax((-6, -6))),
+                (what: RandomEnemy, count: (5, 10), at: Near(structure: "Temple", radius: 10)),
+            ],
         ),
         (
             name: "SkyTempleAscent",
@@ -130,15 +128,17 @@ RecipeFile(
             size_x_range: (40, 60),
             size_y_range: (80, 120),
             floor: Ground,
-            player_start: Placement(Edge(count: 1, side: Bottom)),
-            exits: Edge(count: 1, side: Top),
-            enemies: (
-                count: (8, 12),
-                pick: Random,
-                separation: 4,
-                near: (structure: "SummitTemple", radius: 12),
-            ),
-            chests: (3, 5),
+            spawns: [
+                (what: PlayerStart, at: Edge(Bottom)),
+                (what: Exit, at: Edge(Top)),
+                (
+                    what: RandomEnemy,
+                    count: (8, 12),
+                    at: Near(structure: "SummitTemple", radius: 12),
+                    separation: 4,
+                ),
+                (what: Chest, count: (3, 5), at: Random()),
+            ],
             structures: [
                 (kind: Structure("Temple"), name: "SummitTemple", anchor: CenterOffset((0, 20))),
                 (

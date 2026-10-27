@@ -31,7 +31,8 @@ pub struct NpcSpawnData {
 #[require(Character, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct NPC;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+/// Recipes name these directly, e.g. `(what: Npc(Shopkeeper), ...)` in `map_recipes.ron`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum NpcKind {
     Helper,
     Shopkeeper,

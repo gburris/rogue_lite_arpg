@@ -15,7 +15,8 @@ env:
   RUSTFLAGS: -Dwarnings -Zshare-generics=y -Zthreads=0
   RUSTDOCFLAGS: -Dwarnings -Zshare-generics=y -Zthreads=0
   # Use the same Rust toolchain across jobs so they can share a cache.
-  toolchain: nightly-2025-06-26
+  # Keep in sync with rust-toolchain.toml, which overrides whatever toolchain a job installs.
+  toolchain: nightly-2026-10-20
 
 jobs:
   # Check formatting.
@@ -90,37 +91,45 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
+      # Each lint also becomes a GitHub annotation, shown inline on the PR's changed files.
       - name: Run Clippy lints
-        run: cargo clippy --locked --workspace --all-targets --profile ci --all-features
+        run: |
+          set -o pipefail
+          cargo clippy --locked --workspace --all-targets --profile ci --all-features --message-format=short --color=never 2>&1 \
+            | sed -E \
+              -e 's/^([^: ]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::\4 file=\1,line=\2,col=\3::\6/' \
+              -e 's/^(error(\[[^]]*\])?: .*)$/::error::\1/' \
+              -e 's/^(.*panicked at .*)$/::error::\1/'
 
   # Run Bevy lints.
-  bevy-lints:
-    name: Bevy lints
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  # TODO: re-enable once a bevy_lint release supports Bevy 0.19 (lint-v0.6.0 targets Bevy 0.18).
+  # bevy-lints:
+  #   name: Bevy lints
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 20
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (plus bevy_lint)
-        uses: TheBevyFlock/bevy_cli/bevy_lint@lint-v0.4.0
-        with:
-          cache: true
-          save-cache-if: ${{ github.ref == 'refs/heads/main' }}
+  #     - name: Install Rust toolchain (plus bevy_lint)
+  #       uses: TheBevyFlock/bevy_cli/bevy_lint@lint-v0.4.0
+  #       with:
+  #         cache: true
+  #         save-cache-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Restore Rust cache
-        id: cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ci
-          save-if: false
+  #     - name: Restore Rust cache
+  #       id: cache
+  #       uses: Swatinem/rust-cache@v2
+  #       with:
+  #         shared-key: ci
+  #         save-if: false
 
-      - name: Install build dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
+  #     - name: Install build dependencies
+  #       if: steps.cache.outputs.cache-hit != 'true'
+  #       run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
-      - name: Run Bevy lints
-        run: bevy_lint --locked --workspace --all-targets --profile ci --all-features
+  #     - name: Run Bevy lints
+  #       run: bevy_lint --locked --workspace --all-targets --profile ci --all-features
 
   # Run tests.
   tests:

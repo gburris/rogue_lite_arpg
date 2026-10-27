@@ -193,10 +193,12 @@ jobs:
         if: ${{ env.is_platform_enabled == 'true' }}
         uses: actions/checkout@v4
 
+      # Keep in sync with rust-toolchain.toml, which overrides whatever toolchain is installed.
       - name: Install Rust toolchain
         if: ${{ env.is_platform_enabled == 'true' }}
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-10-20
           targets: ${{ matrix.targets }}
 
       - name: Restore Rust cache

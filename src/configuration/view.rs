@@ -67,7 +67,7 @@ fn ysort_transforms(
 ) {
     for (mut transform, ysort) in &mut transform_query {
         let relative_height_on_map = (transform.translation.y + ysort.height_offset)
-            / (tile_to_world.map_size.y.min(MAX_MAP_TILES) as f32 * tile_to_world.tile_size.y);
+            / (tile_to_world.map_size.y as f32 * tile_to_world.tile_size.y);
 
         transform.translation.z = ysort.z - relative_height_on_map;
     }

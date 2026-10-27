@@ -37,11 +37,17 @@ pub struct EnemySpawnData {
 )]
 pub struct Enemy;
 
-#[derive(Component, Clone, Debug, Eq, PartialEq, Hash)]
+/// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
+#[derive(Component, Clone, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum EnemyKind {
     Warrior,
     IceMage,
     FireMage,
+}
+
+impl EnemyKind {
+    /// Every kind; a recipe's `RandomEnemy` picks uniformly from this list.
+    pub const ALL: [Self; 3] = [Self::Warrior, Self::IceMage, Self::FireMage];
 }
 
 //Experience granted by the enemy when player defeats it

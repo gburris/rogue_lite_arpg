@@ -1,4 +1,6 @@
 [toolchain]
-channel = "1.95.0"
+# A dated nightly: CI uses -Zshare-generics, -Zthreads and the cranelift backend for faster
+# builds. Bump the date here and in .github/workflows/{ci,build,release}.yml together.
+channel = "nightly-2026-10-20"
 components = ["rustfmt", "clippy"]
 profile = "minimal"

@@ -454,8 +454,8 @@ mod placement_tests {
         )
         .unwrap();
 
-        assert!(placed.is_empty());
-        assert!(context.reserved.is_empty());
+        assert_eq!(placed, Vec::<IVec2>::new());
+        assert_eq!(context.reserved, Vec::<TileRect>::new());
     }
 
     #[test]
@@ -578,7 +578,7 @@ mod placement_tests {
         )
         .unwrap();
 
-        assert!(!placed.is_empty());
+        assert_ne!(placed, Vec::<IVec2>::new());
         for tile in placed {
             assert!(tile.distance_squared(IVec2::new(6, 6)) >= 16);
             assert!(tile.distance_squared(IVec2::new(1, 1)) >= 9);

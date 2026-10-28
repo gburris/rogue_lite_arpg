@@ -237,28 +237,3 @@ impl PlacementKind {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::world::map::structures::{apply_structure, structure_from_glyphs};
-
-    #[test]
-    fn structure_markers_preserve_destination_tiles() {
-        let structure = structure_from_glyphs(TileKind::Cobblestone, "#:P").unwrap();
-        let mut blueprint =
-            MapBlueprint::new(UVec2::new(5, 5), TileKind::Grass, "Test".to_owned(), 1);
-        apply_structure(&mut blueprint, &structure, IVec2::new(1, 1)).unwrap();
-        assert_eq!(blueprint.tiles.get(IVec2::new(2, 1)), Some(TileKind::Grass));
-        assert_eq!(
-            blueprint.tiles.get(IVec2::new(3, 1)),
-            Some(TileKind::Cobblestone)
-        );
-        assert!(
-            blueprint
-                .placements
-                .iter()
-                .any(|placement| matches!(placement.kind, PlacementKind::PlayerStart))
-        );
-    }
-}

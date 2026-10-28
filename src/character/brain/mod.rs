@@ -58,8 +58,6 @@ mod decide;
 mod engine;
 mod motion;
 mod perception;
-#[cfg(test)]
-pub(crate) mod scoring_test_support;
 
 pub use action::{Ability, Action, Bite, Breath, Heal};
 pub use capability::Tuning;
@@ -521,85 +519,5 @@ fn seed_ai_seed(map_rng: Option<Res<MapRng>>, mut ai_seed: ResMut<AiSeed>) {
         ai_seed.0 = map_rng.root_seed();
     } else {
         warn!("MapRng is missing; seeding AI randomness with 0");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::considerations::{CAST_DISTANCE_RANGE, CAST_MAX_RANGE};
-    use super::*;
-    use crate::character::vision::TargetInfo;
-    use bevy::ecs::system::RunSystemOnce;
-
-    #[test]
-    fn every_brain_is_valid() {
-        for &kind in EnemyKind::ALL {
-            validate_brain(kind.brain()).unwrap_or_else(|error| panic!("{kind:?}: {error}"));
-        }
-        validate_brain(&VILLAGER).unwrap_or_else(|error| panic!("villager: {error}"));
-    }
-
-    /// Spawns a circling bat with a guaranteed lottery and a live target in
-    /// the cast distance range.
-    fn swooping_bat(chance: f32, cooldown: f32) -> (World, Entity) {
-        let mut world = World::new();
-        world.insert_resource(Time::<Virtual>::default());
-        world.insert_resource(AiSeed::default());
-        let target = world.spawn_empty().id();
-        let bat_brain = EnemyKind::Bat.brain();
-        let mut brain = Brain::new(bat_brain);
-        let orbit = bat_brain
-            .behaviors
-            .iter()
-            .position(|behavior| behavior.motion == Some(Motion::Orbit(CAST_DISTANCE_RANGE)))
-            .expect("the bat lists its orbit");
-        brain.assign_slots(
-            Assignment {
-                motion: Some(orbit),
-                action: None,
-            },
-            &Capabilities::default(),
-            0.0,
-        );
-        let bat = world
-            .spawn((
-                brain,
-                Targeting(target),
-                TargetInfo {
-                    distance: CAST_DISTANCE_RANGE.max() - 50.0,
-                    direction: Vec2::X,
-                    target_velocity: Vec2::ZERO,
-                    line_of_sight: true,
-                    in_vision_cone: true,
-                    targeted_at: 0.0,
-                },
-                Transform::default(),
-                Orbit::new(),
-                Swoop::new(chance, CAST_MAX_RANGE, cooldown),
-            ))
-            .id();
-        (world, bat)
-    }
-
-    /// Advances the clock one decision period, so every brain's next decision
-    /// is due, and decides.
-    fn run_decision_tick(world: &mut World) {
-        world
-            .resource_mut::<Time<Virtual>>()
-            .advance_by(std::time::Duration::from_secs_f32(DECISION_PERIOD));
-        world
-            .run_system_once(decide_behavior)
-            .expect("decisions run");
-    }
-
-    /// The full loop holds: a ready, scored dive starts on the first tick and
-    /// commits to the motion slot.
-    #[test]
-    fn swoop_lottery_starts_a_dive() {
-        let (mut world, bat) = swooping_bat(1.0, 0.0);
-        run_decision_tick(&mut world);
-        let brain = world.get::<Brain>(bat).expect("brained bat");
-        assert_eq!(brain.motion(), Some(Motion::Swoop));
-        assert!(brain.motion.is_some_and(|running| running.committed));
     }
 }

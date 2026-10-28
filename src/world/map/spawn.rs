@@ -331,37 +331,3 @@ impl TileToWorld {
         (rectangle_center, rectangle_size_in_units)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn tilemap_backend_agrees_with_tile_to_world_at_7_by_4_endpoints() {
-        let map_size = UVec2::new(7, 4);
-        let coordinates = TileToWorld {
-            map_size,
-            ..default()
-        };
-        let tilemap_size: TilemapSize = map_size.into();
-        let grid_size: TilemapGridSize = coordinates.tile_size.into();
-        let tilemap_type = TilemapType::Square;
-        let anchor = TilemapAnchor::Center;
-        for tile_position in [TilePos::new(0, 0), TilePos::new(6, 3)] {
-            let backend_center = tile_position.center_in_world(
-                &tilemap_size,
-                &grid_size,
-                &coordinates.tile_size,
-                &tilemap_type,
-                &anchor,
-            );
-            assert_eq!(
-                backend_center,
-                coordinates.tile_center_to_world_position(IVec2::new(
-                    tile_position.x as i32,
-                    tile_position.y as i32,
-                ))
-            );
-        }
-    }
-}

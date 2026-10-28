@@ -127,11 +127,7 @@ fn debug_target_lines(
         } else {
             RED
         };
-        gizmos.line_2d(
-            origin,
-            origin + target_info.direction * target_info.distance,
-            color,
-        );
+        gizmos.line_2d(origin, target_info.target_position, color);
     }
 }
 

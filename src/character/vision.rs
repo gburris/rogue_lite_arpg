@@ -14,6 +14,8 @@ pub struct TargetInfo {
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
     pub direction: Vec2,
+    /// World position of the observed entity.
+    pub target_position: Vec2,
     /// Intended world velocity of the observed entity.
     pub target_velocity: Vec2,
     /// Whether the observed entity is within an unobstructed line of sight (based on `RayCaster`).

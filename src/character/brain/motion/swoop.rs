@@ -101,7 +101,7 @@ impl MotionExecutor for Swoop {
         }
         let flight_distance = context.distance_this_frame(speed_boost);
         let heading = context.movement.direction;
-        let live_target = input.position + info.direction * info.distance;
+        let live_target = info.target_position;
         let exit_turn = self.exit_turn;
         let pass = self.pass.get_or_insert_with(|| {
             SwoopPass::new(

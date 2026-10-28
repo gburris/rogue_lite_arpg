@@ -233,17 +233,14 @@ fn update_target_info(
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             if let Ok((target_transform, target_motion)) = target_query.get(target_entity) {
-                let target_direction = (target_transform.translation.xy()
-                    - transform.translation.xy())
-                .normalize_or_zero();
+                let target_position = target_transform.translation.xy();
+                let position = transform.translation.xy();
 
-                let target_distance = target_transform
-                    .translation
-                    .xy()
-                    .distance(transform.translation.xy());
+                let target_direction = (target_position - position).normalize_or_zero();
 
                 target_info.direction = target_direction;
-                target_info.distance = target_distance;
+                target_info.distance = target_position.distance(position);
+                target_info.target_position = target_position;
                 target_info.target_velocity =
                     target_motion.map_or(Vec2::ZERO, SimpleMotion::get_velocity);
 

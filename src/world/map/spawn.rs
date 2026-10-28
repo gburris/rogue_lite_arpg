@@ -15,6 +15,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(AppState::SpawnMap),
         (
+            set_tile_to_world_map_size,
             populate_map_tiles,
             spawn_colliders,
             spawn_placements,
@@ -28,14 +29,20 @@ fn transition_to_playing(mut game_state: ResMut<NextState<AppState>>) {
     game_state.set(AppState::Playing);
 }
 
+fn set_tile_to_world_map_size(
+    blueprint: Single<&MapBlueprint>,
+    mut coordinates: ResMut<TileToWorld>,
+) {
+    coordinates.map_size = blueprint.map_size();
+}
+
 fn populate_map_tiles(
     mut commands: Commands,
     blueprint: Single<(&MapBlueprint, Entity)>,
-    mut coordinates: ResMut<TileToWorld>,
+    coordinates: Res<TileToWorld>,
     tiles: Res<TileAssets>,
 ) {
     let (blueprint, map) = blueprint.into_inner();
-    coordinates.map_size = blueprint.map_size();
     spawn_tiles(&mut commands, map, blueprint, &tiles, &coordinates);
 }
 
@@ -296,15 +303,14 @@ impl TileToWorld {
     }
 
     /// Returns the tile containing a world-space position, or `None` outside the map.
-    pub fn world_to_tile_position(&self, world_position: Vec2) -> Option<UVec2> {
+    pub fn world_to_tile_position(&self, world_position: Vec2) -> Option<IVec2> {
         let map_position_in_units = world_position - self.bottom_left_offset();
-        let tile_index = map_position_in_units / self.units_per_tile();
+        let tile_index = (map_position_in_units / self.units_per_tile())
+            .floor()
+            .as_ivec2();
 
-        (tile_index.x >= 0.0 && tile_index.y >= 0.0)
-            .then(|| tile_index.as_uvec2())
-            .filter(|tile_position| {
-                tile_position.x < self.map_size.x && tile_position.y < self.map_size.y
-            })
+        (tile_index.cmpge(IVec2::ZERO).all() && tile_index.cmplt(self.map_size.as_ivec2()).all())
+            .then_some(tile_index)
     }
 
     /// Converts tile-space coordinates to world-space coordinates.

@@ -13,9 +13,7 @@ use super::perception::{
     DecisionContext, ObservedComponents, ObservedComponentsItem, WorldUseChecks,
     observe_world_facts,
 };
-use super::{
-    Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD, ScoreTrace,
-};
+use super::{Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD, ScoreTrace};
 
 type DecidingBrains<'world, 'state> = Query<
     'world,

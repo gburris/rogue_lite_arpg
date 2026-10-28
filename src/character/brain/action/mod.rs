@@ -49,8 +49,10 @@ impl Action {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(ability::plugin).add_systems(
-        Update,
-        equipment_use::apply_equipment_use_requests.in_set(AiSet::Execute),
-    );
+    app.add_plugins(ability::plugin)
+        .add_systems(
+            Update,
+            equipment_use::apply_equipment_use_requests.in_set(AiSet::Execute),
+        )
+        .add_observer(equipment_use::report_equipment_use_finished);
 }

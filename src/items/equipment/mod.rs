@@ -19,7 +19,8 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(equip::plugin);
+    app.add_plugins(equip::plugin)
+        .add_observer(use_equipped::on_equipment_use_ended);
 
     app.add_systems(
         Update,

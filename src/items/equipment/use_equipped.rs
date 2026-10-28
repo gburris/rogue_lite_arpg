@@ -24,8 +24,30 @@ pub struct StartUsingEquipment {
 }
 /// Present on an equipped item while its use is in progress (swinging, casting, blocking).
 /// Inserted by the item's `StartUsingEquipment` observer, removed by its stop path.
+/// Its removal, however the use ended, fires [`EquipmentUseFinished`].
 #[derive(Component, Default)]
 pub struct EquipmentInUse;
+
+/// Fired at the holder when an item stops being in use.
+#[derive(EntityEvent)]
+pub struct EquipmentUseFinished {
+    #[event_target]
+    pub holder: Entity,
+    pub item: Entity,
+}
+
+pub(super) fn on_equipment_use_ended(
+    removed: On<Remove, EquipmentInUse>,
+    mut commands: Commands,
+    items: Query<&ItemOf>,
+) {
+    if let Ok(item_of) = items.get(removed.entity) {
+        commands.trigger(EquipmentUseFinished {
+            holder: item_of.holder,
+            item: removed.entity,
+        });
+    }
+}
 
 /// Request to end an in-progress use. Item stop observers own removing `EquipmentInUse`.
 #[derive(EntityEvent)]
@@ -84,67 +106,42 @@ pub struct UsableItem {
 }
 
 impl UsableItemItem<'_, '_> {
-    /// Whether the item is ready and affordable, without consuming anything.
-    pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
-        can_use_item(&self.equippable, self.mana_cost, holder_mana, true)
-    }
+    /// Spends the mana cost and restarts the cooldown. A refused use touches
+    /// neither, so it never marks the holder's `Mana` changed.
+    pub fn consume(&mut self, holder_mana: Option<Mut<Mana>>) -> Result<(), EquipmentUseFailure> {
+        can_use_item(&self.equippable, self.mana_cost, holder_mana.as_deref())?;
 
-    /// Checks every gate before consuming mana or resetting the cooldown.
-    pub fn consume(&mut self, holder_mana: Option<&mut Mana>) -> Result<(), EquipmentUseFailure> {
-        let can_use = self.can_use(holder_mana.as_deref());
-
-        if can_use.is_ok() {
-            if let (Some(holder_mana), Some(mana_cost)) = (holder_mana, self.mana_cost) {
-                holder_mana.use_mana(mana_cost);
-            }
-
-            self.equippable.cooldown.reset();
+        if let (Some(mut holder_mana), Some(mana_cost)) = (holder_mana, self.mana_cost) {
+            holder_mana.use_mana(mana_cost);
         }
-
-        can_use
+        self.equippable.cooldown.reset();
+        Ok(())
     }
 }
 
 impl UsableItemReadOnlyItem<'_, '_> {
     pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
-        can_use_item(self.equippable, self.mana_cost, holder_mana, false)
+        can_use_item(self.equippable, self.mana_cost, holder_mana)
     }
 }
 
-/// Shared readiness gate for both query views: cooldown first, then mana.
-/// `report_missing_mana` is false for passive planning checks so an AI
-/// inspecting a slot does not log a player-facing warning every tick.
+/// Shared readiness gate for both query views: cooldown first, then mana. A
+/// holder without a mana pool can't pay any mana cost.
 fn can_use_item(
     equippable: &Equippable,
     mana_cost: Option<&ManaCost>,
     holder_mana: Option<&Mana>,
-    report_missing_mana: bool,
 ) -> Result<(), EquipmentUseFailure> {
     if !equippable.cooldown.is_finished() {
         return Err(EquipmentUseFailure::OnCooldown);
     }
-    check_mana(mana_cost, holder_mana, report_missing_mana)
-}
-
-fn check_mana(
-    mana_cost: Option<&ManaCost>,
-    mana: Option<&Mana>,
-    report_missing_mana: bool,
-) -> Result<(), EquipmentUseFailure> {
-    if let (Some(mana), Some(mana_cost)) = (mana, mana_cost) {
-        if !mana.has_enough_mana(mana_cost) {
-            if report_missing_mana {
-                debug!("Not enough mana!");
-            }
-            return Err(EquipmentUseFailure::OutOfMana);
+    match (mana_cost, holder_mana) {
+        (Some(mana_cost), Some(mana)) if !mana.has_enough_mana(mana_cost) => {
+            Err(EquipmentUseFailure::OutOfMana)
         }
-    } else if mana.is_none() && mana_cost.is_some() {
-        if report_missing_mana {
-            warn!("This wielder is not skilled in the arts of the arcane");
-        }
-        return Err(EquipmentUseFailure::OutOfMana);
+        (Some(_), None) => Err(EquipmentUseFailure::OutOfMana),
+        _ => Ok(()),
     }
-    Ok(())
 }
 /// Shared capability for using equipped items: resolves
 /// character -> requested slot -> equipped item -> cooldown and mana.
@@ -172,25 +169,10 @@ impl EquipmentUsage<'_, '_> {
         slot.get_equipped(mainhand, offhand)
     }
 
-    /// Whether the holder could use the slot now, without consuming anything.
-    pub fn can_use(&self, holder: Entity, slot: EquipmentSlot) -> Result<(), EquipmentUseFailure> {
-        let (mainhand, offhand, mana) = self
-            .holders
-            .get(holder)
-            .map_err(|_| EquipmentUseFailure::NoHolder)?;
-        let item = slot
-            .get_equipped(mainhand, offhand)
-            .ok_or(EquipmentUseFailure::EmptySlot)?;
-        let usable = self
-            .equipment
-            .get(item)
-            .map_err(|_| EquipmentUseFailure::UnusableItem)?;
-        usable.can_use(mana)
-    }
-
     /// Attempts to use the holder's slot, queuing `StartUsingEquipment` (targeted at
     /// the item) plus `EquipmentUseSucceeded` (targeted at the holder) or a
-    /// failure event, and returns the real result to the caller.
+    /// failure event, and returns the real result to the caller. A refused use
+    /// changes nothing else, so callers may retry it every frame.
     pub fn try_use(
         &mut self,
         holder: Entity,
@@ -232,7 +214,7 @@ impl EquipmentUsage<'_, '_> {
             .equipment
             .get_mut(item)
             .map_err(|_| EquipmentUseFailure::UnusableItem)?;
-        usable.consume(mana.map(Mut::into_inner))?;
+        usable.consume(mana)?;
         Ok(item)
     }
 

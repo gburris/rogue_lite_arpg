@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-use super::{Capability, SteerInput};
-use crate::character::brain::{BrainRng, Interval, Motion, Tuning};
+use super::{SteerInput, SteeredCharacter, Steering};
+use crate::character::brain::{BrainRng, Capability, Interval, Motion, Tuning};
 
 const ORBIT_REROLL_MIN: f32 = 1.5;
 const ORBIT_REROLL_MAX: f32 = 2.5;
@@ -45,7 +45,7 @@ impl Orbit {
     }
 
     /// Forgets the circling side, so the next orbit picks it from the heading again.
-    pub(super) fn leave_orbit(&mut self) {
+    fn leave_orbit(&mut self) {
         self.clockwise = None;
     }
 
@@ -75,7 +75,25 @@ impl Capability for Orbit {
     }
 }
 
-pub(super) fn steer(
+/// Circles the target while the brain holds [`Motion::Orbit`].
+pub(super) fn apply_orbit(
+    time: Res<Time<Virtual>>,
+    mut orbiters: Query<(SteeredCharacter, &mut Orbit, &mut Steering, &mut BrainRng)>,
+) {
+    for (character, mut orbit, mut steering, mut rng) in &mut orbiters {
+        let Some(motion @ Motion::Orbit(distance_range)) = character.brain.motion() else {
+            orbit.leave_orbit();
+            continue;
+        };
+        *steering = character
+            .build_steer_input(motion, &time)
+            .map_or(Steering::HALT, |input| {
+                Steering::scaled(steer(&input, &mut orbit, distance_range, &mut rng), 1.0)
+            });
+    }
+}
+
+fn steer(
     input: &SteerInput,
     orbit: &mut Orbit,
     distance_range: Interval,

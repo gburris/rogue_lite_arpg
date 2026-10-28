@@ -15,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
-#[require(FacingDirection, SimpleMotion)]
+#[require(FacingDirection, Kinematics)]
 pub(super) enum CharacterAnimationState {
     #[default]
     Idle,
@@ -104,16 +104,16 @@ fn direction_index(direction: FacingDirection) -> usize {
 fn update_animation_state(
     mut character_query: Query<
         (
-            &SimpleMotion,
+            &Kinematics,
             &AttackState,
             Option<&Health>,
             &mut CharacterAnimationState,
             &mut FacingDirection,
         ),
-        Or<(Changed<SimpleMotion>, Changed<AttackState>, Changed<Health>)>,
+        Or<(Changed<Kinematics>, Changed<AttackState>, Changed<Health>)>,
     >,
 ) {
-    for (motion, attack_state, health, mut animation_state, mut facing_direction) in
+    for (kinematics, attack_state, health, mut animation_state, mut facing_direction) in
         &mut character_query
     {
         if health.is_none_or(|h| h.hp <= 0.0) {
@@ -123,7 +123,7 @@ fn update_animation_state(
 
         facing_direction.set_if_neq(FacingDirection::from_vec2(
             &facing_direction,
-            motion.direction,
+            kinematics.direction,
         ));
 
         // Attacking animation takes priority over walking / idle
@@ -132,7 +132,7 @@ fn update_animation_state(
             continue;
         }
 
-        if motion.is_moving() {
+        if kinematics.is_moving() {
             animation_state.set_if_neq(CharacterAnimationState::Moving);
         } else {
             animation_state.set_if_neq(CharacterAnimationState::Idle);

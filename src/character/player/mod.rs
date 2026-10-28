@@ -69,7 +69,7 @@ pub(super) fn plugin(app: &mut App) {
     CombatSide = CombatSide::Ally,
     ItemCapacity(50),
     Health::new(100.0),
-    SimpleMotion::new(250.0),
+    Kinematics::new(250.0),
     // Double the mass of npcs/enemies so the player can push them around more
     Mass(100.0),
     IFrames,

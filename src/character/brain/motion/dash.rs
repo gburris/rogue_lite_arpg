@@ -2,11 +2,9 @@
 
 use bevy::prelude::*;
 
-use super::{
-    Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SpeedBoost, SteeringEffort,
-};
+use super::{MotionStep, RunTag, SteerInput, SteeredCharacter, Steering, report_motion_finished};
 use crate::character::brain::perception::{TargetView, build_target_view};
-use crate::character::brain::{Motion, Tuning};
+use crate::character::brain::{BrainRng, Capability, Motion, Tuning};
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -103,19 +101,19 @@ impl Dash {
     }
 }
 
-fn hop_direction(target: &TargetView, close_range: f32, context: &mut MotionContext) -> Vec2 {
+fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2, rng: &mut BrainRng) -> Vec2 {
     if target.distance <= close_range
         && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
     {
-        let spread = context.rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
+        let spread = rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
         return target.bearing.rotate(Vec2::from_angle(spread));
     }
     // Cut across to the side opposite the current heading, so an orbit that
     // follows reads the new heading and circles back the other way.
-    let heading_side = target.bearing.perp().dot(context.input.heading);
+    let heading_side = target.bearing.perp().dot(heading);
     let tangent_sign = if heading_side.abs() > f32::EPSILON {
         -heading_side.signum()
-    } else if context.rng.range(0.0, 1.0) < 0.5 {
+    } else if rng.range(0.0, 1.0) < 0.5 {
         1.0
     } else {
         -1.0
@@ -136,38 +134,56 @@ impl Capability for Dash {
     }
 }
 
-impl MotionExecutor for Dash {
-    fn tag(&mut self) -> &mut RunTag {
-        &mut self.tag
+/// Runs a held dash and reports [`MotionFinished`](super::MotionFinished) at
+/// the end of its distance.
+pub(super) fn apply_dash(
+    time: Res<Time<Virtual>>,
+    mut commands: Commands,
+    mut dashers: Query<(
+        Entity,
+        SteeredCharacter,
+        &mut Dash,
+        &mut Steering,
+        &mut BrainRng,
+    )>,
+) {
+    for (entity, character, mut dash, mut steering, mut rng) in &mut dashers {
+        if dash.tag.follow_brain_run(character.brain, Motion::Dash) {
+            dash.run.finish();
+        }
+        let Some(epoch) = dash.tag.current_epoch() else {
+            continue;
+        };
+        let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
+            *steering = Steering::HALT;
+            continue;
+        };
+        match dash.step(&input, &mut rng) {
+            MotionStep::Steer(next) => *steering = next,
+            MotionStep::Finished { speed_boost } => {
+                report_motion_finished(&mut commands, entity, Motion::Dash, epoch, speed_boost);
+            }
+        }
     }
+}
 
-    fn reset(&mut self, _now: f32) -> Option<SpeedBoost> {
-        self.run.finish();
-        None
-    }
-
-    fn step(&mut self, context: &mut MotionContext) -> MotionStep {
+impl Dash {
+    fn step(&mut self, input: &SteerInput, rng: &mut BrainRng) -> MotionStep {
         if !self.run.called {
-            // Steering halts a target-needing motion without a target, so this
-            // waits rather than aiming blind; the brain drops the behavior.
-            let Some(target) =
-                build_target_view(true, context.input.target_info, context.input.now)
-            else {
-                return MotionStep::Steer {
-                    direction: None,
-                    effort: SteeringEffort::Boosted(self.speed_boost),
-                };
+            // A target with no finite distance gives nothing to aim at, so this
+            // waits rather than aiming blind.
+            let Some(target) = build_target_view(true, input.target_info, input.now) else {
+                return MotionStep::Steer(Steering::boosted(None, self.speed_boost));
             };
-            let direction = self.aim.aim(target, context);
-            let run = context.rng.range(self.min_run, self.max_run);
+            let direction = self.aim.aim(target, input.heading, rng);
+            let run = rng.range(self.min_run, self.max_run);
             self.run.call(direction, run);
         }
-        let distance = context.distance_this_frame(self.speed_boost);
+        let distance = input.distance_this_frame(self.speed_boost);
         match self.run.step(distance) {
-            Some(direction) => MotionStep::Steer {
-                direction: Some(direction),
-                effort: SteeringEffort::Boosted(self.speed_boost),
-            },
+            Some(direction) => {
+                MotionStep::Steer(Steering::boosted(Some(direction), self.speed_boost))
+            }
             None => MotionStep::Finished { speed_boost: None },
         }
     }
@@ -180,18 +196,18 @@ enum AimKind {
 }
 
 impl AimKind {
-    fn aim(self, target: TargetView, context: &mut MotionContext) -> Vec2 {
+    fn aim(self, target: TargetView, heading: Vec2, rng: &mut BrainRng) -> Vec2 {
         let direction = match self {
             Self::Away { spread } => (-target.bearing)
                 .normalize_or_zero()
-                .rotate(Vec2::from_angle(context.rng.range(-spread, spread))),
-            Self::HopTangent { close_range } => hop_direction(&target, close_range, context),
+                .rotate(Vec2::from_angle(rng.range(-spread, spread))),
+            Self::HopTangent { close_range } => hop_direction(&target, close_range, heading, rng),
         };
         // A zero bearing (the characters overlap) has no direction to aim along.
         if direction.length_squared() > f32::EPSILON {
             direction
         } else {
-            context.rng.direction()
+            rng.direction()
         }
     }
 }

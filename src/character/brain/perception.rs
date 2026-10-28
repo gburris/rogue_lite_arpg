@@ -226,13 +226,13 @@ fn update_target_info(
         ),
         Without<Player>,
     >,
-    target_query: Query<(&Transform, Option<&SimpleMotion>)>,
+    target_query: Query<(&Transform, Option<&Kinematics>)>,
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, mut ray_caster, transform, watching, targeting)| {
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
-            if let Ok((target_transform, target_motion)) = target_query.get(target_entity) {
+            if let Ok((target_transform, target_kinematics)) = target_query.get(target_entity) {
                 let target_position = target_transform.translation.xy();
                 let position = transform.translation.xy();
 
@@ -242,7 +242,7 @@ fn update_target_info(
                 target_info.distance = target_position.distance(position);
                 target_info.target_position = target_position;
                 target_info.target_velocity =
-                    target_motion.map_or(Vec2::ZERO, SimpleMotion::get_velocity);
+                    target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity);
 
                 ray_caster.direction = Dir2::new(target_direction).unwrap_or(Dir2::X);
             }
@@ -441,7 +441,7 @@ pub(super) struct ObservedComponents {
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
     anchor: Option<&'static Anchor>,
-    movement: Option<&'static SimpleMotion>,
+    kinematics: Option<&'static Kinematics>,
     items: Option<&'static Items>,
 }
 
@@ -465,7 +465,7 @@ pub(super) fn observe_world_facts(
         me: SelfView {
             health_fraction: components.health.and_then(Health::fraction).unwrap_or(1.0),
             mana_fraction: components.mana.and_then(Mana::fraction).unwrap_or(1.0),
-            stunned: components.movement.is_some_and(SimpleMotion::is_stunned),
+            stunned: components.kinematics.is_some_and(Kinematics::is_stunned),
             anchor,
         },
         target,

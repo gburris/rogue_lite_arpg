@@ -174,7 +174,7 @@ pub(super) fn spawn_warrior(
 
 fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
-        (SimpleMotion::new(200.0), Health::new(40.0)),
+        (Kinematics::new(200.0), Health::new(40.0)),
         Experience { base_exp: 20.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),

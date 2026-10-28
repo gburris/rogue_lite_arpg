@@ -5,7 +5,7 @@
 use bevy::{ecs::query::QueryData, prelude::*};
 
 use super::action::{Ability, AbilityCapabilities, Action};
-use super::motion::{FiniteMotionsReadOnly, Motion, Orbit, Wander};
+use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
 use crate::prelude::{EquipmentRead, EquipmentSlot};
 
 /// A type with its own entry in a [`MotionActionTable`].
@@ -68,7 +68,7 @@ impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
 pub struct Availability(pub MotionActionTable<bool>);
 
 /// What the decision tick needs to know about one capability, copied from the
-/// component that carries it out so scoring never reaches into executor state.
+/// component that carries it out so scoring never reaches into its running state.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tuning {
     pub reach: Option<f32>,
@@ -139,13 +139,14 @@ pub(super) struct Capabilities(pub MotionActionTable<Option<Tuning>>);
 #[derive(QueryData)]
 pub(super) struct CapabilityComponents {
     entity: Entity,
-    finite_motions: FiniteMotionsReadOnly,
+    dash: Option<&'static Dash>,
+    swoop: Option<&'static Swoop>,
     orbit: Option<&'static Orbit>,
     wander: Option<&'static Wander>,
     abilities: AbilityCapabilities,
 }
 
-pub(super) fn record_capability<C: Capability + ?Sized>(
+pub(super) fn record_capability<C: Capability>(
     capabilities: &mut Capabilities,
     component: Option<&C>,
 ) {
@@ -169,9 +170,8 @@ pub(super) fn build_capabilities(
                 ..Tuning::default()
             });
     }
-    components
-        .finite_motions
-        .record_capabilities(&mut capabilities);
+    record_capability(&mut capabilities, components.dash);
+    record_capability(&mut capabilities, components.swoop);
     record_capability(&mut capabilities, components.orbit);
     record_capability(&mut capabilities, components.wander);
     components.abilities.record_capabilities(&mut capabilities);

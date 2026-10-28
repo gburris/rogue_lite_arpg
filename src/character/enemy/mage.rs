@@ -221,7 +221,7 @@ pub(super) fn spawn_fire_mage(
 
 fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
-        (SimpleMotion::new(100.0), Health::new(20.0)),
+        (Kinematics::new(100.0), Health::new(20.0)),
         Experience { base_exp: 12.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
@@ -248,7 +248,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
 
 fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
-        (SimpleMotion::new(150.0), Health::new(20.0)),
+        (Kinematics::new(150.0), Health::new(20.0)),
         Experience { base_exp: 15.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),

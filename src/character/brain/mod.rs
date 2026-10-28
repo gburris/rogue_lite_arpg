@@ -6,19 +6,21 @@
 //!    report [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
 //!
 //! To add a continuous motion:
-//! 1. [`motion`]: a `Motion` variant only for a new steering contract, then a
-//!    file with its component and steering function. A component the motion
-//!    needs implements `Capability`, is recorded in
+//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A
+//!    stateless one gets an arm in `direct::steer_direct_motion`; one with
+//!    state gets a file with its component and an `apply_` system registered
+//!    in `motion::plugin`, and is skipped in `apply_direct_steering`. A
+//!    component the motion needs implements `Capability`, is recorded in
 //!    `capability::build_capabilities`, and is listed in `capability_keys`.
 //! 2. [`DecisionContext`] fields built in [`perception`], plus
 //!    [`ConsiderationInput`](perception::ConsiderationInput) variants read in
 //!    `read_input`.
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
-//! 4. An arm in `motion::steer_continuous_motion`.
 //!
-//! A finite [`Motion`] needs a variant and a component that implements `MotionExecutor`,
-//! listed in `motion::FiniteMotions` and `capability_keys`, and a committed
-//! behavior over it. A new [`Ability`] needs a variant, a `Capability`
+//! A finite [`Motion`] needs a variant, a `Capability` component whose
+//! `apply_` system follows its run with a `RunTag` and reports
+//! `MotionFinished`, the same registration and capability listing, and a
+//! committed behavior over it. A new [`Ability`] needs a variant, a `Capability`
 //! component in `action::ability` listed in `AbilityCapabilities`, an applier,
 //! and behaviors over it.
 
@@ -45,7 +47,7 @@ use self::capability::{
 };
 use self::decide::{decide_behavior, finish_action, release_finished_motion};
 use self::engine::{Assignment, BehaviorScoreExplanation, SlotHolder, SlotHolders, validate_brain};
-use self::motion::steer_characters_from_brain_motion;
+use self::motion::Steering;
 use self::perception::{DecisionContext, MemoryView};
 
 use bevy::{
@@ -56,7 +58,7 @@ use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 use crate::{
-    prelude::{EnemyKind, apply_slowed, tick_equippable_cooldown},
+    prelude::{EnemyKind, tick_equippable_cooldown},
     world::MapRng,
 };
 
@@ -66,8 +68,8 @@ use super::npc::VILLAGER;
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// The motion slot's running behavior, stamped with its epoch so an executor
-/// can tell a fresh start from the run it just finished.
+/// The motion slot's running behavior, stamped with its epoch so a finite
+/// motion's [`RunTag`](motion::RunTag) can tell a fresh start from the run it just finished.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ActiveMotion {
     motion: Motion,
@@ -125,10 +127,11 @@ impl RunningBehavior {
 
 /// A character's utility brain: its static definition, the behaviors holding
 /// its motion and action slots, and its cooldowns. Only [`decide`] writes it,
-/// at 10 Hz on a random per-brain phase; executors read it and answer with
-/// [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
+/// at 10 Hz on a random per-brain phase; motion and action systems read it
+/// and answer with [`MotionFinished`](motion::MotionFinished) or
+/// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(BrainRng, EquipmentUseEpochs)]
+#[require(BrainRng, EquipmentUseEpochs, Steering)]
 #[component(on_add = seed_brain_rng_and_schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
@@ -432,7 +435,7 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
-    app.add_plugins((perception::plugin, action::plugin))
+    app.add_plugins((perception::plugin, action::plugin, motion::plugin))
         .init_resource::<AiSeed>()
         .add_observer(release_finished_motion)
         .add_observer(finish_action)
@@ -443,12 +446,6 @@ pub(super) fn plugin(app: &mut App) {
                 .after(crate::combat::mana::regenerate_mana)
                 .after(tick_equippable_cooldown)
                 .in_set(AiSet::Decision),
-        )
-        .add_systems(
-            Update,
-            steer_characters_from_brain_motion
-                .in_set(AiSet::Motion)
-                .after(apply_slowed),
         );
 }
 

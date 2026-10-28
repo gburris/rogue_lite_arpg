@@ -2,8 +2,8 @@
 
 use bevy::prelude::*;
 
-use super::{Capability, SteerInput};
-use crate::character::brain::{BrainRng, Interval, Motion, Tuning};
+use super::{SteerInput, SteeredCharacter, Steering};
+use crate::character::brain::{BrainRng, Capability, Interval, Motion, Tuning};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
@@ -38,7 +38,7 @@ impl Wander {
         self.stretch.is_some_and(|stretch| stretch.walking)
     }
 
-    pub(super) fn leave_calm(&mut self) {
+    fn leave_calm(&mut self) {
         self.stretch = None;
     }
 }
@@ -56,11 +56,27 @@ impl Capability for Wander {
     }
 }
 
-pub(super) fn steer(
-    input: &SteerInput,
-    wander: &mut Wander,
-    random: &mut BrainRng,
-) -> Option<Vec2> {
+/// Ambles inside the anchor while the brain holds [`Motion::Calm`].
+pub(super) fn apply_wander(
+    time: Res<Time<Virtual>>,
+    mut wanderers: Query<(SteeredCharacter, &mut Wander, &mut Steering, &mut BrainRng)>,
+) {
+    for (character, mut wander, mut steering, mut rng) in &mut wanderers {
+        if character.brain.motion() != Some(Motion::Calm) {
+            wander.leave_calm();
+            continue;
+        }
+        *steering =
+            character
+                .build_steer_input(Motion::Calm, &time)
+                .map_or(Steering::HALT, |input| {
+                    let direction = steer(&input, &mut wander, &mut rng);
+                    Steering::scaled(direction, wander.speed_scale)
+                });
+    }
+}
+
+fn steer(input: &SteerInput, wander: &mut Wander, random: &mut BrainRng) -> Option<Vec2> {
     let stretch = match wander.stretch {
         Some(stretch) if input.now < stretch.until => stretch,
         previous => {

@@ -60,7 +60,7 @@ impl Plugin for CharacterPlugin {
 
         app.add_systems(
             FixedUpdate,
-            state::motion_to_velocity.in_set(MainSystems::InGame),
+            state::kinematics_to_velocity.in_set(MainSystems::InGame),
         );
 
         app.add_systems(

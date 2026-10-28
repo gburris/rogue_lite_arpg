@@ -3,68 +3,50 @@ use bevy::prelude::*;
 
 use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
 
-/// Simple motion has no acceleration and assumes all entities move at max
-/// speed unless `slowed_percentage` reduces it.
+/// A character's intended movement: a heading and a multiple of `max_speed`,
+/// reduced by any slow, with no acceleration. Player input and AI steering
+/// write it; [`kinematics_to_velocity`] hands it to physics.
 #[derive(Component, Clone)]
 #[require(FacingDirection, AttackState)]
-pub struct SimpleMotion {
+pub struct Kinematics {
     pub direction: Vec2,
     pub max_speed: f32,
-    current_speed: f32,
-    speed_boost: f32,
-    /// Applied on top of `max_speed`, `slowed_percentage` of 1.0 represents being "stunned"
+    speed_multiplier: f32,
     slowed_percentage: f32,
 }
 
-impl SimpleMotion {
+impl Kinematics {
     pub fn new(max_speed: f32) -> Self {
-        SimpleMotion {
+        Kinematics {
             max_speed,
-            current_speed: 0.0,
-            speed_boost: 1.0,
+            speed_multiplier: 0.0,
             direction: Vec2::ZERO,
             slowed_percentage: 0.0,
         }
     }
 
-    pub fn stun(&mut self) {
-        self.slowed_percentage = 1.0;
-    }
-
+    /// Sets the fraction of speed removed, where `1.0` is a stun.
     pub fn slow(&mut self, percentage: f32) {
         assert!((0.0..=1.0).contains(&percentage));
 
         self.slowed_percentage = percentage;
     }
 
-    pub fn remove_debuff(&mut self) {
-        self.slowed_percentage = 0.0;
+    pub fn slowed_percentage(&self) -> f32 {
+        self.slowed_percentage
     }
 
-    pub fn start_moving(&mut self, direction: Vec2) {
-        self.speed_boost = 1.0;
-        self.current_speed = self.max_speed;
+    /// Moves along `direction` at `speed_multiplier` times max speed: below
+    /// `1.0` for unhurried movement like wandering, above it for bursts.
+    pub fn move_in_direction(&mut self, direction: Vec2, speed_multiplier: f32) {
         self.direction = direction;
-    }
-    /// Starts moving at a fraction of max speed, for slow motion like wandering
-    /// that should read as unhurried next to full-speed combat movement.
-    pub fn start_moving_scaled(&mut self, direction: Vec2, scale: f32) {
-        self.speed_boost = 1.0;
-        self.current_speed = self.max_speed * scale.clamp(0.0, 1.0);
-        self.direction = direction;
-    }
-    /// Starts moving at a multiple of max speed for committed bursts.
-    pub fn start_moving_boosted(&mut self, direction: Vec2, speed_boost: f32) {
-        self.speed_boost = speed_boost.max(1.0);
-        self.current_speed = self.max_speed * self.speed_boost;
-        self.direction = direction;
+        self.speed_multiplier = speed_multiplier.max(0.0);
     }
 
     /// Stops in place. `direction` keeps the last heading, which steering
     /// reads to continue the way the character was going.
     pub fn stop_moving(&mut self) {
-        self.speed_boost = 1.0;
-        self.current_speed = 0.0;
+        self.speed_multiplier = 0.0;
     }
 
     pub fn is_stunned(&self) -> bool {
@@ -78,44 +60,35 @@ impl SimpleMotion {
     }
 
     pub fn is_moving(&self) -> bool {
-        self.current_speed > 0.0 && !self.is_stunned()
+        self.speed_multiplier > 0.0 && !self.is_stunned()
     }
 
     /// Already fully stopped: lets per-frame drivers skip a no-op write that
-    /// would mark `Changed<SimpleMotion>` and defeat downstream filters.
+    /// would mark `Changed<Kinematics>` and defeat downstream filters.
     pub fn is_idle(&self) -> bool {
-        self.current_speed == 0.0
+        self.speed_multiplier == 0.0
     }
 
-    pub fn get_velocity(&self) -> Vec2 {
-        // A stunned character holds its pre-stun vector in `direction`, but its
-        // movement is frozen: report zero so target-velocity consumers do
-        // not chase a phantom.
-        if self.is_stunned() {
-            return Vec2::ZERO;
-        }
-        (self.direction * self.current_speed * self.speed_scale())
-            .clamp_length_max(self.max_speed * self.speed_boost)
+    /// Velocity after any slow, so a stunned character reports zero. An
+    /// over-long `direction` counts as unit length.
+    pub fn velocity(&self) -> Vec2 {
+        self.direction.clamp_length_max(1.0)
+            * self.max_speed
+            * self.speed_multiplier
+            * self.speed_scale()
     }
 }
 
-impl Default for SimpleMotion {
+impl Default for Kinematics {
     fn default() -> Self {
-        SimpleMotion::new(10.0)
+        Kinematics::new(10.0)
     }
 }
 
-/// Converts simulation motion into physics "real" motion (using avian linear velocity)
-pub(super) fn motion_to_velocity(mut query: Query<(&SimpleMotion, &mut LinearVelocity)>) {
-    for (motion, mut velocity) in &mut query {
-        if motion.is_moving() {
-            let temp_vel = motion.get_velocity();
-            velocity.x = temp_vel.x;
-            velocity.y = temp_vel.y;
-        } else {
-            velocity.x = 0.0;
-            velocity.y = 0.0;
-        }
+/// Converts [`Kinematics`] into avian's `LinearVelocity`.
+pub(super) fn kinematics_to_velocity(mut query: Query<(&Kinematics, &mut LinearVelocity)>) {
+    for (kinematics, mut velocity) in &mut query {
+        velocity.0 = kinematics.velocity();
     }
 }
 

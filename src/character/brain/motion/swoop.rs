@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 
 use super::{
-    Capability, MotionContext, MotionExecutor, MotionStep, RunTag, SpeedBoost, SteeringEffort,
+    MotionStep, RunTag, SpeedBoost, SteerInput, SteeredCharacter, Steering, report_motion_finished,
 };
-use crate::character::brain::{Motion, Tuning};
+use crate::character::brain::{Capability, Motion, Tuning};
 
 const SWOOP_SPEED_BOOST: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -43,7 +43,7 @@ impl Swoop {
         }
     }
 
-    fn finish(&mut self, now: f32) -> Option<SpeedBoost> {
+    fn end_pass(&mut self, now: f32) -> Option<SpeedBoost> {
         // Cleared or cut short, a pass hands its boost to steering to ease off.
         self.pass.take().map(|_| {
             SpeedBoost::new(
@@ -68,23 +68,40 @@ impl Capability for Swoop {
     }
 }
 
-impl MotionExecutor for Swoop {
-    fn tag(&mut self) -> &mut RunTag {
-        &mut self.tag
+/// Flies a held swoop and reports [`MotionFinished`](super::MotionFinished)
+/// once it clears the target.
+pub(super) fn apply_swoop(
+    time: Res<Time<Virtual>>,
+    mut commands: Commands,
+    mut swoopers: Query<(Entity, SteeredCharacter, &mut Swoop, &mut Steering)>,
+) {
+    for (entity, character, mut swoop, mut steering) in &mut swoopers {
+        if swoop.tag.follow_brain_run(character.brain, Motion::Swoop)
+            && let Some(speed_boost) = swoop.end_pass(time.elapsed_secs())
+        {
+            commands.entity(entity).try_insert(speed_boost);
+        }
+        let Some(epoch) = swoop.tag.current_epoch() else {
+            continue;
+        };
+        let Some(input) = character.build_steer_input(Motion::Swoop, &time) else {
+            *steering = Steering::HALT;
+            continue;
+        };
+        match swoop.step(&input) {
+            MotionStep::Steer(next) => *steering = next,
+            MotionStep::Finished { speed_boost } => {
+                report_motion_finished(&mut commands, entity, Motion::Swoop, epoch, speed_boost);
+            }
+        }
     }
+}
 
-    fn reset(&mut self, now: f32) -> Option<SpeedBoost> {
-        self.finish(now)
-    }
-
-    fn step(&mut self, context: &mut MotionContext) -> MotionStep {
-        let input = context.input;
+impl Swoop {
+    fn step(&mut self, input: &SteerInput) -> MotionStep {
         let now = input.now;
         let speed_boost = 1.0 + self.speed_boost;
-        let steer = |direction| MotionStep::Steer {
-            direction,
-            effort: SteeringEffort::Boosted(speed_boost),
-        };
+        let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_boost));
         let Some(info) = input.target_info else {
             return steer(None);
         };
@@ -93,14 +110,14 @@ impl MotionExecutor for Swoop {
             .as_ref()
             .is_some_and(|pass| pass.cleared(input.position, info.distance));
         if cleared {
-            let speed_boost = self.finish(now);
+            let speed_boost = self.end_pass(now);
             return MotionStep::Finished { speed_boost };
         }
         if !info.distance.is_finite() {
             return steer(None);
         }
-        let flight_distance = context.distance_this_frame(speed_boost);
-        let heading = context.movement.direction;
+        let flight_distance = input.distance_this_frame(speed_boost);
+        let heading = input.heading;
         let live_target = info.target_position;
         let exit_turn = self.exit_turn;
         let pass = self.pass.get_or_insert_with(|| {

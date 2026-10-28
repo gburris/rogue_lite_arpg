@@ -168,7 +168,7 @@ pub(super) fn spawn_bat(
 
 fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
-        (SimpleMotion::new(170.0), Health::new(15.0)),
+        (Kinematics::new(170.0), Health::new(15.0)),
         Experience { base_exp: 6.0 },
         // Bats fly high: longer reach, and high obstacles never block the
         // ray, so a bat holds its target through cover.

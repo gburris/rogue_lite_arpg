@@ -37,11 +37,7 @@ pub struct EnemySpawnData {
 pub struct Enemy;
 
 /// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
-#[derive(Component, Clone, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
-
-#[derive(Component, Clone, Copy, Debug, Eq, PartialEq, Hash)]
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum EnemyKind {
     Warrior,
     IceMage,
@@ -51,9 +47,6 @@ pub enum EnemyKind {
 }
 
 impl EnemyKind {
-    /// Every kind; a recipe's `RandomEnemy` picks uniformly from this list.
-    pub const ALL: [Self; 3] = [Self::Warrior, Self::IceMage, Self::FireMage];
-
     /// Every enemy kind, used for random spawns and exhaustive iteration.
     pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
 

@@ -14,9 +14,8 @@ use bevy::{
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 use crate::prelude::{
-    AppState, AttackState, Brain, Dash, Enemy, EnemyKind, InGameSystems, MapBlueprint, Menu,
-    Motion, Placement, PlacementKind, ScoreTrace, TargetInfo, Targeting, TileKind, TileRect,
-    Vision, Wander, ZLayer,
+    AppState, AttackState, Brain, Dash, Enemy, InGameSystems, Menu, Motion, ScoreTrace, TargetInfo,
+    Targeting, Vision, Wander, ZLayer,
 };
 
 use super::view;
@@ -84,9 +83,6 @@ fn handle_debug_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut config_store: ResMut<GizmoConfigStore>,
     debug_enabled: Option<Res<DebugRenderEnabled>>,
-    app_state: Res<State<AppState>>,
-    map_blueprints: Query<Entity, With<MapBlueprint>>,
-    mut next_state: ResMut<NextState<AppState>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Comma) {
         if debug_enabled.is_some() {
@@ -96,17 +92,6 @@ fn handle_debug_input(
         }
         let config = config_store.config_mut::<PhysicsGizmos>().0;
         config.enabled = !config.enabled;
-    }
-    // Teleports into a small walkable arena of 15x15 rooms with hardcoded
-    // enemy combinations for AI behavior testing. The exit portal returns to
-    // normal map generation.
-    if keyboard_input.just_pressed(KeyCode::F1) && *app_state == AppState::Playing {
-        for old_map in &map_blueprints {
-            commands.entity(old_map).despawn();
-        }
-        commands.spawn(build_test_arena_blueprint());
-        next_state.set(AppState::SpawnMap);
-        info!("Spawning AI test arena: lobby plus 3x2 rooms of 15x15 tiles (F1)");
     }
 }
 
@@ -319,188 +304,5 @@ fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -
             }
         }
         Some(motion) => motion.name(),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// AI test arena: enemy-free lobby plus hallway plus 15x15 rooms.
-// ---------------------------------------------------------------------------
-
-/// Interior width and height of one arena room, in tiles (15 scaled up 50%,
-/// floored to keep tiles integral).
-const ARENA_ROOM_TILES: i32 = 22;
-/// Room grid dimensions of the arena.
-const ARENA_COLS: i32 = 3;
-const ARENA_ROWS: i32 = 2;
-/// Height of the central hallway separating the room rows, in tiles.
-const ARENA_HALLWAY_TILES: i32 = 3;
-/// Width of the enemy-free spawn lobby west of the rooms, in tiles.
-const ARENA_LOBBY_TILES: i32 = 7;
-/// West edge of the room grid: lobby plus its dividing wall.
-const ARENA_GRID_WEST: i32 = 1 + ARENA_LOBBY_TILES + 1;
-
-/// Builds a lobby plus a 3x2 arena of 15x15 rooms off one central hallway.
-/// Each room has a single centered 2-wide door; walls otherwise block sight
-/// lines, so walking the hallway never opens a ray into another room. Ground
-/// enemies sit pinned to their back wall outside their 350-unit sight range
-/// from the door; fliers stay in the far east rooms. The exit portal returns
-/// to normal generation.
-fn build_test_arena_blueprint() -> MapBlueprint {
-    debug_assert_eq!(
-        ARENA_ROWS, 2,
-        "arena builder lays one hallway between two rows"
-    );
-    let map_size = UVec2::new(
-        (ARENA_GRID_WEST + ARENA_COLS * ARENA_ROOM_TILES + (ARENA_COLS - 1) + 1) as u32,
-        (1 + ARENA_ROOM_TILES + 1 + ARENA_HALLWAY_TILES + 1 + ARENA_ROOM_TILES + 1) as u32,
-    );
-    let mut blueprint = MapBlueprint::new(map_size, TileKind::Wall, 0);
-    let hallway_min_y = 1 + ARENA_ROOM_TILES + 1;
-
-    // Room interiors.
-    for room_x in 0..ARENA_COLS {
-        for room_y in 0..ARENA_ROWS {
-            let min = room_min(room_x, room_y);
-            if let Some(rect) = TileRect::new(min, UVec2::splat(ARENA_ROOM_TILES as u32)) {
-                blueprint.tiles.fill_rect(&rect, TileKind::Ground);
-            }
-        }
-    }
-
-    // Central hallway spanning the room grid.
-    if let Some(rect) = TileRect::new(
-        IVec2::new(ARENA_GRID_WEST, hallway_min_y),
-        UVec2::new(
-            map_size.x - ARENA_GRID_WEST as u32 - 1,
-            ARENA_HALLWAY_TILES as u32,
-        ),
-    ) {
-        blueprint.tiles.fill_rect(&rect, TileKind::Ground);
-    }
-
-    // Enemy-free lobby opening straight into the hallway's west end.
-    if let Some(rect) = TileRect::new(
-        IVec2::new(1, hallway_min_y - 2),
-        UVec2::new(ARENA_LOBBY_TILES as u32, (ARENA_HALLWAY_TILES + 4) as u32),
-    ) {
-        blueprint.tiles.fill_rect(&rect, TileKind::Ground);
-    }
-    for y in hallway_min_y..(hallway_min_y + ARENA_HALLWAY_TILES) {
-        blueprint
-            .tiles
-            .set(IVec2::new(ARENA_GRID_WEST - 1, y), TileKind::Ground);
-    }
-
-    // One centered 2-wide door per room.
-    for room_x in 0..ARENA_COLS {
-        for room_y in 0..ARENA_ROWS {
-            let min = room_min(room_x, room_y);
-            let center = room_center(room_x, room_y);
-            let door_y = if room_y == 0 {
-                min.y + ARENA_ROOM_TILES
-            } else {
-                min.y - 1
-            };
-            for dx in -1..=0 {
-                blueprint
-                    .tiles
-                    .set(IVec2::new(center.x + dx, door_y), TileKind::Ground);
-            }
-        }
-    }
-
-    // Player spawns in the empty lobby; the exit sits in the last room.
-    blueprint.placements.push(Placement {
-        tile: IVec2::new(
-            1 + ARENA_LOBBY_TILES / 2,
-            hallway_min_y + ARENA_HALLWAY_TILES / 2,
-        ),
-        kind: PlacementKind::PlayerStart,
-    });
-    blueprint.placements.push(Placement {
-        tile: room_center(2, 1) + IVec2::new(5, 4),
-        kind: PlacementKind::Exit,
-    });
-
-    // Hardcoded combinations pinned to the back wall, far from each door.
-    place_enemies(
-        &mut blueprint,
-        0,
-        0,
-        &[EnemyKind::Warrior, EnemyKind::Warrior],
-        -1,
-    );
-    place_enemies(
-        &mut blueprint,
-        1,
-        0,
-        &[EnemyKind::FireMage, EnemyKind::FireMage],
-        -1,
-    );
-    place_enemies(
-        &mut blueprint,
-        2,
-        0,
-        &[EnemyKind::IceMage, EnemyKind::IceMage],
-        -1,
-    );
-    place_enemies(
-        &mut blueprint,
-        0,
-        1,
-        &[EnemyKind::Warrior, EnemyKind::FireMage, EnemyKind::IceMage],
-        1,
-    );
-    place_enemies(
-        &mut blueprint,
-        1,
-        1,
-        &[EnemyKind::Bat, EnemyKind::Bat, EnemyKind::Bat],
-        1,
-    );
-    place_enemies(
-        &mut blueprint,
-        2,
-        1,
-        &[EnemyKind::Warrior, EnemyKind::Bat, EnemyKind::Bat],
-        1,
-    );
-
-    blueprint
-}
-
-/// Bottom-left tile of a room's interior. Row 1 sits above the hallway band.
-fn room_min(room_x: i32, room_y: i32) -> IVec2 {
-    IVec2::new(
-        ARENA_GRID_WEST + room_x * (ARENA_ROOM_TILES + 1),
-        1 + room_y * (ARENA_ROOM_TILES + 1) + room_y * (ARENA_HALLWAY_TILES + 1),
-    )
-}
-
-/// Center tile of a room's interior.
-fn room_center(room_x: i32, room_y: i32) -> IVec2 {
-    room_min(room_x, room_y) + IVec2::splat(ARENA_ROOM_TILES / 2)
-}
-
-/// Pins enemies to the back wall of a room (`back`: -1 for the south row,
-/// +1 for the north row) so each door opens onto empty floor.
-fn place_enemies(
-    blueprint: &mut MapBlueprint,
-    room_x: i32,
-    room_y: i32,
-    kinds: &[EnemyKind],
-    back: i32,
-) {
-    let center = room_center(room_x, room_y);
-    let offsets = [
-        IVec2::new(-4, 5 * back),
-        IVec2::new(4, 5 * back),
-        IVec2::new(0, 4 * back),
-    ];
-    for (index, kind) in kinds.iter().enumerate() {
-        blueprint.placements.push(Placement {
-            tile: center + offsets[index % offsets.len()],
-            kind: PlacementKind::Enemy(*kind),
-        });
     }
 }

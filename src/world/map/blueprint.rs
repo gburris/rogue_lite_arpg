@@ -232,6 +232,7 @@ impl PlacementKind {
             'W' => Some(Self::Enemy(EnemyKind::Warrior)),
             'F' => Some(Self::Enemy(EnemyKind::FireMage)),
             'I' => Some(Self::Enemy(EnemyKind::IceMage)),
+            'B' => Some(Self::Enemy(EnemyKind::Bat)),
             _ => None,
         }
     }

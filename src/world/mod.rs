@@ -4,7 +4,7 @@ mod map;
 mod portal;
 
 use bevy::prelude::*;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
@@ -26,20 +26,36 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Resource)]
-pub(crate) struct MapRng(ChaCha8Rng);
+pub(crate) struct MapRng {
+    rng: ChaCha8Rng,
+    root_seed: u64,
+}
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
-        Self(ChaCha8Rng::seed_from_u64(seed))
+        Self {
+            rng: ChaCha8Rng::seed_from_u64(seed),
+            root_seed: seed,
+        }
     }
 
     /// Draws the build seed for the next map.
     pub(crate) fn next_map_seed(&mut self) -> u64 {
-        self.0.next_u64()
+        self.rng.next_u64()
     }
 
     /// Root generator for choices made before a map is built, such as the weighted recipe pick.
     pub(crate) fn rng(&mut self) -> &mut ChaCha8Rng {
-        &mut self.0
+        &mut self.rng
+    }
+
+    /// Deterministic coin flip on the map stream for spawn-time variants.
+    pub(crate) fn flip(&mut self) -> bool {
+        self.rng.random_bool(0.5)
+    }
+
+    /// The root seed without advancing map generation.
+    pub(crate) fn root_seed(&self) -> u64 {
+        self.root_seed
     }
 }

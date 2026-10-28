@@ -6,12 +6,9 @@ use crate::{
     prelude::*,
 };
 
-/// Drinking carried potions to recover health. Opt-in at spawn; absent means
-/// the entity never drinks. The brain decides when; this component is the
-/// character's capability and its pacing between potions.
+/// Drinking carried potions to recover health, paced by `cooldown`.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Heal {
-    /// Spacing between potions.
     pub cooldown: f32,
 }
 

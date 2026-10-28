@@ -106,7 +106,6 @@ impl UsableItemItem<'_, '_> {
 }
 
 impl UsableItemReadOnlyItem<'_, '_> {
-    /// Whether the item is ready and affordable, without consuming anything.
     pub fn can_use(&self, holder_mana: Option<&Mana>) -> Result<(), EquipmentUseFailure> {
         can_use_item(self.equippable, self.mana_cost, holder_mana, false)
     }
@@ -283,13 +282,11 @@ pub struct EquipmentRead<'w, 's> {
 }
 
 impl EquipmentRead<'_, '_> {
-    /// Item currently equipped in the holder's slot, if any.
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
         let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
         slot.get_equipped(mainhand, offhand)
     }
 
-    /// The usable item data equipped in the holder's slot, if any.
     pub fn equippable_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<&Equippable> {
         let item = self.item_in_slot(holder, slot)?;
         self.equipment

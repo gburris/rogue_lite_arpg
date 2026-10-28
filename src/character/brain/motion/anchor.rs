@@ -26,17 +26,14 @@ impl Anchor {
         }
     }
 
-    /// How close to the origin counts as arrived, in world units.
     pub fn arrival_radius(&self) -> f32 {
         self.arrival_radius
     }
 
-    /// Wander radius in world units.
     pub fn radius(&self) -> f32 {
         self.radius
     }
 
-    /// Distance from the anchor to `position`.
     pub fn distance_from(&self, position: Vec2) -> f32 {
         self.origin.distance(position)
     }
@@ -58,7 +55,6 @@ impl Anchor {
         }
     }
 
-    /// The anchor's world-space origin.
     pub fn origin(&self) -> Vec2 {
         self.origin
     }

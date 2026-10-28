@@ -50,7 +50,6 @@ impl EnemyKind {
     /// Every enemy kind, used for random spawns and exhaustive iteration.
     pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
 
-    /// Brain definition used by this enemy kind.
     pub fn brain(self) -> &'static BrainDefinition {
         match self {
             Self::Warrior => &warrior::WARRIOR,

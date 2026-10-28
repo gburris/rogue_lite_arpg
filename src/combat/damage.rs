@@ -12,9 +12,7 @@ use crate::{
     prelude::{GameCollisionLayer, Player},
 };
 
-/// Which side of combat a character fights on. Immutable identity, required by
-/// every character marker (`Player`, `Enemy`, `NPC`) so weapons never infer it
-/// from `Has<Enemy>` or the player singleton.
+/// Which side of combat a character fights on, required by every character marker.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 #[component(immutable)]
 pub enum CombatSide {
@@ -36,7 +34,6 @@ impl CombatSide {
         self.opposite().hurtbox_layer()
     }
 
-    /// The other side.
     pub fn opposite(self) -> Self {
         match self {
             Self::Ally => Self::Enemy,

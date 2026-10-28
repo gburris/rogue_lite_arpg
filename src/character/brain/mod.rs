@@ -1,55 +1,26 @@
-//! ECS glue for the pure utility brains.
+//! ECS glue for the pure utility brains. Data flows one way, one writer each:
+//! 1. [`perception`] observes the world into a [`DecisionContext`].
+//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior
+//!    holds each slot on the [`Brain`].
+//! 3. [`motion`] and [`action`] carry out the held motion and action and
+//!    report [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
 //!
-//! The vocabulary is standard infinite axis utility:
-//! - A [`DecisionContext`] is everything a brain knows this tick.
-//! - A [`Consideration`](engine::Consideration) reads one raw input from it
-//!   and maps it to `0.0..=1.0`.
-//! - A [`Behavior`] is a [`Motion`] and/or an [`Action`] plus a
-//!   [`CommitPolicy`](engine::CommitPolicy), scored by its weight and
-//!   considerations.
-//! - A brain holds at most one motion and one action at a time. Behaviors take
-//!   those two slots greedily from the highest score down. A momentum holder
-//!   is re-scored every tick with a bonus for holding on.
-//! - A committed holder is not re-scored at all: it runs until its one finite
-//!   part reports finished, or the brain drops it (target lost, stunned, or
-//!   past its timeout). Only a committed behavior in a higher interrupt tier
-//!   can take its slots; momentum counts as tier 0.
-//!
-//! Data flows one way around the loop, and every piece of data has one writer:
-//! 1. [`perception`] tracks targets and observes world state into a
-//!    [`DecisionContext`], and the decision adds the brain's own memory.
-//! 2. [`decide`] runs the pure [`engine`] math and writes only which
-//!    behavior holds each slot on the [`Brain`].
-//! 3. Executors read the held motion and action. [`motion`] steers the
-//!    character and reports a [`MotionFinished`](motion::MotionFinished) event, which ends the
-//!    committed behavior holding it and decides again at once; [`action`]
-//!    applies equipment and ability use, and signals [`ActionFinished`] when a
-//!    use ends or a committed one cannot start.
-//!
-//! The brains themselves never see an `Entity`: [`engine`] holds the scoring
-//! types and math, [`perception`] the context they read, [`considerations`]
-//! what they can sense, and each enemy's file in `character/enemy` (and the
-//! villager's in `character/npc`) its shipped definition.
-//!
-//! To add a continuous motion, touch these in order:
+//! To add a continuous motion:
 //! 1. [`motion`]: a `Motion` variant only for a new steering contract, then a
-//!    behavior file with its component (tuning as pub fields, memory as
-//!    private fields) and a steering function. A component the motion needs
-//!    implements `Capability`, is recorded in
+//!    file with its component and steering function. A component the motion
+//!    needs implements `Capability`, is recorded in
 //!    `capability::build_capabilities`, and is listed in `capability_keys`.
 //! 2. [`DecisionContext`] fields built in [`perception`], plus
-//!    [`ConsiderationInput`](perception::ConsiderationInput) variants read
-//!    there in `read_input`.
-//! 3. The brain definitions in `character/enemy` and `character/npc`:
-//!    behaviors over the motion.
+//!    [`ConsiderationInput`](perception::ConsiderationInput) variants read in
+//!    `read_input`.
+//! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //! 4. An arm in `motion::steer_continuous_motion`.
 //!
-//! A committed move is a finite [`Motion`] instead: a variant, a capability
-//! component in [`motion`] that implements `MotionExecutor` and is listed in
-//! `motion::FiniteMotions` and `capability_keys`, and a committed behavior over
-//! it. A new ability is the same shape: an [`Ability`] variant, a capability
-//! component in `action::ability` that implements `Capability` and is listed
-//! in `AbilityCapabilities`, an applier, and action behaviors over it.
+//! A finite [`Motion`] needs a variant and a component that implements `MotionExecutor`,
+//! listed in `motion::FiniteMotions` and `capability_keys`, and a committed
+//! behavior over it. A new [`Ability`] needs a variant, a `Capability`
+//! component in `action::ability` listed in `AbilityCapabilities`, an applier,
+//! and behaviors over it.
 
 mod action;
 mod capability;
@@ -95,18 +66,16 @@ use super::npc::VILLAGER;
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// The motion slot's running behavior as executors see it, stamped with its
-/// epoch so an executor can tell a fresh start of the same motion from the one
-/// it just finished, and its finish names the running behavior it ended.
+/// The motion slot's running behavior, stamped with its epoch so an executor
+/// can tell a fresh start from the run it just finished.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ActiveMotion {
     motion: Motion,
     epoch: u32,
 }
 
-/// The action slot's running behavior as appliers see it, stamped like
-/// [`ActiveMotion`]. Appliers report through it, so the committed and momentum
-/// policy lives here once.
+/// The action slot's running behavior, stamped like [`ActiveMotion`].
+/// Appliers report through it, so the committed/momentum finish policy lives here.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct ActiveAction {
     action: Action,
@@ -115,13 +84,11 @@ struct ActiveAction {
 }
 
 impl ActiveAction {
-    /// Reports that this use ran to its end.
     fn report_completed(self, commands: &mut Commands, entity: Entity) {
         commands.trigger(self.finished(entity, ActionOutcome::Completed));
     }
 
-    /// Reports an attempt the live world refused this frame. A committed use
-    /// ends as never started; a momentum use waits for its chance.
+    /// Ends a committed use the live world refused; a momentum use waits.
     fn report_not_started(self, commands: &mut Commands, entity: Entity) {
         if self.committed {
             commands.trigger(self.finished(entity, ActionOutcome::NotStarted));
@@ -141,7 +108,6 @@ impl ActiveAction {
 /// A behavior that won a slot. A bundle holds both slots, one record each.
 #[derive(Clone, Copy, Debug)]
 struct RunningBehavior {
-    /// Index into the definition; the identity momentum is keyed on.
     behavior: usize,
     epoch: u32,
     committed: bool,
@@ -149,8 +115,6 @@ struct RunningBehavior {
 }
 
 impl RunningBehavior {
-    /// Whether this committed behavior should end before its finish: the
-    /// target is gone, the character is stunned, or it outlived [`COMMIT_TIMEOUT`].
     fn should_drop_committed_behavior(&self, context: &DecisionContext, now: f32) -> bool {
         self.committed
             && (context.target.is_none()
@@ -159,14 +123,10 @@ impl RunningBehavior {
     }
 }
 
-/// A character's utility brain: which static definition it scores against, the
-/// behaviors holding its motion and action slots, and its cooldowns.
-///
-/// The definition never changes after spawn; decisions rewrite the rest at
-/// 10 Hz, each brain on its own random phase. Only the decision side writes it:
-/// executors get a read-only view and answer with
+/// A character's utility brain: its static definition, the behaviors holding
+/// its motion and action slots, and its cooldowns. Only [`decide`] writes it,
+/// at 10 Hz on a random per-brain phase; executors read it and answer with
 /// [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
-/// Randomness lives apart, in [`BrainRng`].
 #[derive(Component, Debug)]
 #[require(BrainRng, EquipmentUseEpochs)]
 #[component(on_add = seed_brain_rng_and_schedule_first_decision)]
@@ -194,20 +154,17 @@ impl Brain {
         }
     }
 
-    /// The static definition this brain scores against.
     pub fn definition(&self) -> &'static BrainDefinition {
         self.definition
     }
 
-    /// The motion currently driving the character: the motion slot's holder, or
-    /// `None` while the slot is empty and the character stands still.
+    /// The held motion; `None` while the slot is empty.
     pub fn motion(&self) -> Option<Motion> {
         self.motion
             .and_then(|running| self.behavior(running).motion)
     }
 
-    /// The action slot's choice, including a deliberate `Idle`; `None` while
-    /// the slot is empty.
+    /// The held action, including a deliberate `Idle`; `None` while the slot is empty.
     pub fn action(&self) -> Option<Action> {
         self.action
             .and_then(|running| self.behavior(running).action)
@@ -217,7 +174,6 @@ impl Brain {
         self.definition.behaviors[running.behavior]
     }
 
-    /// The motion slot's running behavior with its epoch, committed or not.
     fn current_motion_behavior(&self) -> Option<ActiveMotion> {
         let running = self.motion?;
         Some(ActiveMotion {
@@ -226,7 +182,6 @@ impl Brain {
         })
     }
 
-    /// The action slot's running behavior with its epoch, committed or not.
     fn current_action_behavior(&self) -> Option<ActiveAction> {
         let running = self.action?;
         Some(ActiveAction {
@@ -236,7 +191,6 @@ impl Brain {
         })
     }
 
-    /// The held action, when it is `action`, for the applier that carries it out.
     fn held_action(&self, action: Action) -> Option<ActiveAction> {
         self.current_action_behavior()
             .filter(|current| current.action == action)
@@ -246,7 +200,6 @@ impl Brain {
         now >= self.ready_at[key]
     }
 
-    /// Holds `key` off until `ready_at`.
     fn start_cooldown(&mut self, key: impl MotionActionKey, ready_at: f32) {
         self.ready_at[key] = ready_at;
     }
@@ -262,12 +215,8 @@ impl Brain {
         }
     }
 
-    /// Adds this brain's own state to the observed context to make the scoring
-    /// inputs: the context with its memory and which motions and actions may
-    /// start now. A motion that needs no component is always available; every
-    /// capability key is available when owned, off cooldown and allowed by the
-    /// world (equipment keeps its own cooldown, so its brain cooldown never
-    /// starts).
+    /// Adds the brain's memory to the observed context, and marks each
+    /// capability available when owned, off cooldown and allowed by the world.
     fn build_scoring_inputs(
         &self,
         observed_context: DecisionContext,
@@ -291,8 +240,7 @@ impl Brain {
         (context, Availability(available))
     }
 
-    /// Applies a decision: slot holders and cooldowns of missed starts. The
-    /// only place an attack-finished edge is consumed.
+    /// Applies a decision. The only place an attack-finished edge is consumed.
     fn commit_decision(
         &mut self,
         assignment: Assignment,
@@ -309,9 +257,8 @@ impl Brain {
         self.attack_finish_pending = false;
     }
 
-    /// Hands each slot to the behavior that won it. A slot nothing claimed
-    /// empties unless a committed behavior holds it. A committed behavior that
-    /// lost either slot to an interrupt ends in both, like a drop.
+    /// A slot nothing claimed empties unless a committed behavior holds it. A
+    /// committed behavior that loses either slot ends in both.
     fn assign_slots(&mut self, assignment: Assignment, capabilities: &Capabilities, now: f32) {
         for (holder, winner) in [
             (self.motion, assignment.motion),
@@ -335,8 +282,7 @@ impl Brain {
         }
     }
 
-    /// The running behavior for `index`: the current one if it already holds the
-    /// slot, otherwise a fresh one stamped with a new epoch.
+    /// Keeps the current record if `index` already holds the slot, else stamps a new epoch.
     fn run(
         &mut self,
         current: Option<RunningBehavior>,
@@ -355,9 +301,8 @@ impl Brain {
         })
     }
 
-    /// Ends `running` in every slot it holds and starts its finite part's
-    /// cooldown, so it can't restart on the next tick. Equipment keeps its own
-    /// cooldown, so a dropped use starts none here.
+    /// Ends `running` in every slot and starts its finite part's cooldown so it
+    /// can't restart next tick. Equipment keeps its own cooldown, so a use starts none.
     fn drop_committed_behavior(
         &mut self,
         running: RunningBehavior,
@@ -383,8 +328,7 @@ impl Brain {
         }
     }
 
-    /// Ends the committed behavior whose running record carries `epoch`,
-    /// clearing every slot it holds. Returns `false` for a stale finish.
+    /// Ends the committed behavior stamped `epoch`; `false` for a stale finish.
     fn finish_committed_behavior(&mut self, epoch: u32) -> bool {
         let Some(finished) = [self.motion, self.action]
             .into_iter()
@@ -398,10 +342,8 @@ impl Brain {
     }
 }
 
-/// A brain's private random stream, seeded from [`AiSeed`] and the entity when
-/// its [`Brain`] is added. Executors draw from it every frame and the decision
-/// tick draws from it too, so keeping it apart gives steering code randomness
-/// without handing it the rest of the brain.
+/// A brain's random stream, seeded from [`AiSeed`] and the entity. Kept apart
+/// from [`Brain`] so steering gets randomness without the rest of the brain.
 #[derive(Component, Debug)]
 pub struct BrainRng {
     random: ChaCha8Rng,
@@ -425,7 +367,6 @@ impl BrainRng {
         }
     }
 
-    /// A uniformly random unit direction.
     pub fn direction(&mut self) -> Vec2 {
         let angle = self.random.random_range(0.0..std::f32::consts::TAU);
         Vec2::new(angle.cos(), angle.sin())
@@ -448,10 +389,8 @@ fn seed_brain_rng_and_schedule_first_decision(mut world: DeferredWorld, context:
     }
 }
 
-/// An equipment or ability use ended, either run to completion or a committed
-/// one that could not start. `epoch` names the running behavior that asked for
-/// it; it ends that behavior only while it is still the current one, so a stale
-/// finish never clears a slot.
+/// An equipment or ability use ended. It ends the behavior stamped `epoch`
+/// only while that behavior still runs, so a stale finish clears nothing.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFinished {
     pub entity: Entity,
@@ -463,10 +402,9 @@ pub struct ActionFinished {
 /// How an action reported in [`ActionFinished`] ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionOutcome {
-    /// The use ran to its end.
     Completed,
-    /// A committed use its applier could not start right away. A momentum use
-    /// waits for its chance instead and never reports this.
+    /// A committed use its applier could not start. A momentum use waits for
+    /// its chance instead and never reports this.
     NotStarted,
 }
 

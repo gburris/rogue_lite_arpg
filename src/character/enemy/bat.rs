@@ -40,18 +40,15 @@ const NEAR_BITE_REACH: Consideration = reach_fraction_threshold(
     BITE_ARMING_REACH_FRACTION,
     BITE_ARMING_REACH_FRACTION,
 );
-/// How much the target distance calls for breath: zero where a bite arms, so
-/// the bat only breathes once biting stops being an option, rising to full at
-/// the inner cast edge, where it circles.
+/// Zero where a bite arms, so breath and bite never compete; full at the
+/// inner cast edge.
 const BREATH_DISTANCE: Consideration = consideration(
     "breath distance",
     ConsiderationInput::TargetDistance,
     Interval::new(BITE_ARMING_DISTANCE, CAST_MIN_RANGE),
     Curve::Linear,
 );
-/// How settled the engagement is: zero for the first second after spotting a
-/// target, full a second later, so a fresh target gets a moment before the
-/// first fireball.
+/// Zero for the first second after spotting a target, full a second later.
 const BREATH_WARMED_UP: Consideration = consideration(
     "breath warmed up",
     ConsiderationInput::SecondsSinceTargeted,
@@ -64,7 +61,7 @@ const PAST_INNER_CAST_EDGE: Consideration = distance_threshold(
     CAST_MIN_RANGE - CAST_HYSTERESIS,
 );
 
-/// Orbits the casting distance range; the bat breathes innately, no ready weapon needed.
+/// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
     Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
     None,
@@ -80,7 +77,7 @@ const BAT_KEEP: Behavior = Behavior::new(
     5.0,
     &[INSIDE_OUTER_CAST_EDGE],
 );
-/// Bite dive while the bat is circling inside its cast range.
+/// Bite dive while circling.
 const BAT_SWOOP: Behavior = Behavior::new(
     Some(Motion::Swoop),
     None,
@@ -106,8 +103,7 @@ const BAT_BREATHE: Behavior = Behavior::new(
         NOT_SWOOPING,
     ],
 );
-/// Arms a bite near contact reach, whether diving or circling; the applier
-/// bites only in contact.
+/// Arms a bite near contact reach, whether diving or circling.
 const BAT_BITE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Bite)),
@@ -122,8 +118,6 @@ const BAT_BITE: Behavior = Behavior::new(
 // Action priority: bite (1.5), breathe (up to 1), idle (0.5).
 // - Idle is the bar an action must beat to fire: 0.5, or 0.625 while it holds
 //   the slot.
-// - A bite never competes with the breath. The breath's distance input is zero
-//   wherever a bite arms.
 // - The breath has three yes/no inputs and two graded ones (distance, warm-up).
 //   Its score is the fifth root of their product, which flattens both ramps. It
 //   beats a running idle from about 82 units away once warmed up, and from
@@ -140,7 +134,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     BAT_BITE,
 ];
 
-/// Circles its target, dives to bite, and breathes fireballs; no weapon needed.
+/// Circles its target, dives to bite, and breathes fireballs.
 pub(super) static BAT: BrainDefinition = BrainDefinition {
     behaviors: BAT_BEHAVIORS,
 };
@@ -169,8 +163,6 @@ pub(super) fn spawn_bat(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    // Bats carry no staff: the breath template rides on the bat
-    // itself and the `Breath` applier launches it from brain intent.
     commands.spawn((bat(sprites, sprite_layouts), base, bat_children(shadows)));
 }
 
@@ -188,13 +180,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         TurnRate(BAT_TURN_RATE),
         Orbit::with_standoff(BAT_ORBIT_STANDOFF),
         enemy_wander(),
-        // 35% chance per roll within cast range; after a dive ends, wait 2 s
-        // before the next roll. The dive is a twice-as-fast pass that flies
-        // through the target and back out to roughly the circling radius.
         Swoop::new(0.35, CAST_MAX_RANGE, 2.0),
-        // The bite is its own ability: it lands whenever a target is in reach,
-        // and a landed bite feeds the bat. The cooldown spans a whole pass so
-        // one dive bites once.
         Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),
         Sprite::from_atlas_image(
             sprites.bat_enemy_sprite_sheet.clone(),

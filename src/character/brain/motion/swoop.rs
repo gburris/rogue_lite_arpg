@@ -16,7 +16,7 @@ const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
 
 /// A committed curved dive through the target; on ending it hands steering a
-/// decaying [`SpeedBoost`]. Opt-in at spawn.
+/// decaying [`SpeedBoost`].
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
     pub tuning: Tuning,

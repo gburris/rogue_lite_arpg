@@ -116,8 +116,7 @@ struct MeleeWeapon {
 }
 
 impl MeleeWeapon {
-    /// Gets collision layers for melee weapon based on the holder's side.
-    /// It can either target allies or enemies.
+    /// Collision layers that hit the holder's opponents.
     pub fn collision_layers(side: CombatSide) -> CollisionLayers {
         CollisionLayers::new(GameCollisionLayer::HitBox, side.target_hurtbox())
     }

@@ -16,7 +16,7 @@ const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 const HOP_STEP_IN_SPREAD: f32 = 0.35;
 const HOP_OUTWARD_BIAS: f32 = 0.15;
 
-/// A committed straight run along a direction fixed at its start. Opt-in at spawn.
+/// A committed straight run along a direction fixed at its start.
 #[derive(Component, Clone, Debug)]
 pub struct Dash {
     pub min_run: f32,

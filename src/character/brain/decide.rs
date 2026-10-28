@@ -29,9 +29,6 @@ type DecidingBrains<'world, 'state> = Query<
     ),
 >;
 
-/// Starts a finished motion's cooldown. A finish carrying the committed behavior's
-/// epoch ends that behavior, and the character decides again at once instead
-/// of waiting for the next tick.
 pub(super) fn release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -60,12 +57,9 @@ pub(super) fn release_finished_motion(
     }
 }
 
-/// Starts an ability's cooldown, or marks an attack finished for a completed
-/// instant equipment use (a released block or a use that never started is no
-/// attack), whether or not the finish is current. An ability that never started
-/// waits out its cooldown too, so the next decision can't pick it straight
-/// back. A finish carrying the committed behavior's epoch ends that behavior,
-/// and the character decides again at once.
+/// Applies an [`ActionFinished`], current or stale. An ability starts its
+/// cooldown even if it never started, so the next decision can't pick it
+/// straight back.
 pub(super) fn finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
@@ -106,10 +100,8 @@ pub(super) fn finish_action(
     }
 }
 
-/// Observes the world of every brain whose decision is due and fills its motion
-/// and action slots. Each due brain moves to its next period boundary after
-/// now, keeping its phase without a burst of catch-up decisions after a long
-/// frame.
+/// Decides for every due brain. Each moves to its next period boundary after
+/// now, keeping its phase without a burst of catch-up decisions after a long frame.
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
     use_checks: WorldUseChecks,
@@ -139,8 +131,6 @@ pub(super) fn decide_behavior(
     }
 }
 
-/// Observes one brain's world and fills its slots, explaining the scores into
-/// `score_trace` when the brain carries one.
 fn redecide_now(
     brain: &mut Brain,
     rng: &mut BrainRng,
@@ -163,12 +153,10 @@ fn redecide_now(
     );
 }
 
-/// Fills the free slots. A committed behavior is never re-scored: it ends when
-/// its executor reports it, the brain drops it, or a committed behavior in a
-/// higher interrupt tier wins one of its slots. A winning committed motion
-/// rolls its start chance; a miss waits out its cooldown and the next best
-/// behavior takes the slot. A slot nothing claims empties unless a committed
-/// behavior still holds it.
+/// Drops committed behaviors that lost their target, were stunned or timed
+/// out, then fills the slots. A winning finite
+/// motion rolls its start chance; a miss waits out its cooldown and the next
+/// best behavior takes the slot.
 fn decide_slot_assignments(
     brain: &mut Brain,
     rng: &mut BrainRng,
@@ -214,8 +202,6 @@ fn decide_slot_assignments(
     brain.commit_decision(assignment, &missed_start_cooldowns, capabilities, now);
 }
 
-/// Whether a winning behavior actually starts: a finite motion rolls its
-/// chance, and a miss records when its cooldown ends.
 fn passes_start_roll(
     rng: &mut BrainRng,
     capabilities: &Capabilities,

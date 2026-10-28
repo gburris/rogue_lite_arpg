@@ -10,7 +10,6 @@ use crate::prelude::{EquipmentRead, EquipmentSlot};
 
 /// A type with its own entry in a [`MotionActionTable`].
 pub trait MotionActionKey: Copy {
-    /// Position of this key in a [`MotionActionTable`].
     fn table_index(self) -> usize;
 }
 
@@ -39,7 +38,6 @@ impl MotionActionKey for Ability {
 pub struct MotionActionTable<T>([T; Motion::COUNT + Action::COUNT]);
 
 impl<T: Copy> MotionActionTable<T> {
-    /// A table with every entry set to `value`.
     pub fn splat(value: T) -> Self {
         Self([value; Motion::COUNT + Action::COUNT])
     }
@@ -65,8 +63,7 @@ impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
     }
 }
 
-/// Which motions and actions may start right now. Derefs to its table, so
-/// `availability[Motion::Swoop]` reads an entry directly.
+/// Which motions and actions may start right now.
 #[derive(Clone, Copy, Debug, Deref)]
 pub struct Availability(pub MotionActionTable<bool>);
 
@@ -74,12 +71,10 @@ pub struct Availability(pub MotionActionTable<bool>);
 /// component that carries it out so scoring never reaches into executor state.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tuning {
-    /// Target distance within which the capability should be used, when it has one.
     pub reach: Option<f32>,
     /// Probability that a winning finite motion actually starts.
     pub chance: f32,
-    /// Seconds before the capability may be tried again after it finishes (a
-    /// finite motion also waits this out after a missed start roll).
+    /// Seconds to wait after a finish or a missed start roll.
     pub cooldown: f32,
 }
 
@@ -133,12 +128,10 @@ pub(super) fn capability_keys() -> impl Iterator<Item = CapabilityKey> {
 pub(super) trait Capability {
     type Key: MotionActionKey;
     fn key(&self) -> Self::Key;
-    /// What the decision pipeline needs to know to gate, score and start it.
     fn tuning(&self) -> Tuning;
 }
 
-/// What each capability an entity carries is tuned to; `None` where it has none.
-/// Derefs to its table, so `capabilities[Motion::Swoop]` reads an entry directly.
+/// Each carried capability's tuning; `None` where the entity has none.
 #[derive(Clone, Copy, Debug, Default, Deref)]
 pub(super) struct Capabilities(pub MotionActionTable<Option<Tuning>>);
 
@@ -152,7 +145,6 @@ pub(super) struct CapabilityComponents {
     abilities: AbilityCapabilities,
 }
 
-/// Records one capability component, if the entity has it, under its key.
 pub(super) fn record_capability<C: Capability + ?Sized>(
     capabilities: &mut Capabilities,
     component: Option<&C>,

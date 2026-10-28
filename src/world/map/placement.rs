@@ -73,7 +73,6 @@ pub enum PlaceRule {
     /// Place once at the given anchor; does not advance the RNG.
     Fixed(Anchor),
     /// Try to place an inclusive random count within the half-open x-decile interval.
-    /// `separation` is the minimum tile distance from every point placed so far.
     Random {
         count: CountRange,
         x_deciles: (u32, u32),
@@ -81,7 +80,6 @@ pub enum PlaceRule {
     },
     /// Place an inclusive random count of footprints centered within `radius` tiles (a square)
     /// of a named structure's center plus `offset`.
-    /// `separation` is the minimum tile distance from every point placed so far.
     NearStructure {
         count: CountRange,
         structure: String,

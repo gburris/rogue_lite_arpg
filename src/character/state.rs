@@ -88,7 +88,7 @@ impl SimpleMotion {
     }
 
     pub fn get_velocity(&self) -> Vec2 {
-        // A stunned body holds its pre-stun vector in `direction`, but its
+        // A stunned character holds its pre-stun vector in `direction`, but its
         // movement is frozen: report zero so target-velocity consumers do
         // not chase a phantom.
         if self.is_stunned() {
@@ -157,9 +157,8 @@ pub struct AttackState {
     pub is_attacking: bool,
 }
 
-/// Syncs whether a holder is attacking from `EquipmentInUse` items. Items decide
-/// whether something started; AI only requests use and never writes this.
-/// Held slots (shield blocking) do not count as attacking for animation.
+/// Syncs whether a holder is attacking from `EquipmentInUse` items. Held slots
+/// (shield blocking) do not count as attacking.
 pub(super) fn sync_attack_state_from_equipment(
     mut holders: Query<(&mut AttackState, Option<&Mainhand>, Option<&Offhand>)>,
     in_use: Query<(), With<EquipmentInUse>>,

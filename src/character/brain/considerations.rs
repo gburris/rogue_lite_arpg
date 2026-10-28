@@ -1,10 +1,5 @@
-//! Scored facts for the brains, built over the consideration inputs in
-//! [`super::perception`]. An input reports what it knows, always: `None` means
-//! the input itself is absent (no target, no anchor), which vetoes the
-//! decision. A consideration that reads the target therefore implies one.
-//!
-//! This holds the vocabulary every brain shares; each enemy's own
-//! considerations live next to its brain in `character/enemy`.
+//! Considerations and behaviors every brain shares; each enemy's own live in
+//! its file in `character/enemy`.
 
 use super::action::Action;
 use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, Response};
@@ -118,8 +113,8 @@ pub(crate) const IN_MAINHAND_REACH: Consideration = within_reach(
     ConsiderationInput::ActionReachFraction(MAINHAND),
 );
 
-// The pair below enters at one shared distance, so a character with no incumbent
-// always has one of the two; the exits stay wide so an incumbent holds on.
+// Both enter at one shared distance, so a character with no incumbent always
+// has one of the two; the wide exits let an incumbent hold on.
 pub(crate) const BEYOND_CAST_DISTANCE_RANGE: Consideration = distance_threshold(
     "beyond cast distance range",
     CAST_MAX_RANGE,
@@ -131,7 +126,6 @@ pub(crate) const INSIDE_OUTER_CAST_EDGE: Consideration = distance_threshold(
     CAST_MAX_RANGE + CAST_HYSTERESIS,
 );
 
-/// Disengaged ambling; each character's `Wander` component sets the rhythm.
 pub(crate) const CALM: Behavior = Behavior::new(
     Some(Motion::Calm),
     None,

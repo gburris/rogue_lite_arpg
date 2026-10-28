@@ -41,8 +41,6 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(MainSystems::InGame),
     );
 
-    // Order within Simulation: logic that may (transitively, via observers)
-    // start or stop equipment use runs before state derived from it.
     app.configure_sets(
         Update,
         (SimulationSystems::Logic, SimulationSystems::Derive)

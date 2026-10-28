@@ -7,7 +7,7 @@ use crate::character::brain::{BrainRng, Interval, Motion, Tuning};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
-/// Alternates standing and walking one rolled heading while calm. Opt-in at spawn.
+/// Alternates standing and walking one rolled heading while calm.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
     pub pause: Interval,

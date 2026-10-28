@@ -234,7 +234,7 @@ pub enum TileKind {
 
 impl TileKind {
     /// Every tile kind. `from_glyph` searches this list, so a new kind must be added here
-    /// as well as to `glyph`; the round-trip test catches a missing or clashing glyph.
+    /// as well as to `glyph`.
     pub const ALL: [Self; 7] = [
         Self::Wood,
         Self::Ground,

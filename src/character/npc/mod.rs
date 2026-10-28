@@ -42,7 +42,6 @@ pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
 };
 
 impl NpcKind {
-    /// Brain definition used by this NPC kind.
     pub fn brain(&self) -> &'static BrainDefinition {
         &VILLAGER
     }

@@ -9,14 +9,11 @@ use crate::{
     prelude::*,
 };
 
-/// Contact damage on a target within reach. Opt-in at spawn; absent means the
-/// entity never bites. The brain decides when to bite; this component is only
-/// the bat's capability, so a bat bites whether it is diving or circling.
+/// Contact damage on a target within reach.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Bite {
     pub reach: f32,
     pub damage: f32,
-    /// Fraction of the damage dealt that heals the biter.
     pub life_steal: f32,
     pub cooldown: f32,
 }
@@ -57,9 +54,7 @@ impl Capability for Bite {
     }
 }
 
-/// Lands a bite when the brain wants one and the target is within the true
-/// reach; contact needs no line of sight. The decision tick only arms the
-/// action, so a momentum bite waits for reach.
+/// Bites a target within the true reach; contact needs no line of sight.
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,

@@ -47,7 +47,7 @@ pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -
     )
 }
 
-/// Fire-mage staff variant that fires a single bolt at 70% of the standard speed.
+/// Fire-mage staff that fires a single bolt.
 pub fn mage_fire_staff_single_bolt(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
@@ -64,7 +64,7 @@ pub fn mage_fire_staff_single_bolt(
     )
 }
 
-/// Fire-mage staff variant that fires the full three-bolt fan at 20% of the standard speed.
+/// Fire-mage staff that fires the full three-bolt fan.
 pub fn mage_fire_staff_fan(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,

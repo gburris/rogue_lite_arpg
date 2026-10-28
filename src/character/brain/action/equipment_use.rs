@@ -10,10 +10,8 @@ use crate::{
     prelude::{EquipmentSlot, EquipmentUsage},
 };
 
-/// The last use the applier started in each equipment slot, stamped with the
-/// epoch of the running behavior that started it. A committed behavior begins its
-/// use once and is never re-gated afterwards, and a finish names the running
-/// behavior that started the use.
+/// The last use started in each slot, stamped with its behavior's epoch, so a
+/// committed use starts once and its finish names its behavior.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(in super::super) struct EquipmentUseEpochs(
     [Option<StartedEquipmentUse>; EquipmentSlot::ALL.len()],
@@ -32,16 +30,10 @@ impl EquipmentUseEpochs {
     }
 }
 
-/// Re-gates the brain's momentum action on the live target state. Decisions
-/// price range at 10 Hz but this runs every frame, so a target that drifted out
-/// of reach between ticks must not keep a stale `try_use` alive. A committed use
-/// was gated by its decision at most a frame ago and starts unconditionally; a
-/// start the equipment refuses reports [`ActionOutcome::NotStarted`] at once,
-/// and a started one runs to its finish event. A held use (shield) lasts until the
-/// slot stops asking for it, when it is released here, or until the item ends
-/// it (out of mana, unequipped). Every started use reports [`ActionFinished`]
-/// with its starting epoch once its item stops being in use, whether or not
-/// that behavior still holds the slot.
+/// Starts and releases the brain's equipment uses. Decisions check range at
+/// 10 Hz, so momentum uses are re-gated on the live target every frame; a
+/// committed use starts once, unconditionally. Every started use reports
+/// [`ActionFinished`] with its epoch once its item stops being in use.
 pub(super) fn apply_equipment_use_requests(
     mut commands: Commands,
     mut equipment: EquipmentUsage,
@@ -92,8 +84,6 @@ pub(super) fn apply_equipment_use_requests(
                     if equipment.try_use(entity, slot).is_ok() {
                         *started_use = Some(record_start(committed.epoch));
                     } else {
-                        // Equipment needs no brain cooldown, so a refused start
-                        // only frees the slot.
                         committed.report_not_started(&mut commands, entity);
                     }
                 }

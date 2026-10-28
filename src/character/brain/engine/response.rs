@@ -61,12 +61,11 @@ pub struct Consideration {
     pub name: &'static str,
     pub input: ConsiderationInput,
     pub response: Response,
-    /// Scores `1 - response` instead, so one reader serves a fact and its opposite.
     pub inverted: bool,
 }
 
 impl Consideration {
-    /// The opposite fact under a new name. A missing input stays neutral.
+    /// The opposite fact under a new name. A missing input still vetoes.
     pub const fn inverted(self, name: &'static str) -> Self {
         Self {
             name,

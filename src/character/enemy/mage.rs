@@ -27,27 +27,21 @@ const _: () = assert!(
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
-/// For the ice mage's escape dash, its reach is the danger ring.
 const IN_DASH_REACH: Consideration = within_reach(
     "in dash reach",
     ConsiderationInput::MotionReachFraction(Motion::Dash),
 );
 
-/// Firing-position quality for the fire mage: zero at the inner cast edge, full
-/// 60 units further out, and full out to the staff's reach. The mage stands
-/// still through the wind-up, so a close target could reach it before the bolt
-/// lands. Orbiting outward first avoids that.
+/// Fire mage firing-position quality: zero at the inner cast edge, full 60
+/// units out. It stands still through the wind-up, so it orbits outward first.
 const FIRE_CAST_QUALITY: Consideration = consideration(
     "fire cast quality",
     ConsiderationInput::TargetDistance,
     Interval::new(CAST_MIN_RANGE, CAST_MIN_RANGE + 60.0),
     Curve::Linear,
 );
-/// Firing-position quality for the ice mage. It plants instead of moving, so
-/// anywhere outside its danger ring is full quality. Inside the ring (where it
-/// mostly stands while the slide recharges), quality falls to zero 60 units in:
-/// a target that close reaches the mage during the wind-up, and the slide
-/// interrupts the cast once it is ready.
+/// Ice mage firing-position quality: full outside its danger ring, zero 60
+/// units inside, where a target reaches it during the wind-up.
 const ICE_CAST_QUALITY: Consideration = consideration(
     "ice cast quality",
     ConsiderationInput::TargetDistance,
@@ -55,15 +49,11 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
-/// Weight of both mages' casts, below recover, hop and slide. The cast's other
-/// two inputs are yes/no, so it scores `CAST_WEIGHT * quality^(1/3)`. At full
-/// quality it beats the in-range motions even while they hold the slot. Each
-/// mage's quality decides how close in that stays true.
+/// Both mages' cast weight. The cast's other two inputs are flags, so it
+/// scores `CAST_WEIGHT * quality^(1/3)`.
 const CAST_WEIGHT: f32 = 8.0;
 
-/// Sidesteps for a good firing lane. Each hop after a volley flips the orbit
-/// direction, so the fire mage's turns come from its own volleys instead of
-/// the player's movement.
+/// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
     Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
     None,
@@ -71,8 +61,7 @@ const FIRE_ORBIT: Behavior = Behavior::new(
     5.5,
     &[INSIDE_OUTER_CAST_EDGE],
 );
-/// Plants in the cast distance range and lets the ice bolt do the work. The danger-ring
-/// slide is the only time this mage gives ground.
+/// Plants and lets the ice bolt do the work.
 const ICE_PLANT: Behavior = Behavior::new(
     Some(Motion::Idle),
     None,
@@ -80,9 +69,8 @@ const ICE_PLANT: Behavior = Behavior::new(
     5.0,
     &[INSIDE_OUTER_CAST_EDGE],
 );
-/// Breaks contact while mana is low. The threshold's exit holds it until the
-/// pool refills, and it outweighs the cast, so the cast loses its motion slot
-/// for the whole break. The two casters enter it on their own mana rhythms.
+/// Breaks contact while mana is low; the threshold's exit holds it until the
+/// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
     Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
     None,
@@ -99,8 +87,7 @@ const ICE_RECOVER: Behavior = Behavior::new(
     &[HAS_TARGET, mana_at_or_below("ice mana low", 0.4, 0.75)],
 );
 
-/// A tangent hop after the fire staff finishes a volley. It weighs less than
-/// recovery, so a volley that drains the pool starts the break instead.
+/// A tangent hop after each volley.
 const FIRE_HOP: Behavior = Behavior::new(
     Some(Motion::Dash),
     None,
@@ -108,9 +95,8 @@ const FIRE_HOP: Behavior = Behavior::new(
     8.5,
     &[ATTACK_FINISHED, HAS_TARGET],
 );
-/// A straight escape when the player crosses the ice mage's danger ring. It
-/// outweighs recovery even with momentum, so it can cut one short, and its
-/// higher tier lets it pre-empt a cast (a bolt already in flight still fires).
+/// A straight escape when the player crosses the danger ring. Its higher tier
+/// pre-empts a cast, though a bolt already in flight still fires.
 const ICE_SLIDE: Behavior = Behavior::new(
     Some(Motion::Dash),
     None,
@@ -119,8 +105,7 @@ const ICE_SLIDE: Behavior = Behavior::new(
     &[IN_DASH_REACH],
 );
 
-/// Stands still to cast, so the fire mage stands through the wind-up. Its only
-/// mainhand use.
+/// Stands still through the wind-up to cast.
 const FIRE_CAST: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),
@@ -128,7 +113,7 @@ const FIRE_CAST: Behavior = Behavior::new(
     CAST_WEIGHT,
     &[LINE_OF_SIGHT, IN_MAINHAND_REACH, FIRE_CAST_QUALITY],
 );
-/// The ice mage's cast, from where it plants. Its only mainhand use.
+/// Casts from where the ice mage plants.
 const ICE_CAST: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),
@@ -145,7 +130,6 @@ const ICE_CAST: Behavior = Behavior::new(
 // - The cast beats a running orbit from about 238 units away, and a newly
 //   started one from about 220. A mage crowded closer orbits outward until it
 //   is about 238 away, then casts again.
-// The only action is part of the cast, so the baseline idle sets no bar here.
 static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     CALM,
     ACTION_BASELINE_IDLE,
@@ -163,7 +147,6 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
 // - Cast quality is full from the danger ring out to the staff's reach. Inside
 //   the ring (while the slide recharges), the cast beats a running plant (6.25)
 //   from about 139 units away, and a newly started one from about 125.
-// The only action is part of the cast, so the baseline idle sets no bar here.
 static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     CALM,
     ACTION_BASELINE_IDLE,
@@ -205,8 +188,8 @@ pub(super) fn spawn_ice_mage(
     );
 }
 
-/// Spawns a fire mage carrying one of two flame staves on top of the shared
-/// enemy `base` bundle.
+/// Spawns a fire mage on top of the shared enemy `base` bundle, carrying one of
+/// two flame staves picked from the seeded map stream.
 pub(super) fn spawn_fire_mage(
     commands: &mut Commands,
     base: impl Bundle,
@@ -221,8 +204,6 @@ pub(super) fn spawn_fire_mage(
         enemy_children(shadows),
     );
 
-    // Fire mages carry one of two flame staves, chosen evenly at spawn
-    // from the seeded map stream so the variant replays per seed.
     if map_rng.flip() {
         spawn_enemy_with_equipment(
             commands,
@@ -244,10 +225,8 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         Experience { base_exp: 12.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
-        // Casters are the only kinds that spend mana.
         Mana::new(100.0, 10.0),
-        // Three to four tiles of straight escape once the player crosses the
-        // danger ring; the cooldown is the window to close again.
+        // The cooldown is the player's window to close in again.
         Dash::slide(
             3.0 * TILE_SIZE as f32,
             4.0 * TILE_SIZE as f32,
@@ -273,10 +252,8 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         Experience { base_exp: 15.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
-        // Casters are the only kinds that spend mana.
         Mana::new(100.0, 10.0),
-        // Two to three tiles of tangent hop after every volley. Inside the
-        // close ring a pinned target gets a step-in spread instead.
+        // A still target inside the close range gets a step-in hop instead.
         Dash::hop(
             2.0 * TILE_SIZE as f32,
             3.0 * TILE_SIZE as f32,

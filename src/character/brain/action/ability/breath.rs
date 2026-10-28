@@ -9,15 +9,10 @@ use crate::{
     prelude::*,
 };
 
-/// An innate projectile attack that needs no weapon. The projectile template
-/// rides on the entity as a `Projectiles` relation. Opt-in at spawn; absent
-/// means the entity never breathes. Its side comes from the character marker
-/// and its target from vision; `Projectiles` is a relation, so none of these
-/// can be required here.
+/// An innate projectile attack fired from the entity's `Projectiles` template.
 #[derive(Component, Debug)]
 pub struct Breath {
     pub cooldown: f32,
-    /// Farthest target distance at which the brain breathes.
     pub reach: f32,
 }
 
@@ -47,9 +42,8 @@ impl Capability for Breath {
     }
 }
 
-/// Launches the innate projectile whenever the brain wants to breathe at a
-/// sighted target. `reach` only shapes the decision; a projectile may still
-/// fly past it.
+/// Fires at a sighted target. `reach` only shapes the decision; a projectile
+/// may fly past it.
 pub(super) fn apply_breath(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
@@ -68,9 +62,7 @@ pub(super) fn apply_breath(
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
-        // The bat can sit exactly on the target, where the bearing collapses
-        // to zero. There is no angle to fire along, so wait for separation
-        // instead of launching a NaN projectile.
+        // Sitting on the target leaves a zero bearing to fire along, so wait.
         let aim_direction = target_info.direction;
         let ready = brain.is_cooldown_ready(Ability::Breathe, now);
         if !(ready

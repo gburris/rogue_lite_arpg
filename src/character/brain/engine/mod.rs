@@ -1,16 +1,5 @@
-//! The utility scoring engine: what a brain can choose ([`Behavior`]), the
-//! static definitions it scores against ([`BrainDefinition`]), and the math
-//! that fills its slots. Every behavior scores its weight times the geometric
-//! mean of its considerations. Behaviors then take the motion and action slots
-//! greedily from the highest score down; a behavior that already holds a slot
-//! scores with [`MOMENTUM`]. A slot held by a committed behavior is open only
-//! to a committed behavior with a higher interrupt tier. A slot nothing scores
-//! for stays empty.
-//!
-//! Pure data and math, no ECS and no content: it knows no particular brain or
-//! item. It does name the brain's shared vocabulary, the [`Motion`] and
-//! [`Action`] a behavior claims and the inputs its considerations read through
-//! [`read_input`], because behaviors are static data built from those types.
+//! The pure utility scoring engine: behaviors, static brain definitions, and
+//! the math that fills the motion and action slots. No ECS and no content.
 
 mod response;
 
@@ -28,10 +17,8 @@ pub(crate) const MOMENTUM: f32 = 1.25;
 /// Most behaviors one brain definition may list, so scoring needs no allocation.
 pub(crate) const MAX_BEHAVIORS: usize = 16;
 
-/// One candidate a brain can choose: how the character moves, what it does,
-/// and how firmly it holds on, scored as its weight times the geometric mean
-/// of its considerations. A behavior claims the motion slot, the action slot,
-/// or both.
+/// One candidate a brain can choose: a motion, an action, or both, and how
+/// firmly it holds them.
 #[derive(Clone, Copy, Debug)]
 pub struct Behavior {
     pub motion: Option<Motion>,
@@ -63,19 +50,16 @@ impl Behavior {
 /// How firmly a behavior holds its slots once it wins them.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CommitPolicy {
-    /// Re-scored every tick; the holder gets momentum and exit-side thresholds.
-    /// Counts as interrupt tier 0.
+    /// Re-scored every tick with momentum and exit-side thresholds. Tier 0.
     Momentum,
-    /// Not re-scored until its finite part finishes or the brain drops it, so
-    /// its start conditions are read once: a committed motion carries no
-    /// distance-range threshold that would cancel it mid-flight. Only a
-    /// committed behavior with a higher `interrupt_tier` may take one of its
-    /// slots, and taking either slot ends the whole behavior.
+    /// Not re-scored until its finite part finishes or the brain drops it
+    /// (target lost, stunned, or timed out), so its start conditions are read
+    /// once. Only a committed behavior with a higher `interrupt_tier` may take
+    /// one of its slots, which ends the whole behavior.
     UntilFinished { interrupt_tier: u8 },
 }
 
 impl CommitPolicy {
-    /// Whether this is [`CommitPolicy::UntilFinished`].
     pub const fn is_committed(self) -> bool {
         matches!(self, Self::UntilFinished { .. })
     }
@@ -95,8 +79,7 @@ pub struct BrainDefinition {
     pub behaviors: &'static [Behavior],
 }
 
-/// A behavior holding a slot, by its index in the definition, with its
-/// interrupt tier (0 for momentum).
+/// A behavior holding a slot, by definition index, with its interrupt tier.
 #[derive(Clone, Copy, Debug)]
 pub struct SlotHolder {
     pub behavior: usize,
@@ -110,8 +93,7 @@ pub struct SlotHolders {
     pub action: Option<SlotHolder>,
 }
 
-/// The behaviors that won a slot this decision, by index. A slot nothing
-/// claimed is `None`.
+/// The behavior index that won each slot this decision.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Assignment {
     pub motion: Option<usize>,
@@ -140,9 +122,8 @@ impl SkipReason {
     }
 }
 
-/// One consideration's part in a score: the raw value it read (`None` when the
-/// input is absent, which vetoes) and its score (`None` when the response
-/// rejects the raw value).
+/// One consideration's part in a score. `raw` is `None` when the input is
+/// absent; `score` is `None` when the response rejects the raw value.
 #[derive(Clone, Copy, Debug)]
 pub struct ConsiderationScoreExplanation {
     pub name: &'static str,
@@ -151,10 +132,8 @@ pub struct ConsiderationScoreExplanation {
     pub score: Option<f32>,
 }
 
-/// How one behavior scored in a decision, for the debug trace. `skipped` says
-/// why it sat out unscored; otherwise `score` is its final score with
-/// `momentum` already applied, or `None` when a consideration rejects its
-/// input or the result is not a valid score.
+/// How one behavior scored, for the debug trace: why it sat out, or its final
+/// score with `momentum` applied (`None` when invalid).
 #[derive(Clone, Debug)]
 pub struct BehaviorScoreExplanation {
     pub skipped: Option<SkipReason>,
@@ -170,10 +149,9 @@ pub fn score_behavior(
     decision_context: &DecisionContext,
     is_current: bool,
 ) -> Option<f32> {
-    // The geometric mean over considerations: a zero anywhere still vetoes,
-    // and passing flags add no penalty but raise graded inputs to a root of
-    // the count, so adding a flag shifts a behavior's graded crossovers.
-    // Brains are tuned against that root. No considerations scores the weight.
+    // Weight times the geometric mean: a zero anywhere vetoes, but each
+    // passing flag raises graded inputs to a higher root, so adding a flag
+    // shifts a behavior's crossovers. Brains are tuned against that root.
     let mut product = 1.0;
     let mut count = 0;
     for consideration in behavior.considerations {
@@ -188,13 +166,9 @@ pub fn score_behavior(
     (score.is_finite() && score >= 0.0).then_some(score)
 }
 
-/// Fills the open slots. A committed holder is not scored, and its slots are
-/// open only to committed behaviors in a higher interrupt tier; every behavior
-/// whose claimed slots are all open is scored, then taken from the highest
-/// score down whenever its slots are still free this decision (ties go to the
-/// earlier behavior). An interrupter wins its slot by score like any other.
-/// `start` is asked before a winner is taken, and a `false` drops it and moves
-/// on to the next best.
+/// Scores every behavior not skipped (see [`SkipReason`]), then takes them
+/// from the highest score down while their slots are free; ties go to the
+/// earlier behavior. A `false` from `start` drops a winner for the next best.
 pub fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
     decision_context: &DecisionContext,
@@ -244,12 +218,8 @@ pub fn assign_behaviors_to_slots(
     }
 }
 
-/// Rejects brains that compile but cannot behave: an empty or oversized list,
-/// a behavior that claims nothing or has a non-finite or non-positive weight, a
-/// committed behavior without exactly one finite part (one finish must end it),
-/// over an idle action or a held equipment use, or in tier 0 (momentum's), or a
-/// finite motion that is not committed (nothing would track its end). Intervals
-/// and thresholds are checked by their constructors at compile time.
+/// Rejects brains that compile but cannot behave. Intervals and thresholds
+/// are checked by their constructors at compile time.
 pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
     if brain.behaviors.is_empty() {
         return Err("behavior list is empty".to_string());
@@ -343,9 +313,6 @@ pub fn explain_behavior(
     }
 }
 
-// Why a behavior sits out unscored: a slot it claims is held by a committed
-// behavior it does not outrank (so a committed holder is never re-scored), or
-// it may not start now.
 fn find_skip_reason(
     behavior: &Behavior,
     availability: &Availability,
@@ -381,8 +348,7 @@ fn score_consideration(
     decision_context: &DecisionContext,
     is_current: bool,
 ) -> Option<f32> {
-    // A missing input (no target, no anchor) vetoes, inverted or not: a fact
-    // about something absent cannot be true.
+    // A missing input (no target, no anchor) vetoes, inverted or not.
     let Some(raw) = read_input(consideration.input, decision_context) else {
         return Some(0.0);
     };

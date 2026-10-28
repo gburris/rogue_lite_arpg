@@ -1,7 +1,5 @@
-//! What a brain knows: the only code that turns world state into the facts one
-//! decision reads. Vision picks and tracks a target; observing builds the
-//! [`DecisionContext`] the considerations read, without looking at [`Brain`]'s
-//! state, and the brain then adds its own memory.
+//! What a brain knows: vision tracks a target, and observing turns world state
+//! into the [`DecisionContext`] the considerations read.
 
 use std::f32::consts::FRAC_PI_4;
 
@@ -35,19 +33,15 @@ pub struct TargetView {
     pub line_of_sight: bool,
     /// Unit direction from the viewer to the target.
     pub bearing: Vec2,
-    /// Intended world velocity of the target, read from its movement.
     pub velocity: Vec2,
     pub seconds_since_targeted: f32,
 }
 
-/// Everything a pure brain is allowed to look at during one decision tick:
-/// facts observed from the world, then the brain's own earlier choices.
+/// Everything a pure brain may look at during one decision.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DecisionContext {
     pub me: SelfView,
     pub target: Option<TargetView>,
-    /// Target distance over each owned capability's reach; `f32::MAX` for a
-    /// capability that is missing or has no reach, all `None` without a target.
     pub reach_fraction: MotionActionTable<Option<f32>>,
     pub memory: MemoryView,
 }
@@ -56,9 +50,8 @@ pub struct DecisionContext {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SelfView {
     pub health_fraction: f32,
-    /// Current mana as a `0.0..=1.0` fraction, or `1.0` for a non-caster.
+    /// `1.0` for a non-caster.
     pub mana_fraction: f32,
-    /// Whether the character is stunned and cannot carry out a committed move.
     pub stunned: bool,
     pub anchor: Option<AnchorView>,
 }
@@ -84,14 +77,12 @@ pub struct AnchorView {
 /// The brain's own earlier choices, as scoring sees them.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct MemoryView {
-    /// The motion slot's holder, or `None` while the slot is empty.
     pub motion: Option<Motion>,
-    /// An attack finished since the last decision; finite motions key their start off this.
+    /// An attack finished since the last decision.
     pub attack_finished: bool,
 }
 
-/// The raw fact a consideration reads from the [`DecisionContext`]; see
-/// [`read_input`].
+/// The raw fact a consideration reads; see [`read_input`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConsiderationInput {
     HasTarget,
@@ -113,7 +104,7 @@ pub enum ConsiderationInput {
     SecondsSinceTargeted,
 }
 
-/// Reads `input` from the context. `None` means the input itself is absent.
+/// Reads `input` from the context; `None` when the input is absent.
 pub(super) fn read_input(
     input: ConsiderationInput,
     decision_context: &DecisionContext,
@@ -159,17 +150,12 @@ pub(super) fn read_input(
     }
 }
 
-/// Defines an entity's vision properties, such as how far it can see and how wide its vision cone is.
-/// Immutable component.
+/// How wide an entity's vision cone is.
 #[derive(Component)]
 #[component(immutable)]
 #[require(Vision, TargetInfo)]
 pub(in crate::character) struct VisionCapabilities {
-    /// Half-angle of the entity's field of view, in **radians**.
-    ///
-    /// For example:
-    /// - `PI / 4.0` → 45° field on either side (90° total FOV)
-    /// - `PI / 2.0` → 90° field on either side (180° total FOV)
+    /// Half-angle of the field of view in radians; `PI / 4.0` is a 90° cone.
     pub vision_cone_radius: f32,
 }
 
@@ -181,29 +167,27 @@ impl Default for VisionCapabilities {
     }
 }
 
-/// Marks that the entity is currently targeting another entity.
-/// Added when both line of sight and vision cone are satisfied.
+/// The entity this one fights, added on sight or when damaged.
 #[derive(Component)]
 #[relationship(relationship_target = TargetedBy)]
 pub(crate) struct Targeting(pub Entity);
 
-/// Inverse of `Targeting` — tracked by the targeted entity.
+/// Inverse of [`Targeting`].
 #[derive(Component)]
 #[relationship_target(relationship = Targeting)]
 pub(crate) struct TargetedBy(Vec<Entity>);
 
-/// Tracks which entity the NPC is currently watching or trying to detect.
+/// The entity this one watches for, to target once sighted.
 #[derive(Component)]
 #[relationship(relationship_target = WatchedBy)]
 pub(in crate::character) struct Watching(pub Entity);
 
-/// Inverse of `Watching` — attached to the entity being watched.
+/// Inverse of [`Watching`].
 #[derive(Component)]
 #[relationship_target(relationship = Watching)]
 pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
-/// Indicates a temporary target lock.
-/// Automatically removed after a certain duration via `Lifespan`.
+/// Keeps `Targeting` without sight until its scheduled removal.
 #[derive(Component)]
 struct TargetLock;
 
@@ -211,9 +195,7 @@ struct TargetLock;
 // VISION + PERCEPTION
 // ---------------------
 
-/// Updates the `Vision` component's direction for each entity:
-/// - If the entity is actively targeting something, aim at it.
-/// - Otherwise, aim in the direction it is facing.
+/// Aims vision at the target while targeting, otherwise along the facing direction.
 fn update_aim_position(
     mut character_query: Query<
         (&mut Vision, &TargetInfo, Has<Targeting>, &FacingDirection),
@@ -231,8 +213,8 @@ fn update_aim_position(
         });
 }
 
-/// Updates the direction and distance of the watched (or targeted) entity,
-/// and points the `RayCaster` in that direction.
+/// Tracks direction and distance to the target (or the watched entity without
+/// one) and points the sight ray there.
 fn update_target_info(
     mut npc_query: Query<
         (
@@ -248,7 +230,6 @@ fn update_target_info(
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, mut ray_caster, transform, watching, targeting)| {
-            // Track distance and direction to target if there is one, otherwise track watching
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             if let Ok((target_transform, target_motion)) = target_query.get(target_entity) {
@@ -272,16 +253,8 @@ fn update_target_info(
     );
 }
 
-/// System that updates `TargetInfo.line_of_sight` and `TargetInfo.in_vision_cone`
-/// based on whether an NPC sees its watched entity (via raycast + field of view).
-///
-/// This system:
-/// - Checks if the watched entity (or any of its children) was hit by the NPC's vision ray
-/// - Checks if the direction to the watched entity is within the vision cone
-///
-/// Requirements:
-/// - The NPC must have a `Watching` component referencing the target
-/// - The target must have a `WatchedBy` component and optionally `Children` (e.g. for colliders)
+/// Updates line of sight (the ray hit the target or one of its children) and
+/// whether the target is inside the vision cone.
 fn is_target_in_sight(
     mut npc_query: Query<(
         &mut TargetInfo,
@@ -297,7 +270,6 @@ fn is_target_in_sight(
         |(mut target_info, ray_hits, vision, vision_capabilities, watching, targeting)| {
             target_info.line_of_sight = false;
 
-            // Check if target is in vision cone angle
             let vision_cone_dot = vision_capabilities.vision_cone_radius.cos();
             target_info.in_vision_cone =
                 target_info.direction.dot(vision.aim_direction) > vision_cone_dot;
@@ -305,13 +277,11 @@ fn is_target_in_sight(
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             for hit in ray_hits {
-                // Check direct match
                 if hit.entity == target_entity {
                     target_info.line_of_sight = true;
                     break;
                 }
 
-                // Check if hit entity is a child of the watched entity
                 if let Ok(Some(children)) = target_query.get(target_entity)
                     && children.contains(&hit.entity)
                 {
@@ -327,10 +297,8 @@ fn is_target_in_sight(
 // AGGRO / TARGETING
 // ---------------------
 
-/// Handles auto-targeting when an entity is attacked.
-/// Ignores line of sight or cone checks — instant rage response.
-/// Targets the actual attacker carried by the damage; falls back to the
-/// watched entity for attacker-less damage (environment, damage over time).
+/// Targets the attacker on any hit, ignoring sight, or the watched entity for
+/// attacker-less damage.
 fn on_damage_aggro(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
@@ -355,9 +323,8 @@ fn on_damage_aggro(
     }
 }
 
-/// Records when targeting begins. Only on add: `on_damage_aggro` re-inserts
-/// `Targeting` on every hit, which must not restart the clock, so switching
-/// targets keeps it too.
+/// Records when targeting begins. Only on add, so re-inserts from repeated
+/// hits and target switches keep the clock.
 fn on_targeting_added_record_time(
     added: On<Add, Targeting>,
     time: Res<Time<Virtual>>,
@@ -446,10 +413,8 @@ pub(super) struct WorldUseChecks<'w, 's> {
     pub items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
 }
 
-/// Whether the world lets each motion or action run now: equipment that can
-/// start a use, or a held slot whose item is already in use (a block keeps its
-/// slot past the cooldown its start reset; an instant use runs on regardless),
-/// and a carried potion for `Heal`. Everything else is always allowed.
+/// Whether the world lets each motion or action run now: usable equipment (or
+/// a held use already running), and a carried potion for `Heal`.
 fn build_world_allows_use(
     entity: Entity,
     items: Option<&Items>,
@@ -483,8 +448,7 @@ pub(super) struct ObservedComponents {
     items: Option<&'static Items>,
 }
 
-/// Reads the world facts one decision needs from the entity's components and
-/// the capabilities it carries: the context with its memory left empty for the
+/// Reads one decision's world facts: the context, with memory left for the
 /// brain to add, and whether the world lets each motion or action run now.
 pub(super) fn observe_world_facts(
     components: &ObservedComponentsItem,

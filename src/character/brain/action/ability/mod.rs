@@ -1,16 +1,8 @@
-//! Abilities a brain can ask for besides moving or using equipment. Each one
-//! is an opt-in capability component plus an applier that reads the brain's
-//! held action and its epoch, re-checks the live world, does the work, and
-//! reports [`ActionFinished`](super::super::ActionFinished) for that epoch. A
-//! momentum action the live world refuses waits; a committed one reports that
-//! it never started.
-//! Appliers never change the brain's motion. A defeated character loses its
-//! brain, so appliers never see the dead.
-//!
-//! Capability components implement
-//! [`Capability`](super::super::capability::Capability) and are listed once,
-//! in [`AbilityCapabilities`], which is how the brain learns what an entity can
-//! do without naming each component.
+//! Innate abilities. Each is an opt-in capability component, listed in
+//! [`AbilityCapabilities`], plus an applier that re-checks the live world for
+//! the brain's held action and reports
+//! [`ActionFinished`](super::super::ActionFinished). Appliers never change the
+//! motion, and a defeated character loses its brain, so they never see the dead.
 
 mod bite;
 mod breath;

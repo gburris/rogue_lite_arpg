@@ -23,14 +23,11 @@ use crate::character::{state::SimpleMotion, vision::TargetInfo};
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
 /// How a character moves: a continuous motion that runs until replaced, or a
-/// finite committed move that takes exclusive control of steering until its
-/// executor reports it finished and is never re-scored while it runs. New behaviors
-/// should reuse these motions, not add new variants, unless the
-/// steering contract itself is new.
+/// finite committed move that steers alone until its executor reports it
+/// finished. Add a variant only for a new steering contract.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Motion {
-    /// Disengaged: alternates standing and ambling, paced by the `Wander`
-    /// component.
+    /// Disengaged: alternates standing and ambling, paced by `Wander`.
     #[default]
     Calm,
     Chase,
@@ -42,7 +39,7 @@ pub enum Motion {
     /// slot and keep momentum; an empty slot also stands still, but nothing
     /// chose it.
     Idle,
-    /// Circles the target inside the distance range while equipment stays hot.
+    /// Circles the target inside the distance range.
     Orbit(Interval),
     /// Committed straight run; its `Dash` constructor (kite, hop, slide) sets its aim.
     Dash,
@@ -68,7 +65,7 @@ impl Motion {
     /// Number of distinct motions, for per-motion arrays.
     pub const COUNT: usize = Self::ALL.len();
 
-    /// Position of this motion in per-motion arrays, ignoring any distance range.
+    /// Position of this motion in per-motion arrays.
     pub const fn index(self) -> usize {
         match self {
             Self::Calm => 0,
@@ -157,8 +154,7 @@ const _: () = {
 pub struct TurnRate(pub f32);
 
 /// Extra speed left over from a finite motion's burst, easing off over
-/// `duration`. Steering owns it: it multiplies whatever effort the current
-/// continuous motion asks for and removes it once it has fully decayed.
+/// `duration`. Multiplies the continuous motion's effort until it decays.
 #[derive(Component, Clone, Copy, Debug)]
 pub(super) struct SpeedBoost {
     extra_speed: f32,
@@ -186,8 +182,8 @@ impl SpeedBoost {
     }
 }
 
-/// A finite motion completed; the brain starts its cooldown and, while `epoch`
-/// is still the motion slot's running behavior, ends it and decides again.
+/// A finite motion completed. The brain starts its cooldown and, if `epoch` is
+/// still current, ends its behavior and decides again at once.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
     pub entity: Entity,
@@ -237,8 +233,7 @@ pub(super) enum MotionStep {
     Finished { speed_boost: Option<SpeedBoost> },
 }
 
-/// The brain stamps each start with a fresh epoch, so an executor can tell a
-/// new run apart from the one it just finished.
+/// The epoch of the run an executor is tracking.
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct RunTag {
     epoch: Option<u32>,

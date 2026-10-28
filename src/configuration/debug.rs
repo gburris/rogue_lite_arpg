@@ -223,9 +223,7 @@ fn update_enemy_ai_labels(
     }
 }
 
-/// Appends one line per behavior: its motion and action, then its final score
-/// and any momentum followed by each consideration's name, score, input and
-/// raw value, or why it sat out.
+/// Appends one line per behavior from the last decision's score trace.
 fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrace) {
     let format_value = |value: Option<f32>| {
         // A missing or reachless capability reads as the largest fraction.

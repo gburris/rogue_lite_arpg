@@ -172,7 +172,6 @@ fn handle_collisions(
 /// to the blocker on reflection.
 #[derive(Component, Clone, Copy)]
 pub struct ProjectileAttacker {
-    /// Wielder that fired the projectile; `None` for environmental projectiles.
     pub attacker: Option<Entity>,
 }
 

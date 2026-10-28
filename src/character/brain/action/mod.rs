@@ -38,9 +38,7 @@ impl Action {
     }
 
     /// Whether this action ends on its own and reports it, so a committed
-    /// behavior over it can finish. Idle never does. A held use ends only when
-    /// the applier releases it, once the slot stops asking, which a committed
-    /// behavior never does; scoring decides how long to hold instead.
+    /// behavior over it can finish. A held use ends only when released.
     pub fn reports_finish(self) -> bool {
         match self {
             Self::Use(slot) => slot.is_instant_use(),

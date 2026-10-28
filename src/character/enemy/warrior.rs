@@ -23,9 +23,8 @@ const BADLY_HURT: Consideration = consideration(
     Interval::new(0.45, 0.55),
     Curve::Linear,
 );
-/// How much a potion is called for: nothing above 58% health, full at 18%.
-/// The warrior carries one potion and never regenerates, so it saves it for a
-/// real wound; where it drinks is set by what the heal must outscore.
+/// Potion need: none above 58% health, full at 18%. One potion and no
+/// regeneration, so it is saved for a real wound.
 const NEEDS_POTION: Consideration = consideration(
     "needs potion",
     ConsiderationInput::MissingHealth,
@@ -38,10 +37,9 @@ const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
 
-// The pair below reads mainhand reach fractions, so a longer weapon stands the
-// warrior farther back. Both enter at one shared fraction, so a character with
-// no incumbent always has one of the two; the exits stay wide so an incumbent
-// holds on: a chase closes a little deeper, a hold stays until out of reach.
+// Reach fractions, so a longer weapon stands the warrior farther back. Both
+// enter at `MELEE_ENTER_FRACTION` so one always applies; the wider exits let a
+// chase close a little deeper and a hold stay until out of reach.
 const MELEE_ENTER_FRACTION: f32 = 0.97;
 
 const OUTSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
@@ -72,7 +70,7 @@ const CHASE_MELEE: Behavior = Behavior::new(
     &[OUTSIDE_MELEE_REACH],
 );
 
-/// Stands still in melee reach instead of orbiting; sword readiness only gates the swing.
+/// Stands still in melee reach instead of orbiting.
 const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     Some(Motion::Idle),
     None,
@@ -81,8 +79,7 @@ const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     &[INSIDE_MELEE_REACH],
 );
 
-/// Runs out the break rolled after a swing, then the normal chase/hold
-/// behaviors bring the warrior back in for the next swing.
+/// Runs out the break rolled after a swing.
 const WARRIOR_KITE: Behavior = Behavior::new(
     Some(Motion::Dash),
     None,
@@ -130,7 +127,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
         1.0,
         &[IN_MAINHAND_REACH, NOT_DASHING],
     ),
-    // Drinks the carried potion only at a safe distance, once badly wounded.
+    // The two heals: drink only at a safe distance, or with no target.
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
@@ -164,8 +161,6 @@ pub(super) fn spawn_warrior(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    // Warriors drink the one potion they carry once badly wounded and at a
-    // safe distance.
     spawn_enemy_with_equipment(
         commands,
         (
@@ -183,8 +178,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience { base_exp: 20.0 },
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
-        // 80% of swings end in a break for a rolled 6-8 tile run inside a 90°
-        // cone away from the target; the other 20% swing again.
+        // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
         Dash::kite(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
         Heal::new(HEAL_COOLDOWN),
         enemy_wander(),

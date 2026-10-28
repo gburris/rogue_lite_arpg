@@ -32,7 +32,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 /// An item that can be equipped and used from a slot. `reach` is the farthest
-/// target distance at which an AI holder uses it; `None` means AI never aims it.
+/// target distance an AI holder uses it at; `None` means AI never aims it.
 #[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,

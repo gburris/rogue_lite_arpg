@@ -10,7 +10,7 @@ const ORBIT_REROLL_MAX: f32 = 2.5;
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
 const ORBIT_RADIAL_GAIN: f32 = 0.5;
 
-/// Circles the target inside a distance range, rerolling its direction over time. Opt-in at spawn.
+/// Circles the target inside a distance range, rerolling its direction over time.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Orbit {
     pub reroll_min: f32,
@@ -67,7 +67,6 @@ impl Capability for Orbit {
     type Key = Motion;
 
     fn key(&self) -> Motion {
-        // Tables index by variant, so the range only stands in.
         Motion::Orbit(Interval::new(0.0, 1.0))
     }
 

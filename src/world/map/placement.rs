@@ -229,7 +229,8 @@ fn place_fixed(
     }
     .ok_or_else(|| {
         format!(
-            "fixed footprint {footprint:?} at {anchor:?} is out of bounds for a {}x{} map or references a missing structure",
+            "fixed footprint {footprint:?} at {anchor:?} is out of bounds for a {}x{} map \
+             or references a missing structure",
             context.map_size.x, context.map_size.y
         )
     })?;

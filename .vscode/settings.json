@@ -2,6 +2,12 @@
     // Allow `rust-analyzer` and `cargo` to run simultaneously.
     // This uses extra storage space, so consider commenting it out.
     "rust-analyzer.cargo.targetDir": true,
+    // Auto-imports follow the import rules: prefer `crate::prelude` paths, at most one `super::`,
+    // one `use` per module (matches rustfmt.toml).
+    "rust-analyzer.imports.preferPrelude": true,
+    "rust-analyzer.imports.prefix": "plain",
+    "rust-analyzer.imports.granularity.group": "module",
+    "rust-analyzer.imports.granularity.enforce": true,
     // Display the directory of `mod.rs` files in the tab above the text editor.
     "workbench.editor.customLabels.patterns": {
         "**/mod.rs": "${dirname}/mod.rs"

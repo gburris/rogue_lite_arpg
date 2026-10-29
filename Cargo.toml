@@ -87,6 +87,8 @@ return_self_not_must_use = "allow"
 missing_panics_doc = "allow"
 missing_errors_doc = "allow"
 cast_sign_loss = "allow"
+# Keep the `mod.rs` layout: a module with children lives in `foo/mod.rs`, not `foo.rs`.
+self_named_module_files = "warn"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

@@ -6,27 +6,23 @@ mod level;
 mod movement;
 mod overlay;
 mod progression;
+mod spawn;
+mod stats;
 
 pub mod prelude {
     pub use super::aim::PlayerAim;
-    pub use super::interact::*;
+    pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::progression::GameProgress;
     pub use super::{DisplayableStatType, Player, PlayerStats};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
-use bevy_lit::prelude::PointLight2d;
-use interact::PlayerInteractionRadius;
 
-use crate::character::player::aim::{AimInput, player_aim};
-use crate::character::player::input::player_actions;
-use crate::character::player::movement::PlayerMovement;
-use crate::character::vision::TargetInfo;
-use crate::character::{Character, Purse, physical_collider};
-use crate::menu::{PauseControl, pause_actions};
+pub use self::stats::{DisplayableStatType, PlayerStats};
+use crate::character::{Character, Purse};
 use crate::prelude::*;
+use crate::utility::despawn_all;
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
@@ -47,9 +43,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(AppState::SpawnPlayer),
         (
-            spawn_player,
+            spawn::spawn_player,
             overlay::spawn_player_overlay,
-            transition_to_create_hub,
+            spawn::transition_to_create_hub,
         )
             .chain(),
     );
@@ -110,132 +106,4 @@ impl Player {
     pub fn get_level(&self) -> u32 {
         self.current_level
     }
-}
-
-#[derive(Component, Clone)]
-pub struct PlayerStats {
-    pub agility: u32,   //Movement speed, roll range
-    pub strength: u32,  //Melee swing damage
-    pub dexterity: u32, //Critical Stike Change
-    pub intellect: u32, //Spell damage
-    pub luck: u32,      //Drop rate
-}
-
-impl Default for PlayerStats {
-    fn default() -> Self {
-        PlayerStats {
-            agility: 1,
-            strength: 1,
-            dexterity: 1,
-            intellect: 1,
-            luck: 99,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Copy, PartialEq)]
-pub enum DisplayableStatType {
-    Agility,
-    Strength,
-    Dexterity,
-    Intellect,
-    Luck,
-}
-
-impl DisplayableStatType {
-    pub fn get_description(&self) -> &'static str {
-        match self {
-            DisplayableStatType::Agility => "Movement speed, roll range",
-            DisplayableStatType::Strength => "Melee swing damage",
-            DisplayableStatType::Dexterity => "Critical Strike Chance",
-            DisplayableStatType::Intellect => "Spell damage",
-            DisplayableStatType::Luck => "Drop rate",
-        }
-    }
-
-    pub fn get_value(&self, stats: &PlayerStats) -> u32 {
-        match self {
-            DisplayableStatType::Agility => stats.agility,
-            DisplayableStatType::Strength => stats.strength,
-            DisplayableStatType::Dexterity => stats.dexterity,
-            DisplayableStatType::Intellect => stats.intellect,
-            DisplayableStatType::Luck => stats.luck,
-        }
-    }
-}
-
-fn spawn_player(
-    mut commands: Commands,
-    sprites: Res<SpriteAssets>,
-    sprite_layouts: Res<SpriteSheetLayouts>,
-    game_progress: Res<GameProgress>,
-    shadows: Res<Shadows>,
-    gizmo_assets: ResMut<Assets<GizmoAsset>>,
-) {
-    let fire_staff = commands.spawn(fire_staff(&sprites, &sprite_layouts)).id();
-
-    let player = commands
-        .spawn((
-            Player::default(),
-            PauseControl,
-            pause_actions(),
-            player_actions(),
-            Mana::new(100.0, 10.0),
-            game_progress.base_stats.clone(),
-            Sprite::from_atlas_image(
-                sprites.player_sprite_sheet.clone(),
-                TextureAtlas {
-                    layout: sprite_layouts.player_atlas_layout.clone(),
-                    ..default()
-                },
-            ),
-            TargetInfo::default(),
-            related!(Items[
-                ice_staff(&sprites, &sprite_layouts),
-                sword(&sprites),
-                axe(&sprites),
-                freeze_axe(&sprites),
-                magic_shield(&sprites, &sprite_layouts),
-                knight_shield(&sprites, &sprite_layouts),
-                health_potion(&sprites),
-                tome_of_healing(&sprites)
-            ]),
-            observe(death::on_player_defeated),
-            observe(overlay::on_equipment_use_succeeded),
-            observe(overlay::on_equipment_use_failed),
-            children![
-                player_aim(gizmo_assets),
-                shadow(&shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
-                physical_collider(),
-                hurtbox(Vec2::new(24.0, 40.0), GameCollisionLayer::AllyHurtBox),
-                (
-                    PointLight2d {
-                        color: Color::WHITE,
-                        intensity: 0.4,
-                        outer_radius: 100.0,
-                        falloff: 5.0,
-                        ..default()
-                    },
-                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
-                ),
-                (
-                    PlayerInteractionRadius,
-                    Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-                    CollisionLayers::new(
-                        [GameCollisionLayer::PlayerInteractionRadius],
-                        [GameCollisionLayer::Interaction],
-                    ),
-                )
-            ],
-        ))
-        .id();
-
-    commands.trigger(Equip {
-        item: fire_staff,
-        holder: player,
-    });
-}
-
-fn transition_to_create_hub(mut next_map: NextMap) -> Result {
-    next_map.set(MapRequest::Hub)
 }

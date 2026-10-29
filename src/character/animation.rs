@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use crate::animation::{AnimationData, AnimationIndices, AnimationTimer};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

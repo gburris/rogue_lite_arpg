@@ -13,10 +13,12 @@ use bevy_lit::prelude::Lighting2dPlugin;
 use bevy_tweening::TweeningPlugin;
 
 pub mod prelude {
-    pub use super::assets::*;
-    pub use super::physics::*;
-    pub use super::schedule::*;
-    pub use super::view::*;
+    pub use super::assets::{GameIcons, Shadows, SpriteAssets, SpriteSheetLayouts, TileAssets};
+    pub use super::physics::GameCollisionLayer;
+    pub use super::schedule::{
+        AppState, InGameSystems, MainSystems, Pause, PlayingState, RestartEvent, SimulationSystems,
+    };
+    pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, shadow};
 }
 
 pub(super) fn plugin(app: &mut App) {

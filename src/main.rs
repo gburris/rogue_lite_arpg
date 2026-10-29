@@ -22,7 +22,7 @@ pub mod prelude {
     pub use super::configuration::prelude::*;
     pub use super::items::prelude::*;
     pub use super::menu::prelude::*;
-    pub use super::utility::{Lifespan, despawn_all, schedule_component_removal};
+    pub use super::utility::Lifespan;
     pub use super::world::prelude::*;
 }
 

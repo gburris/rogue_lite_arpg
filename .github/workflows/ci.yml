@@ -37,6 +37,18 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+  # Check import rules that rustfmt and clippy can't.
+  imports:
+    name: Imports
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check import rules
+        run: bash scripts/check_imports.sh
+
   # Check documentation.
   docs:
     name: Docs

@@ -3,9 +3,8 @@ use bevy::sprite::Anchor;
 use bevy::ui_widgets::observe;
 use rand::RngExt;
 
-use crate::items::equipment::{EquipmentSlot, Equippable};
-use crate::items::prelude::StartUsingEquipment;
-use crate::items::{Item, ItemType};
+use super::equipment::{EquipmentSlot, Equippable};
+use super::{Item, ItemType};
 use crate::prelude::*;
 
 #[derive(Component)]

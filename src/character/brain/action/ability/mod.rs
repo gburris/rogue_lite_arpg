@@ -1,7 +1,7 @@
 //! Innate abilities. Each is an opt-in capability component, listed in
 //! [`AbilityCapabilities`], plus an applier that re-checks the live world for
 //! the brain's held action and reports
-//! [`ActionFinished`](super::super::ActionFinished). Appliers never change the
+//! [`ActionFinished`](crate::character::brain::ActionFinished). Appliers never change the
 //! motion, and a defeated character loses its brain, so they never see the dead.
 
 mod bite;
@@ -10,13 +10,13 @@ mod heal;
 
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
-pub use bite::Bite;
-pub use breath::Breath;
-pub use heal::Heal;
-pub(in super::super) use heal::find_carried_potion;
 
-use super::super::capability::{CapabilityProfiles, record_capability_profile};
+pub use self::bite::Bite;
+pub use self::breath::Breath;
+pub use self::heal::Heal;
+pub(in crate::character::brain) use self::heal::find_carried_potion;
 use crate::character::AiSet;
+use crate::character::brain::capability::{CapabilityProfiles, record_capability_profile};
 
 /// An innate move a brain can ask its character for, carried out by a capability
 /// component in this module.
@@ -44,7 +44,7 @@ pub struct AbilityCapabilities {
 }
 
 impl AbilityCapabilitiesItem<'_, '_> {
-    pub(in super::super) fn record_capability_profiles(
+    pub(in crate::character::brain) fn record_capability_profiles(
         &self,
         capability_profiles: &mut CapabilityProfiles,
     ) {

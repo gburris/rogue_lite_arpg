@@ -9,11 +9,15 @@ mod vision;
 pub mod prelude {
     pub(crate) use super::brain::Targeting;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
-    pub use super::enemy::*;
-    pub use super::npc::*;
-    pub use super::player::prelude::*;
-    pub use super::state::*;
-    pub use super::vision::*;
+    pub use super::enemy::{Enemy, EnemyKind, EnemySpawnData, Experience, SpawnEnemies};
+    pub use super::npc::{NPC, NpcKind, NpcSpawnData, SpawnNpcs};
+    pub use super::player::prelude::{
+        DisplayableStatType, GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
+        PlayerInteractionRadius, PlayerStats,
+    };
+    pub use super::state::{AttackState, FacingDirection, Kinematics};
+    pub use super::vision::{TargetInfo, Vision};
+    pub use super::{AiSet, Character, Purse};
 }
 
 /// Ordered AI phases. Perception feeds targeting, aim, decisions, execution
@@ -31,7 +35,7 @@ pub enum AiSet {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::character::animation::{AnimationSheet, CharacterAnimationState};
+use self::animation::{AnimationSheet, CharacterAnimationState};
 use crate::prelude::*;
 
 pub struct CharacterPlugin;

@@ -2,8 +2,8 @@ use bevy::color::palettes::tailwind::YELLOW_300;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
+use super::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
 use crate::combat::damage::{AttemptDamage, Damage};
-use crate::combat::status_effects::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
 use crate::prelude::*;
 
 #[derive(Component, Clone)]

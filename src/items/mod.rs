@@ -12,14 +12,21 @@ mod staff;
 mod tome;
 
 pub mod prelude {
-    pub use super::consumable::*;
-    pub use super::equipment::prelude::*;
-    pub use super::lootable::*;
-    pub use super::magnet::*;
-    pub use super::melee::prelude::*;
-    pub use super::shield::*;
-    pub use super::staff::*;
-    pub use super::tome::*;
+    pub use super::consumable::{Consumable, Consume, health_potion};
+    pub use super::equipment::prelude::{
+        DEFAULT_EQUIPMENT_TRANSFORM_MAP, Equip, EquipmentInUse, EquipmentRead, EquipmentSlot,
+        EquipmentTransformDef, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
+        EquipmentUseFinished, EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand,
+        StartUsingEquipment, StopUsingEquipment, Unequip, tick_equippable_cooldown,
+    };
+    pub use super::lootable::ItemDrop;
+    pub use super::magnet::Magnet;
+    pub use super::melee::prelude::{axe, freeze_axe, sword};
+    pub use super::shield::{ProjectileReflection, knight_shield, magic_shield};
+    pub use super::staff::{
+        STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,
+    };
+    pub use super::tome::tome_of_healing;
     pub use super::{Item, ItemCapacity, ItemOf, ItemType, Items};
 }
 

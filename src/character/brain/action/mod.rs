@@ -4,13 +4,13 @@
 mod ability;
 mod equipment_use;
 
-pub use ability::{Ability, Bite, Breath, Heal};
-pub(super) use ability::{AbilityCapabilities, find_carried_potion};
 use bevy::prelude::*;
-pub(super) use equipment_use::StartedEquipmentUses;
 
+pub use self::ability::{Ability, Bite, Breath, Heal};
+pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
+pub(super) use self::equipment_use::StartedEquipmentUses;
 use crate::character::AiSet;
-use crate::items::prelude::EquipmentSlot;
+use crate::prelude::EquipmentSlot;
 
 /// The one non-movement thing a character does at a time: use equipment, use an
 /// ability, or deliberately do nothing.
@@ -55,4 +55,23 @@ pub(super) fn plugin(app: &mut App) {
             equipment_use::apply_equipment_use_requests.in_set(AiSet::Execute),
         )
         .add_observer(equipment_use::report_equipment_use_finished);
+}
+
+/// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`
+/// only while that behavior still runs, so a stale finish clears nothing.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct ActionFinished {
+    pub entity: Entity,
+    pub action: Action,
+    pub behavior_run_id: u32,
+    pub outcome: ActionOutcome,
+}
+
+/// How an action reported in [`ActionFinished`] ended.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActionOutcome {
+    Completed,
+    /// A committed use its applier could not start. A continuously scored use waits for
+    /// its chance instead and never reports this.
+    NotStarted,
 }

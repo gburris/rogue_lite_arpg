@@ -12,14 +12,14 @@ use ron::Options;
 use ron::extensions::Extensions;
 use serde::Deserialize;
 
+use super::blueprint::PlacementKind;
+use super::build::{MapRequest, MapResult, Stage, build_from_recipe};
+use super::placement::{Anchor, CountRange, PlaceRule, Side};
+use super::spawn::MAX_MAP_TILES;
+use super::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
+use super::tiles::TileKind;
 use crate::prelude::{EnemyKind, NpcKind};
 use crate::world::MapRng;
-use crate::world::map::blueprint::PlacementKind;
-use crate::world::map::build::{MapRequest, MapResult, Stage, build_from_recipe};
-use crate::world::map::placement::{Anchor, CountRange, PlaceRule, Side};
-use crate::world::map::spawn::MAX_MAP_TILES;
-use crate::world::map::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
-use crate::world::map::tiles::TileKind;
 
 /// Loaded map recipes and the structures available to place in them.
 #[derive(Resource, Debug)]

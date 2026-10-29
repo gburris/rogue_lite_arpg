@@ -5,16 +5,12 @@ use bevy::prelude::*;
 use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
+use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
+use super::placement::{PlaceContext, place};
+use super::recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name};
+use super::structures::{Structure, apply_structure, build_empty_square, build_pond, build_rubble};
 use crate::prelude::AppState;
 use crate::world::MapRng;
-use crate::world::map::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
-use crate::world::map::placement::{PlaceContext, place};
-use crate::world::map::recipe::{
-    MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name,
-};
-use crate::world::map::structures::{
-    Structure, apply_structure, build_empty_square, build_pond, build_rubble,
-};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, load_recipes);

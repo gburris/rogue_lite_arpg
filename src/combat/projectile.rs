@@ -4,7 +4,7 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use crate::combat::damage::{AttemptDamage, Damage, HurtBox, Knockback};
+use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

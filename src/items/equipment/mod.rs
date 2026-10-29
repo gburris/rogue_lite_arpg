@@ -11,12 +11,14 @@ mod use_equipped;
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::equip::*;
-    pub use super::equipment_transform::*;
-    pub use super::use_equipped::*;
-    pub use super::{
-        EquipmentSlot, Equippable, Equipped, Mainhand, MainhandOf, Offhand, OffhandOf,
+    pub use super::equip::{Equip, Unequip};
+    pub use super::equipment_transform::{DEFAULT_EQUIPMENT_TRANSFORM_MAP, EquipmentTransformDef};
+    pub use super::use_equipped::{
+        EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
+        EquipmentUseFinished, EquipmentUseSucceeded, StartUsingEquipment, StopUsingEquipment,
+        tick_equippable_cooldown,
     };
+    pub use super::{EquipmentSlot, Equippable, Equipped, Mainhand, Offhand};
 }
 
 pub(super) fn plugin(app: &mut App) {

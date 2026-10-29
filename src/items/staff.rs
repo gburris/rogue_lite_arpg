@@ -9,11 +9,9 @@ use bevy_lit::prelude::PointLight2d;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
-use super::ItemType;
+use super::equipment::Equippable;
+use super::{Item, ItemType};
 use crate::equipment_transforms;
-use crate::items::Item;
-use crate::items::equipment::Equippable;
-use crate::items::prelude::StartUsingEquipment;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

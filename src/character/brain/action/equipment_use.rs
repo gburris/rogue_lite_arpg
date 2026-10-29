@@ -2,16 +2,15 @@
 
 use bevy::prelude::*;
 
-use super::super::perception::Targeting;
-use super::super::{ActionFinished, ActionOutcome, Brain};
-use super::Action;
+use super::{Action, ActionFinished, ActionOutcome};
+use crate::character::brain::{Brain, Targeting};
 use crate::character::vision::TargetInfo;
 use crate::prelude::{EquipmentSlot, EquipmentUsage, EquipmentUseFinished};
 
 /// The last use started in each slot, stamped with its behavior's run id, so a
 /// committed use starts once and its item's finish names its behavior.
 #[derive(Component, Clone, Copy, Debug, Default)]
-pub(in super::super) struct StartedEquipmentUses(
+pub(in crate::character::brain) struct StartedEquipmentUses(
     [Option<StartedEquipmentUse>; EquipmentSlot::ALL.len()],
 );
 

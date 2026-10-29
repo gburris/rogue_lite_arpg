@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
+use super::constants::TITLE_FONT_SIZE;
+use super::primitives::{gold_border, text};
 use crate::prelude::AppState;
-use crate::ui::constants::TITLE_FONT_SIZE;
-use crate::ui::primitives::{gold_border, text};
 
 #[derive(Component)]
 pub struct LoadScreen;

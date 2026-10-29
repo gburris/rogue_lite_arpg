@@ -2,6 +2,7 @@ use bevy::ecs::spawn::SpawnIter;
 use bevy::prelude::*;
 
 use crate::prelude::*;
+use crate::utility::despawn_all;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

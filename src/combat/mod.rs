@@ -10,12 +10,20 @@ use bevy::prelude::*;
 use crate::prelude::InGameSystems;
 
 pub mod prelude {
-    pub use super::damage::*;
-    pub use super::health::*;
-    pub use super::invulnerable::*;
-    pub use super::mana::*;
-    pub use super::projectile::*;
-    pub use super::status_effects::prelude::*;
+    pub use super::damage::{
+        AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, HurtBox, Knockback, hurtbox,
+        hurtbox_at,
+    };
+    pub use super::health::{AttemptHeal, Healed, Health};
+    pub use super::invulnerable::IFrames;
+    pub(crate) use super::mana::regenerate_mana;
+    pub use super::mana::{Mana, ManaCost, ManaDrainRate};
+    pub use super::projectile::{
+        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, Projectiles, fireball,
+        fireball_with_speed, icebolt,
+    };
+    pub(crate) use super::status_effects::prelude::sync_slow_from_statuses;
+    pub use super::status_effects::prelude::{Burning, Effects, Frozen};
 }
 
 pub(super) fn plugin(app: &mut App) {

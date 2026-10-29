@@ -9,14 +9,11 @@ mod tiling;
 
 use ::bevy::prelude::*;
 
-/// Convenient exports for map recipe, blueprint, structure, tile, and spawn APIs.
+/// Map exports other features use: map requests, placement anchors, and tile-to-world lookup.
 pub mod prelude {
-    pub use super::blueprint::*;
-    pub use super::build::*;
-    pub use super::placement::*;
-    pub use super::spawn::*;
-    pub use super::structures::*;
-    pub use super::tiles::*;
+    pub use super::build::{MapRequest, NextMap};
+    pub use super::placement::{Anchor, place};
+    pub use super::spawn::{TILE_SIZE, TileToWorld};
 }
 
 pub(super) fn plugin(app: &mut App) {

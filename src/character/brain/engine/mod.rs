@@ -6,7 +6,7 @@ mod behavior;
 mod explanation;
 mod scoring;
 
-pub use assignment::assign_behaviors_to_slots;
-pub use behavior::{Behavior, BrainDefinition, CommitPolicy, validate_brain};
-pub use explanation::{BehaviorScoreExplanation, explain_behavior};
-pub use scoring::{Consideration, Curve, Interval, ScoreMapping};
+pub use self::assignment::assign_behaviors_to_slots;
+pub use self::behavior::{Behavior, BrainDefinition, CommitPolicy, validate_brain};
+pub use self::explanation::{BehaviorScoreExplanation, explain_behavior};
+pub use self::scoring::{Consideration, Curve, Interval, ScoreMapping};

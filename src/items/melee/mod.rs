@@ -6,12 +6,12 @@ pub mod prelude {
     pub use super::{axe, freeze_axe, sword};
 }
 
-pub use attack::ActiveMeleeAttack;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
-pub use weapons::{axe, freeze_axe, sword};
 
+pub use self::attack::ActiveMeleeAttack;
+pub use self::weapons::{axe, freeze_axe, sword};
 use crate::prelude::*;
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to

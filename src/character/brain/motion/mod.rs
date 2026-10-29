@@ -5,22 +5,24 @@ mod direct;
 mod home_area;
 mod orbit;
 mod steering;
+mod step;
 mod swoop;
 mod wander;
 
 use bevy::prelude::*;
-pub use dash::Dash;
-pub use home_area::HomeArea;
-pub use orbit::Orbit;
-pub(super) use steering::Steering;
-pub use steering::{MotionFinished, TurnRate};
-pub use swoop::Swoop;
-pub use wander::Wander;
 
-use self::steering::{
-    CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput, SteeredCharacter,
-    report_motion_finished,
+pub use self::dash::Dash;
+pub use self::home_area::HomeArea;
+pub use self::orbit::Orbit;
+use self::steering::DecayingSpeedBoost;
+pub(super) use self::steering::Steering;
+pub use self::steering::TurnRate;
+pub use self::step::MotionFinished;
+use self::step::{
+    CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, report_motion_finished,
 };
+pub use self::swoop::Swoop;
+pub use self::wander::Wander;
 use super::engine::Interval;
 use crate::character::AiSet;
 use crate::prelude::sync_slow_from_statuses;

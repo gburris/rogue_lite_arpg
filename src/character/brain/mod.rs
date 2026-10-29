@@ -31,32 +31,30 @@ mod decide;
 mod engine;
 mod motion;
 mod perception;
+mod rng;
 mod running_state;
 
-pub use action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
 use bevy::prelude::*;
-pub use capability::CapabilityProfile;
-pub use decide::ScoreTrace;
-pub(crate) use engine::{Behavior, CommitPolicy, Consideration, Curve};
-pub use engine::{BrainDefinition, Interval};
-pub use motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
-pub(crate) use perception::{ConsiderationInput, Targeting};
-pub(super) use perception::{VisionCone, Watching};
-pub use running_state::{BrainRng, BrainRngRootSeed};
 
 use self::action::StartedEquipmentUses;
+pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
+pub use self::capability::CapabilityProfile;
 use self::capability::{
     AvailableMotionActionTable, Capability, CapabilityKey, CapabilityProfiles, MotionActionKey,
     MotionActionTable, capability_keys,
 };
-use self::decide::{decide_behavior, finish_action, release_finished_motion};
+pub use self::decide::ScoreTrace;
 use self::engine::validate_brain;
+pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
+pub use self::engine::{BrainDefinition, Interval};
 use self::motion::Steering;
+pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
+pub(crate) use self::perception::{ConsiderationInput, Targeting};
 use self::perception::{DecisionContext, MemoryView};
-use self::running_state::{
-    DECISION_PERIOD, RunningBehavior, seed_brain_rng_and_schedule_first_decision,
-    seed_brain_rng_root_from_map,
-};
+pub(super) use self::perception::{VisionCone, Watching};
+pub use self::rng::{BrainRng, BrainRngRootSeed};
+use self::rng::{DECISION_PERIOD, seed_brain_rng_and_schedule_first_decision};
+use self::running_state::RunningBehavior;
 use crate::character::AiSet;
 use crate::character::npc::VILLAGER;
 use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
@@ -281,12 +279,12 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((perception::plugin, action::plugin, motion::plugin))
         .init_resource::<BrainRngRootSeed>()
-        .add_observer(release_finished_motion)
-        .add_observer(finish_action)
-        .add_systems(Startup, seed_brain_rng_root_from_map)
+        .add_observer(decide::release_finished_motion)
+        .add_observer(decide::finish_action)
+        .add_systems(Startup, rng::seed_brain_rng_root_from_map)
         .add_systems(
             Update,
-            decide_behavior
+            decide::decide_behavior
                 .after(regenerate_mana)
                 .after(tick_equippable_cooldown)
                 .in_set(AiSet::Decision),

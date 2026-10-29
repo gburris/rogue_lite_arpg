@@ -4,11 +4,11 @@
 mod ability;
 mod equipment_use;
 
-pub use ability::{Ability, Bite, Breath, Heal};
-pub(super) use ability::{AbilityCapabilities, find_carried_potion};
 use bevy::prelude::*;
-pub(super) use equipment_use::StartedEquipmentUses;
 
+pub use self::ability::{Ability, Bite, Breath, Heal};
+pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
+pub(super) use self::equipment_use::StartedEquipmentUses;
 use crate::character::AiSet;
 use crate::prelude::EquipmentSlot;
 

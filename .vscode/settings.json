@@ -12,7 +12,13 @@
     "workbench.editor.customLabels.patterns": {
         "**/mod.rs": "${dirname}/mod.rs"
     },
+    // Show clippy's lints (pedantic included) in the editor, not only in CI.
+    "rust-analyzer.check.command": "clippy",
     "[rust]": {
-        "editor.formatOnSave": true
-    }
+        "editor.formatOnSave": true,
+        // rustfmt doesn't wrap comments or long string literals.
+        "editor.rulers": [100]
+    },
+    // The repo uses LF line endings.
+    "files.eol": "\n"
 }

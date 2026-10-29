@@ -18,8 +18,8 @@ pub mod prelude {
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-pub use stats::{DisplayableStatType, PlayerStats};
 
+pub use self::stats::{DisplayableStatType, PlayerStats};
 use crate::character::{Character, Purse};
 use crate::prelude::*;
 use crate::utility::despawn_all;

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-use crate::character::player::{AimInput, PlayerMovement};
+use super::aim::AimInput;
+use super::movement::PlayerMovement;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

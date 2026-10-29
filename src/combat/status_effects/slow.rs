@@ -27,7 +27,7 @@ pub(crate) fn sync_slow_from_statuses(
     for (mut kinematics, statuses) in &mut characters {
         let strongest = statuses
             .into_iter()
-            .flat_map(|statuses| statuses.iter())
+            .flat_map(Statuses::iter)
             .map(|status| {
                 if freezes.contains(status) {
                     1.0
@@ -36,7 +36,7 @@ pub(crate) fn sync_slow_from_statuses(
                 }
             })
             .fold(0.0, f32::max);
-        if kinematics.slowed_percentage() != strongest {
+        if (kinematics.slowed_percentage() - strongest).abs() > f32::EPSILON {
             kinematics.slow(strongest);
         }
     }

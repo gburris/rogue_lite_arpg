@@ -360,10 +360,10 @@ impl SpawnKind {
             Self::PlayerStart => PlacementKind::PlayerStart,
             Self::Exit => PlacementKind::Exit,
             Self::Chest => PlacementKind::Chest,
-            Self::Enemy(kind) => PlacementKind::Enemy(kind.clone()),
+            Self::Enemy(kind) => PlacementKind::Enemy(*kind),
             Self::RandomEnemy => {
                 let index = random_generator.random_range(0..EnemyKind::ALL.len());
-                PlacementKind::Enemy(EnemyKind::ALL[index].clone())
+                PlacementKind::Enemy(EnemyKind::ALL[index])
             }
             Self::Npc(kind) => PlacementKind::Npc(*kind),
         }

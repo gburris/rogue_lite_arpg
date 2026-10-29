@@ -42,7 +42,7 @@ impl Interval {
     /// Offset from the center as a fraction of the half-width, clamped to `-1.0..=1.0`.
     pub fn center_error(self, value: f32) -> f32 {
         let half_width = (self.max - self.min) * 0.5;
-        ((value - (self.min + self.max) * 0.5) / half_width).clamp(-1.0, 1.0)
+        ((value - self.min.midpoint(self.max)) / half_width).clamp(-1.0, 1.0)
     }
 
     /// Maps `raw` onto `0.0..=1.0` across the interval, clamping outside it.

@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use super::{Experience, enemy_wander, sight_ray};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
-    CALM, CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
-    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_ANCHOR, consideration, distance_threshold,
-    flag, reach_fraction_threshold, within_reach,
+    CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, WANDER, consideration,
+    distance_threshold, flag, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
     Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy, Consideration,
@@ -65,7 +65,7 @@ const PAST_INNER_CAST_EDGE: Consideration = distance_threshold(
 const BAT_ORBIT: Behavior = Behavior::new(
     Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     5.5,
     &[PAST_INNER_CAST_EDGE, INSIDE_OUTER_CAST_EDGE],
 );
@@ -73,7 +73,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 const BAT_KEEP: Behavior = Behavior::new(
     Some(Motion::KeepDistance(CAST_CORE_DISTANCE_RANGE)),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     5.0,
     &[INSIDE_OUTER_CAST_EDGE],
 );
@@ -87,13 +87,18 @@ const BAT_SWOOP: Behavior = Behavior::new(
 );
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
-const BAT_BASELINE_IDLE: Behavior =
-    Behavior::new(None, Some(Action::Idle), CommitPolicy::Momentum, 0.5, &[]);
+const BAT_BASELINE_IDLE: Behavior = Behavior::new(
+    None,
+    Some(Action::Idle),
+    CommitPolicy::ContinuouslyScored,
+    0.5,
+    &[],
+);
 /// Fireball from range, never mid-dive.
 const BAT_BREATHE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Breathe)),
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     1.0,
     &[
         LINE_OF_SIGHT,
@@ -107,13 +112,13 @@ const BAT_BREATHE: Behavior = Behavior::new(
 const BAT_BITE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Bite)),
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     1.5,
     &[NEAR_BITE_REACH],
 );
 
 // Motion priority: swoop (10), return (6), orbit (5.5), keep (5), chase (4),
-// calm (1). A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
+// wander (1). A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
 //
 // Action priority: bite (1.5), breathe (up to 1), idle (0.5).
 // - Idle is the bar an action must beat to fire: 0.5, or 0.625 while it holds
@@ -123,9 +128,9 @@ const BAT_BITE: Behavior = Behavior::new(
 //   beats a running idle from about 82 units away once warmed up, and from
 //   about 1.1 s after spotting the target (1.4 s at 100 units).
 static BAT_BEHAVIORS: &[Behavior] = &[
-    CALM,
+    WANDER,
     BAT_BASELINE_IDLE,
-    RETURN_TO_ANCHOR,
+    RETURN_TO_HOME,
     CHASE_CAST_RANGE,
     BAT_ORBIT,
     BAT_KEEP,
@@ -143,7 +148,7 @@ const BAT_SIGHT_RANGE: f32 = 550.0;
 const BAT_BREATH_PERIOD: f32 = 1.1;
 const BAT_TURN_RATE: f32 = 6.0;
 /// Half-width of a bat's rerolled orbit-radius offset from the band's centre.
-const BAT_ORBIT_STANDOFF: f32 = 50.0;
+const BAT_ORBIT_MAX_DISTANCE_OFFSET: f32 = 50.0;
 /// Contact range for a bite in world units. Anatomy, not tuning.
 const BITE_REACH: f32 = 30.0;
 const BITE_DAMAGE: f32 = 6.0;
@@ -178,7 +183,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         ),
         YSort::from_offset(BAT_FEET_POS_OFFSET),
         TurnRate(BAT_TURN_RATE),
-        Orbit::with_standoff(BAT_ORBIT_STANDOFF),
+        Orbit::with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
         enemy_wander(),
         Swoop::new(0.35, CAST_MAX_RANGE, 2.0),
         Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),

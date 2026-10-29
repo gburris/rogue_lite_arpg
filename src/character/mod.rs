@@ -109,13 +109,4 @@ impl Purse {
     pub fn add(&mut self, amount: u32) {
         self.amount += amount;
     }
-
-    // pub fn remove(&mut self, amount: u32) -> Result<u32, String> {
-    //     if self.amount >= amount {
-    //         self.amount -= amount;
-    //         Ok(self.amount)
-    //     } else {
-    //         Err("Not enough in purse!".to_string())
-    //     }
-    // }
 }

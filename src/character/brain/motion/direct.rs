@@ -16,7 +16,7 @@ pub(super) fn apply_direct_steering(
     for (character, mut steering, mut rng) in &mut characters {
         *steering = match character.brain.motion() {
             // Steered by their components' systems.
-            Some(Motion::Calm | Motion::Orbit(_) | Motion::Dash | Motion::Swoop) => continue,
+            Some(Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop) => continue,
             None => Steering::HALT,
             Some(motion) => character
                 .build_steer_input(motion, &time)
@@ -31,11 +31,11 @@ fn steer_direct_motion(motion: Motion, input: &SteerInput, rng: &mut BrainRng) -
     match motion {
         Motion::Chase => input.direction_to_target(),
         Motion::Flee => input.direction_from_target(),
-        Motion::ReturnToAnchor => input.direction_to_anchor(),
+        Motion::ReturnToHome => input.direction_to_home(),
         Motion::KeepDistance(distance_range) => {
             steer_to_hold_distance_range(input, distance_range, rng)
         }
-        Motion::Idle | Motion::Calm | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => None,
+        Motion::Idle | Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => None,
     }
 }
 

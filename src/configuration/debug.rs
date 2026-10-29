@@ -238,7 +238,7 @@ fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrac
         .definition()
         .behaviors
         .iter()
-        .zip(&score_trace.behaviors)
+        .zip(&score_trace.behavior_explanations)
     {
         let _ = write!(
             label,
@@ -285,12 +285,12 @@ fn cleanup_enemy_ai_labels(
 }
 
 /// One-word name for what the enemy is doing: its current motion, with a
-/// dash's own policy name and a calm enemy's wander or rest beat.
+/// dash's own policy name and an enemy's wander or rest beat.
 fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
     match brain.motion() {
         None => "Stopped",
         Some(Motion::Dash) => dash.map_or(Motion::Dash.name(), Dash::name),
-        Some(Motion::Calm) => {
+        Some(Motion::Wander) => {
             if wander.is_some_and(Wander::is_walking) {
                 "Wander"
             } else {

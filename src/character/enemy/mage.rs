@@ -4,9 +4,9 @@ use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::brain::considerations::{
-    ACTION_BASELINE_IDLE, ATTACK_FINISHED, CALM, CAST_DISTANCE_RANGE, CAST_MAX_RANGE,
-    CAST_MIN_RANGE, CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE,
-    LINE_OF_SIGHT, MAINHAND, RETURN_TO_ANCHOR, consideration, mana_at_or_below, within_reach,
+    ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
+    CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
+    MAINHAND, RETURN_TO_HOME, WANDER, consideration, mana_at_or_below, within_reach,
 };
 use crate::character::brain::{
     Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve, Dash,
@@ -57,7 +57,7 @@ const CAST_WEIGHT: f32 = 8.0;
 const FIRE_ORBIT: Behavior = Behavior::new(
     Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     5.5,
     &[INSIDE_OUTER_CAST_EDGE],
 );
@@ -65,7 +65,7 @@ const FIRE_ORBIT: Behavior = Behavior::new(
 const ICE_PLANT: Behavior = Behavior::new(
     Some(Motion::Idle),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     5.0,
     &[INSIDE_OUTER_CAST_EDGE],
 );
@@ -74,7 +74,7 @@ const ICE_PLANT: Behavior = Behavior::new(
 const FIRE_RECOVER: Behavior = Behavior::new(
     Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     9.0,
     &[HAS_TARGET, mana_at_or_below("fire mana low", 0.2, 0.45)],
 );
@@ -82,7 +82,7 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 const ICE_RECOVER: Behavior = Behavior::new(
     Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     9.0,
     &[HAS_TARGET, mana_at_or_below("ice mana low", 0.4, 0.75)],
 );
@@ -123,7 +123,7 @@ const ICE_CAST: Behavior = Behavior::new(
 );
 
 // Motion priority: recover (9, or 11.25 once running), hop (8.5), cast (8 at
-// full quality), return (6), orbit (5.5), chase (4), calm (1).
+// full quality), return (6), orbit (5.5), chase (4), wander (1).
 // - Recover beats the hop on the tick it starts, so a volley that drains mana
 //   starts the break instead of a hop.
 // - The hop beats a running orbit (6.875).
@@ -131,9 +131,9 @@ const ICE_CAST: Behavior = Behavior::new(
 //   started one from about 220. A mage crowded closer orbits outward until it
 //   is about 238 away, then casts again.
 static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
-    CALM,
+    WANDER,
     ACTION_BASELINE_IDLE,
-    RETURN_TO_ANCHOR,
+    RETURN_TO_HOME,
     FIRE_RECOVER,
     CHASE_CAST_RANGE,
     FIRE_ORBIT,
@@ -142,15 +142,15 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
 ];
 
 // Motion priority: slide (12), recover (9, or 11.25 once running), cast (8 at
-// full quality), return (6), plant (5), chase (4), calm (1).
+// full quality), return (6), plant (5), chase (4), wander (1).
 // - The slide beats a running recover and interrupts a cast.
 // - Cast quality is full from the danger ring out to the staff's reach. Inside
 //   the ring (while the slide recharges), the cast beats a running plant (6.25)
 //   from about 139 units away, and a newly started one from about 125.
 static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
-    CALM,
+    WANDER,
     ACTION_BASELINE_IDLE,
-    RETURN_TO_ANCHOR,
+    RETURN_TO_HOME,
     ICE_RECOVER,
     CHASE_CAST_RANGE,
     ICE_PLANT,
@@ -228,8 +228,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         Mana::new(100.0, 10.0),
         // The cooldown is the player's window to close in again.
         Dash::slide(
-            3.0 * TILE_SIZE as f32,
-            4.0 * TILE_SIZE as f32,
+            Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32),
             2.2,
             ICE_SLIDE_REACH,
             1.2,
@@ -255,8 +254,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         Mana::new(100.0, 10.0),
         // A still target inside the close range gets a step-in hop instead.
         Dash::hop(
-            2.0 * TILE_SIZE as f32,
-            3.0 * TILE_SIZE as f32,
+            Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
             2.2,
             CAST_MIN_RANGE - 10.0,
         ),

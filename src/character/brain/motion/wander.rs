@@ -1,24 +1,24 @@
-//! Calm ambling inside the anchor.
+//! Ambling inside the home area.
 
 use bevy::prelude::*;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{BrainRng, Capability, Interval, Motion, Tuning};
+use crate::character::brain::{BrainRng, Capability, CapabilityProfile, Interval, Motion};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
-/// Alternates standing and walking one rolled heading while calm.
+/// Alternates standing and walking one rolled heading while wandering.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
     pub pause: Interval,
     pub walk: Interval,
     pub speed_scale: f32,
     direction: Vec2,
-    stretch: Option<Stretch>,
+    phase: Option<WanderPhase>,
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Stretch {
+struct WanderPhase {
     walking: bool,
     until: f32,
 }
@@ -30,45 +30,45 @@ impl Wander {
             walk,
             speed_scale: WANDER_SPEED_SCALE,
             direction: Vec2::ZERO,
-            stretch: None,
+            phase: None,
         }
     }
 
     pub fn is_walking(&self) -> bool {
-        self.stretch.is_some_and(|stretch| stretch.walking)
+        self.phase.is_some_and(|phase| phase.walking)
     }
 
-    fn leave_calm(&mut self) {
-        self.stretch = None;
+    fn leave_wander(&mut self) {
+        self.phase = None;
     }
 }
 
-/// Makes `Motion::Calm` available only to a character that carries one.
+/// Makes `Motion::Wander` available only to a character that carries one.
 impl Capability for Wander {
     type Key = Motion;
 
     fn key(&self) -> Motion {
-        Motion::Calm
+        Motion::Wander
     }
 
-    fn tuning(&self) -> Tuning {
-        Tuning::default()
+    fn capability_profile(&self) -> CapabilityProfile {
+        CapabilityProfile::default()
     }
 }
 
-/// Ambles inside the anchor while the brain holds [`Motion::Calm`].
+/// Ambles inside the home area while the brain holds [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     mut wanderers: Query<(SteeredCharacter, &mut Wander, &mut Steering, &mut BrainRng)>,
 ) {
     for (character, mut wander, mut steering, mut rng) in &mut wanderers {
-        if character.brain.motion() != Some(Motion::Calm) {
-            wander.leave_calm();
+        if character.brain.motion() != Some(Motion::Wander) {
+            wander.leave_wander();
             continue;
         }
         *steering =
             character
-                .build_steer_input(Motion::Calm, &time)
+                .build_steer_input(Motion::Wander, &time)
                 .map_or(Steering::HALT, |input| {
                     let direction = steer(&input, &mut wander, &mut rng);
                     Steering::scaled(direction, wander.speed_scale)
@@ -77,37 +77,37 @@ pub(super) fn apply_wander(
 }
 
 fn steer(input: &SteerInput, wander: &mut Wander, random: &mut BrainRng) -> Option<Vec2> {
-    let stretch = match wander.stretch {
-        Some(stretch) if input.now < stretch.until => stretch,
+    let phase = match wander.phase {
+        Some(phase) if input.now < phase.until => phase,
         previous => {
-            let walking = previous.is_some_and(|stretch| !stretch.walking);
+            let walking = previous.is_some_and(|phase| !phase.walking);
             let span = if walking { wander.walk } else { wander.pause };
             if walking {
                 wander.direction = pick_direction(input, random);
             }
-            let stretch = Stretch {
+            let phase = WanderPhase {
                 walking,
                 until: input.now + random.range(span.min(), span.max()),
             };
-            wander.stretch = Some(stretch);
-            stretch
+            wander.phase = Some(phase);
+            phase
         }
     };
-    stretch.walking.then_some(wander.direction)
+    phase.walking.then_some(wander.direction)
 }
 
 fn pick_direction(input: &SteerInput, random: &mut BrainRng) -> Vec2 {
     let candidate = random.direction();
-    let Some(anchor) = input.anchor else {
+    let Some(home_area) = input.home_area else {
         return candidate;
     };
-    if anchor
+    if home_area
         .overshoot_fraction(input.position)
         .is_none_or(|fraction| fraction < -0.25)
     {
         return candidate;
     }
-    let home = anchor.origin() - input.position;
+    let home = home_area.origin() - input.position;
     if home == Vec2::ZERO {
         return candidate;
     }

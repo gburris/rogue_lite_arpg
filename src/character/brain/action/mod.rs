@@ -8,7 +8,7 @@ use bevy::prelude::*;
 
 pub use ability::{Ability, Bite, Breath, Heal};
 pub(super) use ability::{AbilityCapabilities, find_carried_potion};
-pub(super) use equipment_use::EquipmentUseEpochs;
+pub(super) use equipment_use::StartedEquipmentUses;
 
 use crate::{character::AiSet, items::prelude::EquipmentSlot};
 

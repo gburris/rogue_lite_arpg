@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::character::brain::Capability;
 use crate::{
-    character::brain::{Ability, Action, Brain, Tuning},
+    character::brain::{Ability, Action, Brain, CapabilityProfile},
     prelude::*,
 };
 
@@ -26,10 +26,10 @@ impl Capability for Heal {
         Ability::Heal
     }
 
-    fn tuning(&self) -> Tuning {
-        Tuning {
+    fn capability_profile(&self) -> CapabilityProfile {
+        CapabilityProfile {
             cooldown: self.cooldown,
-            ..Tuning::default()
+            ..CapabilityProfile::default()
         }
     }
 }

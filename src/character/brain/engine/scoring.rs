@@ -46,7 +46,7 @@ impl Interval {
     }
 
     /// Maps `raw` onto `0.0..=1.0` across the interval, clamping outside it.
-    pub fn normalize(self, raw: f32) -> Option<f32> {
+    pub fn normalize_clamped(self, raw: f32) -> Option<f32> {
         if !raw.is_finite() {
             return None;
         }
@@ -60,7 +60,7 @@ impl Interval {
 pub struct Consideration {
     pub name: &'static str,
     pub input: ConsiderationInput,
-    pub response: Response,
+    pub score_mapping: ScoreMapping,
     pub inverted: bool,
 }
 
@@ -77,7 +77,7 @@ impl Consideration {
 
 /// How a consideration turns its raw input into a `0.0..=1.0` score.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Response {
+pub enum ScoreMapping {
     /// Normalize over `range`, then shape with `curve`.
     Curve { range: Interval, curve: Curve },
     /// Full once the raw input crosses `enter`, zero before it. While its
@@ -87,11 +87,13 @@ pub enum Response {
     Threshold { enter: f32, exit: f32 },
 }
 
-impl Response {
+impl ScoreMapping {
     /// Score for `raw`, or `None` for a non-finite raw input.
-    pub fn score(self, raw: f32, is_current: bool) -> Option<f32> {
+    pub fn score_raw_input(self, raw: f32, is_current: bool) -> Option<f32> {
         match self {
-            Self::Curve { range, curve } => range.normalize(raw).map(|value| curve.apply(value)),
+            Self::Curve { range, curve } => {
+                range.normalize_clamped(raw).map(|value| curve.apply(value))
+            }
             Self::Threshold { enter, exit } => {
                 if !raw.is_finite() {
                     return None;
@@ -108,7 +110,7 @@ impl Response {
     }
 }
 
-/// Response curve applied after normalizing a consideration's raw value.
+/// Curve applied after normalizing a consideration's raw value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Curve {
     Linear,

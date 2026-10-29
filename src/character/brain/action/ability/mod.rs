@@ -15,7 +15,7 @@ pub use breath::Breath;
 pub use heal::Heal;
 pub(in super::super) use heal::find_carried_potion;
 
-use super::super::capability::{Capabilities, record_capability};
+use super::super::capability::{CapabilityProfiles, record_capability_profile};
 use crate::character::AiSet;
 
 /// An innate move a brain can ask its character for, carried out by a capability
@@ -44,10 +44,13 @@ pub struct AbilityCapabilities {
 }
 
 impl AbilityCapabilitiesItem<'_, '_> {
-    pub(in super::super) fn record_capabilities(&self, capabilities: &mut Capabilities) {
-        record_capability(capabilities, self.bite);
-        record_capability(capabilities, self.breath);
-        record_capability(capabilities, self.heal);
+    pub(in super::super) fn record_capability_profiles(
+        &self,
+        capability_profiles: &mut CapabilityProfiles,
+    ) {
+        record_capability_profile(capability_profiles, self.bite);
+        record_capability_profile(capability_profiles, self.breath);
+        record_capability_profile(capability_profiles, self.heal);
     }
 }
 

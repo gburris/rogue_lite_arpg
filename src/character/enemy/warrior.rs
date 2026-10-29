@@ -4,7 +4,7 @@ use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::brain::considerations::{
-    ATTACK_FINISHED, CALM, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_ANCHOR,
+    ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME, WANDER,
     consideration, flag, reach_fraction_threshold, target_within_distance,
 };
 use crate::character::brain::{
@@ -58,14 +58,14 @@ const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
 const FLEE: Behavior = Behavior::new(
     Some(Motion::Flee),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     7.0,
     &[HAS_TARGET, BADLY_HURT],
 );
 const CHASE_MELEE: Behavior = Behavior::new(
     Some(Motion::Chase),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     4.0,
     &[OUTSIDE_MELEE_REACH],
 );
@@ -74,7 +74,7 @@ const CHASE_MELEE: Behavior = Behavior::new(
 const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     Some(Motion::Idle),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     5.0,
     &[INSIDE_MELEE_REACH],
 );
@@ -89,21 +89,26 @@ const WARRIOR_KITE: Behavior = Behavior::new(
 );
 
 /// Doing nothing on the action slot: the bar a heal must clear to fire.
-const WARRIOR_BASELINE_IDLE: Behavior =
-    Behavior::new(None, Some(Action::Idle), CommitPolicy::Momentum, 0.5, &[]);
+const WARRIOR_BASELINE_IDLE: Behavior = Behavior::new(
+    None,
+    Some(Action::Idle),
+    CommitPolicy::ContinuouslyScored,
+    0.5,
+    &[],
+);
 
 /// A fleeing warrior stops swinging until the flee ends. Flee is read from the
 /// last decision, so the tick a flee starts can still swing.
 const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
     None,
     Some(Action::Idle),
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     1.5,
     &[FLEEING],
 );
 
 // Motion priority: kite (10), flee (7), return (6), hold melee (5), chase (4),
-// calm (1). Kite beats a running flee (7 x 1.25 = 8.75).
+// wander (1). Kite beats a running flee (7 x 1.25 = 8.75).
 //
 // Action priority: heal (5, scaled by need), hold fire (1.5), swing (1),
 // idle (0.5). Each beats the next even while that one holds the slot.
@@ -112,9 +117,9 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 //   fire from about 48%, before the warrior starts fleeing at about 50%
 //   (health never recovers during a flee).
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
-    CALM,
+    WANDER,
     WARRIOR_BASELINE_IDLE,
-    RETURN_TO_ANCHOR,
+    RETURN_TO_HOME,
     FLEE,
     CHASE_MELEE,
     HOLD_IN_MELEE_REACH,
@@ -123,7 +128,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     Behavior::new(
         None,
         Some(MAINHAND),
-        CommitPolicy::Momentum,
+        CommitPolicy::ContinuouslyScored,
         1.0,
         &[IN_MAINHAND_REACH, NOT_DASHING],
     ),
@@ -131,14 +136,14 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
-        CommitPolicy::Momentum,
+        CommitPolicy::ContinuouslyScored,
         5.0,
         &[NEEDS_POTION, FAR_FROM_TARGET],
     ),
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
-        CommitPolicy::Momentum,
+        CommitPolicy::ContinuouslyScored,
         5.0,
         &[NEEDS_POTION, NO_TARGET],
     ),
@@ -179,7 +184,10 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
         // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
-        Dash::kite(0.8, 6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
+        Dash::kite(
+            0.8,
+            Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
+        ),
         Heal::new(HEAL_COOLDOWN),
         enemy_wander(),
         Sprite::from_atlas_image(

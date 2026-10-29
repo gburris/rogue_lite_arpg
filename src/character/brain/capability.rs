@@ -65,12 +65,23 @@ impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
 
 /// Which motions and actions may start right now.
 #[derive(Clone, Copy, Debug, Deref)]
-pub struct Availability(pub MotionActionTable<bool>);
+pub struct AvailableMotionActionTable(pub MotionActionTable<bool>);
+
+/// Which motions and actions the world lets run right now: usable equipment
+/// and a carried potion for `Heal`. One input to [`AvailableMotionActionTable`].
+#[derive(Clone, Copy, Debug, Deref)]
+pub struct UseEligibilityTable(pub MotionActionTable<bool>);
+
+impl Default for UseEligibilityTable {
+    fn default() -> Self {
+        Self(MotionActionTable::splat(true))
+    }
+}
 
 /// What the decision tick needs to know about one capability, copied from the
 /// component that carries it out so scoring never reaches into its running state.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Tuning {
+pub struct CapabilityProfile {
     pub reach: Option<f32>,
     /// Probability that a winning finite motion actually starts.
     pub chance: f32,
@@ -78,7 +89,7 @@ pub struct Tuning {
     pub cooldown: f32,
 }
 
-impl Default for Tuning {
+impl Default for CapabilityProfile {
     fn default() -> Self {
         Self {
             reach: None,
@@ -108,9 +119,9 @@ impl MotionActionKey for CapabilityKey {
 /// steer, each equipment slot's use and each ability. `Action::Idle` needs none.
 pub(super) fn capability_keys() -> impl Iterator<Item = CapabilityKey> {
     let motions = Motion::ALL.iter().copied().filter(|motion| match motion {
-        Motion::Calm | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => true,
+        Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => true,
         Motion::Chase
-        | Motion::ReturnToAnchor
+        | Motion::ReturnToHome
         | Motion::Flee
         | Motion::KeepDistance(_)
         | Motion::Idle => false,
@@ -124,16 +135,16 @@ pub(super) fn capability_keys() -> impl Iterator<Item = CapabilityKey> {
         .chain(actions.map(CapabilityKey::Action))
 }
 
-/// A capability component: which `MotionActionTable` entry it fills and how it is tuned.
+/// A capability component: which `MotionActionTable` entry it fills and its [`CapabilityProfile`].
 pub(super) trait Capability {
     type Key: MotionActionKey;
     fn key(&self) -> Self::Key;
-    fn tuning(&self) -> Tuning;
+    fn capability_profile(&self) -> CapabilityProfile;
 }
 
-/// Each carried capability's tuning; `None` where the entity has none.
+/// Each carried capability's profile; `None` where the entity has none.
 #[derive(Clone, Copy, Debug, Default, Deref)]
-pub(super) struct Capabilities(pub MotionActionTable<Option<Tuning>>);
+pub(super) struct CapabilityProfiles(pub MotionActionTable<Option<CapabilityProfile>>);
 
 /// Every capability component an entity may carry.
 #[derive(QueryData)]
@@ -146,34 +157,36 @@ pub(super) struct CapabilityComponents {
     abilities: AbilityCapabilities,
 }
 
-pub(super) fn record_capability<C: Capability>(
-    capabilities: &mut Capabilities,
+pub(super) fn record_capability_profile<C: Capability>(
+    capability_profiles: &mut CapabilityProfiles,
     component: Option<&C>,
 ) {
     if let Some(component) = component {
-        capabilities.0[component.key()] = Some(component.tuning());
+        capability_profiles.0[component.key()] = Some(component.capability_profile());
     }
 }
 
-/// Collects the tuning of every capability the entity carries. Each equipped
+/// Collects the profile of every capability the entity carries. Each equipped
 /// item is a capability with the item's own reach.
-pub(super) fn build_capabilities(
+pub(super) fn build_capability_profiles(
     components: &CapabilityComponentsItem,
     equipment: &EquipmentRead,
-) -> Capabilities {
-    let mut capabilities = Capabilities::default();
+) -> CapabilityProfiles {
+    let mut capability_profiles = CapabilityProfiles::default();
     for slot in EquipmentSlot::ALL {
-        capabilities.0[Action::Use(slot)] = equipment
+        capability_profiles.0[Action::Use(slot)] = equipment
             .equippable_in_slot(components.entity, slot)
-            .map(|equippable| Tuning {
+            .map(|equippable| CapabilityProfile {
                 reach: equippable.reach,
-                ..Tuning::default()
+                ..CapabilityProfile::default()
             });
     }
-    record_capability(&mut capabilities, components.dash);
-    record_capability(&mut capabilities, components.swoop);
-    record_capability(&mut capabilities, components.orbit);
-    record_capability(&mut capabilities, components.wander);
-    components.abilities.record_capabilities(&mut capabilities);
-    capabilities
+    record_capability_profile(&mut capability_profiles, components.dash);
+    record_capability_profile(&mut capability_profiles, components.swoop);
+    record_capability_profile(&mut capability_profiles, components.orbit);
+    record_capability_profile(&mut capability_profiles, components.wander);
+    components
+        .abilities
+        .record_capability_profiles(&mut capability_profiles);
+    capability_profiles
 }

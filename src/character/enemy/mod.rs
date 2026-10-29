@@ -6,7 +6,7 @@ mod defeat;
 mod mage;
 mod warrior;
 
-use super::brain::{Anchor, BrainDefinition, Interval, VisionCapabilities, Wander, Watching};
+use super::brain::{BrainDefinition, HomeArea, Interval, VisionCone, Wander, Watching};
 use crate::{
     character::{Character, Purse, physical_collider},
     prelude::*,
@@ -29,7 +29,7 @@ pub struct EnemySpawnData {
 #[derive(Component)]
 #[require(
     Character,
-    VisionCapabilities,
+    VisionCone,
     Purse { amount: 50 },
     CombatSide = CombatSide::Enemy,
     DespawnOnExit::<AppState>(AppState::Playing)
@@ -144,7 +144,7 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Bundle {
         Enemy,
         Brain::new(kind.brain()),
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-        Anchor::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0),
+        HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0),
         Watching(player),
         observe(defeat::on_enemy_defeated),
     )

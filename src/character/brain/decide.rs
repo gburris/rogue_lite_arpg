@@ -1,17 +1,17 @@
-//! The decision pipeline: observe the world, drop a stale committed behavior,
+//! The decision pipeline: build the decision context, drop a stale committed behavior,
 //! score, and commit. This is the only code that changes which behaviors a
 //! [`Brain`] holds.
 
 use bevy::prelude::*;
 
 use super::capability::{
-    Capabilities, CapabilityComponents, MotionActionTable, build_capabilities,
+    CapabilityComponents, CapabilityProfiles, MotionActionTable, build_capability_profiles,
 };
 use super::engine::{Behavior, assign_behaviors_to_slots, explain_behavior};
 use super::motion::MotionFinished;
 use super::perception::{
-    DecisionContext, ObservedComponents, ObservedComponentsItem, WorldUseChecks,
-    observe_world_facts,
+    DecisionContext, DecisionInputComponents, DecisionInputComponentsItem, UseEligibilityQueries,
+    build_decision_context,
 };
 use super::{Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD, ScoreTrace};
 
@@ -21,7 +21,7 @@ type DecidingBrains<'world, 'state> = Query<
     (
         &'static mut Brain,
         &'static mut BrainRng,
-        ObservedComponents,
+        DecisionInputComponents,
         CapabilityComponents,
         Option<&'static mut ScoreTrace>,
     ),
@@ -30,25 +30,26 @@ type DecidingBrains<'world, 'state> = Query<
 pub(super) fn release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
-    use_checks: WorldUseChecks,
+    use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    let Ok((mut brain, mut rng, observed, components, mut score_trace)) =
+    let Ok((mut brain, mut rng, decision_input_components, components, mut score_trace)) =
         brains.get_mut(finished.entity)
     else {
         return;
     };
-    let capabilities = build_capabilities(&components, &use_checks.equipment);
-    let cooldown = capabilities[finished.motion].map_or(0.0, |tuning| tuning.cooldown);
+    let capability_profiles =
+        build_capability_profiles(&components, &use_eligibility_queries.equipment);
+    let cooldown = capability_profiles[finished.motion].map_or(0.0, |profile| profile.cooldown);
     brain.start_cooldown(finished.motion, now + cooldown);
-    if brain.finish_committed_behavior(finished.epoch) {
+    if brain.finish_committed_behavior(finished.behavior_run_id) {
         redecide_now(
             &mut brain,
             &mut rng,
-            &observed,
-            &capabilities,
-            &use_checks,
+            &decision_input_components,
+            &capability_profiles,
+            &use_eligibility_queries,
             score_trace.as_deref_mut(),
             now,
         );
@@ -61,16 +62,17 @@ pub(super) fn release_finished_motion(
 pub(super) fn finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
-    use_checks: WorldUseChecks,
+    use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    let Ok((mut brain, mut rng, observed, components, mut score_trace)) =
+    let Ok((mut brain, mut rng, decision_input_components, components, mut score_trace)) =
         brains.get_mut(finished.entity)
     else {
         return;
     };
-    let capabilities = build_capabilities(&components, &use_checks.equipment);
+    let capability_profiles =
+        build_capability_profiles(&components, &use_eligibility_queries.equipment);
     match finished.action {
         Action::Use(slot)
             if slot.is_instant_use() && finished.outcome == ActionOutcome::Completed =>
@@ -78,20 +80,20 @@ pub(super) fn finish_action(
             brain.attack_finish_pending = true;
         }
         Action::Ability(ability) => {
-            let cooldown = capabilities[ability].map_or(0.0, |tuning| tuning.cooldown);
+            let cooldown = capability_profiles[ability].map_or(0.0, |profile| profile.cooldown);
             brain.start_cooldown(ability, now + cooldown);
         }
         // A held or unstarted use is no attack, and nothing reports an idle
         // action's finish.
         Action::Use(_) | Action::Idle => {}
     }
-    if brain.finish_committed_behavior(finished.epoch) {
+    if brain.finish_committed_behavior(finished.behavior_run_id) {
         redecide_now(
             &mut brain,
             &mut rng,
-            &observed,
-            &capabilities,
-            &use_checks,
+            &decision_input_components,
+            &capability_profiles,
+            &use_eligibility_queries,
             score_trace.as_deref_mut(),
             now,
         );
@@ -102,11 +104,12 @@ pub(super) fn finish_action(
 /// now, keeping its phase without a burst of catch-up decisions after a long frame.
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
-    use_checks: WorldUseChecks,
+    use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
 ) {
     let now = time.elapsed_secs();
-    for (mut brain, mut rng, observed, components, mut score_trace) in &mut brains {
+    for (mut brain, mut rng, decision_input_components, components, mut score_trace) in &mut brains
+    {
         if now < brain.next_decision_at {
             continue;
         }
@@ -116,13 +119,14 @@ pub(super) fn decide_behavior(
         if brain.next_decision_at <= now {
             brain.next_decision_at += DECISION_PERIOD;
         }
-        let capabilities = build_capabilities(&components, &use_checks.equipment);
+        let capability_profiles =
+            build_capability_profiles(&components, &use_eligibility_queries.equipment);
         redecide_now(
             &mut brain,
             &mut rng,
-            &observed,
-            &capabilities,
-            &use_checks,
+            &decision_input_components,
+            &capability_profiles,
+            &use_eligibility_queries,
             score_trace.as_deref_mut(),
             now,
         );
@@ -132,20 +136,23 @@ pub(super) fn decide_behavior(
 fn redecide_now(
     brain: &mut Brain,
     rng: &mut BrainRng,
-    observed: &ObservedComponentsItem,
-    capabilities: &Capabilities,
-    use_checks: &WorldUseChecks,
+    decision_input_components: &DecisionInputComponentsItem,
+    capability_profiles: &CapabilityProfiles,
+    use_eligibility_queries: &UseEligibilityQueries,
     score_trace: Option<&mut ScoreTrace>,
     now: f32,
 ) {
-    let (observed_context, world_allows_use) =
-        observe_world_facts(observed, capabilities, use_checks, now);
+    let context_without_memory = build_decision_context(
+        decision_input_components,
+        capability_profiles,
+        use_eligibility_queries,
+        now,
+    );
     decide_slot_assignments(
         brain,
         rng,
-        observed_context,
-        &world_allows_use,
-        capabilities,
+        context_without_memory,
+        capability_profiles,
         score_trace,
         now,
     );
@@ -158,51 +165,66 @@ fn redecide_now(
 fn decide_slot_assignments(
     brain: &mut Brain,
     rng: &mut BrainRng,
-    observed_context: DecisionContext,
-    world_allows_use: &MotionActionTable<bool>,
-    capabilities: &Capabilities,
+    context_without_memory: DecisionContext,
+    capability_profiles: &CapabilityProfiles,
     score_trace: Option<&mut ScoreTrace>,
     now: f32,
 ) {
     // A bundle's two records name one behavior, so it drops once.
     let mut dropped = None;
-    for running in [brain.motion, brain.action].into_iter().flatten() {
+    for running in [brain.motion_slot, brain.action_slot].into_iter().flatten() {
         if dropped != Some(running.behavior)
-            && running.should_drop_committed_behavior(&observed_context, now)
+            && running.should_drop_committed_behavior(&context_without_memory, now)
         {
-            brain.drop_committed_behavior(running, capabilities, now);
+            brain.drop_committed_behavior(running, capability_profiles, now);
             dropped = Some(running.behavior);
         }
     }
-    let (context, availability) =
-        brain.build_scoring_inputs(observed_context, world_allows_use, capabilities, now);
+    let (context, available_motion_action_table) =
+        brain.build_scoring_inputs(context_without_memory, capability_profiles, now);
     let definition = brain.definition();
-    let holders = brain.holders();
+    let holders = brain.slot_holders();
     if let Some(score_trace) = score_trace {
-        score_trace.behaviors.clear();
+        score_trace.behavior_explanations.clear();
         score_trace
-            .behaviors
+            .behavior_explanations
             .extend((0..definition.behaviors.len()).map(|index| {
-                explain_behavior(definition, index, &context, &availability, holders)
+                explain_behavior(
+                    definition,
+                    index,
+                    &context,
+                    &available_motion_action_table,
+                    holders,
+                )
             }));
     }
     let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
-    let assignment =
-        assign_behaviors_to_slots(definition, &context, &availability, holders, |index| {
+    let assignment = assign_behaviors_to_slots(
+        definition,
+        &context,
+        &available_motion_action_table,
+        holders,
+        |index| {
             passes_start_roll(
                 rng,
-                capabilities,
+                capability_profiles,
                 definition.behaviors[index],
                 now,
                 &mut missed_start_cooldowns,
             )
-        });
-    brain.commit_decision(assignment, &missed_start_cooldowns, capabilities, now);
+        },
+    );
+    brain.commit_decision(
+        assignment,
+        &missed_start_cooldowns,
+        capability_profiles,
+        now,
+    );
 }
 
 fn passes_start_roll(
     rng: &mut BrainRng,
-    capabilities: &Capabilities,
+    capability_profiles: &CapabilityProfiles,
     behavior: Behavior,
     now: f32,
     missed_start_cooldowns: &mut MotionActionTable<Option<f32>>,
@@ -210,12 +232,12 @@ fn passes_start_roll(
     let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) else {
         return true;
     };
-    let Some(tuning) = capabilities[motion] else {
+    let Some(capability_profile) = capability_profiles[motion] else {
         return false;
     };
-    if tuning.chance >= 1.0 || rng.range(0.0, 1.0) < tuning.chance {
+    if capability_profile.chance >= 1.0 || rng.range(0.0, 1.0) < capability_profile.chance {
         return true;
     }
-    missed_start_cooldowns[motion] = Some(now + tuning.cooldown);
+    missed_start_cooldowns[motion] = Some(now + capability_profile.cooldown);
     false
 }

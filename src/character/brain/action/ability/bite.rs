@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::character::brain::Capability;
 use crate::{
     character::{
-        brain::{Ability, Action, Brain, Tuning, perception::Targeting},
+        brain::{Ability, Action, Brain, CapabilityProfile, perception::Targeting},
         vision::TargetInfo,
     },
     prelude::*,
@@ -45,11 +45,11 @@ impl Capability for Bite {
         Ability::Bite
     }
 
-    fn tuning(&self) -> Tuning {
-        Tuning {
+    fn capability_profile(&self) -> CapabilityProfile {
+        CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,
-            ..Tuning::default()
+            ..CapabilityProfile::default()
         }
     }
 }

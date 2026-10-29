@@ -1,14 +1,14 @@
 //! The pure utility scoring engine: behaviors, static brain definitions, and
 //! the math that fills the motion and action slots. No ECS and no content.
 
-mod response;
+mod scoring;
 
-pub use response::{Consideration, Curve, Interval, Response};
+pub use scoring::{Consideration, Curve, Interval, ScoreMapping};
 
 use super::action::Action;
-use super::capability::Availability;
+use super::capability::AvailableMotionActionTable;
 use super::motion::Motion;
-use super::perception::{ConsiderationInput, DecisionContext, read_input};
+use super::perception::{ConsiderationInput, DecisionContext, read_consideration_input};
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
@@ -51,7 +51,7 @@ impl Behavior {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CommitPolicy {
     /// Re-scored every tick with momentum and exit-side thresholds. Tier 0.
-    Momentum,
+    ContinuouslyScored,
     /// Not re-scored until its finite part finishes or the brain drops it
     /// (target lost, stunned, or timed out), so its start conditions are read
     /// once. Only a committed behavior with a higher `interrupt_tier` may take
@@ -64,11 +64,11 @@ impl CommitPolicy {
         matches!(self, Self::UntilFinished { .. })
     }
 
-    /// The tier a holder must be outranked by to lose its slots; 0 for momentum.
+    /// The tier a holder must be outranked by to lose its slots; 0 for a continuously scored behavior.
     pub const fn interrupt_tier(self) -> u8 {
         match self {
             Self::UntilFinished { interrupt_tier } => interrupt_tier,
-            Self::Momentum => 0,
+            Self::ContinuouslyScored => 0,
         }
     }
 }
@@ -95,7 +95,7 @@ pub struct SlotHolders {
 
 /// The behavior index that won each slot this decision.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Assignment {
+pub struct SlotAssignment {
     pub motion: Option<usize>,
     pub action: Option<usize>,
 }
@@ -123,7 +123,7 @@ impl SkipReason {
 }
 
 /// One consideration's part in a score. `raw` is `None` when the input is
-/// absent; `score` is `None` when the response rejects the raw value.
+/// absent; `score` is `None` when the score mapping rejects the raw value.
 #[derive(Clone, Copy, Debug)]
 pub struct ConsiderationScoreExplanation {
     pub name: &'static str,
@@ -172,13 +172,13 @@ pub fn score_behavior(
 pub fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
     decision_context: &DecisionContext,
-    availability: &Availability,
+    available_motion_action_table: &AvailableMotionActionTable,
     holders: SlotHolders,
     mut start: impl FnMut(usize) -> bool,
-) -> Assignment {
+) -> SlotAssignment {
     let mut scores = [0.0_f32; MAX_BEHAVIORS];
     for (index, behavior) in definition.behaviors.iter().enumerate() {
-        if find_skip_reason(behavior, availability, holders).is_some() {
+        if find_skip_reason(behavior, available_motion_action_table, holders).is_some() {
             continue;
         }
         let is_current = holds_slot(holders, index);
@@ -188,7 +188,7 @@ pub fn assign_behaviors_to_slots(
         scores[index] = score * momentum_multiplier(is_current);
     }
 
-    let mut assignment = Assignment::default();
+    let mut assignment = SlotAssignment::default();
     loop {
         let mut best: Option<usize> = None;
         for (index, behavior) in definition.behaviors.iter().enumerate() {
@@ -248,7 +248,7 @@ pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
         }
         if committed && behavior.commit.interrupt_tier() == 0 {
             return Err(format!(
-                "behavior {index} is committed in tier 0, which is momentum's"
+                "behavior {index} is committed in tier 0, which is for continuously scored behaviors"
             ));
         }
         // Every other action is finite, so any action is a finite part.
@@ -274,19 +274,20 @@ pub fn explain_behavior(
     definition: &BrainDefinition,
     index: usize,
     decision_context: &DecisionContext,
-    availability: &Availability,
+    available_motion_action_table: &AvailableMotionActionTable,
     holders: SlotHolders,
 ) -> BehaviorScoreExplanation {
     let behavior = &definition.behaviors[index];
     let is_current = holds_slot(holders, index);
     let momentum = momentum_multiplier(is_current);
-    let skipped = find_skip_reason(behavior, availability, holders).map(|reason| {
-        // The committed holder sits out too, but it is the one running.
-        match reason {
-            SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
-            other => other,
-        }
-    });
+    let skipped =
+        find_skip_reason(behavior, available_motion_action_table, holders).map(|reason| {
+            // The committed holder sits out too, but it is the one running.
+            match reason {
+                SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
+                other => other,
+            }
+        });
     if skipped.is_some() {
         return BehaviorScoreExplanation {
             skipped,
@@ -301,7 +302,7 @@ pub fn explain_behavior(
         .map(|consideration| ConsiderationScoreExplanation {
             name: consideration.name,
             input: consideration.input,
-            raw: read_input(consideration.input, decision_context),
+            raw: read_consideration_input(consideration.input, decision_context),
             score: score_consideration(consideration, decision_context, is_current),
         })
         .collect();
@@ -315,7 +316,7 @@ pub fn explain_behavior(
 
 fn find_skip_reason(
     behavior: &Behavior,
-    availability: &Availability,
+    available_motion_action_table: &AvailableMotionActionTable,
     holders: SlotHolders,
 ) -> Option<SkipReason> {
     let tier = behavior.commit.interrupt_tier();
@@ -327,8 +328,12 @@ fn find_skip_reason(
     {
         return Some(SkipReason::SlotCommitted);
     }
-    let unavailable = behavior.motion.is_some_and(|motion| !availability[motion])
-        || behavior.action.is_some_and(|action| !availability[action]);
+    let unavailable = behavior
+        .motion
+        .is_some_and(|motion| !available_motion_action_table[motion])
+        || behavior
+            .action
+            .is_some_and(|action| !available_motion_action_table[action]);
     unavailable.then_some(SkipReason::Unavailable)
 }
 
@@ -348,11 +353,13 @@ fn score_consideration(
     decision_context: &DecisionContext,
     is_current: bool,
 ) -> Option<f32> {
-    // A missing input (no target, no anchor) vetoes, inverted or not.
-    let Some(raw) = read_input(consideration.input, decision_context) else {
+    // A missing input (no target, no home area) vetoes, inverted or not.
+    let Some(raw) = read_consideration_input(consideration.input, decision_context) else {
         return Some(0.0);
     };
-    let score = consideration.response.score(raw, is_current)?;
+    let score = consideration
+        .score_mapping
+        .score_raw_input(raw, is_current)?;
     Some(if consideration.inverted {
         1.0 - score
     } else {

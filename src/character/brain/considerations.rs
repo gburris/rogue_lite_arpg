@@ -2,7 +2,7 @@
 //! its file in `character/enemy`.
 
 use super::action::Action;
-use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, Response};
+use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, ScoreMapping};
 use super::motion::Motion;
 use super::perception::ConsiderationInput;
 use crate::items::prelude::EquipmentSlot;
@@ -27,12 +27,12 @@ pub(crate) const fn consideration(
     Consideration {
         name,
         input,
-        response: Response::Curve { range, curve },
+        score_mapping: ScoreMapping::Curve { range, curve },
         inverted: false,
     }
 }
 
-/// A target-distance threshold with hysteresis; see [`Response::Threshold`].
+/// A target-distance threshold with hysteresis; see [`ScoreMapping::Threshold`].
 pub(crate) const fn distance_threshold(name: &'static str, enter: f32, exit: f32) -> Consideration {
     assert!(
         enter.is_finite() && exit.is_finite(),
@@ -41,13 +41,13 @@ pub(crate) const fn distance_threshold(name: &'static str, enter: f32, exit: f32
     Consideration {
         name,
         input: ConsiderationInput::TargetDistance,
-        response: Response::Threshold { enter, exit },
+        score_mapping: ScoreMapping::Threshold { enter, exit },
         inverted: false,
     }
 }
 
 /// Mana fraction at or below `enter`, held up to `exit` while its behavior is
-/// current; see [`Response::Threshold`].
+/// current; see [`ScoreMapping::Threshold`].
 pub(crate) const fn mana_at_or_below(name: &'static str, enter: f32, exit: f32) -> Consideration {
     assert!(
         0.0 <= enter && enter <= exit && exit <= 1.0,
@@ -56,13 +56,13 @@ pub(crate) const fn mana_at_or_below(name: &'static str, enter: f32, exit: f32) 
     Consideration {
         name,
         input: ConsiderationInput::ManaFraction,
-        response: Response::Threshold { enter, exit },
+        score_mapping: ScoreMapping::Threshold { enter, exit },
         inverted: false,
     }
 }
 
 /// A reach-fraction threshold with hysteresis on `input`, one of the reach
-/// fraction inputs; see [`Response::Threshold`].
+/// fraction inputs; see [`ScoreMapping::Threshold`].
 pub(crate) const fn reach_fraction_threshold(
     name: &'static str,
     input: ConsiderationInput,
@@ -76,7 +76,7 @@ pub(crate) const fn reach_fraction_threshold(
     Consideration {
         name,
         input,
-        response: Response::Threshold { enter, exit },
+        score_mapping: ScoreMapping::Threshold { enter, exit },
         inverted: false,
     }
 }
@@ -100,9 +100,9 @@ pub(crate) const HAS_TARGET: Consideration = flag("has target", ConsiderationInp
 pub(crate) const NO_TARGET: Consideration = HAS_TARGET.inverted("no target");
 pub(crate) const LINE_OF_SIGHT: Consideration =
     flag("line of sight", ConsiderationInput::LineOfSight);
-pub(crate) const ANCHOR_PULL: Consideration = consideration(
-    "anchor pull",
-    ConsiderationInput::AnchorPull,
+pub(crate) const HOME_AREA_PULL: Consideration = consideration(
+    "home area pull",
+    ConsiderationInput::HomeAreaPull,
     Interval::new(0.0, 1.0),
     Curve::Cubic,
 );
@@ -126,24 +126,24 @@ pub(crate) const INSIDE_OUTER_CAST_EDGE: Consideration = distance_threshold(
     CAST_MAX_RANGE + CAST_HYSTERESIS,
 );
 
-pub(crate) const CALM: Behavior = Behavior::new(
-    Some(Motion::Calm),
+pub(crate) const WANDER: Behavior = Behavior::new(
+    Some(Motion::Wander),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     1.0,
     &[NO_TARGET],
 );
-pub(crate) const RETURN_TO_ANCHOR: Behavior = Behavior::new(
-    Some(Motion::ReturnToAnchor),
+pub(crate) const RETURN_TO_HOME: Behavior = Behavior::new(
+    Some(Motion::ReturnToHome),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     6.0,
-    &[NO_TARGET, ANCHOR_PULL],
+    &[NO_TARGET, HOME_AREA_PULL],
 );
 pub(crate) const CHASE_CAST_RANGE: Behavior = Behavior::new(
     Some(Motion::Chase),
     None,
-    CommitPolicy::Momentum,
+    CommitPolicy::ContinuouslyScored,
     4.0,
     &[BEYOND_CAST_DISTANCE_RANGE],
 );
@@ -151,5 +151,10 @@ pub(crate) const CHASE_CAST_RANGE: Behavior = Behavior::new(
 /// Doing nothing on the action slot, at a low constant weight, for brains whose
 /// actions all ride in two-slot behaviors that outweigh it anyway. A brain with
 /// action-only behaviors sets its own baseline as the bar they must beat.
-pub(crate) const ACTION_BASELINE_IDLE: Behavior =
-    Behavior::new(None, Some(Action::Idle), CommitPolicy::Momentum, 0.01, &[]);
+pub(crate) const ACTION_BASELINE_IDLE: Behavior = Behavior::new(
+    None,
+    Some(Action::Idle),
+    CommitPolicy::ContinuouslyScored,
+    0.01,
+    &[],
+);

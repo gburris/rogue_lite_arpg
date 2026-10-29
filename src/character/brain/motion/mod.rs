@@ -1,17 +1,19 @@
 //! Per-frame steering. The system that owns the brain's held motion writes the
 //! character's [`Steering`], then [`apply_steering`] turns it into [`Kinematics`].
 
-mod anchor;
 mod dash;
 mod direct;
+mod home_area;
 mod orbit;
 mod swoop;
 mod wander;
 
+use std::time::Duration;
+
 use bevy::{ecs::query::QueryData, prelude::*};
 
-pub use anchor::Anchor;
 pub use dash::Dash;
+pub use home_area::HomeArea;
 pub use orbit::Orbit;
 pub use swoop::Swoop;
 pub use wander::Wander;
@@ -29,9 +31,9 @@ use crate::prelude::sync_slow_from_statuses;
 pub enum Motion {
     /// Disengaged: alternates standing and ambling, paced by `Wander`.
     #[default]
-    Calm,
+    Wander,
     Chase,
-    ReturnToAnchor,
+    ReturnToHome,
     /// Wounded break: still in the fight, just getting away from the target.
     Flee,
     KeepDistance(Interval),
@@ -51,9 +53,9 @@ impl Motion {
     /// Every motion in array order. A payload here only stands in; arrays
     /// index by variant.
     pub const ALL: &'static [Self] = &[
-        Self::Calm,
+        Self::Wander,
         Self::Chase,
-        Self::ReturnToAnchor,
+        Self::ReturnToHome,
         Self::Flee,
         Self::KeepDistance(Interval::new(0.0, 1.0)),
         Self::Idle,
@@ -68,9 +70,9 @@ impl Motion {
     /// Position of this motion in per-motion arrays.
     pub const fn index(self) -> usize {
         match self {
-            Self::Calm => 0,
+            Self::Wander => 0,
             Self::Chase => 1,
-            Self::ReturnToAnchor => 2,
+            Self::ReturnToHome => 2,
             Self::Flee => 3,
             Self::KeepDistance(_) => 4,
             Self::Idle => 5,
@@ -85,9 +87,9 @@ impl Motion {
     pub const fn is_finite(self) -> bool {
         match self {
             Self::Dash | Self::Swoop => true,
-            Self::Calm
+            Self::Wander
             | Self::Chase
-            | Self::ReturnToAnchor
+            | Self::ReturnToHome
             | Self::Flee
             | Self::KeepDistance(_)
             | Self::Idle
@@ -105,16 +107,16 @@ impl Motion {
             | Self::Flee
             | Self::Dash
             | Self::Swoop => true,
-            Self::Calm | Self::ReturnToAnchor | Self::Idle => false,
+            Self::Wander | Self::ReturnToHome | Self::Idle => false,
         }
     }
 
     /// One-word label for debug displays.
     pub const fn name(self) -> &'static str {
         match self {
-            Self::Calm => "Calm",
+            Self::Wander => "Wander",
             Self::Chase => "Chase",
-            Self::ReturnToAnchor => "ReturnToAnchor",
+            Self::ReturnToHome => "ReturnToHome",
             Self::Flee => "Flee",
             Self::KeepDistance(_) => "KeepDistance",
             Self::Idle => "Idle",
@@ -128,10 +130,10 @@ impl Motion {
 // `ALL` lists every motion in `index` order.
 const _: () = {
     // A new variant fails to compile here: add it to this match and to `ALL`.
-    match Motion::Calm {
-        Motion::Calm
+    match Motion::Wander {
+        Motion::Wander
         | Motion::Chase
-        | Motion::ReturnToAnchor
+        | Motion::ReturnToHome
         | Motion::Flee
         | Motion::KeepDistance(_)
         | Motion::Idle
@@ -172,40 +174,40 @@ pub struct TurnRate(pub f32);
 
 /// Extra speed left over from a finite motion's burst, easing off over
 /// `duration`. Multiplies scaled steering until it decays.
-#[derive(Component, Clone, Copy, Debug)]
-pub(super) struct SpeedBoost {
+#[derive(Component, Clone, Debug)]
+pub(super) struct DecayingSpeedBoost {
     extra_speed: f32,
-    duration: f32,
-    ends_at: f32,
+    timer: Timer,
     easing: EaseFunction,
 }
 
-impl SpeedBoost {
-    pub(super) fn new(extra_speed: f32, duration: f32, easing: EaseFunction, now: f32) -> Self {
+impl DecayingSpeedBoost {
+    pub(super) fn new(extra_speed: f32, duration: f32, easing: EaseFunction) -> Self {
         Self {
             extra_speed,
-            duration,
-            ends_at: now + duration,
+            timer: Timer::from_seconds(duration, TimerMode::Once),
             easing,
         }
     }
 
-    fn compute_speed_multiplier(&self, now: f32) -> Option<f32> {
-        if now >= self.ends_at {
+    /// Advances the boost by `delta` and returns its speed multiplier, or
+    /// `None` once it has decayed.
+    fn tick_and_compute_speed_multiplier(&mut self, delta: Duration) -> Option<f32> {
+        self.timer.tick(delta);
+        if self.timer.is_finished() {
             return None;
         }
-        let remaining = ((self.ends_at - now) / self.duration).clamp(0.0, 1.0);
-        Some(1.0 + self.extra_speed * self.easing.sample_clamped(remaining))
+        Some(1.0 + self.extra_speed * self.easing.sample_clamped(self.timer.fraction_remaining()))
     }
 }
 
-/// A finite motion completed. The brain starts its cooldown and, if `epoch` is
+/// A finite motion completed. The brain starts its cooldown and, if `behavior_run_id` is
 /// still current, ends its behavior and decides again at once.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
-    pub epoch: u32,
+    pub behavior_run_id: u32,
 }
 
 /// This frame's steering request, written by the system that owns the held
@@ -226,7 +228,7 @@ impl Steering {
     pub(super) const HALT: Self = Self::scaled(None, 1.0);
 
     /// Moves at `scale` (clamped to `0..=1`) times max speed, raised by any
-    /// leftover [`SpeedBoost`].
+    /// leftover [`DecayingSpeedBoost`].
     pub(super) const fn scaled(direction: Option<Vec2>, scale: f32) -> Self {
         Self {
             direction,
@@ -234,12 +236,12 @@ impl Steering {
         }
     }
 
-    /// Moves at a fixed `speed_boost` (at least `1.0`) times max speed. A finite
+    /// Moves at a fixed `speed_multiplier` (at least `1.0`) times max speed. A finite
     /// motion measures its own distance at that speed, so leftover boosts stay out.
-    pub(super) const fn boosted(direction: Option<Vec2>, speed_boost: f32) -> Self {
+    pub(super) const fn boosted(direction: Option<Vec2>, speed_multiplier: f32) -> Self {
         Self {
             direction,
-            effort: SteeringEffort::Boosted(speed_boost),
+            effort: SteeringEffort::Boosted(speed_multiplier),
         }
     }
 }
@@ -257,51 +259,55 @@ pub(super) enum MotionStep {
     /// the slot when the finish flushes, so the next frame's run check resets
     /// the component before it could step the ended run again.
     Finished {
-        speed_boost: Option<SpeedBoost>,
+        decaying_speed_boost: Option<DecayingSpeedBoost>,
     },
 }
 
-/// Follows which brain run of a finite motion its component is serving, so a
-/// new run, or the motion leaving the slot, resets the component's state.
+/// The behavior run id a finite motion's component is serving, so a new run,
+/// or the motion leaving the slot, resets the component's state.
 #[derive(Clone, Copy, Debug, Default)]
-pub(super) struct RunTag {
-    epoch: Option<u32>,
+pub(super) struct CurrentBehaviorRunId {
+    behavior_run_id: Option<u32>,
 }
 
-impl RunTag {
+impl CurrentBehaviorRunId {
     /// Catches up with the brain's current run of `motion`; true when that run
     /// differs from the one followed so far.
     pub(super) fn follow_brain_run(&mut self, brain: &Brain, motion: Motion) -> bool {
-        let epoch = brain
+        let behavior_run_id = brain
             .current_motion_behavior()
-            .filter(|active| active.motion.index() == motion.index())
-            .map(|active| active.epoch);
-        let changed = self.epoch != epoch;
-        self.epoch = epoch;
+            .filter(|running| {
+                running
+                    .motion
+                    .is_some_and(|running_motion| running_motion.index() == motion.index())
+            })
+            .map(|running| running.behavior_run_id);
+        let changed = self.behavior_run_id != behavior_run_id;
+        self.behavior_run_id = behavior_run_id;
         changed
     }
 
-    /// The followed run's epoch while its motion holds the slot.
-    pub(super) fn current_epoch(self) -> Option<u32> {
-        self.epoch
+    /// The id of the followed run while its motion holds the slot.
+    pub(super) fn get(self) -> Option<u32> {
+        self.behavior_run_id
     }
 }
 
-/// Leaves any `speed_boost` to ease off and tells the brain the run is done.
+/// Leaves any `decaying_speed_boost` to ease off and tells the brain the run is done.
 pub(super) fn report_motion_finished(
     commands: &mut Commands,
     entity: Entity,
     motion: Motion,
-    epoch: u32,
-    speed_boost: Option<SpeedBoost>,
+    behavior_run_id: u32,
+    decaying_speed_boost: Option<DecayingSpeedBoost>,
 ) {
-    if let Some(speed_boost) = speed_boost {
-        commands.entity(entity).try_insert(speed_boost);
+    if let Some(decaying_speed_boost) = decaying_speed_boost {
+        commands.entity(entity).try_insert(decaying_speed_boost);
     }
     commands.trigger(MotionFinished {
         entity,
         motion,
-        epoch,
+        behavior_run_id,
     });
 }
 
@@ -313,7 +319,7 @@ pub(super) struct SteeredCharacter {
     kinematics: &'static Kinematics,
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
-    anchor: Option<&'static Anchor>,
+    home_area: Option<&'static HomeArea>,
 }
 
 impl SteeredCharacterItem<'_, '_> {
@@ -333,7 +339,7 @@ impl SteeredCharacterItem<'_, '_> {
             now: time.elapsed_secs(),
             delta_secs: time.delta_secs(),
             target_info: self.target_info,
-            anchor: self.anchor,
+            home_area: self.home_area,
             kinematics: self.kinematics,
         })
     }
@@ -344,7 +350,7 @@ pub(super) struct SteerInput<'a> {
     pub heading: Vec2,
     pub now: f32,
     pub target_info: Option<&'a TargetInfo>,
-    pub anchor: Option<&'a Anchor>,
+    pub home_area: Option<&'a HomeArea>,
     delta_secs: f32,
     kinematics: &'a Kinematics,
 }
@@ -359,10 +365,10 @@ impl SteerInput<'_> {
         self.direction_to_target().map(|direction| -direction)
     }
 
-    fn direction_to_anchor(&self) -> Option<Vec2> {
-        let anchor = self.anchor?;
-        let to_anchor = anchor.origin() - self.position;
-        (to_anchor.length() > anchor.arrival_radius()).then_some(to_anchor.normalize_or_zero())
+    fn direction_to_home(&self) -> Option<Vec2> {
+        let home_area = self.home_area?;
+        let to_home = home_area.origin() - self.position;
+        (to_home.length() > home_area.arrival_radius()).then_some(to_home.normalize_or_zero())
     }
 
     /// How far the character covers this frame at `speed_multiplier` times
@@ -376,7 +382,7 @@ impl SteerInput<'_> {
 }
 
 /// Turns each brain character's [`Steering`] into [`Kinematics`], capping how
-/// fast it turns and dropping a [`SpeedBoost`] once it decays.
+/// fast it turns and dropping a [`DecayingSpeedBoost`] once it decays.
 fn apply_steering(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -385,15 +391,16 @@ fn apply_steering(
         &Steering,
         &mut Kinematics,
         Option<&TurnRate>,
-        Option<&SpeedBoost>,
+        Option<&mut DecayingSpeedBoost>,
     )>,
 ) {
-    let now = time.elapsed_secs();
     let delta_secs = time.delta_secs();
-    for (entity, steering, mut kinematics, turn_rate, speed_boost) in &mut characters {
-        let boost_multiplier = speed_boost.and_then(|boost| boost.compute_speed_multiplier(now));
-        if speed_boost.is_some() && boost_multiplier.is_none() {
-            commands.entity(entity).try_remove::<SpeedBoost>();
+    for (entity, steering, mut kinematics, turn_rate, mut decaying_speed_boost) in &mut characters {
+        let boost_multiplier = decaying_speed_boost
+            .as_mut()
+            .and_then(|boost| boost.tick_and_compute_speed_multiplier(time.delta()));
+        if decaying_speed_boost.is_some() && boost_multiplier.is_none() {
+            commands.entity(entity).try_remove::<DecayingSpeedBoost>();
         }
         let Some(desired) = steering.direction else {
             if !kinematics.is_idle() {
@@ -405,7 +412,7 @@ fn apply_steering(
             SteeringEffort::Scaled(scale) => {
                 scale.clamp(0.0, 1.0) * boost_multiplier.unwrap_or(1.0)
             }
-            SteeringEffort::Boosted(speed_boost) => speed_boost.max(1.0),
+            SteeringEffort::Boosted(speed_multiplier) => speed_multiplier.max(1.0),
         };
         let turn_cap = turn_rate.map(|rate| rate.0 * delta_secs);
         let heading = rotate_heading_toward_desired(kinematics.direction, desired, turn_cap);

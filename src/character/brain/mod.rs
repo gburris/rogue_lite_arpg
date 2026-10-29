@@ -1,5 +1,5 @@
 //! ECS glue for the pure utility brains. Data flows one way, one writer each:
-//! 1. [`perception`] observes the world into a [`DecisionContext`].
+//! 1. [`perception`] builds a [`DecisionContext`] from the world.
 //! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior
 //!    holds each slot on the [`Brain`].
 //! 3. [`motion`] and [`action`] carry out the held motion and action and
@@ -11,14 +11,14 @@
 //!    state gets a file with its component and an `apply_` system registered
 //!    in `motion::plugin`, and is skipped in `apply_direct_steering`. A
 //!    component the motion needs implements `Capability`, is recorded in
-//!    `capability::build_capabilities`, and is listed in `capability_keys`.
+//!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
 //! 2. [`DecisionContext`] fields built in [`perception`], plus
 //!    [`ConsiderationInput`](perception::ConsiderationInput) variants read in
-//!    `read_input`.
+//!    `read_consideration_input`.
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!
 //! A finite [`Motion`] needs a variant, a `Capability` component whose
-//! `apply_` system follows its run with a `RunTag` and reports
+//! `apply_` system follows its run with a `CurrentBehaviorRunId` and reports
 //! `MotionFinished`, the same registration and capability listing, and a
 //! committed behavior over it. A new [`Ability`] needs a variant, a `Capability`
 //! component in `action::ability` listed in `AbilityCapabilities`, an applier,
@@ -33,20 +33,22 @@ mod motion;
 mod perception;
 
 pub use action::{Ability, Action, Bite, Breath, Heal};
-pub use capability::Tuning;
+pub use capability::CapabilityProfile;
 pub(crate) use engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use engine::{BrainDefinition, Interval};
-pub use motion::{Anchor, Dash, Motion, Orbit, Swoop, TurnRate, Wander};
+pub use motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 pub(crate) use perception::{ConsiderationInput, Targeting};
-pub(super) use perception::{VisionCapabilities, Watching};
+pub(super) use perception::{VisionCone, Watching};
 
-use self::action::EquipmentUseEpochs;
+use self::action::StartedEquipmentUses;
 use self::capability::{
-    Availability, Capabilities, Capability, CapabilityKey, MotionActionKey, MotionActionTable,
-    capability_keys,
+    AvailableMotionActionTable, Capability, CapabilityKey, CapabilityProfiles, MotionActionKey,
+    MotionActionTable, capability_keys,
 };
 use self::decide::{decide_behavior, finish_action, release_finished_motion};
-use self::engine::{Assignment, BehaviorScoreExplanation, SlotHolder, SlotHolders, validate_brain};
+use self::engine::{
+    BehaviorScoreExplanation, SlotAssignment, SlotHolder, SlotHolders, validate_brain,
+};
 use self::motion::Steering;
 use self::perception::{DecisionContext, MemoryView};
 
@@ -68,59 +70,56 @@ use super::npc::VILLAGER;
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// The motion slot's running behavior, stamped with its epoch so a finite
-/// motion's [`RunTag`](motion::RunTag) can tell a fresh start from the run it just finished.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct ActiveMotion {
-    motion: Motion,
-    epoch: u32,
-}
-
-/// The action slot's running behavior, stamped like [`ActiveMotion`].
-/// Appliers report through it, so the committed/momentum finish policy lives here.
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct ActiveAction {
-    action: Action,
-    epoch: u32,
-    committed: bool,
-}
-
-impl ActiveAction {
-    fn report_completed(self, commands: &mut Commands, entity: Entity) {
-        commands.trigger(self.finished(entity, ActionOutcome::Completed));
-    }
-
-    /// Ends a committed use the live world refused; a momentum use waits.
-    fn report_not_started(self, commands: &mut Commands, entity: Entity) {
-        if self.committed {
-            commands.trigger(self.finished(entity, ActionOutcome::NotStarted));
-        }
-    }
-
-    fn finished(self, entity: Entity, outcome: ActionOutcome) -> ActionFinished {
-        ActionFinished {
-            entity,
-            action: self.action,
-            epoch: self.epoch,
-            outcome,
-        }
-    }
-}
-
-/// A behavior that won a slot. A bundle holds both slots, one record each.
+/// A behavior that won a slot, with its motion and action copied from the
+/// definition and stamped with a run id so a finite motion's
+/// [`CurrentBehaviorRunId`](motion::CurrentBehaviorRunId) can tell a fresh
+/// start from the run it just finished. A bundle holds both slots, one record
+/// each. Appliers report through it, so the committed/continuously scored
+/// finish policy lives here.
 #[derive(Clone, Copy, Debug)]
 struct RunningBehavior {
     behavior: usize,
-    epoch: u32,
+    motion: Option<Motion>,
+    action: Option<Action>,
+    behavior_run_id: u32,
     committed: bool,
     started_at: f32,
 }
 
 impl RunningBehavior {
+    fn report_completed(self, commands: &mut Commands, entity: Entity) {
+        if let Some(finished) = self.build_action_finished(entity, ActionOutcome::Completed) {
+            commands.trigger(finished);
+        }
+    }
+
+    /// Ends a committed use the live world refused; a continuously scored use waits.
+    fn report_not_started(self, commands: &mut Commands, entity: Entity) {
+        if self.committed
+            && let Some(finished) = self.build_action_finished(entity, ActionOutcome::NotStarted)
+        {
+            commands.trigger(finished);
+        }
+    }
+
+    /// `None` for a record with no action to report on.
+    fn build_action_finished(
+        self,
+        entity: Entity,
+        outcome: ActionOutcome,
+    ) -> Option<ActionFinished> {
+        Some(ActionFinished {
+            entity,
+            action: self.action?,
+            behavior_run_id: self.behavior_run_id,
+            outcome,
+        })
+    }
+
     fn should_drop_committed_behavior(&self, context: &DecisionContext, now: f32) -> bool {
         self.committed
-            && (context.target.is_none()
-                || context.me.stunned
+            && (context.target_view.is_none()
+                || context.self_view.stunned
                 || now - self.started_at > COMMIT_TIMEOUT)
     }
 }
@@ -131,13 +130,13 @@ impl RunningBehavior {
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(BrainRng, EquipmentUseEpochs, Steering)]
+#[require(BrainRng, StartedEquipmentUses, Steering)]
 #[component(on_add = seed_brain_rng_and_schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
-    motion: Option<RunningBehavior>,
-    action: Option<RunningBehavior>,
-    next_epoch: u32,
+    motion_slot: Option<RunningBehavior>,
+    action_slot: Option<RunningBehavior>,
+    next_behavior_run_id: u32,
     ready_at: MotionActionTable<f32>,
     attack_finish_pending: bool,
     next_decision_at: f32,
@@ -148,9 +147,9 @@ impl Brain {
     pub fn new(definition: &'static BrainDefinition) -> Self {
         Self {
             definition,
-            motion: None,
-            action: None,
-            next_epoch: 0,
+            motion_slot: None,
+            action_slot: None,
+            next_behavior_run_id: 0,
             ready_at: MotionActionTable::default(),
             attack_finish_pending: false,
             next_decision_at: 0.0,
@@ -163,40 +162,25 @@ impl Brain {
 
     /// The held motion; `None` while the slot is empty.
     pub fn motion(&self) -> Option<Motion> {
-        self.motion
-            .and_then(|running| self.behavior(running).motion)
+        self.motion_slot.and_then(|running| running.motion)
     }
 
     /// The held action, including a deliberate `Idle`; `None` while the slot is empty.
     pub fn action(&self) -> Option<Action> {
-        self.action
-            .and_then(|running| self.behavior(running).action)
+        self.action_slot.and_then(|running| running.action)
     }
 
-    fn behavior(&self, running: RunningBehavior) -> Behavior {
+    fn definition_of_running_behavior(&self, running: RunningBehavior) -> Behavior {
         self.definition.behaviors[running.behavior]
     }
 
-    fn current_motion_behavior(&self) -> Option<ActiveMotion> {
-        let running = self.motion?;
-        Some(ActiveMotion {
-            motion: self.behavior(running).motion?,
-            epoch: running.epoch,
-        })
+    fn current_motion_behavior(&self) -> Option<RunningBehavior> {
+        self.motion_slot.filter(|running| running.motion.is_some())
     }
 
-    fn current_action_behavior(&self) -> Option<ActiveAction> {
-        let running = self.action?;
-        Some(ActiveAction {
-            action: self.behavior(running).action?,
-            epoch: running.epoch,
-            committed: running.committed,
-        })
-    }
-
-    fn held_action(&self, action: Action) -> Option<ActiveAction> {
-        self.current_action_behavior()
-            .filter(|current| current.action == action)
+    fn held_action(&self, action: Action) -> Option<RunningBehavior> {
+        self.action_slot
+            .filter(|running| running.action == Some(action))
     }
 
     fn is_cooldown_ready(&self, key: impl MotionActionKey, now: f32) -> bool {
@@ -207,51 +191,53 @@ impl Brain {
         self.ready_at[key] = ready_at;
     }
 
-    fn holders(&self) -> SlotHolders {
+    fn slot_holders(&self) -> SlotHolders {
         let holder = |running: RunningBehavior| SlotHolder {
             behavior: running.behavior,
-            interrupt_tier: self.behavior(running).commit.interrupt_tier(),
+            interrupt_tier: self
+                .definition_of_running_behavior(running)
+                .commit
+                .interrupt_tier(),
         };
         SlotHolders {
-            motion: self.motion.map(holder),
-            action: self.action.map(holder),
+            motion: self.motion_slot.map(holder),
+            action: self.action_slot.map(holder),
         }
     }
 
-    /// Adds the brain's memory to the observed context, and marks each
-    /// capability available when owned, off cooldown and allowed by the world.
+    /// Fills in the brain's memory on `context_without_memory`, and marks each
+    /// capability available when owned, off cooldown and use-eligible.
     fn build_scoring_inputs(
         &self,
-        observed_context: DecisionContext,
-        world_allows_use: &MotionActionTable<bool>,
-        capabilities: &Capabilities,
+        context_without_memory: DecisionContext,
+        capability_profiles: &CapabilityProfiles,
         now: f32,
-    ) -> (DecisionContext, Availability) {
+    ) -> (DecisionContext, AvailableMotionActionTable) {
         let context = DecisionContext {
-            memory: MemoryView {
+            memory_view: MemoryView {
                 motion: self.motion(),
                 attack_finished: self.attack_finish_pending,
             },
-            ..observed_context
+            ..context_without_memory
         };
         let mut available = MotionActionTable::splat(true);
         for key in capability_keys() {
-            available[key] = capabilities[key].is_some()
+            available[key] = capability_profiles[key].is_some()
                 && self.is_cooldown_ready(key, now)
-                && world_allows_use[key];
+                && context.use_eligibility[key];
         }
-        (context, Availability(available))
+        (context, AvailableMotionActionTable(available))
     }
 
     /// Applies a decision. The only place an attack-finished edge is consumed.
     fn commit_decision(
         &mut self,
-        assignment: Assignment,
+        assignment: SlotAssignment,
         missed_start_cooldowns: &MotionActionTable<Option<f32>>,
-        capabilities: &Capabilities,
+        capability_profiles: &CapabilityProfiles,
         now: f32,
     ) {
-        self.assign_slots(assignment, capabilities, now);
+        self.assign_slots(assignment, capability_profiles, now);
         for key in capability_keys() {
             if let Some(ready_at) = missed_start_cooldowns[key] {
                 self.start_cooldown(key, ready_at);
@@ -262,31 +248,44 @@ impl Brain {
 
     /// A slot nothing claimed empties unless a committed behavior holds it. A
     /// committed behavior that loses either slot ends in both.
-    fn assign_slots(&mut self, assignment: Assignment, capabilities: &Capabilities, now: f32) {
+    fn assign_slots(
+        &mut self,
+        assignment: SlotAssignment,
+        capability_profiles: &CapabilityProfiles,
+        now: f32,
+    ) {
         for (holder, winner) in [
-            (self.motion, assignment.motion),
-            (self.action, assignment.action),
+            (self.motion_slot, assignment.motion),
+            (self.action_slot, assignment.action),
         ] {
             if let Some(displaced) = holder.filter(|holder| {
                 holder.committed && winner.is_some_and(|winner| winner != holder.behavior)
             }) {
-                self.drop_committed_behavior(displaced, capabilities, now);
+                self.drop_committed_behavior(displaced, capability_profiles, now);
             }
         }
         match assignment.motion {
-            Some(index) => self.motion = self.run(self.motion, index, now),
-            None if self.motion.is_none_or(|running| !running.committed) => self.motion = None,
+            Some(index) => {
+                self.motion_slot = self.start_or_keep_running_behavior(self.motion_slot, index, now)
+            }
+            None if self.motion_slot.is_none_or(|running| !running.committed) => {
+                self.motion_slot = None
+            }
             None => {}
         }
         match assignment.action {
-            Some(index) => self.action = self.run(self.action, index, now),
-            None if self.action.is_none_or(|running| !running.committed) => self.action = None,
+            Some(index) => {
+                self.action_slot = self.start_or_keep_running_behavior(self.action_slot, index, now)
+            }
+            None if self.action_slot.is_none_or(|running| !running.committed) => {
+                self.action_slot = None
+            }
             None => {}
         }
     }
 
-    /// Keeps the current record if `index` already holds the slot, else stamps a new epoch.
-    fn run(
+    /// Keeps the current record if `index` already holds the slot, else stamps a new run id.
+    fn start_or_keep_running_behavior(
         &mut self,
         current: Option<RunningBehavior>,
         index: usize,
@@ -295,11 +294,14 @@ impl Brain {
         if current.is_some_and(|running| running.behavior == index) {
             return current;
         }
-        self.next_epoch = self.next_epoch.wrapping_add(1);
+        self.next_behavior_run_id = self.next_behavior_run_id.wrapping_add(1);
+        let behavior = self.definition.behaviors[index];
         Some(RunningBehavior {
             behavior: index,
-            epoch: self.next_epoch,
-            committed: self.definition.behaviors[index].commit.is_committed(),
+            motion: behavior.motion,
+            action: behavior.action,
+            behavior_run_id: self.next_behavior_run_id,
+            committed: behavior.commit.is_committed(),
             started_at: now,
         })
     }
@@ -309,43 +311,43 @@ impl Brain {
     fn drop_committed_behavior(
         &mut self,
         running: RunningBehavior,
-        capabilities: &Capabilities,
+        capability_profiles: &CapabilityProfiles,
         now: f32,
     ) {
-        self.release(running.behavior);
-        let behavior = self.behavior(running);
+        self.release_behavior_from_slots(running.behavior);
+        let behavior = self.definition_of_running_behavior(running);
         let finite_part = match (behavior.motion, behavior.action) {
             (Some(motion), _) if motion.is_finite() => CapabilityKey::Motion(motion),
             (_, Some(ability @ Action::Ability(_))) => CapabilityKey::Action(ability),
             _ => return,
         };
-        let cooldown = capabilities[finite_part].map_or(0.0, |tuning| tuning.cooldown);
+        let cooldown = capability_profiles[finite_part].map_or(0.0, |profile| profile.cooldown);
         self.start_cooldown(finite_part, now + cooldown);
     }
 
-    fn release(&mut self, behavior: usize) {
-        for slot in [&mut self.motion, &mut self.action] {
+    fn release_behavior_from_slots(&mut self, behavior: usize) {
+        for slot in [&mut self.motion_slot, &mut self.action_slot] {
             if slot.is_some_and(|running| running.behavior == behavior) {
                 *slot = None;
             }
         }
     }
 
-    /// Ends the committed behavior stamped `epoch`; `false` for a stale finish.
-    fn finish_committed_behavior(&mut self, epoch: u32) -> bool {
-        let Some(finished) = [self.motion, self.action]
+    /// Ends the committed behavior stamped `behavior_run_id`; `false` for a stale finish.
+    fn finish_committed_behavior(&mut self, behavior_run_id: u32) -> bool {
+        let Some(finished) = [self.motion_slot, self.action_slot]
             .into_iter()
             .flatten()
-            .find(|running| running.committed && running.epoch == epoch)
+            .find(|running| running.committed && running.behavior_run_id == behavior_run_id)
         else {
             return false;
         };
-        self.release(finished.behavior);
+        self.release_behavior_from_slots(finished.behavior);
         true
     }
 }
 
-/// A brain's random stream, seeded from [`AiSeed`] and the entity. Kept apart
+/// A brain's random stream, seeded from [`BrainRngRootSeed`] and the entity. Kept apart
 /// from [`Brain`] so steering gets randomness without the rest of the brain.
 #[derive(Component, Debug)]
 pub struct BrainRng {
@@ -377,7 +379,9 @@ impl BrainRng {
 }
 
 fn seed_brain_rng_and_schedule_first_decision(mut world: DeferredWorld, context: HookContext) {
-    let root_seed = world.get_resource::<AiSeed>().map_or(0, |seed| seed.0);
+    let root_seed = world
+        .get_resource::<BrainRngRootSeed>()
+        .map_or(0, |seed| seed.0);
     let now = world
         .get_resource::<Time<Virtual>>()
         .map_or(0.0, Time::elapsed_secs);
@@ -392,13 +396,13 @@ fn seed_brain_rng_and_schedule_first_decision(mut world: DeferredWorld, context:
     }
 }
 
-/// An equipment or ability use ended. It ends the behavior stamped `epoch`
+/// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`
 /// only while that behavior still runs, so a stale finish clears nothing.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFinished {
     pub entity: Entity,
     pub action: Action,
-    pub epoch: u32,
+    pub behavior_run_id: u32,
     pub outcome: ActionOutcome,
 }
 
@@ -406,7 +410,7 @@ pub struct ActionFinished {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionOutcome {
     Completed,
-    /// A committed use its applier could not start. A momentum use waits for
+    /// A committed use its applier could not start. A continuously scored use waits for
     /// its chance instead and never reports this.
     NotStarted,
 }
@@ -415,7 +419,7 @@ pub enum ActionOutcome {
 /// definition order. Only brains carrying it pay for the explanations.
 #[derive(Component, Debug, Default)]
 pub struct ScoreTrace {
-    pub behaviors: Vec<BehaviorScoreExplanation>,
+    pub behavior_explanations: Vec<BehaviorScoreExplanation>,
 }
 
 /// Seconds between a brain's scheduled decisions.
@@ -423,7 +427,7 @@ const DECISION_PERIOD: f32 = 0.1;
 
 /// Root seed used to seed each brain's independent random stream.
 #[derive(Resource, Default, Clone, Copy, Debug)]
-pub struct AiSeed(pub u64);
+pub struct BrainRngRootSeed(pub u64);
 
 pub(super) fn plugin(app: &mut App) {
     for &kind in EnemyKind::ALL {
@@ -436,10 +440,10 @@ pub(super) fn plugin(app: &mut App) {
     }
 
     app.add_plugins((perception::plugin, action::plugin, motion::plugin))
-        .init_resource::<AiSeed>()
+        .init_resource::<BrainRngRootSeed>()
         .add_observer(release_finished_motion)
         .add_observer(finish_action)
-        .add_systems(Startup, seed_ai_seed)
+        .add_systems(Startup, seed_brain_rng_root_from_map)
         .add_systems(
             Update,
             decide_behavior
@@ -449,9 +453,12 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-fn seed_ai_seed(map_rng: Option<Res<MapRng>>, mut ai_seed: ResMut<AiSeed>) {
+fn seed_brain_rng_root_from_map(
+    map_rng: Option<Res<MapRng>>,
+    mut root_seed: ResMut<BrainRngRootSeed>,
+) {
     if let Some(map_rng) = map_rng {
-        ai_seed.0 = map_rng.root_seed();
+        root_seed.0 = map_rng.root_seed();
     } else {
         warn!("MapRng is missing; seeding AI randomness with 0");
     }

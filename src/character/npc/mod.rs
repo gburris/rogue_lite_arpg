@@ -2,8 +2,8 @@ use bevy::{prelude::*, ui_widgets::observe};
 
 mod interaction;
 
-use super::brain::considerations::{ACTION_BASELINE_IDLE, CALM, RETURN_TO_ANCHOR};
-use super::brain::{Anchor, Behavior, Brain, BrainDefinition, Interval, Wander};
+use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
+use super::brain::{Behavior, Brain, BrainDefinition, HomeArea, Interval, Wander};
 use crate::{
     character::{Character, physical_collider},
     prelude::*,
@@ -34,9 +34,9 @@ pub enum NpcKind {
     StatTrainer,
 }
 
-static VILLAGER_BEHAVIORS: &[Behavior] = &[CALM, ACTION_BASELINE_IDLE, RETURN_TO_ANCHOR];
+static VILLAGER_BEHAVIORS: &[Behavior] = &[WANDER, ACTION_BASELINE_IDLE, RETURN_TO_HOME];
 
-/// Wanders around its anchor and never requests equipment.
+/// Wanders around its home area and never requests equipment.
 pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
     behaviors: VILLAGER_BEHAVIORS,
 };
@@ -131,7 +131,7 @@ fn base_npc(
         Brain::new(brain),
         // Villagers stand briefly between strolls.
         Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5)),
-        Anchor::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0),
+        HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0),
         Kinematics::new(100.0),
         Health::new(1000.0),
         Transform::from_translation(spawn_position.extend(ZLayer::OnGround.z())),

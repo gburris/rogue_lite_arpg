@@ -8,10 +8,10 @@ use rand::{Rng, RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
-    pub use super::chest::*;
-    pub use super::gold::*;
-    pub use super::map::prelude::*;
-    pub use super::portal::*;
+    pub use super::chest::SpawnChestsEvent;
+    pub use super::gold::GoldDrop;
+    pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
+    pub use super::portal::portal;
 }
 
 pub(super) fn plugin(app: &mut App) {

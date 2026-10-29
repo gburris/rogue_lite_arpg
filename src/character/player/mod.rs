@@ -11,7 +11,7 @@ mod stats;
 
 pub mod prelude {
     pub use super::aim::PlayerAim;
-    pub use super::interact::*;
+    pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::progression::GameProgress;
     pub use super::{DisplayableStatType, Player, PlayerStats};
 }
@@ -22,6 +22,7 @@ pub use stats::{DisplayableStatType, PlayerStats};
 
 use crate::character::{Character, Purse};
 use crate::prelude::*;
+use crate::utility::despawn_all;
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;

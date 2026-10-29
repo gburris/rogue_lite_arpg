@@ -3,7 +3,7 @@ mod swing;
 mod weapons;
 
 pub mod prelude {
-    pub use super::{ActiveMeleeAttack, MELEE_WEAPON_REACH, axe, freeze_axe, sword};
+    pub use super::{axe, freeze_axe, sword};
 }
 
 pub use attack::ActiveMeleeAttack;

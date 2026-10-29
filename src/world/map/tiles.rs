@@ -271,17 +271,17 @@ impl TileKind {
     }
 
     /// Returns whether this tile blocks ground placement.
-    pub fn blocks_ground(&self) -> bool {
+    pub fn blocks_ground(self) -> bool {
         matches!(self, TileKind::Wall | TileKind::Water | TileKind::DeadZone)
     }
 
     /// Returns whether this tile should be rendered.
-    pub fn should_render(&self) -> bool {
+    pub fn should_render(self) -> bool {
         !matches!(self, TileKind::DeadZone)
     }
 
     /// Returns whether this tile can host a spawn.
-    pub fn can_spawn(&self) -> bool {
+    pub fn can_spawn(self) -> bool {
         !self.blocks_ground() && self.should_render()
     }
 }

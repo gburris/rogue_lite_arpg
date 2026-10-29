@@ -3,10 +3,10 @@ mod freeze;
 mod slow;
 
 pub mod prelude {
-    pub use super::burn::*;
-    pub use super::freeze::*;
-    pub use super::slow::*;
-    pub use super::{EffectOf, Effects, StatusOf};
+    pub use super::Effects;
+    pub use super::burn::Burning;
+    pub use super::freeze::Frozen;
+    pub(crate) use super::slow::sync_slow_from_statuses;
 }
 
 use bevy::ecs::entity_disabling::Disabled;

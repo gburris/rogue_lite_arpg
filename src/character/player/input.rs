@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
 use super::aim::AimInput;
+use super::interact::PlayerInteractionInput;
 use super::movement::PlayerMovement;
 use crate::prelude::*;
 

@@ -170,20 +170,15 @@ fn decide_slot_assignments(
     score_trace: Option<&mut ScoreTrace>,
     now: f32,
 ) {
-    // A bundle's two records name one behavior, so it drops once.
-    let mut dropped = None;
-    for running in [brain.motion_slot, brain.action_slot].into_iter().flatten() {
-        if dropped != Some(running.behavior)
-            && running.should_drop_committed_behavior(&context_without_memory, now)
-        {
+    for running in brain.running_behaviors.clone() {
+        if running.should_drop_committed_behavior(&context_without_memory, now) {
             brain.drop_committed_behavior(running, capability_profiles, now);
-            dropped = Some(running.behavior);
         }
     }
     let (context, available_motion_action_table) =
         brain.build_scoring_inputs(context_without_memory, capability_profiles, now);
     let definition = brain.definition();
-    let holders = brain.slot_holders();
+    let running_behavior_ids = brain.running_behavior_ids();
     if let Some(score_trace) = score_trace {
         score_trace.behavior_explanations.clear();
         score_trace
@@ -194,16 +189,16 @@ fn decide_slot_assignments(
                     index,
                     &context,
                     &available_motion_action_table,
-                    holders,
+                    &running_behavior_ids,
                 )
             }));
     }
     let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
-    let assignment = assign_behaviors_to_slots(
+    let winning_behavior_ids = assign_behaviors_to_slots(
         definition,
         &context,
         &available_motion_action_table,
-        holders,
+        &running_behavior_ids,
         |index| {
             passes_start_roll(
                 rng,
@@ -215,7 +210,7 @@ fn decide_slot_assignments(
         },
     );
     brain.commit_decision(
-        assignment,
+        &winning_behavior_ids,
         &missed_start_cooldowns,
         capability_profiles,
         now,

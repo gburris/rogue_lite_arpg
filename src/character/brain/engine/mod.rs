@@ -45,6 +45,12 @@ impl Behavior {
             considerations,
         }
     }
+
+    /// Whether both behaviors claim the motion slot or both claim the action slot.
+    pub fn shares_a_slot_with(&self, other: &Behavior) -> bool {
+        (self.motion.is_some() && other.motion.is_some())
+            || (self.action.is_some() && other.action.is_some())
+    }
 }
 
 /// How firmly a behavior holds its slots once it wins them.
@@ -77,27 +83,6 @@ impl CommitPolicy {
 #[derive(Debug)]
 pub struct BrainDefinition {
     pub behaviors: &'static [Behavior],
-}
-
-/// A behavior holding a slot, by definition index, with its interrupt tier.
-#[derive(Clone, Copy, Debug)]
-pub struct SlotHolder {
-    pub behavior: usize,
-    pub interrupt_tier: u8,
-}
-
-/// Who holds each slot going into a decision.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SlotHolders {
-    pub motion: Option<SlotHolder>,
-    pub action: Option<SlotHolder>,
-}
-
-/// The behavior index that won each slot this decision.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct SlotAssignment {
-    pub motion: Option<usize>,
-    pub action: Option<usize>,
 }
 
 /// Why a behavior sits out a decision unscored.
@@ -169,31 +154,40 @@ pub fn score_behavior(
 /// Scores every behavior not skipped (see [`SkipReason`]), then takes them
 /// from the highest score down while their slots are free; ties go to the
 /// earlier behavior. A `false` from `start` drops a winner for the next best.
+/// Behavior ids, taken and returned, are indices into `definition.behaviors`.
 pub fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
     decision_context: &DecisionContext,
     available_motion_action_table: &AvailableMotionActionTable,
-    holders: SlotHolders,
+    running_behavior_ids: &[usize],
     mut start: impl FnMut(usize) -> bool,
-) -> SlotAssignment {
+) -> Vec<usize> {
     let mut scores = [0.0_f32; MAX_BEHAVIORS];
     for (index, behavior) in definition.behaviors.iter().enumerate() {
-        if find_skip_reason(behavior, available_motion_action_table, holders).is_some() {
+        if find_skip_reason(
+            definition,
+            behavior,
+            available_motion_action_table,
+            running_behavior_ids,
+        )
+        .is_some()
+        {
             continue;
         }
-        let is_current = holds_slot(holders, index);
+        let is_current = running_behavior_ids.contains(&index);
         let Some(score) = score_behavior(behavior, decision_context, is_current) else {
             continue;
         };
         scores[index] = score * momentum_multiplier(is_current);
     }
 
-    let mut assignment = SlotAssignment::default();
+    let mut winning_behavior_ids: Vec<usize> = Vec::with_capacity(2);
     loop {
         let mut best: Option<usize> = None;
         for (index, behavior) in definition.behaviors.iter().enumerate() {
-            let taken = (behavior.motion.is_some() && assignment.motion.is_some())
-                || (behavior.action.is_some() && assignment.action.is_some());
+            let taken = winning_behavior_ids.iter().any(|&winning_behavior_id| {
+                definition.behaviors[winning_behavior_id].shares_a_slot_with(behavior)
+            });
             if scores[index] <= 0.0 || taken {
                 continue;
             }
@@ -202,19 +196,13 @@ pub fn assign_behaviors_to_slots(
             }
         }
         let Some(index) = best else {
-            return assignment;
+            return winning_behavior_ids;
         };
         if !start(index) {
             scores[index] = 0.0;
             continue;
         }
-        let behavior = definition.behaviors[index];
-        if behavior.motion.is_some() {
-            assignment.motion = Some(index);
-        }
-        if behavior.action.is_some() {
-            assignment.action = Some(index);
-        }
+        winning_behavior_ids.push(index);
     }
 }
 
@@ -275,19 +263,24 @@ pub fn explain_behavior(
     index: usize,
     decision_context: &DecisionContext,
     available_motion_action_table: &AvailableMotionActionTable,
-    holders: SlotHolders,
+    running_behavior_ids: &[usize],
 ) -> BehaviorScoreExplanation {
     let behavior = &definition.behaviors[index];
-    let is_current = holds_slot(holders, index);
+    let is_current = running_behavior_ids.contains(&index);
     let momentum = momentum_multiplier(is_current);
-    let skipped =
-        find_skip_reason(behavior, available_motion_action_table, holders).map(|reason| {
-            // The committed holder sits out too, but it is the one running.
-            match reason {
-                SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
-                other => other,
-            }
-        });
+    let skipped = find_skip_reason(
+        definition,
+        behavior,
+        available_motion_action_table,
+        running_behavior_ids,
+    )
+    .map(|reason| {
+        // The committed holder sits out too, but it is the one running.
+        match reason {
+            SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
+            other => other,
+        }
+    });
     if skipped.is_some() {
         return BehaviorScoreExplanation {
             skipped,
@@ -315,17 +308,18 @@ pub fn explain_behavior(
 }
 
 fn find_skip_reason(
+    definition: &BrainDefinition,
     behavior: &Behavior,
     available_motion_action_table: &AvailableMotionActionTable,
-    holders: SlotHolders,
+    running_behavior_ids: &[usize],
 ) -> Option<SkipReason> {
     let tier = behavior.commit.interrupt_tier();
-    let is_closed = |holder: Option<SlotHolder>| {
-        holder.is_some_and(|holder| holder.interrupt_tier > 0 && tier <= holder.interrupt_tier)
-    };
-    if (behavior.motion.is_some() && is_closed(holders.motion))
-        || (behavior.action.is_some() && is_closed(holders.action))
-    {
+    let slot_committed = running_behavior_ids.iter().any(|&running_behavior_id| {
+        let running_behavior = &definition.behaviors[running_behavior_id];
+        let running_tier = running_behavior.commit.interrupt_tier();
+        running_tier > 0 && tier <= running_tier && running_behavior.shares_a_slot_with(behavior)
+    });
+    if slot_committed {
         return Some(SkipReason::SlotCommitted);
     }
     let unavailable = behavior
@@ -335,13 +329,6 @@ fn find_skip_reason(
             .action
             .is_some_and(|action| !available_motion_action_table[action]);
     unavailable.then_some(SkipReason::Unavailable)
-}
-
-fn holds_slot(holders: SlotHolders, index: usize) -> bool {
-    [holders.motion, holders.action]
-        .into_iter()
-        .flatten()
-        .any(|holder| holder.behavior == index)
 }
 
 fn momentum_multiplier(is_current: bool) -> f32 {

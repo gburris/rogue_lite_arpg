@@ -46,9 +46,7 @@ use self::capability::{
     MotionActionTable, capability_keys,
 };
 use self::decide::{decide_behavior, finish_action, release_finished_motion};
-use self::engine::{
-    BehaviorScoreExplanation, SlotAssignment, SlotHolder, SlotHolders, validate_brain,
-};
+use self::engine::{BehaviorScoreExplanation, validate_brain};
 use self::motion::Steering;
 use self::perception::{DecisionContext, MemoryView};
 
@@ -70,12 +68,11 @@ use super::npc::VILLAGER;
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won a slot, with its motion and action copied from the
+/// A behavior that won its slots, with its motion and action copied from the
 /// definition and stamped with a run id so a finite motion's
 /// [`CurrentBehaviorRunId`](motion::CurrentBehaviorRunId) can tell a fresh
-/// start from the run it just finished. A bundle holds both slots, one record
-/// each. Appliers report through it, so the committed/continuously scored
-/// finish policy lives here.
+/// start from the run it just finished. Appliers report through it, so the
+/// committed/continuously scored finish policy lives here.
 #[derive(Clone, Copy, Debug)]
 struct RunningBehavior {
     behavior: usize,
@@ -124,8 +121,8 @@ impl RunningBehavior {
     }
 }
 
-/// A character's utility brain: its static definition, the behaviors holding
-/// its motion and action slots, and its cooldowns. Only [`decide`] writes it,
+/// A character's utility brain: its static definition, the behaviors running
+/// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
 /// at 10 Hz on a random per-brain phase; motion and action systems read it
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
@@ -134,8 +131,7 @@ impl RunningBehavior {
 #[component(on_add = seed_brain_rng_and_schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
-    motion_slot: Option<RunningBehavior>,
-    action_slot: Option<RunningBehavior>,
+    running_behaviors: Vec<RunningBehavior>,
     next_behavior_run_id: u32,
     ready_at: MotionActionTable<f32>,
     attack_finish_pending: bool,
@@ -147,8 +143,7 @@ impl Brain {
     pub fn new(definition: &'static BrainDefinition) -> Self {
         Self {
             definition,
-            motion_slot: None,
-            action_slot: None,
+            running_behaviors: Vec::with_capacity(2),
             next_behavior_run_id: 0,
             ready_at: MotionActionTable::default(),
             attack_finish_pending: false,
@@ -162,12 +157,16 @@ impl Brain {
 
     /// The held motion; `None` while the slot is empty.
     pub fn motion(&self) -> Option<Motion> {
-        self.motion_slot.and_then(|running| running.motion)
+        self.running_behaviors
+            .iter()
+            .find_map(|running| running.motion)
     }
 
     /// The held action, including a deliberate `Idle`; `None` while the slot is empty.
     pub fn action(&self) -> Option<Action> {
-        self.action_slot.and_then(|running| running.action)
+        self.running_behaviors
+            .iter()
+            .find_map(|running| running.action)
     }
 
     fn definition_of_running_behavior(&self, running: RunningBehavior) -> Behavior {
@@ -175,12 +174,17 @@ impl Brain {
     }
 
     fn current_motion_behavior(&self) -> Option<RunningBehavior> {
-        self.motion_slot.filter(|running| running.motion.is_some())
+        self.running_behaviors
+            .iter()
+            .copied()
+            .find(|running| running.motion.is_some())
     }
 
     fn held_action(&self, action: Action) -> Option<RunningBehavior> {
-        self.action_slot
-            .filter(|running| running.action == Some(action))
+        self.running_behaviors
+            .iter()
+            .copied()
+            .find(|running| running.action == Some(action))
     }
 
     fn is_cooldown_ready(&self, key: impl MotionActionKey, now: f32) -> bool {
@@ -191,18 +195,11 @@ impl Brain {
         self.ready_at[key] = ready_at;
     }
 
-    fn slot_holders(&self) -> SlotHolders {
-        let holder = |running: RunningBehavior| SlotHolder {
-            behavior: running.behavior,
-            interrupt_tier: self
-                .definition_of_running_behavior(running)
-                .commit
-                .interrupt_tier(),
-        };
-        SlotHolders {
-            motion: self.motion_slot.map(holder),
-            action: self.action_slot.map(holder),
-        }
+    fn running_behavior_ids(&self) -> Vec<usize> {
+        self.running_behaviors
+            .iter()
+            .map(|running| running.behavior)
+            .collect()
     }
 
     /// Fills in the brain's memory on `context_without_memory`, and marks each
@@ -232,12 +229,12 @@ impl Brain {
     /// Applies a decision. The only place an attack-finished edge is consumed.
     fn commit_decision(
         &mut self,
-        assignment: SlotAssignment,
+        winning_behavior_ids: &[usize],
         missed_start_cooldowns: &MotionActionTable<Option<f32>>,
         capability_profiles: &CapabilityProfiles,
         now: f32,
     ) {
-        self.assign_slots(assignment, capability_profiles, now);
+        self.assign_slots(winning_behavior_ids, capability_profiles, now);
         for key in capability_keys() {
             if let Some(ready_at) = missed_start_cooldowns[key] {
                 self.start_cooldown(key, ready_at);
@@ -246,75 +243,68 @@ impl Brain {
         self.attack_finish_pending = false;
     }
 
-    /// A slot nothing claimed empties unless a committed behavior holds it. A
-    /// committed behavior that loses either slot ends in both.
+    /// Runs the winning behaviors, keeping the record of one already running. A committed
+    /// behavior keeps running until a winner shares one of its slots, which ends
+    /// it; anything else not won again stops. Winners never share a slot, so
+    /// neither do running behaviors.
     fn assign_slots(
         &mut self,
-        assignment: SlotAssignment,
+        winning_behavior_ids: &[usize],
         capability_profiles: &CapabilityProfiles,
         now: f32,
     ) {
-        for (holder, winner) in [
-            (self.motion_slot, assignment.motion),
-            (self.action_slot, assignment.action),
-        ] {
-            if let Some(displaced) = holder.filter(|holder| {
-                holder.committed && winner.is_some_and(|winner| winner != holder.behavior)
-            }) {
-                self.drop_committed_behavior(displaced, capability_profiles, now);
+        let behaviors = self.definition.behaviors;
+        for running in self.running_behaviors.clone() {
+            let displaced = winning_behavior_ids.iter().any(|&winning_behavior_id| {
+                winning_behavior_id != running.behavior
+                    && behaviors[winning_behavior_id]
+                        .shares_a_slot_with(&behaviors[running.behavior])
+            });
+            if running.committed && displaced {
+                self.drop_committed_behavior(running, capability_profiles, now);
             }
         }
-        match assignment.motion {
-            Some(index) => {
-                self.motion_slot = self.start_or_keep_running_behavior(self.motion_slot, index, now)
-            }
-            None if self.motion_slot.is_none_or(|running| !running.committed) => {
-                self.motion_slot = None
-            }
-            None => {}
-        }
-        match assignment.action {
-            Some(index) => {
-                self.action_slot = self.start_or_keep_running_behavior(self.action_slot, index, now)
-            }
-            None if self.action_slot.is_none_or(|running| !running.committed) => {
-                self.action_slot = None
-            }
-            None => {}
+        let previous = std::mem::take(&mut self.running_behaviors);
+        self.running_behaviors
+            .extend(previous.iter().copied().filter(|running| {
+                running.committed && !winning_behavior_ids.contains(&running.behavior)
+            }));
+        for &winning_behavior_id in winning_behavior_ids {
+            let running = match previous
+                .iter()
+                .find(|running| running.behavior == winning_behavior_id)
+            {
+                Some(&kept) => kept,
+                None => self.start_running_behavior(winning_behavior_id, now),
+            };
+            self.running_behaviors.push(running);
         }
     }
 
-    /// Keeps the current record if `index` already holds the slot, else stamps a new run id.
-    fn start_or_keep_running_behavior(
-        &mut self,
-        current: Option<RunningBehavior>,
-        index: usize,
-        now: f32,
-    ) -> Option<RunningBehavior> {
-        if current.is_some_and(|running| running.behavior == index) {
-            return current;
-        }
+    /// Stamps a new run of behavior `index` with the next run id.
+    fn start_running_behavior(&mut self, index: usize, now: f32) -> RunningBehavior {
         self.next_behavior_run_id = self.next_behavior_run_id.wrapping_add(1);
         let behavior = self.definition.behaviors[index];
-        Some(RunningBehavior {
+        RunningBehavior {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
             behavior_run_id: self.next_behavior_run_id,
             committed: behavior.commit.is_committed(),
             started_at: now,
-        })
+        }
     }
 
-    /// Ends `running` in every slot and starts its finite part's cooldown so it
-    /// can't restart next tick. Equipment keeps its own cooldown, so a use starts none.
+    /// Ends `running` and starts its finite part's cooldown so it can't
+    /// restart next tick. Equipment keeps its own cooldown, so a use starts none.
     fn drop_committed_behavior(
         &mut self,
         running: RunningBehavior,
         capability_profiles: &CapabilityProfiles,
         now: f32,
     ) {
-        self.release_behavior_from_slots(running.behavior);
+        self.running_behaviors
+            .retain(|other| other.behavior != running.behavior);
         let behavior = self.definition_of_running_behavior(running);
         let finite_part = match (behavior.motion, behavior.action) {
             (Some(motion), _) if motion.is_finite() => CapabilityKey::Motion(motion),
@@ -325,24 +315,16 @@ impl Brain {
         self.start_cooldown(finite_part, now + cooldown);
     }
 
-    fn release_behavior_from_slots(&mut self, behavior: usize) {
-        for slot in [&mut self.motion_slot, &mut self.action_slot] {
-            if slot.is_some_and(|running| running.behavior == behavior) {
-                *slot = None;
-            }
-        }
-    }
-
     /// Ends the committed behavior stamped `behavior_run_id`; `false` for a stale finish.
     fn finish_committed_behavior(&mut self, behavior_run_id: u32) -> bool {
-        let Some(finished) = [self.motion_slot, self.action_slot]
-            .into_iter()
-            .flatten()
-            .find(|running| running.committed && running.behavior_run_id == behavior_run_id)
+        let Some(position) = self
+            .running_behaviors
+            .iter()
+            .position(|running| running.committed && running.behavior_run_id == behavior_run_id)
         else {
             return false;
         };
-        self.release_behavior_from_slots(finished.behavior);
+        self.running_behaviors.remove(position);
         true
     }
 }

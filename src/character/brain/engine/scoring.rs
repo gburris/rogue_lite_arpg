@@ -1,6 +1,7 @@
 //! How a consideration turns one raw input into a `0.0..=1.0` score.
 
-use super::super::perception::ConsiderationInput;
+use super::super::perception::{ConsiderationInput, DecisionContext, read_consideration_input};
+use super::behavior::Behavior;
 
 /// An ordered `min < max` interval: a distance range, a consideration's input
 /// range, or a span of seconds to roll from.
@@ -127,4 +128,47 @@ impl Curve {
 
         value.clamp(0.0, 1.0)
     }
+}
+
+/// Final bounded score for one behavior. `is_current` switches threshold
+/// considerations to their exit side.
+pub fn score_behavior(
+    behavior: &Behavior,
+    decision_context: &DecisionContext,
+    is_current: bool,
+) -> Option<f32> {
+    // Weight times the geometric mean: a zero anywhere vetoes, but each
+    // passing flag raises graded inputs to a higher root, so adding a flag
+    // shifts a behavior's crossovers. Brains are tuned against that root.
+    let mut product = 1.0;
+    let mut count = 0;
+    for consideration in behavior.considerations {
+        product *= score_consideration(consideration, decision_context, is_current)?;
+        count += 1;
+    }
+    let mut score = behavior.weight;
+    if count > 0 {
+        score *= product.powf(1.0 / (count as f32));
+    }
+
+    (score.is_finite() && score >= 0.0).then_some(score)
+}
+
+pub(super) fn score_consideration(
+    consideration: &Consideration,
+    decision_context: &DecisionContext,
+    is_current: bool,
+) -> Option<f32> {
+    // A missing input (no target, no home area) vetoes, inverted or not.
+    let Some(raw) = read_consideration_input(consideration.input, decision_context) else {
+        return Some(0.0);
+    };
+    let score = consideration
+        .score_mapping
+        .score_raw_input(raw, is_current)?;
+    Some(if consideration.inverted {
+        1.0 - score
+    } else {
+        score
+    })
 }

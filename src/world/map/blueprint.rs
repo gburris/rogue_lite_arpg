@@ -1,6 +1,7 @@
-use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fmt;
+
+use bevy::prelude::*;
 
 use crate::prelude::{EnemyKind, NpcKind, TileGrid, TileKind};
 

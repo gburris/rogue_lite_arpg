@@ -1,14 +1,12 @@
-use bevy::{prelude::*, sprite::Anchor, ui_widgets::observe};
+use bevy::prelude::*;
+use bevy::sprite::Anchor;
+use bevy::ui_widgets::observe;
 use rand::RngExt;
 
-use crate::{
-    items::{
-        Item, ItemType,
-        equipment::{EquipmentSlot, Equippable},
-        prelude::StartUsingEquipment,
-    },
-    prelude::*,
-};
+use crate::items::equipment::{EquipmentSlot, Equippable};
+use crate::items::prelude::StartUsingEquipment;
+use crate::items::{Item, ItemType};
+use crate::prelude::*;
 
 #[derive(Component)]
 struct HealingTome {

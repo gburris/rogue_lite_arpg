@@ -2,7 +2,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::{character::Purse, prelude::*};
+use crate::character::Purse;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

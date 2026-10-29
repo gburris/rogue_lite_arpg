@@ -10,8 +10,8 @@ mod wander;
 
 use std::time::Duration;
 
-use bevy::{ecs::query::QueryData, prelude::*};
-
+use bevy::ecs::query::QueryData;
+use bevy::prelude::*;
 pub use dash::Dash;
 pub use home_area::HomeArea;
 pub use orbit::Orbit;
@@ -21,7 +21,9 @@ pub use wander::Wander;
 use super::Brain;
 use super::engine::Interval;
 use super::perception::Targeting;
-use crate::character::{AiSet, state::Kinematics, vision::TargetInfo};
+use crate::character::AiSet;
+use crate::character::state::Kinematics;
+use crate::character::vision::TargetInfo;
 use crate::prelude::sync_slow_from_statuses;
 
 /// How a character moves: a continuous motion that runs until replaced, or a

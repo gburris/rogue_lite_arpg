@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
+use super::constants::TITLE_FONT_SIZE;
+use super::primitives::text;
 use crate::prelude::*;
-
-use super::{constants::TITLE_FONT_SIZE, primitives::text};
 
 #[derive(Component)]
 pub struct GameOverScreen;

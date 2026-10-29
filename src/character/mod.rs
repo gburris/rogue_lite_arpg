@@ -31,10 +31,8 @@ pub enum AiSet {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{
-    character::animation::{AnimationSheet, CharacterAnimationState},
-    prelude::*,
-};
+use crate::character::animation::{AnimationSheet, CharacterAnimationState};
+use crate::prelude::*;
 
 pub struct CharacterPlugin;
 

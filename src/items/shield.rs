@@ -1,19 +1,14 @@
-use std::{
-    collections::HashSet,
-    f32::consts::{FRAC_PI_2, FRAC_PI_4, PI},
-};
+use std::collections::HashSet;
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
 use avian2d::prelude::*;
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 
-use crate::{
-    items::{
-        Item, ItemOf, ItemType,
-        equipment::{EquipmentSlot, Equippable, Equipped},
-        prelude::StartUsingEquipment,
-    },
-    prelude::*,
-};
+use crate::items::equipment::{EquipmentSlot, Equippable, Equipped};
+use crate::items::prelude::StartUsingEquipment;
+use crate::items::{Item, ItemOf, ItemType};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

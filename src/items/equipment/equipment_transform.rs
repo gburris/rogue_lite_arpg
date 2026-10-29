@@ -1,14 +1,11 @@
-use bevy::{platform::collections::HashMap, prelude::*};
-
 use std::sync::LazyLock;
 
-use crate::{
-    items::{
-        Items,
-        equipment::{Equipped, Mainhand, Offhand},
-    },
-    prelude::*,
-};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
+
+use crate::items::Items;
+use crate::items::equipment::{Equipped, Mainhand, Offhand};
+use crate::prelude::*;
 
 // Simple transform tuple for concise definitions
 pub struct EquipmentTransformDef {

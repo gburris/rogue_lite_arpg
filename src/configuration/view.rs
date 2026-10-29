@@ -1,13 +1,13 @@
+use bevy::camera::ScalingMode;
+use bevy::color::palettes::tailwind::BLUE_300;
 #[cfg(feature = "dev")]
 use bevy::color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700};
-use bevy::{
-    camera::ScalingMode, color::palettes::tailwind::BLUE_300, prelude::*, window::WindowResolution,
-};
+use bevy::prelude::*;
+use bevy::window::WindowResolution;
 use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings};
 
-use crate::prelude::*;
-
 use super::assets::Shadows;
+use crate::prelude::*;
 
 pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
 

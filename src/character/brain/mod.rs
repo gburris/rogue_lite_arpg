@@ -33,12 +33,17 @@ mod motion;
 mod perception;
 
 pub use action::{Ability, Action, Bite, Breath, Heal};
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
+use bevy::prelude::*;
 pub use capability::CapabilityProfile;
 pub(crate) use engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use engine::{BrainDefinition, Interval};
 pub use motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 pub(crate) use perception::{ConsiderationInput, Targeting};
 pub(super) use perception::{VisionCone, Watching};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 use self::action::StartedEquipmentUses;
 use self::capability::{
@@ -49,21 +54,10 @@ use self::decide::{decide_behavior, finish_action, release_finished_motion};
 use self::engine::{BehaviorScoreExplanation, validate_brain};
 use self::motion::Steering;
 use self::perception::{DecisionContext, MemoryView};
-
-use bevy::{
-    ecs::{lifecycle::HookContext, world::DeferredWorld},
-    prelude::*,
-};
-use rand::{RngExt, SeedableRng};
-use rand_chacha::ChaCha8Rng;
-
-use crate::{
-    prelude::{EnemyKind, tick_equippable_cooldown},
-    world::MapRng,
-};
-
 use super::AiSet;
 use super::npc::VILLAGER;
+use crate::prelude::{EnemyKind, tick_equippable_cooldown};
+use crate::world::MapRng;
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;

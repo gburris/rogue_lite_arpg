@@ -1,11 +1,8 @@
-use crate::{
-    prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats},
-    ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
-        primitives::{menu_header, text},
-    },
-};
 use bevy::prelude::*;
+
+use crate::prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats};
+use crate::ui::constants::DARK_GRAY_ALPHA_COLOR;
+use crate::ui::primitives::{menu_header, text};
 
 pub(super) fn plugin(app: &mut App) {
     app

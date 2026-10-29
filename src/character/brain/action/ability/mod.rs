@@ -8,8 +8,8 @@ mod bite;
 mod breath;
 mod heal;
 
-use bevy::{ecs::query::QueryData, prelude::*};
-
+use bevy::ecs::query::QueryData;
+use bevy::prelude::*;
 pub use bite::Bite;
 pub use breath::Breath;
 pub use heal::Heal;

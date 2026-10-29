@@ -1,12 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{
-    prelude::{Menu, PlayerStats},
-    ui::{
-        constants::DARK_GRAY_ALPHA_COLOR,
-        primitives::{menu_header, text},
-    },
-};
+use crate::prelude::{Menu, PlayerStats};
+use crate::ui::constants::DARK_GRAY_ALPHA_COLOR;
+use crate::ui::primitives::{menu_header, text};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Stats), spawn_stats_menu);

@@ -1,7 +1,8 @@
 use core::fmt;
 use std::sync::LazyLock;
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 
 mod equip;
 mod equipment_transform;

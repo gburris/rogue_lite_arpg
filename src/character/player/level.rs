@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{
-    prelude::{InGameSystems, Lifespan, ZLayer},
-    ui::primitives::text,
-};
-
 use super::Player;
+use crate::prelude::{InGameSystems, Lifespan, ZLayer};
+use crate::ui::primitives::text;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

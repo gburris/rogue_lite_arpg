@@ -1,24 +1,20 @@
 use std::fmt::Write as _;
 
 use avian2d::prelude::*;
-use bevy::{
-    color::palettes::css::{GREEN, RED, YELLOW},
-    dev_tools::states::log_transitions,
-    ecs::schedule::{LogLevel, ScheduleBuildSettings},
-    log::{Level, LogPlugin},
-    prelude::*,
-    sprite::Anchor,
-};
-
+use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 #[cfg(not(target_arch = "wasm32"))]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
+use bevy::dev_tools::states::log_transitions;
+use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
+use bevy::log::{Level, LogPlugin};
+use bevy::prelude::*;
+use bevy::sprite::Anchor;
 
+use super::view;
 use crate::prelude::{
     AppState, AttackState, Brain, Dash, Enemy, InGameSystems, Menu, Motion, ScoreTrace, TargetInfo,
     Targeting, Vision, Wander, ZLayer,
 };
-
-use super::view;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(

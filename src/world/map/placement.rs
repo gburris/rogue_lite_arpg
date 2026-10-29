@@ -1,8 +1,9 @@
+use std::collections::BTreeMap;
+
 use bevy::prelude::*;
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 
 use super::blueprint::MapError;
 use super::tiles::{TileGrid, TileRect};
@@ -213,26 +214,30 @@ fn place_fixed(
     tiles: &TileGrid,
     context: &mut PlaceContext,
 ) -> Result<Vec<IVec2>, MapError> {
-    let bounds = match anchor {
-        Anchor::Center => TileRect::centered_in(context.map_size, footprint),
-        Anchor::CenterOffset(offset) => TileRect::centered_in(context.map_size, footprint)
-            .and_then(|rect| rect.translated(*offset)),
-        Anchor::Structure { name, offset } => context
-            .structure_centers_by_name
-            .get(name)
-            .and_then(|center| TileRect::new(*center + *offset - footprint.as_ivec2() / 2, footprint)),
-        Anchor::MapMin(offset) => TileRect::new(*offset, footprint),
-        Anchor::MapMax(offset) => TileRect::new(
-            context.map_size.as_ivec2() - IVec2::ONE + *offset,
-            footprint,
-        ),
-    }
-    .ok_or_else(|| {
-        format!(
-            "fixed footprint {footprint:?} at {anchor:?} is out of bounds for a {}x{} map or references a missing structure",
-            context.map_size.x, context.map_size.y
-        )
-    })?;
+    let bounds =
+        match anchor {
+            Anchor::Center => TileRect::centered_in(context.map_size, footprint),
+            Anchor::CenterOffset(offset) => TileRect::centered_in(context.map_size, footprint)
+                .and_then(|rect| rect.translated(*offset)),
+            Anchor::Structure { name, offset } => context
+                .structure_centers_by_name
+                .get(name)
+                .and_then(|center| {
+                    TileRect::new(*center + *offset - footprint.as_ivec2() / 2, footprint)
+                }),
+            Anchor::MapMin(offset) => TileRect::new(*offset, footprint),
+            Anchor::MapMax(offset) => TileRect::new(
+                context.map_size.as_ivec2() - IVec2::ONE + *offset,
+                footprint,
+            ),
+        }
+        .ok_or_else(|| {
+            format!(
+                "fixed footprint {footprint:?} at {anchor:?} is out of bounds for a {}x{} map \
+             or references a missing structure",
+                context.map_size.x, context.map_size.y
+            )
+        })?;
     if !context.available(tiles, bounds) {
         return Err(format!(
             "fixed footprint {bounds:?} at {anchor:?} overlaps a reserved area or covers unspawnable tiles"

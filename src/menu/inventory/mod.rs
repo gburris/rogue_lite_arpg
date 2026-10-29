@@ -1,20 +1,14 @@
-use bevy::{
-    input::mouse::{MouseScrollUnit, MouseWheel},
-    picking::hover::HoverMap,
-    prelude::*,
-};
+use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
+use bevy::picking::hover::HoverMap;
+use bevy::prelude::*;
 
-use crate::{
-    character::Purse,
-    menu::inventory::item_display::{
-        DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
-    },
-    prelude::*,
-    ui::{
-        constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT},
-        primitives::{menu_header, text, width},
-    },
+use crate::character::Purse;
+use crate::menu::inventory::item_display::{
+    DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
 };
+use crate::prelude::*;
+use crate::ui::constants::{DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT};
+use crate::ui::primitives::{menu_header, text, width};
 
 mod item_display;
 

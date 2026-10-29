@@ -1,5 +1,6 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 
 mod bat;
 mod defeat;
@@ -7,11 +8,9 @@ mod mage;
 mod warrior;
 
 use super::brain::{BrainDefinition, HomeArea, Interval, VisionCone, Wander, Watching};
-use crate::{
-    character::{Character, Purse, physical_collider},
-    prelude::*,
-    world::MapRng,
-};
+use crate::character::{Character, Purse, physical_collider};
+use crate::prelude::*;
+use crate::world::MapRng;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_enemies);

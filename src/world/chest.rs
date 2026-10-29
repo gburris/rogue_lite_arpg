@@ -1,6 +1,7 @@
 use avian2d::prelude::*;
+use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::ui_widgets::observe;
 
 use crate::prelude::*;
 

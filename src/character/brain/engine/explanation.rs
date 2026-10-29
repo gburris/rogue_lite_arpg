@@ -29,7 +29,7 @@ pub struct BehaviorScoreExplanation {
     pub considerations: Vec<ConsiderationScoreExplanation>,
 }
 
-/// Explains behavior `index` exactly as [`assign_behaviors_to_slots`] scores
+/// Explains behavior `index` exactly as [`assign_behaviors_to_slots`](super::assignment::assign_behaviors_to_slots) scores
 /// it from the same inputs.
 pub fn explain_behavior(
     definition: &BrainDefinition,

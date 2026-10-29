@@ -57,9 +57,9 @@ use self::running_state::{
     DECISION_PERIOD, RunningBehavior, seed_brain_rng_and_schedule_first_decision,
     seed_brain_rng_root_from_map,
 };
-use super::AiSet;
-use super::npc::VILLAGER;
-use crate::prelude::{EnemyKind, tick_equippable_cooldown};
+use crate::character::AiSet;
+use crate::character::npc::VILLAGER;
+use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
@@ -287,7 +287,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             decide_behavior
-                .after(crate::combat::mana::regenerate_mana)
+                .after(regenerate_mana)
                 .after(tick_equippable_cooldown)
                 .in_set(AiSet::Decision),
         );

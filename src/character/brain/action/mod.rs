@@ -10,7 +10,7 @@ use bevy::prelude::*;
 pub(super) use equipment_use::StartedEquipmentUses;
 
 use crate::character::AiSet;
-use crate::items::prelude::EquipmentSlot;
+use crate::prelude::EquipmentSlot;
 
 /// The one non-movement thing a character does at a time: use equipment, use an
 /// ability, or deliberately do nothing.

@@ -1,7 +1,9 @@
 //! How a consideration turns one raw input into a `0.0..=1.0` score.
 
-use super::super::perception::{ConsiderationInput, DecisionContext, read_consideration_input};
 use super::behavior::Behavior;
+use crate::character::brain::perception::{
+    ConsiderationInput, DecisionContext, read_consideration_input,
+};
 
 /// An ordered `min < max` interval: a distance range, a consideration's input
 /// range, or a span of seconds to roll from.

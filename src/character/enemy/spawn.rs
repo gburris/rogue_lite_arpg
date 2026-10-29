@@ -6,7 +6,6 @@ use super::{Enemy, EnemyKind, EnemySpawnData, SpawnEnemies, bat, defeat, mage, w
 use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
 use crate::character::physical_collider;
 use crate::prelude::*;
-use crate::world::MapRng;
 
 pub(super) fn spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,

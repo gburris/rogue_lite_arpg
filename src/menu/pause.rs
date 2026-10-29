@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
-use crate::character::Purse;
 use crate::prelude::*;
 use crate::ui::constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT};
 use crate::ui::primitives::{menu_header, text};

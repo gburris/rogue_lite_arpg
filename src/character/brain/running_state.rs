@@ -9,7 +9,7 @@ use rand_chacha::ChaCha8Rng;
 
 use super::perception::DecisionContext;
 use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
-use crate::world::MapRng;
+use crate::prelude::MapRng;
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;

@@ -17,6 +17,7 @@ pub mod prelude {
     };
     pub use super::state::{AttackState, FacingDirection, Kinematics};
     pub use super::vision::{TargetInfo, Vision};
+    pub use super::{AiSet, Character, Purse};
 }
 
 /// Ordered AI phases. Perception feeds targeting, aim, decisions, execution
@@ -34,7 +35,7 @@ pub enum AiSet {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::character::animation::{AnimationSheet, CharacterAnimationState};
+use self::animation::{AnimationSheet, CharacterAnimationState};
 use crate::prelude::*;
 
 pub struct CharacterPlugin;

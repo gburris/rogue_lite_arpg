@@ -5,9 +5,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use crate::items::equipment::{EquipmentSlot, Equippable, Equipped};
-use crate::items::prelude::StartUsingEquipment;
-use crate::items::{Item, ItemOf, ItemType};
+use super::equipment::{EquipmentSlot, Equippable, Equipped};
+use super::{Item, ItemOf, ItemType};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -16,11 +15,11 @@ pub(super) fn plugin(app: &mut App) {
         (
             update_active_shields
                 .in_set(SimulationSystems::Logic)
-                .after(crate::combat::mana::regenerate_mana)
-                .before(crate::character::AiSet::Decision),
+                .after(regenerate_mana)
+                .before(AiSet::Decision),
             reflect_projectiles
                 .in_set(InGameSystems::Simulation)
-                .after(crate::character::AiSet::Motion),
+                .after(AiSet::Motion),
         ),
     );
 }

@@ -3,7 +3,6 @@ use bevy::picking::hover::HoverMap;
 use bevy::prelude::*;
 
 use self::display_case::{UpdateDisplayCase, display_case};
-use crate::character::Purse;
 use crate::prelude::*;
 use crate::ui::constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT};
 use crate::ui::primitives::{menu_header, text};

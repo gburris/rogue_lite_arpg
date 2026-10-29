@@ -3,9 +3,9 @@ use bevy::prelude::*;
 mod interaction;
 mod spawn;
 
-use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
-use super::brain::{Behavior, BrainDefinition};
 use crate::character::Character;
+use crate::character::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
+use crate::character::brain::{Behavior, BrainDefinition};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

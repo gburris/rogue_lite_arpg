@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
+use super::{damage_overlay, game_over_screen, load_screen, start_screen};
 use crate::prelude::*;
-use crate::ui::{damage_overlay, game_over_screen, load_screen, start_screen};
 
 /// Plugin responsible for managing all UI-related systems and state transitions
 pub struct UIPlugin;

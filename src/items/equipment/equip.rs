@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 
-use super::{EquipmentInUse, Equippable, StopUsingEquipment};
-use crate::character::Character;
+use super::{
+    EquipmentInUse, Equippable, Equipped, Mainhand, MainhandOf, Offhand, OffhandOf,
+    StopUsingEquipment,
+};
 use crate::items::ItemOf;
-use crate::items::equipment::{Equipped, Mainhand, MainhandOf, Offhand, OffhandOf};
+use crate::prelude::Character;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_equip).add_observer(on_unequip);

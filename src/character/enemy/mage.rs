@@ -13,7 +13,6 @@ use crate::character::brain::{
     Interval, Motion, Orbit,
 };
 use crate::prelude::*;
-use crate::world::MapRng;
 
 /// Distance a caster opens before it stops casting to regenerate mana.
 const RECOVERY_DISTANCE_RANGE: Interval = Interval::new(300.0, 340.0);

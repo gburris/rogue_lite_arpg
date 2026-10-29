@@ -16,6 +16,7 @@ pub mod prelude {
     };
     pub use super::health::{AttemptHeal, Healed, Health};
     pub use super::invulnerable::IFrames;
+    pub(crate) use super::mana::regenerate_mana;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
         FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, Projectiles, fireball,

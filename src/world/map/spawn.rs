@@ -4,10 +4,10 @@ use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+use super::blueprint::{MapBlueprint, PlacementKind};
 use super::tiles::{TileGrid, TileKind, TileRect};
+use super::tiling::tile_appearance;
 use crate::prelude::*;
-use crate::world::map::blueprint::{MapBlueprint, PlacementKind};
-use crate::world::map::tiling::tile_appearance;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(TilemapPlugin);

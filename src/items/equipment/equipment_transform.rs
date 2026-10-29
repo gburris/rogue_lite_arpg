@@ -3,8 +3,8 @@ use std::sync::LazyLock;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
+use super::{Equipped, Mainhand, Offhand};
 use crate::items::Items;
-use crate::items::equipment::{Equipped, Mainhand, Offhand};
 use crate::prelude::*;
 
 // Simple transform tuple for concise definitions

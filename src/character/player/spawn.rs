@@ -9,7 +9,6 @@ use super::interact::PlayerInteractionRadius;
 use super::{Player, death, overlay};
 use crate::character::physical_collider;
 use crate::character::vision::TargetInfo;
-use crate::menu::{PauseControl, pause_actions};
 use crate::prelude::*;
 
 pub(super) fn spawn_player(

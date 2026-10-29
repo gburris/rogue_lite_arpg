@@ -9,7 +9,7 @@ mod warrior;
 use self::spawn::{
     enemy_children, enemy_wander, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,
 };
-use super::brain::{BrainDefinition, VisionCone};
+use crate::character::brain::{BrainDefinition, VisionCone};
 use crate::character::{Character, Purse};
 use crate::prelude::*;
 

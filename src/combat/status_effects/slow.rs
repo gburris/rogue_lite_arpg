@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::combat::status_effects::freeze::Frozen;
-use crate::combat::status_effects::{StatusType, Statuses};
+use super::freeze::Frozen;
+use super::{StatusType, Statuses};
 use crate::prelude::Kinematics;
 
 #[derive(Component, Clone)]

@@ -7,13 +7,15 @@ use bevy::prelude::*;
 use super::capability::{
     CapabilityComponents, CapabilityProfiles, MotionActionTable, build_capability_profiles,
 };
-use super::engine::{Behavior, assign_behaviors_to_slots, explain_behavior};
+use super::engine::{
+    Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
+};
 use super::motion::MotionFinished;
 use super::perception::{
     DecisionContext, DecisionInputComponents, DecisionInputComponentsItem, UseEligibilityQueries,
     build_decision_context,
 };
-use super::{Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD, ScoreTrace};
+use super::{Action, ActionFinished, ActionOutcome, Brain, BrainRng, DECISION_PERIOD};
 
 type DecidingBrains<'world, 'state> = Query<
     'world,
@@ -26,6 +28,13 @@ type DecidingBrains<'world, 'state> = Query<
         Option<&'static mut ScoreTrace>,
     ),
 >;
+
+/// Debug readout of a brain's last decision: one explanation per behavior, in
+/// definition order. Only brains carrying it pay for the explanations.
+#[derive(Component, Debug, Default)]
+pub struct ScoreTrace {
+    pub behavior_explanations: Vec<BehaviorScoreExplanation>,
+}
 
 pub(super) fn release_finished_motion(
     finished: On<MotionFinished>,

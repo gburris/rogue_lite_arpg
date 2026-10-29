@@ -56,3 +56,22 @@ pub(super) fn plugin(app: &mut App) {
         )
         .add_observer(equipment_use::report_equipment_use_finished);
 }
+
+/// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`
+/// only while that behavior still runs, so a stale finish clears nothing.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct ActionFinished {
+    pub entity: Entity,
+    pub action: Action,
+    pub behavior_run_id: u32,
+    pub outcome: ActionOutcome,
+}
+
+/// How an action reported in [`ActionFinished`] ended.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActionOutcome {
+    Completed,
+    /// A committed use its applier could not start. A continuously scored use waits for
+    /// its chance instead and never reports this.
+    NotStarted,
+}

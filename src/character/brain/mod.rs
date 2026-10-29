@@ -13,7 +13,7 @@
 //!    component the motion needs implements `Capability`, is recorded in
 //!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
 //! 2. [`DecisionContext`] fields built in [`perception`], plus
-//!    [`ConsiderationInput`](perception::ConsiderationInput) variants read in
+//!    [`ConsiderationInput`] variants read in
 //!    `read_consideration_input`.
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!

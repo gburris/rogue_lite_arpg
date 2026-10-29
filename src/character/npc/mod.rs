@@ -1,18 +1,13 @@
 use bevy::{prelude::*, ui_widgets::observe};
-use bevy_behave::prelude::*;
 
 mod interaction;
 
+use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
+use super::brain::{Behavior, Brain, BrainDefinition, HomeArea, Interval, Wander};
 use crate::{
-    character::{
-        Character,
-        behavior::{Idle, Retreat},
-        physical_collider,
-    },
+    character::{Character, physical_collider},
     prelude::*,
 };
-
-use super::behavior::{Anchor, Wander};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_npcs);
@@ -28,7 +23,7 @@ pub struct NpcSpawnData {
 }
 
 #[derive(Component)]
-#[require(Character, DespawnOnExit::<AppState>(AppState::Playing))]
+#[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct NPC;
 
 /// Recipes name these directly, e.g. `(what: Npc(Shopkeeper), ...)` in `map_recipes.ron`.
@@ -37,6 +32,19 @@ pub enum NpcKind {
     Helper,
     Shopkeeper,
     StatTrainer,
+}
+
+static VILLAGER_BEHAVIORS: &[Behavior] = &[WANDER, ACTION_BASELINE_IDLE, RETURN_TO_HOME];
+
+/// Wanders around its home area and never requests equipment.
+pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
+    behaviors: VILLAGER_BEHAVIORS,
+};
+
+impl NpcKind {
+    pub fn brain(&self) -> &'static BrainDefinition {
+        &VILLAGER
+    }
 }
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
@@ -72,11 +80,13 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
+    let brain = npc_kind.brain();
+
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 helper(sprites, sprite_layouts),
             ),
             ice_staff(sprites, sprite_layouts),
@@ -84,7 +94,7 @@ fn spawn_npc(
         NpcKind::Shopkeeper => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 shopkeeper(sprites, sprite_layouts),
             ),
             axe(sprites),
@@ -92,7 +102,7 @@ fn spawn_npc(
         NpcKind::StatTrainer => spawn_npc_with_equipment(
             commands,
             (
-                base_npc(spawn_position, shadows),
+                base_npc(spawn_position, shadows, brain),
                 stat_trainer(sprites, sprite_layouts),
             ),
             sword(sprites),
@@ -111,11 +121,18 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand:
     });
 }
 
-fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
+fn base_npc(
+    spawn_position: Vec2,
+    shadows: &Shadows,
+    brain: &'static BrainDefinition,
+) -> impl Bundle {
     (
         NPC,
-        Anchor::new(spawn_position, WANDER_RADIUS),
-        SimpleMotion::new(100.0),
+        Brain::new(brain),
+        // Villagers stand briefly between strolls.
+        Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5)),
+        HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0),
+        Kinematics::new(100.0),
         Health::new(1000.0),
         Transform::from_translation(spawn_position.extend(ZLayer::OnGround.z())),
         children![
@@ -126,7 +143,6 @@ fn base_npc(spawn_position: Vec2, shadows: &Shadows) -> impl Bundle {
             ),
             hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
             physical_collider(),
-            BehaveTree::new(wander_and_retreat_behavior()),
         ],
     )
 }
@@ -168,18 +184,4 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
         ),
         observe(interaction::on_stat_trainer_store_open),
     )
-}
-
-fn wander_and_retreat_behavior() -> Tree<Behave> {
-    behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Idle", Idle::default().timer_range(1.0..4.0)),
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.5)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-            }
-        }
-    }
 }

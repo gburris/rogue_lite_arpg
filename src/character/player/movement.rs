@@ -15,14 +15,14 @@ pub(super) struct PlayerMovement;
 
 fn on_player_movement(
     movement: On<Fire<PlayerMovement>>,
-    mut player_motion: Single<&mut SimpleMotion, With<Player>>,
+    mut player_kinematics: Single<&mut Kinematics, With<Player>>,
 ) {
-    player_motion.start_moving(movement.value);
+    player_kinematics.move_in_direction(movement.value, 1.0);
 }
 
 fn on_player_stopped(
     _: On<Complete<PlayerMovement>>,
-    mut player_motion: Single<&mut SimpleMotion, (With<Player>, Without<Enemy>, Without<NPC>)>,
+    mut player_kinematics: Single<&mut Kinematics, (With<Player>, Without<Enemy>, Without<NPC>)>,
 ) {
-    player_motion.stop_moving();
+    player_kinematics.stop_moving();
 }

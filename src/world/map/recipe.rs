@@ -64,7 +64,7 @@ impl RecipeCatalog {
         })
     }
 
-    /// Returns the recipe after `current` in file order (hub, dungeons, arenas), wrapping.
+    /// The recipe after `current` in file order, wrapping.
     #[cfg(feature = "dev")]
     pub(super) fn recipe_after(&self, current: &str) -> &str {
         let index = self
@@ -162,7 +162,6 @@ pub(crate) struct MapRecipe {
     pub(super) size_y_range: (u32, u32),
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
-    /// Radius around the player start, in tiles, that no enemy may occupy.
     pub(super) start_clearance: u32,
     /// Preset spawns followed by the recipe's own.
     pub(super) spawns: Vec<SpawnEntry>,
@@ -233,8 +232,7 @@ pub(super) struct StructureEntry {
     /// Where the structure goes, from the same options as spawns; `Random()` by default.
     #[serde(default = "random_location")]
     pub(super) at: Location,
-    /// Places this many copies, as if the entry were repeated; resolved names stay
-    /// `{kind}_{index}`, so a named entry must keep `count: 1`.
+    /// Resolved names stay `{kind}_{index}`, so a named entry must keep `count: 1`.
     #[serde(default = "one")]
     pub(super) count: u32,
 }
@@ -362,10 +360,10 @@ impl SpawnKind {
             Self::PlayerStart => PlacementKind::PlayerStart,
             Self::Exit => PlacementKind::Exit,
             Self::Chest => PlacementKind::Chest,
-            Self::Enemy(kind) => PlacementKind::Enemy(kind.clone()),
+            Self::Enemy(kind) => PlacementKind::Enemy(*kind),
             Self::RandomEnemy => {
                 let index = random_generator.random_range(0..EnemyKind::ALL.len());
-                PlacementKind::Enemy(EnemyKind::ALL[index].clone())
+                PlacementKind::Enemy(EnemyKind::ALL[index])
             }
             Self::Npc(kind) => PlacementKind::Npc(*kind),
         }

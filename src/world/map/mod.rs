@@ -42,18 +42,12 @@ pub(super) fn plugin(app: &mut App) {
 // ```
 //
 // Design notes:
-// - build.rs owns determinism: one ChaCha8Rng(seed) threads through size rolls,
-//   structure choice, and every PlaceRule. Same (recipe, seed) maps to the same blueprint,
-//   and the blueprint keeps both, so MapRequest::Named { recipe, seed } replays it.
-//   The weighted recipe pick draws from the root MapRng, never from the build seed.
+// - build.rs owns determinism: the same (recipe, seed) maps to the same blueprint, and
+//   the blueprint keeps both, so MapRequest::Named { recipe, seed } replays it.
 // - Recipes list everything they place in `spawns` (what, count, at, separation);
 //   structures and spawns pick their location from the same `Location` options.
 // - Build order: size, structures, fixed-anchor spawns, player start (kept the recipe's
-//   start_clearance from enemies), exits, enemies, chests, NPCs. Each stage draws from
-//   its own ChaCha8 stream of the seed, so changing one stage never moves another.
-//   Separation is measured against every point placed so far.
-// - Exits and the player start each come from exactly one source: structure glyphs or
-//   spawn entries.
+//   start_clearance from enemies), exits, enemies, chests, NPCs (see `Stage`).
 // - MapBlueprint is renderer-agnostic data (TileGrid<TileKind> + placements).
 //   All backend detail (TilemapBundle, atlas slots) stays inside spawn.rs.
 // - Structures are glyph grids (: = transparent, letters = placements over floor);
@@ -62,6 +56,6 @@ pub(super) fn plugin(app: &mut App) {
 //   no doorway is carved.
 // - validate() (single PlayerStart, at least one Exit, solid border, spawnable
 //   disjoint placements) runs at generation time; startup additionally rebuilds
-//   seeds 0..=8 per recipe as a smoke test, and `cargo test` builds seeds 0..64.
+//   seeds 0..=8 per recipe as a smoke test.
 // - Dev builds: editing map_recipes.ron rebuilds the current map in place; F1 opens the
 //   AiTestArena arena; F6 cycles through every recipe in file order.

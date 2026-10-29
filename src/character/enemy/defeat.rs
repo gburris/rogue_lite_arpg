@@ -16,7 +16,12 @@ pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
     mut commands: Commands,
     mut defeated_enemy_query: Query<
-        (&Experience, &Transform, Option<&Items>, Option<&Purse>),
+        (
+            Option<&Experience>,
+            &Transform,
+            Option<&Items>,
+            Option<&Purse>,
+        ),
         With<Enemy>,
     >,
     player_query: Single<(&PlayerStats, &mut Player)>,
@@ -28,8 +33,10 @@ pub(super) fn on_enemy_defeated(
         defeated_enemy_query.get_mut(defeated.entity)
     {
         let (player_stats, mut player) = player_query.into_inner();
-        //Give EXP to the player
-        player.current_experience += experience_to_gain.base_exp;
+
+        if let Some(experience_to_gain) = experience_to_gain {
+            player.current_experience += experience_to_gain.base_exp;
+        }
 
         if let Some(items) = items {
             for item_entity in items.iter() {
@@ -37,9 +44,7 @@ pub(super) fn on_enemy_defeated(
                 if let Ok(item_result) = item_query.get(item_entity) {
                     let roll = rng.random_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger(ItemDrop {
-                            entity: item_entity,
-                        });
+                        commands.trigger(ItemDrop { item: item_entity });
                     }
                 }
             }
@@ -58,7 +63,7 @@ pub(super) fn on_enemy_defeated(
         commands
             .entity(defeated.entity)
             .insert(Lifespan::new(2.0))
-            .remove::<RigidBody>()
+            .remove::<(RigidBody, Brain)>()
             .despawn_related::<Children>();
     }
 }

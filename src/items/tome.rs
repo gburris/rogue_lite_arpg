@@ -5,7 +5,7 @@ use crate::{
     items::{
         Item, ItemType,
         equipment::{EquipmentSlot, Equippable},
-        prelude::UseEquipment,
+        prelude::StartUsingEquipment,
     },
     prelude::*,
 };
@@ -34,21 +34,20 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
 }
 
 fn on_healing_tome_cast(
-    healing_tome: On<UseEquipment>,
+    healing_tome: On<StartUsingEquipment>,
     mut commands: Commands,
     tome_query: Query<(&HealingTome, &ItemOf)>,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) -> Result {
-    let (tome, item_of) = tome_query.get(healing_tome.entity)?;
-
+    let (tome, _) = tome_query.get(healing_tome.item)?;
     let health_to_add = rand::rng().random_range(tome.healing.0..tome.healing.1);
     commands.trigger(AttemptHeal {
-        entity: item_of.0,
+        entity: healing_tome.holder,
         amount: health_to_add,
     });
     commands
-        .entity(item_of.0)
+        .entity(healing_tome.holder)
         .with_child(heal_tome_vfx(sprites, sprite_layouts));
 
     Ok(())

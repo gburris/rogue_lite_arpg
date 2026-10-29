@@ -1,7 +1,7 @@
 mod damage;
 mod health;
 mod invulnerable;
-mod mana;
+pub(crate) mod mana;
 mod projectile;
 mod status_effects;
 

@@ -12,36 +12,33 @@ use crate::{
     prelude::{GameCollisionLayer, Player},
 };
 
-#[derive(PartialEq, Clone, Copy, Debug)]
-pub enum DamageSource {
-    Player,
+/// Which side of combat a character fights on, required by every character marker.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+#[component(immutable)]
+pub enum CombatSide {
+    Ally,
     Enemy,
-    NPC,
-    Environment,
 }
 
-impl From<bool> for DamageSource {
-    fn from(is_enemy: bool) -> Self {
-        if is_enemy {
-            DamageSource::Enemy
-        } else {
-            DamageSource::Player
+impl CombatSide {
+    /// The layer my hurtbox is on.
+    pub fn hurtbox_layer(self) -> GameCollisionLayer {
+        match self {
+            Self::Ally => GameCollisionLayer::AllyHurtBox,
+            Self::Enemy => GameCollisionLayer::EnemyHurtBox,
         }
     }
-}
 
-impl From<DamageSource> for LayerMask {
-    fn from(source: DamageSource) -> Self {
-        match source {
-            DamageSource::Player | DamageSource::NPC => GameCollisionLayer::EnemyHurtBox.to_bits(),
-            DamageSource::Enemy => GameCollisionLayer::AllyHurtBox.to_bits(),
-            DamageSource::Environment => {
-                // Environment can affect all characters
-                GameCollisionLayer::AllyHurtBox.to_bits()
-                    | GameCollisionLayer::EnemyHurtBox.to_bits()
-            }
+    /// Layer my attacks collide with (the enemy's hurtbox layer).
+    pub fn target_hurtbox(self) -> GameCollisionLayer {
+        self.opposite().hurtbox_layer()
+    }
+
+    pub fn opposite(self) -> Self {
+        match self {
+            Self::Ally => Self::Enemy,
+            Self::Enemy => Self::Ally,
         }
-        .into()
     }
 }
 
@@ -71,13 +68,22 @@ impl Default for Damage {
 pub struct HurtBox;
 
 pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
+    hurtbox_at(size, membership, HURTBOX_OFFSET)
+}
+
+/// Hurtbox with a custom vertical centre, for sheets whose body does not sit
+/// at the humanoid offset.
+pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> impl Bundle {
     (
         HurtBox,
         Collider::rectangle(size.x, size.y),
-        Transform::from_xyz(0.0, -8.0, 0.0),
+        Transform::from_xyz(0.0, y_offset, 0.0),
         CollisionLayers::new(membership, [GameCollisionLayer::HitBox]),
     )
 }
+
+/// Default hurtbox centre relative to the character transform.
+const HURTBOX_OFFSET: f32 = -8.0;
 
 #[derive(EntityEvent)]
 pub struct AttemptDamage {
@@ -86,8 +92,13 @@ pub struct AttemptDamage {
     pub ignore_invulnerable: bool,
     /// We treat damage as a range with RNG determining which value is dealt
     pub damage: Damage,
-    /// Not all damage has a "Source" entity, like environmental damage or damage-over-time effects
-    pub damage_source: Option<Entity>,
+    /// Weapon or projectile entity used for `Effects` and `Knockback`.
+    /// Not all damage has one, like environmental damage or damage-over-time effects.
+    pub source_item: Option<Entity>,
+    /// Character responsible for aggro or credit. Melee sets the weapon holder,
+    /// projectiles carry the attacker stamped at fire time, reflection transfers
+    /// it to the blocker, environmental damage has none.
+    pub attacker: Option<Entity>,
     /// damage direction, ex. velocity direction of projectile or character position for melee
     pub direction: Option<Vec2>,
 }
@@ -98,7 +109,8 @@ impl Default for AttemptDamage {
             entity: Entity::PLACEHOLDER,
             ignore_invulnerable: false,
             damage: Damage::Single(1.0),
-            damage_source: None,
+            source_item: None,
+            attacker: None,
             direction: None,
         }
     }
@@ -110,7 +122,10 @@ impl Default for AttemptDamage {
 pub struct DamageDealt {
     pub entity: Entity,
     pub damage: f32,
-    pub damage_source: Option<Entity>,
+    /// Weapon or projectile entity used for `Effects` and `Knockback`.
+    pub source_item: Option<Entity>,
+    /// Character responsible for aggro or credit (see `AttemptDamage::attacker`).
+    pub attacker: Option<Entity>,
     /// damage direction, ex. velocity direction of projectile or character position for melee
     pub direction: Option<Vec2>,
 }
@@ -163,7 +178,8 @@ pub(super) fn on_damage_event(
         commands.trigger(DamageDealt {
             entity: damaged_entity,
             damage,
-            damage_source: attempt_damage.damage_source,
+            source_item: attempt_damage.source_item,
+            attacker: attempt_damage.attacker,
             direction: attempt_damage.direction,
         });
 
@@ -171,7 +187,7 @@ pub(super) fn on_damage_event(
             commands.trigger(Defeated {
                 entity: damaged_entity,
             });
-        } else if let Some(source_entity) = attempt_damage.damage_source {
+        } else if let Some(source_entity) = attempt_damage.source_item {
             // If entity is still alive and damage source exists and has effects list, we apply status effects
             if let Ok(effects) = source_query.get(source_entity) {
                 commands.trigger(ApplyEffects::new(effects, damaged_entity));
@@ -230,8 +246,8 @@ pub(super) fn on_damage_dealt_knockback(
     knockback_query: Query<&Knockback>,
     mut forces: Query<Forces>,
 ) -> Result {
-    if let Some(damage_source) = damage_dealt.damage_source
-        && let Ok(knockback) = knockback_query.get(damage_source)
+    if let Some(source_item) = damage_dealt.source_item
+        && let Ok(knockback) = knockback_query.get(source_item)
         && let Some(damage_direction) = damage_dealt.direction
     {
         forces

@@ -77,9 +77,13 @@ impl Item {
     }
 }
 
+/// Relationship linking an item to its holder (inventory or equipment owner).
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Items)]
-pub struct ItemOf(pub Entity);
+pub struct ItemOf {
+    /// Entity holding this item.
+    pub holder: Entity,
+}
 
 #[derive(Component, Clone, Debug)]
 #[relationship_target(relationship = ItemOf, linked_spawn)]
@@ -104,13 +108,13 @@ fn on_item_added_to_inventory(
 ) -> Result {
     let holder_entity = item_query.get(item_added.entity)?;
 
-    let (items, capacity) = holder_query.get(holder_entity.0)?;
+    let (items, capacity) = holder_query.get(holder_entity.holder)?;
 
     let capacity = capacity.map_or(usize::MAX, |c| c.0);
 
     if items.map_or(0, bevy::prelude::RelationshipTarget::len) >= capacity {
         commands.trigger(ItemDrop {
-            entity: item_added.entity,
+            item: item_added.entity,
         });
     }
 

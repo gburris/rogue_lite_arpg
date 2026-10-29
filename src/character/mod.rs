@@ -1,5 +1,5 @@
 mod animation;
-mod behavior;
+mod brain;
 mod enemy;
 mod npc;
 mod player;
@@ -7,6 +7,8 @@ mod state;
 mod vision;
 
 pub mod prelude {
+    pub(crate) use super::brain::Targeting;
+    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     pub use super::enemy::*;
     pub use super::npc::*;
     pub use super::player::prelude::*;
@@ -14,10 +16,25 @@ pub mod prelude {
     pub use super::vision::*;
 }
 
+/// Ordered AI phases. Perception feeds targeting, aim, decisions, execution
+/// of those decisions, and finally the motion driver.
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum AiSet {
+    Perception,
+    Targeting,
+    Aim,
+    Decision,
+    Execute,
+    Motion,
+}
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::{character::animation::CharacterAnimationState, prelude::*};
+use crate::{
+    character::animation::{AnimationSheet, CharacterAnimationState},
+    prelude::*,
+};
 
 pub struct CharacterPlugin;
 
@@ -25,11 +42,30 @@ impl Plugin for CharacterPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-        app.add_plugins((animation::plugin, behavior::plugin, vision::plugin));
+        app.add_plugins((animation::plugin, brain::plugin));
+
+        app.configure_sets(
+            Update,
+            (
+                AiSet::Perception,
+                AiSet::Targeting,
+                AiSet::Aim,
+                AiSet::Decision,
+                AiSet::Execute,
+                AiSet::Motion,
+            )
+                .chain()
+                .in_set(SimulationSystems::Logic),
+        );
 
         app.add_systems(
             FixedUpdate,
-            state::motion_to_velocity.in_set(MainSystems::InGame),
+            state::kinematics_to_velocity.in_set(MainSystems::InGame),
+        );
+
+        app.add_systems(
+            Update,
+            state::sync_attack_state_from_equipment.in_set(SimulationSystems::Derive),
         );
     }
 }
@@ -45,6 +81,7 @@ impl Plugin for CharacterPlugin {
     Vision,
     ItemCapacity(10),
     AnimationTimer,
+    AnimationSheet,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]
 pub struct Character;
 
@@ -72,13 +109,4 @@ impl Purse {
     pub fn add(&mut self, amount: u32) {
         self.amount += amount;
     }
-
-    // pub fn remove(&mut self, amount: u32) -> Result<u32, String> {
-    //     if self.amount >= amount {
-    //         self.amount -= amount;
-    //         Ok(self.amount)
-    //     } else {
-    //         Err("Not enough in purse!".to_string())
-    //     }
-    // }
 }

@@ -5,6 +5,7 @@ mod slow;
 pub mod prelude {
     pub use super::burn::*;
     pub use super::freeze::*;
+    pub use super::slow::*;
     pub use super::{EffectOf, Effects, StatusOf};
 }
 
@@ -21,11 +22,10 @@ pub(super) fn plugin(app: &mut App) {
             burn::apply_burning,
             (burn::tick_burn, burn::while_burning).chain(),
             freeze::apply_frozen,
-            slow::apply_slowed,
+            slow::sync_slow_from_statuses,
         )
             .in_set(InGameSystems::Simulation),
-    )
-    .add_observer(slow::on_slow_removed);
+    );
 }
 
 #[derive(Component, Clone)]
@@ -47,7 +47,7 @@ pub struct StatusOf(pub Entity);
 pub struct Statuses(Vec<Entity>);
 
 #[derive(Component, Clone)]
-struct StatusApplied;
+pub(crate) struct StatusApplied;
 
 #[derive(Component, Clone, Hash, Eq, PartialEq, Debug)]
 enum StatusType {

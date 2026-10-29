@@ -66,9 +66,10 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 #[require(
     Character,
+    CombatSide = CombatSide::Ally,
     ItemCapacity(50),
     Health::new(100.0),
-    SimpleMotion::new(250.0),
+    Kinematics::new(250.0),
     // Double the mass of npcs/enemies so the player can push them around more
     Mass(100.0),
     IFrames,
@@ -205,6 +206,7 @@ fn spawn_player(
                 tome_of_healing(&sprites)
             ]),
             observe(death::on_player_defeated),
+            observe(overlay::on_equipment_use_succeeded),
             observe(overlay::on_equipment_use_failed),
             children![
                 player_aim(gizmo_assets),

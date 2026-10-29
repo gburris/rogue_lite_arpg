@@ -2,7 +2,7 @@ use bevy::{color::palettes::tailwind::BLUE_400, prelude::*};
 use bevy_lit::prelude::PointLight2d;
 
 use crate::{
-    combat::status_effects::{StatusApplied, StatusOf, StatusType, StatusVfxOf, slow::Slowed},
+    combat::status_effects::{StatusApplied, StatusOf, StatusType, StatusVfxOf},
     prelude::*,
 };
 
@@ -12,29 +12,15 @@ pub struct Frozen;
 
 pub(super) fn apply_frozen(
     mut commands: Commands,
-    status_query: Query<(Entity, &StatusOf, &Lifespan), (With<Frozen>, Without<StatusApplied>)>,
+    status_query: Query<(Entity, &StatusOf), (With<Frozen>, Without<StatusApplied>)>,
     sprites: Res<SpriteAssets>,
 ) {
-    status_query
-        .iter()
-        .for_each(|(status, status_of, duration)| {
-            commands.entity(status).insert(StatusApplied);
-
-            let slowed = commands
-                .spawn((
-                    Slowed {
-                        percent: 1.0, // completely stun
-                    },
-                    // make sure slow lasts while frozen
-                    Lifespan::new(duration.0.remaining_secs()),
-                ))
-                .id();
-
-            commands
-                .entity(status_of.0)
-                .add_one_related::<StatusOf>(slowed)
-                .with_child(grounded_ice_vfx(&sprites, status));
-        });
+    status_query.iter().for_each(|(status, status_of)| {
+        commands.entity(status).insert(StatusApplied);
+        commands
+            .entity(status_of.0)
+            .with_child(grounded_ice_vfx(&sprites, status));
+    });
 }
 
 fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {

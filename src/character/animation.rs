@@ -1,4 +1,4 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
     animation::{AnimationData, AnimationIndices, AnimationTimer},
@@ -11,12 +11,11 @@ pub(super) fn plugin(app: &mut App) {
         (update_animation_state, cycle_character_animation)
             .chain()
             .in_set(InGameSystems::Vfx),
-    )
-    .insert_resource(DefaultAnimationConfig::default());
+    );
 }
 
 #[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
-#[require(FacingDirection, SimpleMotion)]
+#[require(FacingDirection, Kinematics)]
 pub(super) enum CharacterAnimationState {
     #[default]
     Idle,
@@ -25,19 +24,96 @@ pub(super) enum CharacterAnimationState {
     Dying,
 }
 
+impl CharacterAnimationState {
+    /// Row group index in [`AnimationSheet::animations`].
+    fn index(self) -> usize {
+        match self {
+            Self::Idle => 0,
+            Self::Moving => 1,
+            Self::Attacking => 2,
+            Self::Dying => 3,
+        }
+    }
+}
+
+/// Sheet layout: columns plus one animation per state and facing direction.
+#[derive(Component, Clone, Debug)]
+pub(super) struct AnimationSheet {
+    columns: usize,
+    animations: [[AnimationData; 4]; 4],
+    preserve_phase: bool,
+}
+
+impl Default for AnimationSheet {
+    fn default() -> Self {
+        // Rows are ordered Down, Right, Up, Left, matching the sheet.
+        Self {
+            columns: 13,
+            animations: [
+                state_rows([14, 15, 12, 13], 3, 0.5),
+                state_rows([10, 11, 8, 9], 9, 0.1),
+                state_rows([18, 19, 16, 17], 9, 0.1),
+                state_rows([20, 20, 20, 20], 5, 0.4),
+            ],
+            preserve_phase: false,
+        }
+    }
+}
+
+impl AnimationSheet {
+    /// Flapping flier layout sharing one wingbeat loop.
+    pub(super) fn bat() -> Self {
+        const BAT_FRAMES_PER_ROW: usize = 4;
+        const BAT_FLAP_DURATION: f32 = 0.12;
+        const BAT_ROWS: [usize; 4] = [0, 1, 2, 3];
+
+        Self {
+            columns: BAT_FRAMES_PER_ROW,
+            animations: [
+                state_rows(BAT_ROWS, BAT_FRAMES_PER_ROW, BAT_FLAP_DURATION),
+                state_rows(BAT_ROWS, BAT_FRAMES_PER_ROW, BAT_FLAP_DURATION),
+                state_rows(BAT_ROWS, BAT_FRAMES_PER_ROW, BAT_FLAP_DURATION),
+                state_rows([0, 0, 0, 0], 1, BAT_FLAP_DURATION),
+            ],
+            preserve_phase: true,
+        }
+    }
+
+    fn get(&self, state: CharacterAnimationState, direction: FacingDirection) -> &AnimationData {
+        &self.animations[state.index()][direction_index(direction)]
+    }
+}
+
+fn state_rows(rows: [usize; 4], frame_count: usize, frame_duration: f32) -> [AnimationData; 4] {
+    rows.map(|row| AnimationData {
+        row,
+        frame_count,
+        frame_duration,
+    })
+}
+
+fn direction_index(direction: FacingDirection) -> usize {
+    match direction {
+        FacingDirection::Down => 0,
+        FacingDirection::Right => 1,
+        FacingDirection::Up => 2,
+        FacingDirection::Left => 3,
+    }
+}
+
 fn update_animation_state(
     mut character_query: Query<
         (
-            &SimpleMotion,
+            &Kinematics,
             &AttackState,
             Option<&Health>,
             &mut CharacterAnimationState,
             &mut FacingDirection,
         ),
-        Or<(Changed<SimpleMotion>, Changed<AttackState>, Changed<Health>)>,
+        Or<(Changed<Kinematics>, Changed<AttackState>, Changed<Health>)>,
     >,
 ) {
-    for (motion, attack_state, health, mut animation_state, mut facing_direction) in
+    for (kinematics, attack_state, health, mut animation_state, mut facing_direction) in
         &mut character_query
     {
         if health.is_none_or(|h| h.hp <= 0.0) {
@@ -47,7 +123,7 @@ fn update_animation_state(
 
         facing_direction.set_if_neq(FacingDirection::from_vec2(
             &facing_direction,
-            motion.direction,
+            kinematics.direction,
         ));
 
         // Attacking animation takes priority over walking / idle
@@ -56,7 +132,7 @@ fn update_animation_state(
             continue;
         }
 
-        if motion.is_moving() {
+        if kinematics.is_moving() {
             animation_state.set_if_neq(CharacterAnimationState::Moving);
         } else {
             animation_state.set_if_neq(CharacterAnimationState::Idle);
@@ -65,7 +141,6 @@ fn update_animation_state(
 }
 
 fn cycle_character_animation(
-    animation_config: Res<DefaultAnimationConfig>,
     mut query: Query<
         (
             &mut AnimationIndices,
@@ -73,86 +148,48 @@ fn cycle_character_animation(
             &mut Sprite,
             &CharacterAnimationState,
             &FacingDirection,
+            &AnimationSheet,
         ),
         Or<(Changed<CharacterAnimationState>, Changed<FacingDirection>)>,
     >,
 ) {
-    for (mut indices, mut timer, mut sprite, state, direction) in &mut query {
-        *indices = animation_config.get_indices(*state, *direction);
-        *timer = AnimationTimer(animation_config.get_timer(*state, *direction));
-        if let Some(atlas) = &mut sprite.texture_atlas {
-            atlas.index = indices.start();
-        }
-    }
-}
-
-#[derive(Resource)]
-struct DefaultAnimationConfig {
-    columns: usize,
-    animations: HashMap<(CharacterAnimationState, FacingDirection), AnimationData>,
-}
-
-impl Default for DefaultAnimationConfig {
-    fn default() -> Self {
-        use CharacterAnimationState::{Attacking, Dying, Idle, Moving};
-        use FacingDirection::{Down, Left, Right, Up};
-        let data = [
-            (Idle, Up, (12, 3, 0.5)),
-            (Idle, Left, (13, 3, 0.5)),
-            (Idle, Down, (14, 3, 0.5)),
-            (Idle, Right, (15, 3, 0.5)),
-            (Moving, Up, (8, 9, 0.1)),
-            (Moving, Left, (9, 9, 0.1)),
-            (Moving, Down, (10, 9, 0.1)),
-            (Moving, Right, (11, 9, 0.1)),
-            (Dying, Up, (20, 5, 0.4)),
-            (Dying, Left, (20, 5, 0.4)),
-            (Dying, Down, (20, 5, 0.4)),
-            (Dying, Right, (20, 5, 0.4)),
-            (Attacking, Up, (16, 9, 0.1)),
-            (Attacking, Left, (17, 9, 0.1)),
-            (Attacking, Down, (18, 9, 0.1)),
-            (Attacking, Right, (19, 9, 0.1)),
-        ];
-        let animations = data
-            .into_iter()
-            .map(|(state, dir, data)| ((state, dir), AnimationData::from(data)))
-            .collect::<HashMap<_, _>>();
-        Self {
-            columns: 13,
-            animations,
-        }
-    }
-}
-
-impl DefaultAnimationConfig {
-    fn get_animation(
-        &self,
-        state: CharacterAnimationState,
-        direction: FacingDirection,
-    ) -> &AnimationData {
-        self.animations.get(&(state, direction)).unwrap_or_else(|| {
-            panic!(
-                "Missing animation data for {:?} {:?}",
-                state.clone(),
-                direction.clone()
-            )
-        })
-    }
-
-    fn get_indices(
-        &self,
-        state: CharacterAnimationState,
-        direction: FacingDirection,
-    ) -> AnimationIndices {
-        let animation = self.get_animation(state, direction);
-        let first = animation.row * self.columns;
+    for (mut indices, mut timer, mut sprite, state, direction, sheet) in &mut query {
+        let animation = sheet.get(*state, *direction);
+        let first = animation.row * sheet.columns;
         let last = first + animation.frame_count - 1;
-        AnimationIndices::Cycle((first..=last).cycle())
-    }
 
-    fn get_timer(&self, state: CharacterAnimationState, direction: FacingDirection) -> Timer {
-        let animation = self.get_animation(state, direction);
-        Timer::from_seconds(animation.frame_duration, TimerMode::Repeating)
+        // Row-major atlas: carry the frame column across a row change so a
+        // shared loop keeps its beat instead of restarting on every turn.
+        let offset = if sheet.preserve_phase {
+            sprite
+                .texture_atlas
+                .as_ref()
+                .map_or(0, |atlas| atlas.index % sheet.columns)
+                % animation.frame_count
+        } else {
+            0
+        };
+
+        // A phase-preserving sheet also keeps its clock, or a facing flip
+        // every frame would freeze the loop. Only a duration change re-arms it.
+        let frame_duration = std::time::Duration::from_secs_f32(animation.frame_duration);
+        if !sheet.preserve_phase || timer.duration() != frame_duration {
+            *timer = AnimationTimer(Timer::from_seconds(
+                animation.frame_duration,
+                TimerMode::Repeating,
+            ));
+        }
+
+        if let Some(atlas) = &mut sprite.texture_atlas {
+            atlas.index = first + offset;
+        }
+
+        // `Cycle::next` yields the range start first, so leave the iterator one
+        // step ahead of the displayed frame.
+        let mut cycle = (first..=last).cycle();
+        for _ in 0..=offset {
+            cycle.next();
+        }
+        *indices = AnimationIndices::Cycle(cycle);
     }
 }

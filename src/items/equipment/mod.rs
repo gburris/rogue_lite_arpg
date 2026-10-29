@@ -19,25 +19,27 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(equip::plugin);
+    app.add_plugins(equip::plugin)
+        .add_observer(use_equipped::on_equipment_use_ended);
 
     app.add_systems(
         Update,
         (
             // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
             equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-            use_equipped::tick_equippable_use_rate.in_set(InGameSystems::Simulation),
+            use_equipped::tick_equippable_cooldown.in_set(InGameSystems::Simulation),
         ),
     );
-
-    app.add_observer(use_equipped::on_ai_equipment_used);
 }
 
+/// An item that can be equipped and used from a slot. `reach` is the farthest
+/// target distance an AI holder uses it at; `None` means AI never aims it.
 #[derive(Component, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
-    pub use_rate: Timer, // swing a sword, shoot a weapon, etc...
+    pub cooldown: Timer, // swing a sword, shoot a weapon, etc...
     pub transforms: &'static HashMap<FacingDirection, Transform>,
+    pub reach: Option<f32>,
 }
 
 impl Equippable {
@@ -49,7 +51,16 @@ impl Equippable {
         Equippable {
             slot,
             transforms,
-            use_rate: Timer::from_seconds(duration, TimerMode::Once),
+            cooldown: Timer::from_seconds(duration, TimerMode::Once),
+            reach: None,
+        }
+    }
+
+    /// Lets an AI holder use this item on targets up to `reach` away.
+    pub fn with_reach(self, reach: f32) -> Self {
+        Self {
+            reach: Some(reach),
+            ..self
         }
     }
 }
@@ -61,6 +72,36 @@ impl Equippable {
 pub enum EquipmentSlot {
     Mainhand,
     Offhand,
+}
+
+impl EquipmentSlot {
+    pub const ALL: [Self; 2] = [Self::Mainhand, Self::Offhand];
+
+    /// Item currently equipped in this slot, if any.
+    pub fn get_equipped(
+        self,
+        mainhand: Option<&Mainhand>,
+        offhand: Option<&Offhand>,
+    ) -> Option<Entity> {
+        match self {
+            Self::Mainhand => mainhand.map(Mainhand::get),
+            Self::Offhand => offhand.map(Offhand::get),
+        }
+    }
+
+    /// Insert the relationship that places `item` in this slot on `holder`.
+    pub fn place_in_slot(self, item: &mut EntityCommands, holder: Entity) {
+        match self {
+            Self::Mainhand => item.insert(MainhandOf(holder)),
+            Self::Offhand => item.insert(OffhandOf(holder)),
+        };
+    }
+
+    /// Whether the equipment in this slot is used instantly (sword swing) rather
+    /// than held until released (shield block).
+    pub fn is_instant_use(self) -> bool {
+        matches!(self, Self::Mainhand)
+    }
 }
 
 impl fmt::Display for EquipmentSlot {

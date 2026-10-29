@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    combat::status_effects::{StatusApplied, StatusOf, StatusType},
-    prelude::SimpleMotion,
+    combat::status_effects::{StatusType, Statuses, freeze::Frozen},
+    prelude::Kinematics,
 };
 
 #[derive(Component, Clone)]
@@ -17,30 +17,27 @@ impl Default for Slowed {
     }
 }
 
-pub fn apply_slowed(
-    mut commands: Commands,
-    status_query: Query<(Entity, &StatusOf, &Slowed), Without<StatusApplied>>,
-    mut motion_query: Query<&mut SimpleMotion>,
+/// Sets each character's slow to its strongest active status, with a freeze
+/// counting as a full stun, so one status expiring never clears another.
+pub(crate) fn sync_slow_from_statuses(
+    mut characters: Query<(&mut Kinematics, Option<&Statuses>)>,
+    slows: Query<&Slowed>,
+    freezes: Query<(), With<Frozen>>,
 ) {
-    status_query.iter().for_each(|(status, status_of, slowed)| {
-        commands.entity(status).insert(StatusApplied);
-
-        if let Ok(mut motion) = motion_query.get_mut(status_of.0) {
-            motion.slow(slowed.percent);
+    for (mut kinematics, statuses) in &mut characters {
+        let strongest = statuses
+            .into_iter()
+            .flat_map(Statuses::iter)
+            .map(|status| {
+                if freezes.contains(status) {
+                    1.0
+                } else {
+                    slows.get(status).map_or(0.0, |slowed| slowed.percent)
+                }
+            })
+            .fold(0.0, f32::max);
+        if (kinematics.slowed_percentage() - strongest).abs() > f32::EPSILON {
+            kinematics.slow(strongest);
         }
-    });
-}
-
-pub fn on_slow_removed(
-    slow_status: On<Remove, Slowed>,
-    status_query: Query<&StatusOf, With<Slowed>>,
-    mut motion_query: Query<&mut SimpleMotion>,
-) {
-    let Ok(status_of) = status_query.get(slow_status.entity) else {
-        return;
-    };
-
-    if let Ok(mut motion) = motion_query.get_mut(status_of.0) {
-        motion.remove_debuff();
     }
 }

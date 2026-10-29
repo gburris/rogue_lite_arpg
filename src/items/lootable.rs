@@ -25,13 +25,15 @@ pub(super) fn plugin(app: &mut App) {
 )]
 pub struct Lootable;
 
+/// Request to drop an item from its holder's inventory into the world.
 #[derive(EntityEvent)]
 pub struct ItemDrop {
-    pub entity: Entity,
+    #[event_target]
+    pub item: Entity,
 }
 
 /// Notes:
-/// 1. `ItemDropEvent` is for items only!
+/// 1. `ItemDrop` is for items only!
 /// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
 /// 3. Needs parent to be holder for position, then removes parent
 fn on_drop_event(
@@ -40,9 +42,12 @@ fn on_drop_event(
     item_query: Query<&ItemOf>,
     mut holder_query: Query<&Transform, With<Items>>,
 ) {
-    let item_entity = item_dropped.entity;
+    let item_entity = item_dropped.item;
 
-    let Ok(ItemOf(holder_entity)) = item_query.get(item_entity) else {
+    let Ok(ItemOf {
+        holder: holder_entity,
+    }) = item_query.get(item_entity)
+    else {
         warn!("Lootable item missing parent");
         return;
     };
@@ -60,9 +65,7 @@ fn on_drop_event(
 
     trace!("Dropping item at {}", offset);
 
-    commands.trigger(Unequip {
-        entity: item_entity,
-    });
+    commands.trigger(Unequip { item: item_entity });
 
     commands
         .entity(item_entity)
@@ -98,7 +101,7 @@ fn on_lootable_item_interaction(
             PointLight2d,
             DespawnOnExit<AppState>,
         )>()
-        .insert((ItemOf(*player), Visibility::Hidden));
+        .insert((ItemOf { holder: *player }, Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up
     commands

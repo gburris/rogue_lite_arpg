@@ -1,7 +1,7 @@
 mod swing;
 
 pub mod prelude {
-    pub use super::{ActiveMeleeAttack, axe, freeze_axe, sword};
+    pub use super::{ActiveMeleeAttack, MELEE_WEAPON_REACH, axe, freeze_axe, sword};
 }
 
 use std::sync::LazyLock;
@@ -20,12 +20,20 @@ use crate::{equipment_transforms, items::melee::swing::MeleeSwingType, prelude::
 /// occur in the direction we expect. This value will need to be updated if our assets change
 pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
 
+/// Farthest target distance at which an AI holder swings a melee weapon.
+pub const MELEE_WEAPON_REACH: f32 = 68.0;
+
 pub(super) fn plugin(app: &mut App) {
     app.add_input_context::<MeleeWeapon>();
 
     app.add_systems(
         Update,
-        (swing::process_melee_attacks, end_melee_attacks).in_set(InGameSystems::Simulation),
+        (
+            swing::process_melee_attacks.before(crate::character::AiSet::Perception),
+            end_melee_attacks,
+        )
+            .chain()
+            .in_set(SimulationSystems::Logic),
     );
 
     app.add_systems(
@@ -45,11 +53,12 @@ pub fn sword(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 15.0,
         },
         Knockback(10.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Item::new(120, ItemType::Melee),
         Sprite::from_image(sprites.sword.clone()),
-        observe(on_melee_equipped),
-        observe(on_weapon_melee),
+        observe(on_stop_melee),
+        observe(on_start_melee),
     )
 }
 
@@ -64,11 +73,12 @@ pub fn axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(20.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Sprite::from_image(sprites.axe.clone()),
         Item::new(220, ItemType::Melee),
-        observe(on_melee_equipped),
-        observe(on_weapon_melee),
+        observe(on_stop_melee),
+        observe(on_start_melee),
     )
 }
 
@@ -83,12 +93,13 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Bundle {
             hold_distance: 30.0,
         },
         Knockback(2.0),
-        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS),
+        Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_TRANSFORMS)
+            .with_reach(MELEE_WEAPON_REACH),
         Item::new(220, ItemType::Melee),
         Sprite::from_image(sprites.axe.clone()),
         related!(Effects[(Frozen, Lifespan::new(2.0))]),
-        observe(on_melee_equipped),
-        observe(on_weapon_melee),
+        observe(on_stop_melee),
+        observe(on_start_melee),
     )
 }
 
@@ -105,10 +116,9 @@ struct MeleeWeapon {
 }
 
 impl MeleeWeapon {
-    /// Gets collision layers for melee weapon based on source of damage
-    /// It can either target allies or enemies
-    pub fn collision_layers(damage_source: DamageSource) -> CollisionLayers {
-        CollisionLayers::new(GameCollisionLayer::HitBox, LayerMask::from(damage_source))
+    /// Collision layers that hit the holder's opponents.
+    pub fn collision_layers(side: CombatSide) -> CollisionLayers {
+        CollisionLayers::new(GameCollisionLayer::HitBox, side.target_hurtbox())
     }
 }
 
@@ -121,32 +131,6 @@ static MELEE_EQUIPMENT_TRANSFORMS: LazyLock<HashMap<FacingDirection, Transform>>
         (Right, ((8.0, -15.0), -90.0)),
     ]);
 
-fn on_melee_equipped(
-    equipped: On<Equip>,
-    mut commands: Commands,
-    weapon_query: Query<&MeleeWeapon, With<Equippable>>,
-    player: Single<Entity, With<Player>>,
-) {
-    let Ok(melee_weapon) = weapon_query.get(equipped.item) else {
-        error!("on_melee_equipped on wrong type");
-        return;
-    };
-
-    let is_player = *player == equipped.holder;
-
-    let damage_source = if is_player {
-        DamageSource::Player
-    } else {
-        DamageSource::Enemy
-    };
-
-    // If melee weapon, we need to add collider and new collision layers on equip
-    commands.entity(equipped.item).insert((
-        melee_weapon.hitbox.clone(),
-        MeleeWeapon::collision_layers(damage_source),
-    ));
-}
-
 fn handle_melee_collisions(
     mut commands: Commands,
     mut melee_query: Query<(
@@ -154,9 +138,10 @@ fn handle_melee_collisions(
         &MeleeWeapon,
         &mut ActiveMeleeAttack,
         &CollidingEntities,
+        &ItemOf,
     )>,
 ) {
-    for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities) in
+    for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities, item_of) in
         &mut melee_query
     {
         for &colliding_entity in colliding_entities.iter() {
@@ -167,10 +152,11 @@ fn handle_melee_collisions(
             {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    ignore_invulnerable: false,
                     damage: Damage::Range(melee_weapon.damage),
-                    damage_source: Some(weapon_entity),
+                    source_item: Some(weapon_entity),
+                    attacker: Some(item_of.holder),
                     direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),
+                    ..default()
                 });
                 active_melee_attack
                     .entities_damaged
@@ -200,42 +186,49 @@ impl ActiveMeleeAttack {
     }
 }
 
-fn on_weapon_melee(
-    melee: On<UseEquipment>,
+/// Start observer: spawns the transient swing hitbox removed by `on_stop_melee`.
+fn on_start_melee(
+    melee: On<StartUsingEquipment>,
     mut commands: Commands,
-    weapon_query: Query<(&ItemOf, &MeleeWeapon)>,
-    mut holder_query: Query<(&mut AttackState, &Vision)>,
+    weapon_query: Query<&MeleeWeapon>,
+    holder_query: Query<(&Vision, &CombatSide)>,
 ) {
-    let Ok((item_of, melee_weapon)) = weapon_query.get(melee.entity) else {
+    let Ok(melee_weapon) = weapon_query.get(melee.item) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok((mut attack_state, vision)) = holder_query.get_mut(item_of.0) else {
+    let Ok((vision, side)) = holder_query.get(melee.holder) else {
         warn!("Holder missing vision");
         return;
     };
 
     let attack_angle = vision.aim_direction.to_angle();
-    attack_state.is_attacking = true;
 
-    commands.entity(melee.entity).insert(ActiveMeleeAttack::new(
-        attack_angle,
-        melee_weapon.attack_time,
+    // Hitbox and layers only exist for the swing; the stop observer removes them.
+    commands.entity(melee.item).insert((
+        EquipmentInUse,
+        ActiveMeleeAttack::new(attack_angle, melee_weapon.attack_time),
+        melee_weapon.hitbox.clone(),
+        MeleeWeapon::collision_layers(*side),
     ));
 }
 
-fn end_melee_attacks(
-    mut commands: Commands,
-    query: Query<(Entity, &ChildOf, &ActiveMeleeAttack)>,
-    mut attack_state_query: Query<&mut AttackState>,
-) {
-    for (entity, child_of, attack) in query {
+/// End polling: queues `StopUsingEquipment` once each swing timer finishes.
+fn end_melee_attacks(mut commands: Commands, swings: Query<(Entity, &ItemOf, &ActiveMeleeAttack)>) {
+    for (item, item_of, attack) in &swings {
         if attack.duration.just_finished() {
-            if let Ok(mut attack_state) = attack_state_query.get_mut(child_of.parent()) {
-                attack_state.is_attacking = false;
-            }
-            commands.entity(entity).remove::<ActiveMeleeAttack>();
+            commands.trigger(StopUsingEquipment {
+                item,
+                holder: item_of.holder,
+            });
         }
     }
+}
+
+/// Stop observer: removes the transient swing state queued by `end_melee_attacks`.
+fn on_stop_melee(stop: On<StopUsingEquipment>, mut commands: Commands) {
+    commands
+        .entity(stop.item)
+        .remove::<(EquipmentInUse, ActiveMeleeAttack, Collider, CollisionLayers)>();
 }

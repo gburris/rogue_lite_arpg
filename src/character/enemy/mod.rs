@@ -1,17 +1,16 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::{prelude::*, ui_widgets::observe};
-use bevy_behave::prelude::*;
 
+mod bat;
 mod defeat;
+mod mage;
+mod warrior;
 
+use super::brain::{BrainDefinition, HomeArea, Interval, VisionCone, Wander, Watching};
 use crate::{
-    character::{
-        Character, Purse,
-        behavior::{Anchor, AttemptMelee, Chase, Idle, KeepDistanceAndFire, Retreat, Wander},
-        physical_collider,
-        vision::{VisionCapabilities, Watching},
-    },
+    character::{Character, Purse, physical_collider},
     prelude::*,
+    world::MapRng,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -30,36 +29,42 @@ pub struct EnemySpawnData {
 #[derive(Component)]
 #[require(
     Character,
-    Experience,
-    VisionCapabilities,
+    VisionCone,
     Purse { amount: 50 },
+    CombatSide = CombatSide::Enemy,
     DespawnOnExit::<AppState>(AppState::Playing)
 )]
 pub struct Enemy;
 
 /// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
-#[derive(Component, Clone, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
 pub enum EnemyKind {
     Warrior,
     IceMage,
     FireMage,
+    /// Flying enemy: circles its target and breathes fire without a weapon.
+    Bat,
 }
 
 impl EnemyKind {
-    /// Every kind; a recipe's `RandomEnemy` picks uniformly from this list.
-    pub const ALL: [Self; 3] = [Self::Warrior, Self::IceMage, Self::FireMage];
+    /// Every enemy kind, used for random spawns and exhaustive iteration.
+    pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
+
+    pub fn brain(self) -> &'static BrainDefinition {
+        match self {
+            Self::Warrior => &warrior::WARRIOR,
+            Self::IceMage => &mage::ICE_MAGE,
+            Self::FireMage => &mage::FIRE_MAGE,
+            Self::Bat => &bat::BAT,
+        }
+    }
 }
 
-//Experience granted by the enemy when player defeats it
+/// Experience paid out when the player defeats this enemy. Scales with
+/// threat: the tanky warrior pays most, the fragile flying bat least.
 #[derive(Component)]
 pub struct Experience {
     pub base_exp: f32,
-}
-
-impl Default for Experience {
-    fn default() -> Self {
-        Experience { base_exp: 10.0 }
-    }
 }
 
 fn spawn_enemies(
@@ -69,6 +74,7 @@ fn spawn_enemies(
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
     player: Single<Entity, With<Player>>,
+    mut map_rng: ResMut<MapRng>,
 ) {
     for spawn_data in spawn_enemies.0.clone() {
         spawn_enemy(
@@ -78,6 +84,7 @@ fn spawn_enemies(
             &sprite_layouts,
             &shadows,
             player.entity(),
+            &mut map_rng,
         );
     }
 }
@@ -89,76 +96,30 @@ fn spawn_enemy(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
     player: Entity,
+    map_rng: &mut MapRng,
 ) {
     trace!("Spawning enemy at: {}", spawn_data.position);
 
-    let chase_behavior = behave! {
-        Behave::While => {
-            Behave::spawn_named("Chase", Chase),
-            Behave::trigger(AttemptMelee)
-        }
-    };
-
-    let melee_enemy_behavior = behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
-                    Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-                @chase_behavior
-            }
-        }
-    };
-
-    let ranged_enemy_behavior = behave! {
-        Behave::Forever => {
-            Behave::Fallback => {
-                Behave::Sequence => {
-                    Behave::spawn_named("Wander", Wander::builder().timer_range(1.0..2.0)),
-                    Behave::spawn_named("Idle", Idle::default().timer_range(3.0..5.0)),
-                },
-                Behave::spawn_named("Retreat", Retreat),
-                Behave::spawn_named("Keep distance and fire", KeepDistanceAndFire)
-            }
-        }
-    };
-
+    let base = base_enemy(spawn_data.enemy_kind, spawn_data.position, player);
     match spawn_data.enemy_kind {
-        EnemyKind::Warrior => spawn_enemy_with_equipment(
-            commands,
-            (
-                warrior(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(melee_enemy_behavior, shadows),
-            ),
-            sword(sprites),
-        ),
-
-        EnemyKind::IceMage => spawn_enemy_with_equipment(
-            commands,
-            (
-                ice_mage(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(ranged_enemy_behavior, shadows),
-            ),
-            ice_staff(sprites, sprite_layouts),
-        ),
-
-        EnemyKind::FireMage => spawn_enemy_with_equipment(
-            commands,
-            (
-                fire_mage(sprites, sprite_layouts),
-                base_enemy(spawn_data.position, player),
-                enemy_children(ranged_enemy_behavior, shadows),
-            ),
-            fire_staff(sprites, sprite_layouts),
-        ),
+        EnemyKind::Warrior => {
+            warrior::spawn_warrior(commands, base, sprites, sprite_layouts, shadows);
+        }
+        EnemyKind::IceMage => {
+            mage::spawn_ice_mage(commands, base, sprites, sprite_layouts, shadows);
+        }
+        EnemyKind::FireMage => {
+            mage::spawn_fire_mage(commands, base, sprites, sprite_layouts, shadows, map_rng);
+        }
+        EnemyKind::Bat => bat::spawn_bat(commands, base, sprites, sprite_layouts, shadows),
     }
 }
 
-fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainhand: impl Bundle) {
+fn spawn_enemy_with_equipment(
+    commands: &mut Commands,
+    enemy: impl Bundle,
+    mainhand: impl Bundle,
+) -> Entity {
     let enemy = commands.spawn(enemy).id();
 
     let mainhand = commands.spawn(mainhand).id();
@@ -167,77 +128,50 @@ fn spawn_enemy_with_equipment(commands: &mut Commands, enemy: impl Bundle, mainh
         item: mainhand,
         holder: enemy,
     });
+
+    enemy
 }
 
-fn base_enemy(position: Vec2, player: Entity) -> impl Bundle {
+/// Enemies stand a while between short walks while disengaged.
+fn enemy_wander() -> Wander {
+    Wander::new(Interval::new(3.0, 5.0), Interval::new(1.0, 2.0))
+}
+const ENEMY_SIGHT_RANGE: f32 = 350.0;
+
+/// The bundle every enemy kind shares; each kind's file adds the rest.
+fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Bundle {
     (
         Enemy,
+        Brain::new(kind.brain()),
         Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-        Anchor::new(position, 8.0 * TILE_SIZE as f32),
-        Mana::new(100.0, 10.0),
-        // enemy vision distance
-        RayCaster::default()
-            .with_max_distance(350.0)
-            .with_query_filter(SpatialQueryFilter::from_mask([
-                GameCollisionLayer::AllyHurtBox,
-                GameCollisionLayer::HighObstacle,
-            ]))
-            .with_max_hits(1),
+        HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0),
         Watching(player),
         observe(defeat::on_enemy_defeated),
     )
 }
 
-fn enemy_children(behavior: Tree<Behave>, shadows: &Shadows) -> impl Bundle {
+fn sight_ray(range: f32, mask: SpatialQueryFilter) -> RayCaster {
+    RayCaster::default()
+        .with_max_distance(range)
+        .with_query_filter(mask)
+        .with_max_hits(1)
+}
+
+/// Sight for enemies on the ground, where high obstacles block the ray.
+fn ground_sight_ray() -> RayCaster {
+    sight_ray(
+        ENEMY_SIGHT_RANGE,
+        SpatialQueryFilter::from_mask([
+            GameCollisionLayer::AllyHurtBox,
+            GameCollisionLayer::HighObstacle,
+        ]),
+    )
+}
+
+fn enemy_children(shadows: &Shadows) -> impl Bundle {
     children![
         shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
         physical_collider(),
         hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
-        BehaveTree::new(behavior.clone()),
     ]
-}
-
-fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        SimpleMotion::new(200.0),
-        Health::new(40.0),
-        Sprite::from_atlas_image(
-            sprites.warrior_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
-}
-
-fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        SimpleMotion::new(100.0),
-        Health::new(20.0),
-        Sprite::from_atlas_image(
-            sprites.ice_mage_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
-}
-
-fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        SimpleMotion::new(150.0),
-        Health::new(20.0),
-        Sprite::from_atlas_image(
-            sprites.fire_mage_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
 }

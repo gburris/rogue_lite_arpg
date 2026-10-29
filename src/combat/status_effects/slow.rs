@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{
-    combat::status_effects::{StatusType, Statuses, freeze::Frozen},
-    prelude::Kinematics,
-};
+use crate::combat::status_effects::freeze::Frozen;
+use crate::combat::status_effects::{StatusType, Statuses};
+use crate::prelude::Kinematics;
 
 #[derive(Component, Clone)]
 #[require(StatusType::Slow)]

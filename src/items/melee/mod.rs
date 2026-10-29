@@ -7,14 +7,14 @@ pub mod prelude {
 use std::sync::LazyLock;
 
 use avian2d::prelude::*;
-use bevy::{
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-    ui_widgets::observe,
-};
+use bevy::platform::collections::{HashMap, HashSet};
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 use bevy_enhanced_input::prelude::*;
 
-use crate::{equipment_transforms, items::melee::swing::MeleeSwingType, prelude::*};
+use crate::equipment_transforms;
+use crate::items::melee::swing::MeleeSwingType;
+use crate::prelude::*;
 
 /// Our pixel weapons all face upwards currently, so we must rotate them 90 degrees for attacks to
 /// occur in the direction we expect. This value will need to be updated if our assets change

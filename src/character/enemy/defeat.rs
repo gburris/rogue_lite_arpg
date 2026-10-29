@@ -1,16 +1,11 @@
 use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
-
 use rand::{RngExt, rng};
 
-use crate::{
-    character::{Purse, player::PlayerStats},
-    prelude::*,
-};
-
-use crate::prelude::GoldDrop;
-
 use super::{Enemy, Experience};
+use crate::character::Purse;
+use crate::character::player::PlayerStats;
+use crate::prelude::{GoldDrop, *};
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,

@@ -7,13 +7,12 @@ pub mod prelude {
     pub use super::Menu;
 }
 
-use bevy::{
-    prelude::*,
-    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
-};
+use bevy::prelude::*;
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
-use crate::{prelude::*, ui::constants::BACKGROUND_COLOR};
+use crate::prelude::*;
+use crate::ui::constants::BACKGROUND_COLOR;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((

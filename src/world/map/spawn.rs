@@ -1,13 +1,12 @@
+use std::collections::BTreeMap;
+
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use std::collections::BTreeMap;
 
-use crate::{
-    prelude::*,
-    world::map::blueprint::{MapBlueprint, PlacementKind},
-    world::map::tiling::tile_appearance,
-};
+use crate::prelude::*;
+use crate::world::map::blueprint::{MapBlueprint, PlacementKind};
+use crate::world::map::tiling::tile_appearance;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(TilemapPlugin);

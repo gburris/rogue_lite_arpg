@@ -1,15 +1,11 @@
 use avian2d::prelude::*;
-use bevy::{
-    color::palettes::tailwind::{BLUE_400, YELLOW_300},
-    ecs::entity_disabling::Disabled,
-    prelude::*,
-};
+use bevy::color::palettes::tailwind::{BLUE_400, YELLOW_300};
+use bevy::ecs::entity_disabling::Disabled;
+use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use crate::{
-    combat::damage::{AttemptDamage, Damage, HurtBox, Knockback},
-    prelude::*,
-};
+use crate::combat::damage::{AttemptDamage, Damage, HurtBox, Knockback};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, handle_collisions.in_set(InGameSystems::Collision))

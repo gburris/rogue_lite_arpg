@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
+use super::constants::TITLE_FONT_SIZE;
+use super::primitives::{gold_border, text};
 use crate::prelude::AppState;
-
-use super::{
-    constants::TITLE_FONT_SIZE,
-    primitives::{gold_border, text},
-};
 
 #[derive(Component)]
 pub struct StartScreen;

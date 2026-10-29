@@ -1,13 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{
-    character::Purse,
-    prelude::*,
-    ui::{
-        constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT},
-        primitives::{menu_header, text},
-    },
-};
+use crate::character::Purse;
+use crate::prelude::*;
+use crate::ui::constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT};
+use crate::ui::primitives::{menu_header, text};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)

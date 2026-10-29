@@ -1,13 +1,12 @@
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 
 mod interaction;
 
 use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
 use super::brain::{Behavior, Brain, BrainDefinition, HomeArea, Interval, Wander};
-use crate::{
-    character::{Character, physical_collider},
-    prelude::*,
-};
+use crate::character::{Character, physical_collider};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn_npcs);

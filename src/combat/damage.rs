@@ -1,16 +1,11 @@
 use avian2d::prelude::*;
-
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::{
-    combat::{
-        health::Health,
-        invulnerable::IFrames,
-        status_effects::{ApplyEffects, Effects},
-    },
-    prelude::{GameCollisionLayer, Player},
-};
+use crate::combat::health::Health;
+use crate::combat::invulnerable::IFrames;
+use crate::combat::status_effects::{ApplyEffects, Effects};
+use crate::prelude::{GameCollisionLayer, Player};
 
 /// Which side of combat a character fights on, required by every character marker.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]

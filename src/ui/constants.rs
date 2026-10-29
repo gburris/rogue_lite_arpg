@@ -1,4 +1,5 @@
-use bevy::{color::Color, ui::Val};
+use bevy::color::Color;
+use bevy::ui::Val;
 
 pub const BACKGROUND_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
 pub const DARK_GRAY_COLOR: Color = Color::srgb(0.05, 0.05, 0.05);

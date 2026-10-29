@@ -1,4 +1,5 @@
-use bevy::{ecs::spawn::SpawnIter, prelude::*};
+use bevy::ecs::spawn::SpawnIter;
+use bevy::prelude::*;
 
 use crate::prelude::*;
 

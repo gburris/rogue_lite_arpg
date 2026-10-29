@@ -1,12 +1,11 @@
-use crate::world::map::{
-    blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
-    placement::{PlaceContext, PlaceRule, place},
-    tiles::{TileGrid, TileKind, TileRect},
-};
 use bevy::prelude::{IVec2, UVec2, Vec2};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use serde::Deserialize;
+
+use crate::world::map::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
+use crate::world::map::placement::{PlaceContext, PlaceRule, place};
+use crate::world::map::tiles::{TileGrid, TileKind, TileRect};
 
 /// Tile data and placement markers for a reusable map structure.
 #[derive(Clone, Debug, PartialEq, Eq)]

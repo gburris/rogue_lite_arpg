@@ -1,22 +1,19 @@
-use rand::{RngExt, SeedableRng};
-use rand_chacha::ChaCha8Rng;
 use std::collections::BTreeMap;
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
-use crate::{
-    prelude::AppState,
-    world::{
-        MapRng,
-        map::{
-            blueprint::{MapBlueprint, MapError, Placement, PlacementKind},
-            placement::{PlaceContext, place},
-            recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name},
-            structures::{
-                Structure, apply_structure, build_empty_square, build_pond, build_rubble,
-            },
-        },
-    },
+use crate::prelude::AppState;
+use crate::world::MapRng;
+use crate::world::map::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
+use crate::world::map::placement::{PlaceContext, place};
+use crate::world::map::recipe::{
+    MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name,
+};
+use crate::world::map::structures::{
+    Structure, apply_structure, build_empty_square, build_pond, build_rubble,
 };
 
 pub(super) fn plugin(app: &mut App) {

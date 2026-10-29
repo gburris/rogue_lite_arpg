@@ -15,23 +15,18 @@ pub mod prelude {
 }
 
 use avian2d::prelude::*;
-use bevy::{prelude::*, ui_widgets::observe};
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 use bevy_lit::prelude::PointLight2d;
 use interact::PlayerInteractionRadius;
 
-use crate::{
-    character::{
-        Character, Purse, physical_collider,
-        player::{
-            aim::{AimInput, player_aim},
-            input::player_actions,
-            movement::PlayerMovement,
-        },
-        vision::TargetInfo,
-    },
-    menu::{PauseControl, pause_actions},
-    prelude::*,
-};
+use crate::character::player::aim::{AimInput, player_aim};
+use crate::character::player::input::player_actions;
+use crate::character::player::movement::PlayerMovement;
+use crate::character::vision::TargetInfo;
+use crate::character::{Character, Purse, physical_collider};
+use crate::menu::{PauseControl, pause_actions};
+use crate::prelude::*;
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;

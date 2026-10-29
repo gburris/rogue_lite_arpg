@@ -7,7 +7,6 @@ mod view;
 
 #[cfg(not(feature = "dev"))]
 use bevy::asset::AssetMetaCheck;
-
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::EnhancedInputPlugin;
 use bevy_lit::prelude::Lighting2dPlugin;

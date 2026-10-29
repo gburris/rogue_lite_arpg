@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
-use crate::character::brain::Capability;
-use crate::{
-    character::brain::{Ability, Action, Brain, CapabilityProfile},
-    prelude::*,
-};
+use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile};
+use crate::prelude::*;
 
 /// Drinking carried potions to recover health, paced by `cooldown`.
 #[derive(Component, Clone, Copy, Debug)]

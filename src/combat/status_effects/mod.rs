@@ -9,7 +9,9 @@ pub mod prelude {
     pub use super::{EffectOf, Effects, StatusOf};
 }
 
-use bevy::{ecs::entity_disabling::Disabled, platform::collections::HashSet, prelude::*};
+use bevy::ecs::entity_disabling::Disabled;
+use bevy::platform::collections::HashSet;
+use bevy::prelude::*;
 
 use crate::prelude::{InGameSystems, Lifespan};
 

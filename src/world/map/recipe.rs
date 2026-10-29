@@ -1,30 +1,25 @@
 //! Recipe file types, loading and validation: `map_recipes.ron` to a [`RecipeCatalog`].
 
-use rand::{
-    Rng, RngExt,
-    distr::{Distribution, weighted::WeightedIndex},
-};
-use rand_chacha::ChaCha8Rng;
-use ron::{Options, extensions::Extensions};
-use serde::Deserialize;
-use std::{collections::BTreeMap, io::BufReader};
+use std::collections::BTreeMap;
+use std::io::BufReader;
 
 use bevy::prelude::*;
+use rand::distr::Distribution;
+use rand::distr::weighted::WeightedIndex;
+use rand::{Rng, RngExt};
+use rand_chacha::ChaCha8Rng;
+use ron::Options;
+use ron::extensions::Extensions;
+use serde::Deserialize;
 
-use crate::{
-    prelude::{EnemyKind, NpcKind},
-    world::{
-        MapRng,
-        map::{
-            blueprint::PlacementKind,
-            build::{MapRequest, MapResult, Stage, build_from_recipe},
-            placement::{Anchor, CountRange, PlaceRule, Side},
-            spawn::MAX_MAP_TILES,
-            structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs},
-            tiles::TileKind,
-        },
-    },
-};
+use crate::prelude::{EnemyKind, NpcKind};
+use crate::world::MapRng;
+use crate::world::map::blueprint::PlacementKind;
+use crate::world::map::build::{MapRequest, MapResult, Stage, build_from_recipe};
+use crate::world::map::placement::{Anchor, CountRange, PlaceRule, Side};
+use crate::world::map::spawn::MAX_MAP_TILES;
+use crate::world::map::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
+use crate::world::map::tiles::TileKind;
 
 /// Loaded map recipes and the structures available to place in them.
 #[derive(Resource, Debug)]

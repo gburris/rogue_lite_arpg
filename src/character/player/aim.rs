@@ -1,11 +1,10 @@
-use bevy::{
-    color::palettes::css::WHITE,
-    prelude::*,
-    window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused},
-};
+use bevy::color::palettes::css::WHITE;
+use bevy::prelude::*;
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};
 use bevy_enhanced_input::prelude::*;
 
-use crate::{character::vision::TargetInfo, prelude::*};
+use crate::character::vision::TargetInfo;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_player_aim);

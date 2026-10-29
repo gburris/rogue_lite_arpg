@@ -1,13 +1,9 @@
 use bevy::prelude::*;
 
-use crate::character::brain::Capability;
-use crate::{
-    character::{
-        brain::{Ability, Action, Brain, CapabilityProfile, perception::Targeting},
-        vision::TargetInfo,
-    },
-    prelude::*,
-};
+use crate::character::brain::perception::Targeting;
+use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile};
+use crate::character::vision::TargetInfo;
+use crate::prelude::*;
 
 /// Contact damage on a target within reach.
 #[derive(Component, Clone, Copy, Debug)]

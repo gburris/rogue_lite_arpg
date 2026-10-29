@@ -4,14 +4,17 @@
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::{ecs::query::QueryData, ecs::system::SystemParam, prelude::*};
+use bevy::ecs::query::QueryData;
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::*;
 
 use super::action::{Ability, Action, find_carried_potion};
 use super::capability::{
     CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
 };
 use super::motion::{HomeArea, Motion};
-use crate::{character::AiSet, prelude::*};
+use crate::character::AiSet;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_damage_aggro)

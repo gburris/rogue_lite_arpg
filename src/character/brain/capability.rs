@@ -2,7 +2,8 @@
 //! trait, the per-motion-and-action table and its keys, and the tables built
 //! from every capability the entity carries.
 
-use bevy::{ecs::query::QueryData, prelude::*};
+use bevy::ecs::query::QueryData;
+use bevy::prelude::*;
 
 use super::action::{Ability, AbilityCapabilities, Action};
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};

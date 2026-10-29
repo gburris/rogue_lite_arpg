@@ -1,20 +1,20 @@
-use std::{
-    f32::consts::{FRAC_PI_4, FRAC_PI_8},
-    sync::LazyLock,
-    time::Duration,
-};
+use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
+use std::sync::LazyLock;
+use std::time::Duration;
 
-use bevy::{platform::collections::HashMap, prelude::*, ui_widgets::observe};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
+use bevy::ui_widgets::observe;
 use bevy_lit::prelude::PointLight2d;
-use bevy_tweening::{Tween, TweenAnim, lens::TransformRotateZLens};
-
-use crate::{
-    equipment_transforms,
-    items::{Item, equipment::Equippable, prelude::StartUsingEquipment},
-    prelude::*,
-};
+use bevy_tweening::lens::TransformRotateZLens;
+use bevy_tweening::{Tween, TweenAnim};
 
 use super::ItemType;
+use crate::equipment_transforms;
+use crate::items::Item;
+use crate::items::equipment::Equippable;
+use crate::items::prelude::StartUsingEquipment;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

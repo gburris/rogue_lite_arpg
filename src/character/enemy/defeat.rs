@@ -5,7 +5,7 @@ use rand::{RngExt, rng};
 use super::{Enemy, Experience};
 use crate::character::Purse;
 use crate::character::player::PlayerStats;
-use crate::prelude::{GoldDrop, *};
+use crate::prelude::*;
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,

@@ -2,7 +2,7 @@ use bevy::ecs::spawn::SpawnWith;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use crate::menu::inventory::UpdateDisplayCase;
+use super::display_case::UpdateDisplayCase;
 use crate::prelude::*;
 use crate::ui::primitives::{text, width};
 

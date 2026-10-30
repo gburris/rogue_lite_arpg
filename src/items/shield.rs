@@ -12,13 +12,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_active_shields
-                .in_set(SimulationSystems::Logic)
-                .after(regenerate_mana)
-                .before(AiSet::Decision),
-            reflect_projectiles
-                .in_set(InGameSystems::Simulation)
-                .after(AiSet::Motion),
+            orient_active_shields.in_set(SimulationSystems::Act),
+            reflect_projectiles.in_set(SimulationSystems::Upkeep),
         ),
     );
 }
@@ -90,32 +85,17 @@ struct ActiveShield {
     projectiles_reflected: HashSet<Entity>,
 }
 
-/// Drains mana and updates sprite/transform for every active shield.
-fn update_active_shields(
+/// Turns each active shield's sprite and offset toward its holder's aim.
+fn orient_active_shields(
     mut commands: Commands,
-    time: Res<Time>,
     mut active_shield_query: Query<
-        (Entity, &ManaDrainRate, &ItemOf, &mut Sprite),
+        (Entity, &ItemOf, &mut Sprite),
         (With<ActiveShield>, With<Equipped>),
     >,
-    mut holder_query: Query<(&Vision, Option<&mut Mana>)>,
+    holder_query: Query<&Vision>,
 ) -> Result {
-    for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in &mut active_shield_query {
-        let (vision, mana) = holder_query.get_mut(item_of.holder)?;
-
-        if let Some(mut mana) = mana {
-            let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
-
-            if mana.has_enough_mana(&drain_amount) {
-                mana.use_mana(&drain_amount);
-            } else {
-                commands.trigger(StopUsingEquipment {
-                    item: shield_entity,
-                    holder: item_of.holder,
-                });
-                continue;
-            }
-        }
+    for (shield_entity, item_of, mut shield_sprite) in &mut active_shield_query {
+        let vision = holder_query.get(item_of.holder)?;
 
         let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
 

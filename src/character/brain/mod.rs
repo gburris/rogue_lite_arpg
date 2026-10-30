@@ -29,7 +29,6 @@ mod decide;
 mod engine;
 mod motion;
 mod perception;
-mod rng;
 mod running_state;
 mod schedule;
 
@@ -43,6 +42,7 @@ use self::capability::{
     MotionActionTable, capability_keys,
 };
 pub use self::decide::ScoreTrace;
+use self::decide::schedule_first_decision;
 use self::engine::validate_brain;
 pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
@@ -51,10 +51,8 @@ pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 pub(crate) use self::perception::{ConsiderationInput, Targeting};
 use self::perception::{DecisionContext, MemoryView};
 pub(super) use self::perception::{VisionCone, Watching};
-pub use self::rng::{BrainRng, BrainRngRootSeed};
-use self::rng::{DECISION_PERIOD, seed_brain_rng_and_schedule_first_decision};
 use self::running_state::RunningBehavior;
-pub use self::schedule::AiSet;
+use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -64,8 +62,8 @@ use crate::prelude::*;
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(BrainRng, StartedEquipmentUses, Steering)]
-#[component(on_add = seed_brain_rng_and_schedule_first_decision)]
+#[require(StartedEquipmentUses, Steering)]
+#[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
@@ -276,16 +274,31 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
+    app.configure_sets(
+        Update,
+        (
+            (
+                BrainSystems::Perception,
+                BrainSystems::Targeting,
+                BrainSystems::Aim,
+            )
+                .chain()
+                .in_set(SimulationSystems::Perceive),
+            (
+                BrainSystems::Decision,
+                BrainSystems::Execute,
+                BrainSystems::Motion,
+            )
+                .chain()
+                .in_set(SimulationSystems::Act),
+        ),
+    );
+
     app.add_plugins((perception::plugin, action::plugin, motion::plugin))
-        .init_resource::<BrainRngRootSeed>()
         .add_observer(decide::on_release_finished_motion)
         .add_observer(decide::on_finish_action)
-        .add_systems(Startup, rng::seed_brain_rng_root_from_map)
         .add_systems(
             Update,
-            decide::decide_behavior
-                .after(regenerate_mana)
-                .after(tick_equippable_cooldown)
-                .in_set(AiSet::Decision),
+            decide::decide_behavior.in_set(BrainSystems::Decision),
         );
 }

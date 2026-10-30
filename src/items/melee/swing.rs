@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
+use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum MeleeSwingType {
@@ -25,7 +26,11 @@ impl MeleeSwingType {
 // TODO: Consider using bevy curve functions to reduce math needed here
 pub(super) fn process_melee_attacks(
     time: Res<Time>,
-    mut attack_query: Query<(&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack)>,
+    // Melee weapons are never projectiles; the filter lets this run beside projectile systems.
+    mut attack_query: Query<
+        (&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack),
+        Without<Projectile>,
+    >,
 ) {
     for (melee_weapon, mut transform, mut active_attack) in &mut attack_query {
         active_attack.duration.tick(time.delta());

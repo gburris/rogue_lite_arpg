@@ -18,7 +18,7 @@ pub mod prelude {
         DirectionalPoses, Equip, EquipmentInUse, EquipmentPose, EquipmentRead, EquipmentSlot,
         EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure, EquipmentUseFinished,
         EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment,
-        StopUsingEquipment, Unequip, tick_equippable_cooldown,
+        StopUsingEquipment, Unequip,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;

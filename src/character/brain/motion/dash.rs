@@ -1,13 +1,16 @@
 //! Committed straight runs: the warrior's kite, the fire mage's hop and the ice mage's slide.
 
+use std::f32::consts::TAU;
+
 use bevy::prelude::*;
+use rand::RngExt;
 
 use super::{
     CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
     report_motion_finished,
 };
 use crate::character::brain::perception::{TargetView, build_target_view};
-use crate::character::brain::{BrainRng, Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -97,11 +100,11 @@ impl Dash {
     }
 }
 
-fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2, rng: &mut BrainRng) -> Vec2 {
+fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2) -> Vec2 {
     if target.distance <= close_range
         && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
     {
-        let spread = rng.range(-HOP_STEP_IN_SPREAD, HOP_STEP_IN_SPREAD);
+        let spread = rand::rng().random_range(-HOP_STEP_IN_SPREAD..=HOP_STEP_IN_SPREAD);
         return target.bearing.rotate(Vec2::from_angle(spread));
     }
     // Cut across to the side opposite the current heading, so an orbit that
@@ -109,7 +112,7 @@ fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2, rng: &mut
     let heading_side = target.bearing.perp().dot(heading);
     let tangent_sign = if heading_side.abs() > f32::EPSILON {
         -heading_side.signum()
-    } else if rng.range(0.0, 1.0) < 0.5 {
+    } else if rand::rng().random_bool(0.5) {
         1.0
     } else {
         -1.0
@@ -135,15 +138,9 @@ impl Capability for Dash {
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
-    mut dashers: Query<(
-        Entity,
-        SteeredCharacter,
-        &mut Dash,
-        &mut Steering,
-        &mut BrainRng,
-    )>,
+    mut dashers: Query<(Entity, SteeredCharacter, &mut Dash, &mut Steering)>,
 ) {
-    for (entity, character, mut dash, mut steering, mut rng) in &mut dashers {
+    for (entity, character, mut dash, mut steering) in &mut dashers {
         if dash
             .current_behavior_run_id
             .follow_brain_run(character.brain, Motion::Dash)
@@ -157,7 +154,7 @@ pub(super) fn apply_dash(
             *steering = Steering::HALT;
             continue;
         };
-        match dash.step(&input, &mut rng) {
+        match dash.step(&input) {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished {
                 decaying_speed_boost,
@@ -175,15 +172,15 @@ pub(super) fn apply_dash(
 }
 
 impl Dash {
-    fn step(&mut self, input: &SteerInput, rng: &mut BrainRng) -> MotionStep {
+    fn step(&mut self, input: &SteerInput) -> MotionStep {
         if !self.progress.started {
             // A target with no finite distance gives nothing to aim at, so this
             // waits rather than aiming blind.
             let Some(target) = build_target_view(input.target_info, input.now) else {
                 return MotionStep::Steer(Steering::boosted(None, self.speed_multiplier));
             };
-            let direction = self.aim_rule.choose_direction(target, input.heading, rng);
-            let run = rng.range(self.run_distance.min(), self.run_distance.max());
+            let direction = self.aim_rule.choose_direction(target, input.heading);
+            let run = rand::rng().random_range(self.run_distance.min()..self.run_distance.max());
             self.progress.start(direction, run);
         }
         let distance = input.distance_this_frame(self.speed_multiplier);
@@ -205,18 +202,18 @@ enum DashAimRule {
 }
 
 impl DashAimRule {
-    fn choose_direction(self, target: TargetView, heading: Vec2, rng: &mut BrainRng) -> Vec2 {
+    fn choose_direction(self, target: TargetView, heading: Vec2) -> Vec2 {
         let direction = match self {
             Self::Away { spread } => (-target.bearing)
                 .normalize_or_zero()
-                .rotate(Vec2::from_angle(rng.range(-spread, spread))),
-            Self::HopTangent { close_range } => hop_direction(&target, close_range, heading, rng),
+                .rotate(Vec2::from_angle(rand::rng().random_range(-spread..=spread))),
+            Self::HopTangent { close_range } => hop_direction(&target, close_range, heading),
         };
         // A zero bearing (the characters overlap) has no direction to aim along.
         if direction.length_squared() > f32::EPSILON {
             direction
         } else {
-            rng.direction()
+            Vec2::from_angle(rand::rng().random_range(0.0..TAU))
         }
     }
 }

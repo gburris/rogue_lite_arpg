@@ -10,9 +10,12 @@ pub(super) fn plugin(app: &mut App) {
             update_exp_bar,
             update_action_bar,
             update_cooldowns,
-            (update_mana_bar, update_lost_mana_bar).chain(),
-            (update_health_bar, update_lost_health_bar).chain(),
+            update_mana_bar,
+            update_lost_mana_bar,
+            update_health_bar,
+            update_lost_health_bar,
         )
+            .chain()
             .in_set(InGameSystems::HudOverlay),
     );
 

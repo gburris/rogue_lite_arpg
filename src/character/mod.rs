@@ -19,7 +19,7 @@ pub mod prelude {
     pub use super::Character;
     #[cfg(feature = "dev")]
     pub(crate) use super::brain::Targeting;
-    pub use super::brain::{AiSet, Brain, Dash, Motion, ScoreTrace, Wander};
+    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawnData, Experience, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawnData, SpawnNpcs};
     pub use super::player::prelude::{
@@ -35,20 +35,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
     app.add_plugins((animation::plugin, brain::plugin));
-
-    app.configure_sets(
-        Update,
-        (
-            AiSet::Perception,
-            AiSet::Targeting,
-            AiSet::Aim,
-            AiSet::Decision,
-            AiSet::Execute,
-            AiSet::Motion,
-        )
-            .chain()
-            .in_set(SimulationSystems::Logic),
-    );
 
     app.add_systems(
         FixedUpdate,

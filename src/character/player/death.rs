@@ -6,7 +6,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         finish_death_animation
-            .in_set(InGameSystems::Vfx)
+            .in_set(VfxSystems::Animate)
             .run_if(in_state(PlayingState::Death)),
     );
 }

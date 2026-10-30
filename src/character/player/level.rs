@@ -7,8 +7,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            on_player_experience_change.in_set(InGameSystems::Simulation),
-            animate_level_up.in_set(InGameSystems::Vfx),
+            on_player_experience_change.in_set(SimulationSystems::Derive),
+            animate_level_up.in_set(VfxSystems::Animate),
         ),
     )
     .add_observer(on_level_up);

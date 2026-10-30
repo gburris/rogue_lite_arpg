@@ -24,10 +24,11 @@ pub(super) fn plugin(app: &mut App) {
             rebuild_current_map.run_if(resource_exists::<RebuildCurrentMap>),
         )
             .chain()
-            .run_if(in_state(AppState::Playing)),
+            .after(dev_map_keys)
+            .in_set(InGameSystems::PlayerInput),
     );
     #[cfg(feature = "dev")]
-    app.add_systems(Update, dev_map_keys.run_if(in_state(AppState::Playing)));
+    app.add_systems(Update, dev_map_keys.in_set(InGameSystems::PlayerInput));
 }
 
 /// System parameters for requesting the next map.

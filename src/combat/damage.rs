@@ -1,9 +1,9 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use rand::RngExt;
 
 use super::health::Health;
 use super::invulnerable::IFrames;
-use super::rng::CombatRng;
 use super::status_effects::prelude::{ApplyEffects, Effects};
 use crate::prelude::*;
 
@@ -44,10 +44,10 @@ pub enum Damage {
 }
 
 impl Damage {
-    /// Picks the amount of damage dealt, drawing from `rng` for a range.
-    fn roll(self, rng: &mut CombatRng) -> f32 {
+    /// Picks the amount of damage dealt, rolling within a range.
+    fn roll(self) -> f32 {
         match self {
-            Self::Range { min, max } => rng.range(min, max),
+            Self::Range { min, max } => rand::rng().random_range(min..max),
             Self::Single(amount) => amount,
         }
     }
@@ -141,7 +141,6 @@ pub(super) fn on_attempt_damage(
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&Effects>,
-    mut combat_rng: ResMut<CombatRng>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
     let damaged_entity = if let Ok(child_of) = hurt_box_query.get(attempt_damage.entity) {
@@ -171,7 +170,7 @@ pub(super) fn on_attempt_damage(
         }
 
         // Convert `Damage` to raw damage amount
-        let damage = attempt_damage.damage.roll(&mut combat_rng);
+        let damage = attempt_damage.damage.roll();
         health.take_damage(damage);
 
         // Because AttemptDamage may not result in damage being applied (invulnerable or entity

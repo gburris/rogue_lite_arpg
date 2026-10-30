@@ -8,6 +8,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
+use super::BrainSystems;
 use super::action::{Ability, Action, find_carried_potion};
 use super::capability::{
     CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
@@ -23,9 +24,9 @@ pub(super) fn plugin(app: &mut App) {
             (
                 (update_target_info, is_target_in_sight)
                     .chain()
-                    .in_set(AiSet::Perception),
-                (should_target_watched, should_stop_targeting).in_set(AiSet::Targeting),
-                update_aim_position.in_set(AiSet::Aim),
+                    .in_set(BrainSystems::Perception),
+                (should_target_watched, should_stop_targeting).in_set(BrainSystems::Targeting),
+                update_aim_position.in_set(BrainSystems::Aim),
             ),
         );
 }

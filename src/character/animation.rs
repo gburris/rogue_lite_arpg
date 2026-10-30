@@ -7,7 +7,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (update_animation_state, cycle_character_animation)
             .chain()
-            .in_set(InGameSystems::Vfx),
+            .in_set(VfxSystems::Select),
     );
 }
 

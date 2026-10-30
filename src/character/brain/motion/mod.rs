@@ -23,9 +23,8 @@ use self::step::{
 };
 pub use self::swoop::Swoop;
 pub use self::wander::Wander;
-use super::AiSet;
+use super::BrainSystems;
 use super::engine::Interval;
-use crate::prelude::*;
 
 /// How a character moves: a continuous motion that runs until replaced, or a
 /// finite committed move that steers alone until its system reports it
@@ -166,7 +165,6 @@ pub(super) fn plugin(app: &mut App) {
             steering::apply_steering,
         )
             .chain()
-            .in_set(AiSet::Motion)
-            .after(sync_slow_from_statuses),
+            .in_set(BrainSystems::Motion),
     );
 }

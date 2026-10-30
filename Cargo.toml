@@ -81,7 +81,7 @@ type_complexity = "allow"
 nonstandard_macro_braces = "warn"
 # Field names often repeat the struct name for clarity (`Mana::max_mana`, `GameIcons::*_icon`).
 struct_field_names = "allow"
-# Use `expect` with a message naming the invariant instead.
+# Use `expect` with a message describing the failure instead.
 unwrap_used = "warn"
 # Every assert states why it must hold.
 missing_assert_message = "warn"

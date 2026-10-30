@@ -79,7 +79,10 @@ pub struct EquipmentUseSucceeded {
 }
 
 /// Advances every equipped item's cooldown timer.
-pub fn tick_equippable_cooldown(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
+pub(super) fn tick_equippable_cooldown(
+    mut equippable_query: Query<&mut Equippable>,
+    time: Res<Time>,
+) {
     for mut equippable in &mut equippable_query {
         equippable.cooldown.tick(time.delta());
     }

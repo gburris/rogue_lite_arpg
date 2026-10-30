@@ -18,7 +18,6 @@ pub mod prelude {
     pub use super::use_equipped::{
         EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
         EquipmentUseFinished, EquipmentUseSucceeded, StartUsingEquipment, StopUsingEquipment,
-        tick_equippable_cooldown,
     };
 }
 
@@ -32,7 +31,7 @@ pub(super) fn plugin(app: &mut App) {
             // Always run this system InGame and InMenu so weapon transforms update as inventory is
             // interacted with
             equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-            use_equipped::tick_equippable_cooldown.in_set(InGameSystems::Simulation),
+            use_equipped::tick_equippable_cooldown.in_set(SimulationSystems::Upkeep),
         ),
     );
 }

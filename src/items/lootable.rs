@@ -7,7 +7,13 @@ use rand::{RngExt, rng};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, glow_and_rotate_lootables.in_set(InGameSystems::Vfx));
+    app.add_systems(
+        Update,
+        glow_and_rotate_lootables
+            .in_set(VfxSystems::Animate)
+            // Lootable items are never frame-animated, level-up effects, or characters.
+            .ambiguous_with(VfxSystems::Animate),
+    );
 
     app.add_observer(on_item_added_make_lootable)
         .add_observer(on_drop_item);

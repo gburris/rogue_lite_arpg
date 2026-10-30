@@ -18,7 +18,7 @@ impl Default for Slowed {
 
 /// Sets each character's slow to its strongest active status, with a freeze
 /// counting as a full stun, so one status expiring never clears another.
-pub(crate) fn sync_slow_from_statuses(
+pub(super) fn sync_slow_from_statuses(
     mut characters: Query<(&mut Kinematics, Option<&Statuses>)>,
     slows: Query<&Slowed>,
     freezes: Query<(), With<Frozen>>,

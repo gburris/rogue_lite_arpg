@@ -8,7 +8,6 @@ pub mod prelude {
     pub use super::burn::Burning;
     pub use super::effect::{ApplyEffects, Effects};
     pub use super::freeze::Frozen;
-    pub(crate) use super::slow::sync_slow_from_statuses;
 }
 
 use bevy::prelude::*;
@@ -26,6 +25,6 @@ pub(super) fn plugin(app: &mut App) {
             freeze::apply_frozen,
             slow::sync_slow_from_statuses,
         )
-            .in_set(InGameSystems::Simulation),
+            .in_set(SimulationSystems::Upkeep),
     );
 }

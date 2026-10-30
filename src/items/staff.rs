@@ -15,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             tick_casting_timer.in_set(InGameSystems::DespawnEntities),
-            fire_projectile_on_casting_end.in_set(SimulationSystems::Logic),
+            fire_projectile_on_casting_end.in_set(SimulationSystems::Act),
         ),
     );
 }

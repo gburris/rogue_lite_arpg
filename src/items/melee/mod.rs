@@ -26,12 +26,9 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            swing::process_melee_attacks.before(AiSet::Perception),
-            attack::end_melee_attacks,
-        )
+        (swing::process_melee_attacks, attack::end_melee_attacks)
             .chain()
-            .in_set(SimulationSystems::Logic),
+            .in_set(SimulationSystems::Upkeep),
     );
 
     app.add_systems(

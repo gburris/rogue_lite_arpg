@@ -9,7 +9,7 @@ use bevy::prelude::*;
 pub use self::ability::{Ability, Bite, Breath, Heal};
 pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
 pub(super) use self::equipment_use::StartedEquipmentUses;
-use super::AiSet;
+use super::BrainSystems;
 use crate::prelude::*;
 
 /// The one non-movement thing a character does at a time: use equipment, use an
@@ -52,7 +52,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(ability::plugin)
         .add_systems(
             Update,
-            equipment_use::apply_equipment_use_requests.in_set(AiSet::Execute),
+            equipment_use::apply_equipment_use_requests.in_set(BrainSystems::Execute),
         )
         .add_observer(equipment_use::on_report_equipment_use_finished);
 }

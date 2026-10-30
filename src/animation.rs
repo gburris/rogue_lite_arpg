@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, animate_sprites.in_set(InGameSystems::Vfx));
+    app.add_systems(Update, animate_sprites.in_set(VfxSystems::Animate));
 }
 
 fn animate_sprites(

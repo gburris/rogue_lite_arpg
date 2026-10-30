@@ -98,16 +98,26 @@ pub(super) fn on_display_case_updated(
     };
 
     // Get name and entity for each item in inventory
-    let items = items.iter().map(|e| (e, item_query.get(e).unwrap())).map(
-        |(item_entity, (name, item, equippable, is_equipped))| DisplaySlotContext {
-            item_entity,
-            item_name: name.to_string(),
-            item_type: item.item_type,
-            item_value: item.value,
-            equipment_slot: equippable.map(|e| e.slot),
-            is_equipped,
-        },
-    );
+    let items = items
+        .iter()
+        .map(|e| {
+            (
+                e,
+                item_query
+                    .get(e)
+                    .expect("Inventory items have a name and item"),
+            )
+        })
+        .map(
+            |(item_entity, (name, item, equippable, is_equipped))| DisplaySlotContext {
+                item_entity,
+                item_name: name.to_string(),
+                item_type: item.item_type,
+                item_value: item.value,
+                equipment_slot: equippable.map(|e| e.slot),
+                is_equipped,
+            },
+        );
 
     commands.entity(displayed_by.0).with_children(|parent| {
         for slot_context in items {

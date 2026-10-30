@@ -79,6 +79,8 @@ too_many_arguments = "allow"
 type_complexity = "allow"
 # Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
 nonstandard_macro_braces = "warn"
+# Use `expect` with a message naming the invariant instead.
+unwrap_used = "warn"
 needless_pass_by_value = "allow"
 cast_precision_loss = "allow"
 cast_possible_truncation = "allow"

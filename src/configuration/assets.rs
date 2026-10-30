@@ -140,7 +140,9 @@ pub struct ShadowMesh<const W: u16, const H: u16> {
 
 impl<const W: u16, const H: u16> FromWorld for ShadowMesh<W, H> {
     fn from_world(world: &mut World) -> Self {
-        let mut meshes = world.get_resource_mut::<Assets<Mesh>>().unwrap();
+        let mut meshes = world
+            .get_resource_mut::<Assets<Mesh>>()
+            .expect("Assets<Mesh> exists before asset collections load");
         ShadowMesh {
             handle: meshes.add(Ellipse {
                 half_size: Vec2::new(f32::from(W), f32::from(H)),
@@ -155,7 +157,9 @@ pub struct ShadowColor {
 
 impl FromWorld for ShadowColor {
     fn from_world(world: &mut World) -> Self {
-        let mut colors = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut colors = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("Assets<ColorMaterial> exists before asset collections load");
         ShadowColor {
             handle: colors.add(Color::srgba(0.0, 0.0, 0.0, 0.6)),
         }

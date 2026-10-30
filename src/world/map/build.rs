@@ -9,7 +9,7 @@ use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
 use super::placement::{PlaceContext, place};
 use super::recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name};
 use super::structures::{Structure, apply_structure, build_empty_square, build_pond, build_rubble};
-use crate::prelude::AppState;
+use crate::prelude::*;
 use crate::world::MapRng;
 
 pub(super) fn plugin(app: &mut App) {

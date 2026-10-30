@@ -112,7 +112,7 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
                     ..default()
                 },
                 children![
-                    text(format!("{:?}: {}", stat_type, stat_type.value(stats)), 24.0),
+                    text(format!("{stat_type:?}: {}", stat_type.value(stats)), 24.0),
                     (
                         text(stat_type.description(), 16.0),
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
@@ -172,13 +172,13 @@ pub fn handle_stat_button_interaction(
             }
             Interaction::Hovered => {
                 if button.change == StatChange::Increase && game_progress.progress_points > 0 {
-                    *background_color = BackgroundColor(Color::srgb(1.0, 1.0, 0.0));
+                    *background_color = BackgroundColor::from(Color::srgb(1.0, 1.0, 0.0));
                 } else {
-                    *background_color = BackgroundColor(Color::srgb(0.5, 0.5, 0.5));
+                    *background_color = BackgroundColor::from(Color::srgb(0.5, 0.5, 0.5));
                 }
             }
             Interaction::None => {
-                *background_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.5));
+                *background_color = BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5));
             }
         }
     }
@@ -234,7 +234,7 @@ pub fn handle_stats_shop_ui_update(
     game_progress.base_stats = player_stats;
 
     // Despawn existing menu
-    for entity in stats_menu_query.iter() {
+    for entity in &stats_menu_query {
         commands.entity(entity).despawn();
     }
 

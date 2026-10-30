@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::{Action, ActionFinished, ActionOutcome};
 use crate::character::brain::{Brain, Targeting};
 use crate::character::vision::TargetInfo;
-use crate::prelude::{EquipmentSlot, EquipmentUsage, EquipmentUseFinished};
+use crate::prelude::*;
 
 /// The last use started in each slot, stamped with its behavior's run id, so a
 /// committed use starts once and its item's finish names its behavior.

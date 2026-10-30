@@ -7,7 +7,7 @@ mod status_effects;
 
 use bevy::prelude::*;
 
-use crate::prelude::InGameSystems;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::damage::{

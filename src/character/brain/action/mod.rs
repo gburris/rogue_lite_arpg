@@ -10,7 +10,7 @@ pub use self::ability::{Ability, Bite, Breath, Heal};
 pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
 pub(super) use self::equipment_use::StartedEquipmentUses;
 use super::AiSet;
-use crate::prelude::EquipmentSlot;
+use crate::prelude::*;
 
 /// The one non-movement thing a character does at a time: use equipment, use an
 /// ability, or deliberately do nothing.

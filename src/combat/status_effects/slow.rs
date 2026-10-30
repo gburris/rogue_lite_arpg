@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::freeze::Frozen;
 use super::status::{StatusType, Statuses};
-use crate::prelude::Kinematics;
+use crate::prelude::*;
 
 #[derive(Component, Clone, Copy)]
 #[require(StatusType::Slow)]

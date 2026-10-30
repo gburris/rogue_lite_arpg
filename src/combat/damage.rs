@@ -5,7 +5,7 @@ use rand::RngExt;
 use super::health::Health;
 use super::invulnerable::IFrames;
 use super::status_effects::prelude::{ApplyEffects, Effects};
-use crate::prelude::{GameCollisionLayer, Player};
+use crate::prelude::*;
 
 /// Which side of combat a character fights on, required by every character marker.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,8 +46,8 @@ pub enum Damage {
 impl Damage {
     fn to_float(self) -> f32 {
         match self {
-            Damage::Range { min, max } => rand::rng().random_range(min..max),
-            Damage::Single(amount) => amount,
+            Self::Range { min, max } => rand::rng().random_range(min..max),
+            Self::Single(amount) => amount,
         }
     }
 }

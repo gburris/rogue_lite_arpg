@@ -56,7 +56,7 @@ use self::rng::{DECISION_PERIOD, seed_brain_rng_and_schedule_first_decision};
 use self::running_state::RunningBehavior;
 pub use self::schedule::AiSet;
 use crate::character::npc::VILLAGER;
-use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
+use crate::prelude::*;
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,

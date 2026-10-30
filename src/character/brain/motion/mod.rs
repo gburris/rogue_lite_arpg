@@ -25,7 +25,7 @@ pub use self::swoop::Swoop;
 pub use self::wander::Wander;
 use super::AiSet;
 use super::engine::Interval;
-use crate::prelude::sync_slow_from_statuses;
+use crate::prelude::*;
 
 /// How a character moves: a continuous motion that runs until replaced, or a
 /// finite committed move that steers alone until its system reports it

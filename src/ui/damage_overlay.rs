@@ -2,7 +2,7 @@ use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::prelude::{DamageDealt, Healed, Health, HurtBox, Lifespan, ZLayer};
+use crate::prelude::*;
 
 const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
@@ -58,7 +58,7 @@ fn random_angle(angle_range: f32) -> f32 {
     rng.random_range(-angle_range..angle_range).to_radians()
 }
 
-pub fn on_damage_overlay_amount(
+pub(super) fn on_damage_overlay_amount(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     damaged_query: Query<(&Health, &Transform)>,
@@ -90,7 +90,7 @@ pub fn on_damage_overlay_amount(
     }
 }
 
-pub fn on_healing_overlay_amount(
+pub(super) fn on_healing_overlay_amount(
     healed: On<Healed>,
     mut commands: Commands,
     children_query: Query<&Children>,

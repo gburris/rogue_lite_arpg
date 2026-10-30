@@ -343,7 +343,7 @@ fn update_action_bar(
     if let Some(player_inventory_result) = equipment_query {
         let (mainhand, offhand) = player_inventory_result.into_inner();
 
-        for (action_box, children) in action_box_query.iter() {
+        for (action_box, children) in &action_box_query {
             let equipment: Option<Entity> = action_box.slot.equipped(mainhand, offhand);
 
             if let Some(&image_entity) = children.first()

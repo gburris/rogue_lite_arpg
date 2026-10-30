@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::prelude::{AppState, PlayerStats, RestartEvent};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.insert_resource(GameProgress::default());

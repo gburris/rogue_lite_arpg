@@ -7,7 +7,7 @@ use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 use super::Brain;
-use crate::prelude::MapRng;
+use crate::prelude::*;
 
 /// A brain's random stream, seeded from [`BrainRngRootSeed`] and the entity. Kept apart
 /// from [`Brain`] so steering gets randomness without the rest of the brain.

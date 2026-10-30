@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 
-use crate::prelude::AppState;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_loading_state(

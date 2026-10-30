@@ -4,7 +4,7 @@ use std::fmt;
 use bevy::prelude::*;
 
 use super::tiles::{TileGrid, TileKind};
-use crate::prelude::{EnemyKind, NpcKind};
+use crate::prelude::*;
 
 /// Generated map tiles and placements, plus the replay key (`recipe`, `seed`) that built them.
 #[derive(Component, Debug, PartialEq, Eq)]

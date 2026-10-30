@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::constants::TITLE_FONT_SIZE;
 use super::primitives::{gold_border, text};
-use crate::prelude::AppState;
+use crate::prelude::*;
 
 #[derive(Component)]
 pub struct LoadScreen;
@@ -10,7 +10,7 @@ pub struct LoadScreen;
 #[derive(Component)]
 pub struct AnimatedText;
 
-pub fn spawn(mut commands: Commands) {
+pub(super) fn spawn(mut commands: Commands) {
     commands.spawn((
         LoadScreen,
         DespawnOnExit(AppState::SpawnMap),
@@ -92,7 +92,7 @@ fn body_section() -> impl Bundle {
                 ..default()
             },
             BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
                 text("Loading Map", 48.0),
                 TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
@@ -121,7 +121,7 @@ fn footer_section() -> impl Bundle {
     )
 }
 
-pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
+pub(super) fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
     for mut color in &mut query {
         // Increased frequency and amplitude.
         let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6;

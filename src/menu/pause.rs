@@ -18,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
 struct MainMenu;
 
 #[derive(Component)]
-struct MenuButton(pub Menu);
+struct MenuButton(Menu);
 
 fn handle_menu_button_pressed(
     mut button_query: Query<(&Interaction, &MenuButton)>,
@@ -85,7 +85,7 @@ fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
             ..default()
         },
         BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor(DARK_GRAY_COLOR),
+        BackgroundColor::from(DARK_GRAY_COLOR),
         children![text(button_text, 32.0)],
     )
 }

@@ -145,7 +145,7 @@ fn handle_collisions(
     hurt_box_query: Query<&HurtBox>,
     reflector_query: Query<&ProjectileReflection>,
 ) {
-    for (projectile, velocity, colliding_entities, projectile_entity) in projectile_query.iter() {
+    for (projectile, velocity, colliding_entities, projectile_entity) in &projectile_query {
         // ignore further collisions after ANY collision with the projectile
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // If the thing we collide with has a HurtBox, lets try to damage it!

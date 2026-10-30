@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::prelude::{Menu, PlayerInteraction};
+use crate::prelude::*;
 
 pub(super) fn on_shop_keeper_store_open(
     _: On<PlayerInteraction>,

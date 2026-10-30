@@ -13,7 +13,7 @@ pub mod prelude {
 
 use bevy::prelude::*;
 
-use crate::prelude::InGameSystems;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(effect::apply_effects);

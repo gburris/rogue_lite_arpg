@@ -11,10 +11,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 use super::view;
-use crate::prelude::{
-    AppState, AttackState, Brain, Dash, Enemy, InGameSystems, Menu, Motion, ScoreTrace, TargetInfo,
-    Targeting, Vision, Wander, ZLayer,
-};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(

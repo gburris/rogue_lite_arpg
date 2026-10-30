@@ -5,7 +5,7 @@ use super::action::Action;
 use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, ScoreMapping};
 use super::motion::Motion;
 use super::perception::ConsiderationInput;
-use crate::prelude::EquipmentSlot;
+use crate::prelude::*;
 
 /// Preferred minimum distance a ranged or flying brain keeps from its target.
 pub const CAST_MIN_RANGE: f32 = 200.0;

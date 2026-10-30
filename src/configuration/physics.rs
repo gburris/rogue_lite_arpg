@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::App;
 
-use crate::prelude::TILE_SIZE;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     // setup avian physics (used for forces, collision, etc...)

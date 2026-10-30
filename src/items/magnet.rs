@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{GameCollisionLayer, PlayerInteractionRadius};
+use crate::prelude::*;
 
 const MAGNETIC_FORCE: f32 = 2_000_000.0;
 
@@ -24,7 +24,7 @@ pub(super) fn update_magnet_locations(
 ) {
     let (player_entity, player_transform) = player_query.into_inner();
 
-    for (child_of, magnet_transform, colliding_entities) in magnet_query.iter() {
+    for (child_of, magnet_transform, colliding_entities) in &magnet_query {
         if colliding_entities.contains(&player_entity) {
             let direction = (player_transform.translation().truncate()
                 - magnet_transform.translation().truncate())

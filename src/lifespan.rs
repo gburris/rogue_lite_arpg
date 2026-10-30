@@ -16,13 +16,13 @@ pub struct Lifespan(pub Timer);
 
 impl Lifespan {
     pub fn new(duration_secs: f32) -> Self {
-        Lifespan(Timer::from_seconds(duration_secs, TimerMode::Once))
+        Self(Timer::from_seconds(duration_secs, TimerMode::Once))
     }
 }
 
 impl Default for Lifespan {
     fn default() -> Self {
-        Lifespan(Timer::from_seconds(2.0, TimerMode::Once))
+        Self::new(2.0)
     }
 }
 

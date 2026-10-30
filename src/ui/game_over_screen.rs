@@ -10,7 +10,7 @@ pub struct GameOverScreen;
 #[derive(Component)]
 pub struct RestartButton;
 
-pub fn spawn(mut commands: Commands) {
+pub(super) fn spawn(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
         DespawnOnExit(AppState::GameOver),
@@ -44,7 +44,7 @@ pub fn spawn(mut commands: Commands) {
                     ..default()
                 },
                 BorderColor::all(Color::BLACK),
-                BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                BackgroundColor::from(Color::srgb(0.15, 0.15, 0.15)),
                 children![Text::new("Restart"), Observer::new(on_restart_clicked)]
             )
         ],

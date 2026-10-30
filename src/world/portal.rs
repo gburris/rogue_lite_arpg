@@ -39,7 +39,7 @@ fn handle_portal_collisions(
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
     mut next_map: NextMap,
 ) -> Result {
-    for portal_colliding_entities in portal_query.iter() {
+    for portal_colliding_entities in &portal_query {
         if portal_colliding_entities.contains(&*player_collider) {
             return next_map.set(MapRequest::Weighted);
         }

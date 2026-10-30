@@ -34,7 +34,7 @@ pub(super) fn while_burning(
     status_query: Query<(&Burning, &StatusOf), With<StatusApplied>>,
     mut health_query: Query<Entity, With<Health>>,
 ) {
-    for (burn, status_of) in status_query.iter() {
+    for (burn, status_of) in &status_query {
         if let Ok(entity) = health_query.get_mut(status_of.0)
             && burn.damage_frequency.just_finished()
         {

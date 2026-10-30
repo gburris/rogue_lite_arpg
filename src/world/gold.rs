@@ -44,7 +44,7 @@ fn handle_gold_collisions(
     player_collider_entity: Single<Entity, With<PlayerInteractionRadius>>,
 ) {
     let pe = player_collider_entity.into_inner();
-    for (gold_entity, gold, colliding_entities) in gold_query.iter() {
+    for (gold_entity, gold, colliding_entities) in &gold_query {
         if colliding_entities.contains(&pe) {
             player_purse.add(gold.value);
             commands.entity(gold_entity).despawn();

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{Item, ItemType};
-use crate::prelude::{AttemptHeal, SpriteAssets};
+use crate::prelude::*;
 
 #[derive(Component)]
 pub struct Consumable {

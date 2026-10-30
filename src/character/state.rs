@@ -1,7 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
+use crate::prelude::*;
 
 /// A character's intended movement: a heading and a multiple of `max_speed`,
 /// reduced by any slow, with no acceleration. Player input and AI steering

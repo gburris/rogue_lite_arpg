@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::prelude::Lifespan;
+use crate::prelude::*;
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Statuses)]

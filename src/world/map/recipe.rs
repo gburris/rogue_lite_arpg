@@ -18,7 +18,7 @@ use super::placement::{Anchor, CountRange, PlaceRule, Side};
 use super::spawn::MAX_MAP_TILES;
 use super::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
 use super::tiles::TileKind;
-use crate::prelude::{EnemyKind, NpcKind};
+use crate::prelude::*;
 use crate::world::MapRng;
 
 /// Loaded map recipes and the structures available to place in them.

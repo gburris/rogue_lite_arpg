@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 use super::action::{Ability, AbilityCapabilities, Action};
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
-use crate::prelude::{EquipmentRead, EquipmentSlot};
+use crate::prelude::*;
 
 /// A type with its own entry in a [`MotionActionTable`].
 pub trait MotionActionKey: Copy {

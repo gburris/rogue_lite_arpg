@@ -59,7 +59,7 @@ pub(super) fn apply_effects(
         }
     }
 
-    debug!("Applying effects: {:?}", deduped_effects);
+    debug!("Applying effects: {deduped_effects:?}");
     for effect in deduped_effects {
         commands
             .entity(effect)

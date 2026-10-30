@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(super) enum MeleeSwingType {
     Stab {
         /// How far the weapon should move (stab) forward from its starting position.

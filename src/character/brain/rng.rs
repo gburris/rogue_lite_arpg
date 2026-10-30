@@ -65,7 +65,7 @@ pub(super) fn seed_brain_rng_and_schedule_first_decision(
 pub(super) const DECISION_PERIOD: f32 = 0.1;
 
 /// Root seed used to seed each brain's independent random stream.
-#[derive(Resource, Default, Clone, Copy, Debug)]
+#[derive(Resource, Clone, Copy, Debug, Default)]
 pub struct BrainRngRootSeed(pub u64);
 
 pub(super) fn seed_brain_rng_root_from_map(

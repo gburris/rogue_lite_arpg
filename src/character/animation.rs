@@ -11,7 +11,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[require(FacingDirection, Kinematics)]
 pub(super) enum CharacterAnimationState {
     #[default]

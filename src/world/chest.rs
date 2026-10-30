@@ -16,7 +16,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_spawn_chests_event);
 }
 
-#[derive(Debug, Event)]
+#[derive(Event, Debug)]
 pub struct SpawnChestsEvent(pub Vec<Vec2>);
 
 #[derive(Component)]

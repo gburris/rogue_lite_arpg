@@ -30,38 +30,34 @@ pub mod prelude {
     pub use super::vision::{TargetInfo, Vision};
 }
 
-pub struct CharacterPlugin;
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-impl Plugin for CharacterPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
+    app.add_plugins((animation::plugin, brain::plugin));
 
-        app.add_plugins((animation::plugin, brain::plugin));
+    app.configure_sets(
+        Update,
+        (
+            AiSet::Perception,
+            AiSet::Targeting,
+            AiSet::Aim,
+            AiSet::Decision,
+            AiSet::Execute,
+            AiSet::Motion,
+        )
+            .chain()
+            .in_set(SimulationSystems::Logic),
+    );
 
-        app.configure_sets(
-            Update,
-            (
-                AiSet::Perception,
-                AiSet::Targeting,
-                AiSet::Aim,
-                AiSet::Decision,
-                AiSet::Execute,
-                AiSet::Motion,
-            )
-                .chain()
-                .in_set(SimulationSystems::Logic),
-        );
+    app.add_systems(
+        FixedUpdate,
+        state::kinematics_to_velocity.in_set(MainSystems::InGame),
+    );
 
-        app.add_systems(
-            FixedUpdate,
-            state::kinematics_to_velocity.in_set(MainSystems::InGame),
-        );
-
-        app.add_systems(
-            Update,
-            state::sync_attack_state_from_equipment.in_set(SimulationSystems::Derive),
-        );
-    }
+    app.add_systems(
+        Update,
+        state::sync_attack_state_from_equipment.in_set(SimulationSystems::Derive),
+    );
 }
 
 #[derive(Component, Default)]

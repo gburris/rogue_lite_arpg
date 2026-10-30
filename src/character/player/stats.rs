@@ -21,7 +21,7 @@ impl Default for PlayerStats {
     }
 }
 
-#[derive(Clone, Debug, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DisplayableStatType {
     Agility,
     Strength,

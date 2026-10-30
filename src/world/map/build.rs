@@ -35,7 +35,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct NextMap<'w, 's> {
     commands: Commands<'w, 's>,
     previous_maps: Query<'w, 's, Entity, With<MapBlueprint>>,
-    next_state: ResMut<'w, NextState<AppState>>,
+    next_app_state: ResMut<'w, NextState<AppState>>,
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
 }
@@ -53,13 +53,13 @@ impl NextMap<'_, '_> {
             self.commands.entity(previous_map).despawn();
         }
         self.commands.spawn(blueprint);
-        self.next_state.set(AppState::SpawnMap);
+        self.next_app_state.set(AppState::SpawnMap);
         Ok(())
     }
 }
 
 /// Selects which recipe and seed to use when generating a map.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MapRequest {
     Hub,
     /// A dungeon picked by weight; arenas are never picked.

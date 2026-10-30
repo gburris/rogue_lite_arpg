@@ -93,7 +93,7 @@ impl RecipeCatalog {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeFile {
     /// Named spawn lists that recipes include with `presets: ["Name"]`.
@@ -108,7 +108,7 @@ pub(super) struct RecipeFile {
     pub(super) arenas: Vec<RecipeEntry>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct StructureDefinition {
     pub(super) floor: TileKind,
@@ -116,7 +116,7 @@ pub(super) struct StructureDefinition {
     pub(super) glyphs: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeDefaults {
     pub(super) size_x_range: CountRange,
@@ -130,7 +130,7 @@ pub(super) struct RecipeDefaults {
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeEntry {
     pub(super) name: Option<String>,
@@ -149,7 +149,7 @@ pub(super) struct RecipeEntry {
 }
 
 /// Resolved map generation settings loaded from a recipe definition.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct MapRecipe {
     pub(super) name: String,
     pub(super) weight: u32,
@@ -218,7 +218,7 @@ pub(super) fn expand_counts(entries: Vec<StructureEntry>) -> Vec<StructureEntry>
         .collect()
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct StructureEntry {
     pub(super) kind: StructureKind,
@@ -242,7 +242,7 @@ pub(super) fn one() -> u32 {
 /// To add a feature: add a variant with its fields, write its builder from
 /// `claim_feature_footprint` in structures.rs (see rubble for a one-tile feature), and
 /// handle the variant in the exhaustive `place_structures` match.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) enum StructureKind {
     /// A named glyph structure: `Structure("Temple")`.
@@ -308,7 +308,7 @@ pub(super) fn resolved_name(kind: &str, index: usize, explicit: &str) -> String 
 /// (what: RandomEnemy, count: (10, 15), at: Random(x_deciles: (2, 8)), separation: 5),
 /// (what: Chest, count: (3, 5), at: Near(structure: "Temple", radius: 6)),
 /// ```
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SpawnEntry {
     pub(super) what: SpawnKind,
@@ -326,7 +326,7 @@ fn one_spawn() -> CountRange {
 }
 
 /// What a spawn entry places.
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub(super) enum SpawnKind {
     PlayerStart,
     Exit,
@@ -369,7 +369,7 @@ impl SpawnKind {
 /// the rest are fixed anchors, which place exactly one. Positions are measured to the
 /// center of what is placed, except the `Map*` anchors and `Edge`, which place its
 /// bottom-left corner.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 pub(super) enum Location {
     /// Anywhere inside the half-open x-decile band, `(1, 9)` by default: `Random()`.
     Random {

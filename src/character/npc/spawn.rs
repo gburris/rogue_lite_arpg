@@ -11,7 +11,7 @@ const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
 #[derive(Event)]
 pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct NpcSpawnData {
     pub position: Vec2,
     pub npc_kind: NpcKind,

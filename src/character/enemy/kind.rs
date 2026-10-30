@@ -1,8 +1,10 @@
+use serde::Deserialize;
+
 use super::{bat, mage, warrior};
 use crate::character::brain::BrainDefinition;
 
 /// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
 pub enum EnemyKind {
     Warrior,
     IceMage,

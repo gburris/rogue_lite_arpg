@@ -124,14 +124,14 @@ pub fn button_system(
         (&Interaction, &mut BackgroundColor, &mut BorderColor),
         (Changed<Interaction>, With<StartScreenButton>),
     >,
-    mut game_state: ResMut<NextState<AppState>>,
+    mut next_app_state: ResMut<NextState<AppState>>,
 ) {
     for (interaction, mut background_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 *background_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
                 *border_color = Color::srgb(1.0, 0.8, 0.3).into();
-                game_state.set(AppState::AssetLoading);
+                next_app_state.set(AppState::AssetLoading);
             }
             Interaction::Hovered => {
                 *background_color = Color::srgba(0.2, 0.15, 0.1, 0.8).into();

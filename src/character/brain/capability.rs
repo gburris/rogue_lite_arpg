@@ -65,12 +65,12 @@ impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
 }
 
 /// Which motions and actions may start right now.
-#[derive(Clone, Copy, Debug, Deref)]
+#[derive(Deref, Clone, Copy, Debug)]
 pub struct AvailableMotionActionTable(pub MotionActionTable<bool>);
 
 /// Which motions and actions the world lets run right now: usable equipment
 /// and a carried potion for `Heal`. One input to [`AvailableMotionActionTable`].
-#[derive(Clone, Copy, Debug, Deref)]
+#[derive(Deref, Clone, Copy, Debug)]
 pub struct UseEligibilityTable(pub MotionActionTable<bool>);
 
 impl Default for UseEligibilityTable {
@@ -144,7 +144,7 @@ pub(super) trait Capability {
 }
 
 /// Each carried capability's profile; `None` where the entity has none.
-#[derive(Clone, Copy, Debug, Default, Deref)]
+#[derive(Deref, Clone, Copy, Debug, Default)]
 pub(super) struct CapabilityProfiles(pub MotionActionTable<Option<CapabilityProfile>>);
 
 /// Every capability component an entity may carry.

@@ -78,7 +78,7 @@ const ATLAS: AtlasLayout = AtlasLayout {
 const TINT_BRIGHTNESS: [f32; 3] = [1.0, 0.98, 0.96];
 
 /// How a tile kind maps to atlas art.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum TilingRule {
     /// Fixed atlas slot with a seeded brightness from `brightness`.
     Tinted {
@@ -128,7 +128,7 @@ fn tiling_rule(tile_kind: TileKind) -> Option<TilingRule> {
 }
 
 /// Atlas slot and tint for one rendered tile.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct TileAppearance {
     /// Flat atlas index for `TileTextureIndex`.
     pub texture_index: u32,
@@ -175,7 +175,7 @@ pub(crate) fn tile_appearance(
 }
 
 /// How off-map neighbours read when sampling a tile's surroundings.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum EdgePolicy {
     /// Off-map tiles read as `TileKind::Wall`, closing the map border ring.
     Closed,

@@ -35,7 +35,7 @@ fn animate_sprites(
     Ok(())
 }
 
-#[derive(Clone, Debug, Component)]
+#[derive(Component, Clone, Debug)]
 pub enum AnimationIndices {
     Cycle(std::iter::Cycle<std::ops::RangeInclusive<usize>>),
     OneShot(std::ops::RangeInclusive<usize>),
@@ -69,11 +69,11 @@ impl Default for AnimationIndices {
     }
 }
 
-#[derive(Component, Deref, DerefMut, Default, Clone, Debug)]
+#[derive(Component, Deref, DerefMut, Clone, Debug, Default)]
 #[require(AnimationIndices)]
 pub struct AnimationTimer(pub Timer);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct AnimationData {
     pub row: usize,          // Row in the sprite sheet
     pub frame_count: usize,  // Number of frames in animation

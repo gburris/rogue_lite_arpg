@@ -25,8 +25,8 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn transition_to_playing(mut game_state: ResMut<NextState<AppState>>) {
-    game_state.set(AppState::Playing);
+fn transition_to_playing(mut next_app_state: ResMut<NextState<AppState>>) {
+    next_app_state.set(AppState::Playing);
 }
 
 fn set_tile_to_world_map_size(

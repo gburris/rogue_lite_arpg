@@ -37,7 +37,7 @@ impl CombatSide {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Damage {
     Single(f32),
     Range { min: f32, max: f32 },

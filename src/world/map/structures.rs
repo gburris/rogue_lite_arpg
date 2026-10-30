@@ -102,7 +102,7 @@ pub fn apply_structure(
 /// independently rolled rectangle between minimum and maximum corners.
 /// RON spells `size: Exact((14, 9))` or `size: Ranged((6, 4), (12, 8))`;
 /// omitting it keeps the feature's classic square size roll.
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub enum FeatureSize {
     /// Fixed footprint.
     Exact(FootprintSize),
@@ -111,7 +111,7 @@ pub enum FeatureSize {
 }
 
 /// Width and height of a feature footprint in tiles. Recipes spell it as `(width, height)`.
-#[derive(Deserialize, Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(from = "(u32, u32)")]
 pub struct FootprintSize {
     pub width: u32,
@@ -125,7 +125,7 @@ impl From<(u32, u32)> for FootprintSize {
 }
 
 /// Fill shape for a builtin feature.
-#[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 pub enum FeatureShape {
     /// Fill the entire claimed rectangle.
     #[default]

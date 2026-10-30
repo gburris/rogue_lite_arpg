@@ -109,7 +109,7 @@ impl MapBlueprint {
 }
 
 /// Describes why a generated map failed validation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MapValidationError {
     MissingPlayerStart,
     MultiplePlayerStarts(usize),
@@ -205,7 +205,7 @@ impl From<&str> for MapError {
 }
 
 /// A placed map entity and its tile coordinate.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Placement {
     pub tile: IVec2,
     /// Entity kind represented by this placement.
@@ -213,7 +213,7 @@ pub struct Placement {
 }
 
 /// Kind of entity placed in a map.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlacementKind {
     PlayerStart,
     Enemy(EnemyKind),

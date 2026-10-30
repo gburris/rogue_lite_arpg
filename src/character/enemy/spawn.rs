@@ -7,10 +7,10 @@ use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
-#[derive(Debug, Event)]
+#[derive(Event, Debug)]
 pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct EnemySpawnData {
     pub position: Vec2,
     pub enemy_kind: EnemyKind,

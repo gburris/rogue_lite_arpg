@@ -54,14 +54,14 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Pause(false)), resume_game);
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MainSystems {
     InGame,
     Menu,
     Shared,
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum InGameSystems {
     DespawnEntities, /* Despawn entities only! MUST happen before simulation of this new frame
                       * we are in! */
@@ -79,7 +79,7 @@ pub enum InGameSystems {
 /// systems) belong in `Logic`. State derived from the `EquipmentInUse` marker, such as
 /// attack animation state, belongs in `Derive` and is guaranteed to see every
 /// same-frame use and cancellation.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SimulationSystems {
     /// Game logic that may queue equipment use or cancellation.
     Logic,
@@ -87,7 +87,7 @@ pub enum SimulationSystems {
     Derive,
 }
 
-#[derive(States, Clone, Copy, Eq, PartialEq, Default, Debug, Hash)]
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum AppState {
     #[default]
     StartScreen,
@@ -99,10 +99,10 @@ pub enum AppState {
 }
 
 /// Whether or not the game is paused.
-#[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Pause(pub bool);
 
-#[derive(SubStates, Eq, Hash, Default, Clone, Copy, Debug, PartialEq)]
+#[derive(SubStates, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Playing)]
 pub enum PlayingState {
     #[default]

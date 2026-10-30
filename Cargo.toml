@@ -66,6 +66,7 @@ default-features = false
 features = ["dev"]
 
 [lints.rust]
+unsafe_code = "forbid"
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 

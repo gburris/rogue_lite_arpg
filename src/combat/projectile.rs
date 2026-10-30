@@ -32,7 +32,10 @@ pub struct Projectile {
 impl Default for Projectile {
     fn default() -> Self {
         Self {
-            damage: Damage::Range((5.0, 10.0)),
+            damage: Damage::Range {
+                min: 5.0,
+                max: 10.0,
+            },
             speed: 600.0,
             angle_offset: 0.0,
             spawn_offset: 0.0,
@@ -105,7 +108,10 @@ pub fn icebolt(
 ) -> impl Bundle {
     (
         Projectile {
-            damage: Damage::Range((10.0, 20.0)),
+            damage: Damage::Range {
+                min: 10.0,
+                max: 20.0,
+            },
             speed: 350.0,
             spawn_offset: 26.0,
             angle_offset,

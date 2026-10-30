@@ -14,8 +14,8 @@ mod tome;
 pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
-        DEFAULT_EQUIPMENT_TRANSFORM_MAP, Equip, EquipmentInUse, EquipmentRead, EquipmentSlot,
-        EquipmentTransformDef, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
+        DEFAULT_EQUIPMENT_POSES, DirectionalPoses, Equip, EquipmentInUse, EquipmentPose,
+        EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
         EquipmentUseFinished, EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand,
         StartUsingEquipment, StopUsingEquipment, Unequip, tick_equippable_cooldown,
     };

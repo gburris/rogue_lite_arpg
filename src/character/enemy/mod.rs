@@ -20,7 +20,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Debug, Event)]
 pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct EnemySpawnData {
     pub position: Vec2,
     pub enemy_kind: EnemyKind,

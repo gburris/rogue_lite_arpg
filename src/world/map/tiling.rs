@@ -294,7 +294,10 @@ fn bank_texture_index(
 /// pick the same variant. Salted by the kind discriminant, so re-encoding a
 /// map glyph never reshuffles art.
 fn tile_variant(seed: u64, tile_kind: TileKind, tile: IVec2, variant_count: u16) -> u16 {
-    debug_assert!(variant_count > 0, "variant_count must be non-zero");
+    debug_assert!(
+        variant_count > 0,
+        "the hash is reduced modulo variant_count, which divides by zero"
+    );
 
     let mut hash = seed
         ^ u64::from(tile_kind as u32).wrapping_mul(0x9E37_79B1_85EB_CA87)

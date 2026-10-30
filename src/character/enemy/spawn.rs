@@ -16,7 +16,7 @@ pub(super) fn spawn_enemies(
     player: Single<Entity, With<Player>>,
     mut map_rng: ResMut<MapRng>,
 ) {
-    for spawn_data in spawn_enemies.0.clone() {
+    for &spawn_data in &spawn_enemies.0 {
         spawn_enemy(
             &mut commands,
             spawn_data,

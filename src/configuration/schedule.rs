@@ -54,14 +54,14 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Pause(false)), resume_game);
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum MainSystems {
     InGame,
     Menu,
     Shared,
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum InGameSystems {
     DespawnEntities, // Despawn entities only! MUST happen before simulation of this new frame we are in!
     PlayerInput,
@@ -78,7 +78,7 @@ pub enum InGameSystems {
 /// systems) belong in `Logic`. State derived from the `EquipmentInUse` marker, such as
 /// attack animation state, belongs in `Derive` and is guaranteed to see every
 /// same-frame use and cancellation.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum SimulationSystems {
     /// Game logic that may queue equipment use or cancellation.
     Logic,
@@ -86,7 +86,7 @@ pub enum SimulationSystems {
     Derive,
 }
 
-#[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
+#[derive(States, Clone, Copy, Eq, PartialEq, Default, Debug, Hash)]
 pub enum AppState {
     #[default]
     StartScreen,

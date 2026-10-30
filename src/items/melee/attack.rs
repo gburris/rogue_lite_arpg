@@ -26,7 +26,7 @@ pub(super) fn handle_melee_collisions(
             {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    damage: Damage::Range(melee_weapon.damage),
+                    damage: melee_weapon.damage,
                     source_item: Some(weapon_entity),
                     attacker: Some(item_of.holder),
                     direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),

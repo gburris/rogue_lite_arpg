@@ -128,7 +128,7 @@ impl FacingDirection {
 
 /// Animation/physics flag mirroring whether an instant-use item is active.
 /// Written only by `sync_attack_state_from_equipment`.
-#[derive(Component, Clone, Default, PartialEq)]
+#[derive(Component, Clone, Copy, Default, PartialEq)]
 pub struct AttackState {
     pub is_attacking: bool,
 }

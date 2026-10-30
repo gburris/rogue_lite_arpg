@@ -119,8 +119,8 @@ pub(super) struct StructureDefinition {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeDefaults {
-    pub(super) size_x_range: (u32, u32),
-    pub(super) size_y_range: (u32, u32),
+    pub(super) size_x_range: CountRange,
+    pub(super) size_y_range: CountRange,
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
     /// Radius around the player start, in tiles, that no enemy may occupy.
@@ -137,8 +137,8 @@ pub(super) struct RecipeEntry {
     pub(super) weight: Option<u32>,
     /// Shorthand for a square map: `size: 60` sets both size ranges to `(60, 60)`.
     pub(super) size: Option<u32>,
-    pub(super) size_x_range: Option<(u32, u32)>,
-    pub(super) size_y_range: Option<(u32, u32)>,
+    pub(super) size_x_range: Option<CountRange>,
+    pub(super) size_y_range: Option<CountRange>,
     pub(super) floor: Option<TileKind>,
     pub(super) structures: Option<Vec<StructureEntry>>,
     pub(super) start_clearance: Option<u32>,
@@ -153,8 +153,8 @@ pub(super) struct RecipeEntry {
 pub(crate) struct MapRecipe {
     pub(super) name: String,
     pub(super) weight: u32,
-    pub(super) size_x_range: (u32, u32),
-    pub(super) size_y_range: (u32, u32),
+    pub(super) size_x_range: CountRange,
+    pub(super) size_y_range: CountRange,
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
     pub(super) start_clearance: u32,
@@ -176,7 +176,7 @@ impl RecipeEntry {
             )
             .into());
         }
-        let square = self.size.map(|size| (size, size));
+        let square = self.size.map(CountRange::exactly);
         let mut spawns = Vec::new();
         for preset in self.presets.as_ref().unwrap_or(&defaults.presets) {
             let preset_spawns = spawn_presets
@@ -322,11 +322,11 @@ pub(super) struct SpawnEntry {
 }
 
 fn one_spawn() -> CountRange {
-    CountRange(1, 1)
+    CountRange::exactly(1)
 }
 
 /// What a spawn entry places.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub(super) enum SpawnKind {
     PlayerStart,
     Exit,
@@ -339,7 +339,7 @@ pub(super) enum SpawnKind {
 
 impl SpawnKind {
     /// Build stage this kind's sampled (non-fixed) spawns run in.
-    pub(super) fn stage(&self) -> Stage {
+    pub(super) fn stage(self) -> Stage {
         match self {
             Self::PlayerStart => Stage::PlayerStart,
             Self::Exit => Stage::Exits,
@@ -350,17 +350,17 @@ impl SpawnKind {
     }
 
     /// Resolves to a concrete placement, rolling `RandomEnemy`.
-    pub(super) fn placement(&self, random_generator: &mut ChaCha8Rng) -> PlacementKind {
+    pub(super) fn placement(self, random_generator: &mut ChaCha8Rng) -> PlacementKind {
         match self {
             Self::PlayerStart => PlacementKind::PlayerStart,
             Self::Exit => PlacementKind::Exit,
             Self::Chest => PlacementKind::Chest,
-            Self::Enemy(kind) => PlacementKind::Enemy(*kind),
+            Self::Enemy(kind) => PlacementKind::Enemy(kind),
             Self::RandomEnemy => {
                 let index = random_generator.random_range(0..EnemyKind::ALL.len());
                 PlacementKind::Enemy(EnemyKind::ALL[index])
             }
-            Self::Npc(kind) => PlacementKind::Npc(*kind),
+            Self::Npc(kind) => PlacementKind::Npc(kind),
         }
     }
 }
@@ -420,7 +420,7 @@ impl Location {
         separation: u32,
         random_generator: &mut ChaCha8Rng,
     ) -> MapResult<PlaceRule> {
-        let count_range = CountRange(count, count);
+        let count_range = CountRange::exactly(count);
         Ok(match self {
             Self::Random { x_deciles } => PlaceRule::Random {
                 count: count_range,
@@ -584,7 +584,7 @@ pub(super) fn validate_recipe(
         ("size_x", recipe.size_x_range),
         ("size_y", recipe.size_y_range),
     ] {
-        if range.0 == 0 || range.0 > range.1 || range.1 > MAX_MAP_TILES {
+        if range.min == 0 || range.min > range.max || range.max > MAX_MAP_TILES {
             return Err(format!(
                 "recipe {} has invalid {name} range (each side must be 1..={MAX_MAP_TILES})",
                 recipe.name
@@ -606,21 +606,21 @@ pub(super) fn validate_recipe(
         }
         validate_location(
             &structure.at,
-            CountRange(1, 1),
+            CountRange::exactly(1),
             &earlier_names,
             &format!("recipe {} structure {index}", recipe.name),
         )?;
         if let Some(size) = structure.kind.feature_size() {
             let (minimum, maximum) = match size {
-                FeatureSize::Exact(dimensions) => (dimensions, dimensions),
+                FeatureSize::Exact(size) => (size, size),
                 FeatureSize::Ranged(minimum, maximum) => (minimum, maximum),
             };
-            if minimum.0 == 0
-                || minimum.1 == 0
-                || minimum.0 > maximum.0
-                || minimum.1 > maximum.1
-                || maximum.0 > MAX_MAP_TILES
-                || maximum.1 > MAX_MAP_TILES
+            if minimum.width == 0
+                || minimum.height == 0
+                || minimum.width > maximum.width
+                || minimum.height > maximum.height
+                || maximum.width > MAX_MAP_TILES
+                || maximum.height > MAX_MAP_TILES
             {
                 return Err(format!(
                     "recipe {} structure {index} has an invalid feature size",
@@ -646,11 +646,11 @@ fn validate_spawns(
 ) -> Result<()> {
     for (index, spawn) in recipe.spawns.iter().enumerate() {
         let context = format!("recipe {} spawn {index}", recipe.name);
-        let CountRange(minimum, maximum) = spawn.count;
-        if minimum > maximum || maximum > MAX_MAP_TILES || spawn.separation > MAX_MAP_TILES {
+        let CountRange { min, max } = spawn.count;
+        if min > max || max > MAX_MAP_TILES || spawn.separation > MAX_MAP_TILES {
             return Err(format!("{context} has an invalid count or separation").into());
         }
-        if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange(1, 1) {
+        if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange::exactly(1) {
             return Err(format!("{context} must place exactly one player start").into());
         }
         validate_location(&spawn.at, spawn.count, structure_names, &context)?;
@@ -678,7 +678,7 @@ fn validate_spawns(
         .iter()
         .filter(|spawn| matches!(spawn.what, SpawnKind::Exit));
     let has_exit_spawns = exit_spawns.clone().next().is_some();
-    let guarantees_an_exit = exit_spawns.clone().any(|spawn| spawn.count.0 > 0);
+    let guarantees_an_exit = exit_spawns.clone().any(|spawn| spawn.count.min > 0);
     if (structure_exits && has_exit_spawns) || (!structure_exits && !guarantees_an_exit) {
         return Err(format!(
             "recipe {} must define exactly one exit source, structure glyphs or exit spawns",
@@ -723,7 +723,7 @@ fn validate_location(
         Location::Structure { structure, .. } if !structure_names.contains(structure) => {
             Err(format!("{context} references missing or later structure {structure}").into())
         }
-        fixed if fixed.is_fixed() && count != CountRange(1, 1) => {
+        fixed if fixed.is_fixed() && count != CountRange::exactly(1) => {
             Err(format!("{context} uses a fixed anchor, so it must place exactly one").into())
         }
         _ => Ok(()),
@@ -741,7 +741,9 @@ pub(super) fn structures_place(
         .iter()
         .filter_map(|structure_entry| match &structure_entry.kind {
             StructureKind::Structure(kind) => structures.get(kind),
-            _ => None,
+            StructureKind::EmptySquare { .. }
+            | StructureKind::Pond { .. }
+            | StructureKind::Rubble { .. } => None,
         })
         .any(|structure| {
             structure

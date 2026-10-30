@@ -274,27 +274,17 @@ fn is_target_in_sight(
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, ray_hits, vision, vision_cone, watching, targeting)| {
-            target_info.line_of_sight = false;
-
             let vision_cone_dot = vision_cone.half_angle.cos();
             target_info.in_vision_cone =
                 target_info.direction.dot(vision.aim_direction) > vision_cone_dot;
 
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
-            for hit in ray_hits {
-                if hit.entity == target_entity {
-                    target_info.line_of_sight = true;
-                    break;
-                }
-
-                if let Ok(Some(children)) = target_query.get(target_entity)
-                    && children.contains(&hit.entity)
-                {
-                    target_info.line_of_sight = true;
-                    break;
-                }
-            }
+            let target_children = target_query.get(target_entity).ok().flatten();
+            target_info.line_of_sight = ray_hits.iter().any(|hit| {
+                hit.entity == target_entity
+                    || target_children.is_some_and(|children| children.contains(&hit.entity))
+            });
         },
     );
 }
@@ -346,13 +336,11 @@ fn should_target_watched(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
-    npc_query
-        .iter()
-        .for_each(|(target_info, watching, entity)| {
-            if target_info.line_of_sight && target_info.in_vision_cone {
-                commands.entity(entity).insert(Targeting(watching.0));
-            }
-        });
+    for (target_info, watching, entity) in &npc_query {
+        if target_info.line_of_sight && target_info.in_vision_cone {
+            commands.entity(entity).insert(Targeting(watching.0));
+        }
+    }
 }
 
 /// Stops targeting if the entity loses sight of the target or the target lock has expired.
@@ -360,24 +348,15 @@ fn should_stop_targeting(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, Has<TargetLock>, Entity), With<Targeting>>,
 ) {
-    npc_query
-        .iter()
-        .for_each(|(target_info, has_lock, entity)| {
-            if !target_info.line_of_sight && !has_lock {
-                commands.entity(entity).remove::<Targeting>();
-            }
-        });
+    for (target_info, has_lock, entity) in &npc_query {
+        if !target_info.line_of_sight && !has_lock {
+            commands.entity(entity).remove::<Targeting>();
+        }
+    }
 }
 
 /// Builds the pure view of a target from the vision system's observation.
-pub(super) fn build_target_view(
-    has_target: bool,
-    info: Option<&TargetInfo>,
-    now: f32,
-) -> Option<TargetView> {
-    if !has_target {
-        return None;
-    }
+pub(super) fn build_target_view(info: Option<&TargetInfo>, now: f32) -> Option<TargetView> {
     info.and_then(|info| {
         info.distance.is_finite().then_some(TargetView {
             distance: info.distance,
@@ -467,7 +446,11 @@ pub(super) fn build_decision_context(
     now: f32,
 ) -> DecisionContext {
     let position = components.transform.translation.xy();
-    let target_view = build_target_view(components.has_target, components.target_info, now);
+    let target_view = if components.has_target {
+        build_target_view(components.target_info, now)
+    } else {
+        None
+    };
     let home_area = components.home_area.and_then(|home_area| {
         Some(HomeAreaView {
             overshoot_fraction: home_area.overshoot_fraction(position)?,

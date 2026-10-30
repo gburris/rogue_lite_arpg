@@ -37,16 +37,16 @@ impl CombatSide {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum Damage {
     Single(f32),
-    Range((f32, f32)),
+    Range { min: f32, max: f32 },
 }
 
 impl Damage {
     fn to_float(self) -> f32 {
         match self {
-            Damage::Range((min, max)) => rand::rng().random_range(min..max),
+            Damage::Range { min, max } => rand::rng().random_range(min..max),
             Damage::Single(amount) => amount,
         }
     }

@@ -1,7 +1,5 @@
 use core::fmt;
-use std::sync::LazyLock;
 
-use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 mod equip;
@@ -12,7 +10,9 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::equip::{Equip, Unequip};
-    pub use super::equipment_transform::{DEFAULT_EQUIPMENT_TRANSFORM_MAP, EquipmentTransformDef};
+    pub use super::equipment_transform::{
+        DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
+    };
     pub use super::use_equipped::{
         EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
         EquipmentUseFinished, EquipmentUseSucceeded, StartUsingEquipment, StopUsingEquipment,
@@ -41,19 +41,15 @@ pub(super) fn plugin(app: &mut App) {
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub cooldown: Timer, // swing a sword, shoot a weapon, etc...
-    pub transforms: &'static HashMap<FacingDirection, Transform>,
+    pub poses: &'static DirectionalPoses,
     pub reach: Option<f32>,
 }
 
 impl Equippable {
-    pub fn new(
-        slot: EquipmentSlot,
-        duration: f32,
-        transforms: &'static LazyLock<HashMap<FacingDirection, Transform>>,
-    ) -> Self {
+    pub fn new(slot: EquipmentSlot, duration: f32, poses: &'static DirectionalPoses) -> Self {
         Equippable {
             slot,
-            transforms,
+            poses,
             cooldown: Timer::from_seconds(duration, TimerMode::Once),
             reach: None,
         }

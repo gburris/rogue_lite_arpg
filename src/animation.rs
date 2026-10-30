@@ -73,19 +73,9 @@ impl Default for AnimationIndices {
 #[require(AnimationIndices)]
 pub struct AnimationTimer(pub Timer);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AnimationData {
     pub row: usize,          // Row in the sprite sheet
     pub frame_count: usize,  // Number of frames in animation
     pub frame_duration: f32, // Duration of each frame
-}
-
-impl From<(usize, usize, f32)> for AnimationData {
-    fn from((row, frame_count, frame_duration): (usize, usize, f32)) -> Self {
-        Self {
-            row,
-            frame_count,
-            frame_duration,
-        }
-    }
 }

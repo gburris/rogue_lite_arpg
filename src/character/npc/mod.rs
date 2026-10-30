@@ -15,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Event)]
 pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct NpcSpawnData {
     pub position: Vec2,
     pub npc_kind: NpcKind,

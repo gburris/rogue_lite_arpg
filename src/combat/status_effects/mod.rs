@@ -51,7 +51,7 @@ pub struct Statuses(Vec<Entity>);
 #[derive(Component, Clone)]
 pub(crate) struct StatusApplied;
 
-#[derive(Component, Clone, Hash, Eq, PartialEq, Debug)]
+#[derive(Component, Clone, Copy, Hash, Eq, PartialEq, Debug)]
 enum StatusType {
     Burn,
     Freeze,
@@ -89,23 +89,16 @@ fn apply_effects(
     status_query: Query<&StatusType, With<StatusOf>>,
 ) {
     let mut new_status_types = HashSet::new();
-    let deduped_effects: Vec<Entity> = apply_effects
-        .effects
-        .iter()
-        .filter_map(|&entity| {
-            if let Ok(status_type) = effect_query.get(entity) {
-                if new_status_types.insert(status_type) {
-                    Some(entity)
-                } else {
-                    None // Duplicate status type, filter it out
-                }
-            } else {
-                // If we can't get the StatusType, keep the entity but warn
-                warn!("Entity {:?} missing StatusType component", entity);
-                None
-            }
-        })
-        .collect();
+    let mut deduped_effects = Vec::new();
+    for &entity in &apply_effects.effects {
+        let Ok(status_type) = effect_query.get(entity) else {
+            warn!("Entity {entity:?} missing StatusType component, skipping it");
+            continue;
+        };
+        if new_status_types.insert(status_type) {
+            deduped_effects.push(entity);
+        }
+    }
 
     // Remove any existing statuses on the target that conflict with new effects
     if let Ok(statuses) = affected_query.get(apply_effects.target) {

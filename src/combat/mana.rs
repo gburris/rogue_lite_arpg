@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Copy)]
 pub struct Mana {
     pub current_mana: f32,
     pub max_mana: f32,

@@ -31,11 +31,7 @@ pub fn magic_shield(
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::new(
-            EquipmentSlot::Offhand,
-            0.5,
-            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
-        ),
+        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -62,11 +58,7 @@ pub fn knight_shield(
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),
-        Equippable::new(
-            EquipmentSlot::Offhand,
-            0.5,
-            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
-        ),
+        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
@@ -264,12 +256,7 @@ fn on_stop_shield(
     commands
         .entity(shield.item)
         .remove::<(EquipmentInUse, ActiveShield, Collider, CollisionLayers)>()
-        .insert(
-            *equippable
-                .transforms
-                .get(facing_direction)
-                .expect("Failed to deactivate shield"),
-        );
+        .insert(equippable.poses.transform(*facing_direction));
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;

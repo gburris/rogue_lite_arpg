@@ -179,7 +179,7 @@ impl Dash {
         if !self.progress.started {
             // A target with no finite distance gives nothing to aim at, so this
             // waits rather than aiming blind.
-            let Some(target) = build_target_view(true, input.target_info, input.now) else {
+            let Some(target) = build_target_view(input.target_info, input.now) else {
                 return MotionStep::Steer(Steering::boosted(None, self.speed_multiplier));
             };
             let direction = self.aim_rule.choose_direction(target, input.heading, rng);

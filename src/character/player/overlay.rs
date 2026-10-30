@@ -199,7 +199,7 @@ fn update_lost_health_bar(
     time: Res<Time>,
 ) {
     let Val::Px(current_pixel) = health_lost_node.width else {
-        panic!("Non-pixel value for mana bar");
+        panic!("Non-pixel value for health bar");
     };
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();

@@ -4,7 +4,7 @@ use super::freeze::Frozen;
 use super::{StatusType, Statuses};
 use crate::prelude::Kinematics;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Copy)]
 #[require(StatusType::Slow)]
 pub struct Slowed {
     pub percent: f32,

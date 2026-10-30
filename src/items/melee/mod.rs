@@ -46,7 +46,7 @@ pub(super) fn plugin(app: &mut App) {
 struct MeleeWeapon {
     // Time it takes (seconds) to complete the attack, smaller = faster
     attack_time: f32,
-    damage: (f32, f32),
+    damage: Damage,
     hitbox: Collider,
     attack_type: swing::MeleeSwingType,
     hold_distance: f32,

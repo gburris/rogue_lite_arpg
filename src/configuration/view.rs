@@ -68,6 +68,7 @@ fn ysort_transforms(
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum ZLayer {
     Ground,
     OnGround,
@@ -80,7 +81,7 @@ pub enum ZLayer {
 }
 
 impl ZLayer {
-    pub fn z(&self) -> f32 {
+    pub fn z(self) -> f32 {
         match self {
             ZLayer::Ground => 0.0,
             ZLayer::OnGround => 5.0,

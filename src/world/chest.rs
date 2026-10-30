@@ -42,8 +42,7 @@ fn on_spawn_chests_event(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    let chest_spawn_positions = chest_spawn_trigger.0.clone();
-    for spawn_position in chest_spawn_positions {
+    for &spawn_position in &chest_spawn_trigger.0 {
         commands.spawn(chest(&sprites, &sprite_layouts, spawn_position));
     }
 }

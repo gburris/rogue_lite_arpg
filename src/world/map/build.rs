@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use rand::{RngExt, SeedableRng};
+use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
@@ -198,8 +198,8 @@ pub(crate) fn build_from_recipe(
     structures: &BTreeMap<String, Structure>,
 ) -> std::result::Result<MapBlueprint, MapError> {
     let mut size_generator = Stage::Size.random_generator(seed);
-    let size_x = size_generator.random_range(recipe.size_x_range.0..=recipe.size_x_range.1);
-    let size_y = size_generator.random_range(recipe.size_y_range.0..=recipe.size_y_range.1);
+    let size_x = recipe.size_x_range.roll_size(&mut size_generator);
+    let size_y = recipe.size_y_range.roll_size(&mut size_generator);
     let mut blueprint = MapBlueprint::new(
         UVec2::new(size_x, size_y),
         recipe.floor,
@@ -233,7 +233,12 @@ pub(crate) fn build_from_recipe(
                     .keep_clear
                     .push((player_start, recipe.start_clearance));
             }
-            _ => {}
+            Stage::Size
+            | Stage::Structures
+            | Stage::Fixed
+            | Stage::Exits
+            | Stage::Chests
+            | Stage::Npcs => {}
         }
         place_spawns(recipe, seed, stage, &mut blueprint, &mut placement_context)?;
         placement_context.keep_clear.truncate(keep_clear_len);

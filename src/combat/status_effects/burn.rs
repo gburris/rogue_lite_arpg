@@ -54,13 +54,13 @@ pub(super) fn apply_burning(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    status_query.iter().for_each(|(status, status_of)| {
+    for (status, status_of) in &status_query {
         commands.entity(status).insert(StatusApplied);
 
         commands
             .entity(status_of.0)
             .with_child(burn_vfx(&sprites, &sprite_layouts, status));
-    });
+    }
 }
 
 fn burn_vfx(

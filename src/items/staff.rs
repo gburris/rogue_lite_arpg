@@ -1,8 +1,6 @@
 use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
-use std::sync::LazyLock;
 use std::time::Duration;
 
-use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 use bevy_lit::prelude::PointLight2d;
@@ -11,7 +9,6 @@ use bevy_tweening::{Tween, TweenAnim};
 
 use super::equipment::Equippable;
 use super::{Item, ItemType};
-use crate::equipment_transforms;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -91,7 +88,7 @@ fn flame_staff_core(sprites: &SpriteAssets) -> impl Bundle {
             return_time: 0.1,
         },
         Item::new(1340, ItemType::Staff),
-        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_TRANSFORMS)
+        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_POSES)
             .with_reach(STAFF_REACH),
         ManaCost(6.0),
         Sprite::from_image(sprites.fire_staff.clone()),
@@ -110,7 +107,7 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         },
         Item::new(2050, ItemType::Staff),
         ManaCost(15.0), // big mana cost
-        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_TRANSFORMS)
+        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_POSES)
             .with_reach(STAFF_REACH),
         Sprite::from_image(sprites.ice_staff.clone()),
         Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
@@ -127,14 +124,12 @@ struct Staff {
     return_time: f32,
 }
 
-use ZLayer::BehindSprite;
-static STAFF_EQUIPMENT_TRANSFORMS: LazyLock<HashMap<FacingDirection, Transform>> =
-    equipment_transforms!([
-        (Up, ((10.0, 2.0), 0.0, BehindSprite)),
-        (Down, ((-10.0, 0.0), 0.0)),
-        (Left, ((-4.0, -7.0), 50.0, BehindSprite)),
-        (Right, ((4.0, -8.0), -50.0)),
-    ]);
+static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
+    up: EquipmentPose::behind(10.0, 2.0, 0.0),
+    down: EquipmentPose::above(-10.0, 0.0, 0.0),
+    left: EquipmentPose::behind(-4.0, -7.0, 50.0),
+    right: EquipmentPose::above(4.0, -8.0, -50.0),
+};
 
 #[derive(Component)]
 struct Casting {

@@ -12,12 +12,10 @@ use super::tiles::{TileGrid, TileRect};
 /// Recipes spell it as a bare number (`count: 1`) or an inclusive pair (`count: (10, 15)`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "CountRangeInput")]
-pub struct CountRange(
-    /// Inclusive minimum value.
-    pub u32,
-    /// Inclusive maximum value.
-    pub u32,
-);
+pub struct CountRange {
+    pub min: u32,
+    pub max: u32,
+}
 
 /// Recipe spelling of a [`CountRange`].
 #[derive(Deserialize)]
@@ -30,16 +28,24 @@ enum CountRangeInput {
 impl From<CountRangeInput> for CountRange {
     fn from(input: CountRangeInput) -> Self {
         match input {
-            CountRangeInput::Exact(count) => Self(count, count),
-            CountRangeInput::Range(minimum, maximum) => Self(minimum, maximum),
+            CountRangeInput::Exact(count) => Self::exactly(count),
+            CountRangeInput::Range(min, max) => Self { min, max },
         }
     }
 }
 
 impl CountRange {
+    /// A range that always rolls `count`.
+    pub const fn exactly(count: u32) -> Self {
+        Self {
+            min: count,
+            max: count,
+        }
+    }
+
     /// Uniformly rolls from `min..=max`; callers must validate that `min <= max`.
     pub fn roll_size(self, random_generator: &mut ChaCha8Rng) -> u32 {
-        random_generator.random_range(self.0..=self.1)
+        random_generator.random_range(self.min..=self.max)
     }
 }
 

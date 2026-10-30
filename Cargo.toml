@@ -81,6 +81,8 @@ type_complexity = "allow"
 nonstandard_macro_braces = "warn"
 # Use `expect` with a message naming the invariant instead.
 unwrap_used = "warn"
+# Every assert states why it must hold.
+missing_assert_message = "warn"
 needless_pass_by_value = "allow"
 cast_precision_loss = "allow"
 cast_possible_truncation = "allow"

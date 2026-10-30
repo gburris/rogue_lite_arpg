@@ -27,7 +27,10 @@ impl Kinematics {
 
     /// Sets the fraction of speed removed, where `1.0` is a stun.
     pub fn slow(&mut self, percentage: f32) {
-        assert!((0.0..=1.0).contains(&percentage));
+        assert!(
+            (0.0..=1.0).contains(&percentage),
+            "slow percentage is a fraction of speed removed, got {percentage}"
+        );
 
         self.slowed_percentage = percentage;
     }

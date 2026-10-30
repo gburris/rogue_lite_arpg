@@ -31,7 +31,7 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Bundle {
     )
 }
 
-pub(super) fn on_consume_event(
+pub(super) fn on_consume(
     consume: On<Consume>,
     mut commands: Commands,
     consumable_query: Query<&Consumable>,

@@ -36,7 +36,7 @@ pub struct ScoreTrace {
     pub behavior_explanations: Vec<BehaviorScoreExplanation>,
 }
 
-pub(super) fn release_finished_motion(
+pub(super) fn on_release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
@@ -68,7 +68,7 @@ pub(super) fn release_finished_motion(
 /// Applies an [`ActionFinished`], current or stale. An ability starts its
 /// cooldown even if it never started, so the next decision can't pick it
 /// straight back.
-pub(super) fn finish_action(
+pub(super) fn on_finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,

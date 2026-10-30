@@ -27,7 +27,7 @@ impl StartedEquipmentUses {
 }
 
 /// Reports [`ActionFinished`] with the run id of the use whose item finished.
-pub(super) fn report_equipment_use_finished(
+pub(super) fn on_report_equipment_use_finished(
     finished: On<EquipmentUseFinished>,
     mut commands: Commands,
     started_equipment_uses: Query<&StartedEquipmentUses>,

@@ -9,8 +9,8 @@ use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
     pub(crate) use super::MapRng;
-    pub use super::chest::SpawnChestsEvent;
-    pub use super::gold::GoldDrop;
+    pub use super::chest::SpawnChests;
+    pub use super::gold::DropGold;
     pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
     pub use super::portal::portal;
 }

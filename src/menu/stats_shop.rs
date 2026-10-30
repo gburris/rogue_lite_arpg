@@ -5,8 +5,8 @@ use crate::prelude::*;
 pub(super) fn plugin(app: &mut App) {
     app
         // Pause Related Systems
-        .add_observer(handle_player_stat_change)
-        .add_observer(handle_stats_shop_ui_update)
+        .add_observer(on_change_stat)
+        .add_observer(on_update_stats_ui)
         .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu)
         .add_systems(
             Update,
@@ -33,13 +33,13 @@ pub struct StatShopButton {
 }
 
 #[derive(Event)]
-pub struct StatChangeEvent {
+pub struct ChangeStat {
     pub stat_type: DisplayableStatType,
     pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct StatsUiUpdateEvent;
+pub struct UpdateStatsUi;
 
 pub fn spawn_stats_shop_menu(
     mut commands: Commands,
@@ -164,7 +164,7 @@ pub fn handle_stat_button_interaction(
                     button.change == StatChange::Decrease && button.stat_type.value(stats) > 1;
 
                 if can_increase || can_decrease {
-                    commands.trigger(StatChangeEvent {
+                    commands.trigger(ChangeStat {
                         stat_type: button.stat_type,
                         change: button.change,
                     });
@@ -184,8 +184,8 @@ pub fn handle_stat_button_interaction(
     }
 }
 
-pub fn handle_player_stat_change(
-    trigger: On<StatChangeEvent>,
+pub fn on_change_stat(
+    trigger: On<ChangeStat>,
     mut player_stats: Query<&mut PlayerStats>,
     mut game_progress: ResMut<GameProgress>,
     mut commands: Commands,
@@ -202,7 +202,7 @@ pub fn handle_player_stat_change(
                 DisplayableStatType::Luck => stats.luck += 1,
             }
             game_progress.progress_points -= 1;
-            commands.trigger(StatsUiUpdateEvent);
+            commands.trigger(UpdateStatsUi);
         }
         (stat_type, StatChange::Decrease) => {
             let current_value = stat_type.value(&stats);
@@ -215,15 +215,15 @@ pub fn handle_player_stat_change(
                     DisplayableStatType::Luck => stats.luck -= 1,
                 }
                 game_progress.progress_points += 1;
-                commands.trigger(StatsUiUpdateEvent);
+                commands.trigger(UpdateStatsUi);
             }
         }
         (_, StatChange::Increase) => {}
     }
 }
 
-pub fn handle_stats_shop_ui_update(
-    _: On<StatsUiUpdateEvent>,
+pub fn on_update_stats_ui(
+    _: On<UpdateStatsUi>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
     player_stats_query: Single<&PlayerStats>,

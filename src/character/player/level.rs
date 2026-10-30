@@ -15,7 +15,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Event)]
-struct PlayerLevelUpEvent;
+struct PlayerLeveledUp;
 
 #[derive(Component)]
 struct LevelUpEffect;
@@ -32,12 +32,12 @@ const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
 
 fn on_player_experience_change(mut commands: Commands, mut player: Single<&mut Player>) {
     while player.attempt_level_up() {
-        commands.trigger(PlayerLevelUpEvent);
+        commands.trigger(PlayerLeveledUp);
     }
 }
 
 fn on_level_up(
-    _: On<PlayerLevelUpEvent>,
+    _: On<PlayerLeveledUp>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,

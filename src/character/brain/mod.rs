@@ -278,8 +278,8 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((perception::plugin, action::plugin, motion::plugin))
         .init_resource::<BrainRngRootSeed>()
-        .add_observer(decide::release_finished_motion)
-        .add_observer(decide::finish_action)
+        .add_observer(decide::on_release_finished_motion)
+        .add_observer(decide::on_finish_action)
         .add_systems(Startup, rng::seed_brain_rng_root_from_map)
         .add_systems(
             Update,

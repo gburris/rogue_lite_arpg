@@ -18,7 +18,7 @@ use crate::character::brain::VisionCone;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(spawn::spawn_enemies);
+    app.add_observer(spawn::on_spawn_enemies);
 }
 
 #[derive(Component)]

@@ -12,7 +12,7 @@ use crate::character::Character;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(spawn::spawn_npcs);
+    app.add_observer(spawn::on_spawn_npcs);
 }
 
 #[derive(Component)]

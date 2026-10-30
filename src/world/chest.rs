@@ -13,11 +13,11 @@ const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 const COIN_DROP_DELAY_SECS: f32 = 0.9;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(on_spawn_chests_event);
+    app.add_observer(on_spawn_chests);
 }
 
 #[derive(Event, Debug)]
-pub struct SpawnChestsEvent(pub Vec<Vec2>);
+pub struct SpawnChests(pub Vec<Vec2>);
 
 #[derive(Component)]
 #[require(YSort::from_offset(BOTTOM_OF_CHEST), DespawnOnExit::<AppState>(AppState::Playing))]
@@ -36,8 +36,8 @@ struct Chest;
 )]
 struct ChestCollider;
 
-fn on_spawn_chests_event(
-    chest_spawn_trigger: On<SpawnChestsEvent>,
+fn on_spawn_chests(
+    chest_spawn_trigger: On<SpawnChests>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
@@ -101,7 +101,7 @@ fn on_interaction_open_chest(
         commands
             .delayed()
             .secs(COIN_DROP_DELAY_SECS)
-            .trigger(GoldDrop {
+            .trigger(DropGold {
                 amount: 999,
                 location: chest_transform.translation.truncate(),
             });

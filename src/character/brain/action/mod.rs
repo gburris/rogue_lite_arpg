@@ -54,7 +54,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             equipment_use::apply_equipment_use_requests.in_set(AiSet::Execute),
         )
-        .add_observer(equipment_use::report_equipment_use_finished);
+        .add_observer(equipment_use::on_report_equipment_use_finished);
 }
 
 /// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`

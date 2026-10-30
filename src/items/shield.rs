@@ -23,10 +23,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-pub fn magic_shield(
-    sprites: &Res<SpriteAssets>,
-    sprite_layouts: &Res<SpriteSheetLayouts>,
-) -> impl Bundle {
+pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Magic Shield"),
         Item::new(355, ItemType::Tome),
@@ -50,10 +47,7 @@ pub fn magic_shield(
     )
 }
 
-pub fn knight_shield(
-    sprites: &Res<SpriteAssets>,
-    sprite_layouts: &Res<SpriteSheetLayouts>,
-) -> impl Bundle {
+pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Knight Shield"),
         Item::new(355, ItemType::Tome),

@@ -42,8 +42,8 @@ pub(super) fn plugin(app: &mut App) {
         )
             .in_set(InGameSystems::Simulation),),
     )
-    .add_observer(health::on_healing_event)
-    .add_observer(damage::on_damage_event)
+    .add_observer(health::on_attempt_heal)
+    .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
     .add_observer(damage::on_damage_dealt_knockback);
 }

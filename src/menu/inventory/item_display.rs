@@ -143,7 +143,7 @@ pub fn on_slot_clicked(
 
         // Right click drops items from inventory
         } else if pointer_click.button == PointerButton::Secondary {
-            commands.trigger(ItemDrop { item: item_entity });
+            commands.trigger(DropItem { item: item_entity });
         }
 
         commands.trigger(UpdateDisplayCase { entity: *player });

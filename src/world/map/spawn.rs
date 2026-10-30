@@ -261,7 +261,7 @@ fn spawn_placements(
         commands.trigger(SpawnNpcs(npcs));
     }
     if !chests.is_empty() {
-        commands.trigger(SpawnChestsEvent(chests));
+        commands.trigger(SpawnChests(chests));
     }
     Ok(())
 }

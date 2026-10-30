@@ -111,7 +111,7 @@ pub enum PlayingState {
 }
 
 #[derive(Event)]
-pub struct RestartEvent {
+pub struct Restart {
     pub player_level: u32,
 }
 

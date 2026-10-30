@@ -28,7 +28,7 @@ impl ApplyEffects {
     }
 }
 
-pub(super) fn apply_effects(
+pub(super) fn on_apply_effects(
     apply_effects: On<ApplyEffects>,
     mut commands: Commands,
     effect_query: Query<&StatusType, (Without<StatusOf>, Allow<Disabled>)>,

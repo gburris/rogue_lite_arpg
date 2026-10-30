@@ -16,7 +16,7 @@ pub struct EnemySpawnData {
     pub enemy_kind: EnemyKind,
 }
 
-pub(super) fn spawn_enemies(
+pub(super) fn on_spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,

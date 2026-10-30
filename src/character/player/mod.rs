@@ -50,7 +50,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Player despawn
-    app.add_observer(despawn_all::<RestartEvent, Player>);
+    app.add_observer(despawn_all::<Restart, Player>);
 }
 
 #[derive(Component)]

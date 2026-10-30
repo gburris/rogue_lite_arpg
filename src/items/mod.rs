@@ -21,7 +21,7 @@ pub mod prelude {
         StopUsingEquipment, Unequip, tick_equippable_cooldown,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
-    pub use super::lootable::ItemDrop;
+    pub use super::lootable::DropItem;
     pub use super::magnet::Magnet;
     pub use super::melee::prelude::{axe, freeze_axe, sword};
     pub use super::shield::{ProjectileReflection, knight_shield, magic_shield};
@@ -46,7 +46,7 @@ pub(super) fn plugin(app: &mut App) {
         magnet::update_magnet_locations.in_set(MainSystems::InGame),
     )
     .add_observer(inventory::on_item_added_to_inventory)
-    .add_observer(consumable::on_consume_event);
+    .add_observer(consumable::on_consume);
 }
 
 /// This is the base component for all items in the game. If you have a new concept that will be

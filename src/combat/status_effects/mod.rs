@@ -16,7 +16,7 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(effect::apply_effects);
+    app.add_observer(effect::on_apply_effects);
 
     app.add_systems(
         Update,

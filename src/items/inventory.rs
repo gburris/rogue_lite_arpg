@@ -30,7 +30,7 @@ pub(super) fn on_item_added_to_inventory(
     let capacity = capacity.map_or(usize::MAX, |c| c.0);
 
     if items.map_or(0, bevy::prelude::RelationshipTarget::len) >= capacity {
-        commands.trigger(ItemDrop {
+        commands.trigger(DropItem {
             item: item_added.entity,
         });
     }

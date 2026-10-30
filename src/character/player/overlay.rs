@@ -16,7 +16,7 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::HudOverlay),
     );
 
-    app.add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
+    app.add_observer(despawn_all::<Restart, PlayerOverlay>);
 }
 
 #[derive(Component)]

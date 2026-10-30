@@ -81,6 +81,10 @@ pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> 
 /// Default hurtbox centre relative to the character transform.
 const HURTBOX_OFFSET: f32 = -8.0;
 
+/// Bright white damage shader at home: linear channels far above 1.0 overexpose the sprite
+/// so a hit flashes it white.
+const DAMAGE_FLASH_COLOR: Color = Color::linear_rgba(255., 255., 255., 0.9);
+
 #[derive(EntityEvent)]
 pub struct AttemptDamage {
     pub entity: Entity,
@@ -131,7 +135,7 @@ pub struct Defeated {
     pub entity: Entity,
 }
 
-pub(super) fn on_damage_event(
+pub(super) fn on_attempt_damage(
     attempt_damage: On<AttemptDamage>,
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
@@ -219,7 +223,7 @@ pub(super) fn on_damage_dealt_flash(
         commands
             .entity(damage_dealt.entity)
             .insert(DamageFlash::default());
-        sprite.color = Color::linear_rgba(255., 255., 255., 0.9);
+        sprite.color = DAMAGE_FLASH_COLOR;
     }
 }
 

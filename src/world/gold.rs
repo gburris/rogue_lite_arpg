@@ -9,7 +9,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         handle_gold_collisions.in_set(InGameSystems::Collision),
     )
-    .add_observer(on_gold_drop_event);
+    .add_observer(on_drop_gold);
 }
 
 #[derive(Component)]
@@ -53,14 +53,14 @@ fn handle_gold_collisions(
 }
 
 #[derive(Event)]
-pub struct GoldDrop {
+pub struct DropGold {
     pub location: Vec2,
     pub amount: u32,
 }
 
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
-fn on_gold_drop_event(gold_drop: On<GoldDrop>, mut commands: Commands, sprites: Res<SpriteAssets>) {
+fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<SpriteAssets>) {
     let mut rng = rand::rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = gold_drop.amount;

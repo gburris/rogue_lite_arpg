@@ -17,7 +17,7 @@ pub struct NpcSpawnData {
     pub npc_kind: NpcKind,
 }
 
-pub(super) fn spawn_npcs(
+pub(super) fn on_spawn_npcs(
     npc_spawn_trigger: On<SpawnNpcs>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,

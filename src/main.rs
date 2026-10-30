@@ -10,9 +10,9 @@ mod character;
 mod combat;
 mod configuration;
 mod items;
+mod lifespan;
 mod menu;
 mod ui;
-mod utility;
 mod world;
 
 pub mod prelude {
@@ -21,8 +21,9 @@ pub mod prelude {
     pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;
     pub use super::items::prelude::*;
+    pub use super::lifespan::Lifespan;
     pub use super::menu::prelude::*;
-    pub use super::utility::Lifespan;
+    pub use super::ui::prelude::*;
     pub use super::world::prelude::*;
 }
 
@@ -34,7 +35,7 @@ fn plugin(app: &mut App) {
     // Core systems
     app.add_plugins((
         animation::plugin,
-        utility::plugin,
+        lifespan::plugin,
         configuration::plugin,
         combat::plugin,
     ));

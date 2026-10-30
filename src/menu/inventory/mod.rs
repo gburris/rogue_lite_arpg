@@ -4,8 +4,6 @@ use bevy::prelude::*;
 
 use self::display_case::{UpdateDisplayCase, display_case};
 use crate::prelude::*;
-use crate::ui::constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT};
-use crate::ui::primitives::{menu_header, text};
 
 mod display_case;
 mod item_display;

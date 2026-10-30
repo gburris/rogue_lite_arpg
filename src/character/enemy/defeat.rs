@@ -2,10 +2,16 @@ use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 use rand::{RngExt, rng};
 
-use super::{Enemy, Experience};
-use crate::character::Purse;
+use super::Enemy;
 use crate::character::player::PlayerStats;
 use crate::prelude::*;
+
+/// Experience paid out when the player defeats this enemy. Scales with
+/// threat: the tanky warrior pays most, the fragile flying bat least.
+#[derive(Component)]
+pub struct Experience {
+    pub base_exp: f32,
+}
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,

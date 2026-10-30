@@ -4,8 +4,6 @@ use super::item_display::{
     DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
 };
 use crate::prelude::*;
-use crate::ui::constants::DARK_GRAY_ALPHA_COLOR;
-use crate::ui::primitives::{text, width};
 
 /// Div that wraps all display slots, but not top level component
 #[derive(Component)]

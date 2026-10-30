@@ -4,7 +4,6 @@ use bevy::ui_widgets::observe;
 
 use super::display_case::UpdateDisplayCase;
 use crate::prelude::*;
-use crate::ui::primitives::{text, width};
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 pub const VALUE_WIDTH: f32 = 60.0;

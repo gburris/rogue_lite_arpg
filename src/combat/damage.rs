@@ -4,7 +4,7 @@ use rand::RngExt;
 
 use super::health::Health;
 use super::invulnerable::IFrames;
-use super::status_effects::{ApplyEffects, Effects};
+use super::status_effects::prelude::{ApplyEffects, Effects};
 use crate::prelude::{GameCollisionLayer, Player};
 
 /// Which side of combat a character fights on, required by every character marker.

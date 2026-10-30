@@ -7,7 +7,6 @@ use bevy_lit::prelude::PointLight2d;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
-use super::equipment::Equippable;
 use super::{Item, ItemType};
 use crate::prelude::*;
 
@@ -249,17 +248,17 @@ fn fire_projectile_on_casting_end(
 
             let rotated_source_offset =
                 (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-            let holder_relative_source_pos =
+            let holder_relative_source_position =
                 staff_transform.translation.truncate() + rotated_source_offset;
 
             // If no target ditance default to sane value away from holder
             let target_angle: Vec2 = (holder_vision.aim_direction
                 * target_info.map_or(100., |t| t.distance))
-                - holder_relative_source_pos;
+                - holder_relative_source_position;
 
             // Staff is child of holder so position is relative, need to add holder transform for global position
             let world_starting_position =
-                holder_transform.translation.truncate() + holder_relative_source_pos;
+                holder_transform.translation.truncate() + holder_relative_source_position;
 
             for projectile_entity in projectiles.iter() {
                 commands.trigger(FireProjectile {

@@ -1,12 +1,21 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::{Npc, NpcKind, NpcSpawnData, SpawnNpcs, VILLAGER, interaction};
+use super::{Npc, NpcKind, VILLAGER, interaction};
 use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
+
+#[derive(Event)]
+pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
+
+#[derive(Debug, Clone, Copy)]
+pub struct NpcSpawnData {
+    pub position: Vec2,
+    pub npc_kind: NpcKind,
+}
 
 pub(super) fn spawn_npcs(
     npc_spawn_trigger: On<SpawnNpcs>,

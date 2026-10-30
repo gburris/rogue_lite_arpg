@@ -1,42 +1,34 @@
 mod animation;
 mod brain;
+mod collider;
 mod enemy;
 mod npc;
 mod player;
+mod purse;
 mod state;
 mod vision;
 
+use avian2d::prelude::*;
+use bevy::prelude::*;
+
+use self::animation::{AnimationSheet, CharacterAnimationState};
+pub(in crate::character) use self::collider::physical_collider;
+use crate::prelude::*;
+
 pub mod prelude {
+    pub use super::Character;
     pub(crate) use super::brain::Targeting;
-    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
+    pub use super::brain::{AiSet, Brain, Dash, Motion, ScoreTrace, Wander};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawnData, Experience, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawnData, SpawnNpcs};
     pub use super::player::prelude::{
         DisplayableStatType, GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
         PlayerInteractionRadius, PlayerStats,
     };
+    pub use super::purse::Purse;
     pub use super::state::{AttackState, FacingDirection, Kinematics};
     pub use super::vision::{TargetInfo, Vision};
-    pub use super::{AiSet, Character, Purse};
 }
-
-/// Ordered AI phases. Perception feeds targeting, aim, decisions, execution
-/// of those decisions, and finally the motion driver.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
-pub enum AiSet {
-    Perception,
-    Targeting,
-    Aim,
-    Decision,
-    Execute,
-    Motion,
-}
-
-use avian2d::prelude::*;
-use bevy::prelude::*;
-
-use self::animation::{AnimationSheet, CharacterAnimationState};
-use crate::prelude::*;
 
 pub struct CharacterPlugin;
 
@@ -86,29 +78,3 @@ impl Plugin for CharacterPlugin {
     AnimationSheet,
     YSort::from_offset(CHARACTER_FEET_POS_OFFSET))]
 pub struct Character;
-
-pub fn physical_collider() -> impl Bundle {
-    (
-        Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-        Collider::circle(10.0),
-        CollisionLayers::new(
-            [GameCollisionLayer::Grounded],
-            [
-                GameCollisionLayer::Grounded,
-                GameCollisionLayer::HighObstacle,
-                GameCollisionLayer::LowObstacle,
-            ],
-        ),
-    )
-}
-
-#[derive(Component, Clone, Copy, Default)]
-pub struct Purse {
-    pub amount: u32,
-}
-
-impl Purse {
-    pub fn add(&mut self, amount: u32) {
-        self.amount += amount;
-    }
-}

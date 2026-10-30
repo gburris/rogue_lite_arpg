@@ -46,8 +46,8 @@ pub fn despawn_all<T: Event, C: Component>(
     mut commands: Commands,
     query: Query<Entity, With<C>>,
 ) {
-    for e in query.iter() {
-        commands.entity(e).despawn();
+    for entity in &query {
+        commands.entity(entity).despawn();
     }
 }
 
@@ -67,9 +67,9 @@ fn generic_remove_component_system(
         if remove_component.timer.is_finished()
             && let Some(remover) = remove_component.remover.take()
         {
-            let mut entity_cmds = commands.entity(entity);
-            remover(&mut entity_cmds);
-            entity_cmds.remove::<RemoveComponent>();
+            let mut entity_commands = commands.entity(entity);
+            remover(&mut entity_commands);
+            entity_commands.remove::<RemoveComponent>();
         }
     }
 }
@@ -79,8 +79,8 @@ pub fn schedule_component_removal<C: Component>(
     entity: Entity,
     seconds: f32,
 ) {
-    let remover = Box::new(|entity_cmds: &mut EntityCommands| {
-        entity_cmds.remove::<C>();
+    let remover = Box::new(|entity_commands: &mut EntityCommands| {
+        entity_commands.remove::<C>();
     });
 
     commands.entity(entity).insert(RemoveComponent {

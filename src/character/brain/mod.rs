@@ -33,6 +33,7 @@ mod motion;
 mod perception;
 mod rng;
 mod running_state;
+mod schedule;
 
 use bevy::prelude::*;
 
@@ -55,7 +56,7 @@ pub(super) use self::perception::{VisionCone, Watching};
 pub use self::rng::{BrainRng, BrainRngRootSeed};
 use self::rng::{DECISION_PERIOD, seed_brain_rng_and_schedule_first_decision};
 use self::running_state::RunningBehavior;
-use crate::character::AiSet;
+pub use self::schedule::AiSet;
 use crate::character::npc::VILLAGER;
 use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
 

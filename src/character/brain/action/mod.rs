@@ -9,7 +9,7 @@ use bevy::prelude::*;
 pub use self::ability::{Ability, Bite, Breath, Heal};
 pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
 pub(super) use self::equipment_use::StartedEquipmentUses;
-use crate::character::AiSet;
+use super::AiSet;
 use crate::prelude::EquipmentSlot;
 
 /// The one non-movement thing a character does at a time: use equipment, use an

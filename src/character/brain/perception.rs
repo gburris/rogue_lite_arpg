@@ -13,9 +13,8 @@ use super::capability::{
     CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
 };
 use super::motion::{HomeArea, Motion};
-use crate::character::AiSet;
+use crate::lifespan::schedule_component_removal;
 use crate::prelude::*;
-use crate::utility::schedule_component_removal;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_damage_aggro)
@@ -211,15 +210,15 @@ fn update_aim_position(
         Without<Player>,
     >,
 ) {
-    character_query
-        .par_iter_mut()
-        .for_each(|(mut vision, target_info, has_target, facing_dir)| {
+    character_query.par_iter_mut().for_each(
+        |(mut vision, target_info, has_target, facing_direction)| {
             vision.aim_direction = if has_target {
                 target_info.direction
             } else {
-                facing_dir.to_vec2()
+                facing_direction.to_vec2()
             };
-        });
+        },
+    );
 }
 
 /// Tracks direction and distance to the target (or the watched entity without

@@ -3,7 +3,6 @@ use bevy::sprite::Anchor;
 use bevy::ui_widgets::observe;
 use rand::RngExt;
 
-use super::equipment::{EquipmentSlot, Equippable};
 use super::{Item, ItemType};
 use crate::prelude::*;
 

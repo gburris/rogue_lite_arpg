@@ -2,9 +2,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{Equippable, Equipped};
-use crate::items::ItemOf;
-use crate::prelude::{Character, EquipmentSlot, Mainhand, Mana, ManaCost, Offhand};
+use crate::prelude::*;
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities

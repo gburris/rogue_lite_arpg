@@ -200,12 +200,13 @@ fn camera_follow_system(
 ) {
     let z = camera.translation.z;
     let aim: Vec3 = player_aim.translation.with_z(z);
-    let player_pos = player_transform.translation.with_z(z);
-    let target = player_pos.lerp(aim + player_pos, TARGET_BIAS);
+    let player_position = player_transform.translation.with_z(z);
+    let target = player_position.lerp(aim + player_position, TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera
-    let offset = (target - player_pos).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_pos;
+    let offset =
+        (target - player_position).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_position;
 
     camera
         .translation
@@ -223,17 +224,18 @@ pub(super) fn camera_debug_system(
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut gizmos: Gizmos,
 ) {
-    let player_pos = player.translation.xy();
-    let target = player_pos.lerp(player_aim.translation.xy() + player_pos, TARGET_BIAS);
+    let player_position = player.translation.xy();
+    let target = player_position.lerp(player_aim.translation.xy() + player_position, TARGET_BIAS);
 
     // apply a distance constraint to the camera, this keeps it close to the player
     // restore z from camera
-    let offset = (target - player_pos).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_pos;
+    let offset =
+        (target - player_position).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_position;
 
     gizmos.circle_2d(target, 5.0, RED).resolution(64);
     gizmos.circle_2d(offset.xy(), 10.0, BLUE).resolution(64);
     gizmos
-        .circle_2d(player_pos, CAMERA_DISTANCE_CONSTRAINT, PURPLE_700)
+        .circle_2d(player_position, CAMERA_DISTANCE_CONSTRAINT, PURPLE_700)
         .resolution(64);
 }
 

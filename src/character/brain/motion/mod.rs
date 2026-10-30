@@ -23,8 +23,8 @@ use self::step::{
 };
 pub use self::swoop::Swoop;
 pub use self::wander::Wander;
+use super::AiSet;
 use super::engine::Interval;
-use crate::character::AiSet;
 use crate::prelude::sync_slow_from_statuses;
 
 /// How a character moves: a continuous motion that runs until replaced, or a

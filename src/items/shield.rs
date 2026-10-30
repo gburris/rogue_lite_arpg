@@ -5,8 +5,6 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::equipment::{EquipmentSlot, Equippable, Equipped};
-use super::{Item, ItemOf, ItemType};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

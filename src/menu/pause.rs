@@ -3,8 +3,6 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
 use crate::prelude::*;
-use crate::ui::constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT};
-use crate::ui::primitives::{menu_header, text};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)

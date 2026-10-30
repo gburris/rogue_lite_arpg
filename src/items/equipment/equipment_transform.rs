@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use super::{Equipped, Mainhand, Offhand};
-use crate::items::Items;
 use crate::prelude::*;
 
 /// Where an equipped item sits relative to its holder for one facing direction.
@@ -90,8 +88,8 @@ pub(super) fn update_equipment_transforms(
 ) {
     for (mainhand, offhand, direction, attack_state) in &all_worn_equipment {
         if !attack_state.is_attacking {
-            update_single_equipment(mainhand.map(|Mainhand(e)| *e), *direction, &mut transforms);
-            update_single_equipment(offhand.map(|Offhand(e)| *e), *direction, &mut transforms);
+            update_single_equipment(mainhand.map(Mainhand::get), *direction, &mut transforms);
+            update_single_equipment(offhand.map(Offhand::get), *direction, &mut transforms);
         }
     }
 }

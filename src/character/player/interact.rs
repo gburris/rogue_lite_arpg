@@ -53,7 +53,7 @@ fn on_player_interaction_input(
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
 ) {
     let (player_transform, interact_collisions) = player_query.into_inner();
-    let player_pos = player_transform.translation.truncate();
+    let player_position = player_transform.translation.truncate();
 
     // Go through all things colliding with player interaction radius
     let closest_interaction: Option<(Entity, Entity, f32)> = interact_collisions
@@ -64,7 +64,7 @@ fn on_player_interaction_input(
                 .get(interact_entity)
                 .ok()
                 .map(|(child_of, transform)| {
-                    let distance = (player_pos - transform.translation.truncate()).length();
+                    let distance = (player_position - transform.translation.truncate()).length();
                     (interact_entity, child_of.parent(), distance)
                 })
         })

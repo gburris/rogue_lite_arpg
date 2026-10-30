@@ -126,19 +126,19 @@ pub fn button_system(
     >,
     mut game_state: ResMut<NextState<AppState>>,
 ) {
-    for (interaction, mut bg_color, mut border_color) in &mut interaction_query {
+    for (interaction, mut background_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                *bg_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
+                *background_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
                 *border_color = Color::srgb(1.0, 0.8, 0.3).into();
                 game_state.set(AppState::AssetLoading);
             }
             Interaction::Hovered => {
-                *bg_color = Color::srgba(0.2, 0.15, 0.1, 0.8).into();
+                *background_color = Color::srgba(0.2, 0.15, 0.1, 0.8).into();
                 *border_color = Color::srgb(1.0, 0.8, 0.3).into();
             }
             Interaction::None => {
-                *bg_color = Color::srgba(0.1, 0.1, 0.1, 0.7).into();
+                *background_color = Color::srgba(0.1, 0.1, 0.1, 0.7).into();
                 *border_color = Color::srgb(0.8, 0.6, 0.2).into();
             }
         }

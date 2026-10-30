@@ -2,7 +2,7 @@ use bevy::color::palettes::tailwind::BLUE_400;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use super::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
+use super::status::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
 use crate::prelude::*;
 
 #[derive(Component, Clone, Default)]

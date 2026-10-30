@@ -20,9 +20,9 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 pub use self::stats::{DisplayableStatType, PlayerStats};
-use crate::character::{Character, Purse};
+use crate::character::Character;
+use crate::lifespan::despawn_all;
 use crate::prelude::*;
-use crate::utility::despawn_all;
 
 /// How much more experience is required (as a multiplier) after each level up
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;

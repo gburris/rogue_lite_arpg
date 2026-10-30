@@ -229,7 +229,7 @@ pub fn handle_stats_shop_ui_update(
     player_stats_query: Single<&PlayerStats>,
     mut game_progress: ResMut<GameProgress>,
 ) {
-    //Set Game Progress to current player stats
+    // Set Game Progress to current player stats
     let player_stats = **player_stats_query;
     game_progress.base_stats = player_stats;
 

@@ -18,7 +18,11 @@ pub(super) fn plugin(app: &mut App) {
     Collider::circle(10.0),
     CollisionLayers::new(
         [GameCollisionLayer::Grounded, GameCollisionLayer::Interaction],
-        [GameCollisionLayer::PlayerInteractionRadius, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
+        [
+            GameCollisionLayer::PlayerInteractionRadius,
+            GameCollisionLayer::HighObstacle,
+            GameCollisionLayer::LowObstacle
+        ]
     ),
     CollidingEntities,
     LockedAxes = LockedAxes::new().lock_rotation(),
@@ -60,8 +64,8 @@ fn on_gold_drop_event(gold_drop: On<GoldDrop>, mut commands: Commands, sprites: 
     let mut rng = rand::rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = gold_drop.amount;
-    //TODO: Give each visual representation of money quantity
-    //It's own sprite. Like red, yellow and blue coins in Mario 64.
+    // TODO: Give each visual representation of money quantity
+    // It's own sprite. Like red, yellow and blue coins in Mario 64.
     while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
         let (gold_image, mut value) = match remaining_gold {
             n if n >= 10000 => (sprites.gold_coin.clone(), 10000),

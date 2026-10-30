@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 /// Goes on the equipment marking where it should be equipped
 ///
-/// Note: We pass this by value a lot, don't add data to it without consideration for passing this by reference
+/// Note: We pass this by value a lot, don't add data to it without consideration for passing this
+/// by reference.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EquipmentSlot {
     Mainhand,

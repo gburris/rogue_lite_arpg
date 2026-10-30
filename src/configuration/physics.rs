@@ -7,7 +7,8 @@ pub(super) fn plugin(app: &mut App) {
     // setup avian physics (used for forces, collision, etc...)
     // length unit here represents "pixels per meter" and is a way to indicate the
     // scale of your world to the physics engine for performance optimizations
-    // In this case, our tiles are currently TILE_SIZE x TILE_SIZE pixels so we set the scale accordingly
+    // In this case, our tiles are currently TILE_SIZE x TILE_SIZE pixels so we set the scale
+    // accordingly
     app.add_plugins(PhysicsPlugins::default().with_length_unit(TILE_SIZE as f32));
 
     // no gravity since this is top-down game
@@ -25,14 +26,16 @@ pub enum GameCollisionLayer {
     EnemyHurtBox,
 
     // For physical collisions
-    LowObstacle, // Obstacle that stops ground movement but lets things "fly" over, like projectiles
+    LowObstacle,  /* Obstacle that stops ground movement but lets things "fly" over, like
+                   * projectiles */
     HighObstacle, // Obstacle that stops all movement
-    Grounded,    // Marks entities that get stopped by all obstacles
-    InAir,       // Marks entity as able to go over low obstacle (projectile, )
+    Grounded,     // Marks entities that get stopped by all obstacles
+    InAir,        // Marks entity as able to go over low obstacle (projectile, )
     EnemyCollider,
     NpcCollider,
 
-    /// Things that interact with player but don't physically collide (NPC dialogue, magnets, etc...)
+    /// Things that interact with player but don't physically collide (NPC dialogue, magnets,
+    /// etc...).
     PlayerInteractionRadius,
     Interaction,
 }

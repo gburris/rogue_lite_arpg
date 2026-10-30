@@ -17,21 +17,20 @@
 //! ```
 //!
 //! Design notes:
-//! - `build.rs` owns determinism: the same (recipe, seed) maps to the same blueprint, and
-//!   the blueprint keeps both, so `MapRequest::Named { recipe, seed }` replays it.
-//! - Recipes list everything they place in `spawns` (what, count, at, separation);
-//!   structures and spawns pick their location from the same `Location` options.
+//! - `build.rs` owns determinism: the same (recipe, seed) maps to the same blueprint, and the
+//!   blueprint keeps both, so `MapRequest::Named { recipe, seed }` replays it.
+//! - Recipes list everything they place in `spawns` (what, count, at, separation); structures and
+//!   spawns pick their location from the same `Location` options.
 //! - Build order: size, structures, fixed-anchor spawns, player start (kept the recipe's
 //!   `start_clearance` from enemies), exits, enemies, chests, NPCs (see `Stage`).
-//! - `MapBlueprint` is renderer-agnostic data (`TileGrid<TileKind>` + placements).
-//!   All backend detail (`TilemapBundle`, atlas slots) stays inside `spawn.rs`.
-//! - Structures are glyph grids (: = transparent, letters = placements over floor);
-//!   builtin features (`EmptySquare`, `Pond`, ...) are picked by reserved kind name and
-//!   share footprint reservation. Portals sit one tile inside a solid wall border;
-//!   no doorway is carved.
-//! - `validate()` (single `PlayerStart`, at least one `Exit`, solid border, spawnable
-//!   disjoint placements) runs at generation time; startup additionally rebuilds
-//!   seeds 0..=8 per recipe as a smoke test.
+//! - `MapBlueprint` is renderer-agnostic data (`TileGrid<TileKind>` + placements). All backend
+//!   detail (`TilemapBundle`, atlas slots) stays inside `spawn.rs`.
+//! - Structures are glyph grids (: = transparent, letters = placements over floor); builtin
+//!   features (`EmptySquare`, `Pond`, ...) are picked by reserved kind name and share footprint
+//!   reservation. Portals sit one tile inside a solid wall border; no doorway is carved.
+//! - `validate()` (single `PlayerStart`, at least one `Exit`, solid border, spawnable disjoint
+//!   placements) runs at generation time; startup additionally rebuilds seeds 0..=8 per recipe as a
+//!   smoke test.
 //! - Dev builds: editing `map_recipes.ron` rebuilds the current map in place; F1 opens the
 //!   `AiTestArena` arena; F6 cycles through every recipe in file order.
 

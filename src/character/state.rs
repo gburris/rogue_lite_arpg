@@ -95,7 +95,7 @@ pub(super) fn kinematics_to_velocity(mut query: Query<(&Kinematics, &mut LinearV
     }
 }
 
-/// The direction a character faces and aims are not tied to each other in this game
+/// The direction a character faces and aims are not tied to each other in this game.
 #[derive(Component, Default, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FacingDirection {
     Up,

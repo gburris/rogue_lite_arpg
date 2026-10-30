@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use super::{damage_overlay, game_over_screen, load_screen, start_screen};
 use crate::prelude::*;
 
-/// Plugin responsible for managing all UI-related systems and state transitions
+/// Plugin responsible for managing all UI-related systems and state transitions.
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        //Loading screen
+        // Loading screen
         app.add_systems(OnEnter(AppState::SpawnMap), load_screen::spawn)
             .add_systems(
                 Update,

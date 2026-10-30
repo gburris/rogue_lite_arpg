@@ -29,7 +29,7 @@ impl Default for GameProgress {
     }
 }
 
-/// Triggers when restart is clicked after death in a run
+/// Triggers when restart is clicked after death in a run.
 fn handle_restart_trigger(
     restart_event_trigger: On<RestartEvent>,
     mut game_progress: ResMut<GameProgress>,

@@ -123,12 +123,11 @@ const ICE_CAST: Behavior = Behavior::new(
 
 // Motion priority: recover (9, or 11.25 once running), hop (8.5), cast (8 at
 // full quality), return (6), orbit (5.5), chase (4), wander (1).
-// - Recover beats the hop on the tick it starts, so a volley that drains mana
-//   starts the break instead of a hop.
+// - Recover beats the hop on the tick it starts, so a volley that drains mana starts the break
+//   instead of a hop.
 // - The hop beats a running orbit (6.875).
-// - The cast beats a running orbit from about 238 units away, and a newly
-//   started one from about 220. A mage crowded closer orbits outward until it
-//   is about 238 away, then casts again.
+// - The cast beats a running orbit from about 238 units away, and a newly started one from about
+//   220. A mage crowded closer orbits outward until it is about 238 away, then casts again.
 static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
     ACTION_BASELINE_IDLE,
@@ -143,9 +142,9 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
 // Motion priority: slide (12), recover (9, or 11.25 once running), cast (8 at
 // full quality), return (6), plant (5), chase (4), wander (1).
 // - The slide beats a running recover and interrupts a cast.
-// - Cast quality is full from the danger ring out to the staff's reach. Inside
-//   the ring (while the slide recharges), the cast beats a running plant (6.25)
-//   from about 139 units away, and a newly started one from about 125.
+// - Cast quality is full from the danger ring out to the staff's reach. Inside the ring (while the
+//   slide recharges), the cast beats a running plant (6.25) from about 139 units away, and a newly
+//   started one from about 125.
 static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
     ACTION_BASELINE_IDLE,

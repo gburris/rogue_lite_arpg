@@ -34,8 +34,9 @@ pub struct ItemDrop {
 
 /// Notes:
 /// 1. `ItemDrop` is for items only!
-/// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
-/// 3. Needs parent to be holder for position, then removes parent
+/// 2. This event will handle unequipping and removing any items dropped from the inventory of the
+///    holder
+/// 3. Needs parent to be holder for position, then removes parent.
 fn on_drop_event(
     item_dropped: On<ItemDrop>,
     mut commands: Commands,

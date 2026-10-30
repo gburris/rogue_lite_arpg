@@ -159,7 +159,8 @@ impl fmt::Display for MapValidationError {
                 tile_kind,
             } => write!(
                 f,
-                "placement {placement_index} at {tile} sits on {tile_kind:?}, which cannot host a spawn"
+                "placement {placement_index} at {tile} sits on {tile_kind:?}, which cannot host a \
+                 spawn"
             ),
             Self::OverlappingPlacements {
                 tile,

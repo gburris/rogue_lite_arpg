@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Represents an entity that will be despawned after time elapsed
+/// Represents an entity that will be despawned after time elapsed.
 #[derive(Component, Clone)]
 pub struct Lifespan(pub Timer);
 
@@ -40,7 +40,7 @@ fn despawn_expired_entities(
     }
 }
 
-/// Despawn all entities with the specific component
+/// Despawn all entities with the specific component.
 pub fn despawn_all<T: Event, C: Component>(
     _: On<T>,
     mut commands: Commands,

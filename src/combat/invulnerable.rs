@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-/// Component to mark whether an entity has iframes when hit
+/// Component to mark whether an entity has iframes when hit.
 #[derive(Component)]
 pub struct IFrames {
     // time to be invulnerable when hit

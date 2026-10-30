@@ -23,7 +23,7 @@ struct LevelUpEffect;
 #[derive(Component)]
 struct LevelUpText;
 
-/// Starting and ending size of level up ring animation
+/// Starting and ending size of level up ring animation.
 const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
 const MAX_RING_SCALE: f32 = LEVEL_UP_RING_SIZE.1 / LEVEL_UP_RING_SIZE.0;
 const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
@@ -61,7 +61,7 @@ fn ring_effect(meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>)
     )
 }
 
-/// Level up text above player's head
+/// Level up text above player's head.
 fn level_up_text() -> impl Bundle {
     (
         LevelUpText,

@@ -1,20 +1,18 @@
 //! ECS glue for the pure utility brains. Data flows one way, one writer each:
 //! 1. [`perception`] builds a [`DecisionContext`] from the world.
-//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior
-//!    holds each slot on the [`Brain`].
-//! 3. [`motion`] and [`action`] carry out the held motion and action and
-//!    report [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
+//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior holds each slot on the
+//!    [`Brain`].
+//! 3. [`motion`] and [`action`] carry out the held motion and action and report
+//!    [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
 //!
 //! To add a continuous motion:
-//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A
-//!    stateless one gets an arm in `direct::steer_direct_motion`; one with
-//!    state gets a file with its component and an `apply_` system registered
-//!    in `motion::plugin`, and is skipped in `apply_direct_steering`. A
+//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A stateless one gets an arm
+//!    in `direct::steer_direct_motion`; one with state gets a file with its component and an
+//!    `apply_` system registered in `motion::plugin`, and is skipped in `apply_direct_steering`. A
 //!    component the motion needs implements `Capability`, is recorded in
 //!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
-//! 2. [`DecisionContext`] fields built in [`perception`], plus
-//!    [`ConsiderationInput`] variants read in
-//!    `read_consideration_input`.
+//! 2. [`DecisionContext`] fields built in [`perception`], plus [`ConsiderationInput`] variants read
+//!    in `read_consideration_input`.
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!
 //! A finite [`Motion`] needs a variant, a `Capability` component whose

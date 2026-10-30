@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Portals represent any "warping device" in the game, currently spawning a new zone when entered
+/// Portals represent any "warping device" in the game, currently spawning a new zone when entered.
 #[derive(Component)]
 #[require(
     RigidBody::Static,

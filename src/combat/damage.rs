@@ -83,9 +83,9 @@ const HURTBOX_OFFSET: f32 = -8.0;
 #[derive(EntityEvent)]
 pub struct AttemptDamage {
     pub entity: Entity,
-    /// Not all damage gets blocked by invulnerable (ex: burn from status effect)
+    /// Not all damage gets blocked by invulnerable (ex: burn from status effect).
     pub ignore_invulnerable: bool,
-    /// We treat damage as a range with RNG determining which value is dealt
+    /// We treat damage as a range with RNG determining which value is dealt.
     pub damage: Damage,
     /// Weapon or projectile entity used for `Effects` and `Knockback`.
     /// Not all damage has one, like environmental damage or damage-over-time effects.
@@ -94,7 +94,7 @@ pub struct AttemptDamage {
     /// projectiles carry the attacker stamped at fire time, reflection transfers
     /// it to the blocker, environmental damage has none.
     pub attacker: Option<Entity>,
-    /// damage direction, ex. velocity direction of projectile or character position for melee
+    /// Damage direction, ex. velocity direction of projectile or character position for melee.
     pub direction: Option<Vec2>,
 }
 
@@ -112,7 +112,7 @@ impl Default for AttemptDamage {
 }
 
 /// While `AttemptDamage` is sent any time a damage source interacts with an entity,
-/// this event represents when that damage attempt succeeds
+/// this event represents when that damage attempt succeeds.
 #[derive(EntityEvent)]
 pub struct DamageDealt {
     pub entity: Entity,
@@ -121,7 +121,7 @@ pub struct DamageDealt {
     pub source_item: Option<Entity>,
     /// Character responsible for aggro or credit (see `AttemptDamage::attacker`).
     pub attacker: Option<Entity>,
-    /// damage direction, ex. velocity direction of projectile or character position for melee
+    /// Damage direction, ex. velocity direction of projectile or character position for melee.
     pub direction: Option<Vec2>,
 }
 
@@ -168,8 +168,9 @@ pub(super) fn on_damage_event(
         let damage = attempt_damage.damage.to_float();
         health.take_damage(damage);
 
-        // Because AttemptDamage may not result in damage being applied (invulnerable or entity without health)
-        // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
+        // Because AttemptDamage may not result in damage being applied (invulnerable or entity
+        // without health) we send this event for guranteed "X damage has been done". Proper
+        // change detection added to bevy would mean this isn't needed
         commands.trigger(DamageDealt {
             entity: damaged_entity,
             damage,
@@ -183,7 +184,8 @@ pub(super) fn on_damage_event(
                 entity: damaged_entity,
             });
         } else if let Some(source_entity) = attempt_damage.source_item {
-            // If entity is still alive and damage source exists and has effects list, we apply status effects
+            // If entity is still alive and damage source exists and has effects list, we apply
+            // status effects
             if let Ok(effects) = source_query.get(source_entity) {
                 commands.trigger(ApplyEffects::new(effects, damaged_entity));
             }
@@ -226,7 +228,8 @@ pub(super) fn tick_and_remove_damage_flash(
     damage_flash_query
         .par_iter_mut()
         .for_each(|(mut flash, mut sprite)| {
-            // Only reset color the frame the flash ends, otherwise we overwrite sprite color every frame
+            // Only reset color the frame the flash ends, otherwise we overwrite sprite color every
+            // frame
             if flash.0.tick(time.delta()).just_finished() {
                 sprite.color = Color::WHITE;
             }

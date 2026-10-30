@@ -24,7 +24,7 @@ use crate::character::Character;
 use crate::lifespan::despawn_all;
 use crate::prelude::*;
 
-/// How much more experience is required (as a multiplier) after each level up
+/// How much more experience is required (as a multiplier) after each level up.
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 pub(super) fn plugin(app: &mut App) {
@@ -84,10 +84,10 @@ impl Default for Player {
 }
 
 impl Player {
-    /// Attempts to increase player level based on current experience and level requirement, and then
-    /// sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
+    /// Attempts to increase player level based on current experience and level requirement, and
+    /// then sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
     ///
-    /// returns whether the player leveled up
+    /// returns whether the player leveled up.
     pub fn attempt_level_up(&mut self) -> bool {
         if self.current_experience >= self.next_level_experience_req {
             self.current_experience -= self.next_level_experience_req;

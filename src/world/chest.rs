@@ -5,7 +5,7 @@ use bevy::ui_widgets::observe;
 
 use crate::prelude::*;
 
-/// Center of chest relative to its sprite's anchor point
+/// Center of chest relative to its sprite's anchor point.
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
 const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 /// Delay before coins pop: the open animation runs 9 frames at 0.1 s each,

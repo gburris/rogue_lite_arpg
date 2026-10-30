@@ -17,7 +17,7 @@ pub struct DisplaySlotOf(Entity);
 #[relationship_target(relationship = DisplaySlotOf, linked_spawn)]
 pub struct ItemDisplayed(Entity);
 
-/// Makes building display slots easier
+/// Makes building display slots easier.
 pub struct DisplaySlotContext {
     pub item_entity: Entity,
     pub item_name: String,   // Owned string
@@ -27,7 +27,7 @@ pub struct DisplaySlotContext {
     pub is_equipped: bool,
 }
 
-/// Spawns a given "slot" in a display case representing a single item in the inventory
+/// Spawns a given "slot" in a display case representing a single item in the inventory.
 pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bundle {
     let equip_slot_string = context
         .equipment_slot

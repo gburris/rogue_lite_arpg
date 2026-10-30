@@ -117,7 +117,7 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
 
 #[derive(Component)]
 struct Staff {
-    /// x, y offset relative to center of staff sprite where projectiles should be spawned
+    /// X, y offset relative to center of staff sprite where projectiles should be spawned.
     source_offset: Vec2,
     fire_time: f32,
     return_time: f32,
@@ -256,7 +256,8 @@ fn fire_projectile_on_casting_end(
                 * target_info.map_or(100., |t| t.distance))
                 - holder_relative_source_position;
 
-            // Staff is child of holder so position is relative, need to add holder transform for global position
+            // Staff is child of holder so position is relative, need to add holder transform for
+            // global position
             let world_starting_position =
                 holder_transform.translation.truncate() + holder_relative_source_position;
 

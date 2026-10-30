@@ -162,8 +162,8 @@ fn overlaps(first_rect: TileRect, second_rect: TileRect) -> bool {
         && second_rect.min.y < first_rect.max_exclusive().y
 }
 
-/// Places footprints and returns their origins; random and edge rules may place fewer than requested.
-/// Successful placements update context; fixed placement does not advance the RNG.
+/// Places footprints and returns their origins; random and edge rules may place fewer than
+/// requested. Successful placements update context; fixed placement does not advance the RNG.
 pub fn place(
     rule: &PlaceRule,
     footprint: UVec2,
@@ -246,7 +246,8 @@ fn place_fixed(
         })?;
     if !context.available(tiles, bounds) {
         return Err(format!(
-            "fixed footprint {bounds:?} at {anchor:?} overlaps a reserved area or covers unspawnable tiles"
+            "fixed footprint {bounds:?} at {anchor:?} overlaps a reserved area or covers \
+             unspawnable tiles"
         )
         .into());
     }

@@ -112,10 +112,9 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 //
 // Action priority: heal (5, scaled by need), hold fire (1.5), swing (1),
 // idle (0.5). Each beats the next even while that one holds the slot.
-// - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square
-//   root of the need. It beats idle from about 43% missing health and hold
-//   fire from about 48%, before the warrior starts fleeing at about 50%
-//   (health never recovers during a flee).
+// - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square root of the need. It
+//   beats idle from about 43% missing health and hold fire from about 48%, before the warrior
+//   starts fleeing at about 50% (health never recovers during a flee).
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
     WARRIOR_BASELINE_IDLE,

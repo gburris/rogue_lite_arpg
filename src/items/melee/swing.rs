@@ -5,11 +5,11 @@ use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
 #[derive(Debug, Clone, Copy)]
 pub(super) enum MeleeSwingType {
     Stab {
-        /// How far the weapon should move (stab) forward from its starting position
+        /// How far the weapon should move (stab) forward from its starting position.
         reach: f32,
     },
     Slash {
-        /// Distance we want slash to travel in radians
+        /// Distance we want slash to travel in radians.
         arc_distance: f32,
     },
 }
@@ -21,7 +21,7 @@ impl MeleeSwingType {
     };
 }
 
-/// Determines path of melee weapon based on swing type
+/// Determines path of melee weapon based on swing type.
 // TODO: Consider using bevy curve functions to reduce math needed here
 pub(super) fn process_melee_attacks(
     time: Res<Time>,

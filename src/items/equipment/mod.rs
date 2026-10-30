@@ -29,7 +29,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            // Always run this system InGame and InMenu so weapon transforms update as inventory is interacted with
+            // Always run this system InGame and InMenu so weapon transforms update as inventory is
+            // interacted with
             equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
             use_equipped::tick_equippable_cooldown.in_set(InGameSystems::Simulation),
         ),

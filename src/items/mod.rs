@@ -52,7 +52,7 @@ pub(super) fn plugin(app: &mut App) {
 /// This is the base component for all items in the game. If you have a new concept that will be
 /// shared by all items, add it as a field here.
 ///
-/// Ex.  All items can be dropped, so drop-related info can go here
+/// Ex.  All items can be dropped, so drop-related info can go here.
 #[derive(Component)]
 #[require(Visibility::Hidden)]
 pub struct Item {

@@ -221,7 +221,8 @@ impl EquipmentUsage<'_, '_> {
         }
     }
 
-    /// Whether the item in the slot currently carries `EquipmentInUse` (swinging, casting, blocking).
+    /// Whether the item in the slot currently carries `EquipmentInUse` (swinging, casting,
+    /// blocking).
     pub fn is_using(&self, holder: Entity, slot: EquipmentSlot) -> bool {
         self.item_in_slot(holder, slot)
             .is_some_and(|item| self.in_use.contains(item))

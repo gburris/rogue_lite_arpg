@@ -123,7 +123,8 @@ fn footer_section() -> impl Bundle {
 
 pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
     for mut color in &mut query {
-        let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6; // Increased frequency and amplitude
+        // Increased frequency and amplitude.
+        let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6;
         *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));
     }
 }

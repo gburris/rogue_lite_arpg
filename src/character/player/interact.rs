@@ -9,14 +9,15 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_interaction_zone_added);
 }
 
-/// Marker component for the sensor added to the player, which must collide with an `InteractionZone` for
-/// a player interaction to be possible
+/// Marker component for the sensor added to the player, which must collide with an
+/// `InteractionZone` for a player interaction to be possible.
 #[derive(Component)]
 #[require(Collider::circle(16.0), Sensor, CollidingEntities)]
 pub struct PlayerInteractionRadius;
 
-/// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
-/// this component will trigger the specified `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup)
+/// Component to be spawned as a child of any entity. When the player walks within "radius" and
+/// clicks "interact" (default: Spacebar) this component will trigger the specified
+/// `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup).
 #[derive(Component)]
 #[require(
     Sensor,
@@ -79,7 +80,8 @@ fn on_player_interaction_input(
     }
 }
 
-/// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant chosen
+/// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant
+/// chosen.
 fn on_interaction_zone_added(
     interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,

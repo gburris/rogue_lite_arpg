@@ -63,7 +63,8 @@ pub enum MainSystems {
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum InGameSystems {
-    DespawnEntities, // Despawn entities only! MUST happen before simulation of this new frame we are in!
+    DespawnEntities, /* Despawn entities only! MUST happen before simulation of this new frame
+                      * we are in! */
     PlayerInput,
     Simulation, // Most game logic (queries modifying components)
     Collision,  // Finally detect collisions using avian based on velocity changed

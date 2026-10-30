@@ -77,7 +77,7 @@ fn spawn_inventory_menu(
 
 const LINE_HEIGHT: f32 = 35.;
 
-/// Updates the scroll position of scrollable nodes in response to mouse input
+/// Updates the scroll position of scrollable nodes in response to mouse input.
 fn update_scroll_position(
     mut mouse_wheel_messages: MessageReader<MouseWheel>,
     hover_map: Res<HoverMap>,

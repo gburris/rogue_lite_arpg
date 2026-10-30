@@ -43,9 +43,9 @@ pub(super) fn handle_melee_collisions(
 #[derive(Component)]
 #[require(CollidingEntities, Sensor)]
 pub struct ActiveMeleeAttack {
-    /// Comes from the direction the entity holding the weapon is aiming
+    /// Comes from the direction the entity holding the weapon is aiming.
     pub(super) initial_angle: f32,
-    /// Comes from "`attack_speed`" defined on `MeleeWeapon`
+    /// Comes from "`attack_speed`" defined on `MeleeWeapon`.
     pub(super) duration: Timer,
     entities_damaged: HashSet<Entity>,
 }

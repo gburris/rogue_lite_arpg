@@ -27,10 +27,10 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Component)]
 pub struct YSort {
-    /// z layer of sprite, only sprites on the same layer will be y-sorted correctly
+    /// Z layer of sprite, only sprites on the same layer will be y-sorted correctly.
     z: f32,
-    /// in some instances we don't want to `YSort` from Sprite anchor, but instead
-    /// from the feet or some other position on the sprite
+    /// In some instances we don't want to `YSort` from Sprite anchor, but instead
+    /// from the feet or some other position on the sprite.
     height_offset: f32,
 }
 
@@ -188,8 +188,10 @@ fn fit_integer_scale(
 }
 
 const DECAY_RATE: f32 = 2.3; // f32::ln(10.0);
-const TARGET_BIAS: f32 = 0.35; // 0.5 is middle of the two positions between the player and the aim position
-const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0; // The camera will not go further than this distance from the player
+// 0.5 is middle of the two positions between the player and the aim position.
+const TARGET_BIAS: f32 = 0.35;
+// The camera will not go further than this distance from the player.
+const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0;
 
 fn camera_follow_system(
     player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,

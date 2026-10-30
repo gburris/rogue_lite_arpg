@@ -29,7 +29,7 @@ pub struct RecipeCatalog {
     pub(super) structures: BTreeMap<String, Structure>,
     pub(super) weighted_names: Vec<String>,
     /// Every recipe name in file order: hub, dungeons, then arenas.
-    #[cfg_attr(not(feature = "dev"), allow(dead_code))]
+    #[cfg_attr(not(feature = "dev"), expect(dead_code))]
     pub(super) order: Vec<String>,
 }
 
@@ -386,7 +386,7 @@ pub(super) enum Location {
         radius: u32,
     },
     /// One of these, picked per map.
-    Choose(Vec<Location>),
+    Choose(Vec<Self>),
     Center,
     CenterOffset(IVec2),
     MapMin(IVec2),
@@ -575,7 +575,6 @@ pub(super) fn recipe_options() -> Options {
     Options::default().with_default_extension(Extensions::IMPLICIT_SOME)
 }
 
-#[allow(clippy::too_many_lines)]
 pub(super) fn validate_recipe(
     recipe: &MapRecipe,
     structures: &BTreeMap<String, Structure>,

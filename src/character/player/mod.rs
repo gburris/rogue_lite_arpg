@@ -21,7 +21,6 @@ use bevy::prelude::*;
 
 pub use self::stats::{DisplayableStatType, PlayerStats};
 use crate::character::Character;
-use crate::lifespan::despawn_all;
 use crate::prelude::*;
 
 /// How much more experience is required (as a multiplier) after each level up.
@@ -75,7 +74,7 @@ pub struct Player {
 
 impl Default for Player {
     fn default() -> Self {
-        Player {
+        Self {
             current_level: 1,
             current_experience: 0.0,
             next_level_experience_req: 20.0,

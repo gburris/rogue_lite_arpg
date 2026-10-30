@@ -5,6 +5,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
+use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

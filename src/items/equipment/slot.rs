@@ -45,8 +45,8 @@ impl EquipmentSlot {
 impl fmt::Display for EquipmentSlot {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let variant_name = match *self {
-            EquipmentSlot::Mainhand => "Main Hand",
-            EquipmentSlot::Offhand => "Off Hand",
+            Self::Mainhand => "Main Hand",
+            Self::Offhand => "Off Hand",
         };
         write!(f, "{variant_name}")
     }

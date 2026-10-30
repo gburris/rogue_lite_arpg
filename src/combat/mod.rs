@@ -3,6 +3,7 @@ mod health;
 mod invulnerable;
 pub(crate) mod mana;
 mod projectile;
+mod rng;
 mod status_effects;
 
 use bevy::prelude::*;
@@ -28,6 +29,9 @@ pub mod prelude {
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((projectile::plugin, status_effects::plugin));
+
+    app.init_resource::<rng::CombatRng>()
+        .add_systems(Startup, rng::seed_combat_rng_from_map);
 
     app.add_systems(
         Update,

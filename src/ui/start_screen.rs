@@ -1,4 +1,7 @@
+use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
+use bevy::ui::Pressed;
+use bevy::ui_widgets::{Activate, Button, observe};
 
 use super::constants::TITLE_FONT_SIZE;
 use super::primitives::{gold_border, text};
@@ -77,6 +80,8 @@ fn start_screen_body() -> impl Bundle {
         children![(
             StartScreenButton,
             Button,
+            Hovered::default(),
+            observe(on_start_button_activated),
             Node {
                 width: px(300.0),
                 height: px(80.0),
@@ -118,29 +123,32 @@ fn start_screen_footer() -> impl Bundle {
     )
 }
 
-// Enhanced button system with more dramatic hover effects
-pub(super) fn button_system(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<StartScreenButton>),
+fn on_start_button_activated(_: On<Activate>, mut next_app_state: ResMut<NextState<AppState>>) {
+    next_app_state.set(AppState::AssetLoading);
+}
+
+// Hover and press styling for the start button.
+pub(super) fn style_start_button(
+    mut button_query: Query<
+        (
+            Has<Pressed>,
+            &Hovered,
+            &mut BackgroundColor,
+            &mut BorderColor,
+        ),
+        With<StartScreenButton>,
     >,
-    mut next_app_state: ResMut<NextState<AppState>>,
 ) {
-    for (interaction, mut background_color, mut border_color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *background_color = BackgroundColor::from(Color::srgba(0.3, 0.2, 0.1, 0.9));
-                *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
-                next_app_state.set(AppState::AssetLoading);
-            }
-            Interaction::Hovered => {
-                *background_color = BackgroundColor::from(Color::srgba(0.2, 0.15, 0.1, 0.8));
-                *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
-            }
-            Interaction::None => {
-                *background_color = BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7));
-                *border_color = BorderColor::from(Color::srgb(0.8, 0.6, 0.2));
-            }
+    for (pressed, hovered, mut background_color, mut border_color) in &mut button_query {
+        if pressed {
+            *background_color = BackgroundColor::from(Color::srgba(0.3, 0.2, 0.1, 0.9));
+            *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
+        } else if hovered.get() {
+            *background_color = BackgroundColor::from(Color::srgba(0.2, 0.15, 0.1, 0.8));
+            *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
+        } else {
+            *background_color = BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7));
+            *border_color = BorderColor::from(Color::srgb(0.8, 0.6, 0.2));
         }
     }
 }

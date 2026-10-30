@@ -68,7 +68,5 @@ pub(super) fn on_healing_event(
             entity: attempt_heal.entity,
             amount: actual_amount,
         });
-        let entity = attempt_heal.entity;
-        info!("Entity {entity} healed by {actual_amount:.2} points");
     }
 }

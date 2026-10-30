@@ -15,10 +15,10 @@ mod tome;
 pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
-        DEFAULT_EQUIPMENT_POSES, DirectionalPoses, Equip, EquipmentInUse, EquipmentPose,
-        EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
-        EquipmentUseFinished, EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand,
-        StartUsingEquipment, StopUsingEquipment, Unequip, tick_equippable_cooldown,
+        DirectionalPoses, Equip, EquipmentInUse, EquipmentPose, EquipmentRead, EquipmentSlot,
+        EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure, EquipmentUseFinished,
+        EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment,
+        StopUsingEquipment, Unequip, tick_equippable_cooldown,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::ItemDrop;
@@ -65,7 +65,7 @@ pub struct Item {
 
 impl Default for Item {
     fn default() -> Self {
-        Item {
+        Self {
             value: 10,
             item_type: ItemType::Melee,
             drop_glow_effect: 0.0,
@@ -77,7 +77,7 @@ impl Default for Item {
 
 impl Item {
     pub fn new(value: u32, item_type: ItemType) -> Self {
-        Item {
+        Self {
             value,
             item_type,
             drop_rate: 1.2,

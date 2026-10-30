@@ -179,7 +179,7 @@ impl TileRect {
             ((map_size.y - rect_size.y) / 2) as i32,
         );
 
-        Some(TileRect {
+        Some(Self {
             min,
             size: rect_size,
         })
@@ -187,7 +187,7 @@ impl TileRect {
 
     /// Returns the rectangle translated by an offset, or `None` on overflow.
     pub fn translated(&self, offset: IVec2) -> Option<Self> {
-        Some(TileRect {
+        Some(Self {
             min: self.min.checked_add(offset)?,
             size: self.size,
         })
@@ -272,12 +272,12 @@ impl TileKind {
 
     /// Returns whether this tile blocks ground placement.
     pub fn blocks_ground(self) -> bool {
-        matches!(self, TileKind::Wall | TileKind::Water | TileKind::DeadZone)
+        matches!(self, Self::Wall | Self::Water | Self::DeadZone)
     }
 
     /// Returns whether this tile should be rendered.
     pub fn should_render(self) -> bool {
-        !matches!(self, TileKind::DeadZone)
+        !matches!(self, Self::DeadZone)
     }
 
     /// Returns whether this tile can host a spawn.

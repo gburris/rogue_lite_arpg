@@ -83,17 +83,17 @@ pub enum ZLayer {
 impl ZLayer {
     pub fn z(self) -> f32 {
         match self {
-            ZLayer::Ground => 0.0,
-            ZLayer::OnGround => 5.0,
-            ZLayer::InAir => 10.0,
+            Self::Ground => 0.0,
+            Self::OnGround => 5.0,
+            Self::InAir => 10.0,
 
             // Z layer is additive in parent/child hierarchies
             // Parent 1 + child entity weapon of 0.1 = 1.1
             // These are the relative z layers
-            ZLayer::SpriteBackground => -2.0,
-            ZLayer::BehindSprite => -0.001,
-            ZLayer::AboveSprite => 0.001,
-            ZLayer::SpriteForeground => 2.0,
+            Self::SpriteBackground => -2.0,
+            Self::BehindSprite => -0.001,
+            Self::AboveSprite => 0.001,
+            Self::SpriteForeground => 2.0,
         }
     }
 }

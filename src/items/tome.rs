@@ -3,6 +3,7 @@ use bevy::sprite::Anchor;
 use bevy::ui_widgets::observe;
 use rand::RngExt;
 
+use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use super::{Item, ItemType};
 use crate::prelude::*;
 

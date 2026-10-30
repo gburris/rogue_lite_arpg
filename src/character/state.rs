@@ -17,7 +17,7 @@ pub struct Kinematics {
 
 impl Kinematics {
     pub fn new(max_speed: f32) -> Self {
-        Kinematics {
+        Self {
             max_speed,
             speed_multiplier: 0.0,
             direction: Vec2::ZERO,
@@ -84,7 +84,7 @@ impl Kinematics {
 
 impl Default for Kinematics {
     fn default() -> Self {
-        Kinematics::new(10.0)
+        Self::new(10.0)
     }
 }
 
@@ -118,10 +118,10 @@ impl FacingDirection {
 
     pub fn to_vec2(self) -> Vec2 {
         match self {
-            FacingDirection::Up => Vec2::new(0.0, 1.0),
-            FacingDirection::Down => Vec2::new(0.0, -1.0),
-            FacingDirection::Left => Vec2::new(-1.0, 0.0),
-            FacingDirection::Right => Vec2::new(1.0, 0.0),
+            Self::Up => Vec2::new(0.0, 1.0),
+            Self::Down => Vec2::new(0.0, -1.0),
+            Self::Left => Vec2::new(-1.0, 0.0),
+            Self::Right => Vec2::new(1.0, 0.0),
         }
     }
 }

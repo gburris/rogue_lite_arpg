@@ -28,7 +28,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(AppState::StartScreen), start_screen::spawn)
         .add_systems(
             Update,
-            (start_screen::button_system, start_screen::animate_text)
+            (start_screen::style_start_button, start_screen::animate_text)
                 .run_if(in_state(AppState::StartScreen)),
         );
 

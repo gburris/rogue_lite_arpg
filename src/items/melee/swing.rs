@@ -15,8 +15,8 @@ pub(super) enum MeleeSwingType {
 }
 
 impl MeleeSwingType {
-    pub const STAB: Self = MeleeSwingType::Stab { reach: 30.0 };
-    pub const SLASH: Self = MeleeSwingType::Slash {
+    pub const STAB: Self = Self::Stab { reach: 30.0 };
+    pub const SLASH: Self = Self::Slash {
         arc_distance: 180f32.to_radians(),
     };
 }

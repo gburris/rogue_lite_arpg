@@ -14,8 +14,8 @@ pub struct Burning {
 }
 
 impl Default for Burning {
-    fn default() -> Burning {
-        Burning {
+    fn default() -> Self {
+        Self {
             damage: 2.0,
             damage_frequency: Timer::from_seconds(0.7, TimerMode::Repeating),
         }

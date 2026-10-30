@@ -13,7 +13,6 @@ use super::capability::{
     CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
 };
 use super::motion::{HomeArea, Motion};
-use crate::lifespan::schedule_component_removal;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

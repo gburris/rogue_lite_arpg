@@ -36,7 +36,7 @@ impl Behavior {
     }
 
     /// Whether both behaviors claim the motion slot or both claim the action slot.
-    pub fn shares_a_slot_with(&self, other: &Behavior) -> bool {
+    pub fn shares_a_slot_with(&self, other: &Self) -> bool {
         (self.motion.is_some() && other.motion.is_some())
             || (self.action.is_some() && other.action.is_some())
     }

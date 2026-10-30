@@ -14,7 +14,7 @@ pub struct Equippable {
 
 impl Equippable {
     pub fn new(slot: EquipmentSlot, duration: f32, poses: &'static DirectionalPoses) -> Self {
-        Equippable {
+        Self {
             slot,
             poses,
             cooldown: Timer::from_seconds(duration, TimerMode::Once),

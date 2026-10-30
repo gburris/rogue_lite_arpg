@@ -1,9 +1,9 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use rand::RngExt;
 
 use super::health::Health;
 use super::invulnerable::IFrames;
+use super::rng::CombatRng;
 use super::status_effects::prelude::{ApplyEffects, Effects};
 use crate::prelude::*;
 
@@ -44,9 +44,10 @@ pub enum Damage {
 }
 
 impl Damage {
-    fn to_float(self) -> f32 {
+    /// Picks the amount of damage dealt, drawing from `rng` for a range.
+    fn roll(self, rng: &mut CombatRng) -> f32 {
         match self {
-            Self::Range { min, max } => rand::rng().random_range(min..max),
+            Self::Range { min, max } => rng.range(min, max),
             Self::Single(amount) => amount,
         }
     }
@@ -136,6 +137,7 @@ pub(super) fn on_damage_event(
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&Effects>,
+    mut combat_rng: ResMut<CombatRng>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
     let damaged_entity = if let Ok(child_of) = hurt_box_query.get(attempt_damage.entity) {
@@ -165,7 +167,7 @@ pub(super) fn on_damage_event(
         }
 
         // Convert `Damage` to raw damage amount
-        let damage = attempt_damage.damage.to_float();
+        let damage = attempt_damage.damage.roll(&mut combat_rng);
         health.take_damage(damage);
 
         // Because AttemptDamage may not result in damage being applied (invulnerable or entity
@@ -193,7 +195,7 @@ pub(super) fn on_damage_event(
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct DamageFlash(Timer);
 
 impl Default for DamageFlash {
@@ -230,7 +232,7 @@ pub(super) fn tick_and_remove_damage_flash(
         .for_each(|(mut flash, mut sprite)| {
             // Only reset color the frame the flash ends, otherwise we overwrite sprite color every
             // frame
-            if flash.0.tick(time.delta()).just_finished() {
+            if flash.tick(time.delta()).just_finished() {
                 sprite.color = Color::WHITE;
             }
         });

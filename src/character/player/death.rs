@@ -11,7 +11,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 struct GameOverTimer(Timer);
 
 pub(super) fn on_player_defeated(
@@ -34,8 +34,8 @@ fn finish_death_animation(
     mut next_app_state: ResMut<NextState<AppState>>,
 ) {
     let mut death_timer = player_death_timer_single.into_inner();
-    death_timer.0.tick(time.delta());
-    if death_timer.0.is_finished() {
+    death_timer.tick(time.delta());
+    if death_timer.is_finished() {
         next_app_state.set(AppState::GameOver);
     }
 }

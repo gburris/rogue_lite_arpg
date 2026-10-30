@@ -12,7 +12,7 @@ pub struct Slowed {
 
 impl Default for Slowed {
     fn default() -> Self {
-        Slowed { percent: 0.5 }
+        Self { percent: 0.5 }
     }
 }
 

@@ -1,7 +1,6 @@
 use bevy::ecs::spawn::SpawnIter;
 use bevy::prelude::*;
 
-use crate::lifespan::despawn_all;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

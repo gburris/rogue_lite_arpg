@@ -47,8 +47,8 @@ impl AnimationIndices {
             // start which is what I would want.
             // TODO: Create helper functions to instantiate AnimationIndices types, that way it's
             // easier to include metadata
-            AnimationIndices::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
-            AnimationIndices::OneShot(range_inclusive) => *range_inclusive.start(),
+            Self::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
+            Self::OneShot(range_inclusive) => *range_inclusive.start(),
         }
     }
 }
@@ -57,8 +57,8 @@ impl Iterator for AnimationIndices {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            AnimationIndices::Cycle(cycle) => cycle.next(),
-            AnimationIndices::OneShot(range_inclusive) => range_inclusive.next(),
+            Self::Cycle(cycle) => cycle.next(),
+            Self::OneShot(range_inclusive) => range_inclusive.next(),
         }
     }
 }

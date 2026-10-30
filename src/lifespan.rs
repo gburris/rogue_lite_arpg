@@ -5,13 +5,13 @@ use crate::prelude::*;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (despawn_expired_entities, generic_remove_component_system)
+        (despawn_expired_entities, remove_scheduled_components)
             .in_set(InGameSystems::DespawnEntities),
     );
 }
 
 /// Represents an entity that will be despawned after time elapsed.
-#[derive(Component, Clone)]
+#[derive(Component, Deref, DerefMut, Clone)]
 pub struct Lifespan(pub Timer);
 
 impl Lifespan {
@@ -32,9 +32,9 @@ fn despawn_expired_entities(
     time: Res<Time>,
 ) {
     for (entity, mut duration) in &mut duration_query {
-        duration.0.tick(time.delta());
+        duration.tick(time.delta());
 
-        if duration.0.is_finished() {
+        if duration.is_finished() {
             commands.entity(entity).despawn();
         }
     }
@@ -51,25 +51,26 @@ pub fn despawn_all<T: Event, C: Component>(
     }
 }
 
+/// A pending component removal, held as a child so several can wait on one entity at once.
 #[derive(Component)]
-struct RemoveComponent {
+struct ScheduledRemoval {
     timer: Timer,
     remover: Option<Box<dyn FnOnce(&mut EntityCommands) + Send + Sync>>,
 }
 
-fn generic_remove_component_system(
+fn remove_scheduled_components(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut RemoveComponent)>,
+    mut removal_query: Query<(Entity, &ChildOf, &mut ScheduledRemoval)>,
     time: Res<Time>,
 ) {
-    for (entity, mut remove_component) in &mut query {
-        remove_component.timer.tick(time.delta());
-        if remove_component.timer.is_finished()
-            && let Some(remover) = remove_component.remover.take()
+    for (removal_entity, child_of, mut removal) in &mut removal_query {
+        removal.timer.tick(time.delta());
+        if removal.timer.is_finished()
+            && let Some(remover) = removal.remover.take()
         {
-            let mut entity_commands = commands.entity(entity);
+            let mut entity_commands = commands.entity(child_of.parent());
             remover(&mut entity_commands);
-            entity_commands.remove::<RemoveComponent>();
+            commands.entity(removal_entity).despawn();
         }
     }
 }
@@ -83,7 +84,7 @@ pub fn schedule_component_removal<C: Component>(
         entity_commands.remove::<C>();
     });
 
-    commands.entity(entity).insert(RemoveComponent {
+    commands.entity(entity).with_child(ScheduledRemoval {
         timer: Timer::from_seconds(seconds, TimerMode::Once),
         remover: Some(remover),
     });

@@ -19,7 +19,7 @@ pub struct GameProgress {
 
 impl Default for GameProgress {
     fn default() -> Self {
-        GameProgress {
+        Self {
             game_completed_counter: 0,
             death_counter: 0,
             total_career_level: 0,

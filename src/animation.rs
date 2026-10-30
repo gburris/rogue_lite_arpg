@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use crate::prelude::InGameSystems;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, animate_sprites.in_set(InGameSystems::Vfx));
+    app.add_systems(Update, animate_sprites.in_set(VfxSystems::Animate));
 }
 
 fn animate_sprites(
@@ -35,7 +35,7 @@ fn animate_sprites(
     Ok(())
 }
 
-#[derive(Clone, Debug, Component)]
+#[derive(Component, Clone, Debug)]
 pub enum AnimationIndices {
     Cycle(std::iter::Cycle<std::ops::RangeInclusive<usize>>),
     OneShot(std::ops::RangeInclusive<usize>),
@@ -47,8 +47,8 @@ impl AnimationIndices {
             // start which is what I would want.
             // TODO: Create helper functions to instantiate AnimationIndices types, that way it's
             // easier to include metadata
-            AnimationIndices::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
-            AnimationIndices::OneShot(range_inclusive) => *range_inclusive.start(),
+            Self::Cycle(cycle) => cycle.clone().next().unwrap_or_default(),
+            Self::OneShot(range_inclusive) => *range_inclusive.start(),
         }
     }
 }
@@ -57,8 +57,8 @@ impl Iterator for AnimationIndices {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            AnimationIndices::Cycle(cycle) => cycle.next(),
-            AnimationIndices::OneShot(range_inclusive) => range_inclusive.next(),
+            Self::Cycle(cycle) => cycle.next(),
+            Self::OneShot(range_inclusive) => range_inclusive.next(),
         }
     }
 }
@@ -69,23 +69,13 @@ impl Default for AnimationIndices {
     }
 }
 
-#[derive(Component, Deref, DerefMut, Default, Clone, Debug)]
+#[derive(Component, Deref, DerefMut, Clone, Debug, Default)]
 #[require(AnimationIndices)]
 pub struct AnimationTimer(pub Timer);
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub struct AnimationData {
     pub row: usize,          // Row in the sprite sheet
     pub frame_count: usize,  // Number of frames in animation
     pub frame_duration: f32, // Duration of each frame
-}
-
-impl From<(usize, usize, f32)> for AnimationData {
-    fn from((row, frame_count, frame_duration): (usize, usize, f32)) -> Self {
-        Self {
-            row,
-            frame_count,
-            frame_duration,
-        }
-    }
 }

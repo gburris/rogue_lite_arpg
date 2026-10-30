@@ -7,11 +7,11 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (update_animation_state, cycle_character_animation)
             .chain()
-            .in_set(InGameSystems::Vfx),
+            .in_set(VfxSystems::Select),
     );
 }
 
-#[derive(Component, Default, PartialEq, Debug, Hash, Eq, Copy, Clone)]
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[require(FacingDirection, Kinematics)]
 pub(super) enum CharacterAnimationState {
     #[default]
@@ -118,10 +118,7 @@ fn update_animation_state(
             continue;
         }
 
-        facing_direction.set_if_neq(FacingDirection::from_vec2(
-            &facing_direction,
-            kinematics.direction,
-        ));
+        facing_direction.set_if_neq(facing_direction.turned_toward(kinematics.direction));
 
         // Attacking animation takes priority over walking / idle
         if attack_state.is_attacking {

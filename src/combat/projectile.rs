@@ -32,7 +32,10 @@ pub struct Projectile {
 impl Default for Projectile {
     fn default() -> Self {
         Self {
-            damage: Damage::Range((5.0, 10.0)),
+            damage: Damage::Range {
+                min: 5.0,
+                max: 10.0,
+            },
             speed: 600.0,
             angle_offset: 0.0,
             spawn_offset: 0.0,
@@ -105,7 +108,10 @@ pub fn icebolt(
 ) -> impl Bundle {
     (
         Projectile {
-            damage: Damage::Range((10.0, 20.0)),
+            damage: Damage::Range {
+                min: 10.0,
+                max: 20.0,
+            },
             speed: 350.0,
             spawn_offset: 26.0,
             angle_offset,
@@ -139,7 +145,7 @@ fn handle_collisions(
     hurt_box_query: Query<&HurtBox>,
     reflector_query: Query<&ProjectileReflection>,
 ) {
-    for (projectile, velocity, colliding_entities, projectile_entity) in projectile_query.iter() {
+    for (projectile, velocity, colliding_entities, projectile_entity) in &projectile_query {
         // ignore further collisions after ANY collision with the projectile
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // If the thing we collide with has a HurtBox, lets try to damage it!

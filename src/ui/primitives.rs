@@ -22,7 +22,7 @@ pub fn menu_header(title: &str) -> impl Bundle {
     )
 }
 
-pub fn gold_border() -> impl Bundle {
+pub(super) fn gold_border() -> impl Bundle {
     (
         Node {
             width: percent(100.0),

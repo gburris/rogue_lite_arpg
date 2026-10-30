@@ -2,7 +2,7 @@ use bevy::color::palettes::tailwind::YELLOW_300;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use super::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
+use super::status::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
 use crate::combat::damage::{AttemptDamage, Damage};
 use crate::prelude::*;
 
@@ -14,8 +14,8 @@ pub struct Burning {
 }
 
 impl Default for Burning {
-    fn default() -> Burning {
-        Burning {
+    fn default() -> Self {
+        Self {
             damage: 2.0,
             damage_frequency: Timer::from_seconds(0.7, TimerMode::Repeating),
         }
@@ -34,7 +34,7 @@ pub(super) fn while_burning(
     status_query: Query<(&Burning, &StatusOf), With<StatusApplied>>,
     mut health_query: Query<Entity, With<Health>>,
 ) {
-    for (burn, status_of) in status_query.iter() {
+    for (burn, status_of) in &status_query {
         if let Ok(entity) = health_query.get_mut(status_of.0)
             && burn.damage_frequency.just_finished()
         {
@@ -54,13 +54,13 @@ pub(super) fn apply_burning(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    status_query.iter().for_each(|(status, status_of)| {
+    for (status, status_of) in &status_query {
         commands.entity(status).insert(StatusApplied);
 
         commands
             .entity(status_of.0)
             .with_child(burn_vfx(&sprites, &sprite_layouts, status));
-    });
+    }
 }
 
 fn burn_vfx(

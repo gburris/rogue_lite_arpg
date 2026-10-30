@@ -1,11 +1,7 @@
 use bevy::prelude::*;
 
-use super::{
-    EquipmentInUse, Equippable, Equipped, Mainhand, MainhandOf, Offhand, OffhandOf,
-    StopUsingEquipment,
-};
-use crate::items::ItemOf;
-use crate::prelude::Character;
+use super::slot::{MainhandOf, OffhandOf};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_equip).add_observer(on_unequip);
@@ -43,7 +39,7 @@ fn on_equip(
         });
     }
 
-    if let Some(current) = equippable.slot.get_equipped(mainhand, offhand) {
+    if let Some(current) = equippable.slot.equipped(mainhand, offhand) {
         commands.trigger(Unequip { item: current });
     }
 

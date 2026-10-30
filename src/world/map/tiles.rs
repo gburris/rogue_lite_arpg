@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// A row-major grid of tile data with a bottom-left origin.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TileGrid<T = TileKind> {
     map_size: UVec2, // Size of the grid in tiles
     cells: Vec<T>,
@@ -153,7 +153,7 @@ impl<T: Copy> TileGrid<T> {
 }
 
 /// An axis-aligned rectangle of tiles with an exclusive upper bound.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TileRect {
     /// Bottom-left tile coordinate.
     pub min: IVec2,
@@ -179,7 +179,7 @@ impl TileRect {
             ((map_size.y - rect_size.y) / 2) as i32,
         );
 
-        Some(TileRect {
+        Some(Self {
             min,
             size: rect_size,
         })
@@ -187,7 +187,7 @@ impl TileRect {
 
     /// Returns the rectangle translated by an offset, or `None` on overflow.
     pub fn translated(&self, offset: IVec2) -> Option<Self> {
-        Some(TileRect {
+        Some(Self {
             min: self.min.checked_add(offset)?,
             size: self.size,
         })
@@ -221,7 +221,7 @@ impl TileRect {
 }
 
 /// A tile material or special map marker.
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TileKind {
     Wood,
     Ground,
@@ -272,12 +272,12 @@ impl TileKind {
 
     /// Returns whether this tile blocks ground placement.
     pub fn blocks_ground(self) -> bool {
-        matches!(self, TileKind::Wall | TileKind::Water | TileKind::DeadZone)
+        matches!(self, Self::Wall | Self::Water | Self::DeadZone)
     }
 
     /// Returns whether this tile should be rendered.
     pub fn should_render(self) -> bool {
-        !matches!(self, TileKind::DeadZone)
+        !matches!(self, Self::DeadZone)
     }
 
     /// Returns whether this tile can host a spawn.

@@ -20,11 +20,10 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 pub use self::stats::{DisplayableStatType, PlayerStats};
-use crate::character::{Character, Purse};
+use crate::character::Character;
 use crate::prelude::*;
-use crate::utility::despawn_all;
 
-/// How much more experience is required (as a multiplier) after each level up
+/// How much more experience is required (as a multiplier) after each level up.
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 pub(super) fn plugin(app: &mut App) {
@@ -51,7 +50,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Player despawn
-    app.add_observer(despawn_all::<RestartEvent, Player>);
+    app.add_observer(despawn_all::<Restart, Player>);
 }
 
 #[derive(Component)]
@@ -75,7 +74,7 @@ pub struct Player {
 
 impl Default for Player {
     fn default() -> Self {
-        Player {
+        Self {
             current_level: 1,
             current_experience: 0.0,
             next_level_experience_req: 20.0,
@@ -84,10 +83,10 @@ impl Default for Player {
 }
 
 impl Player {
-    /// Attempts to increase player level based on current experience and level requirement, and then
-    /// sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
+    /// Attempts to increase player level based on current experience and level requirement, and
+    /// then sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
     ///
-    /// returns whether the player leveled up
+    /// returns whether the player leveled up.
     pub fn attempt_level_up(&mut self) -> bool {
         if self.current_experience >= self.next_level_experience_req {
             self.current_experience -= self.next_level_experience_req;
@@ -99,11 +98,11 @@ impl Player {
         false
     }
 
-    pub fn get_progress_to_next_level(&self) -> f32 {
+    pub fn progress_to_next_level(&self) -> f32 {
         self.current_experience / self.next_level_experience_req
     }
 
-    pub fn get_level(&self) -> u32 {
+    pub fn level(&self) -> u32 {
         self.current_level
     }
 }

@@ -5,7 +5,7 @@ use bevy::ui_widgets::observe;
 
 use crate::prelude::*;
 
-/// Center of chest relative to its sprite's anchor point
+/// Center of chest relative to its sprite's anchor point.
 const CHEST_HEIGHT_OFFSET: f32 = -8.0;
 const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 /// Delay before coins pop: the open animation runs 9 frames at 0.1 s each,
@@ -13,11 +13,11 @@ const BOTTOM_OF_CHEST: f32 = CHEST_HEIGHT_OFFSET - 8.0;
 const COIN_DROP_DELAY_SECS: f32 = 0.9;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_observer(on_spawn_chests_event);
+    app.add_observer(on_spawn_chests);
 }
 
-#[derive(Debug, Event)]
-pub struct SpawnChestsEvent(pub Vec<Vec2>);
+#[derive(Event, Debug)]
+pub struct SpawnChests(pub Vec<Vec2>);
 
 #[derive(Component)]
 #[require(YSort::from_offset(BOTTOM_OF_CHEST), DespawnOnExit::<AppState>(AppState::Playing))]
@@ -36,14 +36,13 @@ struct Chest;
 )]
 struct ChestCollider;
 
-fn on_spawn_chests_event(
-    chest_spawn_trigger: On<SpawnChestsEvent>,
+fn on_spawn_chests(
+    chest_spawn_trigger: On<SpawnChests>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
-    let chest_spawn_positions = chest_spawn_trigger.0.clone();
-    for spawn_position in chest_spawn_positions {
+    for &spawn_position in &chest_spawn_trigger.0 {
         commands.spawn(chest(&sprites, &sprite_layouts, spawn_position));
     }
 }
@@ -102,7 +101,7 @@ fn on_interaction_open_chest(
         commands
             .delayed()
             .secs(COIN_DROP_DELAY_SECS)
-            .trigger(GoldDrop {
+            .trigger(DropGold {
                 amount: 999,
                 location: chest_transform.translation.truncate(),
             });

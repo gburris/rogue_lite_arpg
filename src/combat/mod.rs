@@ -7,7 +7,7 @@ mod status_effects;
 
 use bevy::prelude::*;
 
-use crate::prelude::InGameSystems;
+use crate::prelude::*;
 
 pub mod prelude {
     pub use super::damage::{
@@ -16,13 +16,11 @@ pub mod prelude {
     };
     pub use super::health::{AttemptHeal, Healed, Health};
     pub use super::invulnerable::IFrames;
-    pub(crate) use super::mana::regenerate_mana;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
         FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, Projectiles, fireball,
         fireball_with_speed, icebolt,
     };
-    pub(crate) use super::status_effects::prelude::sync_slow_from_statuses;
     pub use super::status_effects::prelude::{Burning, Effects, Frozen};
 }
 
@@ -31,15 +29,21 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        ((
-            invulnerable::handle_invulnerability,
-            mana::regenerate_mana,
-            damage::tick_and_remove_damage_flash,
-        )
-            .in_set(InGameSystems::Simulation),),
+        (
+            (mana::regenerate_mana, mana::drain_mana_for_items_in_use)
+                .chain()
+                .in_set(SimulationSystems::Upkeep),
+            // A flash ending resets the color to opaque white, so the flicker runs after it.
+            (
+                damage::tick_and_remove_damage_flash,
+                invulnerable::handle_invulnerability,
+            )
+                .chain()
+                .in_set(VfxSystems::Tint),
+        ),
     )
-    .add_observer(health::on_healing_event)
-    .add_observer(damage::on_damage_event)
+    .add_observer(health::on_attempt_heal)
+    .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
     .add_observer(damage::on_damage_dealt_knockback);
 }

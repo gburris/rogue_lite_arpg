@@ -1,31 +1,36 @@
 use bevy::prelude::*;
 
 use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
+use crate::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub(super) enum MeleeSwingType {
     Stab {
-        /// How far the weapon should move (stab) forward from its starting position
+        /// How far the weapon should move (stab) forward from its starting position.
         reach: f32,
     },
     Slash {
-        /// Distance we want slash to travel in radians
+        /// Distance we want slash to travel in radians.
         arc_distance: f32,
     },
 }
 
 impl MeleeSwingType {
-    pub const STAB: Self = MeleeSwingType::Stab { reach: 30.0 };
-    pub const SLASH: Self = MeleeSwingType::Slash {
+    pub const STAB: Self = Self::Stab { reach: 30.0 };
+    pub const SLASH: Self = Self::Slash {
         arc_distance: 180f32.to_radians(),
     };
 }
 
-/// Determines path of melee weapon based on swing type
-/// TODO: Consider using bevy curve functions to reduce math needed here
+/// Determines path of melee weapon based on swing type.
+// TODO: Consider using bevy curve functions to reduce math needed here
 pub(super) fn process_melee_attacks(
     time: Res<Time>,
-    mut attack_query: Query<(&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack)>,
+    // Melee weapons are never projectiles; the filter lets this run beside projectile systems.
+    mut attack_query: Query<
+        (&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack),
+        Without<Projectile>,
+    >,
 ) {
     for (melee_weapon, mut transform, mut active_attack) in &mut attack_query {
         active_attack.duration.tick(time.delta());

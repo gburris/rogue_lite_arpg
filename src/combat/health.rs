@@ -53,14 +53,11 @@ impl Health {
 
 impl Default for Health {
     fn default() -> Self {
-        Health {
-            hp: 100.0,
-            max_hp: 100.0,
-        }
+        Self::new(100.0)
     }
 }
 
-pub(super) fn on_healing_event(
+pub(super) fn on_attempt_heal(
     attempt_heal: On<AttemptHeal>,
     mut commands: Commands,
     mut healed_query: Query<&mut Health>,
@@ -71,9 +68,5 @@ pub(super) fn on_healing_event(
             entity: attempt_heal.entity,
             amount: actual_amount,
         });
-        info!(
-            "Entity {} healed by {:.2} points",
-            attempt_heal.entity, actual_amount,
-        );
     }
 }

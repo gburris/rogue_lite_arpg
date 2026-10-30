@@ -3,7 +3,7 @@ use bevy::sprite::Anchor;
 use bevy::ui_widgets::observe;
 use rand::RngExt;
 
-use super::equipment::{EquipmentSlot, Equippable};
+use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use super::{Item, ItemType};
 use crate::prelude::*;
 
@@ -16,11 +16,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
     (
         Name::new("Tome Of Healing"),
         Item::new(355, ItemType::Tome),
-        Equippable::new(
-            EquipmentSlot::Offhand,
-            2.0,
-            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
-        ),
+        Equippable::new(EquipmentSlot::Offhand, 2.0, &DEFAULT_EQUIPMENT_POSES),
         ManaCost(40.0),
         HealingTome {
             healing: (25.0, 50.0),

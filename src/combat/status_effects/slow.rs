@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
 use super::freeze::Frozen;
-use super::{StatusType, Statuses};
-use crate::prelude::Kinematics;
+use super::status::{StatusType, Statuses};
+use crate::prelude::*;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Copy)]
 #[require(StatusType::Slow)]
 pub struct Slowed {
     pub percent: f32,
@@ -12,13 +12,13 @@ pub struct Slowed {
 
 impl Default for Slowed {
     fn default() -> Self {
-        Slowed { percent: 0.5 }
+        Self { percent: 0.5 }
     }
 }
 
 /// Sets each character's slow to its strongest active status, with a freeze
 /// counting as a full stun, so one status expiring never clears another.
-pub(crate) fn sync_slow_from_statuses(
+pub(super) fn sync_slow_from_statuses(
     mut characters: Query<(&mut Kinematics, Option<&Statuses>)>,
     slows: Query<&Slowed>,
     freezes: Query<(), With<Frozen>>,

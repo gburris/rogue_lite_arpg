@@ -1,8 +1,11 @@
+use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
+use bevy::ui::Pressed;
+use bevy::ui_widgets::{Activate, Button, observe};
 
 use super::constants::TITLE_FONT_SIZE;
 use super::primitives::{gold_border, text};
-use crate::prelude::AppState;
+use crate::prelude::*;
 
 #[derive(Component)]
 pub struct StartScreen;
@@ -13,7 +16,7 @@ pub struct StartScreenButton;
 #[derive(Component)]
 pub struct AnimatedText;
 
-pub fn spawn(mut commands: Commands) {
+pub(super) fn spawn(mut commands: Commands) {
     commands.spawn((
         StartScreen,
         DespawnOnExit(AppState::StartScreen),
@@ -77,6 +80,8 @@ fn start_screen_body() -> impl Bundle {
         children![(
             StartScreenButton,
             Button,
+            Hovered::default(),
+            observe(on_start_button_activated),
             Node {
                 width: px(300.0),
                 height: px(80.0),
@@ -87,7 +92,7 @@ fn start_screen_body() -> impl Bundle {
                 ..default()
             },
             BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7)),
+            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7)),
             children![(
                 text("BEGIN", 48.0),
                 TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
@@ -118,36 +123,40 @@ fn start_screen_footer() -> impl Bundle {
     )
 }
 
-// Enhanced button system with more dramatic hover effects
-pub fn button_system(
-    mut interaction_query: Query<
-        (&Interaction, &mut BackgroundColor, &mut BorderColor),
-        (Changed<Interaction>, With<StartScreenButton>),
+fn on_start_button_activated(_: On<Activate>, mut next_app_state: ResMut<NextState<AppState>>) {
+    next_app_state.set(AppState::AssetLoading);
+}
+
+// Hover and press styling for the start button.
+pub(super) fn style_start_button(
+    mut button_query: Query<
+        (
+            Has<Pressed>,
+            &Hovered,
+            &mut BackgroundColor,
+            &mut BorderColor,
+        ),
+        With<StartScreenButton>,
     >,
-    mut game_state: ResMut<NextState<AppState>>,
 ) {
-    for (interaction, mut bg_color, mut border_color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *bg_color = Color::srgba(0.3, 0.2, 0.1, 0.9).into();
-                *border_color = Color::srgb(1.0, 0.8, 0.3).into();
-                game_state.set(AppState::AssetLoading);
-            }
-            Interaction::Hovered => {
-                *bg_color = Color::srgba(0.2, 0.15, 0.1, 0.8).into();
-                *border_color = Color::srgb(1.0, 0.8, 0.3).into();
-            }
-            Interaction::None => {
-                *bg_color = Color::srgba(0.1, 0.1, 0.1, 0.7).into();
-                *border_color = Color::srgb(0.8, 0.6, 0.2).into();
-            }
+    for (pressed, hovered, mut background_color, mut border_color) in &mut button_query {
+        if pressed {
+            *background_color = BackgroundColor::from(Color::srgba(0.3, 0.2, 0.1, 0.9));
+            *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
+        } else if hovered.get() {
+            *background_color = BackgroundColor::from(Color::srgba(0.2, 0.15, 0.1, 0.8));
+            *border_color = BorderColor::from(Color::srgb(1.0, 0.8, 0.3));
+        } else {
+            *background_color = BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7));
+            *border_color = BorderColor::from(Color::srgb(0.8, 0.6, 0.2));
         }
     }
 }
 
-pub fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
+pub(super) fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
     for mut color in &mut query {
-        let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6; // Increased frequency and amplitude
+        // Increased frequency and amplitude.
+        let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6;
         *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));
     }
 }

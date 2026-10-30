@@ -9,8 +9,8 @@ use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
     pub(crate) use super::MapRng;
-    pub use super::chest::SpawnChestsEvent;
-    pub use super::gold::GoldDrop;
+    pub use super::chest::SpawnChests;
+    pub use super::gold::DropGold;
     pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
     pub use super::portal::portal;
 }
@@ -29,14 +29,12 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Resource)]
 pub(crate) struct MapRng {
     rng: ChaCha8Rng,
-    root_seed: u64,
 }
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
         Self {
             rng: ChaCha8Rng::seed_from_u64(seed),
-            root_seed: seed,
         }
     }
 
@@ -53,10 +51,5 @@ impl MapRng {
     /// Deterministic coin flip on the map stream for spawn-time variants.
     pub(crate) fn flip(&mut self) -> bool {
         self.rng.random_bool(0.5)
-    }
-
-    /// The root seed without advancing map generation.
-    pub(crate) fn root_seed(&self) -> u64 {
-        self.root_seed
     }
 }

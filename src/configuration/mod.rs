@@ -16,7 +16,8 @@ pub mod prelude {
     pub use super::assets::{GameIcons, Shadows, SpriteAssets, SpriteSheetLayouts, TileAssets};
     pub use super::physics::GameCollisionLayer;
     pub use super::schedule::{
-        AppState, InGameSystems, MainSystems, Pause, PlayingState, RestartEvent, SimulationSystems,
+        AppState, InGameSystems, MainSystems, Pause, PlayingState, Restart, SimulationSystems,
+        VfxSystems,
     };
     pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, shadow};
 }
@@ -35,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
                 meta_check: AssetMetaCheck::Never,
                 ..default()
             })
-            .set(view::get_window_plugin())
+            .set(view::window_plugin())
             .set(ImagePlugin::default_nearest()),
     );
 

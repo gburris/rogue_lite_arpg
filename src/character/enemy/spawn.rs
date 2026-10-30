@@ -2,12 +2,21 @@ use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::{Enemy, EnemyKind, EnemySpawnData, SpawnEnemies, bat, defeat, mage, warrior};
+use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
-pub(super) fn spawn_enemies(
+#[derive(Event, Debug)]
+pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
+
+#[derive(Clone, Copy, Debug)]
+pub struct EnemySpawnData {
+    pub position: Vec2,
+    pub enemy_kind: EnemyKind,
+}
+
+pub(super) fn on_spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -16,7 +25,7 @@ pub(super) fn spawn_enemies(
     player: Single<Entity, With<Player>>,
     mut map_rng: ResMut<MapRng>,
 ) {
-    for spawn_data in spawn_enemies.0.clone() {
+    for &spawn_data in &spawn_enemies.0 {
         spawn_enemy(
             &mut commands,
             spawn_data,

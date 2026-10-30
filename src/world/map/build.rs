@@ -2,14 +2,14 @@ use std::collections::BTreeMap;
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use rand::{RngExt, SeedableRng};
+use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
 use super::placement::{PlaceContext, place};
 use super::recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name};
 use super::structures::{Structure, apply_structure, build_empty_square, build_pond, build_rubble};
-use crate::prelude::AppState;
+use crate::prelude::*;
 use crate::world::MapRng;
 
 pub(super) fn plugin(app: &mut App) {
@@ -24,10 +24,11 @@ pub(super) fn plugin(app: &mut App) {
             rebuild_current_map.run_if(resource_exists::<RebuildCurrentMap>),
         )
             .chain()
-            .run_if(in_state(AppState::Playing)),
+            .after(dev_map_keys)
+            .in_set(InGameSystems::PlayerInput),
     );
     #[cfg(feature = "dev")]
-    app.add_systems(Update, dev_map_keys.run_if(in_state(AppState::Playing)));
+    app.add_systems(Update, dev_map_keys.in_set(InGameSystems::PlayerInput));
 }
 
 /// System parameters for requesting the next map.
@@ -35,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct NextMap<'w, 's> {
     commands: Commands<'w, 's>,
     previous_maps: Query<'w, 's, Entity, With<MapBlueprint>>,
-    next_state: ResMut<'w, NextState<AppState>>,
+    next_app_state: ResMut<'w, NextState<AppState>>,
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
 }
@@ -53,13 +54,13 @@ impl NextMap<'_, '_> {
             self.commands.entity(previous_map).despawn();
         }
         self.commands.spawn(blueprint);
-        self.next_state.set(AppState::SpawnMap);
+        self.next_app_state.set(AppState::SpawnMap);
         Ok(())
     }
 }
 
 /// Selects which recipe and seed to use when generating a map.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MapRequest {
     Hub,
     /// A dungeon picked by weight; arenas are never picked.
@@ -198,8 +199,8 @@ pub(crate) fn build_from_recipe(
     structures: &BTreeMap<String, Structure>,
 ) -> std::result::Result<MapBlueprint, MapError> {
     let mut size_generator = Stage::Size.random_generator(seed);
-    let size_x = size_generator.random_range(recipe.size_x_range.0..=recipe.size_x_range.1);
-    let size_y = size_generator.random_range(recipe.size_y_range.0..=recipe.size_y_range.1);
+    let size_x = recipe.size_x_range.roll_size(&mut size_generator);
+    let size_y = recipe.size_y_range.roll_size(&mut size_generator);
     let mut blueprint = MapBlueprint::new(
         UVec2::new(size_x, size_y),
         recipe.floor,
@@ -233,7 +234,12 @@ pub(crate) fn build_from_recipe(
                     .keep_clear
                     .push((player_start, recipe.start_clearance));
             }
-            _ => {}
+            Stage::Size
+            | Stage::Structures
+            | Stage::Fixed
+            | Stage::Exits
+            | Stage::Chests
+            | Stage::Npcs => {}
         }
         place_spawns(recipe, seed, stage, &mut blueprint, &mut placement_context)?;
         placement_context.keep_clear.truncate(keep_clear_len);

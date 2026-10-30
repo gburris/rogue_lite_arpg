@@ -43,9 +43,21 @@ pub(super) fn plugin(app: &mut App) {
 
     app.configure_sets(
         Update,
-        (SimulationSystems::Logic, SimulationSystems::Derive)
+        (
+            SimulationSystems::Upkeep,
+            SimulationSystems::Perceive,
+            SimulationSystems::Act,
+            SimulationSystems::Derive,
+        )
             .chain()
             .in_set(InGameSystems::Simulation),
+    );
+
+    app.configure_sets(
+        Update,
+        (VfxSystems::Select, VfxSystems::Animate, VfxSystems::Tint)
+            .chain()
+            .in_set(InGameSystems::Vfx),
     );
 
     // Setup Pausing!
@@ -54,39 +66,62 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Pause(false)), resume_game);
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MainSystems {
     InGame,
     Menu,
     Shared,
 }
 
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+/// Ordered phases of a gameplay frame. Every gameplay system belongs to exactly one, or to a
+/// sub-phase nested inside one.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum InGameSystems {
-    DespawnEntities, // Despawn entities only! MUST happen before simulation of this new frame we are in!
+    /// Despawns only, before this frame's simulation sees the entities.
+    DespawnEntities,
     PlayerInput,
-    Simulation, // Most game logic (queries modifying components)
-    Collision,  // Finally detect collisions using avian based on velocity changed
-    Vfx,        // Any visual change that should not affect physics or collisions
-    HudOverlay, // Render UI overlay based on simulation
+    /// Game logic, split into [`SimulationSystems`].
+    Simulation,
+    /// Reacts to collisions Avian detected from the simulated velocities.
+    Collision,
+    /// Visual changes that never affect physics or collisions, split into [`VfxSystems`].
+    Vfx,
+    /// UI overlay drawn from the simulation results.
+    HudOverlay,
 }
 
 /// Ordered phases within [`InGameSystems::Simulation`].
 ///
 /// Producers that may start or stop equipment use (directly, or via queued
 /// `StartUsingEquipment` / `StopUsingEquipment` observers, which flush between
-/// systems) belong in `Logic`. State derived from the `EquipmentInUse` marker, such as
+/// systems) run before `Derive`. State derived from the `EquipmentInUse` marker, such as
 /// attack animation state, belongs in `Derive` and is guaranteed to see every
 /// same-frame use and cancellation.
-#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SimulationSystems {
-    /// Game logic that may queue equipment use or cancellation.
-    Logic,
+    /// Advances ongoing state: regeneration, cooldowns, status effects, in-progress swings and
+    /// shield drain.
+    Upkeep,
+    /// Updates who sees and aims at what.
+    Perceive,
+    /// Decides and acts on this frame's perception: AI decisions, motion and equipment use.
+    Act,
     /// State derived from simulation results.
     Derive,
 }
 
-#[derive(States, Clone, Eq, PartialEq, Default, Debug, Hash)]
+/// Ordered phases within [`InGameSystems::Vfx`].
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum VfxSystems {
+    /// Chooses which animation each sprite plays.
+    Select,
+    /// Advances animations and other motion-only effects.
+    Animate,
+    /// Overrides sprite colors, such as hit flashes, on top of the animated frame.
+    Tint,
+}
+
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum AppState {
     #[default]
     StartScreen,
@@ -98,10 +133,10 @@ pub enum AppState {
 }
 
 /// Whether or not the game is paused.
-#[derive(States, Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Pause(pub bool);
 
-#[derive(SubStates, Eq, Hash, Default, Clone, Copy, Debug, PartialEq)]
+#[derive(SubStates, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Playing)]
 pub enum PlayingState {
     #[default]
@@ -110,7 +145,7 @@ pub enum PlayingState {
 }
 
 #[derive(Event)]
-pub struct RestartEvent {
+pub struct Restart {
     pub player_level: u32,
 }
 

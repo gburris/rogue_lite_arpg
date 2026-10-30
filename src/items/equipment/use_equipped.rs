@@ -2,9 +2,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{Equippable, Equipped};
-use crate::items::ItemOf;
-use crate::prelude::{Character, EquipmentSlot, Mainhand, Mana, ManaCost, Offhand};
+use crate::prelude::*;
 
 // We can use the same event for swords, fists, potions thrown, bows, staffs etc
 // and add different observers to different respective entities
@@ -81,7 +79,10 @@ pub struct EquipmentUseSucceeded {
 }
 
 /// Advances every equipped item's cooldown timer.
-pub fn tick_equippable_cooldown(mut equippable_query: Query<&mut Equippable>, time: Res<Time>) {
+pub(super) fn tick_equippable_cooldown(
+    mut equippable_query: Query<&mut Equippable>,
+    time: Res<Time>,
+) {
     for mut equippable in &mut equippable_query {
         equippable.cooldown.tick(time.delta());
     }
@@ -160,7 +161,7 @@ impl EquipmentUsage<'_, '_> {
     /// Item currently equipped in the holder's slot, if any.
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
         let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
-        slot.get_equipped(mainhand, offhand)
+        slot.equipped(mainhand, offhand)
     }
 
     /// Attempts to use the holder's slot, queuing `StartUsingEquipment` (targeted at
@@ -202,7 +203,7 @@ impl EquipmentUsage<'_, '_> {
             .get_mut(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
         let item = slot
-            .get_equipped(mainhand, offhand)
+            .equipped(mainhand, offhand)
             .ok_or(EquipmentUseFailure::EmptySlot)?;
         let mut usable = self
             .equipment
@@ -223,7 +224,8 @@ impl EquipmentUsage<'_, '_> {
         }
     }
 
-    /// Whether the item in the slot currently carries `EquipmentInUse` (swinging, casting, blocking).
+    /// Whether the item in the slot currently carries `EquipmentInUse` (swinging, casting,
+    /// blocking).
     pub fn is_using(&self, holder: Entity, slot: EquipmentSlot) -> bool {
         self.item_in_slot(holder, slot)
             .is_some_and(|item| self.in_use.contains(item))
@@ -260,7 +262,7 @@ pub struct EquipmentRead<'w, 's> {
 impl EquipmentRead<'_, '_> {
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
         let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
-        slot.get_equipped(mainhand, offhand)
+        slot.equipped(mainhand, offhand)
     }
 
     pub fn equippable_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<&Equippable> {
@@ -278,7 +280,7 @@ impl EquipmentRead<'_, '_> {
             .get(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
         let item = slot
-            .get_equipped(mainhand, offhand)
+            .equipped(mainhand, offhand)
             .ok_or(EquipmentUseFailure::EmptySlot)?;
         let usable = self
             .equipment

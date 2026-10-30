@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::{GameCollisionLayer, PlayerInteractionRadius};
+use crate::prelude::*;
 
 const MAGNETIC_FORCE: f32 = 2_000_000.0;
 
@@ -24,7 +24,7 @@ pub(super) fn update_magnet_locations(
 ) {
     let (player_entity, player_transform) = player_query.into_inner();
 
-    for (child_of, magnet_transform, colliding_entities) in magnet_query.iter() {
+    for (child_of, magnet_transform, colliding_entities) in &magnet_query {
         if colliding_entities.contains(&player_entity) {
             let direction = (player_transform.translation().truncate()
                 - magnet_transform.translation().truncate())
@@ -37,7 +37,6 @@ pub(super) fn update_magnet_locations(
                 / 32.0;
 
             // https://en.wikipedia.org/wiki/Force_between_magnets#Magnetic_dipole_moment
-            // https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTxJQAdhCorNz-fMDq7qdEQhwGPm5YxFYCTQA&s
             // Force gets stronger as magnet gets closer to ensure it closes in on target
             let magnetic_force = MAGNETIC_FORCE / distance.powi(3);
 
@@ -46,7 +45,8 @@ pub(super) fn update_magnet_locations(
                 magnetic_force, distance
             );
 
-            // Apply a new force each tick of fixed update, erasing previous force (persistence = false)
+            // Apply a new force each tick of fixed update, erasing previous force (persistence =
+            // false)
             forces
                 .get_mut(child_of.parent())
                 .expect("Magnet parent missing or has no forces")

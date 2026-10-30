@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 #[cfg(not(target_arch = "wasm32"))]
-use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
+use bevy::dev_tools::fps_overlay::{FpsOverlayPlugin, FpsOverlaySystems};
 use bevy::dev_tools::states::log_transitions;
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::log::{Level, LogPlugin};
@@ -11,10 +11,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 use super::view;
-use crate::prelude::{
-    AppState, AttackState, Brain, Dash, Enemy, InGameSystems, Menu, Motion, ScoreTrace, TargetInfo,
-    Targeting, Vision, Wander, ZLayer,
-};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(
@@ -25,7 +22,7 @@ pub(super) fn plugin(app: &mut App) {
                 filter: "wgpu=error,baba_yaga=debug".to_string(),
                 ..default()
             })
-            .set(view::get_window_plugin())
+            .set(view::window_plugin())
             .set(ImagePlugin::default_nearest()),
     )
     .add_plugins(PhysicsDebugPlugin)
@@ -68,7 +65,12 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, log_transitions::<Menu>);
 
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins(FpsOverlayPlugin::default());
+    app.add_plugins(FpsOverlayPlugin::default()).configure_sets(
+        Update,
+        // The overlay only touches its own text and nodes.
+        (FpsOverlaySystems::Customize, FpsOverlaySystems::UpdateText)
+            .ambiguous_with(InGameSystems::HudOverlay),
+    );
 }
 
 #[derive(Resource)]

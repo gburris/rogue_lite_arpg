@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use crate::character::brain::perception::Targeting;
-use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile};
+use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile, Targeting};
 use crate::character::vision::TargetInfo;
 use crate::prelude::*;
 

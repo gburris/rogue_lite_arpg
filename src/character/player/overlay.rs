@@ -2,7 +2,6 @@ use bevy::ecs::spawn::SpawnIter;
 use bevy::prelude::*;
 
 use crate::prelude::*;
-use crate::utility::despawn_all;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -11,13 +10,16 @@ pub(super) fn plugin(app: &mut App) {
             update_exp_bar,
             update_action_bar,
             update_cooldowns,
-            (update_mana_bar, update_lost_mana_bar).chain(),
-            (update_health_bar, update_lost_health_bar).chain(),
+            update_mana_bar,
+            update_lost_mana_bar,
+            update_health_bar,
+            update_lost_health_bar,
         )
+            .chain()
             .in_set(InGameSystems::HudOverlay),
     );
 
-    app.add_observer(despawn_all::<RestartEvent, PlayerOverlay>);
+    app.add_observer(despawn_all::<Restart, PlayerOverlay>);
 }
 
 #[derive(Component)]
@@ -156,7 +158,7 @@ fn update_health_bar(
         health_bar.width = player_health.fraction().map_or(px(0.0), |fraction| {
             px(fraction * player_health.max_hp * ATTRIBUTE_TO_PIXEL_SCALE)
         });
-        health_lost_node.width = get_amount_lost_in_pixels(
+        health_lost_node.width = amount_lost_in_pixels(
             health_lost.previous_hp,
             player_health.hp,
             health_lost_node.width,
@@ -176,7 +178,7 @@ fn update_mana_bar(
     mana_bar.width = player_mana.fraction().map_or(px(0.0), |fraction| {
         px(fraction * player_mana.max_mana * ATTRIBUTE_TO_PIXEL_SCALE)
     });
-    mana_lost_node.width = get_amount_lost_in_pixels(
+    mana_lost_node.width = amount_lost_in_pixels(
         mana_lost.previous_mana,
         player_mana.current_mana,
         mana_lost_node.width,
@@ -199,7 +201,7 @@ fn update_lost_health_bar(
     time: Res<Time>,
 ) {
     let Val::Px(current_pixel) = health_lost_node.width else {
-        panic!("Non-pixel value for mana bar");
+        panic!("Non-pixel value for health bar");
     };
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
@@ -207,7 +209,7 @@ fn update_lost_health_bar(
 }
 
 // Gets length in px of yellow bar representing amount of mana or health lost
-fn get_amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_width: Val) -> Val {
+fn amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_width: Val) -> Val {
     let pixel_change = (previous_amount - current_amount) * ATTRIBUTE_TO_PIXEL_SCALE;
 
     let Val::Px(current_pixels) = pixel_width else {
@@ -268,7 +270,7 @@ fn update_exp_bar(
     mut exp_bar: Single<&mut Node, With<ExpBar>>,
 ) {
     if let Some(player) = player {
-        exp_bar.width = px(400.0 * player.get_progress_to_next_level());
+        exp_bar.width = px(400.0 * player.progress_to_next_level());
     }
 }
 
@@ -343,15 +345,15 @@ fn update_action_bar(
     if let Some(player_inventory_result) = equipment_query {
         let (mainhand, offhand) = player_inventory_result.into_inner();
 
-        for (action_box, children) in action_box_query.iter() {
-            let equipment: Option<Entity> = action_box.slot.get_equipped(mainhand, offhand);
+        for (action_box, children) in &action_box_query {
+            let equipment: Option<Entity> = action_box.slot.equipped(mainhand, offhand);
 
             if let Some(&image_entity) = children.first()
                 && let Ok(mut image_node) = image_query.get_mut(image_entity)
                 && let Some(equipped_entity) = equipment
                 && let Ok(item_sprite) = item_query.get(equipped_entity)
             {
-                let action_bar_sprite = get_action_bar_sprite(item_sprite);
+                let action_bar_sprite = action_bar_sprite(item_sprite);
 
                 image_node.image = action_bar_sprite.image.clone();
 
@@ -429,7 +431,7 @@ fn update_cooldowns(mut cooldown_query: Query<(&mut Node, &Lifespan), With<Coold
     }
 }
 
-fn get_action_bar_sprite(sprite: &Sprite) -> Sprite {
+fn action_bar_sprite(sprite: &Sprite) -> Sprite {
     match &sprite.texture_atlas {
         Some(atlas) => Sprite {
             image: sprite.image.clone(),

@@ -2,21 +2,22 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-use crate::prelude::GameCollisionLayer;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_player_interaction_input)
         .add_observer(on_interaction_zone_added);
 }
 
-/// Marker component for the sensor added to the player, which must collide with an `InteractionZone` for
-/// a player interaction to be possible
+/// Marker component for the sensor added to the player, which must collide with an
+/// `InteractionZone` for a player interaction to be possible.
 #[derive(Component)]
 #[require(Collider::circle(16.0), Sensor, CollidingEntities)]
 pub struct PlayerInteractionRadius;
 
-/// Component to be spawned as a child of any entity. When the player walks within "radius" and clicks "interact" (default: Spacebar)
-/// this component will trigger the specified `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup)
+/// Component to be spawned as a child of any entity. When the player walks within "radius" and
+/// clicks "interact" (default: Spacebar) this component will trigger the specified
+/// `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup).
 #[derive(Component)]
 #[require(
     Sensor,
@@ -53,7 +54,7 @@ fn on_player_interaction_input(
     player_query: Single<(&Transform, &CollidingEntities), With<PlayerInteractionRadius>>,
 ) {
     let (player_transform, interact_collisions) = player_query.into_inner();
-    let player_pos = player_transform.translation.truncate();
+    let player_position = player_transform.translation.truncate();
 
     // Go through all things colliding with player interaction radius
     let closest_interaction: Option<(Entity, Entity, f32)> = interact_collisions
@@ -64,7 +65,7 @@ fn on_player_interaction_input(
                 .get(interact_entity)
                 .ok()
                 .map(|(child_of, transform)| {
-                    let distance = (player_pos - transform.translation.truncate()).length();
+                    let distance = (player_position - transform.translation.truncate()).length();
                     (interact_entity, child_of.parent(), distance)
                 })
         })
@@ -79,7 +80,8 @@ fn on_player_interaction_input(
     }
 }
 
-/// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant chosen
+/// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant
+/// chosen.
 fn on_interaction_zone_added(
     interaction_zone_added: On<Add, InteractionZone>,
     mut commands: Commands,

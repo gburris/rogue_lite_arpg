@@ -4,7 +4,7 @@ use std::fmt;
 use bevy::prelude::*;
 
 use super::tiles::{TileGrid, TileKind};
-use crate::prelude::{EnemyKind, NpcKind};
+use crate::prelude::*;
 
 /// Generated map tiles and placements, plus the replay key (`recipe`, `seed`) that built them.
 #[derive(Component, Debug, PartialEq, Eq)]
@@ -109,7 +109,7 @@ impl MapBlueprint {
 }
 
 /// Describes why a generated map failed validation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MapValidationError {
     MissingPlayerStart,
     MultiplePlayerStarts(usize),
@@ -159,7 +159,8 @@ impl fmt::Display for MapValidationError {
                 tile_kind,
             } => write!(
                 f,
-                "placement {placement_index} at {tile} sits on {tile_kind:?}, which cannot host a spawn"
+                "placement {placement_index} at {tile} sits on {tile_kind:?}, which cannot host a \
+                 spawn"
             ),
             Self::OverlappingPlacements {
                 tile,
@@ -204,7 +205,7 @@ impl From<&str> for MapError {
 }
 
 /// A placed map entity and its tile coordinate.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Placement {
     pub tile: IVec2,
     /// Entity kind represented by this placement.
@@ -212,7 +213,7 @@ pub struct Placement {
 }
 
 /// Kind of entity placed in a map.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlacementKind {
     PlayerStart,
     Enemy(EnemyKind),

@@ -1,7 +1,7 @@
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use crate::prelude::{EquipmentInUse, EquipmentSlot, Mainhand, Offhand};
+use crate::prelude::*;
 
 /// A character's intended movement: a heading and a multiple of `max_speed`,
 /// reduced by any slow, with no acceleration. Player input and AI steering
@@ -17,7 +17,7 @@ pub struct Kinematics {
 
 impl Kinematics {
     pub fn new(max_speed: f32) -> Self {
-        Kinematics {
+        Self {
             max_speed,
             speed_multiplier: 0.0,
             direction: Vec2::ZERO,
@@ -27,7 +27,10 @@ impl Kinematics {
 
     /// Sets the fraction of speed removed, where `1.0` is a stun.
     pub fn slow(&mut self, percentage: f32) {
-        assert!((0.0..=1.0).contains(&percentage));
+        assert!(
+            (0.0..=1.0).contains(&percentage),
+            "slow percentage is a fraction of speed removed, got {percentage}"
+        );
 
         self.slowed_percentage = percentage;
     }
@@ -81,7 +84,7 @@ impl Kinematics {
 
 impl Default for Kinematics {
     fn default() -> Self {
-        Kinematics::new(10.0)
+        Self::new(10.0)
     }
 }
 
@@ -92,8 +95,8 @@ pub(super) fn kinematics_to_velocity(mut query: Query<(&Kinematics, &mut LinearV
     }
 }
 
-/// The direction a character faces and aims are not tied to each other in this game
-#[derive(Component, Default, Hash, PartialEq, Eq, Clone, Copy, Debug)]
+/// The direction a character faces and aims are not tied to each other in this game.
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum FacingDirection {
     Up,
     #[default]
@@ -103,29 +106,29 @@ pub enum FacingDirection {
 }
 
 impl FacingDirection {
-    pub fn from_vec2(&self, vec: Vec2) -> Self {
+    pub fn turned_toward(self, vec: Vec2) -> Self {
         match vec.normalize() {
             v if v.y > 0.5 => Self::Up,
             v if v.y < -0.5 => Self::Down,
             v if v.x > 0.5 => Self::Right,
             v if v.x < -0.5 => Self::Left,
-            _ => *self,
+            _ => self,
         }
     }
 
-    pub fn to_vec2(&self) -> Vec2 {
+    pub fn to_vec2(self) -> Vec2 {
         match self {
-            FacingDirection::Up => Vec2::new(0.0, 1.0),
-            FacingDirection::Down => Vec2::new(0.0, -1.0),
-            FacingDirection::Left => Vec2::new(-1.0, 0.0),
-            FacingDirection::Right => Vec2::new(1.0, 0.0),
+            Self::Up => Vec2::new(0.0, 1.0),
+            Self::Down => Vec2::new(0.0, -1.0),
+            Self::Left => Vec2::new(-1.0, 0.0),
+            Self::Right => Vec2::new(1.0, 0.0),
         }
     }
 }
 
 /// Animation/physics flag mirroring whether an instant-use item is active.
 /// Written only by `sync_attack_state_from_equipment`.
-#[derive(Component, Clone, Default, PartialEq)]
+#[derive(Component, Clone, Copy, Default, PartialEq)]
 pub struct AttackState {
     pub is_attacking: bool,
 }
@@ -140,7 +143,7 @@ pub(super) fn sync_attack_state_from_equipment(
         let attacking = EquipmentSlot::ALL
             .into_iter()
             .filter(|equipment| equipment.is_instant_use())
-            .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
+            .filter_map(|equipment| equipment.equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
         state.set_if_neq(AttackState {
             is_attacking: attacking,

@@ -1,20 +1,18 @@
 //! ECS glue for the pure utility brains. Data flows one way, one writer each:
 //! 1. [`perception`] builds a [`DecisionContext`] from the world.
-//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior
-//!    holds each slot on the [`Brain`].
-//! 3. [`motion`] and [`action`] carry out the held motion and action and
-//!    report [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
+//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior holds each slot on the
+//!    [`Brain`].
+//! 3. [`motion`] and [`action`] carry out the held motion and action and report
+//!    [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
 //!
 //! To add a continuous motion:
-//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A
-//!    stateless one gets an arm in `direct::steer_direct_motion`; one with
-//!    state gets a file with its component and an `apply_` system registered
-//!    in `motion::plugin`, and is skipped in `apply_direct_steering`. A
+//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A stateless one gets an arm
+//!    in `direct::steer_direct_motion`; one with state gets a file with its component and an
+//!    `apply_` system registered in `motion::plugin`, and is skipped in `apply_direct_steering`. A
 //!    component the motion needs implements `Capability`, is recorded in
 //!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
-//! 2. [`DecisionContext`] fields built in [`perception`], plus
-//!    [`ConsiderationInput`] variants read in
-//!    `read_consideration_input`.
+//! 2. [`DecisionContext`] fields built in [`perception`], plus [`ConsiderationInput`] variants read
+//!    in `read_consideration_input`.
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!
 //! A finite [`Motion`] needs a variant, a `Capability` component whose
@@ -31,8 +29,8 @@ mod decide;
 mod engine;
 mod motion;
 mod perception;
-mod rng;
 mod running_state;
+mod schedule;
 
 use bevy::prelude::*;
 
@@ -44,6 +42,7 @@ use self::capability::{
     MotionActionTable, capability_keys,
 };
 pub use self::decide::ScoreTrace;
+use self::decide::schedule_first_decision;
 use self::engine::validate_brain;
 pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
@@ -52,12 +51,10 @@ pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 pub(crate) use self::perception::{ConsiderationInput, Targeting};
 use self::perception::{DecisionContext, MemoryView};
 pub(super) use self::perception::{VisionCone, Watching};
-pub use self::rng::{BrainRng, BrainRngRootSeed};
-use self::rng::{DECISION_PERIOD, seed_brain_rng_and_schedule_first_decision};
 use self::running_state::RunningBehavior;
-use crate::character::AiSet;
+use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
-use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
+use crate::prelude::*;
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
@@ -65,8 +62,8 @@ use crate::prelude::{EnemyKind, regenerate_mana, tick_equippable_cooldown};
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(BrainRng, StartedEquipmentUses, Steering)]
-#[component(on_add = seed_brain_rng_and_schedule_first_decision)]
+#[require(StartedEquipmentUses, Steering)]
+#[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
@@ -277,16 +274,31 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
+    app.configure_sets(
+        Update,
+        (
+            (
+                BrainSystems::Perception,
+                BrainSystems::Targeting,
+                BrainSystems::Aim,
+            )
+                .chain()
+                .in_set(SimulationSystems::Perceive),
+            (
+                BrainSystems::Decision,
+                BrainSystems::Execute,
+                BrainSystems::Motion,
+            )
+                .chain()
+                .in_set(SimulationSystems::Act),
+        ),
+    );
+
     app.add_plugins((perception::plugin, action::plugin, motion::plugin))
-        .init_resource::<BrainRngRootSeed>()
-        .add_observer(decide::release_finished_motion)
-        .add_observer(decide::finish_action)
-        .add_systems(Startup, rng::seed_brain_rng_root_from_map)
+        .add_observer(decide::on_release_finished_motion)
+        .add_observer(decide::on_finish_action)
         .add_systems(
             Update,
-            decide::decide_behavior
-                .after(regenerate_mana)
-                .after(tick_equippable_cooldown)
-                .in_set(AiSet::Decision),
+            decide::decide_behavior.in_set(BrainSystems::Decision),
         );
 }

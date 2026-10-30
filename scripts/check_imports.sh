@@ -15,7 +15,7 @@ if [ -n "$hits" ]; then
   status=1
 fi
 
-for feature in animation character combat configuration items menu world; do
+for feature in animation character combat configuration items lifespan menu ui world; do
   hits=$(grep -rnE "crate::${feature}::" src --include='*.rs' \
     --exclude-dir="$feature" --exclude="${feature}.rs" --exclude=main.rs \
     | grep -vE '^[^:]+:[0-9]+:\s*//')

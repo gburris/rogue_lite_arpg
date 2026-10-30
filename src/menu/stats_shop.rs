@@ -1,14 +1,12 @@
 use bevy::prelude::*;
 
-use crate::prelude::{DisplayableStatType, GameProgress, MainSystems, Menu, PlayerStats};
-use crate::ui::constants::DARK_GRAY_ALPHA_COLOR;
-use crate::ui::primitives::{menu_header, text};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app
         // Pause Related Systems
-        .add_observer(handle_player_stat_change)
-        .add_observer(handle_stats_shop_ui_update)
+        .add_observer(on_change_stat)
+        .add_observer(on_update_stats_ui)
         .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu)
         .add_systems(
             Update,
@@ -21,20 +19,27 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 pub struct StatShopMenu;
 
+/// Which way a stat shop button moves its stat.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StatChange {
+    Increase,
+    Decrease,
+}
+
 #[derive(Component)]
 pub struct StatShopButton {
     pub stat_type: DisplayableStatType,
-    pub is_increase: bool,
+    pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct StatChangeEvent {
+pub struct ChangeStat {
     pub stat_type: DisplayableStatType,
-    pub is_increase: bool,
+    pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct StatsUIUpdateEvent;
+pub struct UpdateStatsUi;
 
 pub fn spawn_stats_shop_menu(
     mut commands: Commands,
@@ -99,7 +104,7 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
         },
         children![
             // Decrease button
-            stat_shop_button(stat_type, false),
+            stat_shop_button(stat_type, StatChange::Decrease),
             (
                 Node {
                     flex_direction: FlexDirection::Column,
@@ -107,28 +112,22 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
                     ..default()
                 },
                 children![
-                    text(
-                        format!("{:?}: {}", stat_type, stat_type.get_value(stats)),
-                        24.0
-                    ),
+                    text(format!("{stat_type:?}: {}", stat_type.value(stats)), 24.0),
                     (
-                        text(stat_type.get_description(), 16.0),
+                        text(stat_type.description(), 16.0),
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
                     )
                 ]
             ),
             // Increase button
-            stat_shop_button(stat_type, true)
+            stat_shop_button(stat_type, StatChange::Increase)
         ],
     )
 }
 
-fn stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl Bundle {
+fn stat_shop_button(stat_type: DisplayableStatType, change: StatChange) -> impl Bundle {
     (
-        StatShopButton {
-            stat_type,
-            is_increase,
-        },
+        StatShopButton { stat_type, change },
         Button,
         Node {
             width: px(30.0),
@@ -138,7 +137,13 @@ fn stat_shop_button(stat_type: DisplayableStatType, is_increase: bool) -> impl B
             ..default()
         },
         BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-        children![text(if is_increase { "+" } else { "-" }, 24.0)],
+        children![text(
+            match change {
+                StatChange::Increase => "+",
+                StatChange::Decrease => "-",
+            },
+            24.0
+        )],
     )
 }
 
@@ -153,40 +158,42 @@ pub fn handle_stat_button_interaction(
     for (interaction, button, mut background_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                let can_increase = button.is_increase && game_progress.progress_points > 0;
-                let can_decrease = !button.is_increase && button.stat_type.get_value(stats) > 1;
+                let can_increase =
+                    button.change == StatChange::Increase && game_progress.progress_points > 0;
+                let can_decrease =
+                    button.change == StatChange::Decrease && button.stat_type.value(stats) > 1;
 
                 if can_increase || can_decrease {
-                    commands.trigger(StatChangeEvent {
+                    commands.trigger(ChangeStat {
                         stat_type: button.stat_type,
-                        is_increase: button.is_increase,
+                        change: button.change,
                     });
                 }
             }
             Interaction::Hovered => {
-                if button.is_increase && game_progress.progress_points > 0 {
-                    *background_color = BackgroundColor(Color::srgb(1.0, 1.0, 0.0));
+                if button.change == StatChange::Increase && game_progress.progress_points > 0 {
+                    *background_color = BackgroundColor::from(Color::srgb(1.0, 1.0, 0.0));
                 } else {
-                    *background_color = BackgroundColor(Color::srgb(0.5, 0.5, 0.5));
+                    *background_color = BackgroundColor::from(Color::srgb(0.5, 0.5, 0.5));
                 }
             }
             Interaction::None => {
-                *background_color = BackgroundColor(Color::srgba(0.2, 0.2, 0.2, 0.5));
+                *background_color = BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5));
             }
         }
     }
 }
 
-pub fn handle_player_stat_change(
-    trigger: On<StatChangeEvent>,
+pub fn on_change_stat(
+    trigger: On<ChangeStat>,
     mut player_stats: Query<&mut PlayerStats>,
     mut game_progress: ResMut<GameProgress>,
     mut commands: Commands,
 ) {
     let mut stats = player_stats.single_mut().expect("Player stats not found");
 
-    match (trigger.stat_type, trigger.is_increase) {
-        (stat_type, true) if game_progress.progress_points > 0 => {
+    match (trigger.stat_type, trigger.change) {
+        (stat_type, StatChange::Increase) if game_progress.progress_points > 0 => {
             match stat_type {
                 DisplayableStatType::Agility => stats.agility += 1,
                 DisplayableStatType::Strength => stats.strength += 1,
@@ -195,10 +202,10 @@ pub fn handle_player_stat_change(
                 DisplayableStatType::Luck => stats.luck += 1,
             }
             game_progress.progress_points -= 1;
-            commands.trigger(StatsUIUpdateEvent);
+            commands.trigger(UpdateStatsUi);
         }
-        (stat_type, false) => {
-            let current_value = stat_type.get_value(&stats);
+        (stat_type, StatChange::Decrease) => {
+            let current_value = stat_type.value(&stats);
             if current_value > 1 {
                 match stat_type {
                     DisplayableStatType::Agility => stats.agility -= 1,
@@ -208,26 +215,26 @@ pub fn handle_player_stat_change(
                     DisplayableStatType::Luck => stats.luck -= 1,
                 }
                 game_progress.progress_points += 1;
-                commands.trigger(StatsUIUpdateEvent);
+                commands.trigger(UpdateStatsUi);
             }
         }
-        _ => {}
+        (_, StatChange::Increase) => {}
     }
 }
 
-pub fn handle_stats_shop_ui_update(
-    _: On<StatsUIUpdateEvent>,
+pub fn on_update_stats_ui(
+    _: On<UpdateStatsUi>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
     player_stats_query: Single<&PlayerStats>,
     mut game_progress: ResMut<GameProgress>,
 ) {
-    //Set Game Progress to current player stats
-    let player_stats = player_stats_query.clone();
-    game_progress.base_stats = player_stats.clone();
+    // Set Game Progress to current player stats
+    let player_stats = **player_stats_query;
+    game_progress.base_stats = player_stats;
 
     // Despawn existing menu
-    for entity in stats_menu_query.iter() {
+    for entity in &stats_menu_query {
         commands.entity(entity).despawn();
     }
 

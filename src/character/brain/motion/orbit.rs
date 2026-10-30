@@ -34,10 +34,10 @@ impl Orbit {
         }
     }
 
-    pub fn with_max_distance_offset(max_distance_offset: f32) -> Self {
+    pub fn with_max_distance_offset(self, max_distance_offset: f32) -> Self {
         Self {
             max_distance_offset,
-            ..Self::new()
+            ..self
         }
     }
 

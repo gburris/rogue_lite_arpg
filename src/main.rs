@@ -43,5 +43,5 @@ fn plugin(app: &mut App) {
     app.add_plugins((world::plugin, items::plugin, character::CharacterPlugin));
 
     // UI
-    app.add_plugins((ui::plugin::UIPlugin, menu::plugin));
+    app.add_plugins((ui::plugin::UiPlugin, menu::plugin));
 }

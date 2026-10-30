@@ -31,7 +31,7 @@ pub enum DisplayableStatType {
 }
 
 impl DisplayableStatType {
-    pub fn get_description(&self) -> &'static str {
+    pub fn description(self) -> &'static str {
         match self {
             DisplayableStatType::Agility => "Movement speed, roll range",
             DisplayableStatType::Strength => "Melee swing damage",
@@ -41,7 +41,7 @@ impl DisplayableStatType {
         }
     }
 
-    pub fn get_value(&self, stats: &PlayerStats) -> u32 {
+    pub fn value(self, stats: &PlayerStats) -> u32 {
         match self {
             DisplayableStatType::Agility => stats.agility,
             DisplayableStatType::Strength => stats.strength,

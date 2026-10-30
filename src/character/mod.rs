@@ -10,7 +10,7 @@ pub mod prelude {
     pub(crate) use super::brain::Targeting;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawnData, Experience, SpawnEnemies};
-    pub use super::npc::{NPC, NpcKind, NpcSpawnData, SpawnNpcs};
+    pub use super::npc::{Npc, NpcKind, NpcSpawnData, SpawnNpcs};
     pub use super::player::prelude::{
         DisplayableStatType, GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
         PlayerInteractionRadius, PlayerStats,

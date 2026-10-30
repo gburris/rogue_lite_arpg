@@ -30,7 +30,7 @@ pub struct Dash {
 }
 
 impl Dash {
-    fn with_aim_rule(
+    fn new(
         run_distance: Interval,
         speed_multiplier: f32,
         capability_profile: CapabilityProfile,
@@ -49,7 +49,7 @@ impl Dash {
     }
 
     pub fn kite(chance: f32, run_distance: Interval) -> Self {
-        Self::with_aim_rule(
+        Self::new(
             run_distance,
             1.0,
             CapabilityProfile {
@@ -64,7 +64,7 @@ impl Dash {
     }
 
     pub fn hop(run_distance: Interval, speed_multiplier: f32, close_range: f32) -> Self {
-        Self::with_aim_rule(
+        Self::new(
             run_distance,
             speed_multiplier,
             CapabilityProfile::default(),
@@ -79,7 +79,7 @@ impl Dash {
         danger_range: f32,
         cooldown: f32,
     ) -> Self {
-        Self::with_aim_rule(
+        Self::new(
             run_distance,
             speed_multiplier,
             CapabilityProfile {

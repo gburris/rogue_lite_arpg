@@ -97,7 +97,7 @@ impl ZLayer {
     }
 }
 
-pub(super) fn get_window_plugin() -> WindowPlugin {
+pub(super) fn window_plugin() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
             title: String::from("Baba Yaga"),

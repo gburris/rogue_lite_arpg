@@ -53,6 +53,6 @@ pub fn spawn(mut commands: Commands) {
 /// Passes players current level to the next instance of the game, despawns everything and starts again
 fn on_restart_clicked(_: On<Pointer<Click>>, mut commands: Commands, player: Single<&Player>) {
     commands.trigger(RestartEvent {
-        player_level: player.get_level(),
+        player_level: player.level(),
     });
 }

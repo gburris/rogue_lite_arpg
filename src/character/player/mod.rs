@@ -99,11 +99,11 @@ impl Player {
         false
     }
 
-    pub fn get_progress_to_next_level(&self) -> f32 {
+    pub fn progress_to_next_level(&self) -> f32 {
         self.current_experience / self.next_level_experience_req
     }
 
-    pub fn get_level(&self) -> u32 {
+    pub fn level(&self) -> u32 {
         self.current_level
     }
 }

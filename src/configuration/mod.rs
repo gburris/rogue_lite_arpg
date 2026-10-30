@@ -35,7 +35,7 @@ pub(super) fn plugin(app: &mut App) {
                 meta_check: AssetMetaCheck::Never,
                 ..default()
             })
-            .set(view::get_window_plugin())
+            .set(view::window_plugin())
             .set(ImagePlugin::default_nearest()),
     );
 

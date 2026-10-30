@@ -69,7 +69,7 @@ fn spawn_main_menu(
                     menu_button(MenuButton(Menu::Stats), "STATS"),
                 ]
             ),
-            main_menu_footer(player.get_level(), health, purse.amount, &game_progress),
+            main_menu_footer(player.level(), health, purse.amount, &game_progress),
         ],
     ));
 }

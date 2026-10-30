@@ -118,10 +118,7 @@ fn update_animation_state(
             continue;
         }
 
-        facing_direction.set_if_neq(FacingDirection::from_vec2(
-            &facing_direction,
-            kinematics.direction,
-        ));
+        facing_direction.set_if_neq(facing_direction.turned_toward(kinematics.direction));
 
         // Attacking animation takes priority over walking / idle
         if attack_state.is_attacking {

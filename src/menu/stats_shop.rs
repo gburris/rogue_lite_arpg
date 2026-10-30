@@ -34,7 +34,7 @@ pub struct StatChangeEvent {
 }
 
 #[derive(Event)]
-pub struct StatsUIUpdateEvent;
+pub struct StatsUiUpdateEvent;
 
 pub fn spawn_stats_shop_menu(
     mut commands: Commands,
@@ -107,12 +107,9 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
                     ..default()
                 },
                 children![
-                    text(
-                        format!("{:?}: {}", stat_type, stat_type.get_value(stats)),
-                        24.0
-                    ),
+                    text(format!("{:?}: {}", stat_type, stat_type.value(stats)), 24.0),
                     (
-                        text(stat_type.get_description(), 16.0),
+                        text(stat_type.description(), 16.0),
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
                     )
                 ]
@@ -154,7 +151,7 @@ pub fn handle_stat_button_interaction(
         match *interaction {
             Interaction::Pressed => {
                 let can_increase = button.is_increase && game_progress.progress_points > 0;
-                let can_decrease = !button.is_increase && button.stat_type.get_value(stats) > 1;
+                let can_decrease = !button.is_increase && button.stat_type.value(stats) > 1;
 
                 if can_increase || can_decrease {
                     commands.trigger(StatChangeEvent {
@@ -195,10 +192,10 @@ pub fn handle_player_stat_change(
                 DisplayableStatType::Luck => stats.luck += 1,
             }
             game_progress.progress_points -= 1;
-            commands.trigger(StatsUIUpdateEvent);
+            commands.trigger(StatsUiUpdateEvent);
         }
         (stat_type, false) => {
-            let current_value = stat_type.get_value(&stats);
+            let current_value = stat_type.value(&stats);
             if current_value > 1 {
                 match stat_type {
                     DisplayableStatType::Agility => stats.agility -= 1,
@@ -208,7 +205,7 @@ pub fn handle_player_stat_change(
                     DisplayableStatType::Luck => stats.luck -= 1,
                 }
                 game_progress.progress_points += 1;
-                commands.trigger(StatsUIUpdateEvent);
+                commands.trigger(StatsUiUpdateEvent);
             }
         }
         _ => {}
@@ -216,7 +213,7 @@ pub fn handle_player_stat_change(
 }
 
 pub fn handle_stats_shop_ui_update(
-    _: On<StatsUIUpdateEvent>,
+    _: On<StatsUiUpdateEvent>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
     player_stats_query: Single<&PlayerStats>,

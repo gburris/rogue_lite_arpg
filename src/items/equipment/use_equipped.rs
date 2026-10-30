@@ -160,7 +160,7 @@ impl EquipmentUsage<'_, '_> {
     /// Item currently equipped in the holder's slot, if any.
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
         let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
-        slot.get_equipped(mainhand, offhand)
+        slot.equipped(mainhand, offhand)
     }
 
     /// Attempts to use the holder's slot, queuing `StartUsingEquipment` (targeted at
@@ -202,7 +202,7 @@ impl EquipmentUsage<'_, '_> {
             .get_mut(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
         let item = slot
-            .get_equipped(mainhand, offhand)
+            .equipped(mainhand, offhand)
             .ok_or(EquipmentUseFailure::EmptySlot)?;
         let mut usable = self
             .equipment
@@ -260,7 +260,7 @@ pub struct EquipmentRead<'w, 's> {
 impl EquipmentRead<'_, '_> {
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
         let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
-        slot.get_equipped(mainhand, offhand)
+        slot.equipped(mainhand, offhand)
     }
 
     pub fn equippable_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<&Equippable> {
@@ -278,7 +278,7 @@ impl EquipmentRead<'_, '_> {
             .get(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
         let item = slot
-            .get_equipped(mainhand, offhand)
+            .equipped(mainhand, offhand)
             .ok_or(EquipmentUseFailure::EmptySlot)?;
         let usable = self
             .equipment

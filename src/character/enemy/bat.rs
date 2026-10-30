@@ -183,7 +183,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         ),
         YSort::from_offset(BAT_FEET_POS_OFFSET),
         TurnRate(BAT_TURN_RATE),
-        Orbit::with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
+        Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
         enemy_wander(),
         Swoop::new(0.35, CAST_MAX_RANGE, 2.0),
         Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),

@@ -79,6 +79,8 @@ too_many_arguments = "allow"
 type_complexity = "allow"
 # Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
 nonstandard_macro_braces = "warn"
+# Field names often repeat the struct name for clarity (`Mana::max_mana`, `GameIcons::*_icon`).
+struct_field_names = "allow"
 # Use `expect` with a message naming the invariant instead.
 unwrap_used = "warn"
 # Every assert states why it must hold.

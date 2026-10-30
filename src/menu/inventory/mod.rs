@@ -28,7 +28,7 @@ struct InventoryMenu;
 
 fn spawn_inventory_menu(
     mut commands: Commands,
-    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<NPC>)>,
+    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<Npc>)>,
 ) {
     commands.spawn((
         InventoryMenu,

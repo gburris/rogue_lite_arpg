@@ -23,7 +23,7 @@ pub struct NpcSpawnData {
 
 #[derive(Component)]
 #[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
-pub struct NPC;
+pub struct Npc;
 
 /// Recipes name these directly, e.g. `(what: Npc(Shopkeeper), ...)` in `map_recipes.ron`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, serde::Deserialize)]
@@ -39,9 +39,3 @@ static VILLAGER_BEHAVIORS: &[Behavior] = &[WANDER, ACTION_BASELINE_IDLE, RETURN_
 pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
     behaviors: VILLAGER_BEHAVIORS,
 };
-
-impl NpcKind {
-    pub fn brain(&self) -> &'static BrainDefinition {
-        &VILLAGER
-    }
-}

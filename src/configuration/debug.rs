@@ -25,7 +25,7 @@ pub(super) fn plugin(app: &mut App) {
                 filter: "wgpu=error,baba_yaga=debug".to_string(),
                 ..default()
             })
-            .set(view::get_window_plugin())
+            .set(view::window_plugin())
             .set(ImagePlugin::default_nearest()),
     )
     .add_plugins(PhysicsDebugPlugin)

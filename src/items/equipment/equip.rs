@@ -43,7 +43,7 @@ fn on_equip(
         });
     }
 
-    if let Some(current) = equippable.slot.get_equipped(mainhand, offhand) {
+    if let Some(current) = equippable.slot.equipped(mainhand, offhand) {
         commands.trigger(Unequip { item: current });
     }
 

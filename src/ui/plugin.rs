@@ -4,9 +4,9 @@ use super::{damage_overlay, game_over_screen, load_screen, start_screen};
 use crate::prelude::*;
 
 /// Plugin responsible for managing all UI-related systems and state transitions
-pub struct UIPlugin;
+pub struct UiPlugin;
 
-impl Plugin for UIPlugin {
+impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         //Loading screen
         app.add_systems(OnEnter(AppState::SpawnMap), load_screen::spawn)

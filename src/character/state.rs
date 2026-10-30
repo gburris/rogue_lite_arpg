@@ -106,17 +106,17 @@ pub enum FacingDirection {
 }
 
 impl FacingDirection {
-    pub fn from_vec2(&self, vec: Vec2) -> Self {
+    pub fn turned_toward(self, vec: Vec2) -> Self {
         match vec.normalize() {
             v if v.y > 0.5 => Self::Up,
             v if v.y < -0.5 => Self::Down,
             v if v.x > 0.5 => Self::Right,
             v if v.x < -0.5 => Self::Left,
-            _ => *self,
+            _ => self,
         }
     }
 
-    pub fn to_vec2(&self) -> Vec2 {
+    pub fn to_vec2(self) -> Vec2 {
         match self {
             FacingDirection::Up => Vec2::new(0.0, 1.0),
             FacingDirection::Down => Vec2::new(0.0, -1.0),
@@ -143,7 +143,7 @@ pub(super) fn sync_attack_state_from_equipment(
         let attacking = EquipmentSlot::ALL
             .into_iter()
             .filter(|equipment| equipment.is_instant_use())
-            .filter_map(|equipment| equipment.get_equipped(mainhand, offhand))
+            .filter_map(|equipment| equipment.equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
         state.set_if_neq(AttackState {
             is_attacking: attacking,

@@ -81,7 +81,7 @@ impl EquipmentSlot {
     pub const ALL: [Self; 2] = [Self::Mainhand, Self::Offhand];
 
     /// Item currently equipped in this slot, if any.
-    pub fn get_equipped(
+    pub fn equipped(
         self,
         mainhand: Option<&Mainhand>,
         offhand: Option<&Offhand>,

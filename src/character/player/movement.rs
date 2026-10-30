@@ -21,7 +21,7 @@ fn on_player_movement(
 
 fn on_player_stopped(
     _: On<Complete<PlayerMovement>>,
-    mut player_kinematics: Single<&mut Kinematics, (With<Player>, Without<Enemy>, Without<NPC>)>,
+    mut player_kinematics: Single<&mut Kinematics, (With<Player>, Without<Enemy>, Without<Npc>)>,
 ) {
     player_kinematics.stop_moving();
 }

@@ -30,7 +30,7 @@ pub enum GameCollisionLayer {
     Grounded,    // Marks entities that get stopped by all obstacles
     InAir,       // Marks entity as able to go over low obstacle (projectile, )
     EnemyCollider,
-    NPCCollider,
+    NpcCollider,
 
     /// Things that interact with player but don't physically collide (NPC dialogue, magnets, etc...)
     PlayerInteractionRadius,

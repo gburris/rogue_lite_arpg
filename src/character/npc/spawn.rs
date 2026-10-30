@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::{NPC, NpcKind, NpcSpawnData, SpawnNpcs, interaction};
+use super::{Npc, NpcKind, NpcSpawnData, SpawnNpcs, VILLAGER, interaction};
 use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
 use crate::character::physical_collider;
 use crate::prelude::*;
@@ -39,7 +39,7 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let brain = npc_kind.brain();
+    let brain = &VILLAGER;
 
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
@@ -86,7 +86,7 @@ fn base_npc(
     brain: &'static BrainDefinition,
 ) -> impl Bundle {
     (
-        NPC,
+        Npc,
         Brain::new(brain),
         // Villagers stand briefly between strolls.
         Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5)),

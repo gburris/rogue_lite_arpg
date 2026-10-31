@@ -23,13 +23,7 @@ rand = "0.10.2"
 rand_chacha = "0.10"
 ron = "0.12.0"
 serde = "1.0.229"
-# Compile out low-severity logs to improve performance.
-# Remove these features if you want to profile your game with tracy.
-# (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
-tracing = { version = "0.1.44", features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
+tracing = "0.1.44"
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
@@ -53,10 +47,19 @@ dev_native = [
     # Enable embedded asset hot reloading for native dev builds.
     "bevy/embedded_watcher",
 ]
+# Compile out low-severity logs and spans. Enabled by the bevy_cli release builds, and left off
+# for profiling since it would also remove Bevy's system spans from Tracy captures.
+# (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
+strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
+# Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
+profile = ["bevy/trace_tracy", "bevy/debug"]
+# Also track allocations, which adds noticeable overhead.
+profile_memory = ["profile", "bevy/trace_tracy_memory"]
 
 [package.metadata.bevy_cli.release]
 # Disable dev features for release builds.
 default-features = false
+features = ["strip_logs"]
 
 [package.metadata.bevy_cli.web]
 # Disable native features for web builds.
@@ -126,6 +129,11 @@ codegen-units = 1
 # Do a second optimization pass over the entire program, including dependencies.
 # Slows compile times, marginal improvements.
 lto = "thin"
+
+# Release speed with symbols, for Tracy and samply captures.
+[profile.profiling]
+inherits = "release"
+debug = "line-tables-only"
 
 # This profile will be used by `bevy run web` automatically.
 [profile.web-release]

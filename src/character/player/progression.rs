@@ -1,16 +1,15 @@
 use bevy::prelude::*;
 
-use crate::prelude::{AppState, PlayerStats, RestartEvent};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.insert_resource(GameProgress::default());
 
-    app.add_observer(handle_restart_trigger);
+    app.add_observer(on_restart);
 }
 
 #[derive(Resource)]
 pub struct GameProgress {
-    pub game_completed_counter: u32,
     pub death_counter: u32,
     pub total_career_level: u32,
     pub progress_points: u32,
@@ -19,8 +18,7 @@ pub struct GameProgress {
 
 impl Default for GameProgress {
     fn default() -> Self {
-        GameProgress {
-            game_completed_counter: 0,
+        Self {
             death_counter: 0,
             total_career_level: 0,
             progress_points: 5,
@@ -29,15 +27,15 @@ impl Default for GameProgress {
     }
 }
 
-/// Triggers when restart is clicked after death in a run
-fn handle_restart_trigger(
-    restart_event_trigger: On<RestartEvent>,
+/// Triggers when restart is clicked after death in a run.
+fn on_restart(
+    restart: On<Restart>,
     mut game_progress: ResMut<GameProgress>,
     mut next_app_state: ResMut<NextState<AppState>>,
 ) {
     game_progress.death_counter += 1;
-    game_progress.total_career_level += restart_event_trigger.player_level;
-    game_progress.progress_points += restart_event_trigger.player_level;
+    game_progress.total_career_level += restart.player_level;
+    game_progress.progress_points += restart.player_level;
 
     next_app_state.set(AppState::SpawnPlayer);
 }

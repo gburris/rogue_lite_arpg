@@ -4,8 +4,8 @@ use rand::RngExt;
 
 use super::health::Health;
 use super::invulnerable::IFrames;
-use super::status_effects::{ApplyEffects, Effects};
-use crate::prelude::{GameCollisionLayer, Player};
+use super::status_effects::prelude::{ApplyEffects, Effects};
+use crate::prelude::*;
 
 /// Which side of combat a character fights on, required by every character marker.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,17 +37,18 @@ impl CombatSide {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy, Debug)]
 pub enum Damage {
     Single(f32),
-    Range((f32, f32)),
+    Range { min: f32, max: f32 },
 }
 
 impl Damage {
-    fn to_float(self) -> f32 {
+    /// Picks the amount of damage dealt, rolling within a range.
+    fn roll(self) -> f32 {
         match self {
-            Damage::Range((min, max)) => rand::rng().random_range(min..max),
-            Damage::Single(amount) => amount,
+            Self::Range { min, max } => rand::rng().random_range(min..max),
+            Self::Single(amount) => amount,
         }
     }
 }
@@ -80,12 +81,16 @@ pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> 
 /// Default hurtbox centre relative to the character transform.
 const HURTBOX_OFFSET: f32 = -8.0;
 
+/// Bright white damage shader at home: linear channels far above 1.0 overexpose the sprite
+/// so a hit flashes it white.
+const DAMAGE_FLASH_COLOR: Color = Color::linear_rgba(255., 255., 255., 0.9);
+
 #[derive(EntityEvent)]
 pub struct AttemptDamage {
     pub entity: Entity,
-    /// Not all damage gets blocked by invulnerable (ex: burn from status effect)
+    /// Not all damage gets blocked by invulnerable (ex: burn from status effect).
     pub ignore_invulnerable: bool,
-    /// We treat damage as a range with RNG determining which value is dealt
+    /// We treat damage as a range with RNG determining which value is dealt.
     pub damage: Damage,
     /// Weapon or projectile entity used for `Effects` and `Knockback`.
     /// Not all damage has one, like environmental damage or damage-over-time effects.
@@ -94,7 +99,7 @@ pub struct AttemptDamage {
     /// projectiles carry the attacker stamped at fire time, reflection transfers
     /// it to the blocker, environmental damage has none.
     pub attacker: Option<Entity>,
-    /// damage direction, ex. velocity direction of projectile or character position for melee
+    /// Damage direction, ex. velocity direction of projectile or character position for melee.
     pub direction: Option<Vec2>,
 }
 
@@ -112,7 +117,7 @@ impl Default for AttemptDamage {
 }
 
 /// While `AttemptDamage` is sent any time a damage source interacts with an entity,
-/// this event represents when that damage attempt succeeds
+/// this event represents when that damage attempt succeeds.
 #[derive(EntityEvent)]
 pub struct DamageDealt {
     pub entity: Entity,
@@ -121,7 +126,7 @@ pub struct DamageDealt {
     pub source_item: Option<Entity>,
     /// Character responsible for aggro or credit (see `AttemptDamage::attacker`).
     pub attacker: Option<Entity>,
-    /// damage direction, ex. velocity direction of projectile or character position for melee
+    /// Damage direction, ex. velocity direction of projectile or character position for melee.
     pub direction: Option<Vec2>,
 }
 
@@ -130,7 +135,7 @@ pub struct Defeated {
     pub entity: Entity,
 }
 
-pub(super) fn on_damage_event(
+pub(super) fn on_attempt_damage(
     attempt_damage: On<AttemptDamage>,
     mut commands: Commands,
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
@@ -153,11 +158,11 @@ pub(super) fn on_damage_event(
         if let Some(mut iframes) = has_iframes
             && !attempt_damage.ignore_invulnerable
         {
-            if iframes.is_invulnerable {
+            if iframes.invulnerable {
                 return;
             }
 
-            iframes.is_invulnerable = true;
+            iframes.invulnerable = true;
         }
 
         if health.is_dead() {
@@ -165,11 +170,12 @@ pub(super) fn on_damage_event(
         }
 
         // Convert `Damage` to raw damage amount
-        let damage = attempt_damage.damage.to_float();
+        let damage = attempt_damage.damage.roll();
         health.take_damage(damage);
 
-        // Because AttemptDamage may not result in damage being applied (invulnerable or entity without health)
-        // we send this event for guranteed "X damage has been done". Proper change detection added to bevy would mean this isn't needed
+        // Because AttemptDamage may not result in damage being applied (invulnerable or entity
+        // without health) we send this event for guranteed "X damage has been done". Proper
+        // change detection added to bevy would mean this isn't needed
         commands.trigger(DamageDealt {
             entity: damaged_entity,
             damage,
@@ -183,7 +189,8 @@ pub(super) fn on_damage_event(
                 entity: damaged_entity,
             });
         } else if let Some(source_entity) = attempt_damage.source_item {
-            // If entity is still alive and damage source exists and has effects list, we apply status effects
+            // If entity is still alive and damage source exists and has effects list, we apply
+            // status effects
             if let Ok(effects) = source_query.get(source_entity) {
                 commands.trigger(ApplyEffects::new(effects, damaged_entity));
             }
@@ -191,7 +198,7 @@ pub(super) fn on_damage_event(
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct DamageFlash(Timer);
 
 impl Default for DamageFlash {
@@ -215,7 +222,7 @@ pub(super) fn on_damage_dealt_flash(
         commands
             .entity(damage_dealt.entity)
             .insert(DamageFlash::default());
-        sprite.color = Color::linear_rgba(255., 255., 255., 0.9);
+        sprite.color = DAMAGE_FLASH_COLOR;
     }
 }
 
@@ -226,8 +233,9 @@ pub(super) fn tick_and_remove_damage_flash(
     damage_flash_query
         .par_iter_mut()
         .for_each(|(mut flash, mut sprite)| {
-            // Only reset color the frame the flash ends, otherwise we overwrite sprite color every frame
-            if flash.0.tick(time.delta()).just_finished() {
+            // Only reset color the frame the flash ends, otherwise we overwrite sprite color every
+            // frame
+            if flash.tick(time.delta()).just_finished() {
                 sprite.color = Color::WHITE;
             }
         });

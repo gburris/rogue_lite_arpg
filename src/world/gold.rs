@@ -5,11 +5,8 @@ use rand::RngExt;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        handle_gold_collisions.in_set(InGameSystems::Collision),
-    )
-    .add_observer(on_gold_drop_event);
+    app.add_systems(Update, collect_gold.in_set(InGameSystems::Collision))
+        .add_observer(on_drop_gold);
 }
 
 #[derive(Component)]
@@ -18,7 +15,11 @@ pub(super) fn plugin(app: &mut App) {
     Collider::circle(10.0),
     CollisionLayers::new(
         [GameCollisionLayer::Grounded, GameCollisionLayer::Interaction],
-        [GameCollisionLayer::PlayerInteractionRadius, GameCollisionLayer::HighObstacle, GameCollisionLayer::LowObstacle]
+        [
+            GameCollisionLayer::PlayerInteractionRadius,
+            GameCollisionLayer::HighObstacle,
+            GameCollisionLayer::LowObstacle
+        ]
     ),
     CollidingEntities,
     LockedAxes = LockedAxes::new().lock_rotation(),
@@ -33,14 +34,14 @@ struct Gold {
     pub value: u32,
 }
 
-fn handle_gold_collisions(
+fn collect_gold(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
     mut player_purse: Single<&mut Purse, With<Player>>,
     player_collider_entity: Single<Entity, With<PlayerInteractionRadius>>,
 ) {
     let pe = player_collider_entity.into_inner();
-    for (gold_entity, gold, colliding_entities) in gold_query.iter() {
+    for (gold_entity, gold, colliding_entities) in &gold_query {
         if colliding_entities.contains(&pe) {
             player_purse.add(gold.value);
             commands.entity(gold_entity).despawn();
@@ -49,19 +50,19 @@ fn handle_gold_collisions(
 }
 
 #[derive(Event)]
-pub struct GoldDrop {
+pub struct DropGold {
     pub location: Vec2,
     pub amount: u32,
 }
 
 const MAX_COINS_TO_SPAWN: i32 = 5;
 
-fn on_gold_drop_event(gold_drop: On<GoldDrop>, mut commands: Commands, sprites: Res<SpriteAssets>) {
+fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<SpriteAssets>) {
     let mut rng = rand::rng();
     let mut entities_spawned = 0;
     let mut remaining_gold = gold_drop.amount;
-    //TODO: Give each visual representation of money quantity
-    //It's own sprite. Like red, yellow and blue coins in Mario 64.
+    // TODO: Give each visual representation of money quantity
+    // It's own sprite. Like red, yellow and blue coins in Mario 64.
     while remaining_gold > 0 && entities_spawned < MAX_COINS_TO_SPAWN {
         let (gold_image, mut value) = match remaining_gold {
             n if n >= 10000 => (sprites.gold_coin.clone(), 10000),

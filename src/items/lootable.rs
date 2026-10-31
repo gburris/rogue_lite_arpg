@@ -7,13 +7,19 @@ use rand::{RngExt, rng};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, glow_and_rotate_lootables.in_set(InGameSystems::Vfx));
+    app.add_systems(
+        Update,
+        glow_and_rotate_lootables
+            .in_set(VfxSystems::Animate)
+            // Lootable items are never frame-animated, level-up effects, or characters.
+            .ambiguous_with(VfxSystems::Animate),
+    );
 
     app.add_observer(on_item_added_make_lootable)
-        .add_observer(on_drop_event);
+        .add_observer(on_drop_item);
 }
 
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 #[require(
     Lifespan::new(10.0),
     YSort::from_offset(-6.0),
@@ -23,21 +29,24 @@ pub(super) fn plugin(app: &mut App) {
                 ..default()
     },
 )]
-pub struct Lootable;
+pub struct Lootable {
+    elapsed: f32,
+}
 
 /// Request to drop an item from its holder's inventory into the world.
 #[derive(EntityEvent)]
-pub struct ItemDrop {
+pub struct DropItem {
     #[event_target]
     pub item: Entity,
 }
 
 /// Notes:
-/// 1. `ItemDrop` is for items only!
-/// 2. This event will handle unequipping and removing any items dropped from the inventory of the holder
-/// 3. Needs parent to be holder for position, then removes parent
-fn on_drop_event(
-    item_dropped: On<ItemDrop>,
+/// 1. `DropItem` is for items only!
+/// 2. This event will handle unequipping and removing any items dropped from the inventory of the
+///    holder
+/// 3. Needs parent to be holder for position, then removes parent.
+fn on_drop_item(
+    item_dropped: On<DropItem>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
     mut holder_query: Query<&Transform, With<Items>>,
@@ -71,7 +80,7 @@ fn on_drop_event(
         .entity(item_entity)
         .remove::<ItemOf>()
         .insert((
-            Lootable,
+            Lootable::default(),
             PointLight2d {
                 intensity: 0.3,
                 color: Color::WHITE,
@@ -104,21 +113,18 @@ fn on_lootable_item_interaction(
         .insert((ItemOf { holder: *player }, Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up
-    commands
-        .entity(interaction.interaction_zone_entity)
-        .despawn();
+    commands.entity(interaction.zone).despawn();
 }
 
 fn glow_and_rotate_lootables(
-    mut query: Query<(&mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
+    mut query: Query<(&mut Lootable, &mut Transform, &mut Sprite)>,
     time: Res<Time>,
 ) {
-    for (mut item, mut transform, mut sprite) in &mut query {
-        item.drop_rotation_timer += time.delta_secs();
-        let rotation_angle = (item.drop_rotation_timer / 6.0) * 2.0 * PI;
+    for (mut lootable, mut transform, mut sprite) in &mut query {
+        lootable.elapsed += time.delta_secs();
+        let rotation_angle = (lootable.elapsed / 6.0) * 2.0 * PI;
         transform.rotation = Quat::from_rotation_z(rotation_angle);
-        item.drop_glow_effect += time.delta_secs() * 2.0;
-        let glow_intensity = item.drop_glow_effect.sin() * 0.1 + 0.7;
+        let glow_intensity = (lootable.elapsed * 2.0).sin() * 0.1 + 0.7;
         let base_color = sprite.color.to_srgba();
         sprite.color = Color::srgba(
             base_color.red * glow_intensity + 0.3,

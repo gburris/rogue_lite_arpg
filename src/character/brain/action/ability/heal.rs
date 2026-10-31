@@ -65,7 +65,7 @@ pub(super) fn apply_heal(
         };
         commands.trigger(Consume {
             entity,
-            item_entity: potion,
+            item: potion,
         });
         drinking.report_completed(&mut commands, entity);
     }

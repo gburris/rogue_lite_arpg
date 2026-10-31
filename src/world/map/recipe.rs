@@ -14,11 +14,11 @@ use serde::Deserialize;
 
 use super::blueprint::PlacementKind;
 use super::build::{MapRequest, MapResult, Stage, build_from_recipe};
-use super::placement::{Anchor, CountRange, PlaceRule, Side};
+use super::placement::{Anchor, CountRange, DecileRange, PlaceRule, Side};
 use super::spawn::MAX_MAP_TILES;
 use super::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
 use super::tiles::TileKind;
-use crate::prelude::{EnemyKind, NpcKind};
+use crate::prelude::*;
 use crate::world::MapRng;
 
 /// Loaded map recipes and the structures available to place in them.
@@ -29,7 +29,7 @@ pub struct RecipeCatalog {
     pub(super) structures: BTreeMap<String, Structure>,
     pub(super) weighted_names: Vec<String>,
     /// Every recipe name in file order: hub, dungeons, then arenas.
-    #[cfg_attr(not(feature = "dev"), allow(dead_code))]
+    #[cfg_attr(not(feature = "dev"), expect(dead_code))]
     pub(super) order: Vec<String>,
 }
 
@@ -49,7 +49,7 @@ impl RecipeCatalog {
         Ok(match request {
             MapRequest::Hub => (self.hub(), root_rng.next_map_seed()),
             MapRequest::Weighted => {
-                let recipe = self.weighted(root_rng.rng())?;
+                let recipe = self.weighted(&mut **root_rng)?;
                 (recipe, root_rng.next_map_seed())
             }
             MapRequest::Named { recipe, seed } => (
@@ -93,7 +93,7 @@ impl RecipeCatalog {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeFile {
     /// Named spawn lists that recipes include with `presets: ["Name"]`.
@@ -108,7 +108,7 @@ pub(super) struct RecipeFile {
     pub(super) arenas: Vec<RecipeEntry>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct StructureDefinition {
     pub(super) floor: TileKind,
@@ -116,11 +116,11 @@ pub(super) struct StructureDefinition {
     pub(super) glyphs: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeDefaults {
-    pub(super) size_x_range: (u32, u32),
-    pub(super) size_y_range: (u32, u32),
+    pub(super) size_x_range: CountRange,
+    pub(super) size_y_range: CountRange,
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
     /// Radius around the player start, in tiles, that no enemy may occupy.
@@ -130,15 +130,15 @@ pub(super) struct RecipeDefaults {
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RecipeEntry {
     pub(super) name: Option<String>,
     pub(super) weight: Option<u32>,
     /// Shorthand for a square map: `size: 60` sets both size ranges to `(60, 60)`.
     pub(super) size: Option<u32>,
-    pub(super) size_x_range: Option<(u32, u32)>,
-    pub(super) size_y_range: Option<(u32, u32)>,
+    pub(super) size_x_range: Option<CountRange>,
+    pub(super) size_y_range: Option<CountRange>,
     pub(super) floor: Option<TileKind>,
     pub(super) structures: Option<Vec<StructureEntry>>,
     pub(super) start_clearance: Option<u32>,
@@ -149,12 +149,12 @@ pub(super) struct RecipeEntry {
 }
 
 /// Resolved map generation settings loaded from a recipe definition.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct MapRecipe {
     pub(super) name: String,
     pub(super) weight: u32,
-    pub(super) size_x_range: (u32, u32),
-    pub(super) size_y_range: (u32, u32),
+    pub(super) size_x_range: CountRange,
+    pub(super) size_y_range: CountRange,
     pub(super) floor: TileKind,
     pub(super) structures: Vec<StructureEntry>,
     pub(super) start_clearance: u32,
@@ -176,7 +176,7 @@ impl RecipeEntry {
             )
             .into());
         }
-        let square = self.size.map(|size| (size, size));
+        let square = self.size.map(CountRange::exactly);
         let mut spawns = Vec::new();
         for preset in self.presets.as_ref().unwrap_or(&defaults.presets) {
             let preset_spawns = spawn_presets
@@ -218,7 +218,7 @@ pub(super) fn expand_counts(entries: Vec<StructureEntry>) -> Vec<StructureEntry>
         .collect()
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct StructureEntry {
     pub(super) kind: StructureKind,
@@ -242,7 +242,7 @@ pub(super) fn one() -> u32 {
 /// To add a feature: add a variant with its fields, write its builder from
 /// `claim_feature_footprint` in structures.rs (see rubble for a one-tile feature), and
 /// handle the variant in the exhaustive `place_structures` match.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) enum StructureKind {
     /// A named glyph structure: `Structure("Temple")`.
@@ -308,7 +308,7 @@ pub(super) fn resolved_name(kind: &str, index: usize, explicit: &str) -> String 
 /// (what: RandomEnemy, count: (10, 15), at: Random(x_deciles: (2, 8)), separation: 5),
 /// (what: Chest, count: (3, 5), at: Near(structure: "Temple", radius: 6)),
 /// ```
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SpawnEntry {
     pub(super) what: SpawnKind,
@@ -322,11 +322,11 @@ pub(super) struct SpawnEntry {
 }
 
 fn one_spawn() -> CountRange {
-    CountRange(1, 1)
+    CountRange::exactly(1)
 }
 
 /// What a spawn entry places.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub(super) enum SpawnKind {
     PlayerStart,
     Exit,
@@ -339,7 +339,7 @@ pub(super) enum SpawnKind {
 
 impl SpawnKind {
     /// Build stage this kind's sampled (non-fixed) spawns run in.
-    pub(super) fn stage(&self) -> Stage {
+    pub(super) fn stage(self) -> Stage {
         match self {
             Self::PlayerStart => Stage::PlayerStart,
             Self::Exit => Stage::Exits,
@@ -350,17 +350,17 @@ impl SpawnKind {
     }
 
     /// Resolves to a concrete placement, rolling `RandomEnemy`.
-    pub(super) fn placement(&self, random_generator: &mut ChaCha8Rng) -> PlacementKind {
+    pub(super) fn placement(self, random_generator: &mut ChaCha8Rng) -> PlacementKind {
         match self {
             Self::PlayerStart => PlacementKind::PlayerStart,
             Self::Exit => PlacementKind::Exit,
             Self::Chest => PlacementKind::Chest,
-            Self::Enemy(kind) => PlacementKind::Enemy(*kind),
+            Self::Enemy(kind) => PlacementKind::Enemy(kind),
             Self::RandomEnemy => {
                 let index = random_generator.random_range(0..EnemyKind::ALL.len());
                 PlacementKind::Enemy(EnemyKind::ALL[index])
             }
-            Self::Npc(kind) => PlacementKind::Npc(*kind),
+            Self::Npc(kind) => PlacementKind::Npc(kind),
         }
     }
 }
@@ -369,12 +369,12 @@ impl SpawnKind {
 /// the rest are fixed anchors, which place exactly one. Positions are measured to the
 /// center of what is placed, except the `Map*` anchors and `Edge`, which place its
 /// bottom-left corner.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 pub(super) enum Location {
     /// Anywhere inside the half-open x-decile band, `(1, 9)` by default: `Random()`.
     Random {
         #[serde(default = "interior_deciles")]
-        x_deciles: (u32, u32),
+        x_deciles: DecileRange,
     },
     /// One tile inside a wall; several spawns spread along it: `Edge(Left)`.
     Edge(Side),
@@ -386,7 +386,7 @@ pub(super) enum Location {
         radius: u32,
     },
     /// One of these, picked per map.
-    Choose(Vec<Location>),
+    Choose(Vec<Self>),
     Center,
     CenterOffset(IVec2),
     MapMin(IVec2),
@@ -400,8 +400,8 @@ pub(super) enum Location {
     },
 }
 
-fn interior_deciles() -> (u32, u32) {
-    (1, 9)
+fn interior_deciles() -> DecileRange {
+    DecileRange { min: 1, max: 9 }
 }
 
 impl Location {
@@ -420,7 +420,7 @@ impl Location {
         separation: u32,
         random_generator: &mut ChaCha8Rng,
     ) -> MapResult<PlaceRule> {
-        let count_range = CountRange(count, count);
+        let count_range = CountRange::exactly(count);
         Ok(match self {
             Self::Random { x_deciles } => PlaceRule::Random {
                 count: count_range,
@@ -575,7 +575,6 @@ pub(super) fn recipe_options() -> Options {
     Options::default().with_default_extension(Extensions::IMPLICIT_SOME)
 }
 
-#[allow(clippy::too_many_lines)]
 pub(super) fn validate_recipe(
     recipe: &MapRecipe,
     structures: &BTreeMap<String, Structure>,
@@ -584,7 +583,7 @@ pub(super) fn validate_recipe(
         ("size_x", recipe.size_x_range),
         ("size_y", recipe.size_y_range),
     ] {
-        if range.0 == 0 || range.0 > range.1 || range.1 > MAX_MAP_TILES {
+        if range.min == 0 || range.min > range.max || range.max > MAX_MAP_TILES {
             return Err(format!(
                 "recipe {} has invalid {name} range (each side must be 1..={MAX_MAP_TILES})",
                 recipe.name
@@ -606,21 +605,21 @@ pub(super) fn validate_recipe(
         }
         validate_location(
             &structure.at,
-            CountRange(1, 1),
+            CountRange::exactly(1),
             &earlier_names,
             &format!("recipe {} structure {index}", recipe.name),
         )?;
         if let Some(size) = structure.kind.feature_size() {
             let (minimum, maximum) = match size {
-                FeatureSize::Exact(dimensions) => (dimensions, dimensions),
+                FeatureSize::Exact(size) => (size, size),
                 FeatureSize::Ranged(minimum, maximum) => (minimum, maximum),
             };
-            if minimum.0 == 0
-                || minimum.1 == 0
-                || minimum.0 > maximum.0
-                || minimum.1 > maximum.1
-                || maximum.0 > MAX_MAP_TILES
-                || maximum.1 > MAX_MAP_TILES
+            if minimum.width == 0
+                || minimum.height == 0
+                || minimum.width > maximum.width
+                || minimum.height > maximum.height
+                || maximum.width > MAX_MAP_TILES
+                || maximum.height > MAX_MAP_TILES
             {
                 return Err(format!(
                     "recipe {} structure {index} has an invalid feature size",
@@ -646,11 +645,11 @@ fn validate_spawns(
 ) -> Result<()> {
     for (index, spawn) in recipe.spawns.iter().enumerate() {
         let context = format!("recipe {} spawn {index}", recipe.name);
-        let CountRange(minimum, maximum) = spawn.count;
-        if minimum > maximum || maximum > MAX_MAP_TILES || spawn.separation > MAX_MAP_TILES {
+        let CountRange { min, max } = spawn.count;
+        if min > max || max > MAX_MAP_TILES || spawn.separation > MAX_MAP_TILES {
             return Err(format!("{context} has an invalid count or separation").into());
         }
-        if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange(1, 1) {
+        if matches!(spawn.what, SpawnKind::PlayerStart) && spawn.count != CountRange::exactly(1) {
             return Err(format!("{context} must place exactly one player start").into());
         }
         validate_location(&spawn.at, spawn.count, structure_names, &context)?;
@@ -678,7 +677,7 @@ fn validate_spawns(
         .iter()
         .filter(|spawn| matches!(spawn.what, SpawnKind::Exit));
     let has_exit_spawns = exit_spawns.clone().next().is_some();
-    let guarantees_an_exit = exit_spawns.clone().any(|spawn| spawn.count.0 > 0);
+    let guarantees_an_exit = exit_spawns.clone().any(|spawn| spawn.count.min > 0);
     if (structure_exits && has_exit_spawns) || (!structure_exits && !guarantees_an_exit) {
         return Err(format!(
             "recipe {} must define exactly one exit source, structure glyphs or exit spawns",
@@ -696,7 +695,7 @@ fn validate_location(
     context: &str,
 ) -> Result<()> {
     match at {
-        Location::Random { x_deciles } if x_deciles.0 >= x_deciles.1 || x_deciles.1 > 10 => {
+        Location::Random { x_deciles } if x_deciles.min >= x_deciles.max || x_deciles.max > 10 => {
             Err(format!("{context} has an invalid x-decile range").into())
         }
         Location::Near {
@@ -723,7 +722,7 @@ fn validate_location(
         Location::Structure { structure, .. } if !structure_names.contains(structure) => {
             Err(format!("{context} references missing or later structure {structure}").into())
         }
-        fixed if fixed.is_fixed() && count != CountRange(1, 1) => {
+        fixed if fixed.is_fixed() && count != CountRange::exactly(1) => {
             Err(format!("{context} uses a fixed anchor, so it must place exactly one").into())
         }
         _ => Ok(()),
@@ -741,7 +740,9 @@ pub(super) fn structures_place(
         .iter()
         .filter_map(|structure_entry| match &structure_entry.kind {
             StructureKind::Structure(kind) => structures.get(kind),
-            _ => None,
+            StructureKind::EmptySquare { .. }
+            | StructureKind::Pond { .. }
+            | StructureKind::Rubble { .. } => None,
         })
         .any(|structure| {
             structure

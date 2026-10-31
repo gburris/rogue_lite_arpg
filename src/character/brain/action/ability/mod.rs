@@ -15,7 +15,7 @@ pub use self::bite::Bite;
 pub use self::breath::Breath;
 pub use self::heal::Heal;
 pub(in crate::character::brain) use self::heal::find_carried_potion;
-use crate::character::AiSet;
+use crate::character::brain::BrainSystems;
 use crate::character::brain::capability::{CapabilityProfiles, record_capability_profile};
 
 /// An innate move a brain can ask its character for, carried out by a capability
@@ -57,6 +57,6 @@ impl AbilityCapabilitiesItem<'_, '_> {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (heal::apply_heal, breath::apply_breath, bite::apply_bite).in_set(AiSet::Execute),
+        (heal::apply_heal, breath::apply_breath, bite::apply_bite).in_set(BrainSystems::Execute),
     );
 }

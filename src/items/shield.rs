@@ -5,37 +5,24 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::equipment::{EquipmentSlot, Equippable, Equipped};
-use super::{Item, ItemOf, ItemType};
+use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_active_shields
-                .in_set(SimulationSystems::Logic)
-                .after(regenerate_mana)
-                .before(AiSet::Decision),
-            reflect_projectiles
-                .in_set(InGameSystems::Simulation)
-                .after(AiSet::Motion),
+            orient_active_shields.in_set(SimulationSystems::Act),
+            reflect_projectiles.in_set(SimulationSystems::Upkeep),
         ),
     );
 }
 
-pub fn magic_shield(
-    sprites: &Res<SpriteAssets>,
-    sprite_layouts: &Res<SpriteSheetLayouts>,
-) -> impl Bundle {
+pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Magic Shield"),
-        Item::new(355, ItemType::Tome),
-        Equippable::new(
-            EquipmentSlot::Offhand,
-            0.5,
-            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
-        ),
+        Item::new(355, ItemKind::Tome),
+        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         ManaCost(5.0),
         ManaDrainRate(20.0),
         ProjectileReflection,
@@ -45,7 +32,7 @@ pub fn magic_shield(
         Sprite {
             image: sprites.magic_shield.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield_layout.clone(),
+                layout: sprite_layouts.shield.clone(),
                 index: 0,
             }),
             ..default()
@@ -55,18 +42,11 @@ pub fn magic_shield(
     )
 }
 
-pub fn knight_shield(
-    sprites: &Res<SpriteAssets>,
-    sprite_layouts: &Res<SpriteSheetLayouts>,
-) -> impl Bundle {
+pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Knight Shield"),
-        Item::new(355, ItemType::Tome),
-        Equippable::new(
-            EquipmentSlot::Offhand,
-            0.5,
-            &DEFAULT_EQUIPMENT_TRANSFORM_MAP,
-        ),
+        Item::new(355, ItemKind::Tome),
+        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         },
@@ -75,7 +55,7 @@ pub fn knight_shield(
         Sprite {
             image: sprites.knight_shield.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield_layout.clone(),
+                layout: sprite_layouts.shield.clone(),
                 index: 0,
             }),
             ..default()
@@ -105,32 +85,17 @@ struct ActiveShield {
     projectiles_reflected: HashSet<Entity>,
 }
 
-/// Drains mana and updates sprite/transform for every active shield.
-fn update_active_shields(
+/// Turns each active shield's sprite and offset toward its holder's aim.
+fn orient_active_shields(
     mut commands: Commands,
-    time: Res<Time>,
     mut active_shield_query: Query<
-        (Entity, &ManaDrainRate, &ItemOf, &mut Sprite),
+        (Entity, &ItemOf, &mut Sprite),
         (With<ActiveShield>, With<Equipped>),
     >,
-    mut holder_query: Query<(&Vision, Option<&mut Mana>)>,
+    holder_query: Query<&Vision>,
 ) -> Result {
-    for (shield_entity, mana_drain_rate, item_of, mut shield_sprite) in &mut active_shield_query {
-        let (vision, mana) = holder_query.get_mut(item_of.holder)?;
-
-        if let Some(mut mana) = mana {
-            let drain_amount = ManaCost(mana_drain_rate.0 * time.delta_secs());
-
-            if mana.has_enough_mana(&drain_amount) {
-                mana.use_mana(&drain_amount);
-            } else {
-                commands.trigger(StopUsingEquipment {
-                    item: shield_entity,
-                    holder: item_of.holder,
-                });
-                continue;
-            }
-        }
+    for (shield_entity, item_of, mut shield_sprite) in &mut active_shield_query {
+        let vision = holder_query.get(item_of.holder)?;
 
         let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
 
@@ -264,12 +229,7 @@ fn on_stop_shield(
     commands
         .entity(shield.item)
         .remove::<(EquipmentInUse, ActiveShield, Collider, CollisionLayers)>()
-        .insert(
-            *equippable
-                .transforms
-                .get(facing_direction)
-                .expect("Failed to deactivate shield"),
-        );
+        .insert(equippable.poses.transform(*facing_direction));
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;

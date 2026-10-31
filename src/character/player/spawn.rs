@@ -28,11 +28,11 @@ pub(super) fn spawn_player(
             pause_actions(),
             player_actions(),
             Mana::new(100.0, 10.0),
-            game_progress.base_stats.clone(),
+            game_progress.base_stats,
             Sprite::from_atlas_image(
                 sprites.player_sprite_sheet.clone(),
                 TextureAtlas {
-                    layout: sprite_layouts.player_atlas_layout.clone(),
+                    layout: sprite_layouts.player.clone(),
                     ..default()
                 },
             ),

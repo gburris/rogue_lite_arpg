@@ -112,10 +112,9 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 //
 // Action priority: heal (5, scaled by need), hold fire (1.5), swing (1),
 // idle (0.5). Each beats the next even while that one holds the slot.
-// - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square
-//   root of the need. It beats idle from about 43% missing health and hold
-//   fire from about 48%, before the warrior starts fleeing at about 50%
-//   (health never recovers during a flee).
+// - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square root of the need. It
+//   beats idle from about 43% missing health and hold fire from about 48%, before the warrior
+//   starts fleeing at about 50% (health never recovers during a flee).
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
     WARRIOR_BASELINE_IDLE,
@@ -180,7 +179,7 @@ pub(super) fn spawn_warrior(
 fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(200.0), Health::new(40.0)),
-        Experience { base_exp: 20.0 },
+        Experience(20.0),
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
         // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
@@ -193,7 +192,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Sprite::from_atlas_image(
             sprites.warrior_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),

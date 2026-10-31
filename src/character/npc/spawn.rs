@@ -1,28 +1,37 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::{NPC, NpcKind, NpcSpawnData, SpawnNpcs, interaction};
+use super::{Npc, NpcKind, VILLAGER, interaction};
 use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
 
-pub(super) fn spawn_npcs(
+#[derive(Event)]
+pub struct SpawnNpcs(pub Vec<NpcSpawn>);
+
+#[derive(Clone, Copy, Debug)]
+pub struct NpcSpawn {
+    pub position: Vec2,
+    pub kind: NpcKind,
+}
+
+pub(super) fn on_spawn_npcs(
     npc_spawn_trigger: On<SpawnNpcs>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
-    for NpcSpawnData {
+    for NpcSpawn {
         position: spawn_position,
-        npc_kind,
+        kind,
     } in &npc_spawn_trigger.0
     {
         spawn_npc(
             &mut commands,
-            *npc_kind,
+            *kind,
             *spawn_position,
             &sprites,
             &sprite_layouts,
@@ -39,7 +48,7 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let brain = npc_kind.brain();
+    let brain = &VILLAGER;
 
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
@@ -86,7 +95,7 @@ fn base_npc(
     brain: &'static BrainDefinition,
 ) -> impl Bundle {
     (
-        NPC,
+        Npc,
         Brain::new(brain),
         // Villagers stand briefly between strolls.
         Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5)),
@@ -111,7 +120,7 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
         Sprite::from_atlas_image(
             sprites.game_guide_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),
@@ -124,7 +133,7 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
         Sprite::from_atlas_image(
             sprites.shop_keeper_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),
@@ -137,7 +146,7 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
         Sprite::from_atlas_image(
             sprites.stat_trainer_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),

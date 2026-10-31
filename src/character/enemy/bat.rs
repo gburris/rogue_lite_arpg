@@ -121,12 +121,10 @@ const BAT_BITE: Behavior = Behavior::new(
 // wander (1). A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
 //
 // Action priority: bite (1.5), breathe (up to 1), idle (0.5).
-// - Idle is the bar an action must beat to fire: 0.5, or 0.625 while it holds
-//   the slot.
-// - The breath has three yes/no inputs and two graded ones (distance, warm-up).
-//   Its score is the fifth root of their product, which flattens both ramps. It
-//   beats a running idle from about 82 units away once warmed up, and from
-//   about 1.1 s after spotting the target (1.4 s at 100 units).
+// - Idle is the bar an action must beat to fire: 0.5, or 0.625 while it holds the slot.
+// - The breath has three yes/no inputs and two graded ones (distance, warm-up). Its score is the
+//   fifth root of their product, which flattens both ramps. It beats a running idle from about 82
+//   units away once warmed up, and from about 1.1 s after spotting the target (1.4 s at 100 units).
 static BAT_BEHAVIORS: &[Behavior] = &[
     WANDER,
     BAT_BASELINE_IDLE,
@@ -174,7 +172,7 @@ pub(super) fn spawn_bat(
 fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(170.0), Health::new(15.0)),
-        Experience { base_exp: 6.0 },
+        Experience(6.0),
         // Bats fly high: longer reach, and high obstacles never block the
         // ray, so a bat holds its target through cover.
         sight_ray(
@@ -183,14 +181,14 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         ),
         YSort::from_offset(BAT_FEET_POS_OFFSET),
         TurnRate(BAT_TURN_RATE),
-        Orbit::with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
+        Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
         enemy_wander(),
         Swoop::new(0.35, CAST_MAX_RANGE, 2.0),
         Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),
         Sprite::from_atlas_image(
             sprites.bat_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.bat_enemy_layout.clone(),
+                layout: sprite_layouts.bat.clone(),
                 index: 0, // Down row; FacingDirection defaults to Down.
             },
         ),

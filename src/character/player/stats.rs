@@ -1,17 +1,18 @@
 use bevy::prelude::*;
 
-#[derive(Component, Clone)]
+/// The player's upgradeable stats.
+#[derive(Component, Clone, Copy)]
 pub struct PlayerStats {
-    pub agility: u32,   //Movement speed, roll range
-    pub strength: u32,  //Melee swing damage
-    pub dexterity: u32, //Critical Stike Change
-    pub intellect: u32, //Spell damage
-    pub luck: u32,      //Drop rate
+    pub agility: u32,   // Movement speed, roll range
+    pub strength: u32,  // Melee swing damage
+    pub dexterity: u32, // Critical Strike Chance
+    pub intellect: u32, // Spell damage
+    pub luck: u32,      // Drop rate
 }
 
 impl Default for PlayerStats {
     fn default() -> Self {
-        PlayerStats {
+        Self {
             agility: 1,
             strength: 1,
             dexterity: 1,
@@ -21,8 +22,9 @@ impl Default for PlayerStats {
     }
 }
 
-#[derive(Clone, Debug, Copy, PartialEq)]
-pub enum DisplayableStatType {
+/// One of the [`PlayerStats`] fields, for shop UI and stat changes.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Stat {
     Agility,
     Strength,
     Dexterity,
@@ -30,24 +32,24 @@ pub enum DisplayableStatType {
     Luck,
 }
 
-impl DisplayableStatType {
-    pub fn get_description(&self) -> &'static str {
+impl Stat {
+    pub fn description(self) -> &'static str {
         match self {
-            DisplayableStatType::Agility => "Movement speed, roll range",
-            DisplayableStatType::Strength => "Melee swing damage",
-            DisplayableStatType::Dexterity => "Critical Strike Chance",
-            DisplayableStatType::Intellect => "Spell damage",
-            DisplayableStatType::Luck => "Drop rate",
+            Self::Agility => "Movement speed, roll range",
+            Self::Strength => "Melee swing damage",
+            Self::Dexterity => "Critical Strike Chance",
+            Self::Intellect => "Spell damage",
+            Self::Luck => "Drop rate",
         }
     }
 
-    pub fn get_value(&self, stats: &PlayerStats) -> u32 {
+    pub fn value(self, stats: &PlayerStats) -> u32 {
         match self {
-            DisplayableStatType::Agility => stats.agility,
-            DisplayableStatType::Strength => stats.strength,
-            DisplayableStatType::Dexterity => stats.dexterity,
-            DisplayableStatType::Intellect => stats.intellect,
-            DisplayableStatType::Luck => stats.luck,
+            Self::Agility => stats.agility,
+            Self::Strength => stats.strength,
+            Self::Dexterity => stats.dexterity,
+            Self::Intellect => stats.intellect,
+            Self::Luck => stats.luck,
         }
     }
 }

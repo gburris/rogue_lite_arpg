@@ -2,12 +2,21 @@ use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
 
-use super::{Enemy, EnemyKind, EnemySpawnData, SpawnEnemies, bat, defeat, mage, warrior};
+use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
-pub(super) fn spawn_enemies(
+#[derive(Event, Debug)]
+pub struct SpawnEnemies(pub Vec<EnemySpawn>);
+
+#[derive(Clone, Copy, Debug)]
+pub struct EnemySpawn {
+    pub position: Vec2,
+    pub kind: EnemyKind,
+}
+
+pub(super) fn on_spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -16,7 +25,7 @@ pub(super) fn spawn_enemies(
     player: Single<Entity, With<Player>>,
     mut map_rng: ResMut<MapRng>,
 ) {
-    for spawn_data in spawn_enemies.0.clone() {
+    for &spawn_data in &spawn_enemies.0 {
         spawn_enemy(
             &mut commands,
             spawn_data,
@@ -31,7 +40,7 @@ pub(super) fn spawn_enemies(
 
 fn spawn_enemy(
     commands: &mut Commands,
-    spawn_data: EnemySpawnData,
+    spawn_data: EnemySpawn,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
@@ -40,8 +49,8 @@ fn spawn_enemy(
 ) {
     trace!("Spawning enemy at: {}", spawn_data.position);
 
-    let base = base_enemy(spawn_data.enemy_kind, spawn_data.position, player);
-    match spawn_data.enemy_kind {
+    let base = base_enemy(spawn_data.kind, spawn_data.position, player);
+    match spawn_data.kind {
         EnemyKind::Warrior => {
             warrior::spawn_warrior(commands, base, sprites, sprite_layouts, shadows);
         }

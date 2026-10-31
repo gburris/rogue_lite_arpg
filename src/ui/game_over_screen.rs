@@ -10,7 +10,7 @@ pub struct GameOverScreen;
 #[derive(Component)]
 pub struct RestartButton;
 
-pub fn spawn(mut commands: Commands) {
+pub(super) fn spawn(mut commands: Commands) {
     commands.spawn((
         GameOverScreen,
         DespawnOnExit(AppState::GameOver),
@@ -23,7 +23,8 @@ pub fn spawn(mut commands: Commands) {
             row_gap: px(20.),
             ..default()
         },
-        BackgroundColor::from(Color::BLACK.with_alpha(1.0)), // want to allow game to be seen in background
+        BackgroundColor::from(Color::BLACK.with_alpha(1.0)), /* want to allow game to be seen in
+                                                              * background */
         // render this above in-game UI such as player health and score
         GlobalZIndex(1),
         children![
@@ -43,16 +44,17 @@ pub fn spawn(mut commands: Commands) {
                     ..default()
                 },
                 BorderColor::all(Color::BLACK),
-                BackgroundColor(Color::srgb(0.15, 0.15, 0.15)),
+                BackgroundColor::from(Color::srgb(0.15, 0.15, 0.15)),
                 children![Text::new("Restart"), Observer::new(on_restart_clicked)]
             )
         ],
     ));
 }
 
-/// Passes players current level to the next instance of the game, despawns everything and starts again
+/// Passes players current level to the next instance of the game, despawns everything and starts
+/// again.
 fn on_restart_clicked(_: On<Pointer<Click>>, mut commands: Commands, player: Single<&Player>) {
-    commands.trigger(RestartEvent {
-        player_level: player.get_level(),
+    commands.trigger(Restart {
+        player_level: player.level(),
     });
 }

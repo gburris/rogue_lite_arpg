@@ -12,12 +12,25 @@ use super::tiles::{TileGrid, TileRect};
 /// Recipes spell it as a bare number (`count: 1`) or an inclusive pair (`count: (10, 15)`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "CountRangeInput")]
-pub struct CountRange(
-    /// Inclusive minimum value.
-    pub u32,
-    /// Inclusive maximum value.
-    pub u32,
-);
+pub struct CountRange {
+    pub min: u32,
+    pub max: u32,
+}
+
+/// Half-open band of x-deciles (tenths of the map width), written as a `(min, max)` pair in
+/// recipes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(from = "(u32, u32)")]
+pub struct DecileRange {
+    pub min: u32,
+    pub max: u32,
+}
+
+impl From<(u32, u32)> for DecileRange {
+    fn from((min, max): (u32, u32)) -> Self {
+        Self { min, max }
+    }
+}
 
 /// Recipe spelling of a [`CountRange`].
 #[derive(Deserialize)]
@@ -30,16 +43,24 @@ enum CountRangeInput {
 impl From<CountRangeInput> for CountRange {
     fn from(input: CountRangeInput) -> Self {
         match input {
-            CountRangeInput::Exact(count) => Self(count, count),
-            CountRangeInput::Range(minimum, maximum) => Self(minimum, maximum),
+            CountRangeInput::Exact(count) => Self::exactly(count),
+            CountRangeInput::Range(min, max) => Self { min, max },
         }
     }
 }
 
 impl CountRange {
+    /// A range that always rolls `count`.
+    pub const fn exactly(count: u32) -> Self {
+        Self {
+            min: count,
+            max: count,
+        }
+    }
+
     /// Uniformly rolls from `min..=max`; callers must validate that `min <= max`.
     pub fn roll_size(self, random_generator: &mut ChaCha8Rng) -> u32 {
-        random_generator.random_range(self.0..=self.1)
+        random_generator.random_range(self.min..=self.max)
     }
 }
 
@@ -76,7 +97,7 @@ pub enum PlaceRule {
     /// Try to place an inclusive random count within the half-open x-decile interval.
     Random {
         count: CountRange,
-        x_deciles: (u32, u32),
+        x_deciles: DecileRange,
         separation: u32,
     },
     /// Place an inclusive random count of footprints centered within `radius` tiles (a square)
@@ -156,8 +177,8 @@ fn overlaps(first_rect: TileRect, second_rect: TileRect) -> bool {
         && second_rect.min.y < first_rect.max_exclusive().y
 }
 
-/// Places footprints and returns their origins; random and edge rules may place fewer than requested.
-/// Successful placements update context; fixed placement does not advance the RNG.
+/// Places footprints and returns their origins; random and edge rules may place fewer than
+/// requested. Successful placements update context; fixed placement does not advance the RNG.
 pub fn place(
     rule: &PlaceRule,
     footprint: UVec2,
@@ -240,7 +261,8 @@ fn place_fixed(
         })?;
     if !context.available(tiles, bounds) {
         return Err(format!(
-            "fixed footprint {bounds:?} at {anchor:?} overlaps a reserved area or covers unspawnable tiles"
+            "fixed footprint {bounds:?} at {anchor:?} overlaps a reserved area or covers \
+             unspawnable tiles"
         )
         .into());
     }
@@ -250,7 +272,7 @@ fn place_fixed(
 
 fn place_random(
     count: CountRange,
-    x_deciles: (u32, u32),
+    x_deciles: DecileRange,
     separation: u32,
     footprint: UVec2,
     tiles: &TileGrid,
@@ -258,8 +280,8 @@ fn place_random(
     random_generator: &mut ChaCha8Rng,
 ) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
-    let x_start = context.map_size.x * x_deciles.0 / 10;
-    let x_end = context.map_size.x * x_deciles.1 / 10;
+    let x_start = context.map_size.x * x_deciles.min / 10;
+    let x_end = context.map_size.x * x_deciles.max / 10;
     if x_start >= x_end
         || context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)

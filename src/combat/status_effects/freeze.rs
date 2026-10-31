@@ -2,11 +2,11 @@ use bevy::color::palettes::tailwind::BLUE_400;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use super::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
+use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
 
 #[derive(Component, Clone, Default)]
-#[require(StatusType::Freeze)]
+#[require(StatusKind::Freeze)]
 pub struct Frozen;
 
 pub(super) fn apply_frozen(
@@ -14,12 +14,12 @@ pub(super) fn apply_frozen(
     status_query: Query<(Entity, &StatusOf), (With<Frozen>, Without<StatusApplied>)>,
     sprites: Res<SpriteAssets>,
 ) {
-    status_query.iter().for_each(|(status, status_of)| {
+    for (status, status_of) in &status_query {
         commands.entity(status).insert(StatusApplied);
         commands
             .entity(status_of.0)
             .with_child(grounded_ice_vfx(&sprites, status));
-    });
+    }
 }
 
 fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {

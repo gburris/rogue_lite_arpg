@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use avian2d::prelude::*;
 use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 #[cfg(not(target_arch = "wasm32"))]
-use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
+use bevy::dev_tools::fps_overlay::{FpsOverlayPlugin, FpsOverlaySystems};
 use bevy::dev_tools::states::log_transitions;
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
 use bevy::log::{Level, LogPlugin};
@@ -11,10 +11,7 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
 use super::view;
-use crate::prelude::{
-    AppState, AttackState, Brain, Dash, Enemy, InGameSystems, Menu, Motion, ScoreTrace, TargetInfo,
-    Targeting, Vision, Wander, ZLayer,
-};
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(
@@ -25,7 +22,7 @@ pub(super) fn plugin(app: &mut App) {
                 filter: "wgpu=error,baba_yaga=debug".to_string(),
                 ..default()
             })
-            .set(view::get_window_plugin())
+            .set(view::window_plugin())
             .set(ImagePlugin::default_nearest()),
     )
     .add_plugins(PhysicsDebugPlugin)
@@ -46,11 +43,11 @@ pub(super) fn plugin(app: &mut App) {
     .add_systems(
         Update,
         (
-            handle_debug_input
+            toggle_debug_render
                 .in_set(InGameSystems::PlayerInput)
                 .ambiguous_with_all(),
             (
-                view::camera_debug_system,
+                view::draw_camera_debug_gizmos,
                 debug_vision,
                 spawn_enemy_ai_labels,
                 update_enemy_ai_labels,
@@ -68,13 +65,18 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, log_transitions::<Menu>);
 
     #[cfg(not(target_arch = "wasm32"))]
-    app.add_plugins(FpsOverlayPlugin::default());
+    app.add_plugins(FpsOverlayPlugin::default()).configure_sets(
+        Update,
+        // The overlay only touches its own text and nodes.
+        (FpsOverlaySystems::Customize, FpsOverlaySystems::UpdateText)
+            .ambiguous_with(InGameSystems::HudOverlay),
+    );
 }
 
 #[derive(Resource)]
 struct DebugRenderEnabled;
 
-fn handle_debug_input(
+fn toggle_debug_render(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut config_store: ResMut<GizmoConfigStore>,
@@ -123,7 +125,7 @@ fn debug_target_lines(
         } else {
             RED
         };
-        gizmos.line_2d(origin, target_info.target_position, color);
+        gizmos.line_2d(origin, target_info.position, color);
     }
 }
 
@@ -173,7 +175,7 @@ fn update_enemy_ai_labels(
             &Brain,
             &TargetInfo,
             Has<Targeting>,
-            Option<&AttackState>,
+            Option<&Attacking>,
             Option<&Dash>,
             Option<&Wander>,
             Option<&ScoreTrace>,
@@ -183,12 +185,12 @@ fn update_enemy_ai_labels(
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((brain, target_info, has_target, attack_state, dash, wander, score_trace)) =
+        let Ok((brain, target_info, has_target, attacking, dash, wander, score_trace)) =
             enemies.get(parent.parent())
         else {
             continue;
         };
-        let attacking = attack_state.is_some_and(|attack| attack.is_attacking);
+        let attacking = attacking.is_some_and(|attacking| **attacking);
         let mode = short_activity(brain, dash, wander);
         if has_target {
             let sight = if target_info.line_of_sight {

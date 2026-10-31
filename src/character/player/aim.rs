@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_player_aim);
 
     app.add_systems(OnEnter(AppState::Playing), grab_cursor)
-        .add_systems(OnExit(Pause(true)), grab_cursor)
+        .add_systems(OnExit(PauseState::Paused), grab_cursor)
         .add_systems(
             Update,
             grab_cursor_when_focused.in_set(InGameSystems::PlayerInput),
@@ -55,14 +55,14 @@ fn on_player_aim(
         let (player_transform, mut target_info) = player.into_inner();
 
         // Convert player-relative aim to screen-relative world position
-        let world_aim_pos = player_transform.translation.xy() + player_aim.translation.xy();
+        let world_aim_position = player_transform.translation.xy() + player_aim.translation.xy();
 
         // Apply screen-relative input
-        let new_world_aim_pos = world_aim_pos + aim_input.value;
+        let new_world_aim_position = world_aim_position + aim_input.value;
 
         // Convert back to player-relative, clamped to max distance
-        let player_pos = player_transform.translation.xy();
-        let direction = new_world_aim_pos - player_pos;
+        let player_position = player_transform.translation.xy();
+        let direction = new_world_aim_position - player_position;
         let distance = direction.length();
 
         if distance > AIM_DISTANCE {

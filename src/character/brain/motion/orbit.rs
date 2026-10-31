@@ -1,13 +1,30 @@
 //! Orbiting the target inside a distance range.
 
 use bevy::prelude::*;
+use rand::RngExt;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{BrainRng, Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
 const ORBIT_RADIAL_GAIN: f32 = 0.5;
+
+/// Which way an [`Orbit`] circles its target.
+#[derive(Clone, Copy, Debug)]
+enum OrbitDirection {
+    Clockwise,
+    CounterClockwise,
+}
+
+impl OrbitDirection {
+    fn reversed(self) -> Self {
+        match self {
+            Self::Clockwise => Self::CounterClockwise,
+            Self::CounterClockwise => Self::Clockwise,
+        }
+    }
+}
 
 /// Circles the target inside a distance range, rerolling its direction over time.
 #[derive(Component, Clone, Copy, Debug)]
@@ -18,7 +35,7 @@ pub struct Orbit {
     pub max_distance_offset: f32,
     distance_offset: f32,
     reroll_at: f32,
-    clockwise: Option<bool>,
+    direction: Option<OrbitDirection>,
 }
 
 impl Orbit {
@@ -30,26 +47,26 @@ impl Orbit {
             max_distance_offset: 0.0,
             distance_offset: 0.0,
             reroll_at: 0.0,
-            clockwise: None,
+            direction: None,
         }
     }
 
-    pub fn with_max_distance_offset(max_distance_offset: f32) -> Self {
+    pub fn with_max_distance_offset(self, max_distance_offset: f32) -> Self {
         Self {
             max_distance_offset,
-            ..Self::new()
+            ..self
         }
     }
 
     /// Forgets the circling side, so the next orbit picks it from the heading again.
     fn leave_orbit(&mut self) {
-        self.clockwise = None;
+        self.direction = None;
     }
 
-    fn roll_distance_offset(&mut self, random: &mut BrainRng) {
+    fn roll_distance_offset(&mut self) {
         if self.max_distance_offset > 0.0 {
             self.distance_offset =
-                random.range(-self.max_distance_offset, self.max_distance_offset);
+                rand::rng().random_range(-self.max_distance_offset..self.max_distance_offset);
         }
     }
 }
@@ -76,9 +93,9 @@ impl Capability for Orbit {
 /// Circles the target while the brain holds [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
-    mut orbiters: Query<(SteeredCharacter, &mut Orbit, &mut Steering, &mut BrainRng)>,
+    mut orbiters: Query<(SteeredCharacter, &mut Orbit, &mut Steering)>,
 ) {
-    for (character, mut orbit, mut steering, mut rng) in &mut orbiters {
+    for (character, mut orbit, mut steering) in &mut orbiters {
         let Some(motion @ Motion::Orbit(distance_range)) = character.brain.motion() else {
             orbit.leave_orbit();
             continue;
@@ -86,42 +103,41 @@ pub(super) fn apply_orbit(
         *steering = character
             .build_steer_input(motion, &time)
             .map_or(Steering::HALT, |input| {
-                Steering::scaled(steer(&input, &mut orbit, distance_range, &mut rng), 1.0)
+                Steering::scaled(steer(&input, &mut orbit, distance_range), 1.0)
             });
     }
 }
 
-fn steer(
-    input: &SteerInput,
-    orbit: &mut Orbit,
-    distance_range: Interval,
-    random: &mut BrainRng,
-) -> Option<Vec2> {
+fn steer(input: &SteerInput, orbit: &mut Orbit, distance_range: Interval) -> Option<Vec2> {
     let info = input.target_info?;
     let bearing = input.direction_to_target()?;
     let now = input.now;
-    let clockwise = match orbit.clockwise {
+    let direction = match orbit.direction {
         None => {
-            let clockwise = pick_side_matching_heading(bearing, input.heading, random);
-            orbit.roll_distance_offset(random);
+            let direction = pick_direction_matching_heading(bearing, input.heading);
+            orbit.roll_distance_offset();
             orbit.reroll_at = now + orbit.reroll_interval.min();
-            clockwise
+            direction
         }
-        Some(clockwise) if now >= orbit.reroll_at => {
-            let switched = clockwise ^ (random.range(0.0, 1.0) < orbit.switch_chance);
-            orbit.roll_distance_offset(random);
-            orbit.reroll_at =
-                now + random.range(orbit.reroll_interval.min(), orbit.reroll_interval.max());
+        Some(direction) if now >= orbit.reroll_at => {
+            let switched = if rand::rng().random::<f32>() < orbit.switch_chance {
+                direction.reversed()
+            } else {
+                direction
+            };
+            orbit.roll_distance_offset();
+            orbit.reroll_at = now
+                + rand::rng()
+                    .random_range(orbit.reroll_interval.min()..orbit.reroll_interval.max());
             switched
         }
-        Some(clockwise) => clockwise,
+        Some(direction) => direction,
     };
-    orbit.clockwise = Some(clockwise);
+    orbit.direction = Some(direction);
     // `bearing.perp()` circles the target clockwise.
-    let tangent = if clockwise {
-        bearing.perp()
-    } else {
-        -bearing.perp()
+    let tangent = match direction {
+        OrbitDirection::Clockwise => bearing.perp(),
+        OrbitDirection::CounterClockwise => -bearing.perp(),
     };
     // Positive error means too far out, so the correction points at the target.
     let radial = bearing
@@ -130,12 +146,16 @@ fn steer(
     Some((tangent + radial).normalize_or_zero())
 }
 
-fn pick_side_matching_heading(bearing: Vec2, heading: Vec2, random: &mut BrainRng) -> bool {
+fn pick_direction_matching_heading(bearing: Vec2, heading: Vec2) -> OrbitDirection {
     let heading_side = bearing.perp().dot(heading);
-    if heading_side.abs() > f32::EPSILON {
-        heading_side > 0.0
-    } else {
+    if heading_side > f32::EPSILON {
+        OrbitDirection::Clockwise
+    } else if heading_side < -f32::EPSILON {
+        OrbitDirection::CounterClockwise
+    } else if rand::rng().random_bool(0.5) {
         // Standing still or heading straight along the bearing favors neither side.
-        random.range(0.0, 1.0) < 0.5
+        OrbitDirection::Clockwise
+    } else {
+        OrbitDirection::CounterClockwise
     }
 }

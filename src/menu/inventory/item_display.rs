@@ -4,7 +4,6 @@ use bevy::ui_widgets::observe;
 
 use super::display_case::UpdateDisplayCase;
 use crate::prelude::*;
-use crate::ui::primitives::{text, width};
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 pub const VALUE_WIDTH: f32 = 60.0;
@@ -18,27 +17,27 @@ pub struct DisplaySlotOf(Entity);
 #[relationship_target(relationship = DisplaySlotOf, linked_spawn)]
 pub struct ItemDisplayed(Entity);
 
-/// Makes building display slots easier
+/// Makes building display slots easier.
 pub struct DisplaySlotContext {
-    pub item_entity: Entity,
-    pub item_name: String,   // Owned string
-    pub item_type: ItemType, // Just store what you need
-    pub item_value: u32,     // Just store what you need
+    pub item: Entity,
+    pub name: String,   // Owned string
+    pub kind: ItemKind, // Just store what you need
+    pub value: u32,     // Just store what you need
     pub equipment_slot: Option<EquipmentSlot>,
-    pub is_equipped: bool,
+    pub equipped: bool,
 }
 
-/// Spawns a given "slot" in a display case representing a single item in the inventory
+/// Spawns a given "slot" in a display case representing a single item in the inventory.
 pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bundle {
     let equip_slot_string = context
         .equipment_slot
         .map_or("-".to_string(), |slot| slot.to_string());
 
-    let equipped_icon = icons.equip_icon.clone();
-    let is_equipped = context.is_equipped;
+    let equipped_icon = icons.equip.clone();
+    let equipped = context.equipped;
 
     (
-        DisplaySlotOf(context.item_entity),
+        DisplaySlotOf(context.item),
         Node {
             width: px(900.0),
             height: px(32.0),
@@ -54,11 +53,11 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
         Children::spawn((
             Spawn((
                 ImageNode {
-                    image: match context.item_type {
-                        ItemType::Melee => icons.melee_icon.clone(),
-                        ItemType::Staff => icons.staff_icon.clone(),
-                        ItemType::Potion => icons.potion_icon.clone(),
-                        ItemType::Tome => icons.spell_book_icon.clone(),
+                    image: match context.kind {
+                        ItemKind::Melee => icons.melee.clone(),
+                        ItemKind::Staff => icons.staff.clone(),
+                        ItemKind::Potion => icons.potion.clone(),
+                        ItemKind::Tome => icons.spell_book.clone(),
                     },
                     ..default()
                 },
@@ -69,9 +68,9 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                 },
                 Pickable::IGNORE,
             )),
-            Spawn((text(context.item_name, 18.0), Pickable::IGNORE)),
+            Spawn((text(context.name, 18.0), Pickable::IGNORE)),
             SpawnWith(move |parent: &mut ChildSpawner| {
-                if is_equipped {
+                if equipped {
                     spawn_equip_icon(parent, equipped_icon);
                 }
             }),
@@ -88,7 +87,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bund
                 Pickable::IGNORE,
             )),
             Spawn((
-                text(context.item_value.to_string(), 18.0),
+                text(context.value.to_string(), 18.0),
                 width(VALUE_WIDTH),
                 Pickable::IGNORE,
             )),
@@ -123,11 +122,11 @@ pub fn on_slot_clicked(
 ) -> Result {
     let item_entity = slot_query.get(pointer_click.entity)?.0;
 
-    if let Ok((equippable, is_equipped, consumable)) = item_query.get(item_entity) {
+    if let Ok((equippable, equipped, consumable)) = item_query.get(item_entity) {
         // Left click consumes or equips item
         if pointer_click.button == PointerButton::Primary {
             if equippable {
-                if is_equipped {
+                if equipped {
                     commands.trigger(Unequip { item: item_entity });
                 } else {
                     commands.trigger(Equip {
@@ -138,13 +137,13 @@ pub fn on_slot_clicked(
             } else if consumable {
                 commands.trigger(Consume {
                     entity: *player,
-                    item_entity,
+                    item: item_entity,
                 });
             }
 
         // Right click drops items from inventory
         } else if pointer_click.button == PointerButton::Secondary {
-            commands.trigger(ItemDrop { item: item_entity });
+            commands.trigger(DropItem { item: item_entity });
         }
 
         commands.trigger(UpdateDisplayCase { entity: *player });

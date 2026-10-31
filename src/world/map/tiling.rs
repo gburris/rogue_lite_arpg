@@ -78,7 +78,7 @@ const ATLAS: AtlasLayout = AtlasLayout {
 const TINT_BRIGHTNESS: [f32; 3] = [1.0, 0.98, 0.96];
 
 /// How a tile kind maps to atlas art.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum TilingRule {
     /// Fixed atlas slot with a seeded brightness from `brightness`.
     Tinted {
@@ -128,7 +128,7 @@ fn tiling_rule(tile_kind: TileKind) -> Option<TilingRule> {
 }
 
 /// Atlas slot and tint for one rendered tile.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct TileAppearance {
     /// Flat atlas index for `TileTextureIndex`.
     pub texture_index: u32,
@@ -175,7 +175,7 @@ pub(crate) fn tile_appearance(
 }
 
 /// How off-map neighbours read when sampling a tile's surroundings.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum EdgePolicy {
     /// Off-map tiles read as `TileKind::Wall`, closing the map border ring.
     Closed,
@@ -294,7 +294,10 @@ fn bank_texture_index(
 /// pick the same variant. Salted by the kind discriminant, so re-encoding a
 /// map glyph never reshuffles art.
 fn tile_variant(seed: u64, tile_kind: TileKind, tile: IVec2, variant_count: u16) -> u16 {
-    debug_assert!(variant_count > 0, "variant_count must be non-zero");
+    debug_assert!(
+        variant_count > 0,
+        "the hash is reduced modulo variant_count, which divides by zero"
+    );
 
     let mut hash = seed
         ^ u64::from(tile_kind as u32).wrapping_mul(0x9E37_79B1_85EB_CA87)

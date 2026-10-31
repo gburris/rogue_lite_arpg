@@ -2,19 +2,19 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// A row-major grid of tile data with a bottom-left origin.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TileGrid<T = TileKind> {
-    map_size: UVec2, // Size of the grid in tiles
+    size: UVec2, // Size of the grid in tiles
     cells: Vec<T>,
 }
 
 impl<T: Copy> TileGrid<T> {
     fn width(&self) -> usize {
-        self.map_size.x as usize
+        self.size.x as usize
     }
 
     fn height(&self) -> usize {
-        self.map_size.y as usize
+        self.size.y as usize
     }
 
     fn cell_index(&self, tile_index: IVec2) -> Option<usize> {
@@ -25,28 +25,28 @@ impl<T: Copy> TileGrid<T> {
     }
 
     /// Creates a grid filled with `fill`.
-    pub fn new(map_size: UVec2, fill: T) -> Self
+    pub fn new(size: UVec2, fill: T) -> Self
     where
         T: Clone,
     {
         assert!(
-            map_size.x > 0 && map_size.y > 0,
+            size.x > 0 && size.y > 0,
             "tile grid dimensions must be non-zero"
         );
-        let width = usize::try_from(map_size.x).expect("map width fits usize");
-        let height = usize::try_from(map_size.y).expect("map height fits usize");
+        let width = usize::try_from(size.x).expect("map width fits usize");
+        let height = usize::try_from(size.y).expect("map height fits usize");
         let capacity = width
             .checked_mul(height)
             .expect("total tiles in map fits usize");
         Self {
-            map_size,
+            size,
             cells: vec![fill; capacity],
         }
     }
 
     /// Returns the grid dimensions in tiles.
-    pub fn map_size(&self) -> UVec2 {
-        self.map_size
+    pub fn size(&self) -> UVec2 {
+        self.size
     }
 
     /// Returns whether the grid contains the given tile coordinate.
@@ -95,7 +95,7 @@ impl<T: Copy> TileGrid<T> {
 
     /// Fills the grid's outermost rows and columns.
     pub fn fill_border(&mut self, value: T) {
-        let size = self.map_size;
+        let size = self.size;
         self.fill_rect(
             &TileRect {
                 min: IVec2::ZERO,
@@ -153,7 +153,7 @@ impl<T: Copy> TileGrid<T> {
 }
 
 /// An axis-aligned rectangle of tiles with an exclusive upper bound.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TileRect {
     /// Bottom-left tile coordinate.
     pub min: IVec2,
@@ -179,7 +179,7 @@ impl TileRect {
             ((map_size.y - rect_size.y) / 2) as i32,
         );
 
-        Some(TileRect {
+        Some(Self {
             min,
             size: rect_size,
         })
@@ -187,7 +187,7 @@ impl TileRect {
 
     /// Returns the rectangle translated by an offset, or `None` on overflow.
     pub fn translated(&self, offset: IVec2) -> Option<Self> {
-        Some(TileRect {
+        Some(Self {
             min: self.min.checked_add(offset)?,
             size: self.size,
         })
@@ -221,7 +221,7 @@ impl TileRect {
 }
 
 /// A tile material or special map marker.
-#[derive(Clone, Eq, Hash, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TileKind {
     Wood,
     Ground,
@@ -272,12 +272,12 @@ impl TileKind {
 
     /// Returns whether this tile blocks ground placement.
     pub fn blocks_ground(self) -> bool {
-        matches!(self, TileKind::Wall | TileKind::Water | TileKind::DeadZone)
+        matches!(self, Self::Wall | Self::Water | Self::DeadZone)
     }
 
     /// Returns whether this tile should be rendered.
     pub fn should_render(self) -> bool {
-        !matches!(self, TileKind::DeadZone)
+        !matches!(self, Self::DeadZone)
     }
 
     /// Returns whether this tile can host a spawn.

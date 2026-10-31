@@ -36,7 +36,7 @@ impl Behavior {
     }
 
     /// Whether both behaviors claim the motion slot or both claim the action slot.
-    pub fn shares_a_slot_with(&self, other: &Behavior) -> bool {
+    pub fn shares_a_slot_with(&self, other: &Self) -> bool {
         (self.motion.is_some() && other.motion.is_some())
             || (self.action.is_some() && other.action.is_some())
     }
@@ -59,7 +59,8 @@ impl CommitPolicy {
         matches!(self, Self::UntilFinished { .. })
     }
 
-    /// The tier a holder must be outranked by to lose its slots; 0 for a continuously scored behavior.
+    /// The tier a holder must be outranked by to lose its slots; 0 for a continuously scored
+    /// behavior.
     pub const fn interrupt_tier(self) -> u8 {
         match self {
             Self::UntilFinished { interrupt_tier } => interrupt_tier,
@@ -104,7 +105,8 @@ pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
         }
         if committed && behavior.commit.interrupt_tier() == 0 {
             return Err(format!(
-                "behavior {index} is committed in tier 0, which is for continuously scored behaviors"
+                "behavior {index} is committed in tier 0, which is for continuously scored \
+                 behaviors"
             ));
         }
         // Every other action is finite, so any action is a finite part.
@@ -112,7 +114,8 @@ pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
         let finite_parts = usize::from(finite_motion) + usize::from(behavior.action.is_some());
         if committed && finite_parts != 1 {
             return Err(format!(
-                "behavior {index} is committed with {finite_parts} finite parts; one finish must end it"
+                "behavior {index} is committed with {finite_parts} finite parts; one finish must \
+                 end it"
             ));
         }
         if !committed && finite_motion {

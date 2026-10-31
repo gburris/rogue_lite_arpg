@@ -3,14 +3,12 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
 use crate::prelude::*;
-use crate::ui::constants::{BACKGROUND_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT};
-use crate::ui::primitives::{menu_header, text};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)
         .add_systems(
             Update,
-            handle_menu_button_pressed
+            switch_menu_on_button_press
                 .run_if(in_state(Menu::Pause))
                 .in_set(MainSystems::Menu),
         );
@@ -20,9 +18,9 @@ pub(super) fn plugin(app: &mut App) {
 struct MainMenu;
 
 #[derive(Component)]
-struct MenuButton(pub Menu);
+struct MenuButton(Menu);
 
-fn handle_menu_button_pressed(
+fn switch_menu_on_button_press(
     mut button_query: Query<(&Interaction, &MenuButton)>,
     mut next_menu_state: ResMut<NextState<Menu>>,
 ) {
@@ -69,7 +67,7 @@ fn spawn_main_menu(
                     menu_button(MenuButton(Menu::Stats), "STATS"),
                 ]
             ),
-            main_menu_footer(player.get_level(), health, purse.amount, &game_progress),
+            main_menu_footer(player.level(), health, purse.amount, &game_progress),
         ],
     ));
 }
@@ -87,7 +85,7 @@ fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
             ..default()
         },
         BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor(DARK_GRAY_COLOR),
+        BackgroundColor::from(DARK_GRAY_COLOR),
         children![text(button_text, 32.0)],
     )
 }
@@ -141,13 +139,13 @@ fn main_menu_footer(
     )
 }
 
-pub(super) fn pause(mut next_pause_state: ResMut<NextState<Pause>>, mut commands: Commands) {
+pub(super) fn pause(mut next_pause_state: ResMut<NextState<PauseState>>, mut commands: Commands) {
     commands.spawn(menu_background());
-    next_pause_state.set(Pause(true));
+    next_pause_state.set(PauseState::Paused);
 }
 
-pub(super) fn unpause(mut next_pause_state: ResMut<NextState<Pause>>) {
-    next_pause_state.set(Pause(false));
+pub(super) fn unpause(mut next_pause_state: ResMut<NextState<PauseState>>) {
+    next_pause_state.set(PauseState::Running);
 }
 
 #[derive(InputAction)]

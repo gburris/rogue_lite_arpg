@@ -1,2 +1,6 @@
 # Require `bevy_ecs::children!` to use `[]` braces, instead of `()` or `{}`.
 standard-macro-braces = [{ name = "children", brace = "[" }]
+# Treat acronyms as one word in type names (`Npc`, `UiPlugin`).
+upper-case-acronyms-aggressive = true
+# Let `wrong_self_convention` and similar lints check `pub` items in a binary crate.
+avoid-breaking-exported-api = false

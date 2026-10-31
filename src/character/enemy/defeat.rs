@@ -2,10 +2,14 @@ use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 use rand::{RngExt, rng};
 
-use super::{Enemy, Experience};
-use crate::character::Purse;
+use super::Enemy;
 use crate::character::player::PlayerStats;
 use crate::prelude::*;
+
+/// Experience paid out when the player defeats this enemy. Scales with
+/// threat: the tanky warrior pays most, the fragile flying bat least.
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut)]
+pub struct Experience(pub f32);
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
@@ -30,7 +34,7 @@ pub(super) fn on_enemy_defeated(
         let (player_stats, mut player) = player_query.into_inner();
 
         if let Some(experience_to_gain) = experience_to_gain {
-            player.current_experience += experience_to_gain.base_exp;
+            player.experience += **experience_to_gain;
         }
 
         if let Some(items) = items {
@@ -39,7 +43,7 @@ pub(super) fn on_enemy_defeated(
                 if let Ok(item_result) = item_query.get(item_entity) {
                     let roll = rng.random_range(0.0..1.0);
                     if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger(ItemDrop { item: item_entity });
+                        commands.trigger(DropItem { item: item_entity });
                     }
                 }
             }
@@ -48,7 +52,7 @@ pub(super) fn on_enemy_defeated(
         if let Some(purse) = purse {
             // Enemies drop their gold based on player luck
             if rng.random_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
-                commands.trigger(GoldDrop {
+                commands.trigger(DropGold {
                     location: transform.translation.truncate(),
                     amount: purse.amount,
                 });

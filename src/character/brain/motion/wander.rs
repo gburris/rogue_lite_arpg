@@ -1,9 +1,12 @@
 //! Ambling inside the home area.
 
+use std::f32::consts::TAU;
+
 use bevy::prelude::*;
+use rand::RngExt;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{BrainRng, Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
@@ -18,9 +21,17 @@ pub struct Wander {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct WanderPhase {
-    walking: bool,
-    until: f32,
+enum WanderPhase {
+    Walking { until: f32 },
+    Pausing { until: f32 },
+}
+
+impl WanderPhase {
+    fn until(self) -> f32 {
+        match self {
+            Self::Walking { until } | Self::Pausing { until } => until,
+        }
+    }
 }
 
 impl Wander {
@@ -35,7 +46,7 @@ impl Wander {
     }
 
     pub fn is_walking(&self) -> bool {
-        self.phase.is_some_and(|phase| phase.walking)
+        matches!(self.phase, Some(WanderPhase::Walking { .. }))
     }
 
     fn leave_wander(&mut self) {
@@ -59,9 +70,9 @@ impl Capability for Wander {
 /// Ambles inside the home area while the brain holds [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
-    mut wanderers: Query<(SteeredCharacter, &mut Wander, &mut Steering, &mut BrainRng)>,
+    mut wanderers: Query<(SteeredCharacter, &mut Wander, &mut Steering)>,
 ) {
-    for (character, mut wander, mut steering, mut rng) in &mut wanderers {
+    for (character, mut wander, mut steering) in &mut wanderers {
         if character.brain.motion() != Some(Motion::Wander) {
             wander.leave_wander();
             continue;
@@ -70,34 +81,38 @@ pub(super) fn apply_wander(
             character
                 .build_steer_input(Motion::Wander, &time)
                 .map_or(Steering::HALT, |input| {
-                    let direction = steer(&input, &mut wander, &mut rng);
+                    let direction = steer(&input, &mut wander);
                     Steering::scaled(direction, wander.speed_scale)
                 });
     }
 }
 
-fn steer(input: &SteerInput, wander: &mut Wander, random: &mut BrainRng) -> Option<Vec2> {
+fn steer(input: &SteerInput, wander: &mut Wander) -> Option<Vec2> {
     let phase = match wander.phase {
-        Some(phase) if input.now < phase.until => phase,
+        Some(phase) if input.now < phase.until() => phase,
         previous => {
-            let walking = previous.is_some_and(|phase| !phase.walking);
-            let span = if walking { wander.walk } else { wander.pause };
-            if walking {
-                wander.direction = pick_direction(input, random);
-            }
-            let phase = WanderPhase {
-                walking,
-                until: input.now + random.range(span.min(), span.max()),
+            let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
+                wander.direction = pick_direction(input);
+                let until =
+                    input.now + rand::rng().random_range(wander.walk.min()..wander.walk.max());
+                WanderPhase::Walking { until }
+            } else {
+                let until =
+                    input.now + rand::rng().random_range(wander.pause.min()..wander.pause.max());
+                WanderPhase::Pausing { until }
             };
             wander.phase = Some(phase);
             phase
         }
     };
-    phase.walking.then_some(wander.direction)
+    match phase {
+        WanderPhase::Walking { .. } => Some(wander.direction),
+        WanderPhase::Pausing { .. } => None,
+    }
 }
 
-fn pick_direction(input: &SteerInput, random: &mut BrainRng) -> Vec2 {
-    let candidate = random.direction();
+fn pick_direction(input: &SteerInput) -> Vec2 {
+    let candidate = Vec2::from_angle(rand::rng().random_range(0.0..TAU));
     let Some(home_area) = input.home_area else {
         return candidate;
     };
@@ -112,5 +127,5 @@ fn pick_direction(input: &SteerInput, random: &mut BrainRng) -> Vec2 {
         return candidate;
     }
     home.normalize_or_zero()
-        .rotate(Vec2::from_angle(random.range(-0.6, 0.6)))
+        .rotate(Vec2::from_angle(rand::rng().random_range(-0.6..0.6)))
 }

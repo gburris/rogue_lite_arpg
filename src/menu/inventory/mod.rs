@@ -4,8 +4,6 @@ use bevy::prelude::*;
 
 use self::display_case::{UpdateDisplayCase, display_case};
 use crate::prelude::*;
-use crate::ui::constants::{DARK_GRAY_COLOR, FOOTER_HEIGHT};
-use crate::ui::primitives::{menu_header, text};
 
 mod display_case;
 mod item_display;
@@ -28,7 +26,7 @@ struct InventoryMenu;
 
 fn spawn_inventory_menu(
     mut commands: Commands,
-    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<NPC>)>,
+    player: Single<(Entity, &Purse), (With<Player>, Without<Enemy>, Without<Npc>)>,
 ) {
     commands.spawn((
         InventoryMenu,
@@ -79,7 +77,7 @@ fn spawn_inventory_menu(
 
 const LINE_HEIGHT: f32 = 35.;
 
-/// Updates the scroll position of scrollable nodes in response to mouse input
+/// Updates the scroll position of scrollable nodes in response to mouse input.
 fn update_scroll_position(
     mut mouse_wheel_messages: MessageReader<MouseWheel>,
     hover_map: Res<HoverMap>,

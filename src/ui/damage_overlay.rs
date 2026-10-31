@@ -2,13 +2,14 @@ use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::prelude::{DamageDealt, Healed, Health, HurtBox, Lifespan, ZLayer};
+use crate::prelude::*;
 
 const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
 const HEALTH_TEXT_OFFSET: f32 = 10.0;
 
-// Characters don't have a collider on their root entity, so we use their hurtbox to determine height
+// Characters don't have a collider on their root entity, so we use their hurtbox to determine
+// height
 fn entity_height(
     entity: Entity,
     children_query: &Query<&Children>,
@@ -18,10 +19,11 @@ fn entity_height(
         .get(entity)
         .ok()
         .and_then(|children| hurt_box_query.iter_many(children).next())
-        .map_or(32.0, |aabb| aabb.max.y - aabb.min.y) // assume entity is 32 pixels tall if no hurtbox can be found
+        // Assume the entity is 32 pixels tall if no hurtbox can be found.
+        .map_or(32.0, |aabb| aabb.max.y - aabb.min.y)
 }
 
-/// Text is placed relative to `origin`, which is the center of the entity the text is for
+/// Text is placed relative to `origin`, which is the center of the entity the text is for.
 fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Bundle {
     // Create a quaternion for the random rotation
     let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
@@ -56,7 +58,7 @@ fn random_angle(angle_range: f32) -> f32 {
     rng.random_range(-angle_range..angle_range).to_radians()
 }
 
-pub fn on_damage_overlay_amount(
+pub(super) fn on_damage_overlay_amount(
     damage_dealt: On<DamageDealt>,
     mut commands: Commands,
     damaged_query: Query<(&Health, &Transform)>,
@@ -88,7 +90,7 @@ pub fn on_damage_overlay_amount(
     }
 }
 
-pub fn on_healing_overlay_amount(
+pub(super) fn on_healing_overlay_amount(
     healed: On<Healed>,
     mut commands: Commands,
     children_query: Query<&Children>,

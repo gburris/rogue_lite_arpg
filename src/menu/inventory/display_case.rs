@@ -4,10 +4,8 @@ use super::item_display::{
     DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
 };
 use crate::prelude::*;
-use crate::ui::constants::DARK_GRAY_ALPHA_COLOR;
-use crate::ui::primitives::{text, width};
 
-/// Div that wraps all display slots, but not top level component
+/// Div that wraps all display slots, but not top level component.
 #[derive(Component)]
 #[relationship(relationship_target = DisplayedBy)]
 pub struct DisplayCaseOf(Entity);
@@ -16,7 +14,8 @@ pub struct DisplayCaseOf(Entity);
 #[relationship_target(relationship = DisplayCaseOf)]
 pub struct DisplayedBy(Entity);
 
-/// Trigger on entity with Inventory component (i.e. the player entity) to update their associated display case
+/// Trigger on entity with Inventory component (i.e. the player entity) to update their associated
+/// display case.
 #[derive(EntityEvent)]
 pub(super) struct UpdateDisplayCase {
     pub entity: Entity,
@@ -88,30 +87,32 @@ pub(super) fn on_display_case_updated(
         .expect("Display case on inventory missing DisplayCaseContainer");
 
     // Despawn existing slots
-    slots_querys
-        .iter()
-        .filter(|(e, _)| display_case_children.is_some_and(|c| c.contains(e)))
-        .for_each(|(e, _)| commands.entity(e).despawn());
+    for (slot_entity, _) in &slots_querys {
+        if display_case_children.is_some_and(|children| children.contains(&slot_entity)) {
+            commands.entity(slot_entity).despawn();
+        }
+    }
 
     let Some(items) = items else {
         return;
     };
 
-    // Get name and entity for each item in inventory
-    let items = items.iter().map(|e| (e, item_query.get(e).unwrap())).map(
-        |(item_entity, (name, item, equippable, is_equipped))| DisplaySlotContext {
-            item_entity,
-            item_name: name.to_string(),
-            item_type: item.item_type,
-            item_value: item.value,
-            equipment_slot: equippable.map(|e| e.slot),
-            is_equipped,
-        },
-    );
-
     commands.entity(displayed_by.0).with_children(|parent| {
-        for slot_context in items {
-            parent.spawn(display_slot(&icons, slot_context));
+        for item_entity in items.iter() {
+            let (name, item, equippable, equipped) = item_query
+                .get(item_entity)
+                .expect("Inventory items have a name and item");
+            parent.spawn(display_slot(
+                &icons,
+                DisplaySlotContext {
+                    item: item_entity,
+                    name: name.to_string(),
+                    kind: item.kind,
+                    value: item.value,
+                    equipment_slot: equippable.map(|e| e.slot),
+                    equipped,
+                },
+            ));
         }
     });
 }

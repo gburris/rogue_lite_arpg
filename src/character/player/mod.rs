@@ -13,18 +13,17 @@ pub mod prelude {
     pub use super::aim::PlayerAim;
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::progression::GameProgress;
-    pub use super::{DisplayableStatType, Player, PlayerStats};
+    pub use super::{Player, PlayerStats, Stat};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::stats::{DisplayableStatType, PlayerStats};
-use crate::character::{Character, Purse};
+pub use self::stats::{PlayerStats, Stat};
+use crate::character::Character;
 use crate::prelude::*;
-use crate::utility::despawn_all;
 
-/// How much more experience is required (as a multiplier) after each level up
+/// How much more experience is required (as a multiplier) after each level up.
 const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 pub(super) fn plugin(app: &mut App) {
@@ -51,7 +50,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Player despawn
-    app.add_observer(despawn_all::<RestartEvent, Player>);
+    app.add_observer(despawn_all::<Restart, Player>);
 }
 
 #[derive(Component)]
@@ -67,43 +66,43 @@ pub(super) fn plugin(app: &mut App) {
     Purse
 )]
 pub struct Player {
-    current_level: u32,
+    level: u32,
     // Outside systems may give the player experience, like when an enemy dies
-    pub current_experience: f32,
-    next_level_experience_req: f32,
+    pub experience: f32,
+    experience_to_next_level: f32,
 }
 
 impl Default for Player {
     fn default() -> Self {
-        Player {
-            current_level: 1,
-            current_experience: 0.0,
-            next_level_experience_req: 20.0,
+        Self {
+            level: 1,
+            experience: 0.0,
+            experience_to_next_level: 20.0,
         }
     }
 }
 
 impl Player {
-    /// Attempts to increase player level based on current experience and level requirement, and then
-    /// sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
+    /// Attempts to increase player level based on current experience and level requirement, and
+    /// then sets the new level requirement based on `PLAYER_LEVEL_REQUIREMENT_MULTIPLIER`
     ///
-    /// returns whether the player leveled up
+    /// returns whether the player leveled up.
     pub fn attempt_level_up(&mut self) -> bool {
-        if self.current_experience >= self.next_level_experience_req {
-            self.current_experience -= self.next_level_experience_req;
-            self.next_level_experience_req *= PLAYER_LEVEL_REQUIREMENT_MULTIPLIER;
-            self.current_level += 1;
+        if self.experience >= self.experience_to_next_level {
+            self.experience -= self.experience_to_next_level;
+            self.experience_to_next_level *= PLAYER_LEVEL_REQUIREMENT_MULTIPLIER;
+            self.level += 1;
             return true;
         }
 
         false
     }
 
-    pub fn get_progress_to_next_level(&self) -> f32 {
-        self.current_experience / self.next_level_experience_req
+    pub fn progress_to_next_level(&self) -> f32 {
+        self.experience / self.experience_to_next_level
     }
 
-    pub fn get_level(&self) -> u32 {
-        self.current_level
+    pub fn level(&self) -> u32 {
+        self.level
     }
 }

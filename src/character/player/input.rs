@@ -15,10 +15,19 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_use_offhand_complete);
 
     // Pause Logic
-    app.add_systems(OnEnter(Pause(false)), set_controls(true))
-        .add_systems(OnEnter(Pause(true)), set_controls(false))
-        .add_systems(OnEnter(PlayingState::Death), set_controls(false))
-        .add_observer(on_inventory_opened);
+    app.add_systems(
+        OnEnter(PauseState::Running),
+        set_controls(ContextActivity::<Player>::ACTIVE),
+    )
+    .add_systems(
+        OnEnter(PauseState::Paused),
+        set_controls(ContextActivity::<Player>::INACTIVE),
+    )
+    .add_systems(
+        OnEnter(PlayingState::Death),
+        set_controls(ContextActivity::<Player>::INACTIVE),
+    )
+    .add_observer(on_inventory_opened);
 }
 
 const MOUSE_SENSITIVITY: f32 = 0.5;
@@ -71,14 +80,10 @@ fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<
     next_menu_state.set(Menu::Inventory);
 }
 
-fn set_controls(active: bool) -> impl Fn(Commands, Single<Entity, With<Player>>) {
+fn set_controls(
+    activity: ContextActivity<Player>,
+) -> impl Fn(Commands, Single<Entity, With<Player>>) {
     move |mut commands, player| {
-        let activity = if active {
-            ContextActivity::<Player>::ACTIVE
-        } else {
-            ContextActivity::<Player>::INACTIVE
-        };
-
         commands.entity(*player).insert(activity);
     }
 }

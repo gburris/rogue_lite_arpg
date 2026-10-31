@@ -32,7 +32,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(pause::on_toggle_pause);
 }
 
-#[derive(States, Eq, Default, Hash, Clone, Copy, Debug, PartialEq)]
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Menu {
     #[default]
     None, // In Game

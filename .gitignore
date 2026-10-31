@@ -34,5 +34,5 @@ sprite_code_do_not_open_its_not_worth_it/
 /cargo.lock
 dist/
 
-# Generated schedule graphs (DUMP_SCHEDULES=1)
-/runs/schedules/
+# Profiling output: schedule graphs (DUMP_SCHEDULES=1) and Tracy captures
+/runs/

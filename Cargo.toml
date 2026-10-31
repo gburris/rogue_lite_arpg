@@ -24,6 +24,8 @@ rand_chacha = "0.10"
 ron = "0.12.0"
 serde = "1.0.229"
 tracing = "0.1.44"
+# Plots in Tracy; the same crate that Bevy's `trace_tracy` uses.
+tracy-client = { version = "0.18.3", optional = true }
 bevy_mod_debugdump = { version = "0.16", default-features = false, optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
@@ -55,7 +57,7 @@ dev_native = [
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
 strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
-profile = ["bevy/trace_tracy", "bevy/debug"]
+profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client"]
 # Also track allocations, which adds noticeable overhead.
 profile_memory = ["profile", "bevy/trace_tracy_memory"]
 

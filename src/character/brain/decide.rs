@@ -4,12 +4,14 @@
 
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
+use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use rand::RngExt;
 
 use super::capability::{
     CapabilityComponents, CapabilityProfiles, MotionActionTable, build_capability_profiles,
 };
+use super::diagnostics::DecisionStats;
 use super::engine::{
     Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
 };
@@ -57,6 +59,7 @@ pub(super) fn on_release_finished_motion(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
+    mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     let Ok((mut brain, decision_input_components, components, mut score_trace)) =
@@ -69,6 +72,8 @@ pub(super) fn on_release_finished_motion(
     let cooldown = capability_profiles[finished.motion].map_or(0.0, |profile| profile.cooldown);
     brain.start_cooldown(finished.motion, now + cooldown);
     if brain.finish_committed_behavior(finished.behavior_run_id) {
+        let _span = info_span!("decide::after_motion").entered();
+        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -77,6 +82,7 @@ pub(super) fn on_release_finished_motion(
             score_trace.as_deref_mut(),
             now,
         );
+        decision_stats.record_redecision(started.elapsed());
     }
 }
 
@@ -88,6 +94,7 @@ pub(super) fn on_finish_action(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
+    mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     let Ok((mut brain, decision_input_components, components, mut score_trace)) =
@@ -112,6 +119,8 @@ pub(super) fn on_finish_action(
         Action::Use(_) | Action::Idle => {}
     }
     if brain.finish_committed_behavior(finished.behavior_run_id) {
+        let _span = info_span!("decide::after_action").entered();
+        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -120,6 +129,7 @@ pub(super) fn on_finish_action(
             score_trace.as_deref_mut(),
             now,
         );
+        decision_stats.record_redecision(started.elapsed());
     }
 }
 
@@ -129,6 +139,7 @@ pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
+    mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     for (mut brain, decision_input_components, components, mut score_trace) in &mut brains {
@@ -143,6 +154,8 @@ pub(super) fn decide_behavior(
         }
         let capability_profiles =
             build_capability_profiles(&components, &use_eligibility_queries.equipment);
+        let _span = info_span!("decide::paced").entered();
+        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -151,6 +164,7 @@ pub(super) fn decide_behavior(
             score_trace.as_deref_mut(),
             now,
         );
+        decision_stats.record_paced_decision(started.elapsed());
     }
 }
 
@@ -162,12 +176,15 @@ fn redecide_now(
     score_trace: Option<&mut ScoreTrace>,
     now: f32,
 ) {
-    let context_without_memory = build_decision_context(
-        decision_input_components,
-        capability_profiles,
-        use_eligibility_queries,
-        now,
-    );
+    let context_without_memory = {
+        let _span = info_span!("decide::context").entered();
+        build_decision_context(
+            decision_input_components,
+            capability_profiles,
+            use_eligibility_queries,
+            now,
+        )
+    };
     decide_slot_assignments(
         brain,
         context_without_memory,
@@ -193,11 +210,14 @@ fn decide_slot_assignments(
             brain.drop_committed_behavior(running, capability_profiles, now);
         }
     }
-    let (context, available_motion_action_table) =
-        brain.build_scoring_inputs(context_without_memory, capability_profiles, now);
+    let (context, available_motion_action_table) = {
+        let _span = info_span!("decide::scoring_inputs").entered();
+        brain.build_scoring_inputs(context_without_memory, capability_profiles, now)
+    };
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
     if let Some(score_trace) = score_trace {
+        let _span = info_span!("decide::explain").entered();
         score_trace.behavior_explanations.clear();
         score_trace
             .behavior_explanations
@@ -212,20 +232,24 @@ fn decide_slot_assignments(
             }));
     }
     let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
-    let winning_behavior_ids = assign_behaviors_to_slots(
-        definition,
-        &context,
-        &available_motion_action_table,
-        &running_behavior_ids,
-        |index| {
-            passes_start_roll(
-                capability_profiles,
-                definition.behaviors[index],
-                now,
-                &mut missed_start_cooldowns,
-            )
-        },
-    );
+    let winning_behavior_ids = {
+        let _span = info_span!("decide::assign").entered();
+        assign_behaviors_to_slots(
+            definition,
+            &context,
+            &available_motion_action_table,
+            &running_behavior_ids,
+            |index| {
+                passes_start_roll(
+                    capability_profiles,
+                    definition.behaviors[index],
+                    now,
+                    &mut missed_start_cooldowns,
+                )
+            },
+        )
+    };
+    let _span = info_span!("decide::commit").entered();
     brain.commit_decision(
         &winning_behavior_ids,
         &missed_start_cooldowns,

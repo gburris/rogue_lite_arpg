@@ -420,6 +420,7 @@ dependencies = [
  "ron",
  "serde",
  "tracing",
+ "tracy-client",
 ]
 
 [[package]]

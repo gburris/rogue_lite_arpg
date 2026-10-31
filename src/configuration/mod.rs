@@ -43,7 +43,8 @@ pub(super) fn plugin(app: &mut App) {
             .set(ImagePlugin::default_nearest()),
     );
 
-    #[cfg(any(feature = "dev", feature = "profile"))]
+    // `bevy/trace_tracy` makes the render plugin add this itself.
+    #[cfg(all(feature = "dev", not(feature = "profile")))]
     app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
 
     // Setup and configuration

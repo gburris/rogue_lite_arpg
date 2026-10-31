@@ -39,12 +39,27 @@ pub struct NextMap<'w, 's> {
     next_app_state: ResMut<'w, NextState<AppState>>,
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
+    #[cfg(feature = "stress")]
+    stress_arena: Option<Res<'w, super::stress::StressArena>>,
 }
 
 impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
+        #[cfg(feature = "stress")]
+        let request = if self.stress_arena.is_some() {
+            super::stress::redirect_hub(request)
+        } else {
+            request
+        };
         let (recipe, seed) = self.catalog.resolve(request, &mut self.root_rng)?;
+        #[cfg(feature = "stress")]
+        let stressed_recipe = self
+            .stress_arena
+            .as_ref()
+            .and_then(|stress_arena| stress_arena.override_counts(recipe));
+        #[cfg(feature = "stress")]
+        let recipe = stressed_recipe.as_ref().unwrap_or(recipe);
         info!("Generating map {} with seed {seed}", recipe.name);
         let blueprint = build_from_recipe(recipe, seed, &self.catalog.structures)
             .map_err(|error| format!("map {} seed {seed}: {error}", recipe.name))?;

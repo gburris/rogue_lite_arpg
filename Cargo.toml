@@ -44,6 +44,7 @@ dev = [
     "bevy/debug",
     # Dump schedule graphs to DOT files (see `configuration/debug.rs`).
     "dep:bevy_mod_debugdump",
+    "stress",
 ]
 dev_native = [
     "dev",
@@ -56,8 +57,10 @@ dev_native = [
 # for profiling since it would also remove Bevy's system spans from Tracy captures.
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
 strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
+# Lets `STRESS_ARENA` start the game in the stress arena with an invincible player.
+stress = []
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
-profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client"]
+profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
 # Also track allocations, which adds noticeable overhead.
 profile_memory = ["profile", "bevy/trace_tracy_memory"]
 

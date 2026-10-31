@@ -67,6 +67,21 @@ Add `profile_memory` to `--features` to track allocations, which adds noticeable
 A `profiling` build has no console, so redirect stderr to read a panic:
 `.\target\profiling\baba_yaga.exe 2> panic.log`.
 
+## Stress arena
+
+Setting `STRESS_ARENA` makes Start load a 200 x 200 open arena with an invincible player and
+the listed enemy counts. Kinds are `warrior`, `ice_mage`, `fire_mage` and `bat`; kinds you leave
+out spawn none. The variable stays set in that window until you remove it.
+
+```powershell
+$env:STRESS_ARENA = "warrior=250,ice_mage=250,fire_mage=250,bat=250"
+
+cargo run                                                                 # dev build
+cargo run --profile profiling --no-default-features --features profile   # with Tracy
+
+Remove-Item Env:STRESS_ARENA
+```
+
 ## Schedule graphs
 
 Writes `runs\schedules\update.dot` and `fixed_update.dot` from a dev build, then exits.

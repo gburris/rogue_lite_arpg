@@ -39,6 +39,8 @@ mod build;
 mod placement;
 mod recipe;
 mod spawn;
+#[cfg(feature = "stress")]
+mod stress;
 mod structures;
 mod tiles;
 mod tiling;
@@ -54,4 +56,6 @@ pub mod prelude {
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((build::plugin, spawn::plugin));
+    #[cfg(feature = "stress")]
+    app.add_plugins(stress::plugin);
 }

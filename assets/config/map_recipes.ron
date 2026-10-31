@@ -227,5 +227,22 @@ RecipeFile(
             presets: [],
             spawns: [],
         ),
+        (
+            // One open floor for AI stress tests. `STRESS_ARENA` overrides the enemy counts
+            // and starts the game here (see `world/map/stress.rs`).
+            name: "StressArena",
+            size: 200,
+            floor: Ground,
+            structures: [],
+            presets: [],
+            spawns: [
+                (what: PlayerStart, at: Center),
+                (what: Exit, at: Edge(Right)),
+                (what: Enemy(Warrior), count: 25, at: Random(), separation: 3),
+                (what: Enemy(IceMage), count: 25, at: Random(), separation: 3),
+                (what: Enemy(FireMage), count: 25, at: Random(), separation: 3),
+                (what: Enemy(Bat), count: 25, at: Random(), separation: 3),
+            ],
+        ),
     ],
 )

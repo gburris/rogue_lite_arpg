@@ -1,7 +1,7 @@
 mod assets;
-mod diagnostics;
 #[cfg(feature = "dev")]
 pub mod debug;
+mod diagnostics;
 mod physics;
 mod schedule;
 #[cfg(feature = "dev")]

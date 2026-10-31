@@ -1,6 +1,8 @@
 mod damage;
 mod diagnostics;
 mod health;
+#[cfg(feature = "stress")]
+mod invincible;
 mod invulnerable;
 pub(crate) mod mana;
 mod projectile;
@@ -16,6 +18,8 @@ pub mod prelude {
         hurtbox_at,
     };
     pub use super::health::{AttemptHeal, Healed, Health};
+    #[cfg(feature = "stress")]
+    pub use super::invincible::Invincible;
     pub use super::invulnerable::IFrames;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
@@ -26,7 +30,11 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((diagnostics::plugin, projectile::plugin, status_effects::plugin));
+    app.add_plugins((
+        diagnostics::plugin,
+        projectile::plugin,
+        status_effects::plugin,
+    ));
 
     app.add_systems(
         Update,

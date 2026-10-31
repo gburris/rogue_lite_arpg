@@ -198,6 +198,7 @@ pub(crate) fn build_from_recipe(
     seed: u64,
     structures: &BTreeMap<String, Structure>,
 ) -> std::result::Result<MapBlueprint, MapError> {
+    let _span = info_span!("map::build_from_recipe").entered();
     let mut size_generator = Stage::Size.random_generator(seed);
     let size_x = recipe.size_x_range.roll_size(&mut size_generator);
     let size_y = recipe.size_y_range.roll_size(&mut size_generator);

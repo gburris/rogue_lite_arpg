@@ -1,4 +1,5 @@
 mod damage;
+mod diagnostics;
 mod health;
 mod invulnerable;
 pub(crate) mod mana;
@@ -25,7 +26,7 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((projectile::plugin, status_effects::plugin));
+    app.add_plugins((diagnostics::plugin, projectile::plugin, status_effects::plugin));
 
     app.add_systems(
         Update,

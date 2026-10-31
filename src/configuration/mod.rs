@@ -1,8 +1,11 @@
 mod assets;
+mod diagnostics;
 #[cfg(feature = "dev")]
 pub mod debug;
 mod physics;
 mod schedule;
+#[cfg(feature = "dev")]
+pub(crate) mod schedule_dump;
 mod view;
 
 #[cfg(not(feature = "dev"))]
@@ -40,9 +43,13 @@ pub(super) fn plugin(app: &mut App) {
             .set(ImagePlugin::default_nearest()),
     );
 
+    #[cfg(any(feature = "dev", feature = "profile"))]
+    app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
+
     // Setup and configuration
     app.add_plugins((
         assets::plugin,
+        diagnostics::plugin,
         physics::plugin,
         schedule::plugin,
         view::plugin,

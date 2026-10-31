@@ -28,7 +28,13 @@ pub mod prelude {
 }
 
 fn main() {
-    App::new().add_plugins(plugin).run();
+    let mut app = App::new();
+    app.add_plugins(plugin);
+    #[cfg(feature = "dev")]
+    if configuration::schedule_dump::dump_schedules_if_requested(&mut app) {
+        return;
+    }
+    app.run();
 }
 
 fn plugin(app: &mut App) {

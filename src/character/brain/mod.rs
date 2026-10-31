@@ -26,6 +26,7 @@ mod action;
 mod capability;
 pub(crate) mod considerations;
 mod decide;
+mod diagnostics;
 mod engine;
 mod motion;
 mod perception;
@@ -273,6 +274,8 @@ pub(super) fn plugin(app: &mut App) {
     if let Err(error) = validate_brain(&VILLAGER) {
         panic!("villager brain is invalid: {error}");
     }
+
+    app.add_plugins(diagnostics::plugin);
 
     app.configure_sets(
         Update,

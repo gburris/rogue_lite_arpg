@@ -412,6 +412,7 @@ dependencies = [
  "bevy_ecs_tilemap",
  "bevy_enhanced_input",
  "bevy_lit",
+ "bevy_mod_debugdump",
  "bevy_tweening",
  "getrandom 0.4.3",
  "rand",
@@ -1285,6 +1286,21 @@ name = "bevy_mikktspace"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bff34eb29ff4b8a8688bc7299f14fb6b597461ca80fec03ed7d22939ab33e48f"
+
+[[package]]
+name = "bevy_mod_debugdump"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b77cb1d6bf4ab9d63ee773478ac8f23e94a226c327fa0941965240786220ebdf"
+dependencies = [
+ "bevy_app",
+ "bevy_color",
+ "bevy_ecs",
+ "bevy_log",
+ "bevy_platform",
+ "bevy_utils",
+ "disqualified",
+]
 
 [[package]]
 name = "bevy_pbr"

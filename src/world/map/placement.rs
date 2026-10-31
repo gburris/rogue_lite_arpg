@@ -17,6 +17,21 @@ pub struct CountRange {
     pub max: u32,
 }
 
+/// Half-open band of x-deciles (tenths of the map width), written as a `(min, max)` pair in
+/// recipes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(from = "(u32, u32)")]
+pub struct DecileRange {
+    pub min: u32,
+    pub max: u32,
+}
+
+impl From<(u32, u32)> for DecileRange {
+    fn from((min, max): (u32, u32)) -> Self {
+        Self { min, max }
+    }
+}
+
 /// Recipe spelling of a [`CountRange`].
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -82,7 +97,7 @@ pub enum PlaceRule {
     /// Try to place an inclusive random count within the half-open x-decile interval.
     Random {
         count: CountRange,
-        x_deciles: (u32, u32),
+        x_deciles: DecileRange,
         separation: u32,
     },
     /// Place an inclusive random count of footprints centered within `radius` tiles (a square)
@@ -257,7 +272,7 @@ fn place_fixed(
 
 fn place_random(
     count: CountRange,
-    x_deciles: (u32, u32),
+    x_deciles: DecileRange,
     separation: u32,
     footprint: UVec2,
     tiles: &TileGrid,
@@ -265,8 +280,8 @@ fn place_random(
     random_generator: &mut ChaCha8Rng,
 ) -> Vec<IVec2> {
     let target_count = count.roll_size(random_generator);
-    let x_start = context.map_size.x * x_deciles.0 / 10;
-    let x_end = context.map_size.x * x_deciles.1 / 10;
+    let x_start = context.map_size.x * x_deciles.min / 10;
+    let x_end = context.map_size.x * x_deciles.max / 10;
     if x_start >= x_end
         || context.map_size.x <= footprint.x.saturating_add(2)
         || context.map_size.y <= footprint.y.saturating_add(2)

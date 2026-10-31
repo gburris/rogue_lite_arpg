@@ -7,7 +7,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_exp_bar,
+            update_experience_bar,
             update_action_bar,
             update_cooldowns,
             update_mana_bar,
@@ -42,9 +42,9 @@ struct HealthLostBar {
 }
 
 #[derive(Component, Debug)]
-struct ExpBar;
+struct ExperienceBar;
 
-const EXP_COLOR: Color = Color::srgb(0.5, 0.0, 0.5);
+const EXPERIENCE_COLOR: Color = Color::srgb(0.5, 0.0, 0.5);
 const HEALTH_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const MANA_COLOR: Color = Color::srgb(0.0, 0.173, 0.878);
 const BAR_CHANGE_COLOR: Color = Color::srgb(1.0, 0.89, 0.41);
@@ -176,15 +176,15 @@ fn update_mana_bar(
     let (mut mana_lost_node, mut mana_lost) = mana_lost_bar.into_inner();
 
     mana_bar.width = player_mana.fraction().map_or(px(0.0), |fraction| {
-        px(fraction * player_mana.max_mana * ATTRIBUTE_TO_PIXEL_SCALE)
+        px(fraction * player_mana.max * ATTRIBUTE_TO_PIXEL_SCALE)
     });
     mana_lost_node.width = amount_lost_in_pixels(
         mana_lost.previous_mana,
-        player_mana.current_mana,
+        player_mana.current,
         mana_lost_node.width,
     );
 
-    mana_lost.previous_mana = player_mana.current_mana;
+    mana_lost.previous_mana = player_mana.current;
 }
 
 fn update_lost_mana_bar(mut mana_lost_node: Single<&mut Node, With<ManaLostBar>>, time: Res<Time>) {
@@ -241,7 +241,7 @@ fn experience_bar() -> impl Bundle {
                 BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
             ),
             (
-                ExpBar,
+                ExperienceBar,
                 Node {
                     width: px(0.0),
                     height: px(20.0),
@@ -249,7 +249,7 @@ fn experience_bar() -> impl Bundle {
                     left: px(0.0),
                     ..default()
                 },
-                BackgroundColor::from(EXP_COLOR),
+                BackgroundColor::from(EXPERIENCE_COLOR),
                 Children::spawn(SpawnIter((1..10).map(|i| (
                     Node {
                         position_type: PositionType::Absolute,
@@ -265,12 +265,12 @@ fn experience_bar() -> impl Bundle {
     )
 }
 
-fn update_exp_bar(
+fn update_experience_bar(
     player: Option<Single<&Player, Changed<Player>>>,
-    mut exp_bar: Single<&mut Node, With<ExpBar>>,
+    mut experience_bar: Single<&mut Node, With<ExperienceBar>>,
 ) {
     if let Some(player) = player {
-        exp_bar.width = px(400.0 * player.progress_to_next_level());
+        experience_bar.width = px(400.0 * player.progress_to_next_level());
     }
 }
 

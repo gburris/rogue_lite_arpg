@@ -68,8 +68,8 @@ impl Capability for Swoop {
     }
 }
 
-/// Flies a held swoop and reports [`MotionFinished`](super::MotionFinished)
-/// once it clears the target.
+/// Applies swoop each tick and reports [`MotionFinished`](super::MotionFinished)
+/// once far enough away from target
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -129,7 +129,7 @@ impl Swoop {
         }
         let flight_distance = input.distance_this_frame(speed_multiplier);
         let heading = input.heading;
-        let live_target = info.target_position;
+        let live_target = info.position;
         let exit_turn = self.exit_turn;
         let pass = self.pass.get_or_insert_with(|| {
             SwoopPass::new(

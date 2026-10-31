@@ -33,7 +33,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        attack::handle_melee_collisions.in_set(InGameSystems::Collision),
+        attack::damage_melee_hits.in_set(InGameSystems::Collision),
     );
 }
 
@@ -45,7 +45,7 @@ struct MeleeWeapon {
     attack_time: f32,
     damage: Damage,
     hitbox: Collider,
-    attack_type: swing::MeleeSwingType,
+    swing_kind: swing::MeleeSwingKind,
     hold_distance: f32,
 }
 

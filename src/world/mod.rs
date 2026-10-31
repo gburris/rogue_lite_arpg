@@ -26,30 +26,22 @@ pub(super) fn plugin(app: &mut App) {
     app.insert_resource(MapRng::seeded(seed));
 }
 
-#[derive(Resource)]
-pub(crate) struct MapRng {
-    rng: ChaCha8Rng,
-}
+/// Seeded root generator for map layouts, also used for choices made before a map is built.
+#[derive(Resource, Deref, DerefMut)]
+pub(crate) struct MapRng(ChaCha8Rng);
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
-        Self {
-            rng: ChaCha8Rng::seed_from_u64(seed),
-        }
+        Self(ChaCha8Rng::seed_from_u64(seed))
     }
 
     /// Draws the build seed for the next map.
     pub(crate) fn next_map_seed(&mut self) -> u64 {
-        self.rng.next_u64()
-    }
-
-    /// Root generator for choices made before a map is built, such as the weighted recipe pick.
-    pub(crate) fn rng(&mut self) -> &mut ChaCha8Rng {
-        &mut self.rng
+        self.next_u64()
     }
 
     /// Deterministic coin flip on the map stream for spawn-time variants.
     pub(crate) fn flip(&mut self) -> bool {
-        self.rng.random_bool(0.5)
+        self.random_bool(0.5)
     }
 }

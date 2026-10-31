@@ -19,7 +19,7 @@ pub(super) fn plugin(app: &mut App) {
     // avian recommendeds ordering camera following logic in PostUpdate after transform prop
     app.add_systems(
         PostUpdate,
-        camera_follow_system.before(TransformSystems::Propagate),
+        follow_player_with_camera.before(TransformSystems::Propagate),
     );
 
     app.add_systems(FixedUpdate, ysort_transforms.in_set(MainSystems::InGame));
@@ -193,7 +193,7 @@ const TARGET_BIAS: f32 = 0.35;
 // The camera will not go further than this distance from the player.
 const CAMERA_DISTANCE_CONSTRAINT: f32 = 120.0;
 
-fn camera_follow_system(
+fn follow_player_with_camera(
     player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut camera: Single<&mut Transform, (With<Camera>, Without<PlayerAim>, Without<Player>)>,
@@ -221,7 +221,7 @@ fn camera_follow_system(
 }
 
 #[cfg(feature = "dev")]
-pub(super) fn camera_debug_system(
+pub(super) fn draw_camera_debug_gizmos(
     player: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut gizmos: Gizmos,
@@ -243,8 +243,8 @@ pub(super) fn camera_debug_system(
 
 pub fn shadow(shadows: &Shadows, y_offset: f32) -> impl Bundle {
     (
-        Mesh2d(shadows.character_shadow.handle.clone()),
-        MeshMaterial2d(shadows.shadow_color.handle.clone()),
+        Mesh2d(shadows.character.handle.clone()),
+        MeshMaterial2d(shadows.color.handle.clone()),
         Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
     )
 }

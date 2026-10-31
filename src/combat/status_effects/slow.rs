@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use super::freeze::Frozen;
-use super::status::{StatusType, Statuses};
+use super::status::{StatusKind, Statuses};
 use crate::prelude::*;
 
 #[derive(Component, Clone, Copy)]
-#[require(StatusType::Slow)]
+#[require(StatusKind::Slow)]
 pub struct Slowed {
     pub percent: f32,
 }

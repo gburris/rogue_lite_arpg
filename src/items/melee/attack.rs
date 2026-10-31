@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use super::MeleeWeapon;
 use crate::prelude::*;
 
-pub(super) fn handle_melee_collisions(
+pub(super) fn damage_melee_hits(
     mut commands: Commands,
     mut melee_query: Query<(
         Entity,

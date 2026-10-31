@@ -15,7 +15,7 @@ pub struct Statuses(Vec<Entity>);
 pub(crate) struct StatusApplied;
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(super) enum StatusType {
+pub(super) enum StatusKind {
     Burn,
     Freeze,
     Slow,

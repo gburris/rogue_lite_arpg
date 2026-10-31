@@ -29,7 +29,7 @@ pub mod prelude {
         STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,
     };
     pub use super::tome::tome_of_healing;
-    pub use super::{Item, ItemType};
+    pub use super::{Item, ItemKind};
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -57,37 +57,22 @@ pub(super) fn plugin(app: &mut App) {
 #[require(Visibility::Hidden)]
 pub struct Item {
     pub value: u32,
-    pub item_type: ItemType,
-    pub drop_glow_effect: f32,
-    pub drop_rotation_timer: f32,
+    pub kind: ItemKind,
     pub drop_rate: f32,
 }
 
-impl Default for Item {
-    fn default() -> Self {
-        Self {
-            value: 10,
-            item_type: ItemType::Melee,
-            drop_glow_effect: 0.0,
-            drop_rotation_timer: 0.0,
-            drop_rate: 0.0,
-        }
-    }
-}
-
 impl Item {
-    pub fn new(value: u32, item_type: ItemType) -> Self {
+    pub fn new(value: u32, kind: ItemKind) -> Self {
         Self {
             value,
-            item_type,
+            kind,
             drop_rate: 1.2,
-            ..default()
         }
     }
 }
 
 #[derive(Clone, Copy)]
-pub enum ItemType {
+pub enum ItemKind {
     Melee,
     Staff,
     Potion,

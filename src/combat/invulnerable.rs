@@ -6,7 +6,7 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct IFrames {
     // time to be invulnerable when hit
-    pub is_invulnerable: bool,
+    pub invulnerable: bool,
     invulnerable_timer: Timer,
     flash_timer: Option<Timer>,
 }
@@ -14,7 +14,7 @@ pub struct IFrames {
 impl Default for IFrames {
     fn default() -> Self {
         Self {
-            is_invulnerable: false,
+            invulnerable: false,
             invulnerable_timer: Timer::new(Duration::from_millis(800), TimerMode::Once),
             flash_timer: Some(Timer::new(Duration::from_millis(100), TimerMode::Repeating)),
         }
@@ -23,7 +23,7 @@ impl Default for IFrames {
 
 impl IFrames {
     fn reset(&mut self) {
-        self.is_invulnerable = false;
+        self.invulnerable = false;
         self.invulnerable_timer.reset();
 
         if let Some(flash) = &mut self.flash_timer {
@@ -32,13 +32,10 @@ impl IFrames {
     }
 }
 
-// System to handle invulnerability duration and flashing
-pub(super) fn handle_invulnerability(
-    time: Res<Time>,
-    mut query: Query<(&mut IFrames, &mut Sprite)>,
-) {
+/// Counts down invulnerability and flashes the sprite until it ends.
+pub(super) fn tick_invulnerability(time: Res<Time>, mut query: Query<(&mut IFrames, &mut Sprite)>) {
     for (mut iframes, mut sprite) in &mut query {
-        if iframes.is_invulnerable {
+        if iframes.invulnerable {
             iframes.invulnerable_timer.tick(time.delta());
 
             if iframes.invulnerable_timer.is_finished() {

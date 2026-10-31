@@ -2,11 +2,11 @@ use bevy::color::palettes::tailwind::BLUE_400;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use super::status::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
+use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
 
 #[derive(Component, Clone, Default)]
-#[require(StatusType::Freeze)]
+#[require(StatusKind::Freeze)]
 pub struct Frozen;
 
 pub(super) fn apply_frozen(

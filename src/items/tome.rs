@@ -4,22 +4,24 @@ use bevy::ui_widgets::observe;
 use rand::RngExt;
 
 use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
-use super::{Item, ItemType};
+use super::{Item, ItemKind};
 use crate::prelude::*;
 
 #[derive(Component)]
 struct HealingTome {
-    pub healing: (f32, f32),
+    min_healing: f32,
+    max_healing: f32,
 }
 
 pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Bundle {
     (
         Name::new("Tome Of Healing"),
-        Item::new(355, ItemType::Tome),
+        Item::new(355, ItemKind::Tome),
         Equippable::new(EquipmentSlot::Offhand, 2.0, &DEFAULT_EQUIPMENT_POSES),
         ManaCost(40.0),
         HealingTome {
-            healing: (25.0, 50.0),
+            min_healing: 25.0,
+            max_healing: 50.0,
         },
         Sprite::from_image(sprites.tome_of_healing.clone()),
         observe(on_healing_tome_cast),
@@ -34,7 +36,7 @@ fn on_healing_tome_cast(
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) -> Result {
     let (tome, _) = tome_query.get(healing_tome.item)?;
-    let health_to_add = rand::rng().random_range(tome.healing.0..tome.healing.1);
+    let health_to_add = rand::rng().random_range(tome.min_healing..tome.max_healing);
     commands.trigger(AttemptHeal {
         entity: healing_tome.holder,
         amount: health_to_add,

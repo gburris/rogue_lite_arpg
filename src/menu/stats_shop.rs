@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu)
         .add_systems(
             Update,
-            handle_stat_button_interaction
+            update_stat_buttons
                 .run_if(in_state(Menu::StatsShop))
                 .in_set(MainSystems::Menu),
         );
@@ -28,13 +28,13 @@ pub enum StatChange {
 
 #[derive(Component)]
 pub struct StatShopButton {
-    pub stat_type: DisplayableStatType,
+    pub stat: Stat,
     pub change: StatChange,
 }
 
 #[derive(Event)]
 pub struct ChangeStat {
-    pub stat_type: DisplayableStatType,
+    pub stat: Stat,
     pub change: StatChange,
 }
 
@@ -73,11 +73,11 @@ pub fn spawn_stats_shop_menu(
                 },
                 BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
                 children![
-                    stat_row(DisplayableStatType::Agility, stats),
-                    stat_row(DisplayableStatType::Strength, stats),
-                    stat_row(DisplayableStatType::Dexterity, stats),
-                    stat_row(DisplayableStatType::Intellect, stats),
-                    stat_row(DisplayableStatType::Luck, stats),
+                    stat_row(Stat::Agility, stats),
+                    stat_row(Stat::Strength, stats),
+                    stat_row(Stat::Dexterity, stats),
+                    stat_row(Stat::Intellect, stats),
+                    stat_row(Stat::Luck, stats),
                 ]
             ),
             // Progress Points Display
@@ -92,7 +92,7 @@ pub fn spawn_stats_shop_menu(
     ));
 }
 
-fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle {
+fn stat_row(stat: Stat, stats: &PlayerStats) -> impl Bundle {
     (
         Node {
             width: percent(100.0),
@@ -104,7 +104,7 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
         },
         children![
             // Decrease button
-            stat_shop_button(stat_type, StatChange::Decrease),
+            stat_shop_button(stat, StatChange::Decrease),
             (
                 Node {
                     flex_direction: FlexDirection::Column,
@@ -112,22 +112,22 @@ fn stat_row(stat_type: DisplayableStatType, stats: &PlayerStats) -> impl Bundle 
                     ..default()
                 },
                 children![
-                    text(format!("{stat_type:?}: {}", stat_type.value(stats)), 24.0),
+                    text(format!("{stat:?}: {}", stat.value(stats)), 24.0),
                     (
-                        text(stat_type.description(), 16.0),
+                        text(stat.description(), 16.0),
                         TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
                     )
                 ]
             ),
             // Increase button
-            stat_shop_button(stat_type, StatChange::Increase)
+            stat_shop_button(stat, StatChange::Increase)
         ],
     )
 }
 
-fn stat_shop_button(stat_type: DisplayableStatType, change: StatChange) -> impl Bundle {
+fn stat_shop_button(stat: Stat, change: StatChange) -> impl Bundle {
     (
-        StatShopButton { stat_type, change },
+        StatShopButton { stat, change },
         Button,
         Node {
             width: px(30.0),
@@ -147,7 +147,7 @@ fn stat_shop_button(stat_type: DisplayableStatType, change: StatChange) -> impl 
     )
 }
 
-pub fn handle_stat_button_interaction(
+pub fn update_stat_buttons(
     mut interaction_query: Query<(&Interaction, &StatShopButton, &mut BackgroundColor)>,
     mut commands: Commands,
     game_progress: Res<GameProgress>,
@@ -161,11 +161,11 @@ pub fn handle_stat_button_interaction(
                 let can_increase =
                     button.change == StatChange::Increase && game_progress.progress_points > 0;
                 let can_decrease =
-                    button.change == StatChange::Decrease && button.stat_type.value(stats) > 1;
+                    button.change == StatChange::Decrease && button.stat.value(stats) > 1;
 
                 if can_increase || can_decrease {
                     commands.trigger(ChangeStat {
-                        stat_type: button.stat_type,
+                        stat: button.stat,
                         change: button.change,
                     });
                 }
@@ -192,27 +192,27 @@ pub fn on_change_stat(
 ) {
     let mut stats = player_stats.single_mut().expect("Player stats not found");
 
-    match (trigger.stat_type, trigger.change) {
-        (stat_type, StatChange::Increase) if game_progress.progress_points > 0 => {
-            match stat_type {
-                DisplayableStatType::Agility => stats.agility += 1,
-                DisplayableStatType::Strength => stats.strength += 1,
-                DisplayableStatType::Dexterity => stats.dexterity += 1,
-                DisplayableStatType::Intellect => stats.intellect += 1,
-                DisplayableStatType::Luck => stats.luck += 1,
+    match (trigger.stat, trigger.change) {
+        (stat, StatChange::Increase) if game_progress.progress_points > 0 => {
+            match stat {
+                Stat::Agility => stats.agility += 1,
+                Stat::Strength => stats.strength += 1,
+                Stat::Dexterity => stats.dexterity += 1,
+                Stat::Intellect => stats.intellect += 1,
+                Stat::Luck => stats.luck += 1,
             }
             game_progress.progress_points -= 1;
             commands.trigger(UpdateStatsUi);
         }
-        (stat_type, StatChange::Decrease) => {
-            let current_value = stat_type.value(&stats);
+        (stat, StatChange::Decrease) => {
+            let current_value = stat.value(&stats);
             if current_value > 1 {
-                match stat_type {
-                    DisplayableStatType::Agility => stats.agility -= 1,
-                    DisplayableStatType::Strength => stats.strength -= 1,
-                    DisplayableStatType::Dexterity => stats.dexterity -= 1,
-                    DisplayableStatType::Intellect => stats.intellect -= 1,
-                    DisplayableStatType::Luck => stats.luck -= 1,
+                match stat {
+                    Stat::Agility => stats.agility -= 1,
+                    Stat::Strength => stats.strength -= 1,
+                    Stat::Dexterity => stats.dexterity -= 1,
+                    Stat::Intellect => stats.intellect -= 1,
+                    Stat::Luck => stats.luck -= 1,
                 }
                 game_progress.progress_points += 1;
                 commands.trigger(UpdateStatsUi);

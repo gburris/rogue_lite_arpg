@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_player_aim);
 
     app.add_systems(OnEnter(AppState::Playing), grab_cursor)
-        .add_systems(OnExit(Pause(true)), grab_cursor)
+        .add_systems(OnExit(PauseState::Paused), grab_cursor)
         .add_systems(
             Update,
             grab_cursor_when_focused.in_set(InGameSystems::PlayerInput),

@@ -23,9 +23,11 @@ struct LevelUpEffect;
 #[derive(Component)]
 struct LevelUpText;
 
-/// Starting and ending size of level up ring animation.
-const LEVEL_UP_RING_SIZE: (f32, f32) = (5.0, 40.0);
-const MAX_RING_SCALE: f32 = LEVEL_UP_RING_SIZE.1 / LEVEL_UP_RING_SIZE.0;
+/// Radius of the level up ring when its animation starts.
+const LEVEL_UP_RING_START_RADIUS: f32 = 5.0;
+/// Radius of the level up ring when its animation ends.
+const LEVEL_UP_RING_END_RADIUS: f32 = 40.0;
+const MAX_RING_SCALE: f32 = LEVEL_UP_RING_END_RADIUS / LEVEL_UP_RING_START_RADIUS;
 const LEVEL_UP_ROTATION_SPEED: f32 = 2.0;
 const LEVEL_UP_ANIMATION_DURATION: f32 = 1.2;
 const LEVEL_UP_TEXT_MAX_HEIGHT: f32 = 100.0;
@@ -54,7 +56,7 @@ fn on_level_up(
 fn ring_effect(meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
     (
         LevelUpEffect,
-        Mesh2d(meshes.add(Circle::new(LEVEL_UP_RING_SIZE.0))),
+        Mesh2d(meshes.add(Circle::new(LEVEL_UP_RING_START_RADIUS))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7)))),
         Transform::from_translation(Vec2::ZERO.extend(ZLayer::BehindSprite.z())),
         Lifespan::new(LEVEL_UP_ANIMATION_DURATION),

@@ -21,7 +21,7 @@ pub(super) fn plugin(app: &mut App) {
 pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Magic Shield"),
-        Item::new(355, ItemType::Tome),
+        Item::new(355, ItemKind::Tome),
         Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         ManaCost(5.0),
         ManaDrainRate(20.0),
@@ -32,7 +32,7 @@ pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts)
         Sprite {
             image: sprites.magic_shield.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield_layout.clone(),
+                layout: sprite_layouts.shield.clone(),
                 index: 0,
             }),
             ..default()
@@ -45,7 +45,7 @@ pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts)
 pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         Name::new("Knight Shield"),
-        Item::new(355, ItemType::Tome),
+        Item::new(355, ItemKind::Tome),
         Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
         Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
@@ -55,7 +55,7 @@ pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts
         Sprite {
             image: sprites.knight_shield.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield_layout.clone(),
+                layout: sprite_layouts.shield.clone(),
                 index: 0,
             }),
             ..default()

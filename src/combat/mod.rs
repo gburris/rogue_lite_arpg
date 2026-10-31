@@ -36,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
             // A flash ending resets the color to opaque white, so the flicker runs after it.
             (
                 damage::tick_and_remove_damage_flash,
-                invulnerable::handle_invulnerability,
+                invulnerable::tick_invulnerability,
             )
                 .chain()
                 .in_set(VfxSystems::Tint),

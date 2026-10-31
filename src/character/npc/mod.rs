@@ -6,7 +6,7 @@ mod spawn;
 mod villager;
 
 pub use self::kind::NpcKind;
-pub use self::spawn::{NpcSpawnData, SpawnNpcs};
+pub use self::spawn::{NpcSpawn, SpawnNpcs};
 pub(in crate::character) use self::villager::VILLAGER;
 use crate::character::Character;
 use crate::prelude::*;

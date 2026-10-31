@@ -220,7 +220,7 @@ pub(super) fn spawn_fire_mage(
 fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(100.0), Health::new(20.0)),
-        Experience { base_exp: 12.0 },
+        Experience(12.0),
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
         Mana::new(100.0, 10.0),
@@ -235,7 +235,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         Sprite::from_atlas_image(
             sprites.ice_mage_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),
@@ -246,7 +246,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
 fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(150.0), Health::new(20.0)),
-        Experience { base_exp: 15.0 },
+        Experience(15.0),
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
         Mana::new(100.0, 10.0),
@@ -261,7 +261,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         Sprite::from_atlas_image(
             sprites.fire_mage_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),

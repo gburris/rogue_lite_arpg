@@ -11,8 +11,8 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             MainSystems::InGame
-                .run_if(in_state(Pause(false)).and_then(in_state(AppState::Playing))),
-            MainSystems::Menu.run_if(in_state(Pause(true))),
+                .run_if(in_state(PauseState::Running).and_then(in_state(AppState::Playing))),
+            MainSystems::Menu.run_if(in_state(PauseState::Paused)),
             MainSystems::Shared,
         )
             .chain()
@@ -22,7 +22,8 @@ pub(super) fn plugin(app: &mut App) {
     // Must order per-schedule, so same as above but for FixedUpdate systems
     app.configure_sets(
         FixedUpdate,
-        MainSystems::InGame.run_if(in_state(Pause(false)).and_then(in_state(AppState::Playing))),
+        MainSystems::InGame
+            .run_if(in_state(PauseState::Running).and_then(in_state(AppState::Playing))),
     );
 
     // Configuring the ordering of our gameplay loop using these main sets
@@ -61,9 +62,9 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Setup Pausing!
-    app.init_state::<Pause>()
-        .add_systems(OnEnter(Pause(true)), pause_game)
-        .add_systems(OnEnter(Pause(false)), resume_game);
+    app.init_state::<PauseState>()
+        .add_systems(OnEnter(PauseState::Paused), pause_game)
+        .add_systems(OnEnter(PauseState::Running), resume_game);
 }
 
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -134,7 +135,11 @@ pub enum AppState {
 
 /// Whether or not the game is paused.
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub struct Pause(pub bool);
+pub enum PauseState {
+    #[default]
+    Running,
+    Paused,
+}
 
 #[derive(SubStates, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Playing)]

@@ -2,7 +2,7 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
-use super::status::{StatusOf, StatusType, Statuses};
+use super::status::{StatusKind, StatusOf, Statuses};
 
 #[derive(Component, Clone)]
 #[require(Disabled)]
@@ -31,18 +31,18 @@ impl ApplyEffects {
 pub(super) fn on_apply_effects(
     apply_effects: On<ApplyEffects>,
     mut commands: Commands,
-    effect_query: Query<&StatusType, (Without<StatusOf>, Allow<Disabled>)>,
+    effect_query: Query<&StatusKind, (Without<StatusOf>, Allow<Disabled>)>,
     affected_query: Query<&Statuses>,
-    status_query: Query<&StatusType, With<StatusOf>>,
+    status_query: Query<&StatusKind, With<StatusOf>>,
 ) {
-    let mut new_status_types = HashSet::new();
+    let mut new_status_kinds = HashSet::new();
     let mut deduped_effects = Vec::new();
     for &entity in &apply_effects.effects {
-        let Ok(status_type) = effect_query.get(entity) else {
-            warn!("Entity {entity:?} missing StatusType component, skipping it");
+        let Ok(status_kind) = effect_query.get(entity) else {
+            warn!("Entity {entity:?} missing StatusKind component, skipping it");
             continue;
         };
-        if new_status_types.insert(status_type) {
+        if new_status_kinds.insert(status_kind) {
             deduped_effects.push(entity);
         }
     }
@@ -50,8 +50,8 @@ pub(super) fn on_apply_effects(
     // Remove any existing statuses on the target that conflict with new effects
     if let Ok(statuses) = affected_query.get(apply_effects.target) {
         for existing_entity in statuses.iter() {
-            if let Ok(existing_type) = status_query.get(existing_entity)
-                && new_status_types.contains(existing_type)
+            if let Ok(existing_kind) = status_query.get(existing_entity)
+                && new_status_kinds.contains(existing_kind)
             {
                 debug!("Removing existing status");
                 commands.entity(existing_entity).despawn();

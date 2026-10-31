@@ -4,7 +4,7 @@ use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
 use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub(super) enum MeleeSwingType {
+pub(super) enum MeleeSwingKind {
     Stab {
         /// How far the weapon should move (stab) forward from its starting position.
         reach: f32,
@@ -15,7 +15,7 @@ pub(super) enum MeleeSwingType {
     },
 }
 
-impl MeleeSwingType {
+impl MeleeSwingKind {
     pub const STAB: Self = Self::Stab { reach: 30.0 };
     pub const SLASH: Self = Self::Slash {
         arc_distance: 180f32.to_radians(),
@@ -36,8 +36,8 @@ pub(super) fn process_melee_attacks(
         active_attack.duration.tick(time.delta());
         let attack_progress = active_attack.duration.fraction();
 
-        match melee_weapon.attack_type {
-            MeleeSwingType::Stab { reach } => {
+        match melee_weapon.swing_kind {
+            MeleeSwingKind::Stab { reach } => {
                 // Total distance of stab * time of swing gets new position each tick
                 let distance = reach * attack_progress;
 
@@ -48,7 +48,7 @@ pub(super) fn process_melee_attacks(
                 transform.rotation =
                     Quat::from_rotation_z(active_attack.initial_angle - MELEE_WEAPON_ROTATION);
             }
-            MeleeSwingType::Slash { arc_distance } => {
+            MeleeSwingKind::Slash { arc_distance } => {
                 let start_angle = active_attack.initial_angle - (arc_distance / 2.0);
 
                 let current_angle = start_angle + (arc_distance * attack_progress);

@@ -69,14 +69,14 @@ pub(super) fn update_equipment_transforms(
             Option<&Mainhand>,
             Option<&Offhand>,
             &FacingDirection,
-            &AttackState,
+            &Attacking,
         ),
         (
             Or<(
                 // Update when holder changes direction
                 Changed<FacingDirection>,
                 // Update when holder stops attacking, stops casting, etc...
-                Changed<AttackState>,
+                Changed<Attacking>,
                 // Update when new item is equipped
                 Changed<Mainhand>,
                 Changed<Offhand>,
@@ -86,8 +86,8 @@ pub(super) fn update_equipment_transforms(
     >,
     mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
-    for (mainhand, offhand, direction, attack_state) in &all_worn_equipment {
-        if !attack_state.is_attacking {
+    for (mainhand, offhand, direction, attacking) in &all_worn_equipment {
+        if !**attacking {
             update_single_equipment(mainhand.map(Mainhand::get), *direction, &mut transforms);
             update_single_equipment(offhand.map(Offhand::get), *direction, &mut transforms);
         }

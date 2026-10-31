@@ -102,15 +102,15 @@ fn update_animation_state(
     mut character_query: Query<
         (
             &Kinematics,
-            &AttackState,
+            &Attacking,
             Option<&Health>,
             &mut CharacterAnimationState,
             &mut FacingDirection,
         ),
-        Or<(Changed<Kinematics>, Changed<AttackState>, Changed<Health>)>,
+        Or<(Changed<Kinematics>, Changed<Attacking>, Changed<Health>)>,
     >,
 ) {
-    for (kinematics, attack_state, health, mut animation_state, mut facing_direction) in
+    for (kinematics, attacking, health, mut animation_state, mut facing_direction) in
         &mut character_query
     {
         if health.is_none_or(|h| h.hp <= 0.0) {
@@ -121,7 +121,7 @@ fn update_animation_state(
         facing_direction.set_if_neq(facing_direction.turned_toward(kinematics.direction));
 
         // Attacking animation takes priority over walking / idle
-        if attack_state.is_attacking {
+        if **attacking {
             animation_state.set_if_neq(CharacterAnimationState::Attacking);
             continue;
         }

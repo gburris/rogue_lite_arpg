@@ -4,10 +4,7 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        handle_portal_collisions.in_set(InGameSystems::Collision),
-    );
+    app.add_systems(Update, enter_portal.in_set(InGameSystems::Collision));
 }
 
 /// Portals represent any "warping device" in the game, currently spawning a new zone when entered.
@@ -34,7 +31,7 @@ pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Bundle {
     )
 }
 
-fn handle_portal_collisions(
+fn enter_portal(
     portal_query: Query<&CollidingEntities, With<Portal>>,
     player_collider: Single<Entity, With<PlayerInteractionRadius>>,
     mut next_map: NextMap,

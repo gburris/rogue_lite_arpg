@@ -146,8 +146,8 @@ fn spawn_colliders(
 }
 
 fn derive_collider_rects(tiles: &TileGrid<TileKind>) -> Vec<TileRect> {
-    let map_width = i32::try_from(tiles.map_size().x).expect("map width fits in i32");
-    let map_height = i32::try_from(tiles.map_size().y).expect("map height fits in i32");
+    let map_width = i32::try_from(tiles.size().x).expect("map width fits in i32");
+    let map_height = i32::try_from(tiles.size().y).expect("map height fits in i32");
 
     let mut completed_collider_rects = Vec::new();
     let mut previous_runs: BTreeMap<(i32, i32), TileRect> = BTreeMap::new();
@@ -236,15 +236,15 @@ fn spawn_placements(
                     world_spawn_position.extend(player_transform.translation.z);
             }
             PlacementKind::Enemy(enemy_kind) => {
-                enemies.push(EnemySpawnData {
+                enemies.push(EnemySpawn {
                     position: world_spawn_position,
-                    enemy_kind: *enemy_kind,
+                    kind: *enemy_kind,
                 });
             }
             PlacementKind::Npc(npc_kind) => {
-                npcs.push(NpcSpawnData {
+                npcs.push(NpcSpawn {
                     position: world_spawn_position,
-                    npc_kind: *npc_kind,
+                    kind: *npc_kind,
                 });
             }
             PlacementKind::Chest => chests.push(world_spawn_position),

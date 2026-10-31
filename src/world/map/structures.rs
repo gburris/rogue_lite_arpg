@@ -77,7 +77,7 @@ pub fn apply_structure(
 ) -> Result<(), MapError> {
     let structure_rect = TileRect {
         min: structure_origin,
-        size: structure.tiles.map_size(),
+        size: structure.tiles.size(),
     };
     if !blueprint.tiles.contains_rect(&structure_rect) {
         return Err("structure placement is out of bounds".into());

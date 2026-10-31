@@ -172,7 +172,7 @@ pub(super) fn spawn_bat(
 fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(170.0), Health::new(15.0)),
-        Experience { base_exp: 6.0 },
+        Experience(6.0),
         // Bats fly high: longer reach, and high obstacles never block the
         // ray, so a bat holds its target through cover.
         sight_ray(
@@ -188,7 +188,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bund
         Sprite::from_atlas_image(
             sprites.bat_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.bat_enemy_layout.clone(),
+                layout: sprite_layouts.bat.clone(),
                 index: 0, // Down row; FacingDirection defaults to Down.
             },
         ),

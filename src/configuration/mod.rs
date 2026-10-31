@@ -16,7 +16,7 @@ pub mod prelude {
     pub use super::assets::{GameIcons, Shadows, SpriteAssets, SpriteSheetLayouts, TileAssets};
     pub use super::physics::GameCollisionLayer;
     pub use super::schedule::{
-        AppState, InGameSystems, MainSystems, Pause, PlayingState, Restart, SimulationSystems,
+        AppState, InGameSystems, MainSystems, PauseState, PlayingState, Restart, SimulationSystems,
         VfxSystems,
     };
     pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, shadow};

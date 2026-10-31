@@ -20,14 +20,14 @@ pub mod prelude {
     #[cfg(feature = "dev")]
     pub(crate) use super::brain::Targeting;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
-    pub use super::enemy::{Enemy, EnemyKind, EnemySpawnData, Experience, SpawnEnemies};
-    pub use super::npc::{Npc, NpcKind, NpcSpawnData, SpawnNpcs};
+    pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, Experience, SpawnEnemies};
+    pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
-        DisplayableStatType, GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
-        PlayerInteractionRadius, PlayerStats,
+        GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
+        PlayerInteractionRadius, PlayerStats, Stat,
     };
     pub use super::purse::Purse;
-    pub use super::state::{AttackState, FacingDirection, Kinematics};
+    pub use super::state::{Attacking, FacingDirection, Kinematics};
     pub use super::vision::{TargetInfo, Vision};
 }
 
@@ -43,7 +43,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        state::sync_attack_state_from_equipment.in_set(SimulationSystems::Derive),
+        state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
     );
 }
 

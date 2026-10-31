@@ -9,12 +9,12 @@ use crate::prelude::*;
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
 
 #[derive(Event)]
-pub struct SpawnNpcs(pub Vec<NpcSpawnData>);
+pub struct SpawnNpcs(pub Vec<NpcSpawn>);
 
 #[derive(Clone, Copy, Debug)]
-pub struct NpcSpawnData {
+pub struct NpcSpawn {
     pub position: Vec2,
-    pub npc_kind: NpcKind,
+    pub kind: NpcKind,
 }
 
 pub(super) fn on_spawn_npcs(
@@ -24,14 +24,14 @@ pub(super) fn on_spawn_npcs(
     sprite_layouts: Res<SpriteSheetLayouts>,
     shadows: Res<Shadows>,
 ) {
-    for NpcSpawnData {
+    for NpcSpawn {
         position: spawn_position,
-        npc_kind,
+        kind,
     } in &npc_spawn_trigger.0
     {
         spawn_npc(
             &mut commands,
-            *npc_kind,
+            *kind,
             *spawn_position,
             &sprites,
             &sprite_layouts,
@@ -120,7 +120,7 @@ fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl B
         Sprite::from_atlas_image(
             sprites.game_guide_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),
@@ -133,7 +133,7 @@ fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> im
         Sprite::from_atlas_image(
             sprites.shop_keeper_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),
@@ -146,7 +146,7 @@ fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> 
         Sprite::from_atlas_image(
             sprites.stat_trainer_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),

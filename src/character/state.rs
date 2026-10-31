@@ -7,7 +7,7 @@ use crate::prelude::*;
 /// reduced by any slow, with no acceleration. Player input and AI steering
 /// write it; [`kinematics_to_velocity`] hands it to physics.
 #[derive(Component, Clone)]
-#[require(FacingDirection, AttackState)]
+#[require(FacingDirection, Attacking)]
 pub struct Kinematics {
     pub direction: Vec2,
     pub max_speed: f32,
@@ -127,26 +127,22 @@ impl FacingDirection {
 }
 
 /// Animation/physics flag mirroring whether an instant-use item is active.
-/// Written only by `sync_attack_state_from_equipment`.
-#[derive(Component, Clone, Copy, Default, PartialEq)]
-pub struct AttackState {
-    pub is_attacking: bool,
-}
+/// Written only by `sync_attacking_from_equipment`.
+#[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
+pub struct Attacking(pub bool);
 
 /// Syncs whether a holder is attacking from `EquipmentInUse` items. Held slots
 /// (shield blocking) do not count as attacking.
-pub(super) fn sync_attack_state_from_equipment(
-    mut holders: Query<(&mut AttackState, Option<&Mainhand>, Option<&Offhand>)>,
+pub(super) fn sync_attacking_from_equipment(
+    mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
     in_use: Query<(), With<EquipmentInUse>>,
 ) {
-    for (mut state, mainhand, offhand) in &mut holders {
-        let attacking = EquipmentSlot::ALL
+    for (mut attacking, mainhand, offhand) in &mut holders {
+        let using_instant_item = EquipmentSlot::ALL
             .into_iter()
             .filter(|equipment| equipment.is_instant_use())
             .filter_map(|equipment| equipment.equipped(mainhand, offhand))
             .any(|item| in_use.contains(item));
-        state.set_if_neq(AttackState {
-            is_attacking: attacking,
-        });
+        attacking.set_if_neq(Attacking(using_instant_item));
     }
 }

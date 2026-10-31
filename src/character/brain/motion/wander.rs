@@ -21,9 +21,17 @@ pub struct Wander {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct WanderPhase {
-    walking: bool,
-    until: f32,
+enum WanderPhase {
+    Walking { until: f32 },
+    Pausing { until: f32 },
+}
+
+impl WanderPhase {
+    fn until(self) -> f32 {
+        match self {
+            Self::Walking { until } | Self::Pausing { until } => until,
+        }
+    }
 }
 
 impl Wander {
@@ -38,7 +46,7 @@ impl Wander {
     }
 
     pub fn is_walking(&self) -> bool {
-        self.phase.is_some_and(|phase| phase.walking)
+        matches!(self.phase, Some(WanderPhase::Walking { .. }))
     }
 
     fn leave_wander(&mut self) {
@@ -81,22 +89,26 @@ pub(super) fn apply_wander(
 
 fn steer(input: &SteerInput, wander: &mut Wander) -> Option<Vec2> {
     let phase = match wander.phase {
-        Some(phase) if input.now < phase.until => phase,
+        Some(phase) if input.now < phase.until() => phase,
         previous => {
-            let walking = previous.is_some_and(|phase| !phase.walking);
-            let span = if walking { wander.walk } else { wander.pause };
-            if walking {
+            let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
                 wander.direction = pick_direction(input);
-            }
-            let phase = WanderPhase {
-                walking,
-                until: input.now + rand::rng().random_range(span.min()..span.max()),
+                let until =
+                    input.now + rand::rng().random_range(wander.walk.min()..wander.walk.max());
+                WanderPhase::Walking { until }
+            } else {
+                let until =
+                    input.now + rand::rng().random_range(wander.pause.min()..wander.pause.max());
+                WanderPhase::Pausing { until }
             };
             wander.phase = Some(phase);
             phase
         }
     };
-    phase.walking.then_some(wander.direction)
+    match phase {
+        WanderPhase::Walking { .. } => Some(wander.direction),
+        WanderPhase::Pausing { .. } => None,
+    }
 }
 
 fn pick_direction(input: &SteerInput) -> Vec2 {

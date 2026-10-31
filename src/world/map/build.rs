@@ -349,7 +349,7 @@ fn place_structures(
                 let structure = structures
                     .get(kind)
                     .ok_or_else(|| format!("structure {kind:?} is missing from the catalog"))?;
-                let footprint = structure.tiles.map_size();
+                let footprint = structure.tiles.size();
                 let placed_origin = place(
                     &rule,
                     footprint,

@@ -9,7 +9,7 @@ mod warrior;
 
 pub use self::defeat::Experience;
 pub use self::kind::EnemyKind;
-pub use self::spawn::{EnemySpawnData, SpawnEnemies};
+pub use self::spawn::{EnemySpawn, SpawnEnemies};
 use self::spawn::{
     enemy_children, enemy_wander, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,
 };

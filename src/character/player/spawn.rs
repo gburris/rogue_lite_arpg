@@ -32,7 +32,7 @@ pub(super) fn spawn_player(
             Sprite::from_atlas_image(
                 sprites.player_sprite_sheet.clone(),
                 TextureAtlas {
-                    layout: sprite_layouts.player_atlas_layout.clone(),
+                    layout: sprite_layouts.player.clone(),
                     ..default()
                 },
             ),

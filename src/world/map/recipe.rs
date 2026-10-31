@@ -14,7 +14,7 @@ use serde::Deserialize;
 
 use super::blueprint::PlacementKind;
 use super::build::{MapRequest, MapResult, Stage, build_from_recipe};
-use super::placement::{Anchor, CountRange, PlaceRule, Side};
+use super::placement::{Anchor, CountRange, DecileRange, PlaceRule, Side};
 use super::spawn::MAX_MAP_TILES;
 use super::structures::{FeatureShape, FeatureSize, Structure, structure_from_glyphs};
 use super::tiles::TileKind;
@@ -49,7 +49,7 @@ impl RecipeCatalog {
         Ok(match request {
             MapRequest::Hub => (self.hub(), root_rng.next_map_seed()),
             MapRequest::Weighted => {
-                let recipe = self.weighted(root_rng.rng())?;
+                let recipe = self.weighted(&mut **root_rng)?;
                 (recipe, root_rng.next_map_seed())
             }
             MapRequest::Named { recipe, seed } => (
@@ -374,7 +374,7 @@ pub(super) enum Location {
     /// Anywhere inside the half-open x-decile band, `(1, 9)` by default: `Random()`.
     Random {
         #[serde(default = "interior_deciles")]
-        x_deciles: (u32, u32),
+        x_deciles: DecileRange,
     },
     /// One tile inside a wall; several spawns spread along it: `Edge(Left)`.
     Edge(Side),
@@ -400,8 +400,8 @@ pub(super) enum Location {
     },
 }
 
-fn interior_deciles() -> (u32, u32) {
-    (1, 9)
+fn interior_deciles() -> DecileRange {
+    DecileRange { min: 1, max: 9 }
 }
 
 impl Location {
@@ -695,7 +695,7 @@ fn validate_location(
     context: &str,
 ) -> Result<()> {
     match at {
-        Location::Random { x_deciles } if x_deciles.0 >= x_deciles.1 || x_deciles.1 > 10 => {
+        Location::Random { x_deciles } if x_deciles.min >= x_deciles.max || x_deciles.max > 10 => {
             Err(format!("{context} has an invalid x-decile range").into())
         }
         Location::Near {

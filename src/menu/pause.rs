@@ -8,7 +8,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)
         .add_systems(
             Update,
-            handle_menu_button_pressed
+            switch_menu_on_button_press
                 .run_if(in_state(Menu::Pause))
                 .in_set(MainSystems::Menu),
         );
@@ -20,7 +20,7 @@ struct MainMenu;
 #[derive(Component)]
 struct MenuButton(Menu);
 
-fn handle_menu_button_pressed(
+fn switch_menu_on_button_press(
     mut button_query: Query<(&Interaction, &MenuButton)>,
     mut next_menu_state: ResMut<NextState<Menu>>,
 ) {
@@ -139,13 +139,13 @@ fn main_menu_footer(
     )
 }
 
-pub(super) fn pause(mut next_pause_state: ResMut<NextState<Pause>>, mut commands: Commands) {
+pub(super) fn pause(mut next_pause_state: ResMut<NextState<PauseState>>, mut commands: Commands) {
     commands.spawn(menu_background());
-    next_pause_state.set(Pause(true));
+    next_pause_state.set(PauseState::Paused);
 }
 
-pub(super) fn unpause(mut next_pause_state: ResMut<NextState<Pause>>) {
-    next_pause_state.set(Pause(false));
+pub(super) fn unpause(mut next_pause_state: ResMut<NextState<PauseState>>) {
+    next_pause_state.set(PauseState::Running);
 }
 
 #[derive(InputAction)]

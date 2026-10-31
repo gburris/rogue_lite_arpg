@@ -7,7 +7,7 @@ use bevy_lit::prelude::PointLight2d;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
-use super::{Item, ItemType};
+use super::{Item, ItemKind};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -86,7 +86,7 @@ fn flame_staff_core(sprites: &SpriteAssets) -> impl Bundle {
             fire_time: 0.1,
             return_time: 0.1,
         },
-        Item::new(1340, ItemType::Staff),
+        Item::new(1340, ItemKind::Staff),
         Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_POSES)
             .with_reach(STAFF_REACH),
         ManaCost(6.0),
@@ -104,7 +104,7 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
             fire_time: 0.15,
             return_time: 0.15,
         },
-        Item::new(2050, ItemType::Staff),
+        Item::new(2050, ItemKind::Staff),
         ManaCost(15.0), // big mana cost
         Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_POSES)
             .with_reach(STAFF_REACH),

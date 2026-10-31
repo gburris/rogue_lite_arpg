@@ -19,7 +19,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_drop_item);
 }
 
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 #[require(
     Lifespan::new(10.0),
     YSort::from_offset(-6.0),
@@ -29,7 +29,9 @@ pub(super) fn plugin(app: &mut App) {
                 ..default()
     },
 )]
-pub struct Lootable;
+pub struct Lootable {
+    elapsed: f32,
+}
 
 /// Request to drop an item from its holder's inventory into the world.
 #[derive(EntityEvent)]
@@ -78,7 +80,7 @@ fn on_drop_item(
         .entity(item_entity)
         .remove::<ItemOf>()
         .insert((
-            Lootable,
+            Lootable::default(),
             PointLight2d {
                 intensity: 0.3,
                 color: Color::WHITE,
@@ -111,21 +113,18 @@ fn on_lootable_item_interaction(
         .insert((ItemOf { holder: *player }, Visibility::Hidden));
 
     // Remove interaction zone once itme is picked up
-    commands
-        .entity(interaction.interaction_zone_entity)
-        .despawn();
+    commands.entity(interaction.zone).despawn();
 }
 
 fn glow_and_rotate_lootables(
-    mut query: Query<(&mut Item, &mut Transform, &mut Sprite), With<Lootable>>,
+    mut query: Query<(&mut Lootable, &mut Transform, &mut Sprite)>,
     time: Res<Time>,
 ) {
-    for (mut item, mut transform, mut sprite) in &mut query {
-        item.drop_rotation_timer += time.delta_secs();
-        let rotation_angle = (item.drop_rotation_timer / 6.0) * 2.0 * PI;
+    for (mut lootable, mut transform, mut sprite) in &mut query {
+        lootable.elapsed += time.delta_secs();
+        let rotation_angle = (lootable.elapsed / 6.0) * 2.0 * PI;
         transform.rotation = Quat::from_rotation_z(rotation_angle);
-        item.drop_glow_effect += time.delta_secs() * 2.0;
-        let glow_intensity = item.drop_glow_effect.sin() * 0.1 + 0.7;
+        let glow_intensity = (lootable.elapsed * 2.0).sin() * 0.1 + 0.7;
         let base_color = sprite.color.to_srgba();
         sprite.color = Color::srgba(
             base_color.red * glow_intensity + 0.3,

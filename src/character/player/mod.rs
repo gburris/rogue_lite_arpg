@@ -13,13 +13,13 @@ pub mod prelude {
     pub use super::aim::PlayerAim;
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::progression::GameProgress;
-    pub use super::{DisplayableStatType, Player, PlayerStats};
+    pub use super::{Player, PlayerStats, Stat};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::stats::{DisplayableStatType, PlayerStats};
+pub use self::stats::{PlayerStats, Stat};
 use crate::character::Character;
 use crate::prelude::*;
 
@@ -66,18 +66,18 @@ pub(super) fn plugin(app: &mut App) {
     Purse
 )]
 pub struct Player {
-    current_level: u32,
+    level: u32,
     // Outside systems may give the player experience, like when an enemy dies
-    pub current_experience: f32,
-    next_level_experience_req: f32,
+    pub experience: f32,
+    experience_to_next_level: f32,
 }
 
 impl Default for Player {
     fn default() -> Self {
         Self {
-            current_level: 1,
-            current_experience: 0.0,
-            next_level_experience_req: 20.0,
+            level: 1,
+            experience: 0.0,
+            experience_to_next_level: 20.0,
         }
     }
 }
@@ -88,10 +88,10 @@ impl Player {
     ///
     /// returns whether the player leveled up.
     pub fn attempt_level_up(&mut self) -> bool {
-        if self.current_experience >= self.next_level_experience_req {
-            self.current_experience -= self.next_level_experience_req;
-            self.next_level_experience_req *= PLAYER_LEVEL_REQUIREMENT_MULTIPLIER;
-            self.current_level += 1;
+        if self.experience >= self.experience_to_next_level {
+            self.experience -= self.experience_to_next_level;
+            self.experience_to_next_level *= PLAYER_LEVEL_REQUIREMENT_MULTIPLIER;
+            self.level += 1;
             return true;
         }
 
@@ -99,10 +99,10 @@ impl Player {
     }
 
     pub fn progress_to_next_level(&self) -> f32 {
-        self.current_experience / self.next_level_experience_req
+        self.experience / self.experience_to_next_level
     }
 
     pub fn level(&self) -> u32 {
-        self.current_level
+        self.level
     }
 }

@@ -8,12 +8,12 @@ use crate::character::physical_collider;
 use crate::prelude::*;
 
 #[derive(Event, Debug)]
-pub struct SpawnEnemies(pub Vec<EnemySpawnData>);
+pub struct SpawnEnemies(pub Vec<EnemySpawn>);
 
 #[derive(Clone, Copy, Debug)]
-pub struct EnemySpawnData {
+pub struct EnemySpawn {
     pub position: Vec2,
-    pub enemy_kind: EnemyKind,
+    pub kind: EnemyKind,
 }
 
 pub(super) fn on_spawn_enemies(
@@ -40,7 +40,7 @@ pub(super) fn on_spawn_enemies(
 
 fn spawn_enemy(
     commands: &mut Commands,
-    spawn_data: EnemySpawnData,
+    spawn_data: EnemySpawn,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
@@ -49,8 +49,8 @@ fn spawn_enemy(
 ) {
     trace!("Spawning enemy at: {}", spawn_data.position);
 
-    let base = base_enemy(spawn_data.enemy_kind, spawn_data.position, player);
-    match spawn_data.enemy_kind {
+    let base = base_enemy(spawn_data.kind, spawn_data.position, player);
+    match spawn_data.kind {
         EnemyKind::Warrior => {
             warrior::spawn_warrior(commands, base, sprites, sprite_layouts, shadows);
         }

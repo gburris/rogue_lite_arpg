@@ -43,11 +43,11 @@ pub(super) fn plugin(app: &mut App) {
     .add_systems(
         Update,
         (
-            handle_debug_input
+            toggle_debug_render
                 .in_set(InGameSystems::PlayerInput)
                 .ambiguous_with_all(),
             (
-                view::camera_debug_system,
+                view::draw_camera_debug_gizmos,
                 debug_vision,
                 spawn_enemy_ai_labels,
                 update_enemy_ai_labels,
@@ -76,7 +76,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Resource)]
 struct DebugRenderEnabled;
 
-fn handle_debug_input(
+fn toggle_debug_render(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut config_store: ResMut<GizmoConfigStore>,
@@ -125,7 +125,7 @@ fn debug_target_lines(
         } else {
             RED
         };
-        gizmos.line_2d(origin, target_info.target_position, color);
+        gizmos.line_2d(origin, target_info.position, color);
     }
 }
 
@@ -175,7 +175,7 @@ fn update_enemy_ai_labels(
             &Brain,
             &TargetInfo,
             Has<Targeting>,
-            Option<&AttackState>,
+            Option<&Attacking>,
             Option<&Dash>,
             Option<&Wander>,
             Option<&ScoreTrace>,
@@ -185,12 +185,12 @@ fn update_enemy_ai_labels(
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((brain, target_info, has_target, attack_state, dash, wander, score_trace)) =
+        let Ok((brain, target_info, has_target, attacking, dash, wander, score_trace)) =
             enemies.get(parent.parent())
         else {
             continue;
         };
-        let attacking = attack_state.is_some_and(|attack| attack.is_attacking);
+        let attacking = attacking.is_some_and(|attacking| **attacking);
         let mode = short_activity(brain, dash, wander);
         if has_target {
             let sight = if target_info.line_of_sight {

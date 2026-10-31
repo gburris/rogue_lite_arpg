@@ -44,7 +44,7 @@ pub struct PlayerInteractionInput;
 #[derive(EntityEvent)]
 pub struct PlayerInteraction {
     pub entity: Entity,
-    pub interaction_zone_entity: Entity,
+    pub zone: Entity,
 }
 
 fn on_player_interaction_input(
@@ -72,10 +72,10 @@ fn on_player_interaction_input(
         // Select colliding zone closest to player
         .min_by(|(_, _, dist_a), (_, _, dist_b)| dist_a.total_cmp(dist_b));
 
-    if let Some((interaction_zone_entity, interactable_entity, _)) = closest_interaction {
+    if let Some((zone, interactable_entity, _)) = closest_interaction {
         commands.trigger(PlayerInteraction {
             entity: interactable_entity,
-            interaction_zone_entity,
+            zone,
         });
     }
 }

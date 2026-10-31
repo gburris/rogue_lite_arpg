@@ -4,17 +4,17 @@ use serde::{Deserialize, Serialize};
 /// A row-major grid of tile data with a bottom-left origin.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TileGrid<T = TileKind> {
-    map_size: UVec2, // Size of the grid in tiles
+    size: UVec2, // Size of the grid in tiles
     cells: Vec<T>,
 }
 
 impl<T: Copy> TileGrid<T> {
     fn width(&self) -> usize {
-        self.map_size.x as usize
+        self.size.x as usize
     }
 
     fn height(&self) -> usize {
-        self.map_size.y as usize
+        self.size.y as usize
     }
 
     fn cell_index(&self, tile_index: IVec2) -> Option<usize> {
@@ -25,28 +25,28 @@ impl<T: Copy> TileGrid<T> {
     }
 
     /// Creates a grid filled with `fill`.
-    pub fn new(map_size: UVec2, fill: T) -> Self
+    pub fn new(size: UVec2, fill: T) -> Self
     where
         T: Clone,
     {
         assert!(
-            map_size.x > 0 && map_size.y > 0,
+            size.x > 0 && size.y > 0,
             "tile grid dimensions must be non-zero"
         );
-        let width = usize::try_from(map_size.x).expect("map width fits usize");
-        let height = usize::try_from(map_size.y).expect("map height fits usize");
+        let width = usize::try_from(size.x).expect("map width fits usize");
+        let height = usize::try_from(size.y).expect("map height fits usize");
         let capacity = width
             .checked_mul(height)
             .expect("total tiles in map fits usize");
         Self {
-            map_size,
+            size,
             cells: vec![fill; capacity],
         }
     }
 
     /// Returns the grid dimensions in tiles.
-    pub fn map_size(&self) -> UVec2 {
-        self.map_size
+    pub fn size(&self) -> UVec2 {
+        self.size
     }
 
     /// Returns whether the grid contains the given tile coordinate.
@@ -95,7 +95,7 @@ impl<T: Copy> TileGrid<T> {
 
     /// Fills the grid's outermost rows and columns.
     pub fn fill_border(&mut self, value: T) {
-        let size = self.map_size;
+        let size = self.size;
         self.fill_rect(
             &TileRect {
                 min: IVec2::ZERO,

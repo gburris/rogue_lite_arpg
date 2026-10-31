@@ -18,9 +18,9 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(AssetCollection, Resource)]
 pub struct SpriteSheetLayouts {
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
-    pub player_atlas_layout: Handle<TextureAtlasLayout>,
+    pub player: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 64, columns = 13, rows = 21))]
-    pub enemy_atlas_layout: Handle<TextureAtlasLayout>,
+    pub enemy: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(
         tile_size_x = 40,
         tile_size_y = 32,
@@ -29,11 +29,11 @@ pub struct SpriteSheetLayouts {
         offset_x = 24,
         padding_x = 24,
     ))]
-    pub fireball_layout: Handle<TextureAtlasLayout>,
+    pub fireball: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 64, tile_size_y = 32, columns = 3, rows = 1))]
-    pub ice_bolt_layout: Handle<TextureAtlasLayout>,
+    pub ice_bolt: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 4))]
-    pub bat_enemy_layout: Handle<TextureAtlasLayout>,
+    pub bat: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(
         tile_size_x = 48,
         tile_size_y = 24,
@@ -42,13 +42,13 @@ pub struct SpriteSheetLayouts {
         padding_y = 8,
         offset_y = 8,
     ))]
-    pub chest_layout: Handle<TextureAtlasLayout>,
+    pub chest: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 64, columns = 8, rows = 1))]
     pub flame_vfx: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 100, tile_size_y = 100, columns = 10, rows = 1))]
     pub spell_effect: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 1))]
-    pub shield_layout: Handle<TextureAtlasLayout>,
+    pub shield: Handle<TextureAtlasLayout>,
 }
 
 /// Holds the shared tile atlas used by the map renderer.
@@ -117,21 +117,21 @@ pub struct SpriteAssets {
 #[derive(AssetCollection, Resource)]
 pub struct GameIcons {
     #[asset(path = "icons/equip_marker.png")]
-    pub equip_icon: Handle<Image>,
+    pub equip: Handle<Image>,
     #[asset(path = "icons/potion.png")]
-    pub potion_icon: Handle<Image>,
+    pub potion: Handle<Image>,
     #[asset(path = "icons/spell-book.png")]
-    pub spell_book_icon: Handle<Image>,
+    pub spell_book: Handle<Image>,
     #[asset(path = "icons/sword-brandish.png")]
-    pub melee_icon: Handle<Image>,
+    pub melee: Handle<Image>,
     #[asset(path = "icons/wizard-staff.png")]
-    pub staff_icon: Handle<Image>,
+    pub staff: Handle<Image>,
 }
 
 #[derive(AssetCollection, Resource)]
 pub struct Shadows {
-    pub character_shadow: ShadowMesh<14, 6>,
-    pub shadow_color: ShadowColor,
+    pub character: ShadowMesh<14, 6>,
+    pub color: ShadowColor,
 }
 
 pub struct ShadowMesh<const W: u16, const H: u16> {

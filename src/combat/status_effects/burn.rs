@@ -2,12 +2,12 @@ use bevy::color::palettes::tailwind::YELLOW_300;
 use bevy::prelude::*;
 use bevy_lit::prelude::PointLight2d;
 
-use super::status::{StatusApplied, StatusOf, StatusType, StatusVfxOf};
+use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::combat::damage::{AttemptDamage, Damage};
 use crate::prelude::*;
 
 #[derive(Component, Clone)]
-#[require(StatusType::Burn)]
+#[require(StatusKind::Burn)]
 pub struct Burning {
     damage: f32,
     damage_frequency: Timer,

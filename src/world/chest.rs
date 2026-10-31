@@ -57,7 +57,7 @@ fn chest(
         Sprite {
             image: sprites.chests_sprite_sheet.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.chest_layout.clone(),
+                layout: sprite_layouts.chest.clone(),
                 index: 0,
             }),
             ..default()
@@ -94,9 +94,7 @@ fn on_interaction_open_chest(
             TimerMode::Repeating,
         )));
 
-    commands
-        .entity(chest_opened.interaction_zone_entity)
-        .despawn();
+    commands.entity(chest_opened.zone).despawn();
     if let Ok(chest_transform) = chest_transforms.get(chest_entity) {
         commands
             .delayed()

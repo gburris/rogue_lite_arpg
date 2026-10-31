@@ -5,11 +5,8 @@ use rand::RngExt;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        handle_gold_collisions.in_set(InGameSystems::Collision),
-    )
-    .add_observer(on_drop_gold);
+    app.add_systems(Update, collect_gold.in_set(InGameSystems::Collision))
+        .add_observer(on_drop_gold);
 }
 
 #[derive(Component)]
@@ -37,7 +34,7 @@ struct Gold {
     pub value: u32,
 }
 
-fn handle_gold_collisions(
+fn collect_gold(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
     mut player_purse: Single<&mut Purse, With<Player>>,

@@ -179,7 +179,7 @@ pub(super) fn spawn_warrior(
 fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
     (
         (Kinematics::new(200.0), Health::new(40.0)),
-        Experience { base_exp: 20.0 },
+        Experience(20.0),
         ground_sight_ray(),
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
         // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
@@ -192,7 +192,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Sprite::from_atlas_image(
             sprites.warrior_enemy_sprite_sheet.clone(),
             TextureAtlas {
-                layout: sprite_layouts.enemy_atlas_layout.clone(),
+                layout: sprite_layouts.enemy.clone(),
                 ..default()
             },
         ),

@@ -8,10 +8,8 @@ use crate::prelude::*;
 
 /// Experience paid out when the player defeats this enemy. Scales with
 /// threat: the tanky warrior pays most, the fragile flying bat least.
-#[derive(Component)]
-pub struct Experience {
-    pub base_exp: f32,
-}
+#[derive(Component, Clone, Copy, Debug, Deref, DerefMut)]
+pub struct Experience(pub f32);
 
 pub(super) fn on_enemy_defeated(
     defeated: On<Defeated>,
@@ -36,7 +34,7 @@ pub(super) fn on_enemy_defeated(
         let (player_stats, mut player) = player_query.into_inner();
 
         if let Some(experience_to_gain) = experience_to_gain {
-            player.current_experience += experience_to_gain.base_exp;
+            player.experience += **experience_to_gain;
         }
 
         if let Some(items) = items {

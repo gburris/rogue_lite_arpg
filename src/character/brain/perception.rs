@@ -248,9 +248,8 @@ fn update_target_info(
 
                 target_info.direction = target_direction;
                 target_info.distance = target_position.distance(position);
-                target_info.target_position = target_position;
-                target_info.target_velocity =
-                    target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity);
+                target_info.position = target_position;
+                target_info.velocity = target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity);
 
                 ray_caster.direction = Dir2::new(target_direction).unwrap_or(Dir2::X);
             }
@@ -361,7 +360,7 @@ pub(super) fn build_target_view(info: Option<&TargetInfo>, now: f32) -> Option<T
             distance: info.distance,
             line_of_sight: info.line_of_sight,
             bearing: info.direction,
-            velocity: info.target_velocity,
+            velocity: info.velocity,
             seconds_since_targeted: now - info.targeted_at,
         })
     })

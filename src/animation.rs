@@ -69,7 +69,7 @@ impl Default for AnimationIndices {
     }
 }
 
-#[derive(Component, Deref, DerefMut, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, Deref, DerefMut)]
 #[require(AnimationIndices)]
 pub struct AnimationTimer(pub Timer);
 

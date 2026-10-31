@@ -16,11 +16,11 @@ pub(super) fn plugin(app: &mut App) {
 
     // Pause Logic
     app.add_systems(
-        OnEnter(Pause(false)),
+        OnEnter(PauseState::Running),
         set_controls(ContextActivity::<Player>::ACTIVE),
     )
     .add_systems(
-        OnEnter(Pause(true)),
+        OnEnter(PauseState::Paused),
         set_controls(ContextActivity::<Player>::INACTIVE),
     )
     .add_systems(

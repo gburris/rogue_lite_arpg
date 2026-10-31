@@ -99,18 +99,18 @@ pub(super) fn on_display_case_updated(
 
     commands.entity(displayed_by.0).with_children(|parent| {
         for item_entity in items.iter() {
-            let (name, item, equippable, is_equipped) = item_query
+            let (name, item, equippable, equipped) = item_query
                 .get(item_entity)
                 .expect("Inventory items have a name and item");
             parent.spawn(display_slot(
                 &icons,
                 DisplaySlotContext {
-                    item_entity,
-                    item_name: name.to_string(),
-                    item_type: item.item_type,
-                    item_value: item.value,
+                    item: item_entity,
+                    name: name.to_string(),
+                    kind: item.kind,
+                    value: item.value,
                     equipment_slot: equippable.map(|e| e.slot),
-                    is_equipped,
+                    equipped,
                 },
             ));
         }

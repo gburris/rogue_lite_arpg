@@ -158,11 +158,11 @@ pub(super) fn on_attempt_damage(
         if let Some(mut iframes) = has_iframes
             && !attempt_damage.ignore_invulnerable
         {
-            if iframes.is_invulnerable {
+            if iframes.invulnerable {
                 return;
             }
 
-            iframes.is_invulnerable = true;
+            iframes.invulnerable = true;
         }
 
         if health.is_dead() {

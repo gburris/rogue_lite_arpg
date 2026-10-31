@@ -107,7 +107,7 @@ impl UsableItemItem<'_, '_> {
         can_use_item(&self.equippable, self.mana_cost, holder_mana.as_deref())?;
 
         if let (Some(mut holder_mana), Some(mana_cost)) = (holder_mana, self.mana_cost) {
-            holder_mana.use_mana(mana_cost);
+            holder_mana.spend(*mana_cost);
         }
         self.equippable.cooldown.reset();
         Ok(())
@@ -131,7 +131,7 @@ fn can_use_item(
         return Err(EquipmentUseFailure::OnCooldown);
     }
     match (mana_cost, holder_mana) {
-        (Some(mana_cost), Some(mana)) if !mana.has_enough_mana(mana_cost) => {
+        (Some(mana_cost), Some(mana)) if !mana.can_afford(*mana_cost) => {
             Err(EquipmentUseFailure::OutOfMana)
         }
         (Some(_), None) => Err(EquipmentUseFailure::OutOfMana),

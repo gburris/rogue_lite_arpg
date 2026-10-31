@@ -104,7 +104,7 @@ impl MapBlueprint {
 
     /// Returns the dimensions of this map in tiles.
     pub fn map_size(&self) -> UVec2 {
-        self.tiles.map_size()
+        self.tiles.size()
     }
 }
 

@@ -47,10 +47,9 @@ impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
         #[cfg(feature = "stress")]
-        let request = if self.stress_arena.is_some() {
-            super::stress::redirect_hub(request)
-        } else {
-            request
+        let request = match self.stress_arena.as_deref() {
+            Some(stress_arena) => stress_arena.redirect_hub(request),
+            None => request,
         };
         let (recipe, seed) = self.catalog.resolve(request, &mut self.root_rng)?;
         #[cfg(feature = "stress")]
@@ -156,10 +155,8 @@ fn dev_map_keys(
             return Ok(());
         };
         stress_arena.advance_step();
-        return next_map.set(MapRequest::Named {
-            recipe: super::stress::STRESS_ARENA_RECIPE.to_owned(),
-            seed: None,
-        });
+        let recipe = stress_arena.recipe_name().to_owned();
+        return next_map.set(MapRequest::Named { recipe, seed: None });
     }
     let recipe = if keyboard_input.just_pressed(KeyCode::F1) {
         AI_TEST_ARENA.to_owned()

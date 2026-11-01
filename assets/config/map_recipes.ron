@@ -244,5 +244,23 @@ RecipeFile(
                 (what: Enemy(Bat), count: 25, at: Random(), separation: 3),
             ],
         ),
+        (
+            // `StressArena`'s smaller twin: the same enemies packed within reach of the
+            // player, the worst case for targeting, aim and decisions. Selected with
+            // `STRESS_SHAPE=swarm`.
+            name: "StressSwarm",
+            size: 60,
+            floor: Ground,
+            structures: [],
+            presets: [],
+            spawns: [
+                (what: PlayerStart, at: Center),
+                (what: Exit, at: Edge(Right)),
+                (what: Enemy(Warrior), count: 25, at: Random(), separation: 1),
+                (what: Enemy(IceMage), count: 25, at: Random(), separation: 1),
+                (what: Enemy(FireMage), count: 25, at: Random(), separation: 1),
+                (what: Enemy(Bat), count: 25, at: Random(), separation: 1),
+            ],
+        ),
     ],
 )

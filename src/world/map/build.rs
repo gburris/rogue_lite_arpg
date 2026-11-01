@@ -40,7 +40,7 @@ pub struct NextMap<'w, 's> {
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
     #[cfg(feature = "stress")]
-    stress_arena: Option<Res<'w, super::stress::StressArena>>,
+    stress_arena: Option<ResMut<'w, super::stress::StressArena>>,
 }
 
 impl NextMap<'_, '_> {
@@ -56,7 +56,7 @@ impl NextMap<'_, '_> {
         #[cfg(feature = "stress")]
         let stressed_recipe = self
             .stress_arena
-            .as_ref()
+            .as_deref()
             .and_then(|stress_arena| stress_arena.override_counts(recipe));
         #[cfg(feature = "stress")]
         let recipe = stressed_recipe.as_ref().unwrap_or(recipe);
@@ -142,13 +142,25 @@ fn rebuild_current_map(
 const AI_TEST_ARENA: &str = "AiTestArena";
 
 /// Dev only: F1 opens the AI test arena; F6 steps through every recipe in file order.
-/// Both use a fresh seed.
+/// F2 rebuilds the stress arena at the next enemy count when `STRESS_ARENA` is set.
+/// All use a fresh seed.
 #[cfg(feature = "dev")]
 fn dev_map_keys(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     blueprint: Single<&MapBlueprint>,
     mut next_map: NextMap,
 ) -> Result {
+    if keyboard_input.just_pressed(KeyCode::F2) {
+        let Some(stress_arena) = next_map.stress_arena.as_mut() else {
+            warn!("F2 steps the stress arena, so start the game with STRESS_ARENA set");
+            return Ok(());
+        };
+        stress_arena.advance_step();
+        return next_map.set(MapRequest::Named {
+            recipe: super::stress::STRESS_ARENA_RECIPE.to_owned(),
+            seed: None,
+        });
+    }
     let recipe = if keyboard_input.just_pressed(KeyCode::F1) {
         AI_TEST_ARENA.to_owned()
     } else if keyboard_input.just_pressed(KeyCode::F6) {

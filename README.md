@@ -82,6 +82,15 @@ cargo run --profile profiling --no-default-features --features profile   # with 
 Remove-Item Env:STRESS_ARENA
 ```
 
+`STRESS_SECONDS` (needs `STRESS_ARENA`) quits after a 5 s warm-up plus that many seconds in the
+arena, and appends one summary line to `runs\stress_summary.txt`. In a dev build, F2 rebuilds the
+arena at the next total of 100, 200, 500 and 1000 enemies, split evenly across the kinds.
+
+```powershell
+$env:STRESS_SECONDS = "60"
+Remove-Item Env:STRESS_SECONDS
+```
+
 ## Schedule graphs
 
 Writes `runs\schedules\update.dot` and `fixed_update.dot` from a dev build, then exits.

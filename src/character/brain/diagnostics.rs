@@ -9,10 +9,12 @@ use bevy::prelude::*;
 use super::Brain;
 use crate::prelude::*;
 
-const BRAINS: DiagnosticPath = DiagnosticPath::const_new("game/ai/brains");
+/// Number of live brains.
+pub const BRAINS: DiagnosticPath = DiagnosticPath::const_new("game/ai/brains");
 const DECISIONS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decisions");
 const REDECISIONS: DiagnosticPath = DiagnosticPath::const_new("game/ai/redecisions");
-const DECIDE_MS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decide_ms");
+/// Milliseconds spent deciding in the last frame.
+pub const DECIDE_MS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decide_ms");
 
 /// Decisions made and time spent deciding since the last frame was published.
 #[derive(Resource, Default)]

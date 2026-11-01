@@ -44,6 +44,8 @@ use self::capability::{
 };
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
+#[cfg(feature = "stress")]
+pub use self::diagnostics::{BRAINS, DECIDE_MS};
 use self::engine::validate_brain;
 pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};

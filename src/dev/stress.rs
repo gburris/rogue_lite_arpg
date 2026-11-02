@@ -1,8 +1,8 @@
 //! Starts the game in the stress arena when `STRESS_ARENA` is set.
 //!
-//! `STRESS_ARENA=warrior=250,ice_mage=250,fire_mage=250,bat=250` replaces the hub request with
-//! the `StressSwarm` recipe, a small floor with the enemies packed around the player, spawns
-//! that many of each listed kind (unlisted kinds spawn none), and makes the player
+//! `STRESS_ARENA=1000` replaces the hub request with the `StressSwarm` recipe, a small floor
+//! with the enemies packed around the player, spawns that many enemies split evenly across
+//! every kind, and makes the player
 //! [`Invincible`]. The start screen is skipped and vsync is off, so frame time shows real cost.
 //!
 //! `STRESS_SECONDS=60` also quits after a warm-up plus that many seconds in the arena, and
@@ -29,17 +29,10 @@ const WARMUP_SECONDS: f32 = 5.0;
 /// File the summary line is appended to, since a profiling build has no console.
 const SUMMARY_PATH: &str = "runs/stress_summary.txt";
 
-/// How many enemies of one kind the stress arena spawns.
-#[derive(Clone, Copy, Debug)]
-struct KindCount {
-    kind: EnemyKind,
-    count: u32,
-}
-
-/// Enemy counts parsed from `STRESS_ARENA`. Present only when the variable is set.
+/// Enemy count parsed from `STRESS_ARENA`. Present only when the variable is set.
 #[derive(Resource, Debug)]
 pub struct StressArena {
-    kind_counts: Vec<KindCount>,
+    enemies_per_kind: u32,
 }
 
 /// Frame times and `game/…` diagnostics collected while `STRESS_SECONDS` is set.
@@ -62,10 +55,14 @@ pub(super) fn plugin(app: &mut App) {
         }
         return;
     };
-    let kind_counts = parse_kind_counts(&arena_spec)
+    let total_enemies = arena_spec
+        .trim()
+        .parse::<u32>()
         .unwrap_or_else(|error| panic!("STRESS_ARENA=`{arena_spec}` is invalid: {error}"));
-    info!("Stress enemy counts: {kind_counts:?}");
-    app.insert_resource(StressArena { kind_counts });
+    let kinds = u32::try_from(EnemyKind::ALL.len()).expect("enemy kind count fits in u32");
+    let enemies_per_kind = total_enemies / kinds;
+    info!("Stress arena: {enemies_per_kind} enemies of each of {kinds} kinds");
+    app.insert_resource(StressArena { enemies_per_kind });
     app.add_observer(on_player_added);
     app.add_systems(OnEnter(AppState::StartScreen), skip_start_screen);
     app.add_systems(Startup, disable_vsync);
@@ -114,16 +111,7 @@ impl StressArena {
         if recipe.name() != self.recipe_name() {
             return None;
         }
-        Some(recipe.clone().with_enemy_counts(|kind| self.count_of(kind)))
-    }
-
-    /// The count for `kind`; the last entry wins and unlisted kinds get none.
-    fn count_of(&self, kind: EnemyKind) -> u32 {
-        self.kind_counts
-            .iter()
-            .rev()
-            .find(|kind_count| kind_count.kind == kind)
-            .map_or(0, |kind_count| kind_count.count)
+        Some(recipe.clone().with_enemy_counts(|_kind| self.enemies_per_kind))
     }
 }
 
@@ -249,40 +237,4 @@ fn log_summary_to_file(summary: &str) {
     if let Err(error) = result {
         error!("Could not write {SUMMARY_PATH}: {error}");
     }
-}
-
-/// Parses `kind=count,kind=count`. Kind names ignore case and underscores (`ice_mage`).
-fn parse_kind_counts(value: &str) -> Result<Vec<KindCount>, String> {
-    let mut kind_counts = Vec::new();
-    for entry in value
-        .split(',')
-        .map(str::trim)
-        .filter(|entry| !entry.is_empty())
-    {
-        let (name, count) = entry
-            .split_once('=')
-            .ok_or_else(|| format!("`{entry}` is not kind=count"))?;
-        let kind = enemy_kind_named(name.trim())?;
-        let count = count
-            .trim()
-            .parse::<u32>()
-            .map_err(|error| format!("count in `{entry}`: {error}"))?;
-        kind_counts.push(KindCount { kind, count });
-    }
-    Ok(kind_counts)
-}
-
-fn enemy_kind_named(name: &str) -> Result<EnemyKind, String> {
-    let normalize = |text: &str| text.replace('_', "").to_lowercase();
-    EnemyKind::ALL
-        .iter()
-        .copied()
-        .find(|kind| normalize(&format!("{kind:?}")) == normalize(name))
-        .ok_or_else(|| {
-            let valid: Vec<String> = EnemyKind::ALL
-                .iter()
-                .map(|kind| format!("{kind:?}"))
-                .collect();
-            format!("unknown enemy kind `{name}`, expected one of {valid:?}")
-        })
 }

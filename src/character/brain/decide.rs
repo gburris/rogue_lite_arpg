@@ -177,6 +177,7 @@ fn redecide_now(
     now: f32,
 ) {
     let context_without_memory = {
+        #[cfg(feature = "profile")]
         let _span = info_span!("decide::context").entered();
         build_decision_context(
             decision_input_components,
@@ -211,12 +212,14 @@ fn decide_slot_assignments(
         }
     }
     let (context, available_motion_action_table) = {
+        #[cfg(feature = "profile")]
         let _span = info_span!("decide::scoring_inputs").entered();
         brain.build_scoring_inputs(context_without_memory, capability_profiles, now)
     };
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
     if let Some(score_trace) = score_trace {
+        #[cfg(feature = "profile")]
         let _span = info_span!("decide::explain").entered();
         score_trace.behavior_explanations.clear();
         score_trace
@@ -233,6 +236,7 @@ fn decide_slot_assignments(
     }
     let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
     let winning_behavior_ids = {
+        #[cfg(feature = "profile")]
         let _span = info_span!("decide::assign").entered();
         assign_behaviors_to_slots(
             definition,
@@ -249,6 +253,7 @@ fn decide_slot_assignments(
             },
         )
     };
+    #[cfg(feature = "profile")]
     let _span = info_span!("decide::commit").entered();
     brain.commit_decision(
         &winning_behavior_ids,

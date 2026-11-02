@@ -63,18 +63,17 @@ cargo run --profile profiling --no-default-features --features profile
 tracy-profiler runs\baseline.tracy
 ```
 
-Add `profile_memory` to `--features` to track allocations, which adds noticeable overhead.
 A `profiling` build has no console, so redirect stderr to read a panic:
 `.\target\profiling\baba_yaga.exe 2> panic.log`.
 
 ## Stress arena
 
-Setting `STRESS_ARENA` makes Start load a 200 x 200 open arena with an invincible player and
-the listed enemy counts. Kinds are `warrior`, `ice_mage`, `fire_mage` and `bat`; kinds you leave
-out spawn none. The variable stays set in that window until you remove it.
+Setting `STRESS_ARENA` to a total enemy count makes Start load a small arena with an invincible
+player and that many enemies packed around them, split evenly across the enemy kinds. The
+variable stays set in that window until you remove it.
 
 ```powershell
-$env:STRESS_ARENA = "warrior=250,ice_mage=250,fire_mage=250,bat=250"
+$env:STRESS_ARENA = "1000"
 
 cargo run                                                                 # dev build
 cargo run --profile profiling --no-default-features --features profile   # with Tracy
@@ -91,7 +90,6 @@ Remove-Item Env:STRESS_SECONDS
 ```
 
 Under `STRESS_ARENA` the game also skips the start screen and turns vsync off.
-The arena is a small floor with the enemies packed around the player.
 
 `scripts\stress_sweep.ps1` records one Tracy capture per run to `runs\stress\`, with the game
 quitting by itself, and prints each run's summary line. It builds the profiling binary first and
@@ -99,7 +97,6 @@ needs `tracy-capture` on `PATH`.
 
 ```powershell
 .\scripts\stress_sweep.ps1                                  # 100, 200, 500, 1000
-.\scripts\stress_sweep.ps1 -Counts 500 -Kinds warrior,bat   # single kinds
 .\scripts\stress_sweep.ps1 -Seconds 60 -MapSeed 7           # longer runs, another map
 ```
 

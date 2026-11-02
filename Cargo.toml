@@ -61,8 +61,6 @@ strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
 stress = []
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
 profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
-# Also track allocations, which adds noticeable overhead.
-profile_memory = ["profile", "bevy/trace_tracy_memory"]
 
 [package.metadata.bevy_cli.release]
 # Disable dev features for release builds.

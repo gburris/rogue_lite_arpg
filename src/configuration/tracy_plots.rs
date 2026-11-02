@@ -8,7 +8,10 @@ use tracy_client::PlotName;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, plot_game_diagnostics.after(InGameSystems::HudOverlay));
+    app.add_systems(
+        Update,
+        plot_game_diagnostics.after(InGameSystems::HudOverlay),
+    );
 }
 
 /// Plots the latest value of each `game/…` diagnostic.

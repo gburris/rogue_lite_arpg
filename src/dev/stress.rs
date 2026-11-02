@@ -2,8 +2,8 @@
 //!
 //! `STRESS_ARENA=1000` replaces the hub request with the `StressSwarm` recipe, a small floor
 //! with the enemies packed around the player, spawns that many enemies split evenly across
-//! every kind, and makes the player
-//! [`Invincible`]. The start screen is skipped and vsync is off, so frame time shows real cost.
+//! every kind, and makes the player [`Invincible`]. The start screen is skipped and vsync is
+//! off, so frame time shows real cost.
 //!
 //! `STRESS_SECONDS=60` also quits after a warm-up plus that many seconds in the arena, and
 //! appends one summary line to `runs/stress_summary.txt` and the log.
@@ -38,7 +38,7 @@ pub struct StressArena {
 /// Frame times and `game/…` diagnostics collected while `STRESS_SECONDS` is set.
 #[derive(Resource)]
 struct StressRun {
-    arena_spec: String,
+    total_enemies: u32,
     measure_seconds: f32,
     started_at: Option<f32>,
     frame_ms: Vec<f32>,
@@ -61,6 +61,7 @@ pub(super) fn plugin(app: &mut App) {
         .unwrap_or_else(|error| panic!("STRESS_ARENA=`{arena_spec}` is invalid: {error}"));
     let kinds = u32::try_from(EnemyKind::ALL.len()).expect("enemy kind count fits in u32");
     let enemies_per_kind = total_enemies / kinds;
+    let total_enemies = enemies_per_kind * kinds;
     info!("Stress arena: {enemies_per_kind} enemies of each of {kinds} kinds");
     app.insert_resource(StressArena { enemies_per_kind });
     app.add_observer(on_player_added);
@@ -73,7 +74,7 @@ pub(super) fn plugin(app: &mut App) {
             .parse::<f32>()
             .unwrap_or_else(|error| panic!("STRESS_SECONDS=`{seconds}` is invalid: {error}"));
         app.insert_resource(StressRun {
-            arena_spec,
+            total_enemies,
             measure_seconds,
             started_at: None,
             frame_ms: Vec::new(),
@@ -188,7 +189,7 @@ impl StressRun {
     fn summary(&self) -> String {
         let mut summary = format!(
             "stress summary: arena={} seconds={}",
-            self.arena_spec, self.measure_seconds,
+            self.total_enemies, self.measure_seconds,
         );
         for (label, frame_ms) in [
             ("", &self.frame_ms),

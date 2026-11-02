@@ -11,7 +11,8 @@ const PHYSICS_BODIES: DiagnosticPath = DiagnosticPath::const_new("game/physics/b
 const CONTACT_PAIRS: DiagnosticPath = DiagnosticPath::const_new("game/physics/contact_pairs");
 const ENABLED_RAYS: DiagnosticPath = DiagnosticPath::const_new("game/physics/enabled_rays");
 /// Fixed steps run since the last frame.
-pub const FIXED_STEPS: DiagnosticPath = DiagnosticPath::const_new("game/physics/fixed_steps");
+pub(super) const FIXED_STEPS: DiagnosticPath =
+    DiagnosticPath::const_new("game/physics/fixed_steps");
 const LIGHTS: DiagnosticPath = DiagnosticPath::const_new("game/lights");
 const LOADED_IMAGES: DiagnosticPath = DiagnosticPath::const_new("game/images");
 

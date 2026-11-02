@@ -35,6 +35,7 @@
 #>
 param(
     [int[]]$Counts = @(100, 200, 500, 1000),
+    [ValidateRange(1, 100)]
     [int]$Repeats = 1,
     [int]$Seconds = 30,
     [int]$CaptureSeconds = 0,

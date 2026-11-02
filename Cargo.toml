@@ -39,6 +39,8 @@ dev = [
     "bevy/dynamic_linking",
     "bevy/bevy_dev_tools",
     "bevy/bevy_ui_debug",
+    # CPU and memory usage diagnostics for the F3 overlay (`dev/hud.rs`).
+    "bevy/sysinfo_plugin",
     # Improve error messages coming from Bevy
     "bevy/track_location",
     "bevy/debug",

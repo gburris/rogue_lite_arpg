@@ -5,6 +5,8 @@
 #[cfg(feature = "dev")]
 mod debug;
 mod diagnostics;
+#[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
+mod hud;
 #[cfg(feature = "dev")]
 mod schedule_dump;
 #[cfg(feature = "stress")]
@@ -27,6 +29,9 @@ pub(super) fn plugin(app: &mut App) {
 
     #[cfg(feature = "dev")]
     app.add_plugins(debug::plugin);
+
+    #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
+    app.add_plugins(hud::plugin);
 
     // `bevy/trace_tracy` makes the render plugin add this itself.
     #[cfg(all(feature = "dev", not(feature = "profile")))]

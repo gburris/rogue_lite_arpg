@@ -11,7 +11,7 @@ const OUTPUT_DIR: &str = "runs/schedules";
 
 /// Writes the schedule graphs and returns true when `DUMP_SCHEDULES` is set, so `main` can exit
 /// instead of running the game. Render with `dot -Tsvg runs/schedules/update.dot -o update.svg`.
-pub(crate) fn dump_schedules_if_requested(app: &mut App) -> bool {
+pub fn dump_schedules_if_requested(app: &mut App) -> bool {
     if std::env::var_os("DUMP_SCHEDULES").is_none() {
         return false;
     }

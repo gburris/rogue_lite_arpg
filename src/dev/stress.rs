@@ -10,16 +10,16 @@
 //! `STRESS_SECONDS=60` also quits after a warm-up plus that many seconds in the arena, and
 //! appends one summary line to `runs/stress_summary.txt` and the log.
 
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
 
-use bevy::diagnostic::{Diagnostic, DiagnosticPath, DiagnosticsStore};
+use bevy::diagnostic::DiagnosticsStore;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, PrimaryWindow};
 
-use super::build::MapRequest;
-use super::placement::CountRange;
-use super::recipe::{MapRecipe, SpawnKind};
+use super::diagnostics::FIXED_STEPS;
 use crate::prelude::*;
 
 /// Total enemy counts F2 steps through, split evenly across the enemy kinds.
@@ -67,14 +67,14 @@ struct KindCount {
 
 /// Enemy counts parsed from `STRESS_ARENA`. Present only when the variable is set.
 #[derive(Resource, Debug)]
-pub(super) struct StressArena {
+pub struct StressArena {
     shape: StressShape,
     kind_counts: Vec<KindCount>,
     #[cfg(feature = "dev")]
     next_step: usize,
 }
 
-/// Frame and decision costs collected while `STRESS_SECONDS` is set.
+/// Frame times and `game/…` diagnostics collected while `STRESS_SECONDS` is set.
 #[derive(Resource)]
 struct StressRun {
     arena_spec: String,
@@ -82,8 +82,9 @@ struct StressRun {
     measure_seconds: f32,
     started_at: Option<f32>,
     frame_ms: Vec<f32>,
-    decide_ms: Vec<f32>,
-    brains: Vec<f32>,
+    frame_ms_with_fixed_step: Vec<f32>,
+    frame_ms_without_fixed_step: Vec<f32>,
+    diagnostic_values: BTreeMap<String, Vec<f32>>,
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -121,8 +122,9 @@ pub(super) fn plugin(app: &mut App) {
             measure_seconds,
             started_at: None,
             frame_ms: Vec::new(),
-            decide_ms: Vec::new(),
-            brains: Vec::new(),
+            frame_ms_with_fixed_step: Vec::new(),
+            frame_ms_without_fixed_step: Vec::new(),
+            diagnostic_values: BTreeMap::new(),
         });
         app.add_systems(
             Last,
@@ -134,12 +136,12 @@ pub(super) fn plugin(app: &mut App) {
 
 impl StressArena {
     /// Name of the recipe this run uses in place of the hub.
-    pub(super) fn recipe_name(&self) -> &'static str {
+    pub fn recipe_name(&self) -> &'static str {
         self.shape.recipe_name()
     }
 
     /// Sends the game's first map request, the hub, to the stress recipe.
-    pub(super) fn redirect_hub(&self, request: MapRequest) -> MapRequest {
+    pub fn redirect_hub(&self, request: MapRequest) -> MapRequest {
         match request {
             MapRequest::Hub => MapRequest::Named {
                 recipe: self.recipe_name().to_owned(),
@@ -150,30 +152,25 @@ impl StressArena {
     }
 
     /// Returns the stress recipe with its enemy counts replaced, or `None` for any other recipe.
-    pub(super) fn override_counts(&self, recipe: &MapRecipe) -> Option<MapRecipe> {
-        if recipe.name != self.recipe_name() {
+    pub fn override_counts(&self, recipe: &MapRecipe) -> Option<MapRecipe> {
+        if recipe.name() != self.recipe_name() {
             return None;
         }
-        let mut recipe = recipe.clone();
-        recipe.spawns.retain_mut(|spawn| {
-            let SpawnKind::Enemy(kind) = spawn.what else {
-                return true;
-            };
-            let count = self
-                .kind_counts
-                .iter()
-                .rev()
-                .find(|kind_count| kind_count.kind == kind)
-                .map_or(0, |kind_count| kind_count.count);
-            spawn.count = CountRange::exactly(count);
-            count > 0
-        });
-        Some(recipe)
+        Some(recipe.clone().with_enemy_counts(|kind| self.count_of(kind)))
+    }
+
+    /// The count for `kind`; the last entry wins and unlisted kinds get none.
+    fn count_of(&self, kind: EnemyKind) -> u32 {
+        self.kind_counts
+            .iter()
+            .rev()
+            .find(|kind_count| kind_count.kind == kind)
+            .map_or(0, |kind_count| kind_count.count)
     }
 
     /// Moves to the next total in [`STEP_TOTALS`], wrapping, split evenly across every kind.
     #[cfg(feature = "dev")]
-    pub(super) fn advance_step(&mut self) {
+    pub fn advance_step(&mut self) {
         let total = STEP_TOTALS[self.next_step % STEP_TOTALS.len()];
         self.next_step += 1;
         let kinds = u32::try_from(EnemyKind::ALL.len()).expect("enemy kind count fits in u32");
@@ -217,15 +214,29 @@ fn sample_stress_run(
         return;
     }
 
-    let latest = |path: &DiagnosticPath| {
-        diagnostics
-            .get(path)
-            .and_then(Diagnostic::value)
-            .unwrap_or(0.0) as f32
-    };
-    stress_run.frame_ms.push(real_time.delta_secs() * 1000.0);
-    stress_run.decide_ms.push(latest(&DECIDE_MS));
-    stress_run.brains.push(latest(&BRAINS));
+    let frame_ms = real_time.delta_secs() * 1000.0;
+    let mut had_fixed_step = false;
+    for diagnostic in diagnostics.iter() {
+        let path = diagnostic.path();
+        if !path.as_str().starts_with("game/") {
+            continue;
+        }
+        let value = diagnostic.value().unwrap_or(0.0) as f32;
+        if *path == FIXED_STEPS {
+            had_fixed_step = value > 0.0;
+        }
+        stress_run
+            .diagnostic_values
+            .entry(path.to_string())
+            .or_default()
+            .push(value);
+    }
+    stress_run.frame_ms.push(frame_ms);
+    if had_fixed_step {
+        stress_run.frame_ms_with_fixed_step.push(frame_ms);
+    } else {
+        stress_run.frame_ms_without_fixed_step.push(frame_ms);
+    }
 
     if elapsed < WARMUP_SECONDS + stress_run.measure_seconds {
         return;
@@ -238,25 +249,48 @@ fn sample_stress_run(
 }
 
 impl StressRun {
-    /// One line: the arena spec, frames measured, frame time median and p99, and mean decide
-    /// time and brain count.
+    /// One line: the arena spec, frames measured, median and p99 frame time overall and split by
+    /// whether the frame ran a fixed step, then the mean of every `game/…` diagnostic.
     fn summary(&self) -> String {
-        let mut sorted_frame_ms = self.frame_ms.clone();
-        sorted_frame_ms.sort_by(f32::total_cmp);
-        let frames = sorted_frame_ms.len();
-        let median = sorted_frame_ms[frames / 2];
-        let p99 = sorted_frame_ms[(frames * 99).div_ceil(100) - 1];
-        format!(
-            "stress summary: shape={:?} arena={} seconds={} frames={frames} \
-             median_frame_ms={median:.2} p99_frame_ms={p99:.2} mean_decide_ms={:.3} \
-             mean_brains={:.0}",
+        let mut summary = format!(
+            "stress summary: shape={:?} arena={} seconds={} frames={}",
             self.shape,
             self.arena_spec,
             self.measure_seconds,
-            mean(&self.decide_ms),
-            mean(&self.brains),
-        )
+            self.frame_ms.len(),
+        );
+        for (label, frame_ms) in [
+            ("", &self.frame_ms),
+            ("fixed_", &self.frame_ms_with_fixed_step),
+            ("no_fixed_", &self.frame_ms_without_fixed_step),
+        ] {
+            let mut sorted_frame_ms = frame_ms.clone();
+            sorted_frame_ms.sort_by(f32::total_cmp);
+            let median = percentile(&sorted_frame_ms, 50);
+            let p99 = percentile(&sorted_frame_ms, 99);
+            write!(
+                summary,
+                " {label}frames={} {label}median_frame_ms={median} {label}p99_frame_ms={p99}",
+                sorted_frame_ms.len(),
+            )
+            .expect("writing to a String cannot fail");
+        }
+        for (path, values) in &self.diagnostic_values {
+            write!(summary, " mean_{path}={:.3}", mean(values))
+                .expect("writing to a String cannot fail");
+        }
+        summary
     }
+}
+
+/// The given percentile of sorted values with two decimals, or `-` when there are none.
+fn percentile(sorted_values: &[f32], percent: usize) -> String {
+    let count = sorted_values.len();
+    if count == 0 {
+        return "-".to_owned();
+    }
+    let index = (count * percent).div_ceil(100).max(1) - 1;
+    format!("{:.2}", sorted_values[index])
 }
 
 fn mean(values: &[f32]) -> f32 {

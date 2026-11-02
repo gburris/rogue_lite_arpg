@@ -6,60 +6,47 @@ use bevy::color::palettes::css::{GREEN, RED, YELLOW};
 use bevy::dev_tools::fps_overlay::{FpsOverlayPlugin, FpsOverlaySystems};
 use bevy::dev_tools::states::log_transitions;
 use bevy::ecs::schedule::{LogLevel, ScheduleBuildSettings};
-use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use super::view;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(
-        DefaultPlugins
-            .set(LogPlugin {
-                level: Level::INFO,
-                // update game dev project to info or another when you get tired of debug
-                filter: "wgpu=error,baba_yaga=debug".to_string(),
+    app.add_plugins(PhysicsDebugPlugin)
+        .insert_gizmo_config(
+            PhysicsGizmos::default(),
+            GizmoConfig {
+                enabled: false,
                 ..default()
-            })
-            .set(view::window_plugin())
-            .set(ImagePlugin::default_nearest()),
-    )
-    .add_plugins(PhysicsDebugPlugin)
-    .insert_gizmo_config(
-        PhysicsGizmos::default(),
-        GizmoConfig {
-            enabled: false,
-            ..default()
-        },
-    )
-    // Enable system ambiguity detection
-    .edit_schedule(Update, |schedule| {
-        schedule.set_build_settings(ScheduleBuildSettings {
-            ambiguity_detection: LogLevel::Warn,
-            ..default()
-        });
-    })
-    .add_systems(
-        Update,
-        (
-            toggle_debug_render
-                .in_set(InGameSystems::PlayerInput)
-                .ambiguous_with_all(),
+            },
+        )
+        // Enable system ambiguity detection
+        .edit_schedule(Update, |schedule| {
+            schedule.set_build_settings(ScheduleBuildSettings {
+                ambiguity_detection: LogLevel::Warn,
+                ..default()
+            });
+        })
+        .add_systems(
+            Update,
             (
-                view::draw_camera_debug_gizmos,
-                debug_vision,
-                spawn_enemy_ai_labels,
-                update_enemy_ai_labels,
-                debug_target_lines,
-            )
-                .in_set(InGameSystems::HudOverlay)
-                .run_if(resource_exists::<DebugRenderEnabled>),
-            cleanup_enemy_ai_labels
-                .in_set(InGameSystems::HudOverlay)
-                .run_if(not(resource_exists::<DebugRenderEnabled>)),
-        ),
-    );
+                toggle_debug_render
+                    .in_set(InGameSystems::PlayerInput)
+                    .ambiguous_with_all(),
+                (
+                    draw_camera_debug_gizmos,
+                    debug_vision,
+                    spawn_enemy_ai_labels,
+                    update_enemy_ai_labels,
+                    debug_target_lines,
+                )
+                    .in_set(InGameSystems::HudOverlay)
+                    .run_if(resource_exists::<DebugRenderEnabled>),
+                cleanup_enemy_ai_labels
+                    .in_set(InGameSystems::HudOverlay)
+                    .run_if(not(resource_exists::<DebugRenderEnabled>)),
+            ),
+        );
 
     app.add_systems(Update, log_transitions::<AppState>);
     app.add_systems(Update, log_transitions::<Menu>);

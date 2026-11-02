@@ -39,8 +39,6 @@ mod build;
 mod placement;
 mod recipe;
 mod spawn;
-#[cfg(feature = "stress")]
-mod stress;
 mod structures;
 mod tiles;
 mod tiling;
@@ -51,11 +49,11 @@ use ::bevy::prelude::*;
 pub mod prelude {
     pub use super::build::{MapRequest, NextMap};
     pub use super::placement::{Anchor, place};
+    #[cfg(feature = "stress")]
+    pub use super::recipe::MapRecipe;
     pub use super::spawn::{TILE_SIZE, TileToWorld};
 }
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((build::plugin, spawn::plugin));
-    #[cfg(feature = "stress")]
-    app.add_plugins(stress::plugin);
 }

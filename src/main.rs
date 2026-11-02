@@ -9,6 +9,8 @@ mod animation;
 mod character;
 mod combat;
 mod configuration;
+#[cfg(any(feature = "dev", feature = "stress", feature = "profile"))]
+mod dev;
 mod items;
 mod lifespan;
 mod menu;
@@ -20,6 +22,8 @@ pub mod prelude {
     pub use super::character::prelude::*;
     pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;
+    #[cfg(feature = "stress")]
+    pub use super::dev::prelude::*;
     pub use super::items::prelude::*;
     pub use super::lifespan::{Lifespan, despawn_all, schedule_component_removal};
     pub use super::menu::prelude::*;
@@ -31,7 +35,7 @@ fn main() {
     let mut app = App::new();
     app.add_plugins(plugin);
     #[cfg(feature = "dev")]
-    if configuration::schedule_dump::dump_schedules_if_requested(&mut app) {
+    if dev::dump_schedules_if_requested(&mut app) {
         return;
     }
     app.run();
@@ -51,4 +55,7 @@ fn plugin(app: &mut App) {
 
     // UI
     app.add_plugins((ui::plugin, menu::plugin));
+
+    #[cfg(any(feature = "dev", feature = "stress", feature = "profile"))]
+    app.add_plugins(dev::plugin);
 }

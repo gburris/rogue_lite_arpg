@@ -10,7 +10,8 @@ use crate::prelude::*;
 const PHYSICS_BODIES: DiagnosticPath = DiagnosticPath::const_new("game/physics/bodies");
 const CONTACT_PAIRS: DiagnosticPath = DiagnosticPath::const_new("game/physics/contact_pairs");
 const ENABLED_RAYS: DiagnosticPath = DiagnosticPath::const_new("game/physics/enabled_rays");
-const FIXED_STEPS: DiagnosticPath = DiagnosticPath::const_new("game/physics/fixed_steps");
+/// Fixed steps run since the last frame.
+pub const FIXED_STEPS: DiagnosticPath = DiagnosticPath::const_new("game/physics/fixed_steps");
 const LIGHTS: DiagnosticPath = DiagnosticPath::const_new("game/lights");
 const LOADED_IMAGES: DiagnosticPath = DiagnosticPath::const_new("game/images");
 

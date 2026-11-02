@@ -11,6 +11,8 @@ pub mod prelude {
     pub(crate) use super::MapRng;
     pub use super::chest::SpawnChests;
     pub use super::gold::DropGold;
+    #[cfg(feature = "stress")]
+    pub use super::map::prelude::MapRecipe;
     pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
     pub use super::portal::portal;
 }

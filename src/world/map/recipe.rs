@@ -150,7 +150,7 @@ pub(super) struct RecipeEntry {
 
 /// Resolved map generation settings loaded from a recipe definition.
 #[derive(Clone, Debug)]
-pub(crate) struct MapRecipe {
+pub struct MapRecipe {
     pub(super) name: String,
     pub(super) weight: u32,
     pub(super) size_x_range: CountRange,
@@ -160,6 +160,27 @@ pub(crate) struct MapRecipe {
     pub(super) start_clearance: u32,
     /// Preset spawns followed by the recipe's own.
     pub(super) spawns: Vec<SpawnEntry>,
+}
+
+#[cfg(feature = "stress")]
+impl MapRecipe {
+    /// The recipe's name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Sets every enemy spawn to exactly `count_of(kind)` and drops those with a count of zero.
+    pub fn with_enemy_counts(mut self, count_of: impl Fn(EnemyKind) -> u32) -> Self {
+        self.spawns.retain_mut(|spawn| {
+            let SpawnKind::Enemy(kind) = spawn.what else {
+                return true;
+            };
+            let count = count_of(kind);
+            spawn.count = CountRange::exactly(count);
+            count > 0
+        });
+        self
+    }
 }
 
 impl RecipeEntry {

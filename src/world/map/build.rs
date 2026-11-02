@@ -40,7 +40,7 @@ pub struct NextMap<'w, 's> {
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
     #[cfg(feature = "stress")]
-    stress_arena: Option<ResMut<'w, super::stress::StressArena>>,
+    stress_arena: Option<ResMut<'w, StressArena>>,
 }
 
 impl NextMap<'_, '_> {

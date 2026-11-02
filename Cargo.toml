@@ -42,7 +42,7 @@ dev = [
     # Improve error messages coming from Bevy
     "bevy/track_location",
     "bevy/debug",
-    # Dump schedule graphs to DOT files (see `configuration/debug.rs`).
+    # Dump schedule graphs to DOT files (see `dev/schedule_dump.rs`).
     "dep:bevy_mod_debugdump",
     "stress",
 ]

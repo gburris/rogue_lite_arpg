@@ -220,8 +220,9 @@ fn follow_player_with_camera(
     camera.translation.y = (camera.translation.y / step).round() * step;
 }
 
+/// Draws the camera target, its distance limit and the player's pull radius.
 #[cfg(feature = "dev")]
-pub(super) fn draw_camera_debug_gizmos(
+pub fn draw_camera_debug_gizmos(
     player: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut gizmos: Gizmos,

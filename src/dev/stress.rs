@@ -23,6 +23,9 @@ use crate::prelude::*;
 /// Recipe the stress arena replaces the hub with.
 const RECIPE_NAME: &str = "StressSwarm";
 
+/// Frame budget a run's p99 frame time must stay under, 120 fps. `STRESS_BUDGET_MS` overrides it.
+const DEFAULT_FRAME_BUDGET_MS: f32 = 1000.0 / 120.0;
+
 /// Seconds in the arena before measuring starts, which skips the spawn spike and first decisions.
 const WARMUP_SECONDS: f32 = 5.0;
 
@@ -40,6 +43,7 @@ pub struct StressArena {
 struct StressRun {
     total_enemies: u32,
     measure_seconds: f32,
+    frame_budget_ms: f32,
     started_at: Option<f32>,
     frame_ms: Vec<f32>,
     frame_ms_with_fixed_step: Vec<f32>,
@@ -73,9 +77,16 @@ pub(super) fn plugin(app: &mut App) {
             .trim()
             .parse::<f32>()
             .unwrap_or_else(|error| panic!("STRESS_SECONDS=`{seconds}` is invalid: {error}"));
+        let frame_budget_ms =
+            std::env::var("STRESS_BUDGET_MS").map_or(DEFAULT_FRAME_BUDGET_MS, |budget| {
+                budget.trim().parse::<f32>().unwrap_or_else(|error| {
+                    panic!("STRESS_BUDGET_MS=`{budget}` is invalid: {error}")
+                })
+            });
         app.insert_resource(StressRun {
             total_enemies,
             measure_seconds,
+            frame_budget_ms,
             started_at: None,
             frame_ms: Vec::new(),
             frame_ms_with_fixed_step: Vec::new(),
@@ -178,14 +189,28 @@ fn sample_stress_run(
     }
     let summary = stress_run.summary();
     info!("{summary}");
+    if stress_run.is_over_budget() {
+        warn!(
+            "Stress run is over its {:.2} ms p99 frame budget",
+            stress_run.frame_budget_ms
+        );
+    }
     log_summary_to_file(&summary);
     commands.remove_resource::<StressRun>();
     app_exit.write(AppExit::Success);
 }
 
 impl StressRun {
-    /// One line: the arena spec, frames measured, median and p99 frame time overall and split by
-    /// whether the frame ran a fixed step, then the mean of every `game/…` diagnostic.
+    /// Whether the p99 frame time of all measured frames exceeds the frame budget.
+    fn is_over_budget(&self) -> bool {
+        let mut sorted_frame_ms = self.frame_ms.clone();
+        sorted_frame_ms.sort_by(f32::total_cmp);
+        percentile(&sorted_frame_ms, 99).is_some_and(|p99| p99 > self.frame_budget_ms)
+    }
+
+    /// One line: the enemy count, median and p99 frame time overall and split by whether the
+    /// frame ran a fixed step, whether the overall p99 is over the frame budget, then the mean of
+    /// every `game/…` diagnostic.
     fn summary(&self) -> String {
         let mut summary = format!(
             "stress summary: arena={} seconds={}",
@@ -198,8 +223,8 @@ impl StressRun {
         ] {
             let mut sorted_frame_ms = frame_ms.clone();
             sorted_frame_ms.sort_by(f32::total_cmp);
-            let median = percentile(&sorted_frame_ms, 50);
-            let p99 = percentile(&sorted_frame_ms, 99);
+            let median = format_ms(percentile(&sorted_frame_ms, 50));
+            let p99 = format_ms(percentile(&sorted_frame_ms, 99));
             write!(
                 summary,
                 " {label}frames={} {label}median_frame_ms={median} {label}p99_frame_ms={p99}",
@@ -207,6 +232,13 @@ impl StressRun {
             )
             .expect("writing to a String cannot fail");
         }
+        write!(
+            summary,
+            " budget_ms={:.2} over_budget={}",
+            self.frame_budget_ms,
+            self.is_over_budget(),
+        )
+        .expect("writing to a String cannot fail");
         for (path, values) in &self.diagnostic_values {
             write!(summary, " mean_{path}={:.3}", mean(values))
                 .expect("writing to a String cannot fail");
@@ -215,14 +247,22 @@ impl StressRun {
     }
 }
 
-/// The given percentile of sorted values with two decimals, or `-` when there are none.
-fn percentile(sorted_values: &[f32], percent: usize) -> String {
+/// The given percentile of sorted values, or `None` when there are none.
+fn percentile(sorted_values: &[f32], percent: usize) -> Option<f32> {
     let count = sorted_values.len();
     if count == 0 {
-        return "-".to_owned();
+        return None;
     }
     let index = (count * percent).div_ceil(100).max(1) - 1;
-    format!("{:.2}", sorted_values[index])
+    Some(sorted_values[index])
+}
+
+/// Milliseconds with two decimals, or `-` when there was no value.
+fn format_ms(milliseconds: Option<f32>) -> String {
+    milliseconds.map_or_else(
+        || "-".to_owned(),
+        |milliseconds| format!("{milliseconds:.2}"),
+    )
 }
 
 fn mean(values: &[f32]) -> f32 {

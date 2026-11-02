@@ -1,10 +1,12 @@
-//! Development tooling: debug rendering and inspection, `game/…` diagnostics, Tracy plots, the
-//! stress arena and the schedule dump. Compiled only for the `dev`, `stress` and `profile`
-//! features, and never needed to boot the game.
+//! Development tooling: debug rendering and inspection, the F3 overlay, `game/…` diagnostics,
+//! Tracy plots, the F4 hitch marker, the stress arena and the schedule dump. Compiled only for the
+//! `dev`, `stress` and `profile` features, and never needed to boot the game.
 
 #[cfg(feature = "dev")]
 mod debug;
 mod diagnostics;
+#[cfg(all(any(feature = "dev", feature = "profile"), not(target_arch = "wasm32")))]
+mod hitch;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
 mod hud;
 #[cfg(feature = "dev")]
@@ -32,6 +34,9 @@ pub(super) fn plugin(app: &mut App) {
 
     #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
     app.add_plugins(hud::plugin);
+
+    #[cfg(all(any(feature = "dev", feature = "profile"), not(target_arch = "wasm32")))]
+    app.add_plugins(hitch::plugin);
 
     // `bevy/trace_tracy` makes the render plugin add this itself.
     #[cfg(all(feature = "dev", not(feature = "profile")))]

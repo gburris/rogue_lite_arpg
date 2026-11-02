@@ -26,6 +26,10 @@
     Stops each capture after this many seconds. 0 keeps the whole run. Use 15-20 when you plan
     to export events with tracy-csvexport -u, since a 30 s capture exports about 2.5 GB.
 
+.PARAMETER Milestone
+    Names a keepsake run: captures and the summary lines go to runs\milestones\<date>_<name>, which no
+    later sweep overwrites. Compare milestones with perf_report.ps1 after big changes.
+
 .PARAMETER MapSeed
     Fixes the map layout and enemy placement across runs.
 
@@ -40,11 +44,16 @@ param(
     [int]$Seconds = 30,
     [int]$CaptureSeconds = 0,
     [int]$MapSeed = 1,
+    [string]$Milestone = "",
     [string]$OutputDirectory = "runs\stress"
 )
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
+
+if ($Milestone) {
+    $OutputDirectory = Join-Path "runs\milestones" "$(Get-Date -Format yyyy-MM-dd)_$Milestone"
+}
 
 if (-not (Get-Command tracy-capture -ErrorAction SilentlyContinue)) {
     throw "tracy-capture is not on PATH"
@@ -123,11 +132,12 @@ $newLines | ForEach-Object { Write-Host $_ }
 
 # The negative lookbehind skips the fixed_ and no_fixed_ variants of each field.
 $runs = foreach ($line in $newLines) {
-    if ($line -match 'arena=(\d+) .*?(?<!\w)median_frame_ms=([\d.]+) (?:.*?)(?<!\w)p99_frame_ms=([\d.]+)') {
+    if ($line -match 'arena=(\d+) .*?(?<!\w)median_frame_ms=([\d.]+) (?:.*?)(?<!\w)p99_frame_ms=([\d.]+) .*?over_budget=(true|false)') {
         [pscustomobject]@{
             Enemies = [int]$Matches[1]
             MedianMs = [double]$Matches[2]
             P99Ms = [double]$Matches[3]
+            OverBudget = ($Matches[4] -eq "true")
         }
     }
 }
@@ -139,6 +149,11 @@ if ($runs) {
             Runs = $_.Count
             MedianMs = Get-Median ($_.Group.MedianMs)
             P99Ms = Get-Median ($_.Group.P99Ms)
+            OverBudget = @($_.Group | Where-Object { $_.OverBudget }).Count
         }
     } | Format-Table -AutoSize
+}
+if ($Milestone) {
+    $newLines | Set-Content (Join-Path $OutputDirectory "summary.txt")
+    Write-Host "milestone saved in $OutputDirectory"
 }

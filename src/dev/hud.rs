@@ -7,7 +7,7 @@
 use std::fmt::Write as _;
 use std::time::Duration;
 
-use bevy::dev_tools::fps_overlay::FpsOverlayConfig;
+use bevy::dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlaySystems};
 use bevy::diagnostic::{
     Diagnostic, DiagnosticsStore, EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
 };
@@ -59,8 +59,13 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            cycle_hud_mode,
-            refresh_detailed_hud.run_if(on_timer(REFRESH_INTERVAL)),
+            // Before the overlay reads its config, so a toggle shows on the same frame.
+            cycle_hud_mode.before(FpsOverlaySystems::Customize),
+            // The overlay only writes the text of its own `FpsText` entities.
+            refresh_detailed_hud
+                .run_if(on_timer(REFRESH_INTERVAL))
+                .ambiguous_with(FpsOverlaySystems::Customize)
+                .ambiguous_with(FpsOverlaySystems::UpdateText),
         ),
     );
 }

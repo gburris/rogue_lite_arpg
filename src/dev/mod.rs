@@ -10,7 +10,7 @@ mod schedule_dump;
 #[cfg(feature = "stress")]
 mod stress;
 #[cfg(feature = "profile")]
-mod tracy_plots;
+mod tracy;
 
 use bevy::prelude::*;
 
@@ -36,5 +36,5 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(stress::plugin);
 
     #[cfg(feature = "profile")]
-    app.add_plugins(tracy_plots::plugin);
+    app.add_plugins(tracy::plugin);
 }

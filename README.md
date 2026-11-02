@@ -100,6 +100,18 @@ needs `tracy-capture` on `PATH`.
 .\scripts\stress_sweep.ps1 -Seconds 60 -MapSeed 7           # longer runs, another map
 ```
 
+`scripts\perf_report.ps1` runs `tracy-csvexport` on captures and prints ms per frame for the zones
+that matter (main and render threads, fixed step, physics, sight raycasts, lights, transform
+propagation, decisions, appliers), one column per capture. The fixed step is also shown per call.
+
+```powershell
+.\scripts\perf_report.ps1 runs\stress
+.\scripts\perf_report.ps1 runs\baseline.tracy, runs\stress\1000_r1.tracy
+```
+
+Under `profile`, every `game/...` diagnostic is also a Tracy plot, and state changes appear as
+Tracy messages (such as `AppState: StartScreen => AssetLoading` for the Start click).
+
 ## Schedule graphs
 
 Writes `runs\schedules\update.dot` and `fixed_update.dot` from a dev build, then exits.

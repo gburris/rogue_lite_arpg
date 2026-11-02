@@ -111,7 +111,11 @@ impl StressArena {
         if recipe.name() != self.recipe_name() {
             return None;
         }
-        Some(recipe.clone().with_enemy_counts(|_kind| self.enemies_per_kind))
+        Some(
+            recipe
+                .clone()
+                .with_enemy_counts(|_kind| self.enemies_per_kind),
+        )
     }
 }
 
@@ -183,10 +187,8 @@ impl StressRun {
     /// whether the frame ran a fixed step, then the mean of every `game/…` diagnostic.
     fn summary(&self) -> String {
         let mut summary = format!(
-            "stress summary: arena={} seconds={} frames={}",
-            self.arena_spec,
-            self.measure_seconds,
-            self.frame_ms.len(),
+            "stress summary: arena={} seconds={}",
+            self.arena_spec, self.measure_seconds,
         );
         for (label, frame_ms) in [
             ("", &self.frame_ms),

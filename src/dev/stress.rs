@@ -1,11 +1,9 @@
 //! Starts the game in the stress arena when `STRESS_ARENA` is set.
 //!
 //! `STRESS_ARENA=warrior=250,ice_mage=250,fire_mage=250,bat=250` replaces the hub request with
-//! the `StressArena` recipe, spawns that many of each listed kind (unlisted kinds spawn none),
-//! and makes the player [`Invincible`]. The start screen is skipped and vsync is off, so
-//! frame time shows real cost. `STRESS_SHAPE=spread` (the default) fills a large floor, and
-//! `swarm` packs the enemies into a small one around the player. Dev builds step the counts
-//! with F2.
+//! the `StressSwarm` recipe, a small floor with the enemies packed around the player, spawns
+//! that many of each listed kind (unlisted kinds spawn none), and makes the player
+//! [`Invincible`]. The start screen is skipped and vsync is off, so frame time shows real cost.
 //!
 //! `STRESS_SECONDS=60` also quits after a warm-up plus that many seconds in the arena, and
 //! appends one summary line to `runs/stress_summary.txt` and the log.
@@ -22,41 +20,14 @@ use bevy::window::{PresentMode, PrimaryWindow};
 use super::diagnostics::FIXED_STEPS;
 use crate::prelude::*;
 
-/// Total enemy counts F2 steps through, split evenly across the enemy kinds.
-#[cfg(feature = "dev")]
-const STEP_TOTALS: [u32; 4] = [100, 200, 500, 1000];
+/// Recipe the stress arena replaces the hub with.
+const RECIPE_NAME: &str = "StressSwarm";
 
 /// Seconds in the arena before measuring starts, which skips the spawn spike and first decisions.
 const WARMUP_SECONDS: f32 = 5.0;
 
 /// File the summary line is appended to, since a profiling build has no console.
 const SUMMARY_PATH: &str = "runs/stress_summary.txt";
-
-/// Which stress recipe `STRESS_SHAPE` selects.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum StressShape {
-    /// Enemies spread over a large floor, mostly out of sight of the player.
-    Spread,
-    /// Enemies packed around the player on a small floor.
-    Swarm,
-}
-
-impl StressShape {
-    fn recipe_name(self) -> &'static str {
-        match self {
-            Self::Spread => "StressArena",
-            Self::Swarm => "StressSwarm",
-        }
-    }
-
-    fn named(name: &str) -> Result<Self, String> {
-        match name.trim().to_lowercase().as_str() {
-            "spread" => Ok(Self::Spread),
-            "swarm" => Ok(Self::Swarm),
-            _ => Err(format!("unknown shape `{name}`, expected spread or swarm")),
-        }
-    }
-}
 
 /// How many enemies of one kind the stress arena spawns.
 #[derive(Clone, Copy, Debug)]
@@ -68,17 +39,13 @@ struct KindCount {
 /// Enemy counts parsed from `STRESS_ARENA`. Present only when the variable is set.
 #[derive(Resource, Debug)]
 pub struct StressArena {
-    shape: StressShape,
     kind_counts: Vec<KindCount>,
-    #[cfg(feature = "dev")]
-    next_step: usize,
 }
 
 /// Frame times and `game/…` diagnostics collected while `STRESS_SECONDS` is set.
 #[derive(Resource)]
 struct StressRun {
     arena_spec: String,
-    shape: StressShape,
     measure_seconds: f32,
     started_at: Option<f32>,
     frame_ms: Vec<f32>,
@@ -97,16 +64,8 @@ pub(super) fn plugin(app: &mut App) {
     };
     let kind_counts = parse_kind_counts(&arena_spec)
         .unwrap_or_else(|error| panic!("STRESS_ARENA=`{arena_spec}` is invalid: {error}"));
-    let shape = std::env::var("STRESS_SHAPE")
-        .map_or(Ok(StressShape::Spread), |name| StressShape::named(&name));
-    let shape = shape.unwrap_or_else(|error| panic!("STRESS_SHAPE is invalid: {error}"));
-    info!("Stress {shape:?} enemy counts: {kind_counts:?}");
-    app.insert_resource(StressArena {
-        shape,
-        kind_counts,
-        #[cfg(feature = "dev")]
-        next_step: 0,
-    });
+    info!("Stress enemy counts: {kind_counts:?}");
+    app.insert_resource(StressArena { kind_counts });
     app.add_observer(on_player_added);
     app.add_systems(OnEnter(AppState::StartScreen), skip_start_screen);
     app.add_systems(Startup, disable_vsync);
@@ -118,7 +77,6 @@ pub(super) fn plugin(app: &mut App) {
             .unwrap_or_else(|error| panic!("STRESS_SECONDS=`{seconds}` is invalid: {error}"));
         app.insert_resource(StressRun {
             arena_spec,
-            shape,
             measure_seconds,
             started_at: None,
             frame_ms: Vec::new(),
@@ -137,7 +95,7 @@ pub(super) fn plugin(app: &mut App) {
 impl StressArena {
     /// Name of the recipe this run uses in place of the hub.
     pub fn recipe_name(&self) -> &'static str {
-        self.shape.recipe_name()
+        RECIPE_NAME
     }
 
     /// Sends the game's first map request, the hub, to the stress recipe.
@@ -166,22 +124,6 @@ impl StressArena {
             .rev()
             .find(|kind_count| kind_count.kind == kind)
             .map_or(0, |kind_count| kind_count.count)
-    }
-
-    /// Moves to the next total in [`STEP_TOTALS`], wrapping, split evenly across every kind.
-    #[cfg(feature = "dev")]
-    pub fn advance_step(&mut self) {
-        let total = STEP_TOTALS[self.next_step % STEP_TOTALS.len()];
-        self.next_step += 1;
-        let kinds = u32::try_from(EnemyKind::ALL.len()).expect("enemy kind count fits in u32");
-        self.kind_counts = EnemyKind::ALL
-            .iter()
-            .map(|&kind| KindCount {
-                kind,
-                count: total / kinds,
-            })
-            .collect();
-        info!("Stress arena stepped to {total} enemies");
     }
 }
 
@@ -253,8 +195,7 @@ impl StressRun {
     /// whether the frame ran a fixed step, then the mean of every `game/…` diagnostic.
     fn summary(&self) -> String {
         let mut summary = format!(
-            "stress summary: shape={:?} arena={} seconds={} frames={}",
-            self.shape,
+            "stress summary: arena={} seconds={} frames={}",
             self.arena_spec,
             self.measure_seconds,
             self.frame_ms.len(),

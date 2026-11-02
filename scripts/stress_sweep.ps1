@@ -1,20 +1,17 @@
 <#
 .SYNOPSIS
-    Records one Tracy capture of the profiling build per enemy count, shape and kind.
+    Records one Tracy capture of the profiling build per enemy count and kind.
 
 .DESCRIPTION
     Builds the profiling binary once, then for each combination starts tracy-capture, runs the
     game in the stress arena with STRESS_SECONDS so it quits by itself, and waits for the
-    capture to finish. Captures go to runs\stress\<shape>_<kind>_<count>.tracy. The game appends
+    capture to finish. Captures go to runs\stress\<kind>_<count>.tracy. The game appends
     one summary line per run to runs\stress_summary.txt.
 
     Needs tracy-capture on PATH. Run it from anywhere; it works from the repository root.
 
 .PARAMETER Counts
     Total enemies per run. Split evenly across the four kinds, or all one kind with -Kinds.
-
-.PARAMETER Shapes
-    spread (large floor, enemies mostly out of sight) or swarm (small floor, all near the player).
 
 .PARAMETER Kinds
     all, or warrior, ice_mage, fire_mage, bat.
@@ -27,11 +24,10 @@
 
 .EXAMPLE
     .\scripts\stress_sweep.ps1
-    .\scripts\stress_sweep.ps1 -Counts 500 -Shapes spread -Kinds warrior,ice_mage,fire_mage,bat
+    .\scripts\stress_sweep.ps1 -Counts 500 -Kinds warrior,ice_mage,fire_mage,bat
 #>
 param(
     [int[]]$Counts = @(100, 200, 500, 1000),
-    [string[]]$Shapes = @("spread", "swarm"),
     [string[]]$Kinds = @("all"),
     [int]$Seconds = 30,
     [int]$MapSeed = 1,
@@ -73,47 +69,44 @@ function Format-ArenaCounts([string]$kind, [int]$count) {
 }
 
 $summaryPath = "runs\stress_summary.txt"
-foreach ($shape in $Shapes) {
-    foreach ($kind in $Kinds) {
-        foreach ($count in $Counts) {
-            $captureFile = Join-Path $OutputDirectory "${shape}_${kind}_${count}.tracy"
-            Write-Host "== $shape, $kind, $count enemies -> $captureFile"
+foreach ($kind in $Kinds) {
+    foreach ($count in $Counts) {
+        $captureFile = Join-Path $OutputDirectory "${kind}_${count}.tracy"
+        Write-Host "== $kind, $count enemies -> $captureFile"
 
-            # The binary run outside cargo looks for assets next to itself, not in the project.
-            $env:BEVY_ASSET_ROOT = (Get-Location).Path
-            $env:MAP_SEED = "$MapSeed"
-            $env:STRESS_ARENA = Format-ArenaCounts $kind $count
-            $env:STRESS_SHAPE = $shape
-            $env:STRESS_SECONDS = "$Seconds"
-            $capture = $null
-            $game = $null
-            try {
-                $capture = Start-Process tracy-capture -ArgumentList @("-o", $captureFile, "-f") `
-                    -PassThru -NoNewWindow
-                Start-Sleep -Seconds 2
-                $game = Start-Process $gameExecutable -PassThru
-                # Warm-up, measured time, and startup and shutdown slack.
-                $gameTimeoutMilliseconds = ($Seconds + 120) * 1000
-                if (-not $game.WaitForExit($gameTimeoutMilliseconds)) {
-                    Write-Warning "game did not exit in time, stopping it"
-                    Stop-Process $game -Force
-                }
-                if (-not $capture.WaitForExit(60000)) {
-                    Write-Warning "tracy-capture did not finish, stopping it"
-                    Stop-Process $capture -Force
-                }
+        # The binary run outside cargo looks for assets next to itself, not in the project.
+        $env:BEVY_ASSET_ROOT = (Get-Location).Path
+        $env:MAP_SEED = "$MapSeed"
+        $env:STRESS_ARENA = Format-ArenaCounts $kind $count
+        $env:STRESS_SECONDS = "$Seconds"
+        $capture = $null
+        $game = $null
+        try {
+            $capture = Start-Process tracy-capture -ArgumentList @("-o", $captureFile, "-f") `
+                -PassThru -NoNewWindow
+            Start-Sleep -Seconds 2
+            $game = Start-Process $gameExecutable -PassThru
+            # Warm-up, measured time, and startup and shutdown slack.
+            $gameTimeoutMilliseconds = ($Seconds + 120) * 1000
+            if (-not $game.WaitForExit($gameTimeoutMilliseconds)) {
+                Write-Warning "game did not exit in time, stopping it"
+                Stop-Process $game -Force
             }
-            finally {
-                Remove-Item Env:BEVY_ASSET_ROOT, Env:MAP_SEED, Env:STRESS_ARENA, Env:STRESS_SHAPE, Env:STRESS_SECONDS `
-                    -ErrorAction SilentlyContinue
+            if (-not $capture.WaitForExit(60000)) {
+                Write-Warning "tracy-capture did not finish, stopping it"
+                Stop-Process $capture -Force
             }
+        }
+        finally {
+            Remove-Item Env:BEVY_ASSET_ROOT, Env:MAP_SEED, Env:STRESS_ARENA, Env:STRESS_SECONDS `
+                -ErrorAction SilentlyContinue
         }
     }
 }
 
 Write-Host "`nDone. Summary lines:"
 if (Test-Path $summaryPath) {
-    Get-Content $summaryPath -Tail ($Shapes.Count * $Kinds.Count * $Counts.Count)
+    Get-Content $summaryPath -Tail ($Kinds.Count * $Counts.Count)
 }
 else {
     Write-Warning "no summary written; a game run probably failed to start"

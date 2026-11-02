@@ -83,8 +83,7 @@ Remove-Item Env:STRESS_ARENA
 ```
 
 `STRESS_SECONDS` (needs `STRESS_ARENA`) quits after a 5 s warm-up plus that many seconds in the
-arena, and appends one summary line to `runs\stress_summary.txt`. In a dev build, F2 rebuilds the
-arena at the next total of 100, 200, 500 and 1000 enemies, split evenly across the kinds.
+arena, and appends one summary line to `runs\stress_summary.txt`.
 
 ```powershell
 $env:STRESS_SECONDS = "60"
@@ -92,16 +91,15 @@ Remove-Item Env:STRESS_SECONDS
 ```
 
 Under `STRESS_ARENA` the game also skips the start screen and turns vsync off.
-`STRESS_SHAPE` is `spread` (large floor, the default) or `swarm` (small floor, enemies packed
-around the player).
+The arena is a small floor with the enemies packed around the player.
 
 `scripts\stress_sweep.ps1` records one Tracy capture per run to `runs\stress\`, with the game
 quitting by itself, and prints each run's summary line. It builds the profiling binary first and
 needs `tracy-capture` on `PATH`.
 
 ```powershell
-.\scripts\stress_sweep.ps1                                  # 100, 200, 500, 1000 in both shapes
-.\scripts\stress_sweep.ps1 -Counts 500 -Shapes spread -Kinds warrior,bat   # single kinds
+.\scripts\stress_sweep.ps1                                  # 100, 200, 500, 1000
+.\scripts\stress_sweep.ps1 -Counts 500 -Kinds warrior,bat   # single kinds
 .\scripts\stress_sweep.ps1 -Seconds 60 -MapSeed 7           # longer runs, another map
 ```
 

@@ -1,5 +1,4 @@
-//! Publishes brain counts and decision costs as `game/ai/…` diagnostics, and plots them in
-//! Tracy under `profile`.
+//! Publishes brain counts and decision costs as `game/ai/…` diagnostics.
 
 use std::time::Duration;
 
@@ -61,13 +60,6 @@ fn publish_decision_stats(mut diagnostics: Diagnostics, mut decision_stats: ResM
     diagnostics.add_measurement(&DECISIONS, || decisions);
     diagnostics.add_measurement(&REDECISIONS, || redecisions);
     diagnostics.add_measurement(&DECIDE_MS, || decide_ms);
-
-    #[cfg(feature = "profile")]
-    if let Some(client) = tracy_client::Client::running() {
-        client.plot(tracy_client::plot_name!("ai decisions"), decisions);
-        client.plot(tracy_client::plot_name!("ai redecisions"), redecisions);
-        client.plot(tracy_client::plot_name!("ai decide ms"), decide_ms);
-    }
 
     *decision_stats = DecisionStats::default();
 }

@@ -6,6 +6,8 @@ mod physics;
 mod schedule;
 #[cfg(feature = "dev")]
 pub(crate) mod schedule_dump;
+#[cfg(feature = "profile")]
+mod tracy_plots;
 mod view;
 
 #[cfg(not(feature = "dev"))]
@@ -55,6 +57,9 @@ pub(super) fn plugin(app: &mut App) {
         schedule::plugin,
         view::plugin,
     ));
+
+    #[cfg(feature = "profile")]
+    app.add_plugins(tracy_plots::plugin);
 
     // Third-party plugins
     app.add_plugins((EnhancedInputPlugin, Lighting2dPlugin, TweeningPlugin));

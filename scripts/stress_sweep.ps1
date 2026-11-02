@@ -30,6 +30,9 @@
     Names a keepsake run: captures and the summary lines go to runs\milestones\<date>_<name>, which no
     later sweep overwrites. Compare milestones with perf_report.ps1 after big changes.
 
+.PARAMETER BudgetMs
+    p99 frame budget each run is flagged against. 0 keeps the game's default, 120 fps.
+
 .PARAMETER MapSeed
     Fixes the map layout and enemy placement across runs.
 
@@ -43,6 +46,7 @@ param(
     [int]$Repeats = 1,
     [int]$Seconds = 30,
     [int]$CaptureSeconds = 0,
+    [double]$BudgetMs = 0,
     [int]$MapSeed = 1,
     [string]$Milestone = "",
     [string]$OutputDirectory = "runs\stress"
@@ -86,6 +90,9 @@ foreach ($count in $Counts) {
         $env:MAP_SEED = "$MapSeed"
         $env:STRESS_ARENA = "$count"
         $env:STRESS_SECONDS = "$Seconds"
+        if ($BudgetMs -gt 0) {
+            $env:STRESS_BUDGET_MS = "$BudgetMs"
+        }
         $capture = $null
         $game = $null
         try {
@@ -111,7 +118,8 @@ foreach ($count in $Counts) {
             }
         }
         finally {
-            Remove-Item Env:BEVY_ASSET_ROOT, Env:MAP_SEED, Env:STRESS_ARENA, Env:STRESS_SECONDS `
+            Remove-Item Env:BEVY_ASSET_ROOT, Env:MAP_SEED, Env:STRESS_ARENA, Env:STRESS_SECONDS, `
+                Env:STRESS_BUDGET_MS `
                 -ErrorAction SilentlyContinue
         }
     }

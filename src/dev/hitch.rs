@@ -1,12 +1,13 @@
 //! F4 marks a hitch: it sends a Tracy message under `profile` and writes the last 10 seconds of
-//! every diagnostic to `runs/diagnostics_<seconds since the Unix epoch>.csv`.
+//! every diagnostic to `runs/diagnostics_<milliseconds since the Unix epoch>.csv`.
 
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::VecDeque;
 use std::fmt::Write as _;
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bevy::diagnostic::{DiagnosticPath, DiagnosticsStore};
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -16,15 +17,19 @@ const HISTORY_SECONDS: f32 = 10.0;
 
 const OUTPUT_DIRECTORY: &str = "runs";
 
-/// Every diagnostic's value in one frame.
+/// Every diagnostic's value in one frame, indexed like [`DiagnosticHistory::paths`]. A diagnostic
+/// that had no value, or did not exist yet, is NaN or past the end.
 struct FrameValues {
     elapsed_seconds: f32,
-    values: Vec<(DiagnosticPath, f64)>,
+    values: Vec<f64>,
 }
 
-/// The last [`HISTORY_SECONDS`] of frames.
+/// The last [`HISTORY_SECONDS`] of frames. Paths are stored once, so recording a frame costs one
+/// allocation.
 #[derive(Resource, Default)]
 struct DiagnosticHistory {
+    paths: Vec<DiagnosticPath>,
+    index_by_path: HashMap<DiagnosticPath, usize>,
     frames: VecDeque<FrameValues>,
 }
 
@@ -46,10 +51,23 @@ fn record_diagnostics(
     mut history: ResMut<DiagnosticHistory>,
 ) {
     let elapsed_seconds = real_time.elapsed_secs();
-    let values = diagnostics_store
-        .iter()
-        .filter_map(|diagnostic| Some((diagnostic.path().clone(), diagnostic.value()?)))
-        .collect();
+    let mut values = vec![f64::NAN; history.paths.len()];
+    for diagnostic in diagnostics_store.iter() {
+        let path = diagnostic.path();
+        let index = match history.index_by_path.get(path) {
+            Some(&index) => index,
+            None => {
+                let index = history.paths.len();
+                history.paths.push(path.clone());
+                history.index_by_path.insert(path.clone(), index);
+                values.push(f64::NAN);
+                index
+            }
+        };
+        if let Some(value) = diagnostic.value() {
+            values[index] = value;
+        }
+    }
     history.frames.push_back(FrameValues {
         elapsed_seconds,
         values,
@@ -79,36 +97,27 @@ fn mark_hitch(keyboard_input: Res<ButtonInput<KeyCode>>, history: Res<Diagnostic
 
 /// Writes one row per frame and one column per diagnostic, returning the file's path.
 fn write_csv(history: &DiagnosticHistory) -> std::io::Result<String> {
-    let paths: BTreeSet<&str> = history
-        .frames
-        .iter()
-        .flat_map(|frame| frame.values.iter().map(|(path, _)| path.as_str()))
-        .collect();
     let mut csv = String::from("elapsed_seconds");
-    for path in &paths {
-        write!(csv, ",{path}").expect("writing to a String cannot fail");
+    for path in &history.paths {
+        write!(csv, ",{}", path.as_str()).expect("writing to a String cannot fail");
     }
     csv.push('\n');
     for frame in &history.frames {
         write!(csv, "{:.4}", frame.elapsed_seconds).expect("writing to a String cannot fail");
-        for path in &paths {
+        for column in 0..history.paths.len() {
             csv.push(',');
-            if let Some((_, value)) = frame
-                .values
-                .iter()
-                .find(|(frame_path, _)| frame_path.as_str() == *path)
-            {
+            if let Some(value) = frame.values.get(column).filter(|value| !value.is_nan()) {
                 write!(csv, "{value}").expect("writing to a String cannot fail");
             }
         }
         csv.push('\n');
     }
 
-    let seconds_since_epoch = SystemTime::now()
+    let milliseconds_since_epoch = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("system clock is after the Unix epoch")
-        .as_secs();
-    let path = format!("{OUTPUT_DIRECTORY}/diagnostics_{seconds_since_epoch}.csv");
+        .as_millis();
+    let path = format!("{OUTPUT_DIRECTORY}/diagnostics_{milliseconds_since_epoch}.csv");
     fs::create_dir_all(OUTPUT_DIRECTORY)?;
     fs::write(&path, csv)?;
     Ok(path)

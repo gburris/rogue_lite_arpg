@@ -4,6 +4,7 @@
 //! with the enemies packed around the player, spawns that many enemies split evenly across
 //! every kind, and makes the player [`Invincible`]. The start screen is skipped and vsync is
 //! off, so frame time shows real cost.
+//! `STRESS_BUDGET_MS` sets the p99 frame budget a run is flagged against (default 120 fps).
 //!
 //! `STRESS_SECONDS=60` also quits after a warm-up plus that many seconds in the arena, and
 //! appends one summary line to `runs/stress_summary.txt` and the log.

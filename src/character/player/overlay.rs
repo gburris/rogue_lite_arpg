@@ -1,4 +1,3 @@
-use bevy::ecs::spawn::SpawnIter;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -22,26 +21,26 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(despawn_all::<Restart, PlayerOverlay>);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct PlayerOverlay;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct ManaBar;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 struct ManaLostBar {
     previous_mana: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct HealthBar;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 struct HealthLostBar {
     previous_hp: f32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Default, Clone)]
 struct ExperienceBar;
 
 const EXPERIENCE_COLOR: Color = Color::srgb(0.5, 0.0, 0.5);
@@ -56,95 +55,77 @@ const ATTRIBUTE_TO_PIXEL_SCALE: f32 = 4.0;
 const LOST_AMOUNT_SHRINK_RATE: f32 = 80.0;
 
 pub(super) fn spawn_player_overlay(mut commands: Commands) {
-    commands.spawn((
-        PlayerOverlay,
+    commands.spawn_scene(bsn! {
+        PlayerOverlay
         Node {
-            width: percent(100.),
-            height: percent(100.0),
+            width: percent(100),
+            height: percent(100),
             flex_direction: FlexDirection::Column,
-            padding: px(20.0).all(),
-            ..default()
-        },
-        children![
+            padding: px(20),
+        }
+        Children [
             // Top left container for health and mana bars
-            (
-                Node {
-                    width: percent(100.0),
-                    height: auto(),
-                    flex_direction: FlexDirection::Column,
-                    row_gap: px(10.0),
-                    ..default()
-                },
-                children![
-                    attribute_bar(
-                        HealthBar,
-                        HealthLostBar { previous_hp: 100.0 },
-                        HEALTH_COLOR,
-                    ),
-                    attribute_bar(
-                        ManaBar,
-                        ManaLostBar {
-                            previous_mana: 100.0,
-                        },
-                        MANA_COLOR,
-                    )
-                ]
-            ),
             Node {
-                flex_grow: 1.0,
-                ..default()
-            },
-            (
-                Node {
-                    width: percent(100.0),
-                    height: auto(),
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::FlexEnd,
-                    ..default()
-                },
-                children![experience_bar(), action_bar()]
-            )
-        ],
-    ));
+                width: percent(100),
+                flex_direction: FlexDirection::Column,
+                row_gap: px(10),
+            }
+            Children [
+                @attribute_bar(HealthBar, HealthLostBar { previous_hp: 100.0 }, HEALTH_COLOR)
+                --
+                @attribute_bar(ManaBar, ManaLostBar { previous_mana: 100.0 }, MANA_COLOR)
+            ]
+            --
+            @spacer()
+            --
+            Node {
+                width: percent(100),
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::FlexEnd,
+            }
+            Children [
+                @experience_bar()
+                --
+                @action_bar()
+            ]
+        ]
+    });
 }
 
 const ATTRIBUTE_BACKGROUND_COLOR: Color = Color::srgb(0.21, 0.21, 0.21);
 const ATTRIBUTE_BAR_WIDTH: Val = Val::Px(400.0);
+const ATTRIBUTE_BAR_HEIGHT: Val = Val::Px(15.0);
 
+/// A bar showing an attribute in `bar_color`, with a yellow tail for the amount just lost.
+/// `marker` tags the filled bar and `change_marker` the tail.
 fn attribute_bar(
-    marker_component: impl Component,
-    change_component: impl Component,
+    marker: impl Component + Clone + Unpin,
+    change_marker: impl Component + Clone + Unpin,
     bar_color: Color,
-) -> impl Bundle {
-    (
+) -> impl Scene {
+    bsn! {
         Node {
             width: ATTRIBUTE_BAR_WIDTH,
-            height: px(15.0),
-            ..default()
-        },
-        BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
-        children![
-            (
-                marker_component,
-                Node {
-                    width: ATTRIBUTE_BAR_WIDTH,
-                    height: px(15.0),
-                    ..default()
-                },
-                BackgroundColor::from(bar_color),
-            ),
-            (
-                change_component,
-                Node {
-                    width: px(0.0),
-                    height: px(15.0),
-                    ..default()
-                },
-                BackgroundColor::from(BAR_CHANGE_COLOR),
-            )
-        ],
-    )
+            height: ATTRIBUTE_BAR_HEIGHT,
+        }
+        BackgroundColor(ATTRIBUTE_BACKGROUND_COLOR)
+        Children [
+            marker
+            Node {
+                width: ATTRIBUTE_BAR_WIDTH,
+                height: ATTRIBUTE_BAR_HEIGHT,
+            }
+            BackgroundColor(bar_color)
+            --
+            change_marker
+            Node {
+                width: px(0),
+                height: ATTRIBUTE_BAR_HEIGHT,
+            }
+            BackgroundColor(BAR_CHANGE_COLOR)
+        ]
+    }
 }
 
 fn update_health_bar(
@@ -220,49 +201,42 @@ fn amount_lost_in_pixels(previous_amount: f32, current_amount: f32, pixel_width:
     px((current_pixels + pixel_change).max(0.0))
 }
 
-fn experience_bar() -> impl Bundle {
-    (
-        Node {
-            width: px(400.0),
-            height: px(20.0),
-            justify_content: JustifyContent::FlexStart,
-            align_items: AlignItems::FlexStart,
-            // Add overflow visibility for debugging
-            overflow: Overflow::visible(),
-            ..default()
-        },
-        children![
-            (
+fn experience_bar() -> impl Scene {
+    // Tick marks splitting the bar into tenths.
+    let ticks: Vec<_> = (1..10)
+        .map(|i| {
+            bsn! {
                 Node {
-                    width: px(400.0),
-                    height: px(20.0),
-                    ..default()
-                },
-                BackgroundColor::from(ATTRIBUTE_BACKGROUND_COLOR),
-            ),
-            (
-                ExperienceBar,
-                Node {
-                    width: px(0.0),
-                    height: px(20.0),
                     position_type: PositionType::Absolute,
-                    left: px(0.0),
-                    ..default()
-                },
-                BackgroundColor::from(EXPERIENCE_COLOR),
-                Children::spawn(SpawnIter((1..10).map(|i| (
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: px(i as f32 * 40.0),
-                        width: px(2.0),
-                        height: px(20.0),
-                        ..default()
-                    },
-                    BackgroundColor::from(Color::srgba(1.0, 1.0, 1.0, 0.3)),
-                ))))
-            )
-        ],
-    )
+                    left: px({i as f32 * 40.0}),
+                    width: px(2),
+                    height: px(20),
+                }
+                BackgroundColor(Color::srgba(1.0, 1.0, 1.0, 0.3))
+            }
+        })
+        .collect();
+
+    bsn! {
+        Node {
+            width: px(400),
+            height: px(20),
+        }
+        BackgroundColor(ATTRIBUTE_BACKGROUND_COLOR)
+        Children [
+            ExperienceBar
+            Node {
+                width: px(0),
+                height: px(20),
+                position_type: PositionType::Absolute,
+                left: px(0),
+            }
+            BackgroundColor(EXPERIENCE_COLOR)
+            Children [
+                {ticks}
+            ]
+        ]
+    }
 }
 
 fn update_experience_bar(
@@ -274,15 +248,15 @@ fn update_experience_bar(
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub(super) struct ActionBox {
     slot: EquipmentSlot,
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct CooldownIndicator;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(Lifespan::new(0.1))]
 pub(super) struct ErrorFlash;
 
@@ -294,41 +268,51 @@ const ACTION_BOX_OUTLINE_COLOR: Color = Color::srgba(0.8, 0.8, 0.8, 0.5); // Sem
 const COOLDOWN_LINE_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.6); // Semi-transparent white
 const ERROR_FLASH_COLOR: Color = Color::srgba(0.9, 0.2, 0.2, 0.2); // Semi-transparent red
 
-fn action_bar() -> impl Bundle {
-    (
-        Name::new("Action Bar"),
-        Node {
-            flex_direction: FlexDirection::Row,
-            ..default()
-        },
-        Children::spawn(SpawnIter(
-            [EquipmentSlot::Mainhand, EquipmentSlot::Offhand]
-                .iter()
-                .map(|slot| action_box(*slot)),
-        )),
-    )
+fn action_bar() -> impl Scene {
+    bsn! {
+        #ActionBar
+        Node { flex_direction: FlexDirection::Row }
+        Children [
+            @action_box(EquipmentSlot::Mainhand)
+            --
+            @action_box(EquipmentSlot::Offhand)
+        ]
+    }
 }
 
-fn action_box(slot: EquipmentSlot) -> impl Bundle {
-    (
-        ActionBox { slot },
+fn action_box(slot: EquipmentSlot) -> impl Scene {
+    bsn! {
+        ~{ActionBox { slot }}
         Node {
             width: px(ACTION_BOX_SIZE),
             height: px(ACTION_BOX_SIZE),
-            border: px(ACTION_BOX_BORDER).all(),
-            ..default()
-        },
-        BackgroundColor::from(ACTION_BOX_COLOR),
-        BorderColor::from(ACTION_BOX_OUTLINE_COLOR),
-        Children::spawn_one((
-            ImageNode::default(),
+            border: px(ACTION_BOX_BORDER),
+        }
+        BackgroundColor(ACTION_BOX_COLOR)
+        BorderColor::all(ACTION_BOX_OUTLINE_COLOR)
+        Children [
+            ImageNode
             Node {
-                width: percent(100.0),
-                height: percent(100.0),
-                ..default()
-            },
-        )),
-    )
+                width: percent(100),
+                height: percent(100),
+            }
+        ]
+    }
+}
+
+/// Covers an action box's interior, for cooldown and error overlays.
+fn action_box_overlay(box_entity: Entity, color: Color) -> impl Scene {
+    bsn! {
+        ChildOf(box_entity)
+        Node {
+            width: px(ACTION_BOX_INTERIOR_SIZE),
+            height: px(ACTION_BOX_INTERIOR_SIZE),
+            position_type: PositionType::Absolute,
+            left: px(0),
+            top: px(0),
+        }
+        BackgroundColor(color)
+    }
 }
 
 fn update_action_bar(
@@ -382,20 +366,11 @@ pub(super) fn on_equipment_use_succeeded(
             .iter()
             .find(|(_, action_box)| action_box.slot == equipment_used.slot)
     {
-        commands.entity(box_entity).with_children(|parent| {
-            parent.spawn((
-                CooldownIndicator,
-                Node {
-                    width: px(ACTION_BOX_INTERIOR_SIZE),
-                    height: px(ACTION_BOX_INTERIOR_SIZE),
-                    position_type: PositionType::Absolute,
-                    left: px(0.0),
-                    top: px(0.0),
-                    ..default()
-                },
-                Lifespan::new(equippable.cooldown.remaining_secs()),
-                BackgroundColor::from(COOLDOWN_LINE_COLOR),
-            ));
+        let cooldown = equippable.cooldown.remaining_secs();
+        commands.spawn_scene(bsn! {
+            @action_box_overlay(box_entity, COOLDOWN_LINE_COLOR)
+            CooldownIndicator
+            Lifespan::new(cooldown)
         });
     }
 }
@@ -410,18 +385,10 @@ pub(super) fn on_equipment_use_failed(
         .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
         && equipment_use_failed.reason != EquipmentUseFailure::OnCooldown
     {
-        commands.entity(box_entity).with_child((
-            ErrorFlash,
-            Node {
-                width: px(ACTION_BOX_INTERIOR_SIZE),
-                height: px(ACTION_BOX_INTERIOR_SIZE),
-                position_type: PositionType::Absolute,
-                left: px(0.0),
-                top: px(0.0),
-                ..default()
-            },
-            BackgroundColor::from(ERROR_FLASH_COLOR),
-        ));
+        commands.spawn_scene(bsn! {
+            @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
+            ErrorFlash
+        });
     }
 }
 

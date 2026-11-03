@@ -33,6 +33,15 @@ pub enum Stat {
 }
 
 impl Stat {
+    /// Every stat, in the order menus list them.
+    pub const ALL: [Self; 5] = [
+        Self::Agility,
+        Self::Strength,
+        Self::Dexterity,
+        Self::Intellect,
+        Self::Luck,
+    ];
+
     pub fn description(self) -> &'static str {
         match self {
             Self::Agility => "Movement speed, roll range",

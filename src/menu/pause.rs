@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::ui_widgets::{Activate, Button, observe};
+use bevy::ui_widgets::Activate;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
@@ -9,7 +9,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Pause), spawn_main_menu);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct MainMenu;
 
 fn spawn_main_menu(
@@ -18,62 +18,36 @@ fn spawn_main_menu(
     game_progress: Res<GameProgress>,
 ) {
     let (health, player, purse) = player.into_inner();
+    let footer = main_menu_footer(player.level(), health, purse.amount, &game_progress);
 
-    commands.spawn((
-        MainMenu,
-        DespawnOnExit(Menu::Pause),
-        GlobalZIndex(2),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            row_gap: px(20.0),
-            flex_direction: FlexDirection::Column,
-            ..default()
-        },
-        children![
-            menu_header("PAUSED"),
-            // Body Section
-            (
-                Node {
-                    width: percent(100.0),
-                    flex_grow: 1.0,
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    row_gap: px(20.0),
-                    ..default()
-                },
-                children![
-                    menu_button(Menu::Inventory, "INVENTORY"),
-                    menu_button(Menu::Stats, "STATS"),
-                ]
-            ),
-            main_menu_footer(player.level(), health, purse.amount, &game_progress),
-        ],
-    ));
+    commands.spawn_scene(bsn! {
+        @menu_screen(Menu::Pause, "PAUSED")
+        MainMenu
+        Children [
+            Node {
+                width: percent(100),
+                flex_grow: 1.0,
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                row_gap: px(20),
+            }
+            Children [
+                @menu_button("INVENTORY")
+                on(open_menu(Menu::Inventory))
+                --
+                @menu_button("STATS")
+                on(open_menu(Menu::Stats))
+            ]
+            --
+            @{footer}
+        ]
+    });
 }
 
-/// A button that switches to `menu` when clicked.
-fn menu_button(menu: Menu, button_text: &str) -> impl Bundle {
-    (
-        Button,
-        observe(
-            move |_: On<Activate>, mut next_menu_state: ResMut<NextState<Menu>>| {
-                next_menu_state.set(menu);
-            },
-        ),
-        Node {
-            width: px(300.0),
-            height: px(60.0),
-            border: px(2.0).all(),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BorderColor::all(Color::srgb(0.8, 0.8, 0.8)),
-        BackgroundColor::from(DARK_GRAY_COLOR),
-        children![text(button_text, 32.0)],
-    )
+/// An observer that switches to `menu` when its button is activated.
+fn open_menu(menu: Menu) -> impl Fn(On<Activate>, ResMut<NextState<Menu>>) + Clone {
+    move |_, mut next_menu_state| next_menu_state.set(menu)
 }
 
 fn main_menu_footer(
@@ -81,52 +55,38 @@ fn main_menu_footer(
     player_health: &Health,
     player_coins: u32,
     game_progress: &GameProgress,
-) -> impl Bundle {
-    // Footer Section
-    (
-        Node {
-            width: percent(100.0),
-            height: FOOTER_HEIGHT,
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::SpaceBetween,
-            align_items: AlignItems::Center,
-            padding: px(40.0).horizontal(),
-            ..default()
-        },
-        BackgroundColor::from(DARK_GRAY_COLOR),
-        children![
+) -> impl Scene {
+    let stats = [
+        format!("Level: {player_level}"),
+        format!("Stat Points: {}", game_progress.progress_points),
+        format!("Deaths: {}", game_progress.death_counter),
+        format!(
+            "Health: {:.1} / {:.1}",
+            player_health.hp, player_health.max_hp
+        ),
+        format!("Total coins: {player_coins}"),
+    ]
+    .map(|stat| text(stat, BODY_FONT_SIZE));
+
+    bsn! {
+        @menu_footer()
+        Children [
             // left side player info
-            (
-                Node {
-                    flex_direction: FlexDirection::Row,
-                    column_gap: px(20.0),
-                    ..default()
-                },
-                children![
-                    text(format!("Level: {player_level}"), 24.0),
-                    text(
-                        format!("Stat Points: {}", game_progress.progress_points),
-                        24.0
-                    ),
-                    text(format!("Deaths: {}", game_progress.death_counter), 24.0),
-                    text(
-                        format!(
-                            "Health: {:.1} / {:.1}",
-                            player_health.hp, player_health.max_hp
-                        ),
-                        24.0
-                    ),
-                    text(format!("Total coins: {player_coins}"), 24.0)
-                ]
-            ),
-            // right side exit instructions
-            text("Press ESC to unpause", 24.0)
-        ],
-    )
+            Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: px(20),
+            }
+            Children [
+                {Vec::from(stats)}
+            ]
+            --
+            @unpause_hint()
+        ]
+    }
 }
 
 pub(super) fn pause(mut next_pause_state: ResMut<NextState<PauseState>>, mut commands: Commands) {
-    commands.spawn(menu_background());
+    commands.spawn_scene(menu_background());
     next_pause_state.set(PauseState::Paused);
 }
 
@@ -142,38 +102,29 @@ pub(super) fn on_menu_back(_: On<Start<MenuBack>>, mut next_menu_state: ResMut<N
     next_menu_state.set(Menu::None);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 pub(super) struct MenuBackground;
 
-#[expect(
-    deprecated,
-    reason = "bevy_enhanced_input 0.27 deprecates its bundle API for BSN; port with the rest of spawning"
-)]
-fn menu_background() -> impl Bundle {
-    (
-        Name::new("Menu Background"),
-        MenuBackground,
-        DespawnOnEnter(Menu::None),
-        actions!(MenuBackground[
-            (
-                Action::<MenuBack>::new(),
-                ActionSettings {
-                    require_reset: true,
-                    ..Default::default()
-                },
-                Bindings::spawn((
-                    Spawn(Binding::from(GamepadButton::East)),
-                )),
-            ),
-        ]),
+/// Dims the game behind every menu and lets a gamepad back out of it.
+fn menu_background() -> impl Scene {
+    bsn! {
+        #MenuBackground
+        MenuBackground
+        ~{DespawnOnEnter(Menu::None)}
         Node {
             width: percent(100),
             height: percent(100),
-            ..default()
-        },
-        GlobalZIndex(1),
-        BackgroundColor::from(BACKGROUND_COLOR),
-    )
+        }
+        GlobalZIndex(1)
+        BackgroundColor(BACKGROUND_COLOR)
+        Actions<MenuBackground> [
+            Action::<MenuBack>::new()
+            ActionSettings { require_reset: true }
+            Bindings [
+                Binding(GamepadButton::East)
+            ]
+        ]
+    }
 }
 
 #[derive(InputAction)]
@@ -191,32 +142,34 @@ pub(super) fn on_toggle_pause(
         _ => next_menu_state.set(Menu::None),
     }
 }
-#[derive(Component)]
+
+#[derive(Component, Default, Clone)]
 pub(crate) struct PauseControl;
 
-#[expect(
-    deprecated,
-    reason = "bevy_enhanced_input 0.27 deprecates its bundle API for BSN; port with the rest of spawning"
-)]
-pub(crate) fn pause_actions() -> impl Bundle {
-    actions!(
-        PauseControl[(
-            Action::<TogglePause>::new(),
-            // We set `require_reset` to `true` because `ResumeGame` action uses the same input,
-            // and we want it to be triggerable only after the button is released.
-            ActionSettings {
-                require_reset: true,
-                ..Default::default()
-            },
-            // Can't allow escape on wasm because that un-grabs cursor
-            Bindings::spawn((
-                Spawn(Binding::from(KeyCode::KeyP)),
-                Spawn(Binding::from(GamepadButton::Start)),
-                #[cfg(not(target_family = "wasm"))]
-                Spawn(Binding::from(KeyCode::Escape)),
-            )),
-        )]
-    )
+/// The pause toggle, added to the player.
+pub(crate) fn pause_actions() -> impl Scene {
+    // Escape un-grabs the cursor on the web, so it can't pause there.
+    let escape = (!cfg!(target_family = "wasm")).then(|| {
+        bsn_list! {
+            Binding(KeyCode::Escape)
+        }
+    });
+
+    bsn! {
+        PauseControl
+        Actions<PauseControl> [
+            Action::<TogglePause>::new()
+            // `MenuBack` shares this input, so wait for a release before toggling again.
+            ActionSettings { require_reset: true }
+            Bindings [
+                Binding(KeyCode::KeyP)
+                --
+                Binding(GamepadButton::Start)
+                --
+                {escape}
+            ]
+        ]
+    }
 }
 
 pub(super) fn release_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {

@@ -17,10 +17,10 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Event)]
 struct PlayerLeveledUp;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct LevelUpEffect;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct LevelUpText;
 
 /// Radius of the level up ring when its animation starts.
@@ -41,49 +41,44 @@ fn on_player_experience_change(mut commands: Commands, mut player: Single<&mut P
 fn on_level_up(
     _: On<PlayerLeveledUp>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    player_entity: Single<Entity, With<Player>>,
+    player: Single<Entity, With<Player>>,
 ) {
-    commands
-        .entity(player_entity.into_inner())
-        .with_children(|parent| {
-            parent.spawn(ring_effect(&mut meshes, &mut materials));
-            parent.spawn(level_up_text());
-        });
+    let player = *player;
+    commands.spawn_scene(bsn! { @ring_effect() ChildOf(player) });
+    commands.spawn_scene(bsn! { @level_up_text() ChildOf(player) });
 }
 
-fn ring_effect(meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
-    (
-        LevelUpEffect,
-        Mesh2d(meshes.add(Circle::new(LEVEL_UP_RING_START_RADIUS))),
-        MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgba(1.0, 0.9, 0.0, 0.7)))),
-        Transform::from_translation(Vec2::ZERO.extend(ZLayer::BehindSprite.z())),
-        Lifespan::new(LEVEL_UP_ANIMATION_DURATION),
-    )
+/// A golden ring that grows, spins and fades around the player.
+fn ring_effect() -> impl Scene {
+    bsn! {
+        LevelUpEffect
+        // Each ring owns its material, so fading one leaves the others alone.
+        Mesh2d(asset_value(Circle::new(LEVEL_UP_RING_START_RADIUS)))
+        MeshMaterial2d<ColorMaterial>(asset_value(Color::srgba(1.0, 0.9, 0.0, 0.7)))
+        Transform::from_translation({Vec2::ZERO.extend(ZLayer::BehindSprite.z())})
+        Lifespan::new(LEVEL_UP_ANIMATION_DURATION)
+    }
 }
 
-/// Level up text above player's head.
-fn level_up_text() -> impl Bundle {
-    (
-        LevelUpText,
-        text("Level up!", 24.0),
-        TextColor::from(Color::srgb(1.0, 0.84, 0.0)),
-        Transform::from_xyz(0.0, 60.0, ZLayer::BehindSprite.z()),
-        Lifespan::new(LEVEL_UP_ANIMATION_DURATION),
-    )
+/// "Level up!" rising above the player's head.
+fn level_up_text() -> impl Scene {
+    bsn! {
+        LevelUpText
+        Text2d("Level up!")
+        TextFont { font_size: FontSize::Px(24.0) }
+        TextColor(Color::srgb(1.0, 0.84, 0.0))
+        Transform::from_xyz(0.0, 60.0, {ZLayer::BehindSprite.z()})
+        Lifespan::new(LEVEL_UP_ANIMATION_DURATION)
+    }
 }
 
 fn animate_level_up(
     mut effect_query: Query<
-        (
-            &mut Transform,
-            &mut MeshMaterial2d<ColorMaterial>,
-            &Lifespan,
-        ),
+        (&mut Transform, &MeshMaterial2d<ColorMaterial>, &Lifespan),
         (With<LevelUpEffect>, Without<LevelUpText>),
     >,
     mut text_query: Query<(&mut Transform, &Lifespan), With<LevelUpText>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Animate ring effect
     for (mut transform, mut material, duration) in &mut effect_query {
@@ -94,7 +89,7 @@ fn animate_level_up(
         transform.rotate_z(LEVEL_UP_ROTATION_SPEED * duration.0.elapsed_secs());
 
         // Fade out
-        if let Some(material) = material.get_field_mut::<ColorMaterial>(0) {
+        if let Some(mut material) = materials.get_mut(&material.0) {
             material.color.set_alpha(1.0 - progress);
         }
     }

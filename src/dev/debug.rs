@@ -117,7 +117,7 @@ fn debug_target_lines(
 }
 
 /// Marker on the floating [`Text2d`] above a debug-tracked enemy.
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct EnemyAiLabel;
 
 /// Marker on enemies that already have a label child (and a [`ScoreTrace`]),
@@ -138,18 +138,16 @@ fn spawn_enemy_ai_labels(
         commands
             .entity(enemy)
             .insert((HasAiLabel, ScoreTrace::default()));
-        commands.entity(enemy).with_child((
-            EnemyAiLabel,
-            Text2d::new("..."),
-            TextFont {
-                font_size: FontSize::Px(12.0),
-                ..default()
-            },
-            TextColor::from(Color::WHITE),
+        commands.spawn_scene(bsn! {
+            EnemyAiLabel
+            Text2d("...")
+            TextFont { font_size: FontSize::Px(12.0) }
+            TextColor(Color::WHITE)
             // Grows upward, so a long score trace stays clear of the enemy.
-            Anchor::BOTTOM_CENTER,
-            Transform::from_translation(Vec3::new(0.0, AI_LABEL_HEIGHT, ZLayer::AboveSprite.z())),
-        ));
+            Anchor::BOTTOM_CENTER
+            Transform::from_xyz(0.0, AI_LABEL_HEIGHT, {ZLayer::AboveSprite.z()})
+            ChildOf(enemy)
+        });
     }
 }
 

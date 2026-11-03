@@ -11,31 +11,28 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::constants::{
-        BACKGROUND_COLOR, DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT,
+        BACKGROUND_COLOR, BODY_FONT_SIZE, CAPTION_FONT_SIZE, DARK_GRAY_ALPHA_COLOR,
+        DARK_GRAY_COLOR, FOOTER_HEIGHT, MUTED_TEXT_COLOR, ROW_COLOR, SMALL_FONT_SIZE,
     };
-    pub use super::primitives::{menu_header, text, width};
+    pub use super::primitives::{
+        ButtonBorderColors, ButtonColors, MENU_BUTTON_COLORS, button, menu_button, menu_footer,
+        menu_header, menu_screen, muted_text, panel, spacer, text, unpause_hint, width,
+    };
 }
 
 pub(super) fn plugin(app: &mut App) {
-    // Loading screen
-    app.add_systems(OnEnter(AppState::SpawnMap), load_screen::spawn)
-        .add_systems(
-            Update,
-            (load_screen::animate_text).run_if(in_state(AppState::SpawnMap)),
-        );
+    // Loading, start and game over screens
+    app.add_systems(OnEnter(AppState::SpawnMap), load_screen::scene.spawn())
+        .add_systems(OnEnter(AppState::StartScreen), start_screen::scene.spawn())
+        .add_systems(OnEnter(AppState::GameOver), game_over_screen::scene.spawn());
 
-    // Start screen
-    app.add_systems(OnEnter(AppState::StartScreen), start_screen::spawn)
-        .add_systems(
-            Update,
-            (start_screen::style_start_button, start_screen::animate_text)
-                .run_if(in_state(AppState::StartScreen)),
-        );
+    // Shared widget behavior
+    app.add_systems(
+        Update,
+        (primitives::style_buttons, primitives::pulse_text).in_set(MainSystems::Shared),
+    );
 
     // Heal and damage overlays
     app.add_observer(damage_overlay::on_damage_overlay_amount)
         .add_observer(damage_overlay::on_healing_overlay_amount);
-
-    // Game over systems
-    app.add_systems(OnEnter(AppState::GameOver), game_over_screen::spawn);
 }

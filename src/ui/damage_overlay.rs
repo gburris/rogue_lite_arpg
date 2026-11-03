@@ -24,7 +24,7 @@ fn entity_height(
 }
 
 /// Text is placed relative to `origin`, which is the center of the entity the text is for.
-fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Bundle {
+fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Scene {
     // Create a quaternion for the random rotation
     let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
 
@@ -44,12 +44,12 @@ fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Colo
         format!("{rounded_amount:.1}") // Display with one decimal place
     };
 
-    (
-        Text2d::new(formatted_amount),
-        TextColor::from(color),
-        Lifespan::new(0.4),
-        Transform::from_translation(origin + text_position),
-    )
+    bsn! {
+        Text2d(formatted_amount)
+        TextColor(color)
+        Lifespan::new(0.4)
+        Transform::from_translation({origin + text_position})
+    }
 }
 
 // Generate a random angle between -angle_range and angle_range degrees (convert to radians)
@@ -72,7 +72,7 @@ pub(super) fn on_damage_overlay_amount(
         // Defeated characters have their children despawned, so text for the killing blow
         // is spawned in world space rather than following the entity
         Ok((health, transform)) if health.is_dead() => {
-            commands.spawn(health_change_text(
+            commands.spawn_scene(health_change_text(
                 transform.translation,
                 entity_height,
                 damage_dealt.damage,
@@ -80,12 +80,8 @@ pub(super) fn on_damage_overlay_amount(
             ));
         }
         _ => {
-            commands.entity(entity).with_child(health_change_text(
-                Vec3::ZERO,
-                entity_height,
-                damage_dealt.damage,
-                RED_COLOR,
-            ));
+            let text = health_change_text(Vec3::ZERO, entity_height, damage_dealt.damage, RED_COLOR);
+            commands.spawn_scene(bsn! { @{text} ChildOf(entity) });
         }
     }
 }
@@ -98,12 +94,6 @@ pub(super) fn on_healing_overlay_amount(
 ) {
     let entity_height = entity_height(healed.entity, &children_query, &hurt_box_query);
 
-    commands
-        .entity(healed.entity)
-        .with_child(health_change_text(
-            Vec3::ZERO,
-            entity_height,
-            healed.amount,
-            GREEN_COLOR,
-        ));
+    let text = health_change_text(Vec3::ZERO, entity_height, healed.amount, GREEN_COLOR);
+    commands.spawn_scene(bsn! { @{text} ChildOf({healed.entity}) });
 }

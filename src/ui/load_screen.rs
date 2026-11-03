@@ -1,130 +1,33 @@
 use bevy::prelude::*;
 
-use super::constants::TITLE_FONT_SIZE;
-use super::primitives::{gold_border, text};
+use super::constants::GOLD_TEXT_COLOR;
+use super::primitives::{gold_frame, splash_screen, text};
 use crate::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 pub struct LoadScreen;
 
-#[derive(Component)]
-pub struct AnimatedText;
-
-pub(super) fn spawn(mut commands: Commands) {
-    commands.spawn((
-        LoadScreen,
-        DespawnOnExit(AppState::SpawnMap),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
-            // Make sure there's no extra space on sides
-            padding: px(0.0).all(),
-            margin: px(0.0).all(),
-            ..default()
-        },
-        // Darker background for more contrast
-        BackgroundColor::from(Color::srgb(0.02, 0.01, 0.04)),
-        GlobalZIndex(1),
-        children![
-            gold_border(),
-            title_section(),
-            body_section(),
-            footer_section(),
-            gold_border()
-        ],
-    ));
+pub(super) fn scene() -> impl Scene {
+    bsn! {
+        @splash_screen(AppState::SpawnMap, "Loading Map", loading_badge(), "I'm loading")
+        LoadScreen
+        // Covers the map while it's built underneath.
+        GlobalZIndex(1)
+    }
 }
 
-fn title_section() -> impl Bundle {
-    (
+fn loading_badge() -> impl Scene {
+    bsn! {
+        @gold_frame()
         Node {
-            width: percent(100.0),
-            height: px(300.0),
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            // Remove any potential spacing issues
-            margin: px(0.0).all(),
-            padding: px(0.0).all(),
-            ..default()
-        },
-        children![(
-            Node {
-                width: auto(),
-                height: auto(),
-                border: px(2.0).all(),
-                padding: px(40.0).horizontal(),
-                margin: px(0.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.3)),
-            children![(
-                text("Loading Map", TITLE_FONT_SIZE),
-                TextColor::from(Color::srgb(0.9, 0.7, 0.2)),
-                AnimatedText,
-            )]
-        )],
-    )
-}
-
-fn body_section() -> impl Bundle {
-    (
-        Node {
-            width: percent(100.0),
-            flex_grow: 1.0,
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            margin: px(0.0).all(),
-            padding: px(0.0).all(),
-            ..default()
-        },
-        children![(
-            Node {
-                width: px(300.0),
-                height: px(80.0),
-                border: px(2.0).all(),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                margin: px(20.0).all(),
-                ..default()
-            },
-            BorderColor::all(Color::srgb(0.8, 0.6, 0.2)),
-            BackgroundColor::from(Color::srgba(0.1, 0.1, 0.1, 0.7)),
-            children![(
-                text("Loading Map", 48.0),
-                TextColor::from(Color::srgb(0.9, 0.8, 0.3)),
-            )]
-        )],
-    )
-}
-
-fn footer_section() -> impl Bundle {
-    (
-        Node {
-            width: percent(100.0),
-            height: px(120.0),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            padding: px(20.0).all(),
-            margin: px(0.0).all(),
-            ..default()
-        },
-        BackgroundColor::from(Color::srgba(0.0, 0.0, 0.0, 0.4)),
-        children![(
-            text("I'm loading", 24.0),
-            TextColor::from(Color::srgb(0.7, 0.6, 0.5)),
-        )],
-    )
-}
-
-pub(super) fn animate_text(time: Res<Time>, mut query: Query<&mut TextColor, With<AnimatedText>>) {
-    for mut color in &mut query {
-        // Increased frequency and amplitude.
-        let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6;
-        *color = TextColor::from(Color::srgb(1.0 * sine, 0.5 * sine, 0.3 * sine));
+            width: px(300),
+            height: px(80),
+            margin: px(20),
+        }
+        BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.7))
+        Children [
+            @text("Loading Map", 48.0)
+            TextColor(GOLD_TEXT_COLOR)
+        ]
     }
 }

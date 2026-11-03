@@ -6,88 +6,51 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Stats), spawn_stats_menu);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 struct StatsMenu;
 
-#[derive(Component)]
-struct StatsDisplay;
+fn spawn_stats_menu(mut commands: Commands, player_stats: Single<&PlayerStats>) {
+    let rows: Vec<_> = Stat::ALL
+        .into_iter()
+        .map(|stat| stat_row(stat, *player_stats))
+        .collect();
 
-fn spawn_stats_menu(mut commands: Commands, player_stats: Query<&PlayerStats>) {
-    if let Ok(stats) = player_stats.single() {
-        commands.spawn((
-            StatsMenu,
-            DespawnOnExit(Menu::Stats),
-            GlobalZIndex(2),
-            Node {
-                width: percent(100.0),
-                height: percent(100.0),
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                row_gap: px(20.0),
-                ..default()
-            },
-            children![
-                menu_header("STATS"),
-                (
-                    StatsDisplay,
-                    Node {
-                        width: px(600.0),
-                        height: percent(80.0),
-                        flex_direction: FlexDirection::Column,
-                        padding: px(20.0).all(),
-                        ..default()
-                    },
-                    BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
-                    children![
-                        stat_row("Agility", stats.agility, "Movement speed, roll range"),
-                        stat_row("Strength", stats.strength, "Melee swing damage"),
-                        stat_row("Dexterity", stats.dexterity, "Critical Strike Chance"),
-                        stat_row("Intellect", stats.intellect, "Spell damage"),
-                        stat_row("Luck", stats.luck, "Drop rate"),
-                    ],
-                )
-            ],
-        ));
-    }
+    commands.spawn_scene(bsn! {
+        @menu_screen(Menu::Stats, "STATS")
+        StatsMenu
+        Children [
+            @panel(600.0)
+            Node { height: percent(80) }
+            Children [
+                {rows}
+            ]
+        ]
+    });
 }
 
-fn stat_row(
-    stat_name: impl Into<String>,
-    stat_value: u32,
-    description: impl Into<String>,
-) -> impl Bundle {
-    (
+fn stat_row(stat: Stat, stats: &PlayerStats) -> impl Scene {
+    bsn! {
         Node {
-            width: percent(100.0),
-            height: px(60.0),
-            padding: px(10.0).all(),
-            margin: px(5.0).bottom(),
+            width: percent(100),
+            height: px(60),
+            padding: px(10),
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
-            ..default()
-        },
-        BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-        children![
-            // left side
-            (
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    ..default()
-                },
-                children![
-                    text(stat_name, 24.0),
-                    (
-                        text(description, 16.0),
-                        Node {
-                            margin: px(4.0).top(),
-                            ..default()
-                        },
-                    )
-                ]
-            ),
-            // right side
-            text(format!("{stat_value}/99"), 24.0)
-        ],
-    )
+        }
+        BackgroundColor(ROW_COLOR)
+        Children [
+            Node {
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                row_gap: px(4),
+            }
+            Children [
+                @text({format!("{stat:?}")}, BODY_FONT_SIZE)
+                --
+                @muted_text(stat.description(), CAPTION_FONT_SIZE)
+            ]
+            --
+            @text({format!("{}/99", stat.value(stats))}, BODY_FONT_SIZE)
+        ]
+    }
 }

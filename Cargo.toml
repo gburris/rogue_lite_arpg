@@ -42,6 +42,8 @@ dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
     "bevy/bevy_dev_tools",
+    # The FPS overlay in the debug plugin lives behind this feature since Bevy 0.20.
+    "bevy/render_dev_tools",
     "bevy/bevy_ui_debug",
     # CPU and memory usage diagnostics for the F3 overlay (`dev/hud.rs`).
     "bevy/sysinfo_plugin",

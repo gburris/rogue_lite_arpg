@@ -33,6 +33,10 @@ pub(super) fn plugin(app: &mut App) {
 const MOUSE_SENSITIVITY: f32 = 0.5;
 const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
 
+#[expect(
+    deprecated,
+    reason = "bevy_enhanced_input 0.27 deprecates its bundle API for BSN; port with the rest of spawning"
+)]
 pub(super) fn player_actions() -> impl Bundle {
     (actions!(Player[
         (

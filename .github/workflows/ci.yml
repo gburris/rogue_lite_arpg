@@ -104,14 +104,23 @@ jobs:
         run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
 
       # Each lint also becomes a GitHub annotation, shown inline on the PR's changed files.
+      # GitHub keeps only 10 error annotations per step, so the first one lists every diagnostic.
       - name: Run Clippy lints
         run: |
-          set -o pipefail
-          cargo clippy --locked --workspace --all-targets --profile ci --all-features --message-format=short --color=never 2>&1 \
+          set +e
+          cargo clippy --locked --workspace --all-targets --profile ci --all-features --message-format=short --color=never > clippy.log 2>&1
+          status=$?
+          summary=$(grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|warning)|^error' clippy.log | sort -u | head -200 \
+            | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
+          if [ $status -ne 0 ] && [ -n "$summary" ]; then
+            echo "::error title=All Clippy diagnostics::$summary"
+          fi
+          cat clippy.log \
             | sed -E \
               -e 's/^([^: ]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::\4 file=\1,line=\2,col=\3::\6/' \
               -e 's/^(error(\[[^]]*\])?: .*)$/::error::\1/' \
               -e 's/^(.*panicked at .*)$/::error::\1/'
+          exit $status
 
   # Run Bevy lints.
   # TODO: re-enable once a bevy_lint release supports Bevy 0.19 (lint-v0.6.0 targets Bevy 0.18).

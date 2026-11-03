@@ -114,7 +114,7 @@ fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
 }
 
 pub fn on_slot_clicked(
-    pointer_click: On<Pointer<Click>>,
+    pointer_click: On<PointerClick>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
     item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
@@ -152,7 +152,7 @@ pub fn on_slot_clicked(
 }
 
 pub fn on_slot_hover(
-    pointer_over: On<Pointer<Over>>,
+    pointer_over: On<PointerOver>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(pointer_over.entity) {
@@ -161,7 +161,7 @@ pub fn on_slot_hover(
 }
 
 pub fn on_slot_done_hovering(
-    pointer_out: On<Pointer<Out>>,
+    pointer_out: On<PointerOut>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(pointer_out.entity) {

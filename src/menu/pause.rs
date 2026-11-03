@@ -145,6 +145,10 @@ pub(super) fn on_menu_back(_: On<Start<MenuBack>>, mut next_menu_state: ResMut<N
 #[derive(Component)]
 pub(super) struct MenuBackground;
 
+#[expect(
+    deprecated,
+    reason = "bevy_enhanced_input 0.27 deprecates its bundle API for BSN; port with the rest of spawning"
+)]
 fn menu_background() -> impl Bundle {
     (
         Name::new("Menu Background"),
@@ -190,6 +194,10 @@ pub(super) fn on_toggle_pause(
 #[derive(Component)]
 pub(crate) struct PauseControl;
 
+#[expect(
+    deprecated,
+    reason = "bevy_enhanced_input 0.27 deprecates its bundle API for BSN; port with the rest of spawning"
+)]
 pub(crate) fn pause_actions() -> impl Bundle {
     actions!(
         PauseControl[(

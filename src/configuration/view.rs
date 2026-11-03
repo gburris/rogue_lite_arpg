@@ -56,12 +56,21 @@ impl YSort {
     }
 }
 
+/// Sprites at exactly the same height would tie on z, and Bevy doesn't guarantee the draw order
+/// of sprites with equal z. Each entity's sort height is nudged by a fraction of a pixel based on
+/// its index (`(index % TIEBREAK_BUCKETS) * TIEBREAK_STEP`, at most a quarter pixel), so their
+/// order stays fixed without visibly changing it. The step is kept large enough to survive f32
+/// precision once divided by the map height.
+const TIEBREAK_BUCKETS: u32 = 16;
+const TIEBREAK_STEP: f32 = 1.0 / 64.0;
+
 fn ysort_transforms(
-    mut transform_query: Query<(&mut Transform, &YSort)>,
+    mut transform_query: Query<(Entity, &mut Transform, &YSort)>,
     tile_to_world: Res<TileToWorld>,
 ) {
-    for (mut transform, ysort) in &mut transform_query {
-        let relative_height_on_map = (transform.translation.y + ysort.height_offset)
+    for (entity, mut transform, ysort) in &mut transform_query {
+        let tiebreak = (entity.index_u32() % TIEBREAK_BUCKETS) as f32 * TIEBREAK_STEP;
+        let relative_height_on_map = (transform.translation.y + ysort.height_offset + tiebreak)
             / (tile_to_world.map_size.y as f32 * tile_to_world.tile_size.y);
 
         transform.translation.z = ysort.z - relative_height_on_map;

@@ -16,7 +16,8 @@ pub(super) fn plugin(app: &mut App) {
             MainSystems::Shared,
         )
             .chain()
-            .after(LoadingStateSystems(AppState::AssetLoading)), // appease the system ordering gods
+            // appease the system ordering gods
+            .after(LoadingStateSystems(AppState::AssetLoading)),
     );
 
     // Must order per-schedule, so same as above but for FixedUpdate systems

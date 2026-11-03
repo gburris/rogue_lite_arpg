@@ -1188,7 +1188,7 @@ dependencies = [
 [[package]]
 name = "bevy_firefly"
 version = "0.20.0"
-source = "git+https://github.com/KaytonFletcher/bevy_firefly?branch=bevy-0.20#081d97f59c43ed9361af9ca54f14b96de0b47b34"
+source = "git+https://github.com/KaytonFletcher/bevy_firefly?branch=bevy-0.20#ce87bbb57cb859b8704da018a8daba655460b983"
 dependencies = [
  "bevy",
  "bitflags 2.13.2",

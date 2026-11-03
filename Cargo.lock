@@ -915,6 +915,7 @@ dependencies = [
  "bevy_audio",
  "bevy_camera",
  "bevy_color 0.20.1",
+ "bevy_core_pipeline",
  "bevy_diagnostic",
  "bevy_ecs 0.20.1",
  "bevy_extract",
@@ -924,6 +925,7 @@ dependencies = [
  "bevy_log 0.20.1",
  "bevy_math 0.20.1",
  "bevy_mesh",
+ "bevy_pbr",
  "bevy_picking",
  "bevy_platform 0.20.1",
  "bevy_reflect 0.20.1",
@@ -935,6 +937,7 @@ dependencies = [
  "bevy_time",
  "bevy_transform",
  "bevy_ui",
+ "bevy_ui_render",
  "bevy_ui_widgets",
  "bevy_window",
  "bevy_world_serialization",
@@ -1185,7 +1188,7 @@ dependencies = [
 [[package]]
 name = "bevy_firefly"
 version = "0.20.0"
-source = "git+https://github.com/KaytonFletcher/bevy_firefly?branch=bevy-0.20#c20c374e50c702e51f68ab4639e544a0c28c4697"
+source = "git+https://github.com/KaytonFletcher/bevy_firefly?branch=bevy-0.20#081d97f59c43ed9361af9ca54f14b96de0b47b34"
 dependencies = [
  "bevy",
  "bitflags 2.13.2",

@@ -1,35 +1,16 @@
 use bevy::prelude::*;
+use bevy::ui_widgets::{Activate, Button, observe};
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use bevy_enhanced_input::prelude::*;
 
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Menu::Pause), spawn_main_menu)
-        .add_systems(
-            Update,
-            switch_menu_on_button_press
-                .run_if(in_state(Menu::Pause))
-                .in_set(MainSystems::Menu),
-        );
+    app.add_systems(OnEnter(Menu::Pause), spawn_main_menu);
 }
 
 #[derive(Component)]
 struct MainMenu;
-
-#[derive(Component)]
-struct MenuButton(Menu);
-
-fn switch_menu_on_button_press(
-    mut button_query: Query<(&Interaction, &MenuButton)>,
-    mut next_menu_state: ResMut<NextState<Menu>>,
-) {
-    for (interaction, menu_button) in &mut button_query {
-        if *interaction == Interaction::Pressed {
-            next_menu_state.set(menu_button.0);
-        }
-    }
-}
 
 fn spawn_main_menu(
     mut commands: Commands,
@@ -63,8 +44,8 @@ fn spawn_main_menu(
                     ..default()
                 },
                 children![
-                    menu_button(MenuButton(Menu::Inventory), "INVENTORY"),
-                    menu_button(MenuButton(Menu::Stats), "STATS"),
+                    menu_button(Menu::Inventory, "INVENTORY"),
+                    menu_button(Menu::Stats, "STATS"),
                 ]
             ),
             main_menu_footer(player.level(), health, purse.amount, &game_progress),
@@ -72,10 +53,15 @@ fn spawn_main_menu(
     ));
 }
 
-fn menu_button(marker: impl Bundle, button_text: &str) -> impl Bundle {
+/// A button that switches to `menu` when clicked.
+fn menu_button(menu: Menu, button_text: &str) -> impl Bundle {
     (
-        marker,
         Button,
+        observe(
+            move |_: On<Activate>, mut next_menu_state: ResMut<NextState<Menu>>| {
+                next_menu_state.set(menu);
+            },
+        ),
         Node {
             width: px(300.0),
             height: px(60.0),

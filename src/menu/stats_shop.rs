@@ -1,4 +1,7 @@
+use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
+use bevy::ui::Pressed;
+use bevy::ui_widgets::{Activate, Button, observe};
 
 use crate::prelude::*;
 
@@ -129,6 +132,8 @@ fn stat_shop_button(stat: Stat, change: StatChange) -> impl Bundle {
     (
         StatShopButton { stat, change },
         Button,
+        Hovered::default(),
+        observe(on_stat_button_activated),
         Node {
             width: px(30.0),
             height: px(30.0),
@@ -147,40 +152,49 @@ fn stat_shop_button(stat: Stat, change: StatChange) -> impl Bundle {
     )
 }
 
-pub fn update_stat_buttons(
-    mut interaction_query: Query<(&Interaction, &StatShopButton, &mut BackgroundColor)>,
+fn on_stat_button_activated(
+    activate: On<Activate>,
+    buttons: Query<&StatShopButton>,
     mut commands: Commands,
     game_progress: Res<GameProgress>,
-    player_stats: Query<&PlayerStats>,
+    player_stats: Single<&PlayerStats>,
 ) {
-    let stats = player_stats.single().expect("Player stats not found");
+    let Ok(button) = buttons.get(activate.entity) else {
+        return;
+    };
 
-    for (interaction, button, mut background_color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                let can_increase =
-                    button.change == StatChange::Increase && game_progress.progress_points > 0;
-                let can_decrease =
-                    button.change == StatChange::Decrease && button.stat.value(stats) > 1;
+    let can_increase = button.change == StatChange::Increase && game_progress.progress_points > 0;
+    let can_decrease =
+        button.change == StatChange::Decrease && button.stat.value(*player_stats) > 1;
 
-                if can_increase || can_decrease {
-                    commands.trigger(ChangeStat {
-                        stat: button.stat,
-                        change: button.change,
-                    });
-                }
+    if can_increase || can_decrease {
+        commands.trigger(ChangeStat {
+            stat: button.stat,
+            change: button.change,
+        });
+    }
+}
+
+// Hover and press styling for the stat buttons.
+pub fn update_stat_buttons(
+    mut buttons: Query<(
+        &Hovered,
+        Has<Pressed>,
+        &StatShopButton,
+        &mut BackgroundColor,
+    )>,
+    game_progress: Res<GameProgress>,
+) {
+    for (hovered, pressed, button, mut background_color) in &mut buttons {
+        *background_color = if hovered.get() || pressed {
+            if button.change == StatChange::Increase && game_progress.progress_points > 0 {
+                BackgroundColor::from(Color::srgb(1.0, 1.0, 0.0))
+            } else {
+                BackgroundColor::from(Color::srgb(0.5, 0.5, 0.5))
             }
-            Interaction::Hovered => {
-                if button.change == StatChange::Increase && game_progress.progress_points > 0 {
-                    *background_color = BackgroundColor::from(Color::srgb(1.0, 1.0, 0.0));
-                } else {
-                    *background_color = BackgroundColor::from(Color::srgb(0.5, 0.5, 0.5));
-                }
-            }
-            Interaction::None => {
-                *background_color = BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5));
-            }
-        }
+        } else {
+            BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5))
+        };
     }
 }
 

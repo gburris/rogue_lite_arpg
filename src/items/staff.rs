@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
@@ -205,7 +205,9 @@ fn on_start_staff(
             PointLight2d {
                 color: Color::WHITE,
                 intensity: 10.0,
-                outer_radius: 3.0,
+                radius: 3.0,
+                falloff: Falloff::InverseSquare { intensity: 1.0 },
+                core: LightCore::NONE,
                 ..default()
             },
         ));

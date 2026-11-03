@@ -29,7 +29,7 @@ pub struct EquipmentUseFinished {
 }
 
 pub(super) fn on_equipment_use_ended(
-    removed: On<Remove, EquipmentInUse>,
+    removed: On<Remove<EquipmentInUse>>,
     mut commands: Commands,
     items: Query<&ItemOf>,
 ) {

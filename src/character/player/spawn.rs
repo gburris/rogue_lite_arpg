@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::ui_widgets::observe;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::aim::player_aim;
 use super::input::player_actions;
@@ -59,8 +59,9 @@ pub(super) fn spawn_player(
                     PointLight2d {
                         color: Color::WHITE,
                         intensity: 0.4,
-                        outer_radius: 100.0,
-                        falloff: 5.0,
+                        radius: 100.0,
+                        falloff: Falloff::InverseSquare { intensity: 5.0 },
+                        core: LightCore::NONE,
                         ..default()
                     },
                     Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)

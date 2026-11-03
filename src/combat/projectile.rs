@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::color::palettes::tailwind::{BLUE_400, YELLOW_300};
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
 use crate::prelude::*;
@@ -93,8 +93,9 @@ pub fn fireball_with_speed(
         PointLight2d {
             color: Color::from(YELLOW_300),
             intensity: 1.4,
-            falloff: 5.0,
-            outer_radius: 50.0,
+            radius: 50.0,
+            falloff: Falloff::InverseSquare { intensity: 5.0 },
+            core: LightCore::NONE,
             ..default()
         },
         Collider::circle(10.0),
@@ -129,8 +130,9 @@ pub fn icebolt(
         PointLight2d {
             color: Color::from(BLUE_400),
             intensity: 1.4,
-            falloff: 5.0,
-            outer_radius: 80.0,
+            radius: 80.0,
+            falloff: Falloff::InverseSquare { intensity: 5.0 },
+            core: LightCore::NONE,
             ..default()
         },
         Collider::rectangle(40.0, 5.0),

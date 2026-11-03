@@ -18,7 +18,7 @@ pub struct Items(Vec<Entity>);
 pub struct ItemCapacity(pub usize);
 
 pub(super) fn on_item_added_to_inventory(
-    item_added: On<Add, ItemOf>,
+    item_added: On<Add<ItemOf>>,
     mut commands: Commands,
     item_query: Query<&ItemOf>,
     holder_query: Query<(Option<&Items>, Option<&ItemCapacity>)>,

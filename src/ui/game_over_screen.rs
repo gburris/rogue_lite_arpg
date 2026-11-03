@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::ui_widgets::Button;
 
 use super::constants::TITLE_FONT_SIZE;
 use super::primitives::text;

@@ -1,6 +1,6 @@
 use bevy::color::palettes::tailwind::BLUE_400;
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
@@ -29,8 +29,9 @@ fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {
         PointLight2d {
             color: Color::from(BLUE_400),
             intensity: 1.4,
-            falloff: 5.0,
-            outer_radius: 80.0,
+            radius: 80.0,
+            falloff: Falloff::InverseSquare { intensity: 5.0 },
+            core: LightCore::NONE,
             ..default()
         },
         Transform {

@@ -4,7 +4,7 @@ use bevy::color::palettes::tailwind::BLUE_300;
 use bevy::color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
-use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings};
+use bevy_firefly::prelude::{FireflyConfig, LightmapSize};
 
 use super::assets::Shadows;
 use crate::prelude::*;
@@ -127,14 +127,17 @@ fn spawn_camera(mut commands: Commands) {
             },
             ..OrthographicProjection::default_2d()
         }),
-        Lighting2dSettings {
-            blur: 4,
-            edge_intensity: 8.0,
+        FireflyConfig {
+            ambient_color: Color::from(BLUE_300),
+            ambient_brightness: 0.5,
+            // Half-resolution lightmap with linear filtering: cheaper, and softens light edges
+            // the way bevy_lit's blur did.
+            lightmap_size: LightmapSize::Scaled(0.5),
+            lightmap_filtering: true,
+            // The game has no occluders, so shadow features are off.
+            soft_shadows: false,
+            z_sorting: false,
             ..default()
-        },
-        AmbientLight2d {
-            intensity: 0.5,
-            color: Color::from(BLUE_300),
         },
     ));
 }

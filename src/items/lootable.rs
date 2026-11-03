@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 use rand::{RngExt, rng};
 
 use crate::prelude::*;
@@ -24,8 +24,11 @@ pub(super) fn plugin(app: &mut App) {
     Lifespan::new(10.0),
     YSort::from_offset(-6.0),
     PointLight2d {
-                intensity: 0.3,
                 color: Color::WHITE,
+                intensity: 0.3,
+                radius: 64.0,
+                falloff: Falloff::InverseSquare { intensity: 1.0 },
+                core: LightCore::NONE,
                 ..default()
     },
 )]
@@ -82,8 +85,11 @@ fn on_drop_item(
         .insert((
             Lootable::default(),
             PointLight2d {
-                intensity: 0.3,
                 color: Color::WHITE,
+                intensity: 0.3,
+                radius: 64.0,
+                falloff: Falloff::InverseSquare { intensity: 1.0 },
+                core: LightCore::NONE,
                 ..default()
             },
             Visibility::Visible,
@@ -135,7 +141,7 @@ fn glow_and_rotate_lootables(
     }
 }
 
-fn on_item_added_make_lootable(item_added: On<Add, Item>, mut commands: Commands) {
+fn on_item_added_make_lootable(item_added: On<Add<Item>>, mut commands: Commands) {
     // We do this to avoid having to manually add this observer to every item we create
     commands
         .entity(item_added.entity)

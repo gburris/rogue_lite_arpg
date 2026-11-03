@@ -83,7 +83,7 @@ fn on_player_interaction_input(
 /// This method acts as a constructor, adding a collider to the `InteractionZone` based the variant
 /// chosen.
 fn on_interaction_zone_added(
-    interaction_zone_added: On<Add, InteractionZone>,
+    interaction_zone_added: On<Add<InteractionZone>>,
     mut commands: Commands,
     interact_query: Query<&InteractionZone>,
 ) -> Result {

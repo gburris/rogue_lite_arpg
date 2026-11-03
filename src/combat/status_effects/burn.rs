@@ -1,6 +1,6 @@
 use bevy::color::palettes::tailwind::YELLOW_300;
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::combat::damage::{AttemptDamage, Damage};
@@ -89,8 +89,9 @@ fn burn_vfx(
         PointLight2d {
             color: Color::from(YELLOW_300),
             intensity: 2.0,
-            falloff: 10.0,
-            outer_radius: 150.0,
+            radius: 150.0,
+            falloff: Falloff::InverseSquare { intensity: 10.0 },
+            core: LightCore::NONE,
             ..default()
         },
         AnimationIndices::Cycle((0..=7).cycle()),

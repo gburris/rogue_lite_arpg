@@ -18,7 +18,7 @@ fn entity_height(
     children_query
         .get(entity)
         .ok()
-        .and_then(|children| hurt_box_query.iter_many(children).next())
+        .and_then(|children| hurt_box_query.iter_many(children).find_map(Result::ok))
         // Assume the entity is 32 pixels tall if no hurtbox can be found.
         .map_or(32.0, |aabb| aabb.max.y - aabb.min.y)
 }

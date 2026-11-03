@@ -79,23 +79,20 @@ fn on_drop_item(
 
     commands.trigger(Unequip { item: item_entity });
 
-    commands
-        .entity(item_entity)
-        .remove::<ItemOf>()
-        .insert((
-            Lootable::default(),
-            PointLight2d {
-                color: Color::WHITE,
-                intensity: 0.3,
-                radius: 64.0,
-                falloff: Falloff::InverseSquare { intensity: 1.0 },
-                core: LightCore::NONE,
-                ..default()
-            },
-            Visibility::Visible,
-            Transform::from_translation(final_position),
-            DespawnOnExit(AppState::Playing),
-        ));
+    commands.entity(item_entity).remove::<ItemOf>().insert((
+        Lootable::default(),
+        PointLight2d {
+            color: Color::WHITE,
+            intensity: 0.3,
+            radius: 64.0,
+            falloff: Falloff::InverseSquare { intensity: 1.0 },
+            core: LightCore::NONE,
+            ..default()
+        },
+        Visibility::Visible,
+        Transform::from_translation(final_position),
+        DespawnOnExit(AppState::Playing),
+    ));
     commands.spawn_scene(bsn! {
         ~InteractionZone::ITEM_PICKUP
         ChildOf(item_entity)

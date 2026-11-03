@@ -80,7 +80,8 @@ pub(super) fn on_damage_overlay_amount(
             ));
         }
         _ => {
-            let text = health_change_text(Vec3::ZERO, entity_height, damage_dealt.damage, RED_COLOR);
+            let text =
+                health_change_text(Vec3::ZERO, entity_height, damage_dealt.damage, RED_COLOR);
             commands.spawn_scene(bsn! { @{text} ChildOf(entity) });
         }
     }

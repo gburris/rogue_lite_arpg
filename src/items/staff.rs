@@ -168,33 +168,31 @@ fn on_start_staff(
         FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
 
-    commands
-        .entity(staff_used.item)
-        .insert((
-            EquipmentInUse,
-            Casting::new(staff.fire_time, staff.return_time),
-            TweenAnim::new(
-                // Swing
-                Tween::new(
-                    EaseFunction::BackIn,
-                    Duration::from_secs_f32(staff.fire_time),
-                    TransformRotateZLens {
-                        start: staff_rotation,
-                        end: staff_rotation + swing_angle,
-                    },
-                )
-                // Return
-                .then(Tween::new(
-                    EaseFunction::CubicOut,
-                    Duration::from_secs_f32(staff.return_time),
-                    TransformRotateZLens {
-                        start: staff_rotation + swing_angle,
-                        end: staff_rotation,
-                    },
-                )),
+    commands.entity(staff_used.item).insert((
+        EquipmentInUse,
+        Casting::new(staff.fire_time, staff.return_time),
+        TweenAnim::new(
+            // Swing
+            Tween::new(
+                EaseFunction::BackIn,
+                Duration::from_secs_f32(staff.fire_time),
+                TransformRotateZLens {
+                    start: staff_rotation,
+                    end: staff_rotation + swing_angle,
+                },
             )
-            .with_destroy_on_completed(true),
-        ));
+            // Return
+            .then(Tween::new(
+                EaseFunction::CubicOut,
+                Duration::from_secs_f32(staff.return_time),
+                TransformRotateZLens {
+                    start: staff_rotation + swing_angle,
+                    end: staff_rotation,
+                },
+            )),
+        )
+        .with_destroy_on_completed(true),
+    ));
 
     // A spark at the tip while the cast winds up.
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());

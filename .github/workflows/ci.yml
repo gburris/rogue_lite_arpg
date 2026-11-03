@@ -34,8 +34,17 @@ jobs:
           toolchain: ${{ env.toolchain }}
           components: rustfmt
 
+      # The diff also goes into an annotation, so it can be read without the job log.
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: |
+          set +e
+          cargo fmt --all -- --check > fmt.diff 2>&1
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "::error title=cargo fmt diff::$(head -300 fmt.diff | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')"
+          fi
+          cat fmt.diff
+          exit $status
 
   # Check import rules that rustfmt and clippy can't.
   imports:

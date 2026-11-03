@@ -15,6 +15,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn::on_spawn_npcs);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct Npc;

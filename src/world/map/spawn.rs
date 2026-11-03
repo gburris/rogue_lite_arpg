@@ -121,7 +121,7 @@ fn spawn_tiles(
 // ---------------------------------------------------------------------------
 
 /// Collider marker for map geometry that is removed when gameplay ends.
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(DespawnOnExit::<AppState>(AppState::Playing))]
 pub struct MapCollider;
 
@@ -133,16 +133,16 @@ fn spawn_colliders(
     for rect in derive_collider_rects(&blueprint.tiles) {
         let (position, size) = coordinates.tile_rectangle_to_world_rectangle(rect);
 
-        commands.spawn((
-            RigidBody::Static,
-            Collider::rectangle(size.x, size.y),
-            Transform::from_xyz(position.x, position.y, ZLayer::OnGround.z()),
-            MapCollider,
-            CollisionLayers::new(
+        commands.spawn_scene(bsn! {
+            MapCollider
+            ~RigidBody::Static
+            ~Collider::rectangle(size.x, size.y)
+            Transform::from_xyz(position.x, position.y, {ZLayer::OnGround.z()})
+            ~CollisionLayers::new(
                 GameCollisionLayer::HighObstacle,
                 GameCollisionLayer::HIGH_OBSTACLE_FILTERS,
-            ),
-        ));
+            )
+        });
     }
 }
 
@@ -251,7 +251,7 @@ fn spawn_placements(
             }
             PlacementKind::Chest => chests.push(world_spawn_position),
             PlacementKind::Exit => {
-                commands.spawn(portal(&sprites, world_spawn_position));
+                commands.spawn_scene(portal(&sprites, world_spawn_position));
             }
         }
     }

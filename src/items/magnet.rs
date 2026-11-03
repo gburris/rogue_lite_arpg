@@ -5,7 +5,7 @@ use crate::prelude::*;
 
 const MAGNETIC_FORCE: f32 = 2_000_000.0;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(
     CollidingEntities,
     Sensor,

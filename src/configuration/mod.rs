@@ -21,7 +21,7 @@ pub mod prelude {
     };
     #[cfg(feature = "dev")]
     pub use super::view::draw_camera_debug_gizmos;
-    pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, shadow};
+    pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, point_light, shadow};
 }
 
 pub(super) fn plugin(app: &mut App) {

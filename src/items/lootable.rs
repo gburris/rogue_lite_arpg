@@ -95,8 +95,11 @@ fn on_drop_item(
             Visibility::Visible,
             Transform::from_translation(final_position),
             DespawnOnExit(AppState::Playing),
-        ))
-        .with_child(InteractionZone::ITEM_PICKUP);
+        ));
+    commands.spawn_scene(bsn! {
+        ~InteractionZone::ITEM_PICKUP
+        ChildOf(item_entity)
+    });
 }
 
 fn on_lootable_item_interaction(

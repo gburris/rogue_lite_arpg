@@ -1,7 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy::ui_widgets::observe;
 
 use crate::prelude::*;
 
@@ -19,11 +18,11 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Event, Debug)]
 pub struct SpawnChests(pub Vec<Vec2>);
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(YSort::from_offset(BOTTOM_OF_CHEST), DespawnOnExit::<AppState>(AppState::Playing))]
 struct Chest;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(
     Collider::rectangle(26.0, 8.0),
     RigidBody::Static,
@@ -43,7 +42,7 @@ fn on_spawn_chests(
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) {
     for &spawn_position in &chest_spawn_trigger.0 {
-        commands.spawn(chest(&sprites, &sprite_layouts, spawn_position));
+        commands.spawn_scene(chest(&sprites, &sprite_layouts, spawn_position));
     }
 }
 
@@ -51,33 +50,31 @@ fn chest(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     spawn_position: Vec2,
-) -> impl Bundle {
-    (
-        Chest,
-        Sprite {
-            image: sprites.chests_sprite_sheet.clone(),
-            texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.chest.clone(),
-                index: 0,
-            }),
-            ..default()
+) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.chests_sprite_sheet.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.chest.clone(),
+            index: 0,
         },
-        Anchor(Vec2::new(-0.18, 0.0)),
-        AnimationIndices::OneShot(0..=8),
+    );
+    bsn! {
+        Chest
+        sprite
+        Anchor(Vec2::new(-0.18, 0.0))
+        ~{AnimationIndices::OneShot(0..=8)}
         Transform {
-            translation: spawn_position.extend(ZLayer::OnGround.z()),
+            translation: {spawn_position.extend(ZLayer::OnGround.z())},
             scale: Vec3::new(2.0, 2.0, 1.0),
-            ..default()
-        },
-        children![
-            ChestCollider,
-            (
-                InteractionZone::OPEN_CHEST,
-                Transform::from_translation(Vec3::new(0.0, CHEST_HEIGHT_OFFSET, 0.0)),
-            )
-        ],
-        observe(on_interaction_open_chest),
-    )
+        }
+        on(on_interaction_open_chest)
+        Children [
+            ChestCollider
+            --
+            ~InteractionZone::OPEN_CHEST
+            Transform::from_xyz(0.0, CHEST_HEIGHT_OFFSET, 0.0)
+        ]
+    }
 }
 
 fn on_interaction_open_chest(

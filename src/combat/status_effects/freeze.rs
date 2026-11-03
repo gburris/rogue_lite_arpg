@@ -1,6 +1,5 @@
 use bevy::color::palettes::tailwind::BLUE_400;
 use bevy::prelude::*;
-use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
@@ -16,32 +15,24 @@ pub(super) fn apply_frozen(
 ) {
     for (status, status_of) in &status_query {
         commands.entity(status).insert(StatusApplied);
-        commands
-            .entity(status_of.0)
-            .with_child(grounded_ice_vfx(&sprites, status));
+        let target = status_of.0;
+        commands.spawn_scene(bsn! {
+            @grounded_ice_vfx(&sprites, status)
+            ChildOf(target)
+        });
     }
 }
 
-fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Bundle {
-    (
-        Sprite::from_image(sprites.grounded_ice.clone()),
-        StatusVfxOf(status),
-        PointLight2d {
-            color: Color::from(BLUE_400),
-            intensity: 1.4,
-            radius: 80.0,
-            falloff: Falloff::InverseSquare { intensity: 5.0 },
-            core: LightCore::NONE,
-            ..default()
-        },
+/// A sheet of ice under the frozen character's feet.
+fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Scene {
+    let image = sprites.grounded_ice.clone();
+    bsn! {
+        ~Sprite::from_image(image)
+        ~{StatusVfxOf(status)}
+        @point_light(Color::from(BLUE_400), 1.4, 80.0, 5.0)
         Transform {
-            translation: Vec3::new(
-                0.0,
-                CHARACTER_FEET_POS_OFFSET + 16.0,
-                ZLayer::SpriteForeground.z(),
-            ),
+            translation: Vec3::new(0.0, {CHARACTER_FEET_POS_OFFSET + 16.0}, {ZLayer::SpriteForeground.z()}),
             scale: Vec3::new(1.4, 1.4, 1.0),
-            ..default()
-        },
-    )
+        }
+    }
 }

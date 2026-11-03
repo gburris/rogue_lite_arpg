@@ -8,7 +8,7 @@ pub struct Vision {
 }
 
 /// Stores calculated perception data for a given potential or current target.
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct TargetInfo {
     /// Distance to the observed entity.
     pub distance: f32,

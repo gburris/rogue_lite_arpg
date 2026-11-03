@@ -5,7 +5,7 @@ use crate::character::vision::TargetInfo;
 use crate::prelude::*;
 
 /// An innate projectile attack fired from the entity's `Projectiles` template.
-#[derive(Component, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct Breath {
     pub cooldown: f32,
     pub reach: f32,

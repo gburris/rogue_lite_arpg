@@ -59,23 +59,23 @@ impl Default for Damage {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(Sensor)]
 pub struct HurtBox;
 
-pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Bundle {
+pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Scene {
     hurtbox_at(size, membership, HURTBOX_OFFSET)
 }
 
 /// Hurtbox with a custom vertical centre, for sheets whose body does not sit
 /// at the humanoid offset.
-pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> impl Bundle {
-    (
-        HurtBox,
-        Collider::rectangle(size.x, size.y),
-        Transform::from_xyz(0.0, y_offset, 0.0),
-        CollisionLayers::new(membership, [GameCollisionLayer::HitBox]),
-    )
+pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> impl Scene {
+    bsn! {
+        HurtBox
+        ~Collider::rectangle(size.x, size.y)
+        Transform::from_xyz(0.0, y_offset, 0.0)
+        ~CollisionLayers::new(membership, [GameCollisionLayer::HitBox])
+    }
 }
 
 /// Default hurtbox centre relative to the character transform.
@@ -247,7 +247,7 @@ pub(super) fn tick_and_remove_damage_flash(
         });
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Default, Clone)]
 pub struct Knockback(pub f32);
 
 pub(super) fn on_damage_dealt_knockback(

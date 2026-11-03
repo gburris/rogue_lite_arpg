@@ -53,7 +53,7 @@ pub(super) fn plugin(app: &mut App) {
 /// shared by all items, add it as a field here.
 ///
 /// Ex.  All items can be dropped, so drop-related info can go here.
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(Visibility::Hidden)]
 pub struct Item {
     pub value: u32,

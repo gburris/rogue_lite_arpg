@@ -21,7 +21,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(spawn::on_spawn_enemies);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(
     Character,
     VisionCone,

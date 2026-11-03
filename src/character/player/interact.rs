@@ -11,14 +11,14 @@ pub(super) fn plugin(app: &mut App) {
 
 /// Marker component for the sensor added to the player, which must collide with an
 /// `InteractionZone` for a player interaction to be possible.
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(Collider::circle(16.0), Sensor, CollidingEntities)]
 pub struct PlayerInteractionRadius;
 
 /// Component to be spawned as a child of any entity. When the player walks within "radius" and
 /// clicks "interact" (default: Spacebar) this component will trigger the specified
 /// `[#InteractionEvent]` on the `ChildOf` entity (ex. Open Chest, Talk to NPC, Item Pickup).
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(
     Sensor,
     CollisionLayers::new(

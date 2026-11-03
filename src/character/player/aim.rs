@@ -17,25 +17,21 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 pub struct PlayerAim;
 
-pub(super) fn player_aim(mut gizmo_assets: ResMut<Assets<GizmoAsset>>) -> impl Bundle {
-    let mut gizmo = GizmoAsset::default();
+/// The reticle the player aims with, a white ring offset from the player.
+pub(super) fn player_aim() -> impl Scene {
+    let mut reticle = GizmoAsset::default();
+    reticle.circle_2d(Vec2::ZERO, 6., WHITE);
 
-    gizmo.circle_2d(Vec2::ZERO, 6., WHITE);
-
-    (
-        PlayerAim,
+    bsn! {
+        PlayerAim
         Gizmo {
-            handle: gizmo_assets.add(gizmo),
-            line_config: GizmoLineConfig {
-                width: 4.,
-                ..default()
-            },
-            ..default()
-        },
-    )
+            handle: asset_value(reticle),
+            line_config: GizmoLineConfig { width: 4.0 },
+        }
+    }
 }
 
 #[derive(InputAction)]

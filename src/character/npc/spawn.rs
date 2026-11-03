@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
 
 use super::{Npc, NpcKind, VILLAGER, interaction};
 use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
@@ -48,40 +47,43 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let brain = &VILLAGER;
+    let base = base_npc(spawn_position, shadows, &VILLAGER);
 
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
             commands,
-            (
-                base_npc(spawn_position, shadows, brain),
-                helper(sprites, sprite_layouts),
-            ),
+            bsn! {
+                @{base}
+                @villager_sprite(sprites.game_guide_sprite_sheet.clone(), sprite_layouts)
+                on(interaction::on_game_guide_start)
+            },
             ice_staff(sprites, sprite_layouts),
         ),
         NpcKind::Shopkeeper => spawn_npc_with_equipment(
             commands,
-            (
-                base_npc(spawn_position, shadows, brain),
-                shopkeeper(sprites, sprite_layouts),
-            ),
+            bsn! {
+                @{base}
+                @villager_sprite(sprites.shop_keeper_sprite_sheet.clone(), sprite_layouts)
+                on(interaction::on_shop_keeper_store_open)
+            },
             axe(sprites),
         ),
         NpcKind::StatTrainer => spawn_npc_with_equipment(
             commands,
-            (
-                base_npc(spawn_position, shadows, brain),
-                stat_trainer(sprites, sprite_layouts),
-            ),
+            bsn! {
+                @{base}
+                @villager_sprite(sprites.stat_trainer_sprite_sheet.clone(), sprite_layouts)
+                on(interaction::on_stat_trainer_store_open)
+            },
             sword(sprites),
         ),
     }
 }
 
-fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Bundle, mainhand: impl Bundle) {
-    let npc = commands.spawn(npc).id();
+fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Scene, mainhand: impl Scene) {
+    let npc = commands.spawn_scene(npc).id();
 
-    let mainhand = commands.spawn(mainhand).id();
+    let mainhand = commands.spawn_scene(mainhand).id();
 
     commands.trigger(Equip {
         item: mainhand,
@@ -93,63 +95,39 @@ fn base_npc(
     spawn_position: Vec2,
     shadows: &Shadows,
     brain: &'static BrainDefinition,
-) -> impl Bundle {
-    (
-        Npc,
-        Brain::new(brain),
+) -> impl Scene {
+    bsn! {
+        Npc
+        template(move |_| Ok(Brain::new(brain)))
         // Villagers stand briefly between strolls.
-        Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5)),
-        HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0),
-        Kinematics::new(100.0),
-        Health::new(1000.0),
-        Transform::from_translation(spawn_position.extend(ZLayer::OnGround.z())),
-        children![
-            shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
-            (
-                InteractionZone::NPC,
-                Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0),
-            ),
-            hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox),
-            physical_collider(),
-        ],
-    )
+        ~Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5))
+        ~HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0)
+        ~Kinematics::new(100.0)
+        ~Health::new(1000.0)
+        Transform::from_translation({spawn_position.extend(ZLayer::OnGround.z())})
+        Children [
+            @shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0)
+            --
+            ~InteractionZone::NPC
+            Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
+            --
+            @hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::AllyHurtBox)
+            --
+            @physical_collider()
+        ]
+    }
 }
 
-fn helper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Sprite::from_atlas_image(
-            sprites.game_guide_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        observe(interaction::on_game_guide_start),
-    )
-}
-
-fn shopkeeper(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Sprite::from_atlas_image(
-            sprites.shop_keeper_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        observe(interaction::on_shop_keeper_store_open),
-    )
-}
-
-fn stat_trainer(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Sprite::from_atlas_image(
-            sprites.stat_trainer_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        observe(interaction::on_stat_trainer_store_open),
-    )
+/// A villager drawn from the shared enemy sheet layout.
+fn villager_sprite(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        image,
+        TextureAtlas {
+            layout: sprite_layouts.enemy.clone(),
+            ..default()
+        },
+    );
+    bsn! {
+        sprite
+    }
 }

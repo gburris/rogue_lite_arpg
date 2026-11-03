@@ -2,7 +2,6 @@ use avian2d::prelude::*;
 use bevy::color::palettes::tailwind::{BLUE_400, YELLOW_300};
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
-use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
 
 use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
 use crate::prelude::*;
@@ -63,7 +62,7 @@ pub fn fireball(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
-) -> impl Bundle {
+) -> impl Scene {
     fireball_with_speed(sprites, sprite_layouts, angle_offset, FIREBALL_SPEED)
 }
 
@@ -74,43 +73,47 @@ pub fn fireball_with_speed(
     sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
     speed: f32,
-) -> impl Bundle {
-    (
+) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.fire_ball.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.fireball.clone(),
+            index: 0,
+        },
+    );
+    bsn! {
         Projectile {
             damage: Damage::Single(3.0),
             speed,
             spawn_offset: 20.0,
             angle_offset,
-        },
-        Lifespan::new(FIREBALL_RANGE / speed),
-        Sprite::from_atlas_image(
-            sprites.fire_ball.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.fireball.clone(),
-                index: 0,
-            },
-        ),
-        PointLight2d {
-            color: Color::from(YELLOW_300),
-            intensity: 1.4,
-            radius: 50.0,
-            falloff: Falloff::InverseSquare { intensity: 5.0 },
-            core: LightCore::NONE,
-            ..default()
-        },
-        Collider::circle(10.0),
-        AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating)),
-        Knockback(5.0),
-        related!(Effects[(Burning::default(), Lifespan::new(2.5))]),
-    )
+        }
+        Lifespan::new({FIREBALL_RANGE / speed})
+        sprite
+        @point_light(Color::from(YELLOW_300), 1.4, 50.0, 5.0)
+        ~Collider::circle(10.0)
+        AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating))
+        Knockback(5.0)
+        Effects [
+            Burning
+            Lifespan::new(2.5)
+        ]
+    }
 }
 
 pub fn icebolt(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
-) -> impl Bundle {
-    (
+) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.ice_bolt.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.ice_bolt.clone(),
+            index: 0,
+        },
+    );
+    bsn! {
         Projectile {
             damage: Damage::Range {
                 min: 10.0,
@@ -119,28 +122,18 @@ pub fn icebolt(
             speed: 350.0,
             spawn_offset: 26.0,
             angle_offset,
-        },
-        Sprite::from_atlas_image(
-            sprites.ice_bolt.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.ice_bolt.clone(),
-                index: 0,
-            },
-        ),
-        PointLight2d {
-            color: Color::from(BLUE_400),
-            intensity: 1.4,
-            radius: 80.0,
-            falloff: Falloff::InverseSquare { intensity: 5.0 },
-            core: LightCore::NONE,
-            ..default()
-        },
-        Collider::rectangle(40.0, 5.0),
-        AnimationIndices::Cycle((0..=2).cycle()),
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-        Knockback(5.0),
-        related!(Effects[(Frozen, Lifespan::new(0.7))]),
-    )
+        }
+        sprite
+        @point_light(Color::from(BLUE_400), 1.4, 80.0, 5.0)
+        ~Collider::rectangle(40.0, 5.0)
+        ~{AnimationIndices::Cycle((0..=2).cycle())}
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))
+        Knockback(5.0)
+        Effects [
+            Frozen
+            Lifespan::new(0.7)
+        ]
+    }
 }
 
 fn damage_on_projectile_hit(

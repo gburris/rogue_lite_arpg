@@ -9,7 +9,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_drop_gold);
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(
     RigidBody,
     Collider::circle(10.0),
@@ -82,19 +82,21 @@ fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<Sp
         let distance = rng.random_range(20.0..70.0);
         let offset = Vec2::from_angle(angle) * distance;
 
-        commands
-            .spawn(gold(gold_image, value, gold_drop.location + offset))
-            .with_child(Magnet);
+        commands.spawn_scene(gold(gold_image, value, gold_drop.location + offset));
 
         remaining_gold -= value;
         entities_spawned += 1;
     }
 }
 
-fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Bundle {
-    (
-        Gold { value },
-        Sprite::from_image(gold_image),
-        Transform::from_translation(location.extend(ZLayer::OnGround.z())),
-    )
+/// A coin worth `value`, pulled toward the player once they're close.
+fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Scene {
+    bsn! {
+        ~{Gold { value }}
+        ~Sprite::from_image(gold_image)
+        Transform::from_translation({location.extend(ZLayer::OnGround.z())})
+        Children [
+            Magnet
+        ]
+    }
 }

@@ -52,10 +52,10 @@ fn git_output(arguments: &[&str]) -> Option<String> {
 
 /// The Cargo profile the game was built with, as far as features and assertions tell.
 fn profile_name() -> &'static str {
-    if cfg!(feature = "profile") && !cfg!(debug_assertions) {
-        "profiling"
-    } else if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) {
         "dev"
+    } else if cfg!(feature = "profile") {
+        "profiling"
     } else {
         "release"
     }

@@ -38,13 +38,17 @@ fn spawn_enemies_at_reticle(
     }
     if keyboard_input.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
         *kind_index = (*kind_index + 1) % EnemyKind::ALL.len();
-        let kind = EnemyKind::ALL[*kind_index];
-        info!("F2 spawns {kind:?}");
+        info!("F2 spawns {:?}", EnemyKind::ALL[*kind_index]);
         return;
     }
     let center = aim.translation().truncate();
     let kind = EnemyKind::ALL[*kind_index];
-    let spawns = (0..ENEMIES_PER_SPAWN)
+    commands.trigger(SpawnEnemies(enemy_ring(center, kind)));
+    info!("spawned {ENEMIES_PER_SPAWN} {kind:?} at {center}");
+}
+
+fn enemy_ring(center: Vec2, kind: EnemyKind) -> Vec<EnemySpawn> {
+    (0..ENEMIES_PER_SPAWN)
         .map(|index| {
             let angle = index as f32 / ENEMIES_PER_SPAWN as f32 * TAU;
             EnemySpawn {
@@ -52,9 +56,7 @@ fn spawn_enemies_at_reticle(
                 kind,
             }
         })
-        .collect();
-    commands.trigger(SpawnEnemies(spawns));
-    info!("spawned {ENEMIES_PER_SPAWN} {kind:?} at {center}");
+        .collect()
 }
 
 fn toggle_invincible(
@@ -84,9 +86,6 @@ fn defeat_all_enemies(
     }
     // Damage rather than despawn, so defeat runs as it does in a fight.
     for (enemy, health) in &enemies {
-        if health.is_dead() {
-            continue;
-        }
         commands.trigger(AttemptDamage {
             entity: enemy,
             ignore_invulnerable: true,

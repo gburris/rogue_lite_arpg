@@ -229,7 +229,7 @@ RecipeFile(
         ),
         (
             // Enemies packed within reach of the player, the worst case for targeting, aim and
-            // decisions. `STRESS_ARENA` overrides the enemy counts and starts the game here
+            // decisions. `--stress` overrides the enemy counts and starts the game here
             // (see `dev/stress.rs`).
             name: "StressSwarm",
             size: 60,

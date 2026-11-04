@@ -47,9 +47,10 @@ impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
         #[cfg(feature = "stress")]
-        let request = match self.stress_arena.as_deref() {
-            Some(stress_arena) => stress_arena.redirect_hub(request),
-            None => request,
+        let request = if self.stress_arena.is_some() {
+            StressArena::redirect_hub(request)
+        } else {
+            request
         };
         let (recipe, seed) = self.catalog.resolve(request, &mut self.root_rng)?;
         #[cfg(feature = "stress")]

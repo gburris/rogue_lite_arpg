@@ -5,15 +5,16 @@ use std::time::Duration;
 use bevy::diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
 use bevy::prelude::*;
 
-use super::Brain;
+use super::{Brain, Targeting};
 use crate::prelude::*;
 
-/// Number of live brains.
-pub const BRAINS: DiagnosticPath = DiagnosticPath::const_new("game/ai/brains");
+const BRAINS: DiagnosticPath = DiagnosticPath::const_new("game/ai/brains");
+/// Brains with a target. More of them means a heavier fight.
+const ENGAGED: DiagnosticPath = DiagnosticPath::const_new("game/ai/engaged");
 const DECISIONS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decisions");
 const REDECISIONS: DiagnosticPath = DiagnosticPath::const_new("game/ai/redecisions");
 /// Milliseconds spent deciding in the last frame.
-pub const DECIDE_MS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decide_ms");
+const DECIDE_MS: DiagnosticPath = DiagnosticPath::const_new("game/ai/decide_ms");
 
 /// Decisions made and time spent deciding since the last frame was published.
 #[derive(Resource, Default)]
@@ -39,7 +40,7 @@ impl DecisionStats {
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<DecisionStats>();
-    for path in [BRAINS, DECISIONS, REDECISIONS, DECIDE_MS] {
+    for path in [BRAINS, ENGAGED, DECISIONS, REDECISIONS, DECIDE_MS] {
         app.register_diagnostic(Diagnostic::new(path).with_smoothing_factor(0.0));
     }
     app.add_systems(
@@ -48,8 +49,13 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn measure_brains(mut diagnostics: Diagnostics, brains: Query<(), With<Brain>>) {
+fn measure_brains(
+    mut diagnostics: Diagnostics,
+    brains: Query<(), With<Brain>>,
+    engaged_brains: Query<(), (With<Brain>, With<Targeting>)>,
+) {
     diagnostics.add_measurement(&BRAINS, || brains.count() as f64);
+    diagnostics.add_measurement(&ENGAGED, || engaged_brains.count() as f64);
 }
 
 /// Publishes the decisions made since the previous frame, then resets the counts.

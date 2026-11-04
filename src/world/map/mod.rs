@@ -50,7 +50,7 @@ pub mod prelude {
     pub use super::build::{MapRequest, NextMap};
     pub use super::placement::{Anchor, place};
     #[cfg(feature = "stress")]
-    pub use super::recipe::MapRecipe;
+    pub(crate) use super::recipe::MapRecipe;
     pub use super::spawn::{TILE_SIZE, TileToWorld};
 }
 

@@ -26,6 +26,7 @@ mod action;
 mod capability;
 pub(crate) mod considerations;
 mod decide;
+#[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
 mod diagnostics;
 mod engine;
 mod motion;
@@ -44,16 +45,16 @@ use self::capability::{
 };
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
-#[cfg(feature = "stress")]
-pub use self::diagnostics::{BRAINS, DECIDE_MS};
 use self::engine::validate_brain;
 pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
-pub(crate) use self::perception::{ConsiderationInput, Targeting};
+#[cfg(feature = "stress")]
+pub(crate) use self::perception::TargetLock;
+pub(super) use self::perception::Watching;
+pub(crate) use self::perception::{ConsiderationInput, Targeting, VisionCone};
 use self::perception::{DecisionContext, MemoryView};
-pub(super) use self::perception::{VisionCone, Watching};
 use self::running_state::RunningBehavior;
 use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
@@ -277,6 +278,7 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
+    #[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
     app.add_plugins(diagnostics::plugin);
 
     app.configure_sets(

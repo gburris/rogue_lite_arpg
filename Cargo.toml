@@ -27,6 +27,7 @@ tracing = "0.1.44"
 # Plots in Tracy; the same crate that Bevy's `trace_tracy` uses.
 tracy-client = { version = "0.18.3", optional = true }
 bevy_mod_debugdump = { version = "0.16", default-features = false, optional = true }
+clap = { version = "4.6.7", features = ["derive"], optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
@@ -59,8 +60,8 @@ dev_native = [
 # for profiling since it would also remove Bevy's system spans from Tracy captures.
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
 strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
-# Lets `STRESS_ARENA` start the game in the stress arena with an invincible player.
-stress = []
+# Lets `--stress` start the game in the stress arena with an invincible player.
+stress = ["dep:clap"]
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
 profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
 
@@ -76,12 +77,18 @@ default-features = false
 [package.metadata.bevy_cli.web.dev]
 features = ["dev"]
 
-[lints.rust]
+[workspace]
+members = ["xtask"]
+
+[lints]
+workspace = true
+
+[workspace.lints.rust]
 unsafe_code = "forbid"
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 
-[lints.clippy]
+[workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 # Bevy supplies arguments to systems via dependency injection, so it's natural for systems to
 # request more than 7 arguments, which would undesirably trigger this lint.

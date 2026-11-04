@@ -1,6 +1,6 @@
 //! Development tooling: debug rendering and inspection, the F3 overlay, `game/…` diagnostics,
-//! Tracy plots, the F4 hitch marker, the stress arena and the schedule dump. Compiled only for the
-//! `dev`, `stress` and `profile` features, and never needed to boot the game.
+//! Tracy plots, hitch marking and detection, the stress arena and the schedule dump. Compiled
+//! only for the `dev`, `stress` and `profile` features, and never needed to boot the game.
 
 #[cfg(feature = "dev")]
 mod debug;

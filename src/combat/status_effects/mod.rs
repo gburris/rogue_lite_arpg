@@ -12,6 +12,8 @@ pub mod prelude {
 
 use bevy::prelude::*;
 
+#[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
+pub(super) use self::status::StatusOf;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

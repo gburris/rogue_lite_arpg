@@ -109,6 +109,7 @@ tracy-profiler runs/baseline.tracy
 ```
 cargo run [--profile profiling --no-default-features --features profile]
           -- --stress <enemies> [--seconds <seconds>] [--engagement all|sight|none]
+             [--player still|circle|strafe]
 ```
 
 Starts the game directly in a small arena: an invincible player with that many enemies packed
@@ -122,6 +123,7 @@ The flags exist in dev and profiling builds.
 | `--stress` | none (normal game) | Total enemies |
 | `--seconds` | none (runs until closed) | Quits after a 5 s warm-up plus this many seconds, and writes the summary line |
 | `--engagement` | `all` | How enemies find the player (see below) |
+| `--player` | `still` | How the player moves: stands still, walks a slow circle, or strafes left and right |
 
 The `MAP_SEED` environment variable fixes the map layout and enemy placement, in the arena or
 not.
@@ -135,7 +137,7 @@ not.
 **Output:** with `--seconds`, one summary line in the log, also appended to
 `runs/stress_summary.txt`:
 
-- the settings: `arena`, `engagement`, `seconds`;
+- the settings: `arena`, `engagement`, `player`, `seconds`;
 - `startup_seconds`: first frame to arena, covering asset loading and map spawn;
 - the build: `git` (short commit hash), `dirty` (uncommitted changes), `profile` (`dev`,
   `release` or `profiling`) and `cpu`, with `-` for a value that couldn't be read. `git` and
@@ -149,6 +151,7 @@ not.
 ```sh
 cargo run -- --stress 1000                                     # dev build, until closed
 cargo run -- --stress 1000 --seconds 60 --engagement none      # timed run, crowd only
+cargo run -- --stress 500 --player circle                      # moving player and camera
 cargo run --profile profiling --no-default-features --features profile -- --stress 1000
 ```
 
@@ -204,7 +207,8 @@ cargo run -p xtask -- sweep --counts 1000 --engagement all,none --milestone subs
 cargo run -p xtask -- compare <path>... [--outlier-fraction <fraction>]
 ```
 
-Compares stress summary lines, one row per source, enemy count and engagement.
+Compares stress summary lines, one row per source, enemy count, engagement and
+player script.
 
 **Options:**
 

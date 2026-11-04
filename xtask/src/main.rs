@@ -22,7 +22,7 @@ struct Cli {
 enum Command {
     /// Records Tracy captures of the profiling build in the stress arena, then compares them.
     Sweep(sweep::SweepArgs),
-    /// Compares stress summary lines, one row per source, enemy count and engagement.
+    /// Compares stress summary lines, one row per source, enemy count, engagement and player.
     Compare(compare::CompareArgs),
     /// Prints ms per frame for the zones that matter, one column per Tracy capture.
     PerfReport(perf_report::PerfReportArgs),

@@ -5,10 +5,12 @@
 //! screen is skipped and vsync is off, so frame time shows real cost.
 //!
 //! - `--engagement` picks how enemies find the player (see [`Engagement`]).
+//! - `--player` picks how the player moves (see [`PlayerScript`]).
 //! - `--seconds 60` quits after a warm-up plus that many seconds, and appends one summary line to
 //!   `runs/stress_summary.txt` and the log.
 
 use std::collections::BTreeMap;
+use std::f32::consts::TAU;
 use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
@@ -30,11 +32,22 @@ const WARMUP_SECONDS: f32 = 5.0;
 /// File the summary line is appended to, since a profiling build has no console.
 const SUMMARY_PATH: &str = "runs/stress_summary.txt";
 
-/// The arena's enemy count and [`Engagement`]. Present only when the game runs with `--stress`.
+/// Fraction of max speed the scripted player walks at.
+const SCRIPTED_SPEED: f32 = 0.5;
+
+/// Seconds for one lap of [`PlayerScript::Circle`].
+const CIRCLE_LAP_SECONDS: f32 = 8.0;
+
+/// Seconds for each leg of [`PlayerScript::Strafe`].
+const STRAFE_LEG_SECONDS: f32 = 2.0;
+
+/// The arena's enemy count, [`Engagement`] and [`PlayerScript`]. Present only when the game runs
+/// with `--stress`.
 #[derive(Resource, Clone, Copy, Debug)]
 pub struct StressArena {
     enemies_per_kind: u32,
     engagement: Engagement,
+    player_script: PlayerScript,
 }
 
 /// How enemies find the player, from `--engagement`:
@@ -51,6 +64,19 @@ enum Engagement {
     Sight,
     #[value(name = "none")]
     Blind,
+}
+
+/// How the player moves, from `--player`:
+///
+/// - `still` (default): stands in place.
+/// - `circle`: walks a slow circle, so the camera follows and enemies keep turning.
+/// - `strafe`: walks left and right.
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+enum PlayerScript {
+    #[default]
+    Still,
+    Circle,
+    Strafe,
 }
 
 /// The game's command line, such as `--stress 1000 --seconds 30 --engagement sight`. `main`
@@ -80,6 +106,15 @@ pub(crate) struct StressArgs {
         help = "How enemies find the player"
     )]
     engagement: Engagement,
+
+    #[arg(
+        long,
+        value_enum,
+        default_value_t,
+        requires = "enemies",
+        help = "How the player moves"
+    )]
+    player: PlayerScript,
 }
 
 /// Frame times and `game/…` diagnostics collected while `--seconds` is set.
@@ -109,12 +144,17 @@ pub(super) fn plugin(app: &mut App) {
     let Some(requested_enemies) = stress_args.enemies else {
         return;
     };
-    let stress_arena = StressArena::new(requested_enemies, stress_args.engagement);
+    let stress_arena = StressArena::new(
+        requested_enemies,
+        stress_args.engagement,
+        stress_args.player,
+    );
     info!(
-        "Stress arena: {} enemies of each of {} kinds, engagement {}",
+        "Stress arena: {} enemies of each of {} kinds, engagement {}, player {}",
         stress_arena.enemies_per_kind,
         enemy_kind_count(),
-        stress_arena.engagement.name()
+        stress_arena.engagement.name(),
+        stress_arena.player_script.name()
     );
 
     app.insert_resource(stress_arena);
@@ -122,6 +162,10 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_enemy_added);
     app.add_systems(OnEnter(AppState::StartScreen), skip_start_screen);
     app.add_systems(Startup, disable_vsync);
+    app.add_systems(
+        Update,
+        move_scripted_player.in_set(InGameSystems::PlayerInput),
+    );
 
     let Some(measure_seconds) = stress_args.seconds else {
         return;
@@ -143,10 +187,11 @@ fn enemy_kind_count() -> u32 {
 
 impl StressArena {
     /// Splits the requested enemies evenly across kinds, dropping the remainder.
-    fn new(requested_enemies: u32, engagement: Engagement) -> Self {
+    fn new(requested_enemies: u32, engagement: Engagement, player_script: PlayerScript) -> Self {
         Self {
             enemies_per_kind: requested_enemies / enemy_kind_count(),
             engagement,
+            player_script,
         }
     }
 
@@ -189,6 +234,29 @@ impl Engagement {
     }
 }
 
+impl PlayerScript {
+    /// The name `--player` takes, also written to the summary line.
+    fn name(self) -> &'static str {
+        match self {
+            Self::Still => "still",
+            Self::Circle => "circle",
+            Self::Strafe => "strafe",
+        }
+    }
+
+    /// The way the player walks after `seconds` of game time, or `None` to stand still.
+    fn direction(self, seconds: f32) -> Option<Vec2> {
+        match self {
+            Self::Still => None,
+            Self::Circle => Some(Vec2::from_angle(seconds / CIRCLE_LAP_SECONDS * TAU)),
+            Self::Strafe => {
+                let leg = (seconds / STRAFE_LEG_SECONDS) as u32;
+                Some(if leg % 2 == 0 { Vec2::X } else { Vec2::NEG_X })
+            }
+        }
+    }
+}
+
 /// Starts the game as if the start button was pressed, so a sweep needs no input.
 fn skip_start_screen(mut next_app_state: ResMut<NextState<AppState>>) {
     next_app_state.set(AppState::AssetLoading);
@@ -201,6 +269,16 @@ fn disable_vsync(mut window: Single<&mut Window, With<PrimaryWindow>>) {
 
 fn on_player_added(player_added: On<Add, Player>, mut commands: Commands) {
     commands.entity(player_added.entity).insert(Invincible);
+}
+
+fn move_scripted_player(
+    stress_arena: Res<StressArena>,
+    time: Res<Time>,
+    mut player_kinematics: Single<&mut Kinematics, With<Player>>,
+) {
+    if let Some(direction) = stress_arena.player_script.direction(time.elapsed_secs()) {
+        player_kinematics.move_in_direction(direction, SCRIPTED_SPEED);
+    }
 }
 
 /// Applies the run's [`Engagement`] to each enemy as it spawns.
@@ -244,7 +322,7 @@ fn sample_stress_run(
         return;
     }
 
-    stress_run.report(stress_arena.engagement);
+    stress_run.report(*stress_arena);
     commands.remove_resource::<StressRun>();
     app_exit.write(AppExit::Success);
 }
@@ -275,18 +353,19 @@ impl StressRun {
     }
 
     /// Logs the summary and appends it to [`SUMMARY_PATH`].
-    fn report(&self, engagement: Engagement) {
-        let summary = self.summary(engagement);
+    fn report(&self, stress_arena: StressArena) {
+        let summary = self.summary(stress_arena);
         info!("{summary}");
         log_summary_to_file(&summary);
     }
 
     /// One line: the run's settings, build, frame stats, then the mean of each `game/…` diagnostic.
-    fn summary(&self, engagement: Engagement) -> String {
+    fn summary(&self, stress_arena: StressArena) -> String {
         let mut summary = format!(
-            "stress summary: arena={} engagement={} seconds={} startup_seconds={:.2}",
+            "stress summary: arena={} engagement={} player={} seconds={} startup_seconds={:.2}",
             self.total_enemies,
-            engagement.name(),
+            stress_arena.engagement.name(),
+            stress_arena.player_script.name(),
             self.measure_seconds,
             self.started_at.unwrap_or(0.0),
         );

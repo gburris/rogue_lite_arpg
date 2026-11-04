@@ -1,4 +1,5 @@
-//! Compares the summary lines stress runs write, grouped by source, enemy count and engagement.
+//! Compares the summary lines stress runs write, grouped by source, enemy count, engagement and
+//! player script.
 //!
 //! A run whose mean projectile count is far from its group's median is listed as an outlier: it
 //! measured a different fight, so leave it out of an A/B.
@@ -17,6 +18,9 @@ const SUMMARY_PREFIX: &str = "stress summary:";
 
 /// File a sweep or milestone folder keeps its summary lines in.
 pub(super) const FOLDER_SUMMARY_FILE: &str = "summary.txt";
+
+/// Player script of summary lines written before the `player` field existed.
+const DEFAULT_PLAYER: &str = "still";
 
 /// Default for [`CompareArgs::outlier_fraction`].
 pub(super) const DEFAULT_OUTLIER_FRACTION: f64 = 0.25;
@@ -44,6 +48,7 @@ struct StressRun {
     run_number: usize,
     enemies: u32,
     engagement: String,
+    player: String,
     median_ms: Option<f64>,
     p99_ms: Option<f64>,
     max_ms: Option<f64>,
@@ -52,11 +57,12 @@ struct StressRun {
     lights: Option<f64>,
 }
 
-/// The runs that share a source, engagement and enemy count. Ordered for printing.
+/// The runs that share a source, engagement, player script and enemy count. Ordered for printing.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct GroupKey {
     source: String,
     engagement: String,
+    player: String,
     enemies: u32,
 }
 
@@ -75,7 +81,7 @@ pub(super) fn print_comparison(paths: &[PathBuf], outlier_fraction: f64) -> Resu
     let groups = group_runs(&runs);
 
     println!(
-        "Median of the runs' values per source, enemy count and engagement \
+        "Median of the runs' values per source, enemy count, engagement and player \
          (MaxMs is the slowest frame of any run):\n"
     );
     println!("{}", group_table(&groups));
@@ -155,6 +161,11 @@ fn parse_run(fields_text: &str, source: &str, run_number: usize) -> Result<Stres
         run_number,
         enemies: required("arena")?.parse().context("arena is not a count")?,
         engagement: required("engagement")?.to_owned(),
+        player: fields
+            .get("player")
+            .copied()
+            .unwrap_or(DEFAULT_PLAYER)
+            .to_owned(),
         median_ms: number("median_frame_ms")?,
         p99_ms: number("p99_frame_ms")?,
         max_ms: number("max_frame_ms")?,
@@ -192,6 +203,7 @@ fn group_runs(runs: &[StressRun]) -> BTreeMap<GroupKey, Vec<&StressRun>> {
         let key = GroupKey {
             source: run.source.clone(),
             engagement: run.engagement.clone(),
+            player: run.player.clone(),
             enemies: run.enemies,
         };
         groups.entry(key).or_default().push(run);
@@ -204,6 +216,7 @@ fn group_table(groups: &BTreeMap<GroupKey, Vec<&StressRun>>) -> Table {
         "Source",
         "Enemies",
         "Engagement",
+        "Player",
         "Runs",
         "MedianMs",
         "P99Ms",
@@ -223,6 +236,7 @@ fn group_table(groups: &BTreeMap<GroupKey, Vec<&StressRun>>) -> Table {
             key.source.clone(),
             key.enemies.to_string(),
             key.engagement.clone(),
+            key.player.clone(),
             runs.len().to_string(),
             median_of(|run| run.median_ms),
             median_of(|run| run.p99_ms),
@@ -266,6 +280,7 @@ fn outlier_table(outliers: &[&StressRun]) -> Table {
         "Run",
         "Enemies",
         "Engagement",
+        "Player",
         "MedianMs",
         "P99Ms",
         "Projectiles",
@@ -278,6 +293,7 @@ fn outlier_table(outliers: &[&StressRun]) -> Table {
             run.run_number.to_string(),
             run.enemies.to_string(),
             run.engagement.clone(),
+            run.player.clone(),
             optional_cell(run.median_ms),
             optional_cell(run.p99_ms),
             optional_cell(run.projectiles),

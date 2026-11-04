@@ -281,7 +281,10 @@ dot -Tsvg runs/schedules/update.dot -o runs/schedules/update.svg
 | F1 | dev | Opens the AI test arena, with a fresh seed |
 | F3 | dev | Cycles the overlay: off, FPS graph, and a panel of every diagnostic with sparklines |
 | F4 | dev, profiling | Logs `hitch marked at <seconds> s` |
+| F5 | dev | Pauses or resumes game time |
 | F6 | dev | Opens the next map recipe in file order, with a fresh seed |
+| F7 | dev | While paused, runs until the next fixed step |
+| F8, F9 | dev | Halves or doubles game speed, from 1/8x to 8x |
 
 Dev and profiling builds also log `hitch: ...` for every frame at least 3 times the recent
 average and slower than 60 fps.

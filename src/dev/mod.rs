@@ -1,6 +1,6 @@
 //! Development tooling: debug rendering and inspection, the F3 overlay, `game/…` diagnostics,
-//! Tracy plots, hitch marking and detection, the stress arena and the schedule dump. Compiled
-//! only for the `dev`, `stress` and `profile` features, and never needed to boot the game.
+//! Tracy plots, hitch marking and detection, time controls, the stress arena and the schedule dump.
+//! Compiled only for the `dev`, `stress` and `profile` features, and never needed to boot the game.
 
 #[cfg(feature = "stress")]
 mod build_info;
@@ -15,6 +15,8 @@ mod hud;
 mod schedule_dump;
 #[cfg(feature = "stress")]
 mod stress;
+#[cfg(feature = "dev")]
+mod time_control;
 #[cfg(feature = "profile")]
 mod tracy;
 
@@ -34,7 +36,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(diagnostics::plugin);
 
     #[cfg(feature = "dev")]
-    app.add_plugins(debug::plugin);
+    app.add_plugins((debug::plugin, time_control::plugin));
 
     #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
     app.add_plugins(hud::plugin);

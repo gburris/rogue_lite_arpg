@@ -2,6 +2,8 @@
 //! Tracy plots, hitch marking and detection, the stress arena and the schedule dump. Compiled
 //! only for the `dev`, `stress` and `profile` features, and never needed to boot the game.
 
+#[cfg(feature = "stress")]
+mod build_info;
 #[cfg(feature = "dev")]
 mod debug;
 mod diagnostics;

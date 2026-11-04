@@ -18,6 +18,7 @@ use bevy::prelude::*;
 use bevy::window::{PresentMode, PrimaryWindow};
 use clap::{Parser, ValueEnum};
 
+use super::build_info::BuildInfo;
 use crate::prelude::*;
 
 /// Recipe the stress arena replaces the hub with.
@@ -280,7 +281,7 @@ impl StressRun {
         log_summary_to_file(&summary);
     }
 
-    /// One line: the run's settings, frame stats, then the mean of every `game/…` diagnostic.
+    /// One line: the run's settings, build, frame stats, then the mean of each `game/…` diagnostic.
     fn summary(&self, engagement: Engagement) -> String {
         let mut summary = format!(
             "stress summary: arena={} engagement={} seconds={} startup_seconds={:.2}",
@@ -290,6 +291,7 @@ impl StressRun {
             self.started_at.unwrap_or(0.0),
         );
 
+        BuildInfo::read().write_fields(&mut summary);
         FrameStats::from_frame_times(&self.frame_ms).write_fields(&mut summary);
         for (path, values) in &self.diagnostic_values {
             write!(summary, " mean_{path}={:.3}", mean(values))

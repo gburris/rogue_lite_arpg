@@ -464,6 +464,7 @@ dependencies = [
  "rand_chacha",
  "ron",
  "serde",
+ "sysinfo",
  "tracing",
  "tracy-client",
 ]

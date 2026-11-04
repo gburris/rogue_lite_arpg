@@ -28,6 +28,8 @@ tracing = "0.1.44"
 tracy-client = { version = "0.18.3", optional = true }
 bevy_mod_debugdump = { version = "0.16", default-features = false, optional = true }
 clap = { version = "4.6.7", features = ["derive"], optional = true }
+# CPU name for the stress summary line; the same version Bevy's `sysinfo_plugin` uses.
+sysinfo = { version = "0.38.4", default-features = false, features = ["system"], optional = true }
 
 [target.wasm32-unknown-unknown.dependencies]
 getrandom = { version = "0.4.3", features = ["wasm_js"] }
@@ -61,7 +63,7 @@ dev_native = [
 # (see <https://github.com/bevyengine/bevy/blob/main/docs/profiling.md#tracy-profiler>)
 strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
 # Lets `--stress` start the game in the stress arena with an invincible player.
-stress = ["dep:clap"]
+stress = ["dep:clap", "dep:sysinfo"]
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
 profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
 

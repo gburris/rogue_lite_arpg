@@ -137,6 +137,9 @@ not.
 
 - the settings: `arena`, `engagement`, `seconds`;
 - `startup_seconds`: first frame to arena, covering asset loading and map spawn;
+- the build: `git` (short commit hash), `dirty` (uncommitted changes), `profile` (`dev`,
+  `release` or `profiling`) and `cpu`, with `-` for a value that couldn't be read. `git` and
+  `dirty` describe the checkout the game runs in when the run ends;
 - `frames`, `median_frame_ms`, `p99_frame_ms` and `max_frame_ms`;
 - the mean of every `game/...` diagnostic, such as `mean_game/ai/engaged` and
   `mean_game/projectiles`.

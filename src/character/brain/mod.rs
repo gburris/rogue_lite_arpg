@@ -26,7 +26,7 @@ mod action;
 mod capability;
 pub(crate) mod considerations;
 mod decide;
-#[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
+#[cfg(feature = "stress")]
 mod diagnostics;
 mod engine;
 mod motion;
@@ -278,7 +278,7 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
-    #[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
+    #[cfg(feature = "stress")]
     app.add_plugins(diagnostics::plugin);
 
     app.configure_sets(

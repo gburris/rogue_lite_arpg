@@ -52,10 +52,11 @@ enum Engagement {
     Blind,
 }
 
-/// The game's command line, such as `--stress 1000 --seconds 30 --engagement sight`.
-#[derive(Parser, Debug)]
+/// The game's command line, such as `--stress 1000 --seconds 30 --engagement sight`. `main`
+/// parses it before building the app, so `--help` and bad flags exit before a window opens.
+#[derive(Resource, Parser, Clone, Copy, Debug)]
 #[command(about = "Baba Yaga. These flags start the stress arena.")]
-struct StressArgs {
+pub(crate) struct StressArgs {
     #[arg(
         long = "stress",
         value_name = "ENEMIES",
@@ -100,7 +101,10 @@ struct FrameStats {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    let stress_args = StressArgs::parse();
+    let stress_args = app
+        .world_mut()
+        .remove_resource::<StressArgs>()
+        .expect("main inserts StressArgs before adding plugins");
     let Some(requested_enemies) = stress_args.enemies else {
         return;
     };

@@ -26,9 +26,16 @@ wasm-pack build --target web --out-dir dist
 
 # Commands
 
-Examples use PowerShell. Run these from the repository root. Run Cargo commands one at a time, since each takes the build
-lock. Environment variables stay set in the PowerShell window until you remove them with
-`Remove-Item Env:<NAME>`.
+Run these from the repository root, in any shell. Run Cargo commands one at a time, since each
+takes the build lock. Paths use `/`, which works in PowerShell too.
+
+The game reads two environment variables, `MAP_SEED` and `DUMP_SCHEDULES`. Set one for a single
+command like this:
+
+```sh
+MAP_SEED=7 cargo run                                       # bash
+$env:MAP_SEED = "7"; cargo run; Remove-Item Env:MAP_SEED   # PowerShell
+```
 
 Each command below lists its usage, then options, output and examples where it has them.
 
@@ -82,20 +89,20 @@ Start click, or `hitch: ...`).
 
 **Examples:**
 
-```powershell
-# Terminal 1: start the capture first, then the game.
-New-Item -ItemType Directory -Force runs | Out-Null
-tracy-capture -o runs\baseline.tracy -f
+```sh
+# Terminal 1: start the capture first, then the game. The runs folder must exist.
+mkdir runs
+tracy-capture -o runs/baseline.tracy -f
 
 # Terminal 2: run the game, play the scenario, then close it.
 cargo run --profile profiling --no-default-features --features profile
 
 # Open the finished capture, or run it with no argument and click Connect for a live view.
-tracy-profiler runs\baseline.tracy
+tracy-profiler runs/baseline.tracy
 ```
 
 **Notes:** a `profiling` build has no console, so redirect stderr to read a panic:
-`.\target\profiling\baba_yaga.exe 2> panic.log`.
+`target/profiling/baba_yaga 2> panic.log`.
 
 ## Stress arena
 
@@ -116,7 +123,7 @@ The flags exist in dev and profiling builds.
 | `--seconds` | none (runs until closed) | Quits after a 5 s warm-up plus this many seconds, and writes the summary line |
 | `--engagement` | `all` | How enemies find the player (see below) |
 
-`MAP_SEED` (an environment variable) fixes the map layout and enemy placement, in the arena or
+The `MAP_SEED` environment variable fixes the map layout and enemy placement, in the arena or
 not.
 
 | `--engagement` | Enemies | Use it for |
@@ -126,7 +133,7 @@ not.
 | `none` | Are blind and only wander | The cost of the crowd without combat |
 
 **Output:** with `--seconds`, one summary line in the log, also appended to
-`runs\stress_summary.txt`:
+`runs/stress_summary.txt`:
 
 - the settings: `arena`, `engagement`, `seconds`;
 - `startup_seconds`: first frame to arena, covering asset loading and map spawn;
@@ -136,7 +143,7 @@ not.
 
 **Examples:**
 
-```powershell
+```sh
 cargo run -- --stress 1000                                     # dev build, until closed
 cargo run -- --stress 1000 --seconds 60 --engagement none      # timed run, crowd only
 cargo run --profile profiling --no-default-features --features profile -- --stress 1000
@@ -174,15 +181,15 @@ repeat in the stress arena. Each run quits by itself.
 | `--seconds` | `30` | Measured seconds per run, after the 5 s warm-up |
 | `--capture-seconds` | none (whole run) | Stops each capture early. Use 15-20 before exporting events, since a 30 s capture exports about 2.5 GB |
 | `--map-seed` | `1` | Map layout and enemy placement |
-| `--milestone` | none | Writes to `runs\milestones\<date>_<name>`, which no later sweep overwrites |
-| `--output-directory` | `runs\stress` | Where captures go without `--milestone`. A rerun overwrites them |
+| `--milestone` | none | Writes to `runs/milestones/<date>_<name>`, which no later sweep overwrites |
+| `--output-directory` | `runs/stress` | Where captures go without `--milestone`. A rerun overwrites them |
 
 **Output:** `<engagement>_<count>_r<repeat>.tracy` captures and a `summary.txt` of the sweep's
 summary lines, both in the output folder. It then prints the runs through `compare`.
 
 **Examples:**
 
-```powershell
+```sh
 cargo run -p xtask -- sweep
 cargo run -p xtask -- sweep --counts 500,1000 --repeats 3 --capture-seconds 20
 cargo run -p xtask -- sweep --counts 1000 --engagement all,none --milestone substeps
@@ -209,9 +216,9 @@ shows they measured a different fight.
 
 **Examples:**
 
-```powershell
-cargo run -p xtask -- compare runs\stress
-cargo run -p xtask -- compare runs\milestones\2026-11-01_before runs\milestones\2026-11-03_after
+```sh
+cargo run -p xtask -- compare runs/stress
+cargo run -p xtask -- compare runs/milestones/2026-11-01_before runs/milestones/2026-11-03_after
 ```
 
 ### perf-report
@@ -237,33 +244,31 @@ so compare captures made the same way.
 
 **Examples:**
 
-```powershell
-cargo run -p xtask -- perf-report runs\stress
-cargo run -p xtask -- perf-report runs\baseline.tracy runs\stress\all_1000_r1.tracy
+```sh
+cargo run -p xtask -- perf-report runs/stress
+cargo run -p xtask -- perf-report runs/baseline.tracy runs/stress/all_1000_r1.tracy
 ```
 
 ## Schedule graphs
 
 ```
-$env:DUMP_SCHEDULES = "1"
-cargo run
+DUMP_SCHEDULES=1 cargo run
 dot -Tsvg <file.dot> -o <file.svg>
 ```
 
-Writes the schedule graphs from a dev build, then exits.
+With `DUMP_SCHEDULES` set to any value, a dev build writes the schedule graphs, then exits.
 
 **Requires:** Graphviz on `PATH` to render the graphs.
 
-**Output:** `runs\schedules\update.dot` and `runs\schedules\fixed_update.dot`.
+**Output:** `runs/schedules/update.dot` and `runs/schedules/fixed_update.dot`.
 
 **Examples:**
 
-```powershell
-$env:DUMP_SCHEDULES = "1"
-cargo run
-Remove-Item Env:DUMP_SCHEDULES
+```sh
+DUMP_SCHEDULES=1 cargo run                                             # bash
+$env:DUMP_SCHEDULES = "1"; cargo run; Remove-Item Env:DUMP_SCHEDULES   # PowerShell
 
-dot -Tsvg runs\schedules\update.dot -o runs\schedules\update.svg
+dot -Tsvg runs/schedules/update.dot -o runs/schedules/update.svg
 ```
 
 ## Dev keys and logs
@@ -278,4 +283,4 @@ dot -Tsvg runs\schedules\update.dot -o runs\schedules\update.svg
 Dev and profiling builds also log `hitch: ...` for every frame at least 3 times the recent
 average and slower than 60 fps.
 
-`runs\` is ignored by git.
+`runs/` is ignored by git.

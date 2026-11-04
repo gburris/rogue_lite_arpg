@@ -20,6 +20,8 @@ use bevy::prelude::*;
 
 #[cfg(feature = "dev")]
 pub use self::schedule_dump::dump_schedules_if_requested;
+#[cfg(feature = "stress")]
+pub(super) use self::stress::StressArgs;
 
 pub mod prelude {
     #[cfg(feature = "stress")]

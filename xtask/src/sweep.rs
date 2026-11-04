@@ -89,7 +89,8 @@ pub(super) struct SweepArgs {
     output_directory: PathBuf,
 }
 
-/// The values the game's `--engagement` takes.
+/// The values the game's `--engagement` takes. Keep in step with `Engagement` in
+/// `src/dev/stress.rs`.
 #[derive(ValueEnum, Clone, Copy, Debug)]
 enum Engagement {
     All,
@@ -150,10 +151,12 @@ fn repository_root() -> PathBuf {
         .to_owned()
 }
 
+/// Builds with the `cargo` that launched `xtask`, falling back to the one on `PATH`.
 fn build_profiling_game() -> Result<()> {
+    let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     run_to_completion(
         "cargo build",
-        Command::new("cargo").args([
+        Command::new(cargo).args([
             "build",
             "--profile",
             PROFILING_PROFILE,

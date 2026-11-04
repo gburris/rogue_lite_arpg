@@ -1,5 +1,5 @@
 mod damage;
-#[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
+#[cfg(feature = "stress")]
 mod diagnostics;
 mod health;
 #[cfg(feature = "stress")]
@@ -32,7 +32,7 @@ pub mod prelude {
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((projectile::plugin, status_effects::plugin));
-    #[cfg(any(feature = "dev", feature = "profile", feature = "stress"))]
+    #[cfg(feature = "stress")]
     app.add_plugins(diagnostics::plugin);
 
     app.add_systems(

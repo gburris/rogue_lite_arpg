@@ -4,12 +4,14 @@
 #![cfg_attr(not(feature = "dev"), windows_subsystem = "windows")]
 
 use bevy::prelude::*;
+#[cfg(feature = "stress")]
+use clap::Parser;
 
 mod animation;
 mod character;
 mod combat;
 mod configuration;
-#[cfg(any(feature = "dev", feature = "stress", feature = "profile"))]
+#[cfg(feature = "stress")]
 mod dev;
 mod items;
 mod lifespan;
@@ -32,7 +34,12 @@ pub mod prelude {
 }
 
 fn main() {
+    #[cfg(feature = "stress")]
+    let stress_args = dev::StressArgs::parse();
+
     let mut app = App::new();
+    #[cfg(feature = "stress")]
+    app.insert_resource(stress_args);
     app.add_plugins(plugin);
     #[cfg(feature = "dev")]
     if dev::dump_schedules_if_requested(&mut app) {
@@ -56,6 +63,6 @@ fn plugin(app: &mut App) {
     // UI
     app.add_plugins((ui::plugin, menu::plugin));
 
-    #[cfg(any(feature = "dev", feature = "stress", feature = "profile"))]
+    #[cfg(feature = "stress")]
     app.add_plugins(dev::plugin);
 }

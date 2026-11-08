@@ -49,7 +49,7 @@ use ::bevy::prelude::*;
 pub mod prelude {
     pub use super::build::{MapRequest, NextMap};
     pub use super::placement::{Anchor, place};
-    #[cfg(feature = "stress")]
+    #[cfg(feature = "dev_tools")]
     pub(crate) use super::recipe::MapRecipe;
     pub use super::spawn::{TILE_SIZE, TileToWorld};
 }

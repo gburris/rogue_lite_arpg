@@ -12,7 +12,7 @@ pub mod prelude {
 
 use bevy::prelude::*;
 
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 pub(super) use self::status::StatusOf;
 use crate::prelude::*;
 

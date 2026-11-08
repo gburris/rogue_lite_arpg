@@ -1,22 +1,19 @@
 //! Development tooling: debug rendering and inspection, the F3 overlay, `game/…` diagnostics,
 //! Tracy plots, hitch marking and detection, time controls, cheat keys, the stress arena and the
-//! schedule dump. Compiled only for the `dev`, `stress` and `tracy` features, and never needed to
-//! boot the game.
+//! schedule dump. Compiled only with the `dev_tools` feature, and never needed to boot the game.
 
-#[cfg(feature = "stress")]
 mod build_info;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
 mod cheats;
 #[cfg(feature = "dev")]
 mod debug;
 mod diagnostics;
-#[cfg(all(any(feature = "dev", feature = "tracy"), not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 mod hitch;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
 mod hud;
 #[cfg(feature = "dev")]
 mod schedule_dump;
-#[cfg(feature = "stress")]
 mod stress;
 #[cfg(feature = "dev")]
 mod time_control;
@@ -27,11 +24,9 @@ use bevy::prelude::*;
 
 #[cfg(feature = "dev")]
 pub use self::schedule_dump::dump_schedules_if_requested;
-#[cfg(feature = "stress")]
 pub(super) use self::stress::StressArgs;
 
 pub mod prelude {
-    #[cfg(feature = "stress")]
     pub use super::stress::StressArena;
 }
 
@@ -44,14 +39,13 @@ pub(super) fn plugin(app: &mut App) {
     #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
     app.add_plugins((cheats::plugin, hud::plugin));
 
-    #[cfg(all(any(feature = "dev", feature = "tracy"), not(target_arch = "wasm32")))]
+    #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins(hitch::plugin);
 
     // `bevy/trace_tracy` makes the render plugin add this itself.
     #[cfg(all(feature = "dev", not(feature = "tracy")))]
     app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
 
-    #[cfg(feature = "stress")]
     app.add_plugins(stress::plugin);
 
     #[cfg(feature = "tracy")]

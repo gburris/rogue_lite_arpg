@@ -4,7 +4,7 @@
 
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use rand::RngExt;
@@ -12,7 +12,7 @@ use rand::RngExt;
 use super::capability::{
     CapabilityComponents, CapabilityProfiles, MotionActionTable, build_capability_profiles,
 };
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
 use super::engine::{
     Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
@@ -61,7 +61,7 @@ pub(super) fn on_release_finished_motion(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
-    #[cfg(feature = "stress")] mut decision_stats: ResMut<DecisionStats>,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     let Ok((mut brain, decision_input_components, components, mut score_trace)) =
@@ -76,7 +76,7 @@ pub(super) fn on_release_finished_motion(
     if brain.finish_committed_behavior(finished.behavior_run_id) {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::after_motion").entered();
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         let started = Instant::now();
         redecide_now(
             &mut brain,
@@ -86,7 +86,7 @@ pub(super) fn on_release_finished_motion(
             score_trace.as_deref_mut(),
             now,
         );
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision(started.elapsed());
     }
 }
@@ -99,7 +99,7 @@ pub(super) fn on_finish_action(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
-    #[cfg(feature = "stress")] mut decision_stats: ResMut<DecisionStats>,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     let Ok((mut brain, decision_input_components, components, mut score_trace)) =
@@ -126,7 +126,7 @@ pub(super) fn on_finish_action(
     if brain.finish_committed_behavior(finished.behavior_run_id) {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::after_action").entered();
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         let started = Instant::now();
         redecide_now(
             &mut brain,
@@ -136,7 +136,7 @@ pub(super) fn on_finish_action(
             score_trace.as_deref_mut(),
             now,
         );
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision(started.elapsed());
     }
 }
@@ -147,7 +147,7 @@ pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
     use_eligibility_queries: UseEligibilityQueries,
     mut brains: DecidingBrains,
-    #[cfg(feature = "stress")] mut decision_stats: ResMut<DecisionStats>,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
     for (mut brain, decision_input_components, components, mut score_trace) in &mut brains {
@@ -164,7 +164,7 @@ pub(super) fn decide_behavior(
             build_capability_profiles(&components, &use_eligibility_queries.equipment);
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::paced").entered();
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         let started = Instant::now();
         redecide_now(
             &mut brain,
@@ -174,7 +174,7 @@ pub(super) fn decide_behavior(
             score_trace.as_deref_mut(),
             now,
         );
-        #[cfg(feature = "stress")]
+        #[cfg(feature = "dev_tools")]
         decision_stats.record_paced_decision(started.elapsed());
     }
 }

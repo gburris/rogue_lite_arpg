@@ -26,7 +26,7 @@ mod action;
 mod capability;
 pub(crate) mod considerations;
 mod decide;
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod engine;
 mod motion;
@@ -50,7 +50,7 @@ pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 pub(crate) use self::perception::{ConsiderationInput, Targeting, VisionCone};
@@ -278,7 +278,7 @@ pub(super) fn plugin(app: &mut App) {
         panic!("villager brain is invalid: {error}");
     }
 
-    #[cfg(feature = "stress")]
+    #[cfg(feature = "dev_tools")]
     app.add_plugins(diagnostics::plugin);
 
     app.configure_sets(

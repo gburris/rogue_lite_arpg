@@ -162,7 +162,7 @@ pub(crate) struct MapRecipe {
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
-#[cfg(feature = "stress")]
+#[cfg(feature = "dev_tools")]
 impl MapRecipe {
     /// The recipe's name.
     pub fn name(&self) -> &str {

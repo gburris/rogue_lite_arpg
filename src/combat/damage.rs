@@ -141,7 +141,7 @@ pub(super) fn on_attempt_damage(
     hurt_box_query: Query<&ChildOf, With<HurtBox>>,
     mut damaged_query: Query<(&mut Health, Option<&mut IFrames>)>,
     source_query: Query<&Effects>,
-    #[cfg(feature = "stress")] invincible_query: Query<(), With<Invincible>>,
+    #[cfg(feature = "dev_tools")] invincible_query: Query<(), With<Invincible>>,
 ) {
     // Damage can be applied to an entities hurtbox, or to the entity directly
     let damaged_entity = if let Ok(child_of) = hurt_box_query.get(attempt_damage.entity) {
@@ -152,7 +152,7 @@ pub(super) fn on_attempt_damage(
         return;
     };
 
-    #[cfg(feature = "stress")]
+    #[cfg(feature = "dev_tools")]
     if invincible_query.contains(damaged_entity) {
         return;
     }

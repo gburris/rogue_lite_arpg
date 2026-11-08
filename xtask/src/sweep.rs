@@ -95,8 +95,7 @@ pub(super) struct SweepArgs {
 enum Engagement {
     All,
     Sight,
-    #[value(name = "none")]
-    Blind,
+    None,
 }
 
 /// One game run of the sweep.
@@ -254,7 +253,8 @@ fn start_game(
         .env("MAP_SEED", args.map_seed.to_string())
         .args(["--stress", &planned_run.enemies.to_string()])
         .args(["--seconds", &args.seconds.to_string()])
-        .args(["--engagement", planned_run.engagement.name()]);
+        .arg("--engagement")
+        .arg(planned_run.engagement.name());
 
     ChildProcess::spawn("the game", &mut command)
 }
@@ -294,11 +294,10 @@ impl PlannedRun {
 
 impl Engagement {
     /// The name the game's `--engagement` takes.
-    fn name(self) -> &'static str {
-        match self {
-            Self::All => "all",
-            Self::Sight => "sight",
-            Self::Blind => "none",
-        }
+    fn name(self) -> String {
+        self.to_possible_value()
+            .expect("no engagement value is skipped")
+            .get_name()
+            .to_owned()
     }
 }

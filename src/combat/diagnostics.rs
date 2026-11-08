@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
     }
     app.add_systems(
         Update,
-        (measure_projectiles, measure_status_effects).in_set(InGameSystems::HudOverlay),
+        (measure_projectiles, measure_status_effects).in_set(InGameSystems::Measure),
     );
 }
 

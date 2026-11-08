@@ -4,8 +4,6 @@
 
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
-#[cfg(feature = "dev_tools")]
-use bevy::platform::time::Instant;
 use bevy::prelude::*;
 use rand::RngExt;
 
@@ -76,8 +74,6 @@ pub(super) fn on_release_finished_motion(
     if brain.finish_committed_behavior(finished.behavior_run_id) {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::after_motion").entered();
-        #[cfg(feature = "dev_tools")]
-        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -87,7 +83,7 @@ pub(super) fn on_release_finished_motion(
             now,
         );
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision(started.elapsed());
+        decision_stats.record_redecision();
     }
 }
 
@@ -126,8 +122,6 @@ pub(super) fn on_finish_action(
     if brain.finish_committed_behavior(finished.behavior_run_id) {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::after_action").entered();
-        #[cfg(feature = "dev_tools")]
-        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -137,7 +131,7 @@ pub(super) fn on_finish_action(
             now,
         );
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision(started.elapsed());
+        decision_stats.record_redecision();
     }
 }
 
@@ -164,8 +158,6 @@ pub(super) fn decide_behavior(
             build_capability_profiles(&components, &use_eligibility_queries.equipment);
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::paced").entered();
-        #[cfg(feature = "dev_tools")]
-        let started = Instant::now();
         redecide_now(
             &mut brain,
             &decision_input_components,
@@ -175,7 +167,7 @@ pub(super) fn decide_behavior(
             now,
         );
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_paced_decision(started.elapsed());
+        decision_stats.record_paced_decision();
     }
 }
 

@@ -35,14 +35,15 @@ pub mod prelude {
 
 fn main() {
     #[cfg(feature = "dev_tools")]
-    let stress_args = dev::StressArgs::parse();
+    let game_args = dev::GameArgs::parse();
 
     let mut app = App::new();
     #[cfg(feature = "dev_tools")]
-    app.insert_resource(stress_args);
+    app.insert_resource(game_args);
     app.add_plugins(plugin);
     #[cfg(feature = "dev")]
-    if dev::dump_schedules_if_requested(&mut app) {
+    if game_args.dump_schedules {
+        dev::dump_schedules(&mut app);
         return;
     }
     app.run();

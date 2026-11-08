@@ -1,161 +1,167 @@
 ![image](https://github.com/user-attachments/assets/8e19637c-eb1f-4170-b202-663c1434e073)
 
-# Building
+# Build and run
 
-## Native
-```bash
-# Prerequisites
-rustup update
+Run all commands from the repository root. They work in bash and PowerShell. Run Cargo commands
+one at a time, because each one locks the build directory.
 
-# Build
-cargo run           # dev build
-cargo run --release # optimized build
-```
+`rust-toolchain.toml` pins a nightly toolchain. `rustup` installs it on the first build.
 
-## Web Assembly
+## Builds
 
-```bash
-# Prerequisites
-rustup update
-rustup target add wasm32-unknown-unknown
-cargo install wasm-pack
+| Build | Command | Use it for |
+| --- | --- | --- |
+| Dev | `cargo run` or `bevy run` | Daily work: hot reload, dev keys, F3 overlay |
+| Release | `cargo run --release` | Playing at full speed |
+| Profiling | `cargo tracy` | Performance measurement: release speed, debug symbols, Tracy spans |
+| Web dev | `bevy run web` | Testing in the browser |
+| Web release | `bevy build --release web --bundle` | Publishing to the web |
 
-# Build
-wasm-pack build --target web --out-dir dist
-```
+`cargo tracy` is an alias in `.cargo/config.toml` for
+`cargo run --profile profiling --no-default-features --features tracy`.
 
-# Commands
+Web builds need the [Bevy CLI](https://github.com/TheBevyFlock/bevy_cli) and the wasm target:
+`rustup target add wasm32-unknown-unknown`.
 
-Run these from the repository root, in any shell. Run Cargo commands one at a time, since each
-takes the build lock. Paths use `/`, which works in PowerShell too.
+## Map seed
 
-The game reads two environment variables, `MAP_SEED` and `DUMP_SCHEDULES`. Set one for a single
-command like this:
+The `MAP_SEED` environment variable fixes the map layout and enemy placement:
 
 ```sh
 MAP_SEED=7 cargo run                                       # bash
 $env:MAP_SEED = "7"; cargo run; Remove-Item Env:MAP_SEED   # PowerShell
 ```
 
-Each command below lists its usage, then options, output and examples where it has them.
+## Local Cargo settings
 
-## Run
-
-```
-cargo run [--release]
-bevy run
-```
-
-Builds and starts the game.
-
-| Command | Build |
-| --- | --- |
-| `cargo run` | Dev build: hot reload, dev keys, diagnostics overlay |
-| `cargo run --release` | Optimized build |
-| `bevy run` | Dev build through `bevy_cli` |
+Put machine-specific Cargo settings, such as a faster linker, in `.cargo/config.local.toml`. Git
+ignores this file, and `.cargo/config.toml` loads it if it exists.
 
 ## Check
 
-```
-cargo check --all-targets [--no-default-features [--features tracy]]
-cargo clippy --workspace --all-targets
-```
-
-Compile checks and lints. No game window opens.
-
 | Command | Checks |
 | --- | --- |
-| `cargo check --all-targets` | Dev feature set |
-| `cargo check --all-targets --no-default-features` | Release feature set |
-| `cargo check --all-targets --no-default-features --features tracy` | Profiling feature set |
-| `cargo clippy --workspace --all-targets` | Lints, for the game and `xtask` |
+| `cargo check --all-targets` | Dev features |
+| `cargo check --all-targets --no-default-features` | Release features |
+| `cargo check --all-targets --no-default-features --features tracy` | Profiling features |
+| `cargo clippy --workspace --all-targets` | Lints for the game and `xtask` |
 
-## Profile with Tracy
+# Performance tools
 
-```
-tracy-capture -o <file.tracy> -f
-cargo tracy
-tracy-profiler [<file.tracy>]
-```
+Measure with the profiling build. Dev build timings are not accurate.
 
-`cargo tracy` is an alias (in `.cargo/config.toml`) for
-`cargo run --profile profiling --no-default-features --features tracy`.
+| Question | Tool |
+| --- | --- |
+| How fast is a large fight? | [`cargo xtask sweep`](#sweep) |
+| Did a change make the game faster or slower? | [`cargo xtask compare`](#compare) on two sweeps |
+| Which systems use the time? | [`cargo xtask perf-report`](#perf-report) |
+| What happens in one slow frame? | [Tracy](#tracy) |
+| What are the live counts while I play? | F3 overlay (dev build) |
+| In what order do the systems run? | [Schedule graphs](#schedule-graphs) |
 
-Records a Tracy capture of the `profiling` build, then opens it. Use the `profiling` build for
-timings; the dev build's are misleading.
+All output goes to `runs/`. Git ignores this folder.
 
-**Requires:** the Tracy v0.14.0 tools (matching `tracy-client` 0.18.5) on `PATH`.
+## Compare a change
 
-**Output:** the capture file. In a capture, every `game/...` diagnostic is a plot, and state
-changes and log lines are messages (such as `AppState: StartScreen => AssetLoading` for the
-Start click, or `hitch: ...`).
+1. On the old code, record a baseline:
 
-**Examples:**
+   ```sh
+   cargo xtask sweep --counts 500,1000 --repeats 3 --milestone before
+   ```
 
-```sh
-# Terminal 1: start the capture first, then the game. The runs folder must exist.
-mkdir runs
-tracy-capture -o runs/baseline.tracy -f
+2. Make the change. Record again:
 
-# Terminal 2: run the game, play the scenario, then close it.
-cargo tracy
+   ```sh
+   cargo xtask sweep --counts 500,1000 --repeats 3 --milestone after
+   ```
 
-# Open the finished capture, or run it with no argument and click Connect for a live view.
-tracy-profiler runs/baseline.tracy
-```
+3. Compare frame times:
 
-**Notes:** a `profiling` build has no console, so redirect stderr to read a panic:
-`target/profiling/baba_yaga 2> panic.log`.
+   ```sh
+   cargo xtask compare runs/milestones/<date>_before runs/milestones/<date>_after
+   ```
+
+4. Find the systems that changed:
+
+   ```sh
+   cargo xtask perf-report runs/milestones/<date>_before runs/milestones/<date>_after
+   ```
+
+For a fair comparison:
+
+- Use the same machine, `--map-seed` and `--engagement` for both sweeps.
+- Close other programs that use the CPU or GPU.
+- Make sure the Engaged and Projectiles columns in `compare` are similar. If they are not, the
+  sweeps measured different fights.
+- Check the `git` and `dirty` fields in each summary line. They show which code each sweep ran.
 
 ## Stress arena
 
 ```
-cargo run|tracy -- --stress <enemies> [--seconds <seconds>] [--engagement all|sight|none]
-                   [--player still|circle|strafe]
+cargo run   -- --stress <enemies> [options]   # dev build
+cargo tracy -- --stress <enemies> [options]   # profiling build
 ```
 
-Starts the game directly in a small arena: an invincible player with that many enemies packed
-around them, split evenly across the enemy kinds. The start screen is skipped and vsync is off.
-The flags exist in dev and profiling builds.
-
-**Options:**
+Starts the game in a small arena. The player is invincible, and the enemies surround the player.
+The game divides the enemies equally between the enemy kinds and drops the remainder. The start
+screen is skipped, and vsync is off.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--stress` | none (normal game) | Total enemies |
-| `--seconds` | none (runs until closed) | Quits after a 5 s warm-up plus this many seconds, and writes the summary line |
-| `--engagement` | `all` | How enemies find the player (see below) |
-| `--player` | `still` | How the player moves: stands still, walks a slow circle, or strafes left and right |
-
-The `MAP_SEED` environment variable fixes the map layout and enemy placement, in the arena or
-not.
+| `--stress <n>` | Normal game | Total enemies |
+| `--seconds <n>` | Run until closed | After a 5 s warm-up, measure for this many seconds, write a summary line, then quit |
+| `--engagement <mode>` | `all` | How enemies find the player. See below |
+| `--player <script>` | `still` | How the player moves: `still`, `circle` or `strafe` |
 
 | `--engagement` | Enemies | Use it for |
 | --- | --- | --- |
-| `all` | Target the player from spawn, until the player hits them | Repeatable A/B runs: every run fights the same way |
-| `sight` | Engage on sight, as in normal play | Runs land in a heavy or a calm fight by chance |
-| `none` | Are blind and only wander | The cost of the crowd without combat |
+| `all` | Target the player from spawn | Repeatable A/B runs. Every run has the same fight |
+| `sight` | Attack when they see the player, as in normal play | Realistic fights. The load changes between runs |
+| `none` | Cannot see and only wander | The cost of the crowd without combat |
 
-**Output:** with `--seconds`, one summary line in the log, also appended to
-`runs/stress_summary.txt`:
+With `--seconds`, the game writes one summary line to the log and appends it to
+`runs/stress_summary.txt`. The line contains:
 
-- the settings: `arena`, `engagement`, `player`, `seconds`;
-- `startup_seconds`: first frame to arena, covering asset loading and map spawn;
-- the build: `git` (short commit hash), `dirty` (uncommitted changes), `optimized` (`false` for
-  a dev build), `tracy` (Tracy spans compiled in) and `cpu`, with `-` for a value that couldn't
-  be read. `git` and `dirty` describe the checkout the game runs in when the run ends;
-- `frames`, `median_frame_ms`, `p99_frame_ms` and `max_frame_ms`;
-- the mean of every `game/...` diagnostic, such as `mean_game/ai/engaged` and
-  `mean_game/projectiles`.
+| Fields | Meaning |
+| --- | --- |
+| `arena`, `engagement`, `player`, `seconds` | The run settings |
+| `startup_seconds` | Time from the first frame to the arena: asset loading and map spawn |
+| `git`, `dirty` | Commit and uncommitted changes when the run ends |
+| `optimized`, `tracy` | `false` for a dev build; `true` when Tracy spans are compiled in |
+| `cpu` | CPU name |
+| `frames`, `median_frame_ms`, `p99_frame_ms`, `max_frame_ms` | Frame times |
+| `mean_game/...` | The mean of each `game/...` diagnostic, such as `mean_game/ai/engaged` |
 
-**Examples:**
+A `-` means that the value was not available.
 
 ```sh
-cargo run -- --stress 1000                                     # dev build, until closed
-cargo run -- --stress 1000 --seconds 60 --engagement none      # timed run, crowd only
-cargo run -- --stress 500 --player circle                      # moving player and camera
-cargo tracy -- --stress 1000
+cargo run -- --stress 1000                                  # dev build, run until closed
+cargo run -- --stress 1000 --seconds 60 --engagement none   # timed, crowd only
+cargo run -- --stress 500 --player circle                   # moving player and camera
+cargo tracy -- --stress 1000                                # profiling build
 ```
+
+## Tracy
+
+```sh
+mkdir runs                                  # once
+tracy-capture -o runs/baseline.tracy -f     # terminal 1: start the capture first
+cargo tracy                                 # terminal 2: play, then close the game
+tracy-profiler runs/baseline.tracy          # open the capture
+```
+
+Run `tracy-profiler` with no file and click Connect to see a live view.
+
+**Requires:** Tracy v0.14.0 tools on `PATH`. This version matches `tracy-client` 0.18.5.
+
+A capture contains:
+
+- A plot for each `game/...` diagnostic.
+- A message for each state change, such as `AppState: StartScreen => AssetLoading`.
+- A message for each log line, such as `hitch: ...`.
+
+The profiling build has no console. To read a panic, redirect stderr:
+`target/profiling/baba_yaga 2> panic.log`.
 
 ## xtask
 
@@ -163,39 +169,34 @@ cargo tracy -- --stress 1000
 cargo xtask <sweep|compare|perf-report> [options]
 ```
 
-Development commands written in Rust, so they run anywhere `cargo` does. Run them from anywhere
-in the repository. `--help` after a command lists its options.
+Development commands written in Rust. Run them from any folder in the repository. Add `--help`
+to see all options.
 
 ### sweep
 
 ```
-cargo xtask sweep [--counts <n,n,...>] [--repeats <n>] [--engagement <all,sight,none>]
-                            [--seconds <n>] [--capture-seconds <n>] [--map-seed <n>]
-                            [--milestone <name>] [--output-directory <path>]
+cargo xtask sweep [options]
 ```
 
-Builds the profiling binary once, then records one Tracy capture per engagement, enemy count and
-repeat in the stress arena. Each run quits by itself.
+Builds the profiling build once. Then records one Tracy capture for each engagement, enemy count
+and repeat in the stress arena. Each run quits automatically.
 
 **Requires:** `tracy-capture` on `PATH`.
 
-**Options:**
-
 | Option | Default | Description |
 | --- | --- | --- |
-| `--counts` | `100,200,500,1000` | Total enemies per run |
-| `--repeats` | `1` | Runs per count and engagement. Use 2-3; the comparison prints the median |
-| `--engagement` | `all` | One or more of `all`, `sight` and `none` |
-| `--seconds` | `30` | Measured seconds per run, after the 5 s warm-up |
-| `--capture-seconds` | none (whole run) | Stops each capture early. Use 15-20 before exporting events, since a 30 s capture exports about 2.5 GB |
-| `--map-seed` | `1` | Map layout and enemy placement |
-| `--milestone` | none | Writes to `runs/milestones/<date>_<name>`, which no later sweep overwrites |
-| `--output-directory` | `runs/stress` | Where captures go without `--milestone`. A rerun overwrites them |
+| `--counts <n,n,...>` | `100,200,500,1000` | Total enemies for each run |
+| `--repeats <n>` | `1` | Runs for each count and engagement. Use 2 or 3; `compare` shows the median |
+| `--engagement <mode,...>` | `all` | One or more of `all`, `sight` and `none` |
+| `--seconds <n>` | `30` | Measured seconds for each run, after the 5 s warm-up |
+| `--capture-seconds <n>` | Whole run | Stops each capture early. Use 15 to 20 if you export events: a 30 s capture exports approximately 2.5 GB |
+| `--map-seed <n>` | `1` | Map layout and enemy placement |
+| `--milestone <name>` | None | Writes to `runs/milestones/<date>_<name>`. Later sweeps do not overwrite it |
+| `--output-directory <path>` | `runs/stress` | Output folder without `--milestone`. The next sweep overwrites it |
 
-**Output:** `<engagement>_<count>_r<repeat>.tracy` captures and a `summary.txt` of the sweep's
-summary lines, both in the output folder. It then prints the runs through `compare`.
-
-**Examples:**
+**Output:** in the output folder, one `<engagement>_<count>_r<repeat>.tracy` capture and one
+`.log` for each run, and a `summary.txt` with the summary lines. At the end, the sweep prints the
+`compare` table.
 
 ```sh
 cargo xtask sweep
@@ -209,21 +210,17 @@ cargo xtask sweep --counts 1000 --engagement all,none --milestone substeps
 cargo xtask compare <path>... [--outlier-fraction <fraction>]
 ```
 
-Compares stress summary lines, one row per source, enemy count, engagement and
-player script.
-
-**Options:**
+Shows a table of summary lines. Each row is one source, enemy count, engagement and player
+script.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `<path>...` | required | Summary files, or folders holding a `summary.txt` (a sweep or a milestone) |
-| `--outlier-fraction` | `0.25` | How far a run's projectile count may be from its row's median before it is listed |
+| `<path>...` | Required | Summary files, or folders that contain a `summary.txt` (a sweep or a milestone) |
+| `--outlier-fraction <f>` | `0.25` | How far a run's projectile count can be from its row's median before the run is an outlier |
 
-**Output:** a table with the median of the runs' median and p99 frame ms, the slowest frame, and
-the engaged brains, projectiles and lights. Then a list of outlier runs, whose projectile count
-shows they measured a different fight.
-
-**Examples:**
+**Output:** for each row, the median of the median and p99 frame times, the slowest frame, and
+the engaged brains, projectiles and lights. Then a list of outlier runs. An outlier measured a
+different fight, so do not use it in an A/B comparison.
 
 ```sh
 cargo xtask compare runs/stress
@@ -236,22 +233,22 @@ cargo xtask compare runs/milestones/2026-11-01_before runs/milestones/2026-11-03
 cargo xtask perf-report <path>...
 ```
 
-Runs `tracy-csvexport` on captures and prints ms per frame for the zones that matter: main and
-render threads, fixed step, physics, sight raycasts, lights, transform propagation, decisions and
-appliers. The fixed step is also shown per call, since it only runs on some frames.
+Exports Tracy captures with `tracy-csvexport`. Shows the time per frame for the important zones:
+main and render threads, fixed step, physics, sight raycasts, lights, transform propagation,
+decisions and appliers. The fixed step also shows time per call, because it does not run every
+frame.
 
 **Requires:** `tracy-csvexport` on `PATH`.
 
-**Options:**
-
 | Option | Default | Description |
 | --- | --- | --- |
-| `<path>...` | required | Folders of `.tracy` captures, or `.tracy` files |
+| `<path>...` | Required | `.tracy` files, or folders that contain them |
 
-**Output:** one row per zone, one column per capture. Frame counts include warm-up and loading,
-so compare captures made the same way.
+**Output:** one row for each zone and one column for each capture.
 
-**Examples:**
+- The frame count includes warm-up and loading. Only compare captures that you made the same
+  way.
+- Each capture adds a column. Use few captures, for example one count with 2 or 3 repeats.
 
 ```sh
 cargo xtask perf-report runs/stress
@@ -260,42 +257,30 @@ cargo xtask perf-report runs/baseline.tracy runs/stress/all_1000_r1.tracy
 
 ## Schedule graphs
 
-```
-DUMP_SCHEDULES=1 cargo run
-dot -Tsvg <file.dot> -o <file.svg>
-```
-
-With `DUMP_SCHEDULES` set to any value, a dev build writes the schedule graphs, then exits.
-
-**Requires:** Graphviz on `PATH` to render the graphs.
-
-**Output:** `runs/schedules/update.dot` and `runs/schedules/fixed_update.dot`.
-
-**Examples:**
-
 ```sh
-DUMP_SCHEDULES=1 cargo run                                             # bash
-$env:DUMP_SCHEDULES = "1"; cargo run; Remove-Item Env:DUMP_SCHEDULES   # PowerShell
-
+cargo run -- --dump-schedules
 dot -Tsvg runs/schedules/update.dot -o runs/schedules/update.svg
 ```
 
-## Dev keys and logs
+The dev build writes `runs/schedules/update.dot` and `runs/schedules/fixed_update.dot`, then
+quits.
+
+**Requires:** Graphviz (`dot`) on `PATH` to make the images.
+
+# Dev keys and logs
 
 | Key | Builds | Action |
 | --- | --- | --- |
-| F1 | dev | Opens the AI test arena, with a fresh seed |
-| F2 | native dev | Spawns 10 enemies of the chosen kind around the aim reticle; Shift+F2 picks the next kind |
-| F3 | dev | Cycles the overlay: off, FPS graph, and a panel of every diagnostic with sparklines |
-| F4 | dev, profiling | Logs `hitch marked at <seconds> s` |
-| F5 | dev | Pauses or resumes game time |
-| F6 | dev | Opens the next map recipe in file order, with a fresh seed |
-| F7 | dev | While paused, runs until the next fixed step |
-| F8, F9 | dev | Halves or doubles game speed, from 1/8x to 8x |
-| F10 | native dev | Toggles player invincibility |
-| F11 | native dev | Defeats every enemy |
+| F1 | Dev | Opens the AI test arena with a new seed |
+| F2 | Native dev | Spawns 10 enemies of the selected kind at the aim reticle. Shift+F2 selects the next kind |
+| F3 | Dev | Cycles the overlay: off, FPS graph, all diagnostics with sparklines |
+| F4 | Dev, profiling | Logs `hitch marked at <seconds> s` |
+| F5 | Dev | Pauses or resumes game time |
+| F6 | Dev | Opens the next map recipe in file order with a new seed |
+| F7 | Dev | When paused, runs to the next fixed step |
+| F8, F9 | Dev | Halves or doubles game speed, from 1/8x to 8x |
+| F10 | Native dev | Toggles player invincibility |
+| F11 | Native dev | Defeats all enemies |
 
-Dev and profiling builds also log `hitch: ...` for every frame at least 3 times the recent
+Dev and profiling builds also log `hitch: ...` for a frame that is at least 3 times the recent
 average and slower than 60 fps.
-
-`runs/` is ignored by git.

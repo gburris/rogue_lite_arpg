@@ -18,9 +18,10 @@ use std::io::Write as _;
 use bevy::diagnostic::DiagnosticsStore;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, PrimaryWindow};
-use clap::{Parser, ValueEnum};
+use clap::{Args, ValueEnum};
 
 use super::build_info::BuildInfo;
+use super::game_args::GameArgs;
 use crate::prelude::*;
 
 /// Recipe the stress arena replaces the hub with.
@@ -62,8 +63,7 @@ enum Engagement {
     #[default]
     All,
     Sight,
-    #[value(name = "none")]
-    Blind,
+    None,
 }
 
 /// How the player moves, from `--player`:
@@ -79,11 +79,9 @@ enum PlayerScript {
     Strafe,
 }
 
-/// The game's command line, such as `--stress 1000 --seconds 30 --engagement sight`. `main`
-/// parses it before building the app, so `--help` and bad flags exit before a window opens.
-#[derive(Resource, Parser, Clone, Copy, Debug)]
-#[command(about = "Baba Yaga. These flags start the stress arena.")]
-pub(crate) struct StressArgs {
+/// The stress arena flags, such as `--stress 1000 --seconds 30 --engagement sight`.
+#[derive(Args, Clone, Copy, Debug)]
+pub(super) struct StressArgs {
     #[arg(
         long = "stress",
         value_name = "ENEMIES",
@@ -138,9 +136,10 @@ struct FrameStats {
 
 pub(super) fn plugin(app: &mut App) {
     let stress_args = app
-        .world_mut()
-        .remove_resource::<StressArgs>()
-        .expect("main inserts StressArgs before adding plugins");
+        .world()
+        .get_resource::<GameArgs>()
+        .expect("main inserts GameArgs before adding plugins")
+        .stress;
     let Some(requested_enemies) = stress_args.enemies else {
         return;
     };
@@ -153,8 +152,8 @@ pub(super) fn plugin(app: &mut App) {
         "Stress arena: {} enemies of each of {} kinds, engagement {}, player {}",
         stress_arena.enemies_per_kind,
         enemy_kind_count(),
-        stress_arena.engagement.name(),
-        stress_arena.player_script.name()
+        flag_value_name(stress_arena.engagement),
+        flag_value_name(stress_arena.player_script)
     );
 
     app.insert_resource(stress_arena);
@@ -179,6 +178,15 @@ pub(super) fn plugin(app: &mut App) {
         sample_stress_run
             .run_if(resource_exists::<StressRun>.and_then(in_state(AppState::Playing))),
     );
+}
+
+/// The name `value` takes on the command line, also written to the summary line.
+fn flag_value_name(value: impl ValueEnum) -> String {
+    value
+        .to_possible_value()
+        .expect("no stress flag value is skipped")
+        .get_name()
+        .to_owned()
 }
 
 fn enemy_kind_count() -> u32 {
@@ -223,27 +231,7 @@ impl StressArena {
     }
 }
 
-impl Engagement {
-    /// The name `--engagement` takes, also written to the summary line.
-    fn name(self) -> &'static str {
-        match self {
-            Self::All => "all",
-            Self::Sight => "sight",
-            Self::Blind => "none",
-        }
-    }
-}
-
 impl PlayerScript {
-    /// The name `--player` takes, also written to the summary line.
-    fn name(self) -> &'static str {
-        match self {
-            Self::Still => "still",
-            Self::Circle => "circle",
-            Self::Strafe => "strafe",
-        }
-    }
-
     /// The way the player walks after `seconds` of game time, or `None` to stand still.
     fn direction(self, seconds: f32) -> Option<Vec2> {
         match self {
@@ -295,7 +283,7 @@ fn on_enemy_added(
         }
         Engagement::Sight => {}
         // A zero-width cone never contains the player, but the sight rays still run.
-        Engagement::Blind => {
+        Engagement::None => {
             enemy.insert(VisionCone { half_angle: 0.0 });
         }
     }
@@ -364,8 +352,8 @@ impl StressRun {
         let mut summary = format!(
             "stress summary: arena={} engagement={} player={} seconds={} startup_seconds={:.2}",
             self.total_enemies,
-            stress_arena.engagement.name(),
-            stress_arena.player_script.name(),
+            flag_value_name(stress_arena.engagement),
+            flag_value_name(stress_arena.player_script),
             self.measure_seconds,
             self.started_at.unwrap_or(0.0),
         );

@@ -26,5 +26,5 @@ sprite_code_do_not_open_its_not_worth_it/
 
 dist/
 
-# Profiling output: schedule graphs (DUMP_SCHEDULES=1) and Tracy captures
+# Profiling output: schedule graphs (--dump-schedules), stress summaries and Tracy captures
 /runs/

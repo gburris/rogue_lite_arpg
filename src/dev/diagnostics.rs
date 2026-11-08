@@ -44,7 +44,7 @@ pub(super) fn plugin(app: &mut App) {
             measure_lights,
             measure_loaded_images,
         )
-            .in_set(InGameSystems::HudOverlay),
+            .in_set(InGameSystems::Measure),
     );
 }
 

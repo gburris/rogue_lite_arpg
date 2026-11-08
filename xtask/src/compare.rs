@@ -19,7 +19,7 @@ const SUMMARY_PREFIX: &str = "stress summary:";
 /// File a sweep or milestone folder keeps its summary lines in.
 pub(super) const FOLDER_SUMMARY_FILE: &str = "summary.txt";
 
-/// Player script of summary lines written before the `player` field existed.
+/// Player script of a summary line without a `player` field.
 const DEFAULT_PLAYER: &str = "still";
 
 /// Default for [`CompareArgs::outlier_fraction`].

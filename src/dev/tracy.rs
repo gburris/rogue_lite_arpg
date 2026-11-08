@@ -18,10 +18,7 @@ pub(super) fn plugin(app: &mut App) {
             send_state_message::<Menu>,
         ),
     );
-    app.add_systems(
-        Update,
-        plot_game_diagnostics.after(InGameSystems::HudOverlay),
-    );
+    app.add_systems(Update, plot_game_diagnostics.after(InGameSystems::Measure));
 }
 
 /// Plots the latest value of each `game/…` diagnostic.

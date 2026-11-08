@@ -37,6 +37,7 @@ pub(super) fn plugin(app: &mut App) {
             InGameSystems::Collision,
             InGameSystems::Vfx,
             InGameSystems::HudOverlay,
+            InGameSystems::Measure,
         )
             .chain()
             .in_set(MainSystems::InGame),
@@ -89,6 +90,8 @@ pub enum InGameSystems {
     Vfx,
     /// UI overlay drawn from the simulation results.
     HudOverlay,
+    /// Diagnostics measured from the finished frame, such as entity and decision counts.
+    Measure,
 }
 
 /// Ordered phases within [`InGameSystems::Simulation`].

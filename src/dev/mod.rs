@@ -8,6 +8,7 @@ mod cheats;
 #[cfg(feature = "dev")]
 mod debug;
 mod diagnostics;
+mod game_args;
 #[cfg(not(target_arch = "wasm32"))]
 mod hitch;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
@@ -22,9 +23,9 @@ mod tracy;
 
 use bevy::prelude::*;
 
+pub(super) use self::game_args::GameArgs;
 #[cfg(feature = "dev")]
-pub use self::schedule_dump::dump_schedules_if_requested;
-pub(super) use self::stress::StressArgs;
+pub(super) use self::schedule_dump::dump_schedules;
 
 pub mod prelude {
     pub use super::stress::StressArena;

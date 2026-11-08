@@ -9,12 +9,9 @@ use bevy_mod_debugdump::schedule_graph::Settings;
 /// Directory the DOT files are written to.
 const OUTPUT_DIR: &str = "runs/schedules";
 
-/// Writes the schedule graphs and returns true when `DUMP_SCHEDULES` is set, so `main` can exit
-/// instead of running the game. Render with `dot -Tsvg runs/schedules/update.dot -o update.svg`.
-pub fn dump_schedules_if_requested(app: &mut App) -> bool {
-    if std::env::var_os("DUMP_SCHEDULES").is_none() {
-        return false;
-    }
+/// Writes the schedule graphs for `--dump-schedules`. Render one with
+/// `dot -Tsvg runs/schedules/update.dot -o update.svg`.
+pub(crate) fn dump_schedules(app: &mut App) {
     // Plugins add their final systems in `finish`, so the graph is only complete afterwards.
     app.finish();
     app.cleanup();
@@ -30,7 +27,6 @@ pub fn dump_schedules_if_requested(app: &mut App) -> bool {
         &bevy_mod_debugdump::schedule_graph_dot(app, FixedUpdate, &settings),
     );
     info!("wrote schedule graphs to {OUTPUT_DIR}");
-    true
 }
 
 fn write_graph(file_name: &str, dot: &str) {

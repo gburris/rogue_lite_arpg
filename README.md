@@ -74,9 +74,12 @@ Compile checks and lints. No game window opens.
 
 ```
 tracy-capture -o <file.tracy> -f
-cargo run --profile profiling --no-default-features --features tracy
+cargo tracy
 tracy-profiler [<file.tracy>]
 ```
+
+`cargo tracy` is an alias (in `.cargo/config.toml`) for
+`cargo run --profile profiling --no-default-features --features tracy`.
 
 Records a Tracy capture of the `profiling` build, then opens it. Use the `profiling` build for
 timings; the dev build's are misleading.
@@ -95,7 +98,7 @@ mkdir runs
 tracy-capture -o runs/baseline.tracy -f
 
 # Terminal 2: run the game, play the scenario, then close it.
-cargo run --profile profiling --no-default-features --features tracy
+cargo tracy
 
 # Open the finished capture, or run it with no argument and click Connect for a live view.
 tracy-profiler runs/baseline.tracy
@@ -107,9 +110,8 @@ tracy-profiler runs/baseline.tracy
 ## Stress arena
 
 ```
-cargo run [--profile profiling --no-default-features --features tracy]
-          -- --stress <enemies> [--seconds <seconds>] [--engagement all|sight|none]
-             [--player still|circle|strafe]
+cargo run|tracy -- --stress <enemies> [--seconds <seconds>] [--engagement all|sight|none]
+                   [--player still|circle|strafe]
 ```
 
 Starts the game directly in a small arena: an invincible player with that many enemies packed
@@ -152,13 +154,13 @@ not.
 cargo run -- --stress 1000                                     # dev build, until closed
 cargo run -- --stress 1000 --seconds 60 --engagement none      # timed run, crowd only
 cargo run -- --stress 500 --player circle                      # moving player and camera
-cargo run --profile profiling --no-default-features --features tracy -- --stress 1000
+cargo tracy -- --stress 1000
 ```
 
 ## xtask
 
 ```
-cargo run -p xtask -- <sweep|compare|perf-report> [options]
+cargo xtask <sweep|compare|perf-report> [options]
 ```
 
 Development commands written in Rust, so they run anywhere `cargo` does. Run them from anywhere
@@ -167,7 +169,7 @@ in the repository. `--help` after a command lists its options.
 ### sweep
 
 ```
-cargo run -p xtask -- sweep [--counts <n,n,...>] [--repeats <n>] [--engagement <all,sight,none>]
+cargo xtask sweep [--counts <n,n,...>] [--repeats <n>] [--engagement <all,sight,none>]
                             [--seconds <n>] [--capture-seconds <n>] [--map-seed <n>]
                             [--milestone <name>] [--output-directory <path>]
 ```
@@ -196,15 +198,15 @@ summary lines, both in the output folder. It then prints the runs through `compa
 **Examples:**
 
 ```sh
-cargo run -p xtask -- sweep
-cargo run -p xtask -- sweep --counts 500,1000 --repeats 3 --capture-seconds 20
-cargo run -p xtask -- sweep --counts 1000 --engagement all,none --milestone substeps
+cargo xtask sweep
+cargo xtask sweep --counts 500,1000 --repeats 3 --capture-seconds 20
+cargo xtask sweep --counts 1000 --engagement all,none --milestone substeps
 ```
 
 ### compare
 
 ```
-cargo run -p xtask -- compare <path>... [--outlier-fraction <fraction>]
+cargo xtask compare <path>... [--outlier-fraction <fraction>]
 ```
 
 Compares stress summary lines, one row per source, enemy count, engagement and
@@ -224,14 +226,14 @@ shows they measured a different fight.
 **Examples:**
 
 ```sh
-cargo run -p xtask -- compare runs/stress
-cargo run -p xtask -- compare runs/milestones/2026-11-01_before runs/milestones/2026-11-03_after
+cargo xtask compare runs/stress
+cargo xtask compare runs/milestones/2026-11-01_before runs/milestones/2026-11-03_after
 ```
 
 ### perf-report
 
 ```
-cargo run -p xtask -- perf-report <path>...
+cargo xtask perf-report <path>...
 ```
 
 Runs `tracy-csvexport` on captures and prints ms per frame for the zones that matter: main and
@@ -252,8 +254,8 @@ so compare captures made the same way.
 **Examples:**
 
 ```sh
-cargo run -p xtask -- perf-report runs/stress
-cargo run -p xtask -- perf-report runs/baseline.tracy runs/stress/all_1000_r1.tracy
+cargo xtask perf-report runs/stress
+cargo xtask perf-report runs/baseline.tracy runs/stress/all_1000_r1.tracy
 ```
 
 ## Schedule graphs

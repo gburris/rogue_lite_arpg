@@ -4,8 +4,8 @@
 # Developer specific commands
 cmds.txt
 
-# Rust-specific configuration files
-/.cargo
+# Machine-specific Cargo settings (see `.cargo/config.toml`)
+/.cargo/config.local.toml
 
 .vs/
 

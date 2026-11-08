@@ -7,7 +7,7 @@ description = "Stress sweeps, stress summary comparisons and Tracy zone reports 
 
 [dependencies]
 anyhow = "1.0.104"
-clap = { version = "4.6.7", features = ["derive"] }
+clap = { workspace = true }
 jiff = "0.2"
 
 [lints]

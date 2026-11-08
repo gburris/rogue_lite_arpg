@@ -27,7 +27,7 @@ tracing = "0.1.44"
 # Plots in Tracy; the same crate that Bevy's `trace_tracy` uses.
 tracy-client = { version = "0.18.3", optional = true }
 bevy_mod_debugdump = { version = "0.16", default-features = false, optional = true }
-clap = { version = "4.6.7", features = ["derive"], optional = true }
+clap = { workspace = true, optional = true }
 # CPU name for the stress summary line; the same version Bevy's `sysinfo_plugin` uses.
 sysinfo = { version = "0.38.4", default-features = false, features = ["system"], optional = true }
 
@@ -81,6 +81,9 @@ features = ["dev"]
 
 [workspace]
 members = ["xtask"]
+
+[workspace.dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
 
 [lints]
 workspace = true

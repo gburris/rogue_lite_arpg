@@ -1,4 +1,4 @@
-//! Development commands for the game. Run them with `cargo run -p xtask -- <command>`, and pass
+//! Development commands for the game. Run them with `cargo xtask <command>`, and pass
 //! `--help` to any command for its options.
 
 mod compare;

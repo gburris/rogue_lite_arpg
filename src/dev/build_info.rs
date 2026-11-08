@@ -6,13 +6,12 @@ use std::process::Command;
 
 use sysinfo::{CpuRefreshKind, RefreshKind, System};
 
-/// The commit, uncommitted changes, Cargo profile and CPU of the running game. Git fields describe
-/// the working directory's checkout when the run ends, and a field is `None` when it can't be
-/// read, such as when `git` isn't on `PATH`.
+/// The commit, uncommitted changes and CPU of the running game. Git fields describe the working
+/// directory's checkout when the run ends, and a field is `None` when it can't be read, such as
+/// when `git` isn't on `PATH`.
 pub(super) struct BuildInfo {
     commit: Option<String>,
     dirty: Option<bool>,
-    profile: &'static str,
     cpu: Option<String>,
 }
 
@@ -21,20 +20,21 @@ impl BuildInfo {
         Self {
             commit: git_output(&["rev-parse", "--short", "HEAD"]),
             dirty: git_output(&["status", "--porcelain"]).map(|changes| !changes.is_empty()),
-            profile: profile_name(),
             cpu: cpu_name(),
         }
     }
 
-    /// Appends ` git=… dirty=… profile=… cpu=…`, with `-` for a value that couldn't be read.
+    /// Appends ` git=… dirty=… optimized=… tracy=… cpu=…`, with `-` for a value that couldn't be
+    /// read. `optimized` and `tracy` are the build settings that change frame times.
     pub(super) fn write_fields(&self, summary: &mut String) {
         write!(
             summary,
-            " git={} dirty={} profile={} cpu={}",
+            " git={} dirty={} optimized={} tracy={} cpu={}",
             self.commit.as_deref().unwrap_or("-"),
             self.dirty
                 .map_or("-", |dirty| if dirty { "true" } else { "false" }),
-            self.profile,
+            !cfg!(debug_assertions),
+            cfg!(feature = "tracy"),
             self.cpu.as_deref().unwrap_or("-"),
         )
         .expect("writing to a String cannot fail");
@@ -48,17 +48,6 @@ fn git_output(arguments: &[&str]) -> Option<String> {
         return None;
     }
     Some(String::from_utf8_lossy(&output.stdout).trim().to_owned())
-}
-
-/// The Cargo profile the game was built with, as far as features and assertions tell.
-fn profile_name() -> &'static str {
-    if cfg!(debug_assertions) {
-        "dev"
-    } else if cfg!(feature = "profile") {
-        "profiling"
-    } else {
-        "release"
-    }
 }
 
 /// The CPU's brand name, with spaces as `_` so the summary stays one `key=value` per word.

@@ -1,5 +1,5 @@
 //! F4 logs a hitch marker, and any frame at least [`HITCH_FACTOR`] times the recent average and
-//! slower than [`MINIMUM_HITCH_MS`] is logged as a hitch. Under `profile` each log line is also a
+//! slower than [`MINIMUM_HITCH_MS`] is logged as a hitch. Under `tracy` each log line is also a
 //! Tracy message. A detected hitch lands two frames after the slow frame, since with pipelined
 //! rendering each frame's delta measures the main frame two before it.
 

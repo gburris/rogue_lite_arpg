@@ -162,7 +162,7 @@ fn build_profiling_game() -> Result<()> {
             PROFILING_PROFILE,
             "--no-default-features",
             "--features",
-            "profile",
+            "tracy",
         ]),
     )
 }

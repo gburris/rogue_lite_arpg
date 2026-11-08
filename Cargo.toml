@@ -65,7 +65,7 @@ strip_logs = ["tracing/max_level_debug", "tracing/release_max_level_warn"]
 # Lets `--stress` start the game in the stress arena with an invincible player.
 stress = ["dep:clap", "dep:sysinfo"]
 # Stream spans to Tracy. Build with `--profile profiling --no-default-features`.
-profile = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
+tracy = ["bevy/trace_tracy", "bevy/debug", "dep:tracy-client", "stress"]
 
 [package.metadata.bevy_cli.release]
 # Disable dev features for release builds.

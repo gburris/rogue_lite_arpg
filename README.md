@@ -57,7 +57,7 @@ Builds and starts the game.
 ## Check
 
 ```
-cargo check --all-targets [--no-default-features [--features profile]]
+cargo check --all-targets [--no-default-features [--features tracy]]
 cargo clippy --workspace --all-targets
 ```
 
@@ -67,14 +67,14 @@ Compile checks and lints. No game window opens.
 | --- | --- |
 | `cargo check --all-targets` | Dev feature set |
 | `cargo check --all-targets --no-default-features` | Release feature set |
-| `cargo check --all-targets --no-default-features --features profile` | Profiling feature set |
+| `cargo check --all-targets --no-default-features --features tracy` | Profiling feature set |
 | `cargo clippy --workspace --all-targets` | Lints, for the game and `xtask` |
 
 ## Profile with Tracy
 
 ```
 tracy-capture -o <file.tracy> -f
-cargo run --profile profiling --no-default-features --features profile
+cargo run --profile profiling --no-default-features --features tracy
 tracy-profiler [<file.tracy>]
 ```
 
@@ -95,7 +95,7 @@ mkdir runs
 tracy-capture -o runs/baseline.tracy -f
 
 # Terminal 2: run the game, play the scenario, then close it.
-cargo run --profile profiling --no-default-features --features profile
+cargo run --profile profiling --no-default-features --features tracy
 
 # Open the finished capture, or run it with no argument and click Connect for a live view.
 tracy-profiler runs/baseline.tracy
@@ -107,7 +107,7 @@ tracy-profiler runs/baseline.tracy
 ## Stress arena
 
 ```
-cargo run [--profile profiling --no-default-features --features profile]
+cargo run [--profile profiling --no-default-features --features tracy]
           -- --stress <enemies> [--seconds <seconds>] [--engagement all|sight|none]
              [--player still|circle|strafe]
 ```
@@ -139,9 +139,9 @@ not.
 
 - the settings: `arena`, `engagement`, `player`, `seconds`;
 - `startup_seconds`: first frame to arena, covering asset loading and map spawn;
-- the build: `git` (short commit hash), `dirty` (uncommitted changes), `profile` (`dev`,
-  `release` or `profiling`) and `cpu`, with `-` for a value that couldn't be read. `git` and
-  `dirty` describe the checkout the game runs in when the run ends;
+- the build: `git` (short commit hash), `dirty` (uncommitted changes), `optimized` (`false` for
+  a dev build), `tracy` (Tracy spans compiled in) and `cpu`, with `-` for a value that couldn't
+  be read. `git` and `dirty` describe the checkout the game runs in when the run ends;
 - `frames`, `median_frame_ms`, `p99_frame_ms` and `max_frame_ms`;
 - the mean of every `game/...` diagnostic, such as `mean_game/ai/engaged` and
   `mean_game/projectiles`.
@@ -152,7 +152,7 @@ not.
 cargo run -- --stress 1000                                     # dev build, until closed
 cargo run -- --stress 1000 --seconds 60 --engagement none      # timed run, crowd only
 cargo run -- --stress 500 --player circle                      # moving player and camera
-cargo run --profile profiling --no-default-features --features profile -- --stress 1000
+cargo run --profile profiling --no-default-features --features tracy -- --stress 1000
 ```
 
 ## xtask

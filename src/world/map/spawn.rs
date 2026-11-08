@@ -53,6 +53,7 @@ fn spawn_tiles(
     tiles: &TileAssets,
     coordinates: &TileToWorld,
 ) {
+    let _span = info_span!("map::spawn_tiles").entered();
     let map_size = blueprint.map_size();
     let grid_size: TilemapGridSize = coordinates.tile_size.into();
     let tilemap_entity = commands.spawn_empty().id();
@@ -146,6 +147,7 @@ fn spawn_colliders(
 }
 
 fn derive_collider_rects(tiles: &TileGrid<TileKind>) -> Vec<TileRect> {
+    let _span = info_span!("map::derive_collider_rects").entered();
     let map_width = i32::try_from(tiles.size().x).expect("map width fits in i32");
     let map_height = i32::try_from(tiles.size().y).expect("map height fits in i32");
 

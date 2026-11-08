@@ -1,0 +1,14 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Stress sweeps, stress summary comparisons and Tracy zone reports for the game."
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { workspace = true }
+jiff = "0.2"
+
+[lints]
+workspace = true

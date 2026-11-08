@@ -39,12 +39,27 @@ pub struct NextMap<'w, 's> {
     next_app_state: ResMut<'w, NextState<AppState>>,
     catalog: Res<'w, RecipeCatalog>,
     root_rng: ResMut<'w, MapRng>,
+    #[cfg(feature = "dev_tools")]
+    stress_arena: Option<Res<'w, StressArena>>,
 }
 
 impl NextMap<'_, '_> {
     /// Builds and schedules the requested map, replacing any current map.
     pub fn set(&mut self, request: MapRequest) -> Result<()> {
+        #[cfg(feature = "dev_tools")]
+        let request = if self.stress_arena.is_some() {
+            StressArena::redirect_hub(request)
+        } else {
+            request
+        };
         let (recipe, seed) = self.catalog.resolve(request, &mut self.root_rng)?;
+        #[cfg(feature = "dev_tools")]
+        let stressed_recipe = self
+            .stress_arena
+            .as_deref()
+            .and_then(|stress_arena| stress_arena.override_counts(recipe));
+        #[cfg(feature = "dev_tools")]
+        let recipe = stressed_recipe.as_ref().unwrap_or(recipe);
         info!("Generating map {} with seed {seed}", recipe.name);
         let blueprint = build_from_recipe(recipe, seed, &self.catalog.structures)
             .map_err(|error| format!("map {} seed {seed}: {error}", recipe.name))?;
@@ -198,6 +213,7 @@ pub(crate) fn build_from_recipe(
     seed: u64,
     structures: &BTreeMap<String, Structure>,
 ) -> std::result::Result<MapBlueprint, MapError> {
+    let _span = info_span!("map::build_from_recipe").entered();
     let mut size_generator = Stage::Size.random_generator(seed);
     let size_x = recipe.size_x_range.roll_size(&mut size_generator);
     let size_y = recipe.size_y_range.roll_size(&mut size_generator);

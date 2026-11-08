@@ -25,6 +25,7 @@ pub(super) fn on_spawn_enemies(
     player: Single<Entity, With<Player>>,
     mut map_rng: ResMut<MapRng>,
 ) {
+    let _span = info_span!("enemy::on_spawn_enemies").entered();
     for &spawn_data in &spawn_enemies.0 {
         spawn_enemy(
             &mut commands,

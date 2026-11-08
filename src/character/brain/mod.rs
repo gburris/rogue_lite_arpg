@@ -26,6 +26,8 @@ mod action;
 mod capability;
 pub(crate) mod considerations;
 mod decide;
+#[cfg(feature = "dev_tools")]
+mod diagnostics;
 mod engine;
 mod motion;
 mod perception;
@@ -48,9 +50,11 @@ pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
-pub(crate) use self::perception::{ConsiderationInput, Targeting};
+#[cfg(feature = "dev_tools")]
+pub(crate) use self::perception::TargetLock;
+pub(super) use self::perception::Watching;
+pub(crate) use self::perception::{ConsiderationInput, Targeting, VisionCone};
 use self::perception::{DecisionContext, MemoryView};
-pub(super) use self::perception::{VisionCone, Watching};
 use self::running_state::RunningBehavior;
 use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
@@ -273,6 +277,9 @@ pub(super) fn plugin(app: &mut App) {
     if let Err(error) = validate_brain(&VILLAGER) {
         panic!("villager brain is invalid: {error}");
     }
+
+    #[cfg(feature = "dev_tools")]
+    app.add_plugins(diagnostics::plugin);
 
     app.configure_sets(
         Update,

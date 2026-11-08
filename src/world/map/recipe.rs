@@ -162,6 +162,27 @@ pub(crate) struct MapRecipe {
     pub(super) spawns: Vec<SpawnEntry>,
 }
 
+#[cfg(feature = "dev_tools")]
+impl MapRecipe {
+    /// The recipe's name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Sets every enemy spawn to exactly `count_of(kind)` and drops those with a count of zero.
+    pub fn with_enemy_counts(mut self, count_of: impl Fn(EnemyKind) -> u32) -> Self {
+        self.spawns.retain_mut(|spawn| {
+            let SpawnKind::Enemy(kind) = spawn.what else {
+                return true;
+            };
+            let count = count_of(kind);
+            spawn.count = CountRange::exactly(count);
+            count > 0
+        });
+        self
+    }
+}
+
 impl RecipeEntry {
     pub(super) fn resolve(
         self,

@@ -60,7 +60,7 @@ fn chest(
     );
     bsn! {
         Chest
-        sprite
+        template(move |_| Ok(sprite.clone()))
         Anchor(Vec2::new(-0.18, 0.0))
         ~{AnimationIndices::OneShot(0..=8)}
         Transform {

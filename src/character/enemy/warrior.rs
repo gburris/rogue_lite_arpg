@@ -194,7 +194,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         ~Dash::kite(0.8, Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32))
         ~Heal::new(HEAL_COOLDOWN)
         enemy_wander()
-        sprite
+        template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)
         ]

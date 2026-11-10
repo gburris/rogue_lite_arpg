@@ -7,7 +7,7 @@ use super::item_display::{
 use crate::prelude::*;
 
 /// Div that wraps all display slots, but not top level component.
-#[derive(Component, Clone)]
+#[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = DisplayedBy)]
 pub struct DisplayCaseOf(Entity);
 
@@ -56,7 +56,7 @@ pub(super) fn display_case(inventory_owner: Entity) -> impl Scene {
             ]
             --
             // One slot per item, scrolled with the mouse wheel.
-            ~{DisplayCaseOf(inventory_owner)}
+            DisplayCaseOf(inventory_owner)
             ScrollArea
             Node {
                 flex_grow: 1.0,

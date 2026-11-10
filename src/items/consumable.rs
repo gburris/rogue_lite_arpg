@@ -24,7 +24,7 @@ pub fn health_potion(sprites: &SpriteAssets) -> impl Scene {
         Name::new("Health Potion")
         ~Item::new(40, ItemKind::Potion)
         ~Consumable::Heal(50.0)
-        ~Sprite::from_image(image)
+        Sprite { image }
     }
 }
 

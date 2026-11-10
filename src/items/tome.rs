@@ -23,7 +23,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
             min_healing: 25.0,
             max_healing: 50.0,
         }}
-        ~Sprite::from_image(image)
+        Sprite { image }
         on(on_healing_tome_cast)
     }
 }
@@ -60,7 +60,7 @@ fn heal_tome_vfx(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
         },
     );
     bsn! {
-        sprite
+        template(move |_| Ok(sprite.clone()))
         Anchor(Vec2::new(0.0, 0.10))
         ~{AnimationIndices::OneShot(0..=9)}
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))

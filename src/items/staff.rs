@@ -104,7 +104,7 @@ fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
         Staff { source_offset: Vec2::new(0.0, 26.0) }
         ~Equippable::new(EquipmentSlot::Mainhand, cooldown, &STAFF_EQUIPMENT_POSES)
             .with_reach(STAFF_REACH)
-        ~Sprite::from_image(image)
+        Sprite { image }
         on(on_start_staff)
         on(on_stop_staff)
     }

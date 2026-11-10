@@ -7,7 +7,7 @@ const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 pub const VALUE_WIDTH: f32 = 60.0;
 pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
 
-#[derive(Component, Clone)]
+#[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = ItemDisplayed)]
 pub struct DisplaySlotOf(Entity);
 
@@ -50,7 +50,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scen
     let item = context.item;
 
     bsn! {
-        ~{DisplaySlotOf(item)}
+        DisplaySlotOf(item)
         Node {
             width: px(900),
             height: px(32),

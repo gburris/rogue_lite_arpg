@@ -128,6 +128,6 @@ fn villager_sprite(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) ->
         },
     );
     bsn! {
-        sprite
+        template(move |_| Ok(sprite.clone()))
     }
 }

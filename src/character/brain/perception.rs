@@ -186,7 +186,7 @@ pub(crate) struct Targeting(pub Entity);
 pub(crate) struct TargetedBy(Vec<Entity>);
 
 /// The entity this one watches for, to target once sighted.
-#[derive(Component, Clone)]
+#[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = WatchedBy)]
 pub(in crate::character) struct Watching(pub Entity);
 

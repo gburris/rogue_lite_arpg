@@ -78,8 +78,8 @@ fn burn_vfx(
         },
     );
     bsn! {
-        ~{StatusVfxOf(status)}
-        sprite
+        StatusVfxOf(status)
+        template(move |_| Ok(sprite.clone()))
         Transform {
             translation: Vec3::new(0.0, {CHARACTER_FEET_POS_OFFSET + 8.0}, {ZLayer::SpriteForeground.z()}),
             scale: Vec3::new(1.2, 1.2, 1.0),

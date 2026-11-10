@@ -89,7 +89,7 @@ pub fn fireball_with_speed(
             angle_offset,
         }
         Lifespan::new({FIREBALL_RANGE / speed})
-        sprite
+        template(move |_| Ok(sprite.clone()))
         @point_light(Color::from(YELLOW_300), 1.4, 50.0, 5.0)
         ~Collider::circle(10.0)
         AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating))
@@ -123,7 +123,7 @@ pub fn icebolt(
             spawn_offset: 26.0,
             angle_offset,
         }
-        sprite
+        template(move |_| Ok(sprite.clone()))
         @point_light(Color::from(BLUE_400), 1.4, 80.0, 5.0)
         ~Collider::rectangle(40.0, 5.0)
         ~{AnimationIndices::Cycle((0..=2).cycle())}

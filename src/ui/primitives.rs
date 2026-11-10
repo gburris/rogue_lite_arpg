@@ -49,7 +49,7 @@ pub fn spacer() -> impl Scene {
 }
 
 /// A node that fills the screen as a column and despawns when `state` exits.
-pub fn screen<S: States>(state: S) -> impl Scene {
+pub fn screen<S: States + Unpin>(state: S) -> impl Scene {
     bsn! {
         ~{DespawnOnExit(state)}
         Node {
@@ -153,7 +153,7 @@ pub fn gold_frame() -> impl Scene {
 
 /// The layout the start and loading screens share: a pulsing title, a `centerpiece` in the
 /// middle, and a `tagline` along the bottom, between two gold stripes.
-pub fn splash_screen<S: States>(
+pub fn splash_screen<S: States + Unpin>(
     state: S,
     title: &str,
     centerpiece: impl Scene,

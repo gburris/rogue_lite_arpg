@@ -37,7 +37,7 @@ pub(super) fn spawn_player(
             @player_actions()
             ~Mana::new(100.0, 10.0)
             stats
-            sprite
+            template(move |_| Ok(sprite.clone()))
             TargetInfo
             on(death::on_player_defeated)
             on(overlay::on_equipment_use_succeeded)

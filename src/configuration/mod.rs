@@ -35,7 +35,9 @@ pub(super) fn plugin(app: &mut App) {
                 ..default()
             })
             .set(view::window_plugin())
-            .set(ImagePlugin::default_nearest()),
+            .set(ImagePlugin::default_nearest())
+            // Panics at startup without `bevy_pbr`: https://github.com/bevyengine/bevy/issues/25980
+            .disable::<bevy::dev_tools::render_debug::RenderDebugOverlayPlugin>(),
     );
 
     #[cfg(not(feature = "dev"))]

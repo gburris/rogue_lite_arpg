@@ -64,7 +64,7 @@ fn melee_weapon(image: Handle<Image>, value: u32) -> impl Scene {
         ~Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_POSES)
             .with_reach(MELEE_WEAPON_REACH)
         ~Item::new(value, ItemKind::Melee)
-        ~Sprite::from_image(image)
+        Sprite { image }
         on(on_stop_melee)
         on(on_start_melee)
     }

@@ -23,8 +23,9 @@ impl Default for PlayerStats {
 }
 
 /// One of the [`PlayerStats`] fields, for shop UI and stat changes.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Stat {
+    #[default]
     Agility,
     Strength,
     Dexterity,

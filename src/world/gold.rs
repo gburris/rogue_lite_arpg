@@ -9,7 +9,7 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_drop_gold);
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 #[require(
     RigidBody,
     Collider::circle(10.0),
@@ -92,8 +92,8 @@ fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<Sp
 /// A coin worth `value`, pulled toward the player once they're close.
 fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Scene {
     bsn! {
-        ~{Gold { value }}
-        ~Sprite::from_image(gold_image)
+        Gold { value }
+        Sprite { image: gold_image }
         Transform::from_translation({location.extend(ZLayer::OnGround.z())})
         Children [
             Magnet

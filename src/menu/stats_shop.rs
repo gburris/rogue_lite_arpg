@@ -13,13 +13,14 @@ pub(super) fn plugin(app: &mut App) {
 pub struct StatShopMenu;
 
 /// Which way a stat shop button moves its stat.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum StatChange {
+    #[default]
     Increase,
     Decrease,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 pub struct StatShopButton {
     pub stat: Stat,
     pub change: StatChange,
@@ -102,7 +103,7 @@ fn stat_shop_button(stat: Stat, change: StatChange, points: u32) -> impl Scene {
 
     bsn! {
         @button(label, BODY_FONT_SIZE, Color::WHITE, colors)
-        ~{StatShopButton { stat, change }}
+        StatShopButton { stat, change }
         Node {
             width: px(30),
             height: px(30),

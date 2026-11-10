@@ -51,7 +51,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
-        sprite
+        template(move |_| Ok(sprite.clone()))
         on(on_start_shield)
         on(on_stop_shield)
     }

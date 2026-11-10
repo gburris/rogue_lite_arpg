@@ -248,7 +248,7 @@ fn update_experience_bar(
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 pub(super) struct ActionBox {
     slot: EquipmentSlot,
 }
@@ -282,7 +282,7 @@ fn action_bar() -> impl Scene {
 
 fn action_box(slot: EquipmentSlot) -> impl Scene {
     bsn! {
-        ~{ActionBox { slot }}
+        ActionBox { slot }
         Node {
             width: px(ACTION_BOX_SIZE),
             height: px(ACTION_BOX_SIZE),

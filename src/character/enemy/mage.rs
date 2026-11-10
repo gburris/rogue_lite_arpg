@@ -236,7 +236,7 @@ fn mage_body(
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         ~Mana::new(100.0, 10.0)
         enemy_wander()
-        sprite
+        template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)
         ]

@@ -227,5 +227,23 @@ RecipeFile(
             presets: [],
             spawns: [],
         ),
+        (
+            // Enemies packed within reach of the player, the worst case for targeting, aim and
+            // decisions. `--stress` overrides the enemy counts and starts the game here
+            // (see `dev/stress.rs`).
+            name: "StressSwarm",
+            size: 60,
+            floor: Ground,
+            structures: [],
+            presets: [],
+            spawns: [
+                (what: PlayerStart, at: Center),
+                (what: Exit, at: Edge(Right)),
+                (what: Enemy(Warrior), count: 25, at: Random(), separation: 1),
+                (what: Enemy(IceMage), count: 25, at: Random(), separation: 1),
+                (what: Enemy(FireMage), count: 25, at: Random(), separation: 1),
+                (what: Enemy(Bat), count: 25, at: Random(), separation: 1),
+            ],
+        ),
     ],
 )

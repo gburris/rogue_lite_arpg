@@ -3,7 +3,6 @@ use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
 
 use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use crate::prelude::*;
@@ -18,59 +17,52 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Name::new("Magic Shield"),
-        Item::new(355, ItemKind::Tome),
-        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
-        ManaCost(5.0),
-        ManaDrainRate(20.0),
-        ProjectileReflection,
-        Shield {
-            hitbox: Collider::rectangle(25.0, 25.0),
-        },
-        Sprite {
-            image: sprites.magic_shield.clone(),
-            texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield.clone(),
-                index: 0,
-            }),
-            ..default()
-        },
-        observe(on_start_shield),
-        observe(on_stop_shield),
-    )
+pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @shield(sprites.magic_shield.clone(), sprite_layouts)
+        Name::new("Magic Shield")
+        ManaCost(5.0)
+        ManaDrainRate(20.0)
+        ProjectileReflection
+    }
 }
 
-pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Name::new("Knight Shield"),
-        Item::new(355, ItemKind::Tome),
-        Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES),
-        Shield {
-            hitbox: Collider::rectangle(25.0, 25.0),
-        },
-        ManaDrainRate(25.0),
-        ManaCost(25.0),
-        Sprite {
-            image: sprites.knight_shield.clone(),
-            texture_atlas: Some(TextureAtlas {
-                layout: sprite_layouts.shield.clone(),
-                index: 0,
-            }),
-            ..default()
-        },
-        observe(on_start_shield),
-        observe(on_stop_shield),
-    )
+pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @shield(sprites.knight_shield.clone(), sprite_layouts)
+        Name::new("Knight Shield")
+        ManaCost(25.0)
+        ManaDrainRate(25.0)
+    }
 }
 
-#[derive(Component)]
+/// What every shield shares: an offhand item with a square block hitbox, shown with `image`.
+fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        image,
+        TextureAtlas {
+            layout: sprite_layouts.shield.clone(),
+            index: 0,
+        },
+    );
+    bsn! {
+        ~Item::new(355, ItemKind::Tome)
+        ~Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES)
+        ~{Shield {
+            hitbox: Collider::rectangle(25.0, 25.0),
+        }}
+        template(move |_| Ok(sprite.clone()))
+        on(on_start_shield)
+        on(on_stop_shield)
+    }
+}
+
+#[derive(Component, Clone)]
 pub struct Shield {
     pub hitbox: Collider,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 #[require(CollidingEntities, Sensor)]
 pub struct ProjectileReflection;
 

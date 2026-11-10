@@ -6,8 +6,9 @@ use bevy::prelude::*;
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this
 /// by reference.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum EquipmentSlot {
+    #[default]
     Mainhand,
     Offhand,
 }

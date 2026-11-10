@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use crate::character::state::Kinematics;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct TurnRate(pub f32);
 
 /// Extra speed left over from a finite motion's burst, easing off over

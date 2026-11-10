@@ -43,10 +43,10 @@ impl Mana {
 }
 
 /// Attach it to projectiles, weapons, spells, etc... if they cost mana to use.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Default, Clone, Copy, Debug)]
 pub struct ManaCost(pub f32);
 
-#[derive(Component, Clone)]
+#[derive(Component, Default, Clone)]
 pub struct ManaDrainRate(pub f32);
 
 /// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration

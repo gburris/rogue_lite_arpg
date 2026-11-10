@@ -4,7 +4,7 @@ use bevy::color::palettes::tailwind::BLUE_300;
 use bevy::color::palettes::{basic::RED, css::BLUE, tailwind::PURPLE_700};
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
-use bevy_lit::prelude::{AmbientLight2d, Lighting2dSettings};
+use bevy_firefly::prelude::{Falloff, FireflyConfig, LightCore, LightmapSize, PointLight2d};
 
 use super::assets::Shadows;
 use crate::prelude::*;
@@ -12,7 +12,7 @@ use crate::prelude::*;
 pub const CHARACTER_FEET_POS_OFFSET: f32 = -24.0;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Startup, spawn_camera);
+    app.add_systems(Startup, camera.spawn());
     app.init_resource::<IntegerScale>();
     app.add_systems(Update, fit_integer_scale);
 
@@ -25,7 +25,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(FixedUpdate, ysort_transforms.in_set(MainSystems::InGame));
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct YSort {
     /// Z layer of sprite, only sprites on the same layer will be y-sorted correctly.
     z: f32,
@@ -56,12 +56,21 @@ impl YSort {
     }
 }
 
+/// Sprites at exactly the same height would tie on z, and Bevy doesn't guarantee the draw order
+/// of sprites with equal z. Each entity's sort height is nudged by a fraction of a pixel based on
+/// its index (`(index % TIEBREAK_BUCKETS) * TIEBREAK_STEP`, at most a quarter pixel), so their
+/// order stays fixed without visibly changing it. The step is kept large enough to survive f32
+/// precision once divided by the map height.
+const TIEBREAK_BUCKETS: u32 = 16;
+const TIEBREAK_STEP: f32 = 1.0 / 64.0;
+
 fn ysort_transforms(
-    mut transform_query: Query<(&mut Transform, &YSort)>,
+    mut transform_query: Query<(Entity, &mut Transform, &YSort)>,
     tile_to_world: Res<TileToWorld>,
 ) {
-    for (mut transform, ysort) in &mut transform_query {
-        let relative_height_on_map = (transform.translation.y + ysort.height_offset)
+    for (entity, mut transform, ysort) in &mut transform_query {
+        let tiebreak = (entity.index_u32() % TIEBREAK_BUCKETS) as f32 * TIEBREAK_STEP;
+        let relative_height_on_map = (transform.translation.y + ysort.height_offset + tiebreak)
             / (tile_to_world.map_size.y as f32 * tile_to_world.tile_size.y);
 
         transform.translation.z = ysort.z - relative_height_on_map;
@@ -115,28 +124,32 @@ pub(super) fn window_plugin() -> WindowPlugin {
     }
 }
 
-fn spawn_camera(mut commands: Commands) {
-    commands.spawn((
-        Camera2d,
-        Projection::Orthographic(OrthographicProjection {
-            // Initial view; fit_integer_scale snaps it to exact integer
-            // scaling on the first frame (and every resize after that).
-            scaling_mode: ScalingMode::Fixed {
-                width: 1280.0,
-                height: 720.0,
-            },
-            ..OrthographicProjection::default_2d()
-        }),
-        Lighting2dSettings {
-            blur: 4,
-            edge_intensity: 8.0,
-            ..default()
+fn camera() -> impl Scene {
+    // Initial view; fit_integer_scale snaps it to exact integer
+    // scaling on the first frame (and every resize after that).
+    let projection = Projection::Orthographic(OrthographicProjection {
+        scaling_mode: ScalingMode::Fixed {
+            width: 1280.0,
+            height: 720.0,
         },
-        AmbientLight2d {
-            intensity: 0.5,
-            color: Color::from(BLUE_300),
-        },
-    ));
+        ..OrthographicProjection::default_2d()
+    });
+
+    bsn! {
+        Camera2d
+        projection
+        FireflyConfig {
+            ambient_color: Color::from(BLUE_300),
+            ambient_brightness: 0.5,
+            // Half-resolution lightmap with linear filtering: cheaper, and softens light edges
+            // the way bevy_lit's blur did.
+            lightmap_size: LightmapSize::Scaled(0.5),
+            lightmap_filtering: true,
+            // The game has no occluders, so shadow features are off.
+            soft_shadows: false,
+            z_sorting: false,
+        }
+    }
 }
 
 /// Target vertical view size in world units. The shown height snaps to the
@@ -242,10 +255,27 @@ pub fn draw_camera_debug_gizmos(
         .resolution(64);
 }
 
-pub fn shadow(shadows: &Shadows, y_offset: f32) -> impl Bundle {
-    (
-        Mesh2d(shadows.character.handle.clone()),
-        MeshMaterial2d(shadows.color.handle.clone()),
-        Transform::from_xyz(0.0, y_offset, ZLayer::SpriteBackground.z()),
-    )
+/// A soft ellipse under a character's feet, `y_offset` below its center.
+pub fn shadow(shadows: &Shadows, y_offset: f32) -> impl Scene {
+    let mesh = shadows.character.handle.clone();
+    let material = shadows.color.handle.clone();
+    bsn! {
+        Mesh2d(mesh)
+        MeshMaterial2d<ColorMaterial>(material)
+        Transform::from_xyz(0.0, y_offset, {ZLayer::SpriteBackground.z()})
+    }
+}
+
+/// A point light with an inverse-square falloff and no bright core, the look every light in
+/// the game shares.
+pub fn point_light(color: Color, intensity: f32, radius: f32, falloff: f32) -> impl Scene {
+    bsn! {
+        PointLight2d {
+            color,
+            intensity,
+            radius,
+            falloff: Falloff::InverseSquare { intensity: falloff },
+            core: LightCore::NONE,
+        }
+    }
 }

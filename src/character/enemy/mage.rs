@@ -167,40 +167,40 @@ pub(super) static ICE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: ICE_MAGE_BEHAVIORS,
 };
 
-/// Spawns an ice-staff mage on top of the shared enemy `base` bundle.
+/// Spawns a staff-carrying ice mage on top of the shared enemy `base` scene.
 pub(super) fn spawn_ice_mage(
     commands: &mut Commands,
-    base: impl Bundle,
+    base: impl Scene,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
     spawn_enemy_with_equipment(
         commands,
-        (
-            ice_mage(sprites, sprite_layouts),
-            base,
-            enemy_children(shadows),
-        ),
+        bsn! {
+            @ice_mage(sprites, sprite_layouts)
+            @{base}
+            @enemy_children(shadows)
+        },
         ice_staff(sprites, sprite_layouts),
     );
 }
 
-/// Spawns a fire mage on top of the shared enemy `base` bundle, carrying one of
+/// Spawns a fire mage on top of the shared enemy `base` scene, carrying one of
 /// two flame staves picked from the seeded map stream.
 pub(super) fn spawn_fire_mage(
     commands: &mut Commands,
-    base: impl Bundle,
+    base: impl Scene,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
     map_rng: &mut MapRng,
 ) {
-    let enemy = (
-        fire_mage(sprites, sprite_layouts),
-        base,
-        enemy_children(shadows),
-    );
+    let enemy = bsn! {
+        @fire_mage(sprites, sprite_layouts)
+        @{base}
+        @enemy_children(shadows)
+    };
 
     if map_rng.flip() {
         spawn_enemy_with_equipment(
@@ -217,54 +217,58 @@ pub(super) fn spawn_fire_mage(
     }
 }
 
-fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        (Kinematics::new(100.0), Health::new(20.0)),
-        Experience(12.0),
-        ground_sight_ray(),
-        YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
-        Mana::new(100.0, 10.0),
+/// A mage's look and body: an enemy-sheet sprite carrying a spare potion.
+fn mage_body(
+    image: Handle<Image>,
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        image,
+        TextureAtlas {
+            layout: sprite_layouts.enemy.clone(),
+            ..default()
+        },
+    );
+    bsn! {
+        ~Health::new(20.0)
+        ground_sight_ray()
+        YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
+        ~Mana::new(100.0, 10.0)
+        enemy_wander()
+        template(move |_| Ok(sprite.clone()))
+        Items [
+            @health_potion(sprites)
+        ]
+    }
+}
+
+fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @mage_body(sprites.ice_mage_enemy_sprite_sheet.clone(), sprites, sprite_layouts)
+        ~Kinematics::new(100.0)
+        Experience(12.0)
         // The cooldown is the player's window to close in again.
-        Dash::slide(
+        ~Dash::slide(
             Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32),
             2.2,
             ICE_SLIDE_REACH,
             1.2,
-        ),
-        enemy_wander(),
-        Sprite::from_atlas_image(
-            sprites.ice_mage_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
+        )
+    }
 }
 
-fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        (Kinematics::new(150.0), Health::new(20.0)),
-        Experience(15.0),
-        ground_sight_ray(),
-        YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
-        Mana::new(100.0, 10.0),
+fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @mage_body(sprites.fire_mage_enemy_sprite_sheet.clone(), sprites, sprite_layouts)
+        ~Kinematics::new(150.0)
+        Experience(15.0)
         // A still target inside the close range gets a step-in hop instead.
-        Dash::hop(
+        ~Dash::hop(
             Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
             2.2,
             CAST_MIN_RANGE - 10.0,
-        ),
-        Orbit::new(),
-        enemy_wander(),
-        Sprite::from_atlas_image(
-            sprites.fire_mage_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
+        )
+        ~Orbit::new()
+    }
 }

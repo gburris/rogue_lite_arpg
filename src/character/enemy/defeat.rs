@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 /// Experience paid out when the player defeats this enemy. Scales with
 /// threat: the tanky warrior pays most, the fragile flying bat least.
-#[derive(Component, Clone, Copy, Debug, Deref, DerefMut)]
+#[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut)]
 pub struct Experience(pub f32);
 
 pub(super) fn on_enemy_defeated(

@@ -1,6 +1,5 @@
 use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
 
 use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
@@ -67,12 +66,12 @@ fn spawn_enemy(
 
 pub(super) fn spawn_enemy_with_equipment(
     commands: &mut Commands,
-    enemy: impl Bundle,
-    mainhand: impl Bundle,
+    enemy: impl Scene,
+    mainhand: impl Scene,
 ) -> Entity {
-    let enemy = commands.spawn(enemy).id();
+    let enemy = commands.spawn_scene(enemy).id();
 
-    let mainhand = commands.spawn(mainhand).id();
+    let mainhand = commands.spawn_scene(mainhand).id();
 
     commands.trigger(Equip {
         item: mainhand,
@@ -88,16 +87,17 @@ pub(super) fn enemy_wander() -> Wander {
 }
 const ENEMY_SIGHT_RANGE: f32 = 350.0;
 
-/// The bundle every enemy kind shares; each kind's file adds the rest.
-fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Bundle {
-    (
-        Enemy,
-        Brain::new(kind.brain()),
-        Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-        HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0),
-        Watching(player),
-        observe(defeat::on_enemy_defeated),
-    )
+/// The scene every enemy kind shares; each kind's file adds the rest.
+fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
+    let brain = kind.brain();
+    bsn! {
+        Enemy
+        template(move |_| Ok(Brain::new(brain)))
+        Transform::from_translation({position.extend(ZLayer::OnGround.z())})
+        ~HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0)
+        Watching(player)
+        on(defeat::on_enemy_defeated)
+    }
 }
 
 pub(super) fn sight_ray(range: f32, mask: SpatialQueryFilter) -> RayCaster {
@@ -118,10 +118,15 @@ pub(super) fn ground_sight_ray() -> RayCaster {
     )
 }
 
-pub(super) fn enemy_children(shadows: &Shadows) -> impl Bundle {
-    children![
-        shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0),
-        physical_collider(),
-        hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox),
-    ]
+/// The shadow, body collider and hurtbox under every walking enemy.
+pub(super) fn enemy_children(shadows: &Shadows) -> impl Scene {
+    bsn! {
+        Children [
+            @shadow(shadows, CHARACTER_FEET_POS_OFFSET - 4.0)
+            --
+            @physical_collider()
+            --
+            @hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox)
+        ]
+    }
 }

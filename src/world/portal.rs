@@ -8,7 +8,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 /// Portals represent any "warping device" in the game, currently spawning a new zone when entered.
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 #[require(
     RigidBody::Static,
     Collider::rectangle(TILE_SIZE as f32, 2.0 * TILE_SIZE as f32),
@@ -22,13 +22,13 @@ pub(super) fn plugin(app: &mut App) {
 )]
 struct Portal;
 
-pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Bundle {
-    (
-        // Generate a unique instance layout for each portal
-        Portal,
-        Sprite::from_image(sprites.exit_door.clone()),
-        Transform::from_translation(position.extend(ZLayer::OnGround.z())),
-    )
+pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
+    let image = sprites.exit_door.clone();
+    bsn! {
+        Portal
+        Sprite { image }
+        Transform::from_translation({position.extend(ZLayer::OnGround.z())})
+    }
 }
 
 fn enter_portal(

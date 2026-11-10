@@ -23,8 +23,9 @@ impl Default for PlayerStats {
 }
 
 /// One of the [`PlayerStats`] fields, for shop UI and stat changes.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Stat {
+    #[default]
     Agility,
     Strength,
     Dexterity,
@@ -33,6 +34,15 @@ pub enum Stat {
 }
 
 impl Stat {
+    /// Every stat, in the order menus list them.
+    pub const ALL: [Self; 5] = [
+        Self::Agility,
+        Self::Strength,
+        Self::Dexterity,
+        Self::Intellect,
+        Self::Luck,
+    ];
+
     pub fn description(self) -> &'static str {
         match self {
             Self::Agility => "Movement speed, roll range",

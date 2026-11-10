@@ -1,6 +1,5 @@
 use bevy::color::palettes::tailwind::YELLOW_300;
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
 
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::combat::damage::{AttemptDamage, Damage};
@@ -57,43 +56,36 @@ pub(super) fn apply_burning(
     for (status, status_of) in &status_query {
         commands.entity(status).insert(StatusApplied);
 
-        commands
-            .entity(status_of.0)
-            .with_child(burn_vfx(&sprites, &sprite_layouts, status));
+        let target = status_of.0;
+        commands.spawn_scene(bsn! {
+            @burn_vfx(&sprites, &sprite_layouts, status)
+            ChildOf(target)
+        });
     }
 }
 
+/// Flames licking up around the burning character.
 fn burn_vfx(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     status: Entity,
-) -> impl Bundle {
-    (
-        StatusVfxOf(status),
-        Sprite::from_atlas_image(
-            sprites.flame.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.flame_vfx.clone(),
-                ..default()
-            },
-        ),
+) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.flame.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.flame_vfx.clone(),
+            ..default()
+        },
+    );
+    bsn! {
+        StatusVfxOf(status)
+        template(move |_| Ok(sprite.clone()))
         Transform {
-            translation: Vec3::new(
-                0.0,
-                CHARACTER_FEET_POS_OFFSET + 8.0,
-                ZLayer::SpriteForeground.z(),
-            ),
+            translation: Vec3::new(0.0, {CHARACTER_FEET_POS_OFFSET + 8.0}, {ZLayer::SpriteForeground.z()}),
             scale: Vec3::new(1.2, 1.2, 1.0),
-            ..default()
-        },
-        PointLight2d {
-            color: Color::from(YELLOW_300),
-            intensity: 2.0,
-            falloff: 10.0,
-            outer_radius: 150.0,
-            ..default()
-        },
-        AnimationIndices::Cycle((0..=7).cycle()),
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    )
+        }
+        @point_light(Color::from(YELLOW_300), 2.0, 150.0, 10.0)
+        ~{AnimationIndices::Cycle((0..=7).cycle())}
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))
+    }
 }

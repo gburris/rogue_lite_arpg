@@ -255,7 +255,7 @@ fn disable_vsync(mut window: Single<&mut Window, With<PrimaryWindow>>) {
     window.present_mode = PresentMode::AutoNoVsync;
 }
 
-fn on_player_added(player_added: On<Add, Player>, mut commands: Commands) {
+fn on_player_added(player_added: On<Add<Player>>, mut commands: Commands) {
     commands.entity(player_added.entity).insert(Invincible);
 }
 
@@ -271,7 +271,7 @@ fn move_scripted_player(
 
 /// Applies the run's [`Engagement`] to each enemy as it spawns.
 fn on_enemy_added(
-    enemy_added: On<Add, Enemy>,
+    enemy_added: On<Add<Enemy>>,
     mut commands: Commands,
     stress_arena: Res<StressArena>,
     player: Single<Entity, With<Player>>,

@@ -158,65 +158,65 @@ const BAT_SHADOW_DROP: f32 = 4.0;
 const BAT_BODY_OFFSET: f32 = BAT_FEET_POS_OFFSET + 8.0;
 const BAT_HURTBOX_OFFSET: f32 = BAT_FEET_POS_OFFSET + 12.0;
 
-/// Spawns a weaponless bat on top of the shared enemy `base` bundle.
+/// Spawns a weaponless bat on top of the shared enemy `base` scene.
 pub(super) fn spawn_bat(
     commands: &mut Commands,
-    base: impl Bundle,
+    base: impl Scene,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    commands.spawn((bat(sprites, sprite_layouts), base, bat_children(shadows)));
+    commands.spawn_scene(bsn! {
+        @bat(sprites, sprite_layouts)
+        @{base}
+        @bat_children(shadows)
+    });
 }
 
-fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        (Kinematics::new(170.0), Health::new(15.0)),
-        Experience(6.0),
+fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.bat_enemy_sprite_sheet.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.bat.clone(),
+            index: 0, // Down row; FacingDirection defaults to Down.
+        },
+    );
+    bsn! {
+        ~Kinematics::new(170.0)
+        ~Health::new(15.0)
+        Experience(6.0)
         // Bats fly high: longer reach, and high obstacles never block the
         // ray, so a bat holds its target through cover.
         sight_ray(
             BAT_SIGHT_RANGE,
             SpatialQueryFilter::from_mask([GameCollisionLayer::AllyHurtBox]),
-        ),
-        YSort::from_offset(BAT_FEET_POS_OFFSET),
-        TurnRate(BAT_TURN_RATE),
-        Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET),
-        enemy_wander(),
-        Swoop::new(0.35, CAST_MAX_RANGE, 2.0),
-        Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0),
-        Sprite::from_atlas_image(
-            sprites.bat_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.bat.clone(),
-                index: 0, // Down row; FacingDirection defaults to Down.
-            },
-        ),
-        AnimationSheet::bat(),
-        Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE),
-        related!(Projectiles[fireball(sprites, sprite_layouts, 0.0)]),
-    )
+        )
+        YSort::from_offset(BAT_FEET_POS_OFFSET)
+        TurnRate(BAT_TURN_RATE)
+        ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+        enemy_wander()
+        ~Swoop::new(0.35, CAST_MAX_RANGE, 2.0)
+        ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0)
+        template(move |_| Ok(sprite.clone()))
+        ~AnimationSheet::bat()
+        ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
+        Projectiles [
+            @fireball(sprites, sprite_layouts, 0.0)
+        ]
+    }
 }
 
-fn bat_children(shadows: &Shadows) -> impl Bundle {
-    children![
-        shadow(shadows, BAT_FEET_POS_OFFSET - BAT_SHADOW_DROP),
-        bat_collider(),
-        hurtbox_at(
-            Vec2::new(24.0, 24.0),
-            GameCollisionLayer::EnemyHurtBox,
-            BAT_HURTBOX_OFFSET,
-        ),
-    ]
-}
-
-fn bat_collider() -> impl Bundle {
-    (
-        Transform::from_xyz(0.0, BAT_BODY_OFFSET, 0.0),
-        Collider::circle(8.0),
-        CollisionLayers::new(
-            [GameCollisionLayer::InAir],
-            [GameCollisionLayer::HighObstacle],
-        ),
-    )
+/// The shadow, airborne body collider and hurtbox of a bat.
+fn bat_children(shadows: &Shadows) -> impl Scene {
+    bsn! {
+        Children [
+            @shadow(shadows, BAT_FEET_POS_OFFSET - BAT_SHADOW_DROP)
+            --
+            Transform::from_xyz(0.0, BAT_BODY_OFFSET, 0.0)
+            ~Collider::circle(8.0)
+            ~CollisionLayers::new([GameCollisionLayer::InAir], [GameCollisionLayer::HighObstacle])
+            --
+            @hurtbox_at(Vec2::new(24.0, 24.0), GameCollisionLayer::EnemyHurtBox, BAT_HURTBOX_OFFSET)
+        ]
+    }
 }

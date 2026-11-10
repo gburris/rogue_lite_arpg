@@ -2,8 +2,6 @@ use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
-use bevy_lit::prelude::PointLight2d;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
@@ -27,95 +25,92 @@ const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
 /// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
 const MAGE_FAN_SPEED_FACTOR: f32 = 0.2;
 
-pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Name::new("Staff of Flames"),
-        flame_staff_core(sprites),
-        related!(
-            Projectiles [
-                fireball(sprites, sprite_layouts, -FRAC_PI_8),
-                fireball(sprites, sprite_layouts, 0.0),
-                fireball(sprites, sprite_layouts, FRAC_PI_8)
-            ]
-        ),
-    )
+pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @flame_staff_core(sprites)
+        Name::new("Staff of Flames")
+        Projectiles [
+            @fireball(sprites, sprite_layouts, -FRAC_PI_8)
+            --
+            @fireball(sprites, sprite_layouts, 0.0)
+            --
+            @fireball(sprites, sprite_layouts, FRAC_PI_8)
+        ]
+    }
 }
 
 /// Fire-mage staff that fires a single bolt.
 pub fn mage_fire_staff_single_bolt(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
-) -> impl Bundle {
-    (
-        Name::new("Staff of Flames"),
-        flame_staff_core(sprites),
-        Projectiles::spawn_one(fireball_with_speed(
-            sprites,
-            sprite_layouts,
-            0.0,
-            FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR,
-        )),
-    )
+) -> impl Scene {
+    let speed = FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR;
+    bsn! {
+        @flame_staff_core(sprites)
+        Name::new("Staff of Flames")
+        Projectiles [
+            @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
+        ]
+    }
 }
 
 /// Fire-mage staff that fires the full three-bolt fan.
 pub fn mage_fire_staff_fan(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
-) -> impl Bundle {
-    let fan_speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
-
-    (
-        Name::new("Staff of Wildfire"),
-        flame_staff_core(sprites),
-        related!(
-            Projectiles [
-                fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, fan_speed),
-                fireball_with_speed(sprites, sprite_layouts, 0.0, fan_speed),
-                fireball_with_speed(sprites, sprite_layouts, FRAC_PI_8, fan_speed)
-            ]
-        ),
-    )
+) -> impl Scene {
+    let speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
+    bsn! {
+        @flame_staff_core(sprites)
+        Name::new("Staff of Wildfire")
+        Projectiles [
+            @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)
+            --
+            @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
+            --
+            @fireball_with_speed(sprites, sprite_layouts, FRAC_PI_8, speed)
+        ]
+    }
 }
 
 /// Shared layout, item data, sprite, and cast observers for every flame staff.
-fn flame_staff_core(sprites: &SpriteAssets) -> impl Bundle {
-    (
-        Staff {
-            source_offset: Vec2::new(0.0, 26.0),
-            fire_time: 0.1,
-            return_time: 0.1,
-        },
-        Item::new(1340, ItemKind::Staff),
-        Equippable::new(EquipmentSlot::Mainhand, 0.5, &STAFF_EQUIPMENT_POSES)
-            .with_reach(STAFF_REACH),
-        ManaCost(6.0),
-        Sprite::from_image(sprites.fire_staff.clone()),
-        observe(on_start_staff),
-        observe(on_stop_staff),
-    )
+fn flame_staff_core(sprites: &SpriteAssets) -> impl Scene {
+    bsn! {
+        @staff(sprites.fire_staff.clone(), 0.5)
+        Staff { fire_time: 0.1, return_time: 0.1 }
+        ~Item::new(1340, ItemKind::Staff)
+        ManaCost(6.0)
+    }
 }
 
-pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        Name::new("Staff of Ice"),
-        Staff {
-            source_offset: Vec2::new(0.0, 26.0),
-            fire_time: 0.15,
-            return_time: 0.15,
-        },
-        Item::new(2050, ItemKind::Staff),
-        ManaCost(15.0), // big mana cost
-        Equippable::new(EquipmentSlot::Mainhand, 1.0, &STAFF_EQUIPMENT_POSES)
-            .with_reach(STAFF_REACH),
-        Sprite::from_image(sprites.ice_staff.clone()),
-        Projectiles::spawn_one(icebolt(sprites, sprite_layouts, 0.0)),
-        observe(on_start_staff),
-        observe(on_stop_staff),
-    )
+pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    bsn! {
+        @staff(sprites.ice_staff.clone(), 1.0)
+        Name::new("Staff of Ice")
+        Staff { fire_time: 0.15, return_time: 0.15 }
+        ~Item::new(2050, ItemKind::Staff)
+        // big mana cost
+        ManaCost(15.0)
+        Projectiles [
+            @icebolt(sprites, sprite_layouts, 0.0)
+        ]
+    }
 }
 
-#[derive(Component)]
+/// What every staff shares: a mainhand item drawn with `image` that swings and casts its
+/// projectiles every `cooldown` seconds.
+fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
+    bsn! {
+        Staff { source_offset: Vec2::new(0.0, 26.0) }
+        ~Equippable::new(EquipmentSlot::Mainhand, cooldown, &STAFF_EQUIPMENT_POSES)
+            .with_reach(STAFF_REACH)
+        Sprite { image }
+        on(on_start_staff)
+        on(on_stop_staff)
+    }
+}
+
+#[derive(Component, Default, Clone)]
 struct Staff {
     /// X, y offset relative to center of staff sprite where projectiles should be spawned.
     source_offset: Vec2,
@@ -173,42 +168,40 @@ fn on_start_staff(
         FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
 
-    commands
-        .entity(staff_used.item)
-        .insert((
-            EquipmentInUse,
-            Casting::new(staff.fire_time, staff.return_time),
-            TweenAnim::new(
-                // Swing
-                Tween::new(
-                    EaseFunction::BackIn,
-                    Duration::from_secs_f32(staff.fire_time),
-                    TransformRotateZLens {
-                        start: staff_rotation,
-                        end: staff_rotation + swing_angle,
-                    },
-                )
-                // Return
-                .then(Tween::new(
-                    EaseFunction::CubicOut,
-                    Duration::from_secs_f32(staff.return_time),
-                    TransformRotateZLens {
-                        start: staff_rotation + swing_angle,
-                        end: staff_rotation,
-                    },
-                )),
+    commands.entity(staff_used.item).insert((
+        EquipmentInUse,
+        Casting::new(staff.fire_time, staff.return_time),
+        TweenAnim::new(
+            // Swing
+            Tween::new(
+                EaseFunction::BackIn,
+                Duration::from_secs_f32(staff.fire_time),
+                TransformRotateZLens {
+                    start: staff_rotation,
+                    end: staff_rotation + swing_angle,
+                },
             )
-            .with_destroy_on_completed(true),
-        ))
-        .with_child((
-            Transform::from_translation(staff.source_offset.extend(ZLayer::AboveSprite.z())),
-            PointLight2d {
-                color: Color::WHITE,
-                intensity: 10.0,
-                outer_radius: 3.0,
-                ..default()
-            },
-        ));
+            // Return
+            .then(Tween::new(
+                EaseFunction::CubicOut,
+                Duration::from_secs_f32(staff.return_time),
+                TransformRotateZLens {
+                    start: staff_rotation + swing_angle,
+                    end: staff_rotation,
+                },
+            )),
+        )
+        .with_destroy_on_completed(true),
+    ));
+
+    // A spark at the tip while the cast winds up.
+    let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
+    let staff_entity = staff_used.item;
+    commands.spawn_scene(bsn! {
+        @point_light(Color::WHITE, 10.0, 3.0, 1.0)
+        Transform::from_translation(tip)
+        ChildOf(staff_entity)
+    });
 }
 
 fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {

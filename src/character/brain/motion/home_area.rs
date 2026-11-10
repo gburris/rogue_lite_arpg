@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 /// A character's home: its center, how far it may wander from it, and how
 /// close to the center counts as being back home.
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct HomeArea {
     origin: Vec2,
     radius: f32,

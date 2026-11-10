@@ -53,7 +53,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(despawn_all::<Restart, Player>);
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(
     Character,
     CombatSide = CombatSide::Ally,

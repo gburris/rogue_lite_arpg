@@ -1,6 +1,4 @@
-use bevy::ecs::spawn::SpawnWith;
 use bevy::prelude::*;
-use bevy::ui_widgets::observe;
 
 use super::display_case::UpdateDisplayCase;
 use crate::prelude::*;
@@ -9,7 +7,7 @@ const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 pub const VALUE_WIDTH: f32 = 60.0;
 pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
 
-#[derive(Component)]
+#[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = ItemDisplayed)]
 pub struct DisplaySlotOf(Entity);
 
@@ -27,94 +25,72 @@ pub struct DisplaySlotContext {
     pub equipped: bool,
 }
 
-/// Spawns a given "slot" in a display case representing a single item in the inventory.
-pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Bundle {
-    let equip_slot_string = context
+/// A single "slot" in a display case, representing one item in the inventory.
+pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scene {
+    let equip_slot = context
         .equipment_slot
         .map_or("-".to_string(), |slot| slot.to_string());
+    let icon = match context.kind {
+        ItemKind::Melee => icons.melee.clone(),
+        ItemKind::Staff => icons.staff.clone(),
+        ItemKind::Potion => icons.potion.clone(),
+        ItemKind::Tome => icons.spell_book.clone(),
+    };
+    let equipped_icon = context.equipped.then(|| {
+        let image = icons.equip.clone();
+        bsn_list! {
+            ImageNode { image }
+            Node {
+                width: px(16),
+                height: px(16),
+            }
+            Pickable::IGNORE
+        }
+    });
+    let item = context.item;
 
-    let equipped_icon = icons.equip.clone();
-    let equipped = context.equipped;
-
-    (
-        DisplaySlotOf(context.item),
+    bsn! {
+        DisplaySlotOf(item)
         Node {
-            width: px(900.0),
-            height: px(32.0),
-            padding: px(5.0).all(),
-            column_gap: px(5.0),
+            width: px(900),
+            height: px(32),
+            padding: px(5),
+            column_gap: px(5),
             align_items: AlignItems::Center,
-            ..default()
-        },
-        Pickable {
-            should_block_lower: false,
-            ..default()
-        },
-        Children::spawn((
-            Spawn((
-                ImageNode {
-                    image: match context.kind {
-                        ItemKind::Melee => icons.melee.clone(),
-                        ItemKind::Staff => icons.staff.clone(),
-                        ItemKind::Potion => icons.potion.clone(),
-                        ItemKind::Tome => icons.spell_book.clone(),
-                    },
-                    ..default()
-                },
-                Node {
-                    width: px(30.0),
-                    height: px(30.0),
-                    ..default()
-                },
-                Pickable::IGNORE,
-            )),
-            Spawn((text(context.name, 18.0), Pickable::IGNORE)),
-            SpawnWith(move |parent: &mut ChildSpawner| {
-                if equipped {
-                    spawn_equip_icon(parent, equipped_icon);
-                }
-            }),
-            Spawn((
-                Node {
-                    flex_grow: 1.0,
-                    ..default()
-                },
-                Pickable::IGNORE,
-            )),
-            Spawn((
-                text(equip_slot_string, 18.0),
-                width(EQUIP_SLOT_WIDTH),
-                Pickable::IGNORE,
-            )),
-            Spawn((
-                text(context.value.to_string(), 18.0),
-                width(VALUE_WIDTH),
-                Pickable::IGNORE,
-            )),
-        )),
-        observe(on_slot_clicked),
-        observe(on_slot_hover),
-        observe(on_slot_done_hovering),
-    )
-}
-
-fn spawn_equip_icon(parent: &mut ChildSpawner, equipped_icon: Handle<Image>) {
-    parent.spawn((
-        ImageNode {
-            image: equipped_icon,
-            ..default()
-        },
-        Node {
-            height: px(16.0),
-            width: px(16.0),
-            ..default()
-        },
-        Pickable::IGNORE,
-    ));
+        }
+        Pickable { should_block_lower: false }
+        on(on_slot_clicked)
+        on(on_slot_hover)
+        on(on_slot_done_hovering)
+        Children [
+            ImageNode { image: icon }
+            Node {
+                width: px(30),
+                height: px(30),
+            }
+            Pickable::IGNORE
+            --
+            @text(context.name, SMALL_FONT_SIZE)
+            Pickable::IGNORE
+            --
+            {equipped_icon}
+            --
+            @spacer()
+            Pickable::IGNORE
+            --
+            @text(equip_slot, SMALL_FONT_SIZE)
+            @width(EQUIP_SLOT_WIDTH)
+            Pickable::IGNORE
+            --
+            @text({context.value.to_string()}, SMALL_FONT_SIZE)
+            @width(VALUE_WIDTH)
+            Pickable::IGNORE
+        ]
+    }
 }
 
 pub fn on_slot_clicked(
-    pointer_click: On<Pointer<Click>>,
+    pointer_click: On<PointerClick>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
     item_query: Query<(Has<Equippable>, Has<Equipped>, Has<Consumable>), With<Item>>,
@@ -152,7 +128,7 @@ pub fn on_slot_clicked(
 }
 
 pub fn on_slot_hover(
-    pointer_over: On<Pointer<Over>>,
+    pointer_over: On<PointerOver>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(pointer_over.entity) {
@@ -161,7 +137,7 @@ pub fn on_slot_hover(
 }
 
 pub fn on_slot_done_hovering(
-    pointer_out: On<Pointer<Out>>,
+    pointer_out: On<PointerOut>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
     if let Ok(mut background_color) = item_slot.get_mut(pointer_out.entity) {

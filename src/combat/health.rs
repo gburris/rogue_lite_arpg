@@ -12,7 +12,7 @@ pub struct Healed {
     pub amount: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Health {
     pub hp: f32,
     pub max_hp: f32,

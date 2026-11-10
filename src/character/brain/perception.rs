@@ -186,7 +186,7 @@ pub(crate) struct Targeting(pub Entity);
 pub(crate) struct TargetedBy(Vec<Entity>);
 
 /// The entity this one watches for, to target once sighted.
-#[derive(Component)]
+#[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = WatchedBy)]
 pub(in crate::character) struct Watching(pub Entity);
 
@@ -320,7 +320,7 @@ fn on_damage_aggro(
 /// Records when targeting begins. Only on add, so re-inserts from repeated
 /// hits and target switches keep the clock.
 fn on_targeting_added_record_time(
-    added: On<Add, Targeting>,
+    added: On<Add<Targeting>>,
     time: Res<Time<Virtual>>,
     mut target_infos: Query<&mut TargetInfo>,
 ) {

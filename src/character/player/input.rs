@@ -33,43 +33,69 @@ pub(super) fn plugin(app: &mut App) {
 const MOUSE_SENSITIVITY: f32 = 0.5;
 const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
 
-pub(super) fn player_actions() -> impl Bundle {
-    (actions!(Player[
-        (
-            Action::<OpenInventory>::new(),
-            bindings![KeyCode::KeyI],
-        ),
-        (
-            Action::<PlayerInteractionInput>::new(),
-            bindings![KeyCode::Space, GamepadButton::South],
-        ),
-        (
-            Action::<PlayerMovement>::new(),
-            DeadZone::default(),
-            Bindings::spawn((
-                Cardinal::wasd_keys(),
-                Axial::left_stick(),
-            )),
-        ),
-        (
-            Action::<AimInput>::new(),
-            Bindings::spawn((
-                Spawn((Binding::mouse_motion(), Negate::y(), Scale::splat(MOUSE_SENSITIVITY))),
-                Axial::right_stick().with((
-                    DeadZone { upper_threshold: 0.8, ..default() },
-                    Scale::splat(CONTROLLER_AIM_SENSITIVITY),
-                ))
-            )),
-        ),
-        (
-            Action::<UseMainhand>::new(),
-            bindings![MouseButton::Left, GamepadButton::RightTrigger, GamepadButton::RightTrigger2],
-        ),
-        (
-            Action::<UseOffhand>::new(),
-            bindings![MouseButton::Right, GamepadButton::LeftTrigger, GamepadButton::LeftTrigger2],
-        )
-    ]),)
+/// The player's gameplay controls, added to the player.
+pub(super) fn player_actions() -> impl Scene {
+    bsn! {
+        Actions<Player> [
+            Action::<OpenInventory>::new()
+            Bindings [
+                Binding(KeyCode::KeyI)
+            ]
+            --
+            Action::<PlayerInteractionInput>::new()
+            Bindings [
+                Binding(KeyCode::Space)
+                --
+                Binding(GamepadButton::South)
+            ]
+            --
+            Action::<PlayerMovement>::new()
+            DeadZone
+            Bindings [
+                {preset::cardinal::wasd_keys()}
+                --
+                {preset::axial::left_stick()}
+            ]
+            --
+            Action::<AimInput>::new()
+            Bindings [
+                Binding::mouse_motion()
+                ~Negate::y()
+                ~Scale::splat(MOUSE_SENSITIVITY)
+                --
+                {preset::axial::new(
+                    (
+                        GamepadAxis::RightStickX,
+                        DeadZone { upper_threshold: 0.8, ..default() },
+                        Scale::splat(CONTROLLER_AIM_SENSITIVITY),
+                    ),
+                    (
+                        GamepadAxis::RightStickY,
+                        DeadZone { upper_threshold: 0.8, ..default() },
+                        Scale::splat(CONTROLLER_AIM_SENSITIVITY),
+                    ),
+                )}
+            ]
+            --
+            Action::<UseMainhand>::new()
+            Bindings [
+                Binding(MouseButton::Left)
+                --
+                Binding(GamepadButton::RightTrigger)
+                --
+                Binding(GamepadButton::RightTrigger2)
+            ]
+            --
+            Action::<UseOffhand>::new()
+            Bindings [
+                Binding(MouseButton::Right)
+                --
+                Binding(GamepadButton::LeftTrigger)
+                --
+                Binding(GamepadButton::LeftTrigger2)
+            ]
+        ]
+    }
 }
 
 #[derive(InputAction)]

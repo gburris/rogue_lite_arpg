@@ -1,32 +1,26 @@
 use bevy::prelude::*;
+use bevy::ui_widgets::Activate;
 
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app
-        // Pause Related Systems
-        .add_observer(on_change_stat)
+    app.add_observer(on_change_stat)
         .add_observer(on_update_stats_ui)
-        .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu)
-        .add_systems(
-            Update,
-            update_stat_buttons
-                .run_if(in_state(Menu::StatsShop))
-                .in_set(MainSystems::Menu),
-        );
+        .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu);
 }
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 pub struct StatShopMenu;
 
 /// Which way a stat shop button moves its stat.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum StatChange {
+    #[default]
     Increase,
     Decrease,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Default)]
 pub struct StatShopButton {
     pub stat: Stat,
     pub change: StatChange,
@@ -47,140 +41,97 @@ pub fn spawn_stats_shop_menu(
     game_progress: ResMut<GameProgress>,
 ) {
     let stats = player_stats.into_inner();
+    let points = game_progress.progress_points;
+    let rows: Vec<_> = Stat::ALL
+        .into_iter()
+        .map(|stat| stat_row(stat, stats, points))
+        .collect();
 
-    commands.spawn((
-        StatShopMenu,
-        DespawnOnExit(Menu::StatsShop),
-        GlobalZIndex(2),
-        Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            align_items: AlignItems::Center,
-            flex_direction: FlexDirection::Column,
-            row_gap: px(20.0),
-            ..default()
-        },
-        children![
-            menu_header("STATS SHOP"),
-            // stats shop body
-            (
-                Node {
-                    width: px(600.0),
-                    flex_direction: FlexDirection::Column,
-                    padding: px(20.0).all(),
-                    row_gap: px(10.0),
-                    ..default()
-                },
-                BackgroundColor::from(DARK_GRAY_ALPHA_COLOR),
-                children![
-                    stat_row(Stat::Agility, stats),
-                    stat_row(Stat::Strength, stats),
-                    stat_row(Stat::Dexterity, stats),
-                    stat_row(Stat::Intellect, stats),
-                    stat_row(Stat::Luck, stats),
-                ]
-            ),
-            // Progress Points Display
-            text(
-                format!(
-                    "Available Progress Points: {}",
-                    game_progress.progress_points
-                ),
-                32.0
-            )
-        ],
-    ));
+    commands.spawn_scene(bsn! {
+        @menu_screen(Menu::StatsShop, "STATS SHOP")
+        StatShopMenu
+        Children [
+            @panel(600.0)
+            Children [
+                {rows}
+            ]
+            --
+            @text({format!("Available Progress Points: {points}")}, 32.0)
+        ]
+    });
 }
 
-fn stat_row(stat: Stat, stats: &PlayerStats) -> impl Bundle {
-    (
+fn stat_row(stat: Stat, stats: &PlayerStats, points: u32) -> impl Scene {
+    bsn! {
         Node {
-            width: percent(100.0),
-            height: px(50.0),
+            width: percent(100),
+            height: px(50),
             justify_content: JustifyContent::SpaceBetween,
             align_items: AlignItems::Center,
-            padding: px(10.0).horizontal(),
-            ..default()
-        },
-        children![
-            // Decrease button
-            stat_shop_button(stat, StatChange::Decrease),
-            (
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                children![
-                    text(format!("{stat:?}: {}", stat.value(stats)), 24.0),
-                    (
-                        text(stat.description(), 16.0),
-                        TextColor::from(Color::srgb(0.5, 0.5, 0.5)),
-                    )
-                ]
-            ),
-            // Increase button
-            stat_shop_button(stat, StatChange::Increase)
-        ],
-    )
+            padding: {px(10).horizontal()},
+        }
+        Children [
+            @stat_shop_button(stat, StatChange::Decrease, points)
+            --
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+            }
+            Children [
+                @text({format!("{stat:?}: {}", stat.value(stats))}, BODY_FONT_SIZE)
+                --
+                @muted_text(stat.description(), CAPTION_FONT_SIZE)
+            ]
+            --
+            @stat_shop_button(stat, StatChange::Increase, points)
+        ]
+    }
 }
 
-fn stat_shop_button(stat: Stat, change: StatChange) -> impl Bundle {
-    (
-        StatShopButton { stat, change },
-        Button,
+fn stat_shop_button(stat: Stat, change: StatChange, points: u32) -> impl Scene {
+    let (label, highlight) = match change {
+        // Highlight increases the player can afford.
+        StatChange::Increase if points > 0 => ("+", Color::srgb(1.0, 1.0, 0.0)),
+        StatChange::Increase => ("+", Color::srgb(0.5, 0.5, 0.5)),
+        StatChange::Decrease => ("-", Color::srgb(0.5, 0.5, 0.5)),
+    };
+    let colors = ButtonColors {
+        idle: ROW_COLOR,
+        hovered: highlight,
+        pressed: highlight,
+    };
+
+    bsn! {
+        @button(label, BODY_FONT_SIZE, Color::WHITE, colors)
+        StatShopButton { stat, change }
         Node {
-            width: px(30.0),
-            height: px(30.0),
-            justify_content: JustifyContent::Center,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5)),
-        children![text(
-            match change {
-                StatChange::Increase => "+",
-                StatChange::Decrease => "-",
-            },
-            24.0
-        )],
-    )
+            width: px(30),
+            height: px(30),
+        }
+        on(on_stat_button_activated)
+    }
 }
 
-pub fn update_stat_buttons(
-    mut interaction_query: Query<(&Interaction, &StatShopButton, &mut BackgroundColor)>,
+fn on_stat_button_activated(
+    activate: On<Activate>,
+    buttons: Query<&StatShopButton>,
     mut commands: Commands,
     game_progress: Res<GameProgress>,
-    player_stats: Query<&PlayerStats>,
+    player_stats: Single<&PlayerStats>,
 ) {
-    let stats = player_stats.single().expect("Player stats not found");
+    let Ok(button) = buttons.get(activate.entity) else {
+        return;
+    };
 
-    for (interaction, button, mut background_color) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                let can_increase =
-                    button.change == StatChange::Increase && game_progress.progress_points > 0;
-                let can_decrease =
-                    button.change == StatChange::Decrease && button.stat.value(stats) > 1;
+    let can_increase = button.change == StatChange::Increase && game_progress.progress_points > 0;
+    let can_decrease =
+        button.change == StatChange::Decrease && button.stat.value(*player_stats) > 1;
 
-                if can_increase || can_decrease {
-                    commands.trigger(ChangeStat {
-                        stat: button.stat,
-                        change: button.change,
-                    });
-                }
-            }
-            Interaction::Hovered => {
-                if button.change == StatChange::Increase && game_progress.progress_points > 0 {
-                    *background_color = BackgroundColor::from(Color::srgb(1.0, 1.0, 0.0));
-                } else {
-                    *background_color = BackgroundColor::from(Color::srgb(0.5, 0.5, 0.5));
-                }
-            }
-            Interaction::None => {
-                *background_color = BackgroundColor::from(Color::srgba(0.2, 0.2, 0.2, 0.5));
-            }
-        }
+    if can_increase || can_decrease {
+        commands.trigger(ChangeStat {
+            stat: button.stat,
+            change: button.change,
+        });
     }
 }
 

@@ -1,59 +1,41 @@
 use bevy::prelude::*;
+use bevy::ui_widgets::Activate;
 
 use super::constants::TITLE_FONT_SIZE;
-use super::primitives::text;
+use super::primitives::{gold_button, screen, text};
 use crate::prelude::*;
 
-#[derive(Component)]
+#[derive(Component, Default, Clone)]
 pub struct GameOverScreen;
 
-#[derive(Component)]
-pub struct RestartButton;
-
-pub(super) fn spawn(mut commands: Commands) {
-    commands.spawn((
-        GameOverScreen,
-        DespawnOnExit(AppState::GameOver),
+pub(super) fn scene() -> impl Scene {
+    bsn! {
+        @screen(AppState::GameOver)
+        GameOverScreen
         Node {
-            width: percent(100.0),
-            height: percent(100.0),
-            flex_direction: FlexDirection::Column,
             align_items: AlignItems::Center,
-            padding: px(200.0).top(),
-            row_gap: px(20.),
-            ..default()
-        },
-        BackgroundColor::from(Color::BLACK.with_alpha(1.0)), /* want to allow game to be seen in
-                                                              * background */
-        // render this above in-game UI such as player health and score
-        GlobalZIndex(1),
-        children![
-            text("Game Over!", TITLE_FONT_SIZE),
-            (
-                Button,
-                RestartButton,
-                Node {
-                    width: px(150.0),
-                    height: px(65.0),
-                    border: px(5.0).all(),
-                    border_radius: BorderRadius::MAX,
-                    // horizontally center child text
-                    justify_content: JustifyContent::Center,
-                    // vertically center child text
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                BorderColor::all(Color::BLACK),
-                BackgroundColor::from(Color::srgb(0.15, 0.15, 0.15)),
-                children![Text::new("Restart"), Observer::new(on_restart_clicked)]
-            )
-        ],
-    ));
+            padding: {px(200).top()},
+            row_gap: px(20),
+        }
+        BackgroundColor(Color::BLACK)
+        // Render above in-game UI such as player health and score.
+        GlobalZIndex(1)
+        Children [
+            @text("Game Over!", TITLE_FONT_SIZE)
+            --
+            @gold_button("Restart", 32.0)
+            Node {
+                width: px(200),
+                height: px(65),
+                border_radius: BorderRadius::MAX,
+            }
+            on(on_restart)
+        ]
+    }
 }
 
-/// Passes players current level to the next instance of the game, despawns everything and starts
-/// again.
-fn on_restart_clicked(_: On<Pointer<Click>>, mut commands: Commands, player: Single<&Player>) {
+/// Passes the player's current level to the next run, despawns everything and starts again.
+fn on_restart(_: On<Activate>, mut commands: Commands, player: Single<&Player>) {
     commands.trigger(Restart {
         player_level: player.level(),
     });

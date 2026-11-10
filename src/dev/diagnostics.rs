@@ -3,7 +3,7 @@
 use avian2d::prelude::{ContactGraph, RayCaster, RigidBody};
 use bevy::diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
 use bevy::prelude::*;
-use bevy_lit::prelude::PointLight2d;
+use bevy_firefly::prelude::PointLight2d;
 
 use crate::prelude::*;
 

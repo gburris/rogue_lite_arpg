@@ -2,31 +2,32 @@
 name = "baba_yaga"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95.0"
+rust-version = "1.97.1"
 description = "Baba Yaga is a 2D action RPG about a witch who wants to eat you."
 
 [dependencies]
-bevy = { version = "0.19.1", default-features = false, features = [
+bevy = { version = "0.20.1", default-features = false, features = [
     "2d",
     "ui",
     "bevy_feathers",
     "webgpu",
 ] }
-bevy_ecs_tilemap = "0.19.0"
-bevy_asset_loader = { version = "0.27.0", features = ["2d"] }
-bevy_enhanced_input = "0.26.0"
-bevy_lit = "0.11"
-bevy_tweening = "0.16.0"
-accesskit = "0.24.0"
-avian2d = "0.7.0"
+bevy_ecs_tilemap = "0.20.0"
+bevy_asset_loader = { version = "0.28.1", features = ["2d"] }
+bevy_enhanced_input = "0.27.2"
+# Not on crates.io for Bevy 0.20 yet; the fork carries the 0.20 port.
+bevy_firefly = { git = "https://github.com/KaytonFletcher/bevy_firefly", branch = "bevy-0.20" }
+bevy_tweening = "0.17.0"
+accesskit = "0.25.2"
+avian2d = "0.8.0"
 rand = "0.10.2"
 rand_chacha = "0.10"
-ron = "0.12.0"
+ron = "0.12.3"
 serde = "1.0.229"
 tracing = "0.1.44"
 # Plots in Tracy; the same crate that Bevy's `trace_tracy` uses.
-tracy-client = { version = "0.18.3", optional = true }
-bevy_mod_debugdump = { version = "0.16", default-features = false, optional = true }
+tracy-client = { version = "0.19.0", optional = true }
+bevy_mod_debugdump = { version = "0.17",default-features = false, optional = true }
 clap = { workspace = true, optional = true }
 # CPU name for the stress summary line; the same version Bevy's `sysinfo_plugin` uses.
 sysinfo = { version = "0.38.4", default-features = false, features = ["system"], optional = true }
@@ -41,6 +42,8 @@ dev = [
     # Improve compile times for dev builds by linking Bevy as a dynamic library.
     "bevy/dynamic_linking",
     "bevy/bevy_dev_tools",
+    # The FPS overlay in the debug plugin lives behind this feature since Bevy 0.20.
+    "bevy/render_dev_tools",
     "bevy/bevy_ui_debug",
     # CPU and memory usage diagnostics for the F3 overlay (`dev/hud.rs`).
     "bevy/sysinfo_plugin",

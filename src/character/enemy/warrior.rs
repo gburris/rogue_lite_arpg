@@ -157,45 +157,46 @@ pub(super) static WARRIOR: BrainDefinition = BrainDefinition {
 /// Seconds between potions, so a hurt warrior drinks one at a time.
 const HEAL_COOLDOWN: f32 = 1.0;
 
-/// Spawns a sword-carrying warrior on top of the shared enemy `base` bundle.
+/// Spawns a sword-carrying warrior on top of the shared enemy `base` scene.
 pub(super) fn spawn_warrior(
     commands: &mut Commands,
-    base: impl Bundle,
+    base: impl Scene,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
     spawn_enemy_with_equipment(
         commands,
-        (
-            warrior(sprites, sprite_layouts),
-            base,
-            enemy_children(shadows),
-        ),
+        bsn! {
+            @warrior(sprites, sprite_layouts)
+            @{base}
+            @enemy_children(shadows)
+        },
         sword(sprites),
     );
 }
 
-fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Bundle {
-    (
-        (Kinematics::new(200.0), Health::new(40.0)),
-        Experience(20.0),
-        ground_sight_ray(),
-        YSort::from_offset(CHARACTER_FEET_POS_OFFSET),
+fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.warrior_enemy_sprite_sheet.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.enemy.clone(),
+            ..default()
+        },
+    );
+    bsn! {
+        ~Kinematics::new(200.0)
+        ~Health::new(40.0)
+        Experience(20.0)
+        ground_sight_ray()
+        YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
-        Dash::kite(
-            0.8,
-            Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32),
-        ),
-        Heal::new(HEAL_COOLDOWN),
-        enemy_wander(),
-        Sprite::from_atlas_image(
-            sprites.warrior_enemy_sprite_sheet.clone(),
-            TextureAtlas {
-                layout: sprite_layouts.enemy.clone(),
-                ..default()
-            },
-        ),
-        related!(Items[health_potion(sprites)]),
-    )
+        ~Dash::kite(0.8, Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32))
+        ~Heal::new(HEAL_COOLDOWN)
+        enemy_wander()
+        template(move |_| Ok(sprite.clone()))
+        Items [
+            @health_potion(sprites)
+        ]
+    }
 }

@@ -17,9 +17,11 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::Character;
+    #[cfg(feature = "dev")]
+    pub(crate) use super::brain::TargetInfo;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     #[cfg(feature = "dev_tools")]
-    pub(crate) use super::brain::{TargetInfo, TargetLock, Targeting, VisionCone};
+    pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{

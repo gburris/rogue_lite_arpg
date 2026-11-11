@@ -14,8 +14,7 @@ use super::engine::{
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
-use super::motion_action_table::MotionActionTable;
-use super::{Action, ActionFinished, ActionOutcome, Brain};
+use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
 
 type DecidingBrains<'world, 'state> = Query<
     'world,
@@ -60,17 +59,17 @@ pub(super) fn on_release_finished_motion(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let cooldown = inputs
-        .motion_profile(finished.motion)
-        .map_or(0.0, |profile| profile.cooldown);
-    brain.start_cooldown(finished.motion, inputs.now + cooldown);
-    if brain.finish_committed_behavior(finished.behavior_run_id) {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::after_motion").entered();
-        redecide_now(&mut brain, &inputs, score_trace.as_deref_mut());
+    brain.start_motion_cooldown(finished.motion, &inputs);
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_motion").entered();
+    finish_and_redecide(
+        &mut brain,
+        finished.behavior_run_id,
+        &inputs,
+        score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision();
-    }
+        &mut decision_stats,
+    );
 }
 
 /// Applies an [`ActionFinished`], current or stale. An ability starts its
@@ -95,22 +94,36 @@ pub(super) fn on_finish_action(
         Action::Use(slot)
             if slot.is_instant_use() && finished.outcome == ActionOutcome::Completed =>
         {
-            brain.attack_finish_pending = true;
+            brain.record_attack_finished();
         }
-        Action::Ability(ability) => {
-            let cooldown = inputs
-                .action_profile(finished.action)
-                .map_or(0.0, |profile| profile.cooldown);
-            brain.start_cooldown(ability, inputs.now + cooldown);
-        }
+        Action::Ability(ability) => brain.start_ability_cooldown(ability, &inputs),
         // A held or unstarted use is no attack, and nothing reports an idle
         // action's finish.
         Action::Use(_) | Action::Idle => {}
     }
-    if brain.finish_committed_behavior(finished.behavior_run_id) {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::after_action").entered();
-        redecide_now(&mut brain, &inputs, score_trace.as_deref_mut());
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_action").entered();
+    finish_and_redecide(
+        &mut brain,
+        finished.behavior_run_id,
+        &inputs,
+        score_trace.as_deref_mut(),
+        #[cfg(feature = "dev_tools")]
+        &mut decision_stats,
+    );
+}
+
+/// Ends the committed behavior stamped `behavior_run_id` and, unless the finish was stale,
+/// decides again at once.
+fn finish_and_redecide(
+    brain: &mut Brain,
+    behavior_run_id: u32,
+    inputs: &DecisionInputs,
+    score_trace: Option<&mut ScoreTrace>,
+    #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
+) {
+    if brain.finish_committed_behavior(behavior_run_id) {
+        redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();
     }
@@ -145,21 +158,14 @@ pub(super) fn decide_behavior(
     }
 }
 
-/// Drops committed behaviors that lost their target, were stunned or timed
-/// out, then fills the slots. A winning finite motion rolls its start chance; a
-/// miss waits out its cooldown and the next best behavior takes the slot.
+/// Drops stale committed behaviors, then fills the slots. A winning finite motion rolls its
+/// start chance; a miss waits out its cooldown and the next best behavior takes the slot.
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
-    for running in brain.running_behaviors.clone() {
-        if running.should_drop_committed_behavior(inputs) {
-            brain.drop_committed_behavior(running, inputs);
-        }
-    }
-    // Read after the drops, which change the running motion and cooldowns.
-    let memory = brain.memory();
+    brain.drop_stale_committed_behaviors(inputs);
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
-    let read = |input: ConsiderationInput| inputs.read_consideration_input(input, memory);
-    let available = |behavior: &Behavior| inputs.is_available(behavior, brain);
+    let read = |input: ConsiderationInput| inputs.read_consideration_input(input, brain);
+    let available = |behavior: &Behavior| brain.is_available(behavior, inputs);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();
@@ -170,7 +176,7 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
                 explain_behavior(definition, index, &read, &available, &running_behavior_ids)
             }));
     }
-    let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
+    let mut missed_starts = Vec::new();
     let winning_behavior_ids = {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::assign").entered();
@@ -179,24 +185,18 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
             &read,
             &available,
             &running_behavior_ids,
-            |index| {
-                passes_start_roll(
-                    inputs,
-                    definition.behaviors[index],
-                    &mut missed_start_cooldowns,
-                )
-            },
+            |index| passes_start_roll(inputs, definition.behaviors[index], &mut missed_starts),
         )
     };
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::commit").entered();
-    brain.commit_decision(&winning_behavior_ids, &missed_start_cooldowns, inputs);
+    brain.commit_decision(&winning_behavior_ids, &missed_starts, inputs);
 }
 
 fn passes_start_roll(
     inputs: &DecisionInputs,
     behavior: Behavior,
-    missed_start_cooldowns: &mut MotionActionTable<Option<f32>>,
+    missed_starts: &mut Vec<Motion>,
 ) -> bool {
     let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) else {
         return true;
@@ -207,6 +207,6 @@ fn passes_start_roll(
     if capability_profile.chance >= 1.0 || rand::rng().random::<f32>() < capability_profile.chance {
         return true;
     }
-    missed_start_cooldowns[motion] = Some(inputs.now + capability_profile.cooldown);
+    missed_starts.push(motion);
     false
 }

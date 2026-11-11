@@ -1,15 +1,11 @@
-//! What scoring reads. [`DecisionInputs`] answers each input, capability profile and
-//! availability check from the query item when asked, so nothing is copied up front.
-
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::Brain;
 use super::action::{Ability, AbilityCapabilities, Action, find_carried_potion};
-use super::engine::Behavior;
 use super::motion::{HomeArea, Motion, MotionCapabilities};
 use super::perception::{TargetInfo, Targeting};
+use super::{Brain, CapabilityProfile};
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
@@ -32,34 +28,6 @@ pub enum ConsiderationInput {
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     SecondsSinceTargeted,
-}
-
-/// The reach, start chance and cooldown a decision reads for one motion or action.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) struct CapabilityProfile {
-    pub reach: Option<f32>,
-    /// Probability that a winning finite motion actually starts.
-    pub chance: f32,
-    /// Seconds to wait after a finish or a missed start roll.
-    pub cooldown: f32,
-}
-
-impl Default for CapabilityProfile {
-    fn default() -> Self {
-        Self {
-            reach: None,
-            chance: 1.0,
-            cooldown: 0.0,
-        }
-    }
-}
-
-/// The brain's own earlier choices, as scoring reads them.
-#[derive(Clone, Copy, Debug)]
-pub(super) struct BrainMemory {
-    pub motion: Option<Motion>,
-    /// An attack finished since the last decision.
-    pub attack_finished: bool,
 }
 
 /// The components one decision reads, including every capability a character may carry.
@@ -87,13 +55,13 @@ pub(super) struct DecisionQueries<'w, 's> {
 }
 
 /// One decision's view of the world: references only, read on demand.
-pub(super) struct DecisionInputs<'a, 'w, 's, 'qw, 'qs> {
+pub(super) struct DecisionInputs<'a, 'w, 's> {
     pub components: &'a DecisionInputComponentsItem<'w, 's>,
-    pub queries: &'a DecisionQueries<'qw, 'qs>,
+    pub queries: &'a DecisionQueries<'a, 'a>,
     pub now: f32,
 }
 
-impl DecisionInputs<'_, '_, '_, '_, '_> {
+impl DecisionInputs<'_, '_, '_> {
     /// The tracked target while targeting one at a finite distance. `TargetInfo`
     /// also tracks a watched entity, so every target input reads through here.
     pub fn target(&self) -> Option<&TargetInfo> {
@@ -135,7 +103,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
 
     /// Whether the world lets `action` run now: usable equipment (or a held use
     /// already running), and a carried potion for `Heal`.
-    fn world_allows_use(&self, action: Action) -> bool {
+    pub fn world_allows_use(&self, action: Action) -> bool {
         let entity = self.components.entity;
         let queries = self.queries;
         match action {
@@ -154,25 +122,11 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         }
     }
 
-    /// Whether `behavior` may start now: each part's capability is owned, off its
-    /// cooldown on `brain`, and allowed by the world.
-    pub fn is_available(&self, behavior: &Behavior, brain: &Brain) -> bool {
-        let motion_available = |motion: Motion| {
-            self.motion_profile(motion).is_some() && brain.is_cooldown_ready(motion, self.now)
-        };
-        let action_available = |action: Action| {
-            self.action_profile(action).is_some()
-                && brain.is_cooldown_ready(action, self.now)
-                && self.world_allows_use(action)
-        };
-        behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
-    }
-
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.
     pub fn read_consideration_input(
         &self,
         input: ConsiderationInput,
-        memory: BrainMemory,
+        brain: &Brain,
     ) -> Option<f32> {
         match input {
             ConsiderationInput::HasTarget => Some(f32::from(self.target().is_some())),
@@ -191,16 +145,16 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
                 Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
-                memory
-                    .motion
+                brain
+                    .motion()
                     .is_some_and(|running| running.is_same_kind(motion)),
             )),
             ConsiderationInput::Circling => Some(f32::from(matches!(
-                memory.motion,
+                brain.motion(),
                 Some(Motion::Orbit(_) | Motion::KeepDistance(_))
             ))),
-            ConsiderationInput::HomeAreaPull => self.home_area_pull(memory),
-            ConsiderationInput::AttackFinished => Some(f32::from(memory.attack_finished)),
+            ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
+            ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
             ConsiderationInput::MotionReachFraction(motion) => {
                 self.reach_fraction(self.motion_profile(motion))
             }
@@ -216,11 +170,11 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     /// How far past its home area range the character is. Once already heading
     /// home it reads full until arrival, so crossing back inside the range
     /// mid-return cannot hand the character straight back to wandering.
-    fn home_area_pull(&self, memory: BrainMemory) -> Option<f32> {
+    fn home_area_pull(&self, running_motion: Option<Motion>) -> Option<f32> {
         let home_area = self.components.home_area?;
         let position = self.components.transform.translation.xy();
         let overshoot_fraction = home_area.overshoot_fraction(position)?;
-        if memory.motion == Some(Motion::ReturnToHome) {
+        if running_motion == Some(Motion::ReturnToHome) {
             Some(f32::from(!home_area.has_arrived(position)))
         } else {
             Some(overshoot_fraction)

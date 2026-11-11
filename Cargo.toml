@@ -18,7 +18,6 @@ bevy_enhanced_input = "0.27.2"
 # Not on crates.io for Bevy 0.20 yet; the fork carries the 0.20 port.
 bevy_firefly = { git = "https://github.com/KaytonFletcher/bevy_firefly", branch = "bevy-0.20" }
 bevy_tweening = "0.17.0"
-accesskit = "0.25.2"
 avian2d = "0.8.0"
 rand = "0.10.2"
 rand_chacha = "0.10"

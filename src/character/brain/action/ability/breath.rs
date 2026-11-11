@@ -23,7 +23,7 @@ impl Breath {
 
 impl Breath {
     /// What a decision reads of this capability.
-    pub fn profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn profile(&self) -> CapabilityProfile {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,

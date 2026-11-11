@@ -1,6 +1,5 @@
-//! What scoring reads, answered on demand: [`DecisionInputs`] reads each
-//! consideration's input, capability profile and availability straight from the
-//! query item when the decision asks for it, so nothing is copied up front.
+//! What scoring reads. [`DecisionInputs`] answers each input, capability profile and
+//! availability check from the query item when asked, so nothing is copied up front.
 
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
@@ -44,9 +43,7 @@ pub(super) struct BrainMemory {
     pub attack_finished: bool,
 }
 
-/// The components one decision reads, including every capability an entity may
-/// carry. A new capability component is listed here and read in
-/// [`DecisionInputs::motion_profile`] or [`DecisionInputs::action_profile`].
+/// The components one decision reads, including every capability an entity may carry.
 #[derive(QueryData)]
 pub(super) struct DecisionInputComponents {
     entity: Entity,

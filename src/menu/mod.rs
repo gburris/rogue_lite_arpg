@@ -5,7 +5,7 @@ mod stats_shop;
 
 pub mod prelude {
     pub use super::Menu;
-    pub(crate) use super::{PauseControl, pause_actions};
+    pub(crate) use super::pause_actions;
 }
 
 use bevy::prelude::*;

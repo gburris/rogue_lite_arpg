@@ -25,7 +25,7 @@ const HOP_OUTWARD_BIAS: f32 = 0.15;
 pub struct Dash {
     pub run_distance: Interval,
     pub speed_multiplier: f32,
-    pub capability_profile: CapabilityProfile,
+    capability_profile: CapabilityProfile,
     aim_rule: DashAimRule,
     debug_name: &'static str,
     progress: DashProgress,
@@ -123,7 +123,7 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
 
 impl Dash {
     /// What a decision reads of this capability.
-    pub fn profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn profile(&self) -> CapabilityProfile {
         self.capability_profile
     }
 }

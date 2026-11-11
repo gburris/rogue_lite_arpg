@@ -149,10 +149,8 @@ pub(crate) struct PauseControl;
 /// The pause toggle, added to the player.
 pub(crate) fn pause_actions() -> impl Scene {
     // Escape un-grabs the cursor on the web, so it can't pause there.
-    let escape = (!cfg!(target_family = "wasm")).then(|| {
-        bsn_list! {
-            Binding(KeyCode::Escape)
-        }
+    let escape = (!cfg!(target_family = "wasm")).then_some(bsn_list! {
+        Binding(KeyCode::Escape)
     });
 
     bsn! {

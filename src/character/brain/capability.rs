@@ -5,7 +5,7 @@ use super::action::{Ability, Action};
 use super::motion::Motion;
 
 /// A type with its own entry in a [`MotionActionTable`].
-pub trait MotionActionKey: Copy {
+pub(super) trait MotionActionKey: Copy {
     fn table_index(self) -> usize;
 }
 
@@ -31,7 +31,7 @@ impl MotionActionKey for Ability {
 
 /// One value per motion and per action, indexed by any [`MotionActionKey`].
 #[derive(Clone, Copy, Debug)]
-pub struct MotionActionTable<T>([T; Motion::COUNT + Action::COUNT]);
+pub(super) struct MotionActionTable<T>([T; Motion::COUNT + Action::COUNT]);
 
 impl<T: Default> Default for MotionActionTable<T> {
     fn default() -> Self {
@@ -53,10 +53,9 @@ impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
     }
 }
 
-/// What the decision needs to know about one capability, read from the component
-/// that carries it out (see `DecisionInputs::motion_profile` and `action_profile`).
+/// The reach, start chance and cooldown a decision reads for one motion or action.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CapabilityProfile {
+pub(super) struct CapabilityProfile {
     pub reach: Option<f32>,
     /// Probability that a winning finite motion actually starts.
     pub chance: f32,

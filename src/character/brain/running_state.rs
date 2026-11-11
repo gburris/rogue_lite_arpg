@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 
+use super::inputs::DecisionInputs;
 use super::{Action, ActionFinished, ActionOutcome, Motion};
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
@@ -53,12 +54,10 @@ impl RunningBehavior {
     }
 
     /// Whether a committed behavior lost its target, was stunned, or timed out.
-    pub(super) fn should_drop_committed_behavior(
-        &self,
-        has_target: bool,
-        stunned: bool,
-        now: f32,
-    ) -> bool {
-        self.committed && (!has_target || stunned || now - self.started_at > COMMIT_TIMEOUT)
+    pub(super) fn should_drop_committed_behavior(&self, inputs: &DecisionInputs) -> bool {
+        self.committed
+            && (inputs.target().is_none()
+                || inputs.stunned()
+                || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }

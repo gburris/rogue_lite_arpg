@@ -159,9 +159,8 @@ pub(super) fn decide_behavior(
 /// out, then fills the slots. A winning finite motion rolls its start chance; a
 /// miss waits out its cooldown and the next best behavior takes the slot.
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
-    let (has_target, stunned) = (inputs.target().is_some(), inputs.stunned());
     for running in brain.running_behaviors.clone() {
-        if running.should_drop_committed_behavior(has_target, stunned, inputs.now) {
+        if running.should_drop_committed_behavior(inputs) {
             brain.drop_committed_behavior(running, inputs);
         }
     }

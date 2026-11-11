@@ -95,6 +95,8 @@ workspace = true
 unsafe_code = "forbid"
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+# `bsn!` takes expression arguments in braces (`px({i as f32 * 40.0})`).
+unused_braces = "allow"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }

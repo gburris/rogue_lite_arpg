@@ -20,7 +20,7 @@ const SWOOP_RECOVERY_TIME: f32 = 0.4;
 /// decaying [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
-    pub capability_profile: CapabilityProfile,
+    capability_profile: CapabilityProfile,
     pub extra_speed: f32,
     pub exit_turn: f32,
     pass: Option<SwoopPass>,
@@ -58,7 +58,7 @@ impl Swoop {
 
 impl Swoop {
     /// What a decision reads of this capability.
-    pub fn profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn profile(&self) -> CapabilityProfile {
         self.capability_profile
     }
 }

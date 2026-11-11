@@ -1,6 +1,6 @@
 //! ECS glue for the pure utility brains. Data flows one way, one writer each:
-//! 1. [`perception`] tracks targets, and its `DecisionInputs` answers each consideration's input
-//!    straight from the world when scoring asks.
+//! 1. [`perception`] tracks targets; [`inputs`] answers each consideration's input from the world
+//!    when scoring asks.
 //! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior holds each slot on the
 //!    [`Brain`].
 //! 3. [`motion`] and [`action`] carry out the held motion and action and report
@@ -40,8 +40,7 @@ use bevy::prelude::*;
 
 use self::action::StartedEquipmentUses;
 pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
-pub use self::capability::CapabilityProfile;
-use self::capability::{MotionActionKey, MotionActionTable};
+use self::capability::{CapabilityProfile, MotionActionKey, MotionActionTable};
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
 use self::engine::validate_brain;

@@ -171,13 +171,13 @@ impl Dash {
             // waits rather than aiming blind.
             let Some(target) = input
                 .target_info
-                .filter(|target| target.distance.is_finite())
+                .filter(|target| target.has_finite_distance())
             else {
                 return MotionStep::Steer(Steering::boosted(None, self.speed_multiplier));
             };
             let direction = self.aim_rule.choose_direction(target, input.heading);
-            let run = rand::rng().random_range(self.run_distance.min()..self.run_distance.max());
-            self.progress.start(direction, run);
+            self.progress
+                .start(direction, self.run_distance.pick_random_value());
         }
         let distance = input.distance_this_frame(self.speed_multiplier);
         match self.progress.step(distance) {

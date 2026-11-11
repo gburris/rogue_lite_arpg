@@ -50,17 +50,14 @@ pub(super) fn apply_breath(
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
-        // Sitting on the target leaves a zero bearing to fire along, so wait.
-        let aim_direction = target_info.direction;
         let ready = brain.is_cooldown_ready(Ability::Breathe, now);
-        if !(ready
-            && has_target
-            && target_info.line_of_sight
-            && aim_direction.length_squared() > f32::EPSILON)
-        {
+        let Some(aim_direction) = target_info
+            .nonzero_direction()
+            .filter(|_| ready && has_target && target_info.line_of_sight)
+        else {
             breathing.report_not_started(&mut commands, entity);
             continue;
-        }
+        };
 
         for template in templates.iter() {
             commands.trigger(FireProjectile {

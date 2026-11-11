@@ -1,5 +1,7 @@
 //! How a consideration turns one raw input into a `0.0..=1.0` score.
 
+use rand::RngExt;
+
 use super::behavior::Behavior;
 use crate::character::brain::ConsiderationInput;
 
@@ -27,6 +29,11 @@ impl Interval {
 
     pub const fn max(self) -> f32 {
         self.max
+    }
+
+    /// A uniformly random value from `min` up to, not including, `max`.
+    pub fn pick_random_value(self) -> f32 {
+        rand::rng().random_range(self.min..self.max)
     }
 
     /// Signed distance outside the interval; zero inside it.

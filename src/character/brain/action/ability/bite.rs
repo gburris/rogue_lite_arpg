@@ -60,8 +60,7 @@ pub(super) fn apply_bite(
         let Some(biting) = brain.held_action(Action::Ability(Ability::Bite)) else {
             continue;
         };
-        let in_reach = target_info.distance.is_finite() && target_info.distance <= bite.reach;
-        if !(brain.is_cooldown_ready(Ability::Bite, now) && in_reach) {
+        if !(brain.is_cooldown_ready(Ability::Bite, now) && target_info.is_within(bite.reach)) {
             biting.report_not_started(&mut commands, entity);
             continue;
         }

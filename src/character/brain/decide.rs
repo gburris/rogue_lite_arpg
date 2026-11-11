@@ -17,9 +17,6 @@ use super::motion::MotionFinished;
 use super::motion_action_table::MotionActionTable;
 use super::{Action, ActionFinished, ActionOutcome, Brain};
 
-/// Seconds between a brain's scheduled decisions.
-const DECISION_PERIOD: f32 = 0.1;
-
 type DecidingBrains<'world, 'state> = Query<
     'world,
     'state,
@@ -37,14 +34,13 @@ pub struct ScoreTrace {
     pub behavior_explanations: Vec<BehaviorScoreExplanation>,
 }
 
-/// Puts a new brain's first decision at a random point in the next period, so brains spawned
-/// together don't all decide on the same frame.
+/// Staggers a new brain's first decision; see [`Brain::randomize_decision_phase`].
 pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookContext) {
     let now = world
         .get_resource::<Time<Virtual>>()
         .map_or(0.0, Time::elapsed_secs);
     if let Some(mut brain) = world.get_mut::<Brain>(context.entity) {
-        brain.next_decision_at = now + rand::rng().random_range(0.0..DECISION_PERIOD);
+        brain.randomize_decision_phase(now);
     }
 }
 
@@ -120,8 +116,8 @@ pub(super) fn on_finish_action(
     }
 }
 
-/// Decides for every due brain. Each moves to its next period boundary after
-/// now, keeping its phase without a burst of catch-up decisions after a long frame.
+/// Decides for every brain whose scheduled decision is due; see
+/// [`Brain::advance_decision_clock`].
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
@@ -130,14 +126,8 @@ pub(super) fn decide_behavior(
 ) {
     let now = time.elapsed_secs();
     for (mut brain, components, mut score_trace) in &mut brains {
-        if now < brain.next_decision_at {
+        if !brain.advance_decision_clock(now) {
             continue;
-        }
-        let periods_passed = ((now - brain.next_decision_at) / DECISION_PERIOD).floor() + 1.0;
-        brain.next_decision_at += periods_passed * DECISION_PERIOD;
-        // Rounding near an exact multiple can land the boundary on `now`.
-        if brain.next_decision_at <= now {
-            brain.next_decision_at += DECISION_PERIOD;
         }
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::paced").entered();

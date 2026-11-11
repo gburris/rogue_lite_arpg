@@ -40,6 +40,12 @@ impl Default for VisionCone {
     }
 }
 
+impl VisionCone {
+    fn contains_direction(&self, aim_direction: Vec2, direction: Vec2) -> bool {
+        direction.dot(aim_direction) > self.half_angle.cos()
+    }
+}
+
 /// The entity this one fights, added on sight or when damaged.
 #[derive(Component)]
 #[relationship(relationship_target = TargetedBy)]
@@ -106,17 +112,12 @@ fn update_target_info(
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             if let Ok((target_transform, target_kinematics)) = target_query.get(target_entity) {
-                let target_position = target_transform.translation.xy();
-                let position = transform.translation.xy();
-
-                let target_direction = (target_position - position).normalize_or_zero();
-
-                target_info.direction = target_direction;
-                target_info.distance = target_position.distance(position);
-                target_info.position = target_position;
-                target_info.velocity = target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity);
-
-                ray_caster.direction = Dir2::new(target_direction).unwrap_or(Dir2::X);
+                target_info.record_observation(
+                    transform.translation.xy(),
+                    target_transform.translation.xy(),
+                    target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity),
+                );
+                ray_caster.direction = Dir2::new(target_info.direction).unwrap_or(Dir2::X);
             }
         },
     );
@@ -137,9 +138,8 @@ fn is_target_in_sight(
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, ray_hits, vision, vision_cone, watching, targeting)| {
-            let vision_cone_dot = vision_cone.half_angle.cos();
             target_info.in_vision_cone =
-                target_info.direction.dot(vision.aim_direction) > vision_cone_dot;
+                vision_cone.contains_direction(vision.aim_direction, target_info.direction);
 
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
@@ -200,7 +200,7 @@ fn should_target_watched(
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
     for (target_info, watching, entity) in &npc_query {
-        if target_info.line_of_sight && target_info.in_vision_cone {
+        if target_info.is_in_view() {
             commands.entity(entity).insert(Targeting(watching.0));
         }
     }

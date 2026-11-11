@@ -86,6 +86,11 @@ impl Motion {
         }
     }
 
+    /// Whether both are the same variant, whatever their payloads.
+    pub fn is_same_kind(self, other: Self) -> bool {
+        self.index() == other.index()
+    }
+
     /// Whether this motion ends on its own and reports it, rather than
     /// running until replaced.
     pub const fn is_finite(self) -> bool {

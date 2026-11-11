@@ -26,16 +26,22 @@ impl HomeArea {
         }
     }
 
-    pub fn arrival_radius(&self) -> f32 {
-        self.arrival_radius
-    }
-
     pub fn radius(&self) -> f32 {
         self.radius
     }
 
     pub fn distance_from(&self, position: Vec2) -> f32 {
         self.origin.distance(position)
+    }
+
+    /// Whether `position` is close enough to the origin to count as back home.
+    pub fn has_arrived(&self, position: Vec2) -> bool {
+        self.distance_from(position) <= self.arrival_radius
+    }
+
+    /// The unit direction from `position` to the origin; `None` at the origin itself.
+    pub fn direction_home(&self, position: Vec2) -> Option<Vec2> {
+        (self.origin - position).try_normalize()
     }
 
     /// Distance beyond the configured radius; negative while inside it.
@@ -53,9 +59,5 @@ impl HomeArea {
         } else {
             None
         }
-    }
-
-    pub fn origin(&self) -> Vec2 {
-        self.origin
     }
 }

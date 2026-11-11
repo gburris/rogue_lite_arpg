@@ -99,7 +99,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     pub fn target(&self) -> Option<&TargetInfo> {
         self.components
             .target_info
-            .filter(|info| self.components.has_target && info.distance.is_finite())
+            .filter(|info| self.components.has_target && info.has_finite_distance())
     }
 
     pub fn is_stunned(&self) -> bool {
@@ -193,7 +193,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
                 memory
                     .motion
-                    .is_some_and(|running| running.index() == motion.index()),
+                    .is_some_and(|running| running.is_same_kind(motion)),
             )),
             ConsiderationInput::Circling => Some(f32::from(matches!(
                 memory.motion,
@@ -221,8 +221,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         let position = self.components.transform.translation.xy();
         let overshoot_fraction = home_area.overshoot_fraction(position)?;
         if memory.motion == Some(Motion::ReturnToHome) {
-            let arrived = home_area.distance_from(position) <= home_area.arrival_radius();
-            Some(f32::from(!arrived))
+            Some(f32::from(!home_area.has_arrived(position)))
         } else {
             Some(overshoot_fraction)
         }

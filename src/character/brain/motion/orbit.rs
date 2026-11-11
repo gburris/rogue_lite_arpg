@@ -18,6 +18,20 @@ enum OrbitDirection {
 }
 
 impl OrbitDirection {
+    fn from_heading(bearing: Vec2, heading: Vec2) -> Self {
+        let heading_side = bearing.perp().dot(heading);
+        if heading_side > f32::EPSILON {
+            Self::Clockwise
+        } else if heading_side < -f32::EPSILON {
+            Self::CounterClockwise
+        } else if rand::rng().random_bool(0.5) {
+            // Standing still or heading straight along the bearing favors neither side.
+            Self::Clockwise
+        } else {
+            Self::CounterClockwise
+        }
+    }
+
     fn reversed(self) -> Self {
         match self {
             Self::Clockwise => Self::CounterClockwise,
@@ -69,6 +83,46 @@ impl Orbit {
                 rand::rng().random_range(-self.max_distance_offset..self.max_distance_offset);
         }
     }
+
+    fn pick_steering_direction(
+        &mut self,
+        input: &SteerInput,
+        distance_range: Interval,
+    ) -> Option<Vec2> {
+        let info = input.target_info?;
+        let bearing = input.direction_to_target()?;
+        let now = input.now;
+        let direction = match self.direction {
+            None => {
+                let direction = OrbitDirection::from_heading(bearing, input.heading);
+                self.roll_distance_offset();
+                self.reroll_at = now + self.reroll_interval.min();
+                direction
+            }
+            Some(direction) if now >= self.reroll_at => {
+                let switched = if rand::rng().random::<f32>() < self.switch_chance {
+                    direction.reversed()
+                } else {
+                    direction
+                };
+                self.roll_distance_offset();
+                self.reroll_at = now + self.reroll_interval.pick_random_value();
+                switched
+            }
+            Some(direction) => direction,
+        };
+        self.direction = Some(direction);
+        // `bearing.perp()` circles the target clockwise.
+        let tangent = match direction {
+            OrbitDirection::Clockwise => bearing.perp(),
+            OrbitDirection::CounterClockwise => -bearing.perp(),
+        };
+        // Positive error means too far out, so the correction points at the target.
+        let radial = bearing
+            * distance_range.center_error(info.distance - self.distance_offset)
+            * self.radial_gain;
+        Some((tangent + radial).normalize_or_zero())
+    }
 }
 
 impl Default for Orbit {
@@ -90,59 +144,7 @@ pub(super) fn apply_orbit(
         *steering = character
             .build_steer_input(motion, &time)
             .map_or(Steering::HALT, |input| {
-                Steering::scaled(steer(&input, &mut orbit, distance_range), 1.0)
+                Steering::scaled(orbit.pick_steering_direction(&input, distance_range), 1.0)
             });
-    }
-}
-
-fn steer(input: &SteerInput, orbit: &mut Orbit, distance_range: Interval) -> Option<Vec2> {
-    let info = input.target_info?;
-    let bearing = input.direction_to_target()?;
-    let now = input.now;
-    let direction = match orbit.direction {
-        None => {
-            let direction = pick_direction_matching_heading(bearing, input.heading);
-            orbit.roll_distance_offset();
-            orbit.reroll_at = now + orbit.reroll_interval.min();
-            direction
-        }
-        Some(direction) if now >= orbit.reroll_at => {
-            let switched = if rand::rng().random::<f32>() < orbit.switch_chance {
-                direction.reversed()
-            } else {
-                direction
-            };
-            orbit.roll_distance_offset();
-            orbit.reroll_at = now
-                + rand::rng()
-                    .random_range(orbit.reroll_interval.min()..orbit.reroll_interval.max());
-            switched
-        }
-        Some(direction) => direction,
-    };
-    orbit.direction = Some(direction);
-    // `bearing.perp()` circles the target clockwise.
-    let tangent = match direction {
-        OrbitDirection::Clockwise => bearing.perp(),
-        OrbitDirection::CounterClockwise => -bearing.perp(),
-    };
-    // Positive error means too far out, so the correction points at the target.
-    let radial = bearing
-        * distance_range.center_error(info.distance - orbit.distance_offset)
-        * orbit.radial_gain;
-    Some((tangent + radial).normalize_or_zero())
-}
-
-fn pick_direction_matching_heading(bearing: Vec2, heading: Vec2) -> OrbitDirection {
-    let heading_side = bearing.perp().dot(heading);
-    if heading_side > f32::EPSILON {
-        OrbitDirection::Clockwise
-    } else if heading_side < -f32::EPSILON {
-        OrbitDirection::CounterClockwise
-    } else if rand::rng().random_bool(0.5) {
-        // Standing still or heading straight along the bearing favors neither side.
-        OrbitDirection::Clockwise
-    } else {
-        OrbitDirection::CounterClockwise
     }
 }

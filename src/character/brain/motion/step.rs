@@ -45,7 +45,7 @@ impl CurrentBehaviorRunId {
             .filter(|running| {
                 running
                     .motion
-                    .is_some_and(|running_motion| running_motion.index() == motion.index())
+                    .is_some_and(|running_motion| running_motion.is_same_kind(motion))
             })
             .map(|running| running.behavior_run_id);
         let changed = self.behavior_run_id != behavior_run_id;
@@ -123,8 +123,7 @@ pub(super) struct SteerInput<'a> {
 
 impl SteerInput<'_> {
     pub(super) fn direction_to_target(&self) -> Option<Vec2> {
-        let direction = self.target_info.map_or(Vec2::ZERO, |info| info.direction);
-        (direction.length_squared() > f32::EPSILON).then_some(direction)
+        self.target_info.and_then(TargetInfo::nonzero_direction)
     }
 
     pub(super) fn direction_from_target(&self) -> Option<Vec2> {
@@ -133,8 +132,10 @@ impl SteerInput<'_> {
 
     pub(super) fn direction_to_home(&self) -> Option<Vec2> {
         let home_area = self.home_area?;
-        let to_home = home_area.origin() - self.position;
-        (to_home.length() > home_area.arrival_radius()).then_some(to_home.normalize_or_zero())
+        if home_area.has_arrived(self.position) {
+            return None;
+        }
+        home_area.direction_home(self.position)
     }
 
     /// How far the character covers this frame at `speed_multiplier` times

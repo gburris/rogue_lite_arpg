@@ -37,6 +37,7 @@ mod running_state;
 mod schedule;
 
 use bevy::prelude::*;
+use rand::RngExt;
 
 use self::action::StartedEquipmentUses;
 pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
@@ -58,6 +59,9 @@ use self::running_state::RunningBehavior;
 use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
+
+/// Seconds between a brain's scheduled decisions.
+const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
@@ -131,6 +135,28 @@ impl Brain {
 
     fn start_cooldown(&mut self, key: impl MotionActionKey, ready_at: f32) {
         self.ready_at[key] = ready_at;
+    }
+
+    /// Puts the first decision at a random point in the next period, so brains spawned
+    /// together don't all decide on the same frame.
+    fn randomize_decision_phase(&mut self, now: f32) {
+        self.next_decision_at = now + rand::rng().random_range(0.0..DECISION_PERIOD);
+    }
+
+    /// Whether a scheduled decision is due at `now`. A due brain moves to its next period
+    /// boundary after `now`, keeping its phase without a burst of catch-up decisions after a
+    /// long frame.
+    fn advance_decision_clock(&mut self, now: f32) -> bool {
+        if now < self.next_decision_at {
+            return false;
+        }
+        let periods_passed = ((now - self.next_decision_at) / DECISION_PERIOD).floor() + 1.0;
+        self.next_decision_at += periods_passed * DECISION_PERIOD;
+        // Rounding near an exact multiple can land the boundary on `now`.
+        if self.next_decision_at <= now {
+            self.next_decision_at += DECISION_PERIOD;
+        }
+        true
     }
 
     fn running_behavior_ids(&self) -> Vec<usize> {

@@ -117,7 +117,7 @@ impl Swoop {
                 decaying_speed_boost,
             };
         }
-        if !info.distance.is_finite() {
+        if !info.has_finite_distance() {
             return steer(None);
         }
         let flight_distance = input.distance_this_frame(speed_multiplier);

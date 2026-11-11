@@ -1,5 +1,5 @@
-//! What a brain knows: vision tracks a target, and [`build_decision_context`] reads world state
-//! into the [`DecisionContext`] the considerations read.
+//! What a brain knows: vision tracks a target, and [`DecisionInputs::read`] answers each
+//! consideration's input straight from the world when scoring asks for it.
 
 use std::f32::consts::FRAC_PI_4;
 
@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use super::BrainSystems;
 use super::action::{Ability, Action, find_carried_potion};
 use super::capability::{
-    CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
+    CapabilityProfiles, MotionActionKey, MotionActionTable, UseEligibilityTable,
 };
 use super::motion::{HomeArea, Motion};
 use crate::prelude::*;
@@ -31,64 +31,15 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-/// Target data visible to a brain this tick.
+/// The brain's own earlier choices, as scoring reads them.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct TargetView {
-    pub distance: f32,
-    pub line_of_sight: bool,
-    /// Unit direction from the viewer to the target.
-    pub bearing: Vec2,
-    pub velocity: Vec2,
-    pub seconds_since_targeted: f32,
-}
-
-/// Everything a pure brain may look at during one decision.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DecisionContext {
-    pub self_view: SelfView,
-    pub target_view: Option<TargetView>,
-    pub reach_fractions: MotionActionTable<Option<f32>>,
-    pub use_eligibility: UseEligibilityTable,
-    pub memory_view: MemoryView,
-}
-
-/// The deciding character's own state this tick.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct SelfView {
-    pub health_fraction: f32,
-    /// `1.0` for a non-caster.
-    pub mana_fraction: f32,
-    pub stunned: bool,
-    pub home_area: Option<HomeAreaView>,
-}
-
-impl Default for SelfView {
-    fn default() -> Self {
-        Self {
-            health_fraction: 1.0,
-            mana_fraction: 1.0,
-            stunned: false,
-            home_area: None,
-        }
-    }
-}
-
-/// Where the character stands relative to the home area it is tethered to.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct HomeAreaView {
-    pub overshoot_fraction: f32,
-    pub arrived: bool,
-}
-
-/// The brain's own earlier choices, as scoring sees them.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct MemoryView {
+pub(super) struct BrainMemory {
     pub motion: Option<Motion>,
     /// An attack finished since the last decision.
     pub attack_finished: bool,
 }
 
-/// The raw fact a consideration reads; see [`read_consideration_input`].
+/// The raw fact a consideration reads; see [`DecisionInputs::read`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConsiderationInput {
     HasTarget,
@@ -108,54 +59,6 @@ pub enum ConsiderationInput {
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     SecondsSinceTargeted,
-}
-
-/// Reads `input` from the context; `None` when the input is absent.
-pub(super) fn read_consideration_input(
-    input: ConsiderationInput,
-    decision_context: &DecisionContext,
-) -> Option<f32> {
-    let boolean_input = |set: bool| Some(if set { 1.0 } else { 0.0 });
-    match input {
-        ConsiderationInput::HasTarget => boolean_input(decision_context.target_view.is_some()),
-        ConsiderationInput::LineOfSight => decision_context
-            .target_view
-            .and_then(|target| boolean_input(target.line_of_sight)),
-        ConsiderationInput::TargetDistance => {
-            decision_context.target_view.map(|target| target.distance)
-        }
-        ConsiderationInput::MissingHealth => Some(1.0 - decision_context.self_view.health_fraction),
-        ConsiderationInput::ManaFraction => Some(decision_context.self_view.mana_fraction),
-        ConsiderationInput::MotionRunning(motion) => boolean_input(
-            decision_context
-                .memory_view
-                .motion
-                .is_some_and(|running| running.index() == motion.index()),
-        ),
-        ConsiderationInput::Circling => boolean_input(matches!(
-            decision_context.memory_view.motion,
-            Some(Motion::Orbit(_) | Motion::KeepDistance(_))
-        )),
-        // Once already heading home it reads full until arrival, so crossing
-        // back inside the range mid-return cannot hand the character straight
-        // back to wandering.
-        ConsiderationInput::HomeAreaPull => {
-            let home_area = decision_context.self_view.home_area?;
-            if decision_context.memory_view.motion == Some(Motion::ReturnToHome) {
-                boolean_input(!home_area.arrived)
-            } else {
-                Some(home_area.overshoot_fraction)
-            }
-        }
-        ConsiderationInput::AttackFinished => {
-            boolean_input(decision_context.memory_view.attack_finished)
-        }
-        ConsiderationInput::MotionReachFraction(motion) => decision_context.reach_fractions[motion],
-        ConsiderationInput::ActionReachFraction(action) => decision_context.reach_fractions[action],
-        ConsiderationInput::SecondsSinceTargeted => decision_context
-            .target_view
-            .map(|target| target.seconds_since_targeted),
-    }
 }
 
 /// How wide an entity's vision cone is.
@@ -353,42 +256,8 @@ fn should_stop_targeting(
     }
 }
 
-/// Builds the pure view of a target from the vision system's observation.
-pub(super) fn build_target_view(info: Option<&TargetInfo>, now: f32) -> Option<TargetView> {
-    info.and_then(|info| {
-        info.distance.is_finite().then_some(TargetView {
-            distance: info.distance,
-            line_of_sight: info.line_of_sight,
-            bearing: info.direction,
-            velocity: info.velocity,
-            seconds_since_targeted: now - info.targeted_at,
-        })
-    })
-}
-
-/// Target distance over each owned capability's reach; `f32::MAX` for a
-/// capability that is missing or has no reach.
-fn build_reach_fractions(
-    target: Option<TargetView>,
-    capability_profiles: &CapabilityProfiles,
-) -> MotionActionTable<Option<f32>> {
-    let Some(target) = target else {
-        return MotionActionTable::default();
-    };
-    let mut reach_fractions = MotionActionTable::splat(Some(f32::MAX));
-    for key in capability_keys() {
-        if let Some(reach) = capability_profiles[key]
-            .and_then(|profile| profile.reach)
-            .filter(|&reach| reach > 0.0)
-        {
-            reach_fractions[key] = Some(target.distance / reach);
-        }
-    }
-    reach_fractions
-}
-
 /// The queries behind each capability's world-allows-use check, shared by
-/// `build_decision_context` and the appliers.
+/// [`DecisionInputs::use_eligibility`] and the appliers.
 #[derive(SystemParam)]
 pub(super) struct UseEligibilityQueries<'w, 's> {
     pub equipment: EquipmentRead<'w, 's>,
@@ -421,7 +290,7 @@ fn build_use_eligibility_table(
     UseEligibilityTable(use_eligibility)
 }
 
-/// The components one decision reads to build its context.
+/// The components one decision reads its inputs from.
 #[derive(QueryData)]
 pub(super) struct DecisionInputComponents {
     entity: Entity,
@@ -435,40 +304,86 @@ pub(super) struct DecisionInputComponents {
     items: Option<&'static Items>,
 }
 
-/// Builds one decision's context from the world, with memory left for the
-/// brain to add.
-pub(super) fn build_decision_context(
-    components: &DecisionInputComponentsItem,
-    capability_profiles: &CapabilityProfiles,
-    use_eligibility_queries: &UseEligibilityQueries,
-    now: f32,
-) -> DecisionContext {
-    let position = components.transform.translation.xy();
-    let target_view = if components.has_target {
-        build_target_view(components.target_info, now)
-    } else {
-        None
-    };
-    let home_area = components.home_area.and_then(|home_area| {
-        Some(HomeAreaView {
-            overshoot_fraction: home_area.overshoot_fraction(position)?,
-            arrived: home_area.distance_from(position) <= home_area.arrival_radius(),
-        })
-    });
-    DecisionContext {
-        self_view: SelfView {
-            health_fraction: components.health.and_then(Health::fraction).unwrap_or(1.0),
-            mana_fraction: components.mana.and_then(Mana::fraction).unwrap_or(1.0),
-            stunned: components.kinematics.is_some_and(Kinematics::is_stunned),
-            home_area,
-        },
-        target_view,
-        reach_fractions: build_reach_fractions(target_view, capability_profiles),
-        use_eligibility: build_use_eligibility_table(
-            components.entity,
-            components.items,
-            use_eligibility_queries,
-        ),
-        memory_view: MemoryView::default(),
+/// One decision's view of the world: references only, read on demand while scoring.
+#[derive(Clone, Copy)]
+pub(super) struct DecisionInputs<'a, 'w, 's> {
+    pub item: &'a DecisionInputComponentsItem<'w, 's>,
+    pub profiles: &'a CapabilityProfiles,
+    pub now: f32,
+}
+
+impl DecisionInputs<'_, '_, '_> {
+    /// The tracked target while targeting one at a finite distance. `TargetInfo`
+    /// also tracks a watched entity, so every target input reads through here.
+    pub fn target(&self) -> Option<&TargetInfo> {
+        self.item
+            .target_info
+            .filter(|info| self.item.has_target && info.distance.is_finite())
+    }
+
+    pub fn stunned(&self) -> bool {
+        self.item.kinematics.is_some_and(Kinematics::is_stunned)
+    }
+
+    /// Whether the world lets each motion or action run now.
+    pub fn use_eligibility(&self, queries: &UseEligibilityQueries) -> UseEligibilityTable {
+        build_use_eligibility_table(self.item.entity, self.item.items, queries)
+    }
+
+    /// Answers `input`; `None` when it is absent, which vetoes the behavior.
+    pub fn read(&self, input: ConsiderationInput, memory: BrainMemory) -> Option<f32> {
+        let flag = |set: bool| Some(if set { 1.0 } else { 0.0 });
+        match input {
+            ConsiderationInput::HasTarget => flag(self.target().is_some()),
+            ConsiderationInput::LineOfSight => self.target().and_then(|t| flag(t.line_of_sight)),
+            ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
+            ConsiderationInput::MissingHealth => {
+                Some(1.0 - self.item.health.and_then(Health::fraction).unwrap_or(1.0))
+            }
+            ConsiderationInput::ManaFraction => {
+                Some(self.item.mana.and_then(Mana::fraction).unwrap_or(1.0))
+            }
+            ConsiderationInput::MotionRunning(motion) => flag(
+                memory
+                    .motion
+                    .is_some_and(|running| running.index() == motion.index()),
+            ),
+            ConsiderationInput::Circling => flag(matches!(
+                memory.motion,
+                Some(Motion::Orbit(_) | Motion::KeepDistance(_))
+            )),
+            ConsiderationInput::HomeAreaPull => self.home_area_pull(memory),
+            ConsiderationInput::AttackFinished => flag(memory.attack_finished),
+            ConsiderationInput::MotionReachFraction(motion) => self.reach_fraction(motion),
+            ConsiderationInput::ActionReachFraction(action) => self.reach_fraction(action),
+            ConsiderationInput::SecondsSinceTargeted => {
+                self.target().map(|target| self.now - target.targeted_at)
+            }
+        }
+    }
+
+    /// How far past its home area range the character is. Once already heading
+    /// home it reads full until arrival, so crossing back inside the range
+    /// mid-return cannot hand the character straight back to wandering.
+    fn home_area_pull(&self, memory: BrainMemory) -> Option<f32> {
+        let home_area = self.item.home_area?;
+        let position = self.item.transform.translation.xy();
+        let overshoot_fraction = home_area.overshoot_fraction(position)?;
+        if memory.motion == Some(Motion::ReturnToHome) {
+            let arrived = home_area.distance_from(position) <= home_area.arrival_radius();
+            Some(if arrived { 0.0 } else { 1.0 })
+        } else {
+            Some(overshoot_fraction)
+        }
+    }
+
+    /// Target distance over the capability's reach; at most `1.0` is in reach.
+    /// `f32::MAX` for a capability that is missing or has no reach.
+    fn reach_fraction(&self, key: impl MotionActionKey) -> Option<f32> {
+        let target = self.target()?;
+        let reach = self.profiles[key]
+            .and_then(|profile| profile.reach)
+            .filter(|&reach| reach > 0.0);
+        Some(reach.map_or(f32::MAX, |reach| target.distance / reach))
     }
 }

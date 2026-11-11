@@ -2,7 +2,6 @@
 
 use bevy::prelude::*;
 
-use super::perception::DecisionContext;
 use super::{Action, ActionFinished, ActionOutcome, Motion};
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
@@ -53,14 +52,13 @@ impl RunningBehavior {
         })
     }
 
+    /// Whether a committed behavior lost its target, was stunned, or timed out.
     pub(super) fn should_drop_committed_behavior(
         &self,
-        context: &DecisionContext,
+        has_target: bool,
+        stunned: bool,
         now: f32,
     ) -> bool {
-        self.committed
-            && (context.target_view.is_none()
-                || context.self_view.stunned
-                || now - self.started_at > COMMIT_TIMEOUT)
+        self.committed && (!has_target || stunned || now - self.started_at > COMMIT_TIMEOUT)
     }
 }

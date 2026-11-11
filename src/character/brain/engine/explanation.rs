@@ -3,11 +3,9 @@
 
 use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
 use super::behavior::BrainDefinition;
-use super::scoring::{score_behavior, score_consideration};
+use super::scoring::{combine, score_consideration};
 use crate::character::brain::capability::AvailableMotionActionTable;
-use crate::character::brain::perception::{
-    ConsiderationInput, DecisionContext, read_consideration_input,
-};
+use crate::character::brain::perception::ConsiderationInput;
 
 /// One consideration's part in a score. `raw` is `None` when the input is
 /// absent; `score` is `None` when the score mapping rejects the raw value.
@@ -31,11 +29,11 @@ pub struct BehaviorScoreExplanation {
 
 /// Explains behavior `index` exactly as
 /// [`assign_behaviors_to_slots`](super::assignment::assign_behaviors_to_slots) scores it from the
-/// same inputs.
+/// same inputs, reading each consideration's input once.
 pub fn explain_behavior(
     definition: &BrainDefinition,
     index: usize,
-    decision_context: &DecisionContext,
+    read: &impl Fn(ConsiderationInput) -> Option<f32>,
     available_motion_action_table: &AvailableMotionActionTable,
     running_behavior_ids: &[usize],
 ) -> BehaviorScoreExplanation {
@@ -63,19 +61,26 @@ pub fn explain_behavior(
             considerations: Vec::new(),
         };
     }
-    let considerations = behavior
+    let considerations: Vec<ConsiderationScoreExplanation> = behavior
         .considerations
         .iter()
-        .map(|consideration| ConsiderationScoreExplanation {
-            name: consideration.name,
-            input: consideration.input,
-            raw: read_consideration_input(consideration.input, decision_context),
-            score: score_consideration(consideration, decision_context, is_current),
+        .map(|consideration| {
+            let raw = read(consideration.input);
+            ConsiderationScoreExplanation {
+                name: consideration.name,
+                input: consideration.input,
+                raw,
+                score: score_consideration(consideration, raw, is_current),
+            }
         })
         .collect();
     BehaviorScoreExplanation {
         skipped,
-        score: score_behavior(behavior, decision_context, is_current).map(|score| score * momentum),
+        score: combine(
+            behavior.weight,
+            considerations.iter().map(|explanation| explanation.score),
+        )
+        .map(|score| score * momentum),
         momentum,
         considerations,
     }

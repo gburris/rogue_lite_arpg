@@ -1,5 +1,6 @@
 //! ECS glue for the pure utility brains. Data flows one way, one writer each:
-//! 1. [`perception`] builds a [`DecisionContext`] from the world.
+//! 1. [`perception`] tracks targets, and its `DecisionInputs` answers each consideration's input
+//!    straight from the world when scoring asks.
 //! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior holds each slot on the
 //!    [`Brain`].
 //! 3. [`motion`] and [`action`] carry out the held motion and action and report
@@ -11,8 +12,8 @@
 //!    `apply_` system registered in `motion::plugin`, and is skipped in `apply_direct_steering`. A
 //!    component the motion needs implements `Capability`, is recorded in
 //!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
-//! 2. [`DecisionContext`] fields built in [`perception`], plus [`ConsiderationInput`] variants read
-//!    in `read_consideration_input`.
+//! 2. A [`ConsiderationInput`] variant and its arm in `DecisionInputs::read`, reading a field of
+//!    `DecisionInputComponents` (add one for a new component).
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!
 //! A finite [`Motion`] needs a variant, a `Capability` component whose
@@ -41,7 +42,7 @@ pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Bre
 pub use self::capability::CapabilityProfile;
 use self::capability::{
     AvailableMotionActionTable, Capability, CapabilityKey, CapabilityProfiles, MotionActionKey,
-    MotionActionTable, capability_keys,
+    MotionActionTable, UseEligibilityTable, capability_keys,
 };
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
@@ -50,11 +51,11 @@ pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
+use self::perception::BrainMemory;
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 pub(crate) use self::perception::{ConsiderationInput, Targeting, VisionCone};
-use self::perception::{DecisionContext, MemoryView};
 use self::running_state::RunningBehavior;
 use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
@@ -141,28 +142,28 @@ impl Brain {
             .collect()
     }
 
-    /// Fills in the brain's memory on `context_without_memory`, and marks each
-    /// capability available when owned, off cooldown and use-eligible.
-    fn build_scoring_inputs(
+    /// What scoring reads of the brain's own earlier choices.
+    fn memory(&self) -> BrainMemory {
+        BrainMemory {
+            motion: self.motion(),
+            attack_finished: self.attack_finish_pending,
+        }
+    }
+
+    /// Marks each capability available when owned, off cooldown and use-eligible.
+    fn available_motion_actions(
         &self,
-        context_without_memory: DecisionContext,
         capability_profiles: &CapabilityProfiles,
+        use_eligibility: &UseEligibilityTable,
         now: f32,
-    ) -> (DecisionContext, AvailableMotionActionTable) {
-        let context = DecisionContext {
-            memory_view: MemoryView {
-                motion: self.motion(),
-                attack_finished: self.attack_finish_pending,
-            },
-            ..context_without_memory
-        };
+    ) -> AvailableMotionActionTable {
         let mut available = MotionActionTable::splat(true);
         for key in capability_keys() {
             available[key] = capability_profiles[key].is_some()
                 && self.is_cooldown_ready(key, now)
-                && context.use_eligibility[key];
+                && use_eligibility[key];
         }
-        (context, AvailableMotionActionTable(available))
+        AvailableMotionActionTable(available)
     }
 
     /// Applies a decision. The only place an attack-finished edge is consumed.

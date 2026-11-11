@@ -4,7 +4,7 @@
 use super::behavior::{Behavior, BrainDefinition, MAX_BEHAVIORS};
 use super::scoring::score_behavior;
 use crate::character::brain::capability::AvailableMotionActionTable;
-use crate::character::brain::perception::DecisionContext;
+use crate::character::brain::perception::ConsiderationInput;
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
@@ -35,10 +35,11 @@ impl SkipReason {
 /// Scores every behavior not skipped (see [`SkipReason`]), then takes them
 /// from the highest score down while their slots are free; ties go to the
 /// earlier behavior. A `false` from `start` drops a winner for the next best.
-/// Behavior ids, taken and returned, are indices into `definition.behaviors`.
+/// `read` answers each consideration's input. Behavior ids, taken and returned,
+/// are indices into `definition.behaviors`.
 pub fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
-    decision_context: &DecisionContext,
+    read: &impl Fn(ConsiderationInput) -> Option<f32>,
     available_motion_action_table: &AvailableMotionActionTable,
     running_behavior_ids: &[usize],
     mut start: impl FnMut(usize) -> bool,
@@ -56,7 +57,7 @@ pub fn assign_behaviors_to_slots(
             continue;
         }
         let is_current = running_behavior_ids.contains(&index);
-        let Some(score) = score_behavior(behavior, decision_context, is_current) else {
+        let Some(score) = score_behavior(behavior, read, is_current) else {
             continue;
         };
         scores[index] = score * momentum_multiplier(is_current);

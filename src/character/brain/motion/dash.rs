@@ -9,8 +9,8 @@ use super::{
     CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
     report_motion_finished,
 };
-use crate::character::brain::perception::{TargetView, build_target_view};
 use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
+use crate::character::vision::TargetInfo;
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -100,16 +100,16 @@ impl Dash {
     }
 }
 
-fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2) -> Vec2 {
+fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
     if target.distance <= close_range
         && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
     {
         let spread = rand::rng().random_range(-HOP_STEP_IN_SPREAD..=HOP_STEP_IN_SPREAD);
-        return target.bearing.rotate(Vec2::from_angle(spread));
+        return target.direction.rotate(Vec2::from_angle(spread));
     }
     // Cut across to the side opposite the current heading, so an orbit that
     // follows reads the new heading and circles back the other way.
-    let heading_side = target.bearing.perp().dot(heading);
+    let heading_side = target.direction.perp().dot(heading);
     let tangent_sign = if heading_side.abs() > f32::EPSILON {
         -heading_side.signum()
     } else if rand::rng().random_bool(0.5) {
@@ -117,8 +117,8 @@ fn hop_direction(target: &TargetView, close_range: f32, heading: Vec2) -> Vec2 {
     } else {
         -1.0
     };
-    let tangent = target.bearing.perp() * tangent_sign;
-    (tangent - target.bearing * HOP_OUTWARD_BIAS).normalize_or_zero()
+    let tangent = target.direction.perp() * tangent_sign;
+    (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
 impl Capability for Dash {
@@ -176,7 +176,10 @@ impl Dash {
         if !self.progress.started {
             // A target with no finite distance gives nothing to aim at, so this
             // waits rather than aiming blind.
-            let Some(target) = build_target_view(input.target_info, input.now) else {
+            let Some(target) = input
+                .target_info
+                .filter(|target| target.distance.is_finite())
+            else {
                 return MotionStep::Steer(Steering::boosted(None, self.speed_multiplier));
             };
             let direction = self.aim_rule.choose_direction(target, input.heading);
@@ -202,12 +205,12 @@ enum DashAimRule {
 }
 
 impl DashAimRule {
-    fn choose_direction(self, target: TargetView, heading: Vec2) -> Vec2 {
+    fn choose_direction(self, target: &TargetInfo, heading: Vec2) -> Vec2 {
         let direction = match self {
-            Self::Away { spread } => (-target.bearing)
+            Self::Away { spread } => (-target.direction)
                 .normalize_or_zero()
                 .rotate(Vec2::from_angle(rand::rng().random_range(-spread..=spread))),
-            Self::HopTangent { close_range } => hop_direction(&target, close_range, heading),
+            Self::HopTangent { close_range } => hop_direction(target, close_range, heading),
         };
         // A zero bearing (the characters overlap) has no direction to aim along.
         if direction.length_squared() > f32::EPSILON {

@@ -123,7 +123,7 @@ pub enum Curve {
 }
 
 impl Curve {
-    pub(crate) fn apply(self, normalized: f32) -> f32 {
+    fn apply(self, normalized: f32) -> f32 {
         let value = match self {
             Self::Linear => normalized,
             Self::Cubic => normalized * normalized * normalized,

@@ -63,20 +63,15 @@ pub static DEFAULT_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     right: EquipmentPose::behind(8.0, -15.0, -90.0),
 };
 
+/// Puts a holder's equipped items in their resting poses, except while an instant-use item is in
+/// use, since its use moves the items itself.
 pub(super) fn update_equipment_transforms(
-    all_worn_equipment: Query<
-        (
-            Option<&Mainhand>,
-            Option<&Offhand>,
-            &FacingDirection,
-            &Attacking,
-        ),
+    changed_holders: Query<
+        Entity,
         (
             Or<(
                 // Update when holder changes direction
                 Changed<FacingDirection>,
-                // Update when holder stops attacking, stops casting, etc...
-                Changed<Attacking>,
                 // Update when new item is equipped
                 Changed<Mainhand>,
                 Changed<Offhand>,
@@ -84,10 +79,22 @@ pub(super) fn update_equipment_transforms(
             With<Items>,
         ),
     >,
+    // Update when an item stops swinging, casting, etc...
+    mut ended_uses: RemovedComponents<EquipmentInUse>,
+    item_holders: Query<&ItemOf>,
+    holders: Query<(Option<&Mainhand>, Option<&Offhand>, &FacingDirection), With<Items>>,
+    in_use: Query<(), With<EquipmentInUse>>,
     mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
-    for (mainhand, offhand, direction, attacking) in &all_worn_equipment {
-        if !**attacking {
+    let ended_use_holders = ended_uses
+        .read()
+        .filter_map(|item| item_holders.get(item).ok())
+        .map(|item_of| item_of.holder);
+    for holder in changed_holders.iter().chain(ended_use_holders) {
+        let Ok((mainhand, offhand, direction)) = holders.get(holder) else {
+            continue;
+        };
+        if !EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use) {
             update_single_equipment(mainhand.map(Mainhand::get), *direction, &mut transforms);
             update_single_equipment(offhand.map(Offhand::get), *direction, &mut transforms);
         }

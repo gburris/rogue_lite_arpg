@@ -7,7 +7,7 @@ mod mage;
 mod spawn;
 mod warrior;
 
-pub use self::defeat::Experience;
+use self::defeat::Experience;
 pub use self::kind::EnemyKind;
 pub use self::spawn::{EnemySpawn, SpawnEnemies};
 use self::spawn::{

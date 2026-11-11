@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
 
+use super::equipment::prelude::{DirectionalPoses, EquipmentPose};
 use super::{Item, ItemKind};
 use crate::prelude::*;
 

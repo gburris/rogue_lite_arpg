@@ -58,17 +58,17 @@ pub(crate) struct TargetInfo {
     /// Distance to the observed entity.
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
-    pub direction: Vec2,
+    pub(super) direction: Vec2,
     /// World position of the observed entity.
     pub position: Vec2,
     /// Intended world velocity of the observed entity.
-    pub velocity: Vec2,
+    pub(super) velocity: Vec2,
     /// Whether the observed entity is within an unobstructed line of sight (based on `RayCaster`).
     pub line_of_sight: bool,
     /// Whether the observed entity is within the entity’s vision cone angle.
-    pub in_vision_cone: bool,
+    pub(super) in_vision_cone: bool,
     /// When the current `Targeting` was acquired, in virtual seconds.
-    pub targeted_at: f32,
+    pub(super) targeted_at: f32,
     // TODO: Add `last_known_position` for memory/prediction systems.
 }
 

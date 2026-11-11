@@ -4,7 +4,7 @@ use super::Consideration;
 use crate::character::brain::{Action, Motion};
 
 /// Most behaviors one brain definition may list, so scoring needs no allocation.
-pub(crate) const MAX_BEHAVIORS: usize = 16;
+pub(super) const MAX_BEHAVIORS: usize = 16;
 
 /// One candidate a brain can choose: a motion, an action, or both, and how
 /// firmly it holds them.
@@ -55,13 +55,13 @@ pub enum CommitPolicy {
 }
 
 impl CommitPolicy {
-    pub const fn is_committed(self) -> bool {
+    pub(in crate::character::brain) const fn is_committed(self) -> bool {
         matches!(self, Self::UntilFinished { .. })
     }
 
     /// The tier a holder must be outranked by to lose its slots; 0 for a continuously scored
     /// behavior.
-    pub const fn interrupt_tier(self) -> u8 {
+    pub(super) const fn interrupt_tier(self) -> u8 {
         match self {
             Self::UntilFinished { interrupt_tier } => interrupt_tier,
             Self::ContinuouslyScored => 0,

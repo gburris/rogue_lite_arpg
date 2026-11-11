@@ -16,14 +16,21 @@ impl Default for Slowed {
     }
 }
 
-/// Sets each character's slow to its strongest active status, with a freeze
+/// The fraction of a character's speed that its statuses remove. The character feature applies
+/// it to the character's [`Kinematics`].
+#[derive(Component, Clone, Copy, Debug)]
+#[component(immutable)]
+pub struct MovementSlow(pub f32);
+
+/// Sets each character's [`MovementSlow`] to its strongest active status, with a freeze
 /// counting as a full stun, so one status expiring never clears another.
 pub(super) fn sync_slow_from_statuses(
-    mut characters: Query<(&mut Kinematics, Option<&Statuses>)>,
+    mut commands: Commands,
+    characters: Query<(Entity, Option<&Statuses>, Option<&MovementSlow>), With<Kinematics>>,
     slows: Query<&Slowed>,
     freezes: Query<(), With<Frozen>>,
 ) {
-    for (mut kinematics, statuses) in &mut characters {
+    for (character, statuses, current_slow) in &characters {
         let strongest = statuses
             .into_iter()
             .flat_map(Statuses::iter)
@@ -35,8 +42,11 @@ pub(super) fn sync_slow_from_statuses(
                 }
             })
             .fold(0.0, f32::max);
-        if (kinematics.slowed_percentage() - strongest).abs() > f32::EPSILON {
-            kinematics.slow(strongest);
+        let current = current_slow.map_or(0.0, |slow| slow.0);
+        if (current - strongest).abs() > f32::EPSILON {
+            commands
+                .entity(character)
+                .try_insert(MovementSlow(strongest));
         }
     }
 }

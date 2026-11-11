@@ -4,6 +4,8 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 
 use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
+use super::reflection::ProjectileReflection;
+use super::status_effects::prelude::Burning;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

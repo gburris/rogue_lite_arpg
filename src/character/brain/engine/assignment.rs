@@ -7,7 +7,7 @@ use crate::character::brain::ConsiderationInput;
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
-pub(crate) const MOMENTUM: f32 = 1.25;
+const MOMENTUM: f32 = 1.25;
 
 /// Why a behavior sits out a decision unscored.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::equipment_transform::DirectionalPoses;
 use crate::prelude::*;
 
 /// An item that can be equipped and used from a slot. `reach` is the farthest

@@ -15,16 +15,15 @@ mod tome;
 pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
-        DirectionalPoses, Equip, EquipmentInUse, EquipmentPose, EquipmentRead, EquipmentSlot,
-        EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure, EquipmentUseFinished,
-        EquipmentUseSucceeded, Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment,
-        StopUsingEquipment, Unequip,
+        Equip, EquipmentInUse, EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed,
+        EquipmentUseFailure, EquipmentUseFinished, EquipmentUseSucceeded, Equippable, Equipped,
+        Mainhand, Offhand, StartUsingEquipment, StopUsingEquipment, Unequip,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;
     pub use super::magnet::Magnet;
     pub use super::melee::prelude::{axe, freeze_axe, sword};
-    pub use super::shield::{ProjectileReflection, knight_shield, magic_shield};
+    pub use super::shield::{knight_shield, magic_shield};
     pub use super::staff::{
         STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,
     };

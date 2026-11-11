@@ -24,7 +24,7 @@
 //! applier, and behaviors over it.
 
 mod action;
-pub(crate) mod considerations;
+pub(super) mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
@@ -44,9 +44,9 @@ use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
 use self::engine::validate_brain;
-pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
+pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
-pub(crate) use self::inputs::ConsiderationInput;
+pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::{BrainMemory, CapabilityProfile, DecisionInputs};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};

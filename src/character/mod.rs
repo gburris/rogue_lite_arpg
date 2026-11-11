@@ -20,7 +20,7 @@ pub mod prelude {
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetInfo, TargetLock, Targeting, VisionCone};
-    pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, Experience, SpawnEnemies};
+    pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
         GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
@@ -44,7 +44,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
-    );
+    )
+    .add_observer(state::on_movement_slow_changed);
 }
 
 #[derive(Component, Default)]

@@ -26,17 +26,13 @@ impl Kinematics {
     }
 
     /// Sets the fraction of speed removed, where `1.0` is a stun.
-    pub fn slow(&mut self, percentage: f32) {
+    fn slow(&mut self, percentage: f32) {
         assert!(
             (0.0..=1.0).contains(&percentage),
             "slow percentage is a fraction of speed removed, got {percentage}"
         );
 
         self.slowed_percentage = percentage;
-    }
-
-    pub fn slowed_percentage(&self) -> f32 {
-        self.slowed_percentage
     }
 
     /// Moves along `direction` at `speed_multiplier` times max speed: below
@@ -88,6 +84,16 @@ impl Default for Kinematics {
     }
 }
 
+/// Applies a character's new [`MovementSlow`] to its [`Kinematics`].
+pub(super) fn on_movement_slow_changed(
+    slow_changed: On<Insert<MovementSlow>>,
+    mut characters: Query<(&MovementSlow, &mut Kinematics)>,
+) {
+    if let Ok((movement_slow, mut kinematics)) = characters.get_mut(slow_changed.entity) {
+        kinematics.slow(movement_slow.0);
+    }
+}
+
 /// Converts [`Kinematics`] into avian's `LinearVelocity`.
 pub(super) fn kinematics_to_velocity(mut query: Query<(&Kinematics, &mut LinearVelocity)>) {
     for (kinematics, mut velocity) in &mut query {
@@ -131,18 +137,13 @@ impl FacingDirection {
 #[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
 pub struct Attacking(pub bool);
 
-/// Syncs whether a holder is attacking from `EquipmentInUse` items. Held slots
-/// (shield blocking) do not count as attacking.
+/// Syncs whether a holder is attacking; see [`EquipmentSlot::is_instant_item_in_use`].
 pub(super) fn sync_attacking_from_equipment(
     mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
     in_use: Query<(), With<EquipmentInUse>>,
 ) {
     for (mut attacking, mainhand, offhand) in &mut holders {
-        let using_instant_item = EquipmentSlot::ALL
-            .into_iter()
-            .filter(|equipment| equipment.is_instant_use())
-            .filter_map(|equipment| equipment.equipped(mainhand, offhand))
-            .any(|item| in_use.contains(item));
+        let using_instant_item = EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use);
         attacking.set_if_neq(Attacking(using_instant_item));
     }
 }

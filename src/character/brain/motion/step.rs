@@ -5,14 +5,13 @@ use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
 use super::{DecayingSpeedBoost, HomeArea, Motion, Steering};
-use crate::character::brain::{Brain, Targeting};
+use crate::character::brain::{Brain, TargetInfo, Targeting};
 use crate::character::state::Kinematics;
-use crate::character::vision::TargetInfo;
 
 /// A finite motion completed. The brain starts its cooldown and, if `behavior_run_id` is
 /// still current, ends its behavior and decides again at once.
 #[derive(EntityEvent, Clone, Copy, Debug)]
-pub struct MotionFinished {
+pub(in crate::character::brain) struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
     pub behavior_run_id: u32,

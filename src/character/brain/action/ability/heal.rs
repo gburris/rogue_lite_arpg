@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// Drinking carried potions to recover health, paced by `cooldown`.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Heal {
-    pub cooldown: f32,
+    cooldown: f32,
 }
 
 impl Heal {

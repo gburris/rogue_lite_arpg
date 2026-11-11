@@ -9,7 +9,7 @@ use super::Brain;
 use super::action::{Ability, AbilityCapabilities, Action, find_carried_potion};
 use super::engine::Behavior;
 use super::motion::{HomeArea, Motion, MotionCapabilities};
-use super::perception::Targeting;
+use super::perception::{TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].

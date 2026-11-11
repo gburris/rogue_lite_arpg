@@ -39,8 +39,8 @@ mod schedule;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use self::action::StartedEquipmentUses;
-pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
+pub use self::action::{Ability, Action, Bite, Breath, Heal};
+use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
 use self::engine::validate_brain;
@@ -54,7 +54,7 @@ use self::motion_action_table::{MotionActionKey, MotionActionTable};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
-pub(crate) use self::perception::{Targeting, VisionCone};
+pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::running_state::RunningBehavior;
 use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;

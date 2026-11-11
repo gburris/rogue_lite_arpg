@@ -31,7 +31,7 @@ pub enum Ability {
 
 impl Ability {
     /// Every ability, in array order.
-    pub const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
+    pub(in crate::character::brain) const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
 }
 
 pub(super) fn plugin(app: &mut App) {

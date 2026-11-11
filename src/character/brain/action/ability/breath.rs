@@ -1,14 +1,13 @@
 use bevy::prelude::*;
 
-use crate::character::brain::{Ability, Action, Brain, CapabilityProfile, Targeting};
-use crate::character::vision::TargetInfo;
+use crate::character::brain::{Ability, Action, Brain, CapabilityProfile, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// An innate projectile attack fired from the entity's `Projectiles` template.
 #[derive(Component, Clone, Debug)]
 pub struct Breath {
-    pub cooldown: f32,
-    pub reach: f32,
+    cooldown: f32,
+    reach: f32,
 }
 
 impl Breath {

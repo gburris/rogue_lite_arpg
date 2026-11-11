@@ -9,8 +9,7 @@ use super::{
     CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
     report_motion_finished,
 };
-use crate::character::brain::{CapabilityProfile, Interval, Motion};
-use crate::character::vision::TargetInfo;
+use crate::character::brain::{CapabilityProfile, Interval, Motion, TargetInfo};
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -23,8 +22,8 @@ const HOP_OUTWARD_BIAS: f32 = 0.15;
 /// A committed straight run along a direction fixed at its start.
 #[derive(Component, Clone, Debug)]
 pub struct Dash {
-    pub run_distance: Interval,
-    pub speed_multiplier: f32,
+    run_distance: Interval,
+    speed_multiplier: f32,
     capability_profile: CapabilityProfile,
     aim_rule: DashAimRule,
     debug_name: &'static str,

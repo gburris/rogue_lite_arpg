@@ -19,7 +19,7 @@ pub use self::orbit::Orbit;
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
-pub use self::step::MotionFinished;
+pub(super) use self::step::MotionFinished;
 use self::step::{
     CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, report_motion_finished,
 };
@@ -56,7 +56,7 @@ pub enum Motion {
 impl Motion {
     /// Every motion in array order. A payload here only stands in; arrays
     /// index by variant.
-    pub const ALL: &'static [Self] = &[
+    pub(super) const ALL: &'static [Self] = &[
         Self::Wander,
         Self::Chase,
         Self::ReturnToHome,
@@ -69,10 +69,10 @@ impl Motion {
     ];
 
     /// Number of distinct motions, for per-motion arrays.
-    pub const COUNT: usize = Self::ALL.len();
+    pub(super) const COUNT: usize = Self::ALL.len();
 
     /// Position of this motion in per-motion arrays.
-    pub const fn index(self) -> usize {
+    pub(super) const fn index(self) -> usize {
         match self {
             Self::Wander => 0,
             Self::Chase => 1,
@@ -87,13 +87,13 @@ impl Motion {
     }
 
     /// Whether both are the same variant, whatever their payloads.
-    pub fn is_same_kind(self, other: Self) -> bool {
+    pub(super) fn is_same_kind(self, other: Self) -> bool {
         self.index() == other.index()
     }
 
     /// Whether this motion ends on its own and reports it, rather than
     /// running until replaced.
-    pub const fn is_finite(self) -> bool {
+    pub(super) const fn is_finite(self) -> bool {
         match self {
             Self::Dash | Self::Swoop => true,
             Self::Wander
@@ -107,7 +107,7 @@ impl Motion {
     }
 
     /// Whether steering this motion needs a live target.
-    pub fn needs_target(self) -> bool {
+    pub(super) fn needs_target(self) -> bool {
         match self {
             // Flee is still fighting: the target is live, the goal is just distance.
             Self::Chase

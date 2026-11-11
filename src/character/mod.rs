@@ -19,7 +19,7 @@ pub mod prelude {
     pub use super::Character;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     #[cfg(feature = "dev_tools")]
-    pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
+    pub(crate) use super::brain::{TargetInfo, TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, Experience, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
@@ -28,7 +28,7 @@ pub mod prelude {
     };
     pub use super::purse::Purse;
     pub use super::state::{Attacking, FacingDirection, Kinematics};
-    pub use super::vision::{TargetInfo, Vision};
+    pub use super::vision::Vision;
 }
 
 pub(super) fn plugin(app: &mut App) {

@@ -221,16 +221,14 @@ fn fire_projectile_on_casting_end(
         &ItemOf,
         &Transform,
     )>,
-    holder_query: Query<(&Transform, &Vision, Option<&TargetInfo>, &CombatSide)>,
+    holder_query: Query<(&Transform, &Vision, &CombatSide)>,
 ) {
     for (staff_entity, staff, mut casting, projectiles, item_of, staff_transform) in staff_query {
         if !casting.fire_time.is_finished() {
             continue;
         }
 
-        let Ok((holder_transform, holder_vision, target_info, side)) =
-            holder_query.get(item_of.holder)
-        else {
+        let Ok((holder_transform, holder_vision, side)) = holder_query.get(item_of.holder) else {
             warn!("Tried to fire staff with holder missing aim position or transform");
             continue;
         };
@@ -244,9 +242,7 @@ fn fire_projectile_on_casting_end(
             let holder_relative_source_position =
                 staff_transform.translation.truncate() + rotated_source_offset;
 
-            // If no target ditance default to sane value away from holder
-            let target_angle: Vec2 = (holder_vision.aim_direction
-                * target_info.map_or(100., |t| t.distance))
+            let target_angle: Vec2 = holder_vision.aim_direction * holder_vision.aim_distance
                 - holder_relative_source_position;
 
             // Staff is child of holder so position is relative, need to add holder transform for

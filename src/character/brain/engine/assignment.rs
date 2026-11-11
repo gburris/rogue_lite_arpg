@@ -37,7 +37,7 @@ impl SkipReason {
 /// `read` answers each consideration's input and `available` whether a behavior
 /// may start now. Behavior ids, taken and returned, are indices into
 /// `definition.behaviors`.
-pub fn assign_behaviors_to_slots(
+pub(in crate::character::brain) fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
     read: &impl Fn(ConsiderationInput) -> Option<f32>,
     available: &impl Fn(&Behavior) -> bool,

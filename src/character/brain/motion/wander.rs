@@ -13,9 +13,9 @@ const WANDER_SPEED_SCALE: f32 = 0.4;
 /// Alternates standing and walking one rolled heading while wandering.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
-    pub pause: Interval,
-    pub walk: Interval,
-    pub speed_scale: f32,
+    pause: Interval,
+    walk: Interval,
+    speed_scale: f32,
     direction: Vec2,
     phase: Option<WanderPhase>,
 }

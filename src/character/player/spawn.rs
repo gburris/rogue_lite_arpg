@@ -6,7 +6,6 @@ use super::input::player_actions;
 use super::interact::PlayerInteractionRadius;
 use super::{Player, death, overlay};
 use crate::character::physical_collider;
-use crate::character::vision::TargetInfo;
 use crate::prelude::*;
 
 pub(super) fn spawn_player(
@@ -38,7 +37,6 @@ pub(super) fn spawn_player(
             ~Mana::new(100.0, 10.0)
             stats
             template(move |_| Ok(sprite.clone()))
-            TargetInfo
             on(death::on_player_defeated)
             on(overlay::on_equipment_use_succeeded)
             on(overlay::on_equipment_use_failed)

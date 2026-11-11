@@ -23,21 +23,17 @@ impl Interval {
         Self { min, max }
     }
 
-    pub const fn min(self) -> f32 {
+    pub(in crate::character::brain) const fn min(self) -> f32 {
         self.min
     }
 
-    pub const fn max(self) -> f32 {
-        self.max
-    }
-
     /// A uniformly random value from `min` up to, not including, `max`.
-    pub fn pick_random_value(self) -> f32 {
+    pub(in crate::character::brain) fn pick_random_value(self) -> f32 {
         rand::rng().random_range(self.min..self.max)
     }
 
     /// Signed distance outside the interval; zero inside it.
-    pub fn error(self, value: f32) -> f32 {
+    pub(in crate::character::brain) fn error(self, value: f32) -> f32 {
         if value < self.min {
             value - self.min
         } else if value > self.max {
@@ -48,13 +44,13 @@ impl Interval {
     }
 
     /// Offset from the center as a fraction of the half-width, clamped to `-1.0..=1.0`.
-    pub fn center_error(self, value: f32) -> f32 {
+    pub(in crate::character::brain) fn center_error(self, value: f32) -> f32 {
         let half_width = (self.max - self.min) * 0.5;
         ((value - self.min.midpoint(self.max)) / half_width).clamp(-1.0, 1.0)
     }
 
     /// Maps `raw` onto `0.0..=1.0` across the interval, clamping outside it.
-    pub fn normalize_clamped(self, raw: f32) -> Option<f32> {
+    pub(in crate::character::brain) fn normalize_clamped(self, raw: f32) -> Option<f32> {
         if !raw.is_finite() {
             return None;
         }
@@ -66,10 +62,10 @@ impl Interval {
 /// One normalized input to a behavior's score.
 #[derive(Clone, Copy, Debug)]
 pub struct Consideration {
-    pub name: &'static str,
-    pub input: ConsiderationInput,
-    pub score_mapping: ScoreMapping,
-    pub inverted: bool,
+    pub(in crate::character::brain) name: &'static str,
+    pub(in crate::character::brain) input: ConsiderationInput,
+    pub(in crate::character::brain) score_mapping: ScoreMapping,
+    pub(in crate::character::brain) inverted: bool,
 }
 
 impl Consideration {
@@ -85,7 +81,7 @@ impl Consideration {
 
 /// How a consideration turns its raw input into a `0.0..=1.0` score.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ScoreMapping {
+pub(in crate::character::brain) enum ScoreMapping {
     /// Normalize over `range`, then shape with `curve`.
     Curve { range: Interval, curve: Curve },
     /// Full once the raw input crosses `enter`, zero before it. While its
@@ -97,7 +93,7 @@ pub enum ScoreMapping {
 
 impl ScoreMapping {
     /// Score for `raw`, or `None` for a non-finite raw input.
-    pub fn score_raw_input(self, raw: f32, is_current: bool) -> Option<f32> {
+    pub(super) fn score_raw_input(self, raw: f32, is_current: bool) -> Option<f32> {
         match self {
             Self::Curve { range, curve } => {
                 range.normalize_clamped(raw).map(|value| curve.apply(value))
@@ -139,7 +135,7 @@ impl Curve {
 
 /// Final bounded score for one behavior, reading each consideration's input
 /// through `read`. `is_current` switches threshold considerations to their exit side.
-pub fn score_behavior(
+pub(super) fn score_behavior(
     behavior: &Behavior,
     read: &impl Fn(ConsiderationInput) -> Option<f32>,
     is_current: bool,

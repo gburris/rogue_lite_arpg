@@ -21,8 +21,8 @@ const SWOOP_RECOVERY_TIME: f32 = 0.4;
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
     capability_profile: CapabilityProfile,
-    pub extra_speed: f32,
-    pub exit_turn: f32,
+    extra_speed: f32,
+    exit_turn: f32,
     pass: Option<SwoopPass>,
     current_behavior_run_id: CurrentBehaviorRunId,
 }

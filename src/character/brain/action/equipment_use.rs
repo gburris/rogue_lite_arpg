@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use super::{Action, ActionFinished, ActionOutcome};
-use crate::character::brain::{Brain, Targeting};
-use crate::character::vision::TargetInfo;
+use crate::character::brain::{Brain, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// The last use started in each slot, stamped with its behavior's run id, so a

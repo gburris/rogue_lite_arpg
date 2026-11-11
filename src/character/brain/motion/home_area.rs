@@ -26,33 +26,33 @@ impl HomeArea {
         }
     }
 
-    pub fn radius(&self) -> f32 {
+    pub(in crate::character::brain) fn radius(&self) -> f32 {
         self.radius
     }
 
-    pub fn distance_from(&self, position: Vec2) -> f32 {
+    pub(in crate::character::brain) fn distance_from(&self, position: Vec2) -> f32 {
         self.origin.distance(position)
     }
 
     /// Whether `position` is close enough to the origin to count as back home.
-    pub fn has_arrived(&self, position: Vec2) -> bool {
+    pub(in crate::character::brain) fn has_arrived(&self, position: Vec2) -> bool {
         self.distance_from(position) <= self.arrival_radius
     }
 
     /// The unit direction from `position` to the origin; `None` at the origin itself.
-    pub fn direction_home(&self, position: Vec2) -> Option<Vec2> {
+    pub(in crate::character::brain) fn direction_home(&self, position: Vec2) -> Option<Vec2> {
         (self.origin - position).try_normalize()
     }
 
     /// Distance beyond the configured radius; negative while inside it.
-    pub fn overshoot(&self, position: Vec2) -> f32 {
+    pub(in crate::character::brain) fn overshoot(&self, position: Vec2) -> f32 {
         self.distance_from(position) - self.radius
     }
 
     /// Overshoot as a fraction of the home area range (`1.0` is one full range
     /// beyond it). Returns `None` for a non-positive or non-finite radius
     /// so callers treat it as having no home area.
-    pub fn overshoot_fraction(&self, position: Vec2) -> Option<f32> {
+    pub(in crate::character::brain) fn overshoot_fraction(&self, position: Vec2) -> Option<f32> {
         let radius = self.radius();
         if radius.is_finite() && radius > 0.0 {
             Some(self.overshoot(position) / radius)

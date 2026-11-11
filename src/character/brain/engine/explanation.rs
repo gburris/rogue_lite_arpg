@@ -29,7 +29,7 @@ pub struct BehaviorScoreExplanation {
 /// Explains behavior `index` exactly as
 /// [`assign_behaviors_to_slots`](super::assignment::assign_behaviors_to_slots) scores it from the
 /// same inputs, reading each consideration's input once.
-pub fn explain_behavior(
+pub(in crate::character::brain) fn explain_behavior(
     definition: &BrainDefinition,
     index: usize,
     read: &impl Fn(ConsiderationInput) -> Option<f32>,

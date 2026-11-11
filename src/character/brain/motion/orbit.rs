@@ -43,10 +43,10 @@ impl OrbitDirection {
 /// Circles the target inside a distance range, rerolling its direction over time.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Orbit {
-    pub reroll_interval: Interval,
-    pub switch_chance: f32,
-    pub radial_gain: f32,
-    pub max_distance_offset: f32,
+    reroll_interval: Interval,
+    switch_chance: f32,
+    radial_gain: f32,
+    max_distance_offset: f32,
     distance_offset: f32,
     reroll_at: f32,
     direction: Option<OrbitDirection>,

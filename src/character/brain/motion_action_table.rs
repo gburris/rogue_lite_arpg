@@ -1,5 +1,4 @@
-//! What an entity can do: the per-motion-and-action table and the profile each
-//! capability component reports.
+//! [`MotionActionTable`], one value per motion and per action, and the keys that index it.
 
 use super::action::{Ability, Action};
 use super::motion::Motion;
@@ -50,25 +49,5 @@ impl<T, K: MotionActionKey> std::ops::Index<K> for MotionActionTable<T> {
 impl<T, K: MotionActionKey> std::ops::IndexMut<K> for MotionActionTable<T> {
     fn index_mut(&mut self, key: K) -> &mut T {
         &mut self.0[key.table_index()]
-    }
-}
-
-/// The reach, start chance and cooldown a decision reads for one motion or action.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) struct CapabilityProfile {
-    pub reach: Option<f32>,
-    /// Probability that a winning finite motion actually starts.
-    pub chance: f32,
-    /// Seconds to wait after a finish or a missed start roll.
-    pub cooldown: f32,
-}
-
-impl Default for CapabilityProfile {
-    fn default() -> Self {
-        Self {
-            reach: None,
-            chance: 1.0,
-            cooldown: 0.0,
-        }
     }
 }

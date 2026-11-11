@@ -6,14 +6,13 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Ability, Action, Bite, Breath, Heal, find_carried_potion};
-use super::capability::CapabilityProfile;
+use super::action::{Ability, AbilityCapabilities, Action, find_carried_potion};
 use super::engine::Behavior;
-use super::motion::{Dash, HomeArea, Motion, Orbit, Swoop, Wander};
+use super::motion::{HomeArea, Motion, MotionCapabilities};
 use super::perception::Targeting;
 use crate::prelude::*;
 
-/// The raw fact a consideration reads; see [`DecisionInputs::read`].
+/// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConsiderationInput {
     HasTarget,
@@ -35,6 +34,26 @@ pub enum ConsiderationInput {
     SecondsSinceTargeted,
 }
 
+/// The reach, start chance and cooldown a decision reads for one motion or action.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct CapabilityProfile {
+    pub reach: Option<f32>,
+    /// Probability that a winning finite motion actually starts.
+    pub chance: f32,
+    /// Seconds to wait after a finish or a missed start roll.
+    pub cooldown: f32,
+}
+
+impl Default for CapabilityProfile {
+    fn default() -> Self {
+        Self {
+            reach: None,
+            chance: 1.0,
+            cooldown: 0.0,
+        }
+    }
+}
+
 /// The brain's own earlier choices, as scoring reads them.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct BrainMemory {
@@ -43,7 +62,7 @@ pub(super) struct BrainMemory {
     pub attack_finished: bool,
 }
 
-/// The components one decision reads, including every capability an entity may carry.
+/// The components one decision reads, including every capability a character may carry.
 #[derive(QueryData)]
 pub(super) struct DecisionInputComponents {
     entity: Entity,
@@ -53,15 +72,10 @@ pub(super) struct DecisionInputComponents {
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
     home_area: Option<&'static HomeArea>,
-    kinematics: Option<&'static Kinematics>,
+    kinematics: &'static Kinematics,
     items: Option<&'static Items>,
-    dash: Option<&'static Dash>,
-    swoop: Option<&'static Swoop>,
-    orbit: Option<&'static Orbit>,
-    wander: Option<&'static Wander>,
-    bite: Option<&'static Bite>,
-    breath: Option<&'static Breath>,
-    heal: Option<&'static Heal>,
+    motion_capabilities: MotionCapabilities,
+    ability_capabilities: AbilityCapabilities,
 }
 
 /// The queries behind equipment profiles and the world-allows-use checks.
@@ -74,7 +88,7 @@ pub(super) struct DecisionQueries<'w, 's> {
 
 /// One decision's view of the world: references only, read on demand.
 pub(super) struct DecisionInputs<'a, 'w, 's, 'qw, 'qs> {
-    pub item: &'a DecisionInputComponentsItem<'w, 's>,
+    pub components: &'a DecisionInputComponentsItem<'w, 's>,
     pub queries: &'a DecisionQueries<'qw, 'qs>,
     pub now: f32,
 }
@@ -83,30 +97,20 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     /// The tracked target while targeting one at a finite distance. `TargetInfo`
     /// also tracks a watched entity, so every target input reads through here.
     pub fn target(&self) -> Option<&TargetInfo> {
-        self.item
+        self.components
             .target_info
-            .filter(|info| self.item.has_target && info.distance.is_finite())
+            .filter(|info| self.components.has_target && info.distance.is_finite())
     }
 
-    pub fn stunned(&self) -> bool {
-        self.item.kinematics.is_some_and(Kinematics::is_stunned)
+    pub fn is_stunned(&self) -> bool {
+        self.components.kinematics.is_stunned()
     }
 
-    /// The profile of the capability that carries out `motion`; `None` when the
-    /// entity lacks it. Motions steered without a component are always owned.
+    /// The profile of the capability that carries out `motion`; see [`MotionCapabilities`].
     pub fn motion_profile(&self, motion: Motion) -> Option<CapabilityProfile> {
-        match motion {
-            // Their components carry no decision settings, only ownership.
-            Motion::Wander => self.item.wander.map(|_| CapabilityProfile::default()),
-            Motion::Orbit(_) => self.item.orbit.map(|_| CapabilityProfile::default()),
-            Motion::Dash => self.item.dash.map(Dash::profile),
-            Motion::Swoop => self.item.swoop.map(Swoop::profile),
-            Motion::Chase
-            | Motion::ReturnToHome
-            | Motion::Flee
-            | Motion::KeepDistance(_)
-            | Motion::Idle => Some(CapabilityProfile::default()),
-        }
+        self.components
+            .motion_capabilities
+            .capability_profile(motion)
     }
 
     /// The profile of the capability that carries out `action`: the equipped
@@ -116,22 +120,23 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
             Action::Use(slot) => self
                 .queries
                 .equipment
-                .equippable_in_slot(self.item.entity, slot)
+                .equippable_in_slot(self.components.entity, slot)
                 .map(|equippable| CapabilityProfile {
                     reach: equippable.reach,
                     ..CapabilityProfile::default()
                 }),
-            Action::Ability(Ability::Heal) => self.item.heal.map(|heal| heal.profile()),
-            Action::Ability(Ability::Breathe) => self.item.breath.map(Breath::profile),
-            Action::Ability(Ability::Bite) => self.item.bite.map(Bite::profile),
+            Action::Ability(ability) => self
+                .components
+                .ability_capabilities
+                .capability_profile(ability),
             Action::Idle => Some(CapabilityProfile::default()),
         }
     }
 
     /// Whether the world lets `action` run now: usable equipment (or a held use
     /// already running), and a carried potion for `Heal`.
-    fn can_use(&self, action: Action) -> bool {
-        let entity = self.item.entity;
+    fn world_allows_use(&self, action: Action) -> bool {
+        let entity = self.components.entity;
         let queries = self.queries;
         match action {
             Action::Use(slot) => {
@@ -143,7 +148,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
                 held_item_in_use || queries.equipment.can_use(entity, slot).is_ok()
             }
             Action::Ability(Ability::Heal) => {
-                find_carried_potion(self.item.items, &queries.consumables).is_some()
+                find_carried_potion(self.components.items, &queries.consumables).is_some()
             }
             Action::Ability(Ability::Breathe | Ability::Bite) | Action::Idle => true,
         }
@@ -158,24 +163,32 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         let action_available = |action: Action| {
             self.action_profile(action).is_some()
                 && brain.is_cooldown_ready(action, self.now)
-                && self.can_use(action)
+                && self.world_allows_use(action)
         };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
     }
 
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.
-    pub fn read(&self, input: ConsiderationInput, memory: BrainMemory) -> Option<f32> {
+    pub fn read_consideration_input(
+        &self,
+        input: ConsiderationInput,
+        memory: BrainMemory,
+    ) -> Option<f32> {
         match input {
             ConsiderationInput::HasTarget => Some(f32::from(self.target().is_some())),
             ConsiderationInput::LineOfSight => {
                 self.target().map(|target| f32::from(target.line_of_sight))
             }
             ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
-            ConsiderationInput::MissingHealth => {
-                Some(1.0 - self.item.health.and_then(Health::fraction).unwrap_or(1.0))
-            }
+            ConsiderationInput::MissingHealth => Some(
+                1.0 - self
+                    .components
+                    .health
+                    .and_then(Health::fraction)
+                    .unwrap_or(1.0),
+            ),
             ConsiderationInput::ManaFraction => {
-                Some(self.item.mana.and_then(Mana::fraction).unwrap_or(1.0))
+                Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
                 memory
@@ -204,8 +217,8 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     /// home it reads full until arrival, so crossing back inside the range
     /// mid-return cannot hand the character straight back to wandering.
     fn home_area_pull(&self, memory: BrainMemory) -> Option<f32> {
-        let home_area = self.item.home_area?;
-        let position = self.item.transform.translation.xy();
+        let home_area = self.components.home_area?;
+        let position = self.components.transform.translation.xy();
         let overshoot_fraction = home_area.overshoot_fraction(position)?;
         if memory.motion == Some(Motion::ReturnToHome) {
             let arrived = home_area.distance_from(position) <= home_area.arrival_radius();
@@ -215,17 +228,15 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         }
     }
 
+    /// Target distance over the capability's reach; at most `1.0` is in reach.
+    /// `f32::MAX` for a capability that is missing or has no positive reach.
     fn reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
-        self.target()
-            .map(|target| reach_fraction(target.distance, profile))
+        let target = self.target()?;
+        Some(
+            profile
+                .and_then(|profile| profile.reach)
+                .filter(|&reach| reach > 0.0)
+                .map_or(f32::MAX, |reach| target.distance / reach),
+        )
     }
-}
-
-/// `distance` over the capability's reach; at most `1.0` is in reach.
-/// `f32::MAX` for a capability that is missing or has no positive reach.
-fn reach_fraction(distance: f32, profile: Option<CapabilityProfile>) -> f32 {
-    profile
-        .and_then(|profile| profile.reach)
-        .filter(|&reach| reach > 0.0)
-        .map_or(f32::MAX, |reach| distance / reach)
 }

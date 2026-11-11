@@ -98,6 +98,11 @@ impl Dash {
     pub fn name(&self) -> &'static str {
         self.debug_name
     }
+
+    /// What a decision reads of this capability.
+    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
+        self.capability_profile
+    }
 }
 
 fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
@@ -119,13 +124,6 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
     };
     let tangent = target.direction.perp() * tangent_sign;
     (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
-}
-
-impl Dash {
-    /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn profile(&self) -> CapabilityProfile {
-        self.capability_profile
-    }
 }
 
 /// Runs a held dash and reports [`MotionFinished`](super::MotionFinished) at

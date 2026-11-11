@@ -10,21 +10,20 @@
 //! 1. [`motion`]: a `Motion` variant only for a new steering contract. A stateless one gets an arm
 //!    in `direct::steer_direct_motion`; one with state gets a file with its component and an
 //!    `apply_` system registered in `motion::plugin`, and is skipped in `apply_direct_steering`. A
-//!    component the motion needs is listed in `DecisionInputComponents` and read in
-//!    `DecisionInputs::motion_profile`.
-//! 2. A [`ConsiderationInput`] variant and its arm in `DecisionInputs::read`, reading a field of
-//!    `DecisionInputComponents` (add one for a new component).
+//!    component the motion needs is listed in `MotionCapabilities`, with an arm in its
+//!    `capability_profile`.
+//! 2. A [`ConsiderationInput`] variant and its arm in `DecisionInputs::read_consideration_input`,
+//!    reading a field of `DecisionInputComponents` (add one for a new component).
 //! 3. Behaviors over it in `character/enemy` and `character/npc`.
 //!
-//! A finite [`Motion`] needs a variant, a component with a `profile()` whose
+//! A finite [`Motion`] needs a variant, a component with a `capability_profile()` whose
 //! `apply_` system follows its run with a `CurrentBehaviorRunId` and reports
 //! `MotionFinished`, the same registration and listing, and a committed
 //! behavior over it. A new [`Ability`] needs a variant, a component in
-//! `action::ability` with a `profile()`, listed in `DecisionInputComponents` and
-//! read in `DecisionInputs::action_profile`, an applier, and behaviors over it.
+//! `action::ability` with a `capability_profile()`, listed in `AbilityCapabilities`, an
+//! applier, and behaviors over it.
 
 mod action;
-mod capability;
 pub(crate) mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
@@ -32,6 +31,7 @@ mod diagnostics;
 mod engine;
 mod inputs;
 mod motion;
+mod motion_action_table;
 mod perception;
 mod running_state;
 mod schedule;
@@ -40,16 +40,16 @@ use bevy::prelude::*;
 
 use self::action::StartedEquipmentUses;
 pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
-use self::capability::{CapabilityProfile, MotionActionKey, MotionActionTable};
 pub use self::decide::ScoreTrace;
 use self::decide::schedule_first_decision;
 use self::engine::validate_brain;
 pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 pub(crate) use self::inputs::ConsiderationInput;
-use self::inputs::{BrainMemory, DecisionInputs};
+use self::inputs::{BrainMemory, CapabilityProfile, DecisionInputs};
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
+use self::motion_action_table::{MotionActionKey, MotionActionTable};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
@@ -65,7 +65,7 @@ use crate::prelude::*;
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedEquipmentUses, Steering)]
+#[require(StartedEquipmentUses, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,

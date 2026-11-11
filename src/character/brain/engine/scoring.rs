@@ -137,7 +137,7 @@ pub fn score_behavior(
     read: &impl Fn(ConsiderationInput) -> Option<f32>,
     is_current: bool,
 ) -> Option<f32> {
-    combine(
+    combine_consideration_scores(
         behavior.weight,
         behavior.considerations.iter().map(|consideration| {
             score_consideration(consideration, read(consideration.input), is_current)
@@ -149,7 +149,10 @@ pub fn score_behavior(
 /// `None`. A zero anywhere vetoes, but each passing flag raises graded inputs
 /// to a higher root, so adding a flag shifts a behavior's crossovers. Brains
 /// are tuned against that root.
-pub(super) fn combine(weight: f32, scores: impl IntoIterator<Item = Option<f32>>) -> Option<f32> {
+pub(super) fn combine_consideration_scores(
+    weight: f32,
+    scores: impl IntoIterator<Item = Option<f32>>,
+) -> Option<f32> {
     let mut product = 1.0;
     let mut count = 0;
     for score in scores {

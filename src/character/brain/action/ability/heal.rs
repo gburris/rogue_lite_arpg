@@ -14,11 +14,9 @@ impl Heal {
     pub fn new(cooldown: f32) -> Self {
         Self { cooldown }
     }
-}
 
-impl Heal {
     /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn profile(self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn capability_profile(self) -> CapabilityProfile {
         CapabilityProfile {
             cooldown: self.cooldown,
             ..CapabilityProfile::default()

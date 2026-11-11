@@ -3,7 +3,7 @@
 
 use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
 use super::behavior::{Behavior, BrainDefinition};
-use super::scoring::{combine, score_consideration};
+use super::scoring::{combine_consideration_scores, score_consideration};
 use crate::character::brain::ConsiderationInput;
 
 /// One consideration's part in a score. `raw` is `None` when the input is
@@ -70,7 +70,7 @@ pub fn explain_behavior(
         .collect();
     BehaviorScoreExplanation {
         skipped,
-        score: combine(
+        score: combine_consideration_scores(
             behavior.weight,
             considerations.iter().map(|explanation| explanation.score),
         )

@@ -57,7 +57,7 @@ impl RunningBehavior {
     pub(super) fn should_drop_committed_behavior(&self, inputs: &DecisionInputs) -> bool {
         self.committed
             && (inputs.target().is_none()
-                || inputs.stunned()
+                || inputs.is_stunned()
                 || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }

@@ -54,11 +54,9 @@ impl Swoop {
             )
         })
     }
-}
 
-impl Swoop {
     /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
         self.capability_profile
     }
 }

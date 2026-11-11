@@ -7,7 +7,6 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::capability::MotionActionTable;
 #[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
 use super::engine::{
@@ -15,6 +14,7 @@ use super::engine::{
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
+use super::motion_action_table::MotionActionTable;
 use super::{Action, ActionFinished, ActionOutcome, Brain};
 
 /// Seconds between a brain's scheduled decisions.
@@ -56,11 +56,11 @@ pub(super) fn on_release_finished_motion(
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let Ok((mut brain, item, mut score_trace)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
         return;
     };
     let inputs = DecisionInputs {
-        item: &item,
+        components: &components,
         queries: &queries,
         now: time.elapsed_secs(),
     };
@@ -87,11 +87,11 @@ pub(super) fn on_finish_action(
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let Ok((mut brain, item, mut score_trace)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
         return;
     };
     let inputs = DecisionInputs {
-        item: &item,
+        components: &components,
         queries: &queries,
         now: time.elapsed_secs(),
     };
@@ -129,7 +129,7 @@ pub(super) fn decide_behavior(
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
-    for (mut brain, item, mut score_trace) in &mut brains {
+    for (mut brain, components, mut score_trace) in &mut brains {
         if now < brain.next_decision_at {
             continue;
         }
@@ -144,7 +144,7 @@ pub(super) fn decide_behavior(
         redecide_now(
             &mut brain,
             &DecisionInputs {
-                item: &item,
+                components: &components,
                 queries: &queries,
                 now,
             },
@@ -168,7 +168,7 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
     let memory = brain.memory();
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
-    let read = |input: ConsiderationInput| inputs.read(input, memory);
+    let read = |input: ConsiderationInput| inputs.read_consideration_input(input, memory);
     let available = |behavior: &Behavior| inputs.is_available(behavior, brain);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]

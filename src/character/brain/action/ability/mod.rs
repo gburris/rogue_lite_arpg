@@ -3,12 +3,14 @@
 //! [`ActionFinished`](crate::character::brain::ActionFinished). A defeated character loses its
 //! brain, so appliers never see the dead.
 
+mod ability_capabilities;
 mod bite;
 mod breath;
 mod heal;
 
 use bevy::prelude::*;
 
+pub(in crate::character::brain) use self::ability_capabilities::AbilityCapabilities;
 pub use self::bite::Bite;
 pub use self::breath::Breath;
 pub use self::heal::Heal;

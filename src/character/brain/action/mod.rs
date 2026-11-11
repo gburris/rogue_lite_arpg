@@ -6,8 +6,8 @@ mod equipment_use;
 
 use bevy::prelude::*;
 
-pub(super) use self::ability::find_carried_potion;
 pub use self::ability::{Ability, Bite, Breath, Heal};
+pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
 pub(super) use self::equipment_use::StartedEquipmentUses;
 use super::BrainSystems;
 use crate::prelude::*;

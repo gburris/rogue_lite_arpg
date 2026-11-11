@@ -77,7 +77,6 @@ impl Default for Orbit {
     }
 }
 
-/// Makes `Motion::Orbit` available only to a character that carries one.
 /// Circles the target while the brain holds [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,

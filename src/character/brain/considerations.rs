@@ -3,8 +3,8 @@
 
 use super::action::Action;
 use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, ScoreMapping};
+use super::inputs::ConsiderationInput;
 use super::motion::Motion;
-use super::perception::ConsiderationInput;
 use crate::prelude::*;
 
 /// Preferred minimum distance a ranged or flying brain keeps from its target.

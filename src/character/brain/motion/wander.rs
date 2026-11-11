@@ -54,7 +54,6 @@ impl Wander {
     }
 }
 
-/// Makes `Motion::Wander` available only to a character that carries one.
 /// Ambles inside the home area while the brain holds [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,

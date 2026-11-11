@@ -167,11 +167,10 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
     }
     // Read after the drops, which change the running motion and cooldowns.
     let memory = brain.memory();
-    let ready_at = brain.ready_at;
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
     let read = |input: ConsiderationInput| inputs.read(input, memory);
-    let available = |behavior: &Behavior| inputs.is_available(behavior, &ready_at);
+    let available = |behavior: &Behavior| inputs.is_available(behavior, brain);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();

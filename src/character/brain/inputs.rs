@@ -6,8 +6,9 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
+use super::Brain;
 use super::action::{Ability, Action, Bite, Breath, Heal, find_carried_potion};
-use super::capability::{CapabilityProfile, MotionActionTable};
+use super::capability::CapabilityProfile;
 use super::engine::Behavior;
 use super::motion::{Dash, HomeArea, Motion, Orbit, Swoop, Wander};
 use super::perception::Targeting;
@@ -99,13 +100,11 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     pub fn motion_profile(&self, motion: Motion) -> Option<CapabilityProfile> {
         match motion {
             // Their components carry no decision settings, only ownership.
-            Motion::Wander if self.item.wander.is_none() => None,
-            Motion::Orbit(_) if self.item.orbit.is_none() => None,
+            Motion::Wander => self.item.wander.map(|_| CapabilityProfile::default()),
+            Motion::Orbit(_) => self.item.orbit.map(|_| CapabilityProfile::default()),
             Motion::Dash => self.item.dash.map(Dash::profile),
             Motion::Swoop => self.item.swoop.map(Swoop::profile),
-            Motion::Wander
-            | Motion::Orbit(_)
-            | Motion::Chase
+            Motion::Chase
             | Motion::ReturnToHome
             | Motion::Flee
             | Motion::KeepDistance(_)
@@ -154,13 +153,14 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     }
 
     /// Whether `behavior` may start now: each part's capability is owned, off its
-    /// cooldown in `ready_at`, and allowed by the world.
-    pub fn is_available(&self, behavior: &Behavior, ready_at: &MotionActionTable<f32>) -> bool {
-        let motion_available =
-            |motion: Motion| self.motion_profile(motion).is_some() && self.now >= ready_at[motion];
+    /// cooldown on `brain`, and allowed by the world.
+    pub fn is_available(&self, behavior: &Behavior, brain: &Brain) -> bool {
+        let motion_available = |motion: Motion| {
+            self.motion_profile(motion).is_some() && brain.is_cooldown_ready(motion, self.now)
+        };
         let action_available = |action: Action| {
             self.action_profile(action).is_some()
-                && self.now >= ready_at[action]
+                && brain.is_cooldown_ready(action, self.now)
                 && self.can_use(action)
         };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
@@ -218,18 +218,22 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         }
     }
 
-    /// Target distance over the capability's reach; at most `1.0` is in reach.
-    /// `f32::MAX` for a capability that is missing or has no reach.
     fn reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
-        let target = self.target()?;
-        let reach = profile
-            .and_then(|profile| profile.reach)
-            .filter(|&reach| reach > 0.0);
-        Some(reach.map_or(f32::MAX, |reach| target.distance / reach))
+        self.target()
+            .map(|target| reach_fraction(target.distance, profile))
     }
 }
 
 /// A yes-or-no input as `1.0` or `0.0`.
 fn flag(set: bool) -> Option<f32> {
     Some(if set { 1.0 } else { 0.0 })
+}
+
+/// `distance` over the capability's reach; at most `1.0` is in reach.
+/// `f32::MAX` for a capability that is missing or has no positive reach.
+fn reach_fraction(distance: f32, profile: Option<CapabilityProfile>) -> f32 {
+    profile
+        .and_then(|profile| profile.reach)
+        .filter(|&reach| reach > 0.0)
+        .map_or(f32::MAX, |reach| distance / reach)
 }

@@ -124,7 +124,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
                     reach: equippable.reach,
                     ..CapabilityProfile::default()
                 }),
-            Action::Ability(Ability::Heal) => self.item.heal.map(Heal::profile),
+            Action::Ability(Ability::Heal) => self.item.heal.map(|heal| heal.profile()),
             Action::Ability(Ability::Breathe) => self.item.breath.map(Breath::profile),
             Action::Ability(Ability::Bite) => self.item.bite.map(Bite::profile),
             Action::Idle => Some(CapabilityProfile::default()),
@@ -169,9 +169,9 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.
     pub fn read(&self, input: ConsiderationInput, memory: BrainMemory) -> Option<f32> {
         match input {
-            ConsiderationInput::HasTarget => flag(self.target().is_some()),
+            ConsiderationInput::HasTarget => Some(f32::from(self.target().is_some())),
             ConsiderationInput::LineOfSight => {
-                self.target().and_then(|target| flag(target.line_of_sight))
+                self.target().map(|target| f32::from(target.line_of_sight))
             }
             ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
             ConsiderationInput::MissingHealth => {
@@ -180,17 +180,17 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
             ConsiderationInput::ManaFraction => {
                 Some(self.item.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
-            ConsiderationInput::MotionRunning(motion) => flag(
+            ConsiderationInput::MotionRunning(motion) => Some(f32::from(
                 memory
                     .motion
                     .is_some_and(|running| running.index() == motion.index()),
-            ),
-            ConsiderationInput::Circling => flag(matches!(
+            )),
+            ConsiderationInput::Circling => Some(f32::from(matches!(
                 memory.motion,
                 Some(Motion::Orbit(_) | Motion::KeepDistance(_))
-            )),
+            ))),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(memory),
-            ConsiderationInput::AttackFinished => flag(memory.attack_finished),
+            ConsiderationInput::AttackFinished => Some(f32::from(memory.attack_finished)),
             ConsiderationInput::MotionReachFraction(motion) => {
                 self.reach_fraction(self.motion_profile(motion))
             }
@@ -212,7 +212,7 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         let overshoot_fraction = home_area.overshoot_fraction(position)?;
         if memory.motion == Some(Motion::ReturnToHome) {
             let arrived = home_area.distance_from(position) <= home_area.arrival_radius();
-            flag(!arrived)
+            Some(f32::from(!arrived))
         } else {
             Some(overshoot_fraction)
         }
@@ -222,11 +222,6 @@ impl DecisionInputs<'_, '_, '_, '_, '_> {
         self.target()
             .map(|target| reach_fraction(target.distance, profile))
     }
-}
-
-/// A yes-or-no input as `1.0` or `0.0`.
-fn flag(set: bool) -> Option<f32> {
-    Some(if set { 1.0 } else { 0.0 })
 }
 
 /// `distance` over the capability's reach; at most `1.0` is in reach.

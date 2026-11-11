@@ -18,7 +18,7 @@ impl Heal {
 
 impl Heal {
     /// What a decision reads of this capability.
-    pub fn profile(&self) -> CapabilityProfile {
+    pub fn profile(self) -> CapabilityProfile {
         CapabilityProfile {
             cooldown: self.cooldown,
             ..CapabilityProfile::default()

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile};
+use crate::character::brain::{Ability, Action, Brain, CapabilityProfile};
 use crate::prelude::*;
 
 /// Drinking carried potions to recover health, paced by `cooldown`.
@@ -16,14 +16,9 @@ impl Heal {
     }
 }
 
-impl Capability for Heal {
-    type Key = Ability;
-
-    fn key(&self) -> Ability {
-        Ability::Heal
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
+impl Heal {
+    /// What a decision reads of this capability.
+    pub fn profile(&self) -> CapabilityProfile {
         CapabilityProfile {
             cooldown: self.cooldown,
             ..CapabilityProfile::default()

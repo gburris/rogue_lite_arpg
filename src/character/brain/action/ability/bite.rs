@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::character::brain::{Ability, Action, Brain, Capability, CapabilityProfile, Targeting};
+use crate::character::brain::{Ability, Action, Brain, CapabilityProfile, Targeting};
 use crate::character::vision::TargetInfo;
 use crate::prelude::*;
 
@@ -33,14 +33,9 @@ impl Bite {
     }
 }
 
-impl Capability for Bite {
-    type Key = Ability;
-
-    fn key(&self) -> Ability {
-        Ability::Bite
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
+impl Bite {
+    /// What a decision reads of this capability.
+    pub fn profile(&self) -> CapabilityProfile {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Interval, Motion};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
@@ -55,18 +55,6 @@ impl Wander {
 }
 
 /// Makes `Motion::Wander` available only to a character that carries one.
-impl Capability for Wander {
-    type Key = Motion;
-
-    fn key(&self) -> Motion {
-        Motion::Wander
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
-        CapabilityProfile::default()
-    }
-}
-
 /// Ambles inside the home area while the brain holds [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,

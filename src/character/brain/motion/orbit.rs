@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Interval, Motion};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
@@ -78,18 +78,6 @@ impl Default for Orbit {
 }
 
 /// Makes `Motion::Orbit` available only to a character that carries one.
-impl Capability for Orbit {
-    type Key = Motion;
-
-    fn key(&self) -> Motion {
-        Motion::Orbit(Interval::new(0.0, 1.0))
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
-        CapabilityProfile::default()
-    }
-}
-
 /// Circles the target while the brain holds [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,

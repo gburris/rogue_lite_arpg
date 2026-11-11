@@ -1,19 +1,11 @@
-//! What a brain knows: vision tracks a target, and [`DecisionInputs::read`] answers each
-//! consideration's input straight from the world when scoring asks for it.
+//! What a brain knows: vision tracks a target and aggro picks one.
 
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::ecs::query::QueryData;
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::BrainSystems;
-use super::action::{Ability, Action, find_carried_potion};
-use super::capability::{
-    CapabilityProfiles, MotionActionKey, MotionActionTable, UseEligibilityTable,
-};
-use super::motion::{HomeArea, Motion};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -29,36 +21,6 @@ pub(super) fn plugin(app: &mut App) {
                 update_aim_position.in_set(BrainSystems::Aim),
             ),
         );
-}
-
-/// The brain's own earlier choices, as scoring reads them.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub(super) struct BrainMemory {
-    pub motion: Option<Motion>,
-    /// An attack finished since the last decision.
-    pub attack_finished: bool,
-}
-
-/// The raw fact a consideration reads; see [`DecisionInputs::read`].
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ConsiderationInput {
-    HasTarget,
-    LineOfSight,
-    TargetDistance,
-    MissingHealth,
-    ManaFraction,
-    /// Whether this motion's kind is the one running; its payload is ignored.
-    MotionRunning(Motion),
-    /// Whether the running motion holds the target at a distance.
-    Circling,
-    /// How far past its home area range the character is.
-    HomeAreaPull,
-    AttackFinished,
-    /// Target distance over this motion's reach; at most `1.0` is in reach.
-    MotionReachFraction(Motion),
-    /// Target distance over this action's reach; at most `1.0` is in reach.
-    ActionReachFraction(Action),
-    SecondsSinceTargeted,
 }
 
 /// How wide an entity's vision cone is.
@@ -253,137 +215,5 @@ fn should_stop_targeting(
         if !target_info.line_of_sight && !has_lock {
             commands.entity(entity).remove::<Targeting>();
         }
-    }
-}
-
-/// The queries behind each capability's world-allows-use check, shared by
-/// [`DecisionInputs::use_eligibility`] and the appliers.
-#[derive(SystemParam)]
-pub(super) struct UseEligibilityQueries<'w, 's> {
-    pub equipment: EquipmentRead<'w, 's>,
-    pub consumables: Query<'w, 's, (), With<Consumable>>,
-    pub items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
-}
-
-/// Whether the world lets each motion or action run now: usable equipment (or
-/// a held use already running), and a carried potion for `Heal`.
-fn build_use_eligibility_table(
-    entity: Entity,
-    items: Option<&Items>,
-    use_eligibility_queries: &UseEligibilityQueries,
-) -> UseEligibilityTable {
-    let mut use_eligibility = MotionActionTable::splat(true);
-    for slot in EquipmentSlot::ALL {
-        let held_item_in_use = !slot.is_instant_use()
-            && use_eligibility_queries
-                .equipment
-                .item_in_slot(entity, slot)
-                .is_some_and(|item| use_eligibility_queries.items_in_use.contains(item));
-        use_eligibility[Action::Use(slot)] = held_item_in_use
-            || use_eligibility_queries
-                .equipment
-                .can_use(entity, slot)
-                .is_ok();
-    }
-    use_eligibility[Ability::Heal] =
-        find_carried_potion(items, &use_eligibility_queries.consumables).is_some();
-    UseEligibilityTable(use_eligibility)
-}
-
-/// The components one decision reads its inputs from.
-#[derive(QueryData)]
-pub(super) struct DecisionInputComponents {
-    entity: Entity,
-    transform: &'static Transform,
-    has_target: Has<Targeting>,
-    target_info: Option<&'static TargetInfo>,
-    health: Option<&'static Health>,
-    mana: Option<&'static Mana>,
-    home_area: Option<&'static HomeArea>,
-    kinematics: Option<&'static Kinematics>,
-    items: Option<&'static Items>,
-}
-
-/// One decision's view of the world: references only, read on demand while scoring.
-#[derive(Clone, Copy)]
-pub(super) struct DecisionInputs<'a, 'w, 's> {
-    pub item: &'a DecisionInputComponentsItem<'w, 's>,
-    pub profiles: &'a CapabilityProfiles,
-    pub now: f32,
-}
-
-impl DecisionInputs<'_, '_, '_> {
-    /// The tracked target while targeting one at a finite distance. `TargetInfo`
-    /// also tracks a watched entity, so every target input reads through here.
-    pub fn target(&self) -> Option<&TargetInfo> {
-        self.item
-            .target_info
-            .filter(|info| self.item.has_target && info.distance.is_finite())
-    }
-
-    pub fn stunned(&self) -> bool {
-        self.item.kinematics.is_some_and(Kinematics::is_stunned)
-    }
-
-    /// Whether the world lets each motion or action run now.
-    pub fn use_eligibility(&self, queries: &UseEligibilityQueries) -> UseEligibilityTable {
-        build_use_eligibility_table(self.item.entity, self.item.items, queries)
-    }
-
-    /// Answers `input`; `None` when it is absent, which vetoes the behavior.
-    pub fn read(&self, input: ConsiderationInput, memory: BrainMemory) -> Option<f32> {
-        let flag = |set: bool| Some(if set { 1.0 } else { 0.0 });
-        match input {
-            ConsiderationInput::HasTarget => flag(self.target().is_some()),
-            ConsiderationInput::LineOfSight => self.target().and_then(|t| flag(t.line_of_sight)),
-            ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
-            ConsiderationInput::MissingHealth => {
-                Some(1.0 - self.item.health.and_then(Health::fraction).unwrap_or(1.0))
-            }
-            ConsiderationInput::ManaFraction => {
-                Some(self.item.mana.and_then(Mana::fraction).unwrap_or(1.0))
-            }
-            ConsiderationInput::MotionRunning(motion) => flag(
-                memory
-                    .motion
-                    .is_some_and(|running| running.index() == motion.index()),
-            ),
-            ConsiderationInput::Circling => flag(matches!(
-                memory.motion,
-                Some(Motion::Orbit(_) | Motion::KeepDistance(_))
-            )),
-            ConsiderationInput::HomeAreaPull => self.home_area_pull(memory),
-            ConsiderationInput::AttackFinished => flag(memory.attack_finished),
-            ConsiderationInput::MotionReachFraction(motion) => self.reach_fraction(motion),
-            ConsiderationInput::ActionReachFraction(action) => self.reach_fraction(action),
-            ConsiderationInput::SecondsSinceTargeted => {
-                self.target().map(|target| self.now - target.targeted_at)
-            }
-        }
-    }
-
-    /// How far past its home area range the character is. Once already heading
-    /// home it reads full until arrival, so crossing back inside the range
-    /// mid-return cannot hand the character straight back to wandering.
-    fn home_area_pull(&self, memory: BrainMemory) -> Option<f32> {
-        let home_area = self.item.home_area?;
-        let position = self.item.transform.translation.xy();
-        let overshoot_fraction = home_area.overshoot_fraction(position)?;
-        if memory.motion == Some(Motion::ReturnToHome) {
-            let arrived = home_area.distance_from(position) <= home_area.arrival_radius();
-            Some(if arrived { 0.0 } else { 1.0 })
-        } else {
-            Some(overshoot_fraction)
-        }
-    }
-
-    /// Target distance over the capability's reach; at most `1.0` is in reach.
-    /// `f32::MAX` for a capability that is missing or has no reach.
-    fn reach_fraction(&self, key: impl MotionActionKey) -> Option<f32> {
-        let target = self.target()?;
-        let reach = self.profiles[key]
-            .and_then(|profile| profile.reach)
-            .filter(|&reach| reach > 0.0);
-        Some(reach.map_or(f32::MAX, |reach| target.distance / reach))
     }
 }

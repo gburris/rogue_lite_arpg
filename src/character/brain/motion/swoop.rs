@@ -6,7 +6,7 @@ use super::{
     CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput, SteeredCharacter, Steering,
     report_motion_finished,
 };
-use crate::character::brain::{Capability, CapabilityProfile, Motion};
+use crate::character::brain::{CapabilityProfile, Motion};
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -56,14 +56,9 @@ impl Swoop {
     }
 }
 
-impl Capability for Swoop {
-    type Key = Motion;
-
-    fn key(&self) -> Motion {
-        Motion::Swoop
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
+impl Swoop {
+    /// What a decision reads of this capability.
+    pub fn profile(&self) -> CapabilityProfile {
         self.capability_profile
     }
 }

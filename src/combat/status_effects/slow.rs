@@ -18,7 +18,7 @@ impl Default for Slowed {
 
 /// The fraction of a character's speed that its statuses remove. The character feature applies
 /// it to the character's [`Kinematics`].
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Deref)]
 #[component(immutable)]
 pub struct MovementSlow(pub f32);
 
@@ -42,7 +42,7 @@ pub(super) fn sync_slow_from_statuses(
                 }
             })
             .fold(0.0, f32::max);
-        let current = current_slow.map_or(0.0, |slow| slow.0);
+        let current = current_slow.map_or(0.0, |slow| **slow);
         if (current - strongest).abs() > f32::EPSILON {
             commands
                 .entity(character)

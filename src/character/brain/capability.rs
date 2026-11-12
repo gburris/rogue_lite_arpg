@@ -67,9 +67,9 @@ impl AbilityCapabilitiesItem<'_, '_> {
     /// lacks it.
     pub(super) fn capability_profile(&self, ability: Ability) -> Option<CapabilityProfile> {
         match ability {
-            Ability::Heal => self.heal.map(|heal| heal.capability_profile()),
-            Ability::Breathe => self.breath.map(Breath::capability_profile),
-            Ability::Bite => self.bite.map(Bite::capability_profile),
+            Ability::Heal => self.heal.copied().map(Heal::capability_profile),
+            Ability::Breathe => self.breath.copied().map(Breath::capability_profile),
+            Ability::Bite => self.bite.copied().map(Bite::capability_profile),
         }
     }
 }

@@ -90,7 +90,7 @@ pub(super) fn on_movement_slow_changed(
     mut characters: Query<(&MovementSlow, &mut Kinematics)>,
 ) {
     if let Ok((movement_slow, mut kinematics)) = characters.get_mut(slow_changed.entity) {
-        kinematics.slow(movement_slow.0);
+        kinematics.slow(**movement_slow);
     }
 }
 

@@ -257,7 +257,7 @@ impl Brain {
         match (behavior.motion, behavior.action) {
             (Some(motion), _) if motion.is_finite() => self.start_motion_cooldown(motion, inputs),
             (_, Some(Action::Ability(ability))) => self.start_ability_cooldown(ability, inputs),
-            _ => {}
+            (_, Some(Action::Use(_) | Action::Idle) | None) => {}
         }
     }
 

@@ -47,7 +47,7 @@ impl Heal {
 }
 
 /// An innate projectile attack fired from the entity's `Projectiles` template.
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct Breath {
     cooldown: f32,
     reach: f32,
@@ -63,7 +63,7 @@ impl Breath {
     }
 
     /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn capability_profile(self) -> CapabilityProfile {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,
@@ -101,7 +101,7 @@ impl Bite {
     }
 
     /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
+    pub(in crate::character::brain) fn capability_profile(self) -> CapabilityProfile {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,

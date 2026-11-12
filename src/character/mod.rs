@@ -6,7 +6,6 @@ mod npc;
 mod player;
 mod purse;
 mod state;
-mod vision;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -29,8 +28,7 @@ pub mod prelude {
         PlayerInteractionRadius, PlayerStats, Stat,
     };
     pub use super::purse::Purse;
-    pub use super::state::{Attacking, FacingDirection, Kinematics};
-    pub use super::vision::Vision;
+    pub use super::state::{Attacking, FacingDirection, Kinematics, Vision};
 }
 
 pub(super) fn plugin(app: &mut App) {

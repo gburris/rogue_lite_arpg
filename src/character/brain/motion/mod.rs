@@ -3,7 +3,6 @@
 mod dash;
 mod direct;
 mod home_area;
-mod motion_capabilities;
 mod orbit;
 mod steering;
 mod step;
@@ -14,7 +13,6 @@ use bevy::prelude::*;
 
 pub use self::dash::Dash;
 pub use self::home_area::HomeArea;
-pub(super) use self::motion_capabilities::MotionCapabilities;
 pub use self::orbit::Orbit;
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;

@@ -1,7 +1,6 @@
 mod action;
-mod capability_profile;
+mod capability;
 pub(super) mod considerations;
-mod cooldowns;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
@@ -9,18 +8,15 @@ mod engine;
 mod inputs;
 mod motion;
 mod perception;
-mod running_state;
-mod schedule;
 
 use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::{Ability, Action, Bite, Breath, Heal};
 use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
-use self::capability_profile::CapabilityProfile;
-use self::cooldowns::{CooldownKey, Cooldowns};
+use self::capability::{CapabilityProfile, CooldownKey, Cooldowns};
 pub use self::decide::ScoreTrace;
-use self::decide::schedule_first_decision;
+use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
 pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
@@ -32,8 +28,6 @@ pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
-use self::running_state::RunningBehavior;
-use self::schedule::BrainSystems;
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -279,6 +273,18 @@ impl Brain {
         self.running_behaviors.remove(position);
         true
     }
+}
+
+/// Ordered brain phases. Perception feeds targeting, aim, decisions, execution
+/// of those decisions, and finally the motion driver.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) enum BrainSystems {
+    Perception,
+    Targeting,
+    Aim,
+    Decision,
+    Execute,
+    Motion,
 }
 
 pub(super) fn plugin(app: &mut App) {

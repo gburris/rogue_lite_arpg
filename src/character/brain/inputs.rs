@@ -2,10 +2,11 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::action::{Ability, AbilityCapabilities, Action, find_carried_potion};
-use super::motion::{HomeArea, Motion, MotionCapabilities};
+use super::Brain;
+use super::action::{Ability, Action, find_carried_potion};
+use super::capability::{AbilityCapabilities, CapabilityProfile, MotionCapabilities};
+use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, CapabilityProfile};
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].

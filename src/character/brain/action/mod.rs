@@ -6,8 +6,8 @@ mod equipment_use;
 
 use bevy::prelude::*;
 
+pub(super) use self::ability::find_carried_potion;
 pub use self::ability::{Ability, Bite, Breath, Heal};
-pub(super) use self::ability::{AbilityCapabilities, find_carried_potion};
 pub(super) use self::equipment_use::StartedEquipmentUses;
 use super::BrainSystems;
 use crate::prelude::*;
@@ -49,12 +49,17 @@ impl Action {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(ability::plugin)
-        .add_systems(
-            Update,
-            equipment_use::apply_equipment_use_requests.in_set(BrainSystems::Execute),
+    app.add_systems(
+        Update,
+        (
+            equipment_use::apply_equipment_use_requests,
+            ability::apply_heal,
+            ability::apply_breath,
+            ability::apply_bite,
         )
-        .add_observer(equipment_use::on_report_equipment_use_finished);
+            .in_set(BrainSystems::Execute),
+    )
+    .add_observer(equipment_use::on_report_equipment_use_finished);
 }
 
 /// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`

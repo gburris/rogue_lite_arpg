@@ -7,7 +7,6 @@ mod invincible;
 mod invulnerable;
 pub(crate) mod mana;
 mod projectile;
-mod reflection;
 mod status_effects;
 
 use bevy::prelude::*;
@@ -25,10 +24,9 @@ pub mod prelude {
     pub use super::invulnerable::IFrames;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
-        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, Projectiles, fireball,
-        fireball_with_speed, icebolt,
+        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, ProjectileReflection,
+        Projectiles, fireball, fireball_with_speed, icebolt,
     };
-    pub use super::reflection::ProjectileReflection;
     pub use super::status_effects::prelude::{Effects, Frozen, MovementSlow};
 }
 
@@ -42,7 +40,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             (
                 (mana::regenerate_mana, mana::drain_mana_for_items_in_use).chain(),
-                reflection::reflect_projectiles,
+                projectile::reflect_projectiles,
             )
                 .in_set(SimulationSystems::Upkeep),
             // A flash ending resets the color to opaque white, so the flicker runs after it.

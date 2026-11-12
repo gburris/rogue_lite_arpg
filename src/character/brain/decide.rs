@@ -1,6 +1,6 @@
-//! The decision pipeline: drop a stale committed behavior, score with inputs read on
-//! demand, and commit. This is the only code that changes which behaviors a
-//! [`Brain`] holds.
+//! The decision pipeline: drop a stale committed behavior, score with inputs read on demand, and
+//! commit the winners as [`RunningBehavior`]s. This is the only code that changes which behaviors
+//! a [`Brain`] holds.
 
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
@@ -15,6 +15,63 @@ use super::engine::{
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
 use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
+
+/// Longest a committed behavior may run, a safety net against a missing finish.
+const COMMIT_TIMEOUT: f32 = 3.0;
+
+/// A behavior that won its slots, with its motion and action copied from the
+/// definition and stamped with a run id so a finite motion's
+/// `CurrentBehaviorRunId` can tell a fresh
+/// start from the run it just finished. Appliers report through it, so the
+/// committed/continuously scored finish policy lives here.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct RunningBehavior {
+    pub(super) behavior: usize,
+    pub(super) motion: Option<Motion>,
+    pub(super) action: Option<Action>,
+    pub(super) behavior_run_id: u32,
+    pub(super) committed: bool,
+    pub(super) started_at: f32,
+}
+
+impl RunningBehavior {
+    pub(super) fn report_completed(self, commands: &mut Commands, entity: Entity) {
+        if let Some(finished) = self.build_action_finished(entity, ActionOutcome::Completed) {
+            commands.trigger(finished);
+        }
+    }
+
+    /// Ends a committed use the live world refused; a continuously scored use waits.
+    pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
+        if self.committed
+            && let Some(finished) = self.build_action_finished(entity, ActionOutcome::NotStarted)
+        {
+            commands.trigger(finished);
+        }
+    }
+
+    /// `None` for a record with no action to report on.
+    fn build_action_finished(
+        self,
+        entity: Entity,
+        outcome: ActionOutcome,
+    ) -> Option<ActionFinished> {
+        Some(ActionFinished {
+            entity,
+            action: self.action?,
+            behavior_run_id: self.behavior_run_id,
+            outcome,
+        })
+    }
+
+    /// Whether a committed behavior lost its target, was stunned, or timed out.
+    pub(super) fn should_drop_committed_behavior(&self, inputs: &DecisionInputs) -> bool {
+        self.committed
+            && (inputs.target().is_none()
+                || inputs.is_stunned()
+                || inputs.now - self.started_at > COMMIT_TIMEOUT)
+    }
+}
 
 type DecidingBrains<'world, 'state> = Query<
     'world,

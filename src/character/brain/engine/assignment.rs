@@ -3,12 +3,11 @@
 
 use super::behavior::{Behavior, BrainDefinition, MAX_BEHAVIORS};
 use super::scoring::score_behavior;
-use crate::character::brain::capability::AvailableMotionActionTable;
-use crate::character::brain::perception::DecisionContext;
+use crate::character::brain::ConsiderationInput;
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
-pub(crate) const MOMENTUM: f32 = 1.25;
+const MOMENTUM: f32 = 1.25;
 
 /// Why a behavior sits out a decision unscored.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,28 +34,23 @@ impl SkipReason {
 /// Scores every behavior not skipped (see [`SkipReason`]), then takes them
 /// from the highest score down while their slots are free; ties go to the
 /// earlier behavior. A `false` from `start` drops a winner for the next best.
-/// Behavior ids, taken and returned, are indices into `definition.behaviors`.
-pub fn assign_behaviors_to_slots(
+/// `read` answers each consideration's input and `available` whether a behavior
+/// may start now. Behavior ids, taken and returned, are indices into
+/// `definition.behaviors`.
+pub(in crate::character::brain) fn assign_behaviors_to_slots(
     definition: &BrainDefinition,
-    decision_context: &DecisionContext,
-    available_motion_action_table: &AvailableMotionActionTable,
+    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+    available: &impl Fn(&Behavior) -> bool,
     running_behavior_ids: &[usize],
     mut start: impl FnMut(usize) -> bool,
 ) -> Vec<usize> {
     let mut scores = [0.0_f32; MAX_BEHAVIORS];
     for (index, behavior) in definition.behaviors.iter().enumerate() {
-        if find_skip_reason(
-            definition,
-            behavior,
-            available_motion_action_table,
-            running_behavior_ids,
-        )
-        .is_some()
-        {
+        if find_skip_reason(definition, behavior, available, running_behavior_ids).is_some() {
             continue;
         }
         let is_current = running_behavior_ids.contains(&index);
-        let Some(score) = score_behavior(behavior, decision_context, is_current) else {
+        let Some(score) = score_behavior(behavior, read, is_current) else {
             continue;
         };
         scores[index] = score * momentum_multiplier(is_current);
@@ -90,7 +84,7 @@ pub fn assign_behaviors_to_slots(
 pub(super) fn find_skip_reason(
     definition: &BrainDefinition,
     behavior: &Behavior,
-    available_motion_action_table: &AvailableMotionActionTable,
+    available: &impl Fn(&Behavior) -> bool,
     running_behavior_ids: &[usize],
 ) -> Option<SkipReason> {
     let tier = behavior.commit.interrupt_tier();
@@ -102,13 +96,7 @@ pub(super) fn find_skip_reason(
     if slot_committed {
         return Some(SkipReason::SlotCommitted);
     }
-    let unavailable = behavior
-        .motion
-        .is_some_and(|motion| !available_motion_action_table[motion])
-        || behavior
-            .action
-            .is_some_and(|action| !available_motion_action_table[action]);
-    unavailable.then_some(SkipReason::Unavailable)
+    (!available(behavior)).then_some(SkipReason::Unavailable)
 }
 
 pub(super) fn momentum_multiplier(is_current: bool) -> f32 {

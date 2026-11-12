@@ -3,8 +3,7 @@
 use bevy::prelude::*;
 
 use super::{Action, ActionFinished, ActionOutcome};
-use crate::character::brain::{Brain, Targeting};
-use crate::character::vision::TargetInfo;
+use crate::character::brain::{Brain, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// The last use started in each slot, stamped with its behavior's run id, so a
@@ -24,6 +23,17 @@ impl StartedEquipmentUses {
     fn started_use_mut(&mut self, slot: EquipmentSlot) -> &mut Option<StartedEquipmentUse> {
         &mut self.0[slot as usize]
     }
+
+    fn find_started_uses_of_item(
+        &self,
+        item: Entity,
+    ) -> impl Iterator<Item = (EquipmentSlot, StartedEquipmentUse)> + '_ {
+        EquipmentSlot::ALL.into_iter().filter_map(move |slot| {
+            self.0[slot as usize]
+                .filter(|started| started.item == item)
+                .map(|started| (slot, started))
+        })
+    }
 }
 
 /// Reports [`ActionFinished`] with the run id of the use whose item finished.
@@ -35,17 +45,13 @@ pub(super) fn on_report_equipment_use_finished(
     let Ok(started_equipment_uses) = started_equipment_uses.get(finished.holder) else {
         return;
     };
-    for slot in EquipmentSlot::ALL {
-        if let Some(started) =
-            started_equipment_uses.0[slot as usize].filter(|started| started.item == finished.item)
-        {
-            commands.trigger(ActionFinished {
-                entity: finished.holder,
-                action: Action::Use(slot),
-                behavior_run_id: started.behavior_run_id,
-                outcome: ActionOutcome::Completed,
-            });
-        }
+    for (slot, started) in started_equipment_uses.find_started_uses_of_item(finished.item) {
+        commands.trigger(ActionFinished {
+            entity: finished.holder,
+            action: Action::Use(slot),
+            behavior_run_id: started.behavior_run_id,
+            outcome: ActionOutcome::Completed,
+        });
     }
 }
 
@@ -73,9 +79,8 @@ pub(super) fn apply_equipment_use_requests(
             let reach = equipment
                 .equippable_in_slot(entity, slot)
                 .and_then(|equippable| equippable.reach);
-            let in_range = reach.is_some_and(|reach| {
-                target_info.is_some_and(|info| info.distance.is_finite() && info.distance <= reach)
-            });
+            let in_range =
+                reach.is_some_and(|reach| target_info.is_some_and(|info| info.is_within(reach)));
             let live = has_target && sighted && in_range;
             let slot_behavior = brain.held_action(Action::Use(slot));
 

@@ -81,7 +81,7 @@ fn animate_level_up(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     // Animate ring effect
-    for (mut transform, mut material, duration) in &mut effect_query {
+    for (mut transform, material, duration) in &mut effect_query {
         let progress = duration.0.fraction();
 
         // Scale up and rotate

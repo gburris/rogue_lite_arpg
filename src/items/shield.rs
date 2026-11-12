@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 
 use avian2d::prelude::*;
@@ -8,13 +7,7 @@ use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            orient_active_shields.in_set(SimulationSystems::Act),
-            reflect_projectiles.in_set(SimulationSystems::Upkeep),
-        ),
-    );
+    app.add_systems(Update, orient_active_shields.in_set(SimulationSystems::Act));
 }
 
 pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
@@ -62,20 +55,8 @@ pub struct Shield {
     pub hitbox: Collider,
 }
 
-#[derive(Component, Default, Clone)]
-#[require(CollidingEntities, Sensor)]
-pub struct ProjectileReflection;
-
-impl ProjectileReflection {
-    fn collision_layers() -> CollisionLayers {
-        CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir)
-    }
-}
-
 #[derive(Component)]
-struct ActiveShield {
-    projectiles_reflected: HashSet<Entity>,
-}
+struct ActiveShield;
 
 /// Turns each active shield's sprite and offset toward its holder's aim.
 fn orient_active_shields(
@@ -146,56 +127,10 @@ fn on_start_shield(
 
     commands.entity(used_shield.item).insert((
         EquipmentInUse,
-        ActiveShield {
-            projectiles_reflected: HashSet::default(),
-        },
+        ActiveShield,
         shield.hitbox.clone(),
-        ProjectileReflection::collision_layers(),
+        CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
     ));
-}
-
-fn reflect_projectiles(
-    mut commands: Commands,
-    mut shield_query: Query<
-        (&mut ActiveShield, &CollidingEntities, &ChildOf),
-        With<ProjectileReflection>,
-    >,
-    mut projectile_query: Query<(&mut LinearVelocity, &mut Transform), With<Projectile>>,
-    holder_query: Query<&CombatSide>,
-) {
-    for (mut shield, colliding_entities, child_of) in &mut shield_query {
-        for &colliding_entity in colliding_entities.iter() {
-            if shield.projectiles_reflected.contains(&colliding_entity) {
-                continue;
-            }
-            if let Ok((mut linear_velocity, mut transform)) =
-                projectile_query.get_mut(colliding_entity)
-            {
-                // The blocker takes over: the reflected projectile now hurts the blocker's enemies.
-                let Ok(side) = holder_query.get(child_of.parent()) else {
-                    continue;
-                };
-
-                // Reverse direction of projectile! Reflect!
-                linear_velocity.0 = -linear_velocity.0;
-
-                // Rotate projectile sprite to face new velocity direction
-                transform.rotation = Quat::from_rotation_z(linear_velocity.0.to_angle());
-
-                commands.entity(colliding_entity).insert((
-                    CollisionLayers::new(
-                        GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                        LayerMask::from(side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
-                    ),
-                    ProjectileAttacker {
-                        attacker: Some(child_of.parent()),
-                    },
-                ));
-
-                shield.projectiles_reflected.insert(colliding_entity);
-            }
-        }
-    }
 }
 
 /// Stop observer: lowers the shield and restores its resting transform.

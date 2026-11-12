@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};
 use bevy_enhanced_input::prelude::*;
 
-use crate::character::vision::TargetInfo;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -44,12 +43,10 @@ fn on_player_aim(
     aim_input: On<Fire<AimInput>>,
     mut player_vision: Single<&mut Vision, With<Player>>,
     mut player_aim: Single<&mut Transform, With<PlayerAim>>,
-    player: Single<(&Transform, &mut TargetInfo), (With<Player>, Without<PlayerAim>)>,
+    player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>)>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     if window.focused {
-        let (player_transform, mut target_info) = player.into_inner();
-
         // Convert player-relative aim to screen-relative world position
         let world_aim_position = player_transform.translation.xy() + player_aim.translation.xy();
 
@@ -67,7 +64,7 @@ fn on_player_aim(
             player_aim.translation = direction.extend(0.0);
         }
 
-        target_info.distance = distance.min(AIM_DISTANCE);
+        player_vision.aim_distance = distance.min(AIM_DISTANCE);
         player_vision.aim_direction = player_aim.translation.xy().normalize_or_zero();
     }
 }

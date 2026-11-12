@@ -282,9 +282,9 @@ fn on_enemy_added(
             enemy.insert((Targeting(*player), TargetLock));
         }
         Engagement::Sight => {}
-        // A zero-width cone never contains the player, but the sight rays still run.
+        // Blind enemies still run their sight rays.
         Engagement::None => {
-            enemy.insert(VisionCone { half_angle: 0.0 });
+            enemy.insert(VisionCone::blind());
         }
     }
 }

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use super::attack::{on_start_melee, on_stop_melee};
 use super::swing::MeleeSwingKind;
 use super::{MELEE_WEAPON_REACH, MeleeWeapon};
+use crate::items::equipment::prelude::{DirectionalPoses, EquipmentPose};
 use crate::prelude::*;
 
 pub fn sword(sprites: &SpriteAssets) -> impl Scene {

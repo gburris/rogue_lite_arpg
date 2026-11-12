@@ -2,6 +2,8 @@ use core::fmt;
 
 use bevy::prelude::*;
 
+use super::use_equipped::EquipmentInUse;
+
 /// Goes on the equipment marking where it should be equipped
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this
@@ -40,6 +42,20 @@ impl EquipmentSlot {
     /// than held until released (shield block).
     pub fn is_instant_use(self) -> bool {
         matches!(self, Self::Mainhand)
+    }
+
+    /// Whether the holder with these slots is using an instant-use item; see
+    /// [`Self::is_instant_use`].
+    pub fn is_instant_item_in_use(
+        mainhand: Option<&Mainhand>,
+        offhand: Option<&Offhand>,
+        in_use: &Query<(), With<EquipmentInUse>>,
+    ) -> bool {
+        Self::ALL
+            .into_iter()
+            .filter(|slot| slot.is_instant_use())
+            .filter_map(|slot| slot.equipped(mainhand, offhand))
+            .any(|item| in_use.contains(item))
     }
 }
 

@@ -1,19 +1,11 @@
-//! What a brain knows: vision tracks a target, and [`build_decision_context`] reads world state
-//! into the [`DecisionContext`] the considerations read.
+//! What a brain knows: vision tracks a target and aggro picks one.
 
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::ecs::query::QueryData;
-use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::BrainSystems;
-use super::action::{Ability, Action, find_carried_potion};
-use super::capability::{
-    CapabilityProfiles, MotionActionTable, UseEligibilityTable, capability_keys,
-};
-use super::motion::{HomeArea, Motion};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -31,140 +23,13 @@ pub(super) fn plugin(app: &mut App) {
         );
 }
 
-/// Target data visible to a brain this tick.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct TargetView {
-    pub distance: f32,
-    pub line_of_sight: bool,
-    /// Unit direction from the viewer to the target.
-    pub bearing: Vec2,
-    pub velocity: Vec2,
-    pub seconds_since_targeted: f32,
-}
-
-/// Everything a pure brain may look at during one decision.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DecisionContext {
-    pub self_view: SelfView,
-    pub target_view: Option<TargetView>,
-    pub reach_fractions: MotionActionTable<Option<f32>>,
-    pub use_eligibility: UseEligibilityTable,
-    pub memory_view: MemoryView,
-}
-
-/// The deciding character's own state this tick.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct SelfView {
-    pub health_fraction: f32,
-    /// `1.0` for a non-caster.
-    pub mana_fraction: f32,
-    pub stunned: bool,
-    pub home_area: Option<HomeAreaView>,
-}
-
-impl Default for SelfView {
-    fn default() -> Self {
-        Self {
-            health_fraction: 1.0,
-            mana_fraction: 1.0,
-            stunned: false,
-            home_area: None,
-        }
-    }
-}
-
-/// Where the character stands relative to the home area it is tethered to.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct HomeAreaView {
-    pub overshoot_fraction: f32,
-    pub arrived: bool,
-}
-
-/// The brain's own earlier choices, as scoring sees them.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct MemoryView {
-    pub motion: Option<Motion>,
-    /// An attack finished since the last decision.
-    pub attack_finished: bool,
-}
-
-/// The raw fact a consideration reads; see [`read_consideration_input`].
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ConsiderationInput {
-    HasTarget,
-    LineOfSight,
-    TargetDistance,
-    MissingHealth,
-    ManaFraction,
-    /// Whether this motion's kind is the one running; its payload is ignored.
-    MotionRunning(Motion),
-    /// Whether the running motion holds the target at a distance.
-    Circling,
-    /// How far past its home area range the character is.
-    HomeAreaPull,
-    AttackFinished,
-    /// Target distance over this motion's reach; at most `1.0` is in reach.
-    MotionReachFraction(Motion),
-    /// Target distance over this action's reach; at most `1.0` is in reach.
-    ActionReachFraction(Action),
-    SecondsSinceTargeted,
-}
-
-/// Reads `input` from the context; `None` when the input is absent.
-pub(super) fn read_consideration_input(
-    input: ConsiderationInput,
-    decision_context: &DecisionContext,
-) -> Option<f32> {
-    let boolean_input = |set: bool| Some(if set { 1.0 } else { 0.0 });
-    match input {
-        ConsiderationInput::HasTarget => boolean_input(decision_context.target_view.is_some()),
-        ConsiderationInput::LineOfSight => decision_context
-            .target_view
-            .and_then(|target| boolean_input(target.line_of_sight)),
-        ConsiderationInput::TargetDistance => {
-            decision_context.target_view.map(|target| target.distance)
-        }
-        ConsiderationInput::MissingHealth => Some(1.0 - decision_context.self_view.health_fraction),
-        ConsiderationInput::ManaFraction => Some(decision_context.self_view.mana_fraction),
-        ConsiderationInput::MotionRunning(motion) => boolean_input(
-            decision_context
-                .memory_view
-                .motion
-                .is_some_and(|running| running.index() == motion.index()),
-        ),
-        ConsiderationInput::Circling => boolean_input(matches!(
-            decision_context.memory_view.motion,
-            Some(Motion::Orbit(_) | Motion::KeepDistance(_))
-        )),
-        // Once already heading home it reads full until arrival, so crossing
-        // back inside the range mid-return cannot hand the character straight
-        // back to wandering.
-        ConsiderationInput::HomeAreaPull => {
-            let home_area = decision_context.self_view.home_area?;
-            if decision_context.memory_view.motion == Some(Motion::ReturnToHome) {
-                boolean_input(!home_area.arrived)
-            } else {
-                Some(home_area.overshoot_fraction)
-            }
-        }
-        ConsiderationInput::AttackFinished => {
-            boolean_input(decision_context.memory_view.attack_finished)
-        }
-        ConsiderationInput::MotionReachFraction(motion) => decision_context.reach_fractions[motion],
-        ConsiderationInput::ActionReachFraction(action) => decision_context.reach_fractions[action],
-        ConsiderationInput::SecondsSinceTargeted => decision_context
-            .target_view
-            .map(|target| target.seconds_since_targeted),
-    }
-}
-
 /// How wide an entity's vision cone is.
 #[derive(Component)]
 #[component(immutable)]
 #[require(Vision, TargetInfo)]
 pub(crate) struct VisionCone {
     /// In radians; `PI / 4.0` is a 90° cone.
-    pub half_angle: f32,
+    half_angle: f32,
 }
 
 impl Default for VisionCone {
@@ -172,6 +37,73 @@ impl Default for VisionCone {
         Self {
             half_angle: FRAC_PI_4,
         }
+    }
+}
+
+impl VisionCone {
+    /// A zero-width cone, which never contains a direction.
+    #[cfg(feature = "dev_tools")]
+    pub(crate) fn blind() -> Self {
+        Self { half_angle: 0.0 }
+    }
+
+    fn contains_direction(&self, aim_direction: Vec2, direction: Vec2) -> bool {
+        direction.dot(aim_direction) > self.half_angle.cos()
+    }
+}
+
+/// Stores calculated perception data for a given potential or current target.
+#[derive(Component, Default, Clone)]
+pub(crate) struct TargetInfo {
+    /// Distance to the observed entity.
+    pub distance: f32,
+    /// Direction vector pointing to the observed entity.
+    pub(super) direction: Vec2,
+    /// World position of the observed entity.
+    pub position: Vec2,
+    /// Intended world velocity of the observed entity.
+    pub(super) velocity: Vec2,
+    /// Whether the observed entity is within an unobstructed line of sight (based on `RayCaster`).
+    pub line_of_sight: bool,
+    /// Whether the observed entity is within the entity’s vision cone angle.
+    pub(super) in_vision_cone: bool,
+    /// When the current `Targeting` was acquired, in virtual seconds.
+    pub(super) targeted_at: f32,
+    // TODO: Add `last_known_position` for memory/prediction systems.
+}
+
+impl TargetInfo {
+    /// Records where the observed entity is relative to `observer_position`, and how it moves.
+    fn record_observation(
+        &mut self,
+        observer_position: Vec2,
+        target_position: Vec2,
+        target_velocity: Vec2,
+    ) {
+        self.direction = (target_position - observer_position).normalize_or_zero();
+        self.distance = target_position.distance(observer_position);
+        self.position = target_position;
+        self.velocity = target_velocity;
+    }
+
+    pub(super) fn has_finite_distance(&self) -> bool {
+        self.distance.is_finite()
+    }
+
+    /// Whether the observed entity is at a finite distance of at most `reach`.
+    pub(super) fn is_within(&self, reach: f32) -> bool {
+        self.has_finite_distance() && self.distance <= reach
+    }
+
+    /// The direction to the observed entity; `None` while the two overlap, leaving no
+    /// direction to aim along.
+    pub(super) fn nonzero_direction(&self) -> Option<Vec2> {
+        (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
+    }
+
+    /// Whether the observed entity is in line of sight and inside the vision cone.
+    pub(super) fn is_in_view(&self) -> bool {
+        self.line_of_sight && self.in_vision_cone
     }
 }
 
@@ -203,7 +135,8 @@ pub(crate) struct TargetLock;
 // VISION + PERCEPTION
 // ---------------------
 
-/// Aims vision at the target while targeting, otherwise along the facing direction.
+/// Aims vision at the target while targeting, otherwise along the facing direction, as far out as
+/// the tracked target.
 fn update_aim_position(
     mut character_query: Query<
         (&mut Vision, &TargetInfo, Has<Targeting>, &FacingDirection),
@@ -217,6 +150,7 @@ fn update_aim_position(
             } else {
                 facing_direction.to_vec2()
             };
+            vision.aim_distance = target_info.distance;
         },
     );
 }
@@ -241,17 +175,12 @@ fn update_target_info(
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
             if let Ok((target_transform, target_kinematics)) = target_query.get(target_entity) {
-                let target_position = target_transform.translation.xy();
-                let position = transform.translation.xy();
-
-                let target_direction = (target_position - position).normalize_or_zero();
-
-                target_info.direction = target_direction;
-                target_info.distance = target_position.distance(position);
-                target_info.position = target_position;
-                target_info.velocity = target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity);
-
-                ray_caster.direction = Dir2::new(target_direction).unwrap_or(Dir2::X);
+                target_info.record_observation(
+                    transform.translation.xy(),
+                    target_transform.translation.xy(),
+                    target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity),
+                );
+                ray_caster.direction = Dir2::new(target_info.direction).unwrap_or(Dir2::X);
             }
         },
     );
@@ -272,9 +201,8 @@ fn is_target_in_sight(
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, ray_hits, vision, vision_cone, watching, targeting)| {
-            let vision_cone_dot = vision_cone.half_angle.cos();
             target_info.in_vision_cone =
-                target_info.direction.dot(vision.aim_direction) > vision_cone_dot;
+                vision_cone.contains_direction(vision.aim_direction, target_info.direction);
 
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
@@ -335,7 +263,7 @@ fn should_target_watched(
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
     for (target_info, watching, entity) in &npc_query {
-        if target_info.line_of_sight && target_info.in_vision_cone {
+        if target_info.is_in_view() {
             commands.entity(entity).insert(Targeting(watching.0));
         }
     }
@@ -350,125 +278,5 @@ fn should_stop_targeting(
         if !target_info.line_of_sight && !has_lock {
             commands.entity(entity).remove::<Targeting>();
         }
-    }
-}
-
-/// Builds the pure view of a target from the vision system's observation.
-pub(super) fn build_target_view(info: Option<&TargetInfo>, now: f32) -> Option<TargetView> {
-    info.and_then(|info| {
-        info.distance.is_finite().then_some(TargetView {
-            distance: info.distance,
-            line_of_sight: info.line_of_sight,
-            bearing: info.direction,
-            velocity: info.velocity,
-            seconds_since_targeted: now - info.targeted_at,
-        })
-    })
-}
-
-/// Target distance over each owned capability's reach; `f32::MAX` for a
-/// capability that is missing or has no reach.
-fn build_reach_fractions(
-    target: Option<TargetView>,
-    capability_profiles: &CapabilityProfiles,
-) -> MotionActionTable<Option<f32>> {
-    let Some(target) = target else {
-        return MotionActionTable::default();
-    };
-    let mut reach_fractions = MotionActionTable::splat(Some(f32::MAX));
-    for key in capability_keys() {
-        if let Some(reach) = capability_profiles[key]
-            .and_then(|profile| profile.reach)
-            .filter(|&reach| reach > 0.0)
-        {
-            reach_fractions[key] = Some(target.distance / reach);
-        }
-    }
-    reach_fractions
-}
-
-/// The queries behind each capability's world-allows-use check, shared by
-/// `build_decision_context` and the appliers.
-#[derive(SystemParam)]
-pub(super) struct UseEligibilityQueries<'w, 's> {
-    pub equipment: EquipmentRead<'w, 's>,
-    pub consumables: Query<'w, 's, (), With<Consumable>>,
-    pub items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
-}
-
-/// Whether the world lets each motion or action run now: usable equipment (or
-/// a held use already running), and a carried potion for `Heal`.
-fn build_use_eligibility_table(
-    entity: Entity,
-    items: Option<&Items>,
-    use_eligibility_queries: &UseEligibilityQueries,
-) -> UseEligibilityTable {
-    let mut use_eligibility = MotionActionTable::splat(true);
-    for slot in EquipmentSlot::ALL {
-        let held_item_in_use = !slot.is_instant_use()
-            && use_eligibility_queries
-                .equipment
-                .item_in_slot(entity, slot)
-                .is_some_and(|item| use_eligibility_queries.items_in_use.contains(item));
-        use_eligibility[Action::Use(slot)] = held_item_in_use
-            || use_eligibility_queries
-                .equipment
-                .can_use(entity, slot)
-                .is_ok();
-    }
-    use_eligibility[Ability::Heal] =
-        find_carried_potion(items, &use_eligibility_queries.consumables).is_some();
-    UseEligibilityTable(use_eligibility)
-}
-
-/// The components one decision reads to build its context.
-#[derive(QueryData)]
-pub(super) struct DecisionInputComponents {
-    entity: Entity,
-    transform: &'static Transform,
-    has_target: Has<Targeting>,
-    target_info: Option<&'static TargetInfo>,
-    health: Option<&'static Health>,
-    mana: Option<&'static Mana>,
-    home_area: Option<&'static HomeArea>,
-    kinematics: Option<&'static Kinematics>,
-    items: Option<&'static Items>,
-}
-
-/// Builds one decision's context from the world, with memory left for the
-/// brain to add.
-pub(super) fn build_decision_context(
-    components: &DecisionInputComponentsItem,
-    capability_profiles: &CapabilityProfiles,
-    use_eligibility_queries: &UseEligibilityQueries,
-    now: f32,
-) -> DecisionContext {
-    let position = components.transform.translation.xy();
-    let target_view = if components.has_target {
-        build_target_view(components.target_info, now)
-    } else {
-        None
-    };
-    let home_area = components.home_area.and_then(|home_area| {
-        Some(HomeAreaView {
-            overshoot_fraction: home_area.overshoot_fraction(position)?,
-            arrived: home_area.distance_from(position) <= home_area.arrival_radius(),
-        })
-    });
-    DecisionContext {
-        self_view: SelfView {
-            health_fraction: components.health.and_then(Health::fraction).unwrap_or(1.0),
-            mana_fraction: components.mana.and_then(Mana::fraction).unwrap_or(1.0),
-            stunned: components.kinematics.is_some_and(Kinematics::is_stunned),
-            home_area,
-        },
-        target_view,
-        reach_fractions: build_reach_fractions(target_view, capability_profiles),
-        use_eligibility: build_use_eligibility_table(
-            components.entity,
-            components.items,
-            use_eligibility_queries,
-        ),
-        memory_view: MemoryView::default(),
     }
 }

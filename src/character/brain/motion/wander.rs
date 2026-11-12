@@ -6,16 +6,16 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{Capability, CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Interval, Motion};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 
 /// Alternates standing and walking one rolled heading while wandering.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
-    pub pause: Interval,
-    pub walk: Interval,
-    pub speed_scale: f32,
+    pause: Interval,
+    walk: Interval,
+    speed_scale: f32,
     direction: Vec2,
     phase: Option<WanderPhase>,
 }
@@ -52,18 +52,29 @@ impl Wander {
     fn leave_wander(&mut self) {
         self.phase = None;
     }
-}
 
-/// Makes `Motion::Wander` available only to a character that carries one.
-impl Capability for Wander {
-    type Key = Motion;
-
-    fn key(&self) -> Motion {
-        Motion::Wander
-    }
-
-    fn capability_profile(&self) -> CapabilityProfile {
-        CapabilityProfile::default()
+    fn pick_steering_direction(&mut self, input: &SteerInput) -> Option<Vec2> {
+        let phase = match self.phase {
+            Some(phase) if input.now < phase.until() => phase,
+            previous => {
+                let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
+                    self.direction = pick_direction(input);
+                    WanderPhase::Walking {
+                        until: input.now + self.walk.pick_random_value(),
+                    }
+                } else {
+                    WanderPhase::Pausing {
+                        until: input.now + self.pause.pick_random_value(),
+                    }
+                };
+                self.phase = Some(phase);
+                phase
+            }
+        };
+        match phase {
+            WanderPhase::Walking { .. } => Some(self.direction),
+            WanderPhase::Pausing { .. } => None,
+        }
     }
 }
 
@@ -81,33 +92,9 @@ pub(super) fn apply_wander(
             character
                 .build_steer_input(Motion::Wander, &time)
                 .map_or(Steering::HALT, |input| {
-                    let direction = steer(&input, &mut wander);
+                    let direction = wander.pick_steering_direction(&input);
                     Steering::scaled(direction, wander.speed_scale)
                 });
-    }
-}
-
-fn steer(input: &SteerInput, wander: &mut Wander) -> Option<Vec2> {
-    let phase = match wander.phase {
-        Some(phase) if input.now < phase.until() => phase,
-        previous => {
-            let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
-                wander.direction = pick_direction(input);
-                let until =
-                    input.now + rand::rng().random_range(wander.walk.min()..wander.walk.max());
-                WanderPhase::Walking { until }
-            } else {
-                let until =
-                    input.now + rand::rng().random_range(wander.pause.min()..wander.pause.max());
-                WanderPhase::Pausing { until }
-            };
-            wander.phase = Some(phase);
-            phase
-        }
-    };
-    match phase {
-        WanderPhase::Walking { .. } => Some(wander.direction),
-        WanderPhase::Pausing { .. } => None,
     }
 }
 
@@ -122,10 +109,8 @@ fn pick_direction(input: &SteerInput) -> Vec2 {
     {
         return candidate;
     }
-    let home = home_area.origin() - input.position;
-    if home == Vec2::ZERO {
+    let Some(direction_home) = home_area.direction_home(input.position) else {
         return candidate;
-    }
-    home.normalize_or_zero()
-        .rotate(Vec2::from_angle(rand::rng().random_range(-0.6..0.6)))
+    };
+    direction_home.rotate(Vec2::from_angle(rand::rng().random_range(-0.6..0.6)))
 }

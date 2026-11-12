@@ -8,6 +8,7 @@ pub mod prelude {
     pub use super::burn::Burning;
     pub use super::effect::{ApplyEffects, Effects};
     pub use super::freeze::Frozen;
+    pub use super::slow::MovementSlow;
 }
 
 use bevy::prelude::*;

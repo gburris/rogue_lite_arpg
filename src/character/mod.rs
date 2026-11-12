@@ -6,7 +6,6 @@ mod npc;
 mod player;
 mod purse;
 mod state;
-mod vision;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -17,18 +16,19 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::Character;
+    #[cfg(feature = "dev")]
+    pub(crate) use super::brain::TargetInfo;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
-    pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, Experience, SpawnEnemies};
+    pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
         GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
         PlayerInteractionRadius, PlayerStats, Stat,
     };
     pub use super::purse::Purse;
-    pub use super::state::{Attacking, FacingDirection, Kinematics};
-    pub use super::vision::{TargetInfo, Vision};
+    pub use super::state::{Attacking, FacingDirection, Kinematics, Vision};
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -44,7 +44,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
-    );
+    )
+    .add_observer(state::on_movement_slow_changed);
 }
 
 #[derive(Component, Default)]

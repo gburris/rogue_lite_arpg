@@ -82,6 +82,15 @@ enum SteeringEffort {
     Boosted(f32),
 }
 
+impl SteeringEffort {
+    fn speed_multiplier(self, boost_multiplier: Option<f32>) -> f32 {
+        match self {
+            Self::Scaled(scale) => scale.clamp(0.0, 1.0) * boost_multiplier.unwrap_or(1.0),
+            Self::Boosted(speed_multiplier) => speed_multiplier.max(1.0),
+        }
+    }
+}
+
 /// Turns each brain character's [`Steering`] into [`Kinematics`], capping how
 /// fast it turns and dropping a [`DecayingSpeedBoost`] once it decays.
 pub(super) fn apply_steering(
@@ -109,12 +118,7 @@ pub(super) fn apply_steering(
             }
             continue;
         };
-        let speed_multiplier = match steering.effort {
-            SteeringEffort::Scaled(scale) => {
-                scale.clamp(0.0, 1.0) * boost_multiplier.unwrap_or(1.0)
-            }
-            SteeringEffort::Boosted(speed_multiplier) => speed_multiplier.max(1.0),
-        };
+        let speed_multiplier = steering.effort.speed_multiplier(boost_multiplier);
         let turn_cap = turn_rate.map(|rate| rate.0 * delta_secs);
         let heading = rotate_heading_toward_desired(kinematics.direction, desired, turn_cap);
         kinematics.move_in_direction(heading, speed_multiplier);

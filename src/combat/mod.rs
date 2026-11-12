@@ -24,10 +24,10 @@ pub mod prelude {
     pub use super::invulnerable::IFrames;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
-        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, Projectiles, fireball,
-        fireball_with_speed, icebolt,
+        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, ProjectileReflection,
+        Projectiles, fireball, fireball_with_speed, icebolt,
     };
-    pub use super::status_effects::prelude::{Burning, Effects, Frozen};
+    pub use super::status_effects::prelude::{Effects, Frozen, MovementSlow};
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -38,8 +38,10 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            (mana::regenerate_mana, mana::drain_mana_for_items_in_use)
-                .chain()
+            (
+                (mana::regenerate_mana, mana::drain_mana_for_items_in_use).chain(),
+                projectile::reflect_projectiles,
+            )
                 .in_set(SimulationSystems::Upkeep),
             // A flash ending resets the color to opaque white, so the flicker runs after it.
             (

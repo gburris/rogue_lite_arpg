@@ -1,64 +1,38 @@
-//! ECS glue for the pure utility brains. Data flows one way, one writer each:
-//! 1. [`perception`] builds a [`DecisionContext`] from the world.
-//! 2. [`decide`] runs the pure [`engine`] scoring and writes which behavior holds each slot on the
-//!    [`Brain`].
-//! 3. [`motion`] and [`action`] carry out the held motion and action and report
-//!    [`MotionFinished`](motion::MotionFinished) or [`ActionFinished`].
-//!
-//! To add a continuous motion:
-//! 1. [`motion`]: a `Motion` variant only for a new steering contract. A stateless one gets an arm
-//!    in `direct::steer_direct_motion`; one with state gets a file with its component and an
-//!    `apply_` system registered in `motion::plugin`, and is skipped in `apply_direct_steering`. A
-//!    component the motion needs implements `Capability`, is recorded in
-//!    `capability::build_capability_profiles`, and is listed in `capability_keys`.
-//! 2. [`DecisionContext`] fields built in [`perception`], plus [`ConsiderationInput`] variants read
-//!    in `read_consideration_input`.
-//! 3. Behaviors over it in `character/enemy` and `character/npc`.
-//!
-//! A finite [`Motion`] needs a variant, a `Capability` component whose
-//! `apply_` system follows its run with a `CurrentBehaviorRunId` and reports
-//! `MotionFinished`, the same registration and capability listing, and a
-//! committed behavior over it. A new [`Ability`] needs a variant, a `Capability`
-//! component in `action::ability` listed in `AbilityCapabilities`, an applier,
-//! and behaviors over it.
-
 mod action;
 mod capability;
-pub(crate) mod considerations;
+pub(super) mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod engine;
+mod inputs;
 mod motion;
 mod perception;
-mod running_state;
-mod schedule;
 
 use bevy::prelude::*;
+use rand::RngExt;
 
-use self::action::StartedEquipmentUses;
-pub use self::action::{Ability, Action, ActionFinished, ActionOutcome, Bite, Breath, Heal};
-pub use self::capability::CapabilityProfile;
-use self::capability::{
-    AvailableMotionActionTable, Capability, CapabilityKey, CapabilityProfiles, MotionActionKey,
-    MotionActionTable, capability_keys,
-};
+pub use self::action::{Ability, Action, Bite, Breath, Heal};
+use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
+use self::capability::{CapabilityProfile, CooldownKey, Cooldowns};
 pub use self::decide::ScoreTrace;
-use self::decide::schedule_first_decision;
+use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
-pub(crate) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
+pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
+pub(super) use self::inputs::ConsiderationInput;
+use self::inputs::DecisionInputs;
 use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
-pub(crate) use self::perception::{ConsiderationInput, Targeting, VisionCone};
-use self::perception::{DecisionContext, MemoryView};
-use self::running_state::RunningBehavior;
-use self::schedule::BrainSystems;
+pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
+
+/// Seconds between a brain's scheduled decisions.
+const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
@@ -66,13 +40,13 @@ use crate::prelude::*;
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedEquipmentUses, Steering)]
+#[require(StartedEquipmentUses, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
     next_behavior_run_id: u32,
-    ready_at: MotionActionTable<f32>,
+    cooldowns: Cooldowns,
     attack_finish_pending: bool,
     next_decision_at: f32,
 }
@@ -84,7 +58,7 @@ impl Brain {
             definition,
             running_behaviors: Vec::with_capacity(2),
             next_behavior_run_id: 0,
-            ready_at: MotionActionTable::default(),
+            cooldowns: Cooldowns::default(),
             attack_finish_pending: false,
             next_decision_at: 0.0,
         }
@@ -126,12 +100,74 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    fn is_cooldown_ready(&self, key: impl MotionActionKey, now: f32) -> bool {
-        now >= self.ready_at[key]
+    fn is_cooldown_ready(&self, key: impl CooldownKey, now: f32) -> bool {
+        self.cooldowns.is_ready(key, now)
     }
 
-    fn start_cooldown(&mut self, key: impl MotionActionKey, ready_at: f32) {
-        self.ready_at[key] = ready_at;
+    fn start_cooldown(&mut self, key: impl CooldownKey, ready_at: f32) {
+        self.cooldowns.start(key, ready_at);
+    }
+
+    /// Starts `motion`'s cooldown for as long as its capability profile says.
+    fn start_motion_cooldown(&mut self, motion: Motion, inputs: &DecisionInputs) {
+        let cooldown = inputs
+            .motion_profile(motion)
+            .map_or(0.0, |profile| profile.cooldown);
+        self.start_cooldown(motion, inputs.now + cooldown);
+    }
+
+    /// Starts `ability`'s cooldown for as long as its capability profile says.
+    fn start_ability_cooldown(&mut self, ability: Ability, inputs: &DecisionInputs) {
+        let cooldown = inputs
+            .action_profile(Action::Ability(ability))
+            .map_or(0.0, |profile| profile.cooldown);
+        self.start_cooldown(ability, inputs.now + cooldown);
+    }
+
+    /// Whether `behavior` may start now: each part's capability is owned, off its
+    /// cooldown, and allowed by the world.
+    fn is_available(&self, behavior: &Behavior, inputs: &DecisionInputs) -> bool {
+        let motion_available = |motion: Motion| {
+            inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
+        };
+        let action_available = |action: Action| {
+            inputs.action_profile(action).is_some()
+                && self.is_cooldown_ready(action, inputs.now)
+                && inputs.world_allows_use(action)
+        };
+        behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
+    }
+
+    /// An attack finished since the last decision.
+    fn attack_finish_pending(&self) -> bool {
+        self.attack_finish_pending
+    }
+
+    /// Notes an attack finish for the next decision to read.
+    fn record_attack_finished(&mut self) {
+        self.attack_finish_pending = true;
+    }
+
+    /// Puts the first decision at a random point in the next period, so brains spawned
+    /// together don't all decide on the same frame.
+    fn randomize_decision_phase(&mut self, now: f32) {
+        self.next_decision_at = now + rand::rng().random_range(0.0..DECISION_PERIOD);
+    }
+
+    /// Whether a scheduled decision is due at `now`. A due brain moves to its next period
+    /// boundary after `now`, keeping its phase without a burst of catch-up decisions after a
+    /// long frame.
+    fn advance_decision_clock(&mut self, now: f32) -> bool {
+        if now < self.next_decision_at {
+            return false;
+        }
+        let periods_passed = ((now - self.next_decision_at) / DECISION_PERIOD).floor() + 1.0;
+        self.next_decision_at += periods_passed * DECISION_PERIOD;
+        // Rounding near an exact multiple can land the boundary on `now`.
+        if self.next_decision_at <= now {
+            self.next_decision_at += DECISION_PERIOD;
+        }
+        true
     }
 
     fn running_behavior_ids(&self) -> Vec<usize> {
@@ -141,43 +177,17 @@ impl Brain {
             .collect()
     }
 
-    /// Fills in the brain's memory on `context_without_memory`, and marks each
-    /// capability available when owned, off cooldown and use-eligible.
-    fn build_scoring_inputs(
-        &self,
-        context_without_memory: DecisionContext,
-        capability_profiles: &CapabilityProfiles,
-        now: f32,
-    ) -> (DecisionContext, AvailableMotionActionTable) {
-        let context = DecisionContext {
-            memory_view: MemoryView {
-                motion: self.motion(),
-                attack_finished: self.attack_finish_pending,
-            },
-            ..context_without_memory
-        };
-        let mut available = MotionActionTable::splat(true);
-        for key in capability_keys() {
-            available[key] = capability_profiles[key].is_some()
-                && self.is_cooldown_ready(key, now)
-                && context.use_eligibility[key];
-        }
-        (context, AvailableMotionActionTable(available))
-    }
-
     /// Applies a decision. The only place an attack-finished edge is consumed.
+    /// `missed_starts` are the finite motions that won but failed their start roll.
     fn commit_decision(
         &mut self,
         winning_behavior_ids: &[usize],
-        missed_start_cooldowns: &MotionActionTable<Option<f32>>,
-        capability_profiles: &CapabilityProfiles,
-        now: f32,
+        missed_starts: &[Motion],
+        inputs: &DecisionInputs,
     ) {
-        self.assign_slots(winning_behavior_ids, capability_profiles, now);
-        for key in capability_keys() {
-            if let Some(ready_at) = missed_start_cooldowns[key] {
-                self.start_cooldown(key, ready_at);
-            }
+        self.assign_slots(winning_behavior_ids, inputs);
+        for &motion in missed_starts {
+            self.start_motion_cooldown(motion, inputs);
         }
         self.attack_finish_pending = false;
     }
@@ -186,12 +196,7 @@ impl Brain {
     /// behavior keeps running until a winner shares one of its slots, which ends
     /// it; anything else not won again stops. Winners never share a slot, so
     /// neither do running behaviors.
-    fn assign_slots(
-        &mut self,
-        winning_behavior_ids: &[usize],
-        capability_profiles: &CapabilityProfiles,
-        now: f32,
-    ) {
+    fn assign_slots(&mut self, winning_behavior_ids: &[usize], inputs: &DecisionInputs) {
         let behaviors = self.definition.behaviors;
         for running in self.running_behaviors.clone() {
             let displaced = winning_behavior_ids.iter().any(|&winning_behavior_id| {
@@ -200,7 +205,7 @@ impl Brain {
                         .shares_a_slot_with(&behaviors[running.behavior])
             });
             if running.committed && displaced {
-                self.drop_committed_behavior(running, capability_profiles, now);
+                self.drop_committed_behavior(running, inputs);
             }
         }
         let previous = std::mem::take(&mut self.running_behaviors);
@@ -214,7 +219,7 @@ impl Brain {
                 .find(|running| running.behavior == winning_behavior_id)
             {
                 Some(&kept) => kept,
-                None => self.start_running_behavior(winning_behavior_id, now),
+                None => self.start_running_behavior(winning_behavior_id, inputs.now),
             };
             self.running_behaviors.push(running);
         }
@@ -234,24 +239,26 @@ impl Brain {
         }
     }
 
+    /// Drops each committed behavior that lost its target, was stunned or timed out.
+    fn drop_stale_committed_behaviors(&mut self, inputs: &DecisionInputs) {
+        for running in self.running_behaviors.clone() {
+            if running.should_drop_committed_behavior(inputs) {
+                self.drop_committed_behavior(running, inputs);
+            }
+        }
+    }
+
     /// Ends `running` and starts its finite part's cooldown so it can't
     /// restart next tick. Equipment keeps its own cooldown, so a use starts none.
-    fn drop_committed_behavior(
-        &mut self,
-        running: RunningBehavior,
-        capability_profiles: &CapabilityProfiles,
-        now: f32,
-    ) {
+    fn drop_committed_behavior(&mut self, running: RunningBehavior, inputs: &DecisionInputs) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);
         let behavior = self.definition_of_running_behavior(running);
-        let finite_part = match (behavior.motion, behavior.action) {
-            (Some(motion), _) if motion.is_finite() => CapabilityKey::Motion(motion),
-            (_, Some(ability @ Action::Ability(_))) => CapabilityKey::Action(ability),
-            _ => return,
-        };
-        let cooldown = capability_profiles[finite_part].map_or(0.0, |profile| profile.cooldown);
-        self.start_cooldown(finite_part, now + cooldown);
+        match (behavior.motion, behavior.action) {
+            (Some(motion), _) if motion.is_finite() => self.start_motion_cooldown(motion, inputs),
+            (_, Some(Action::Ability(ability))) => self.start_ability_cooldown(ability, inputs),
+            (_, Some(Action::Use(_) | Action::Idle) | None) => {}
+        }
     }
 
     /// Ends the committed behavior stamped `behavior_run_id`; `false` for a stale finish.
@@ -266,6 +273,18 @@ impl Brain {
         self.running_behaviors.remove(position);
         true
     }
+}
+
+/// Ordered brain phases. Perception feeds targeting, aim, decisions, execution
+/// of those decisions, and finally the motion driver.
+#[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) enum BrainSystems {
+    Perception,
+    Targeting,
+    Aim,
+    Decision,
+    Execute,
+    Motion,
 }
 
 pub(super) fn plugin(app: &mut App) {

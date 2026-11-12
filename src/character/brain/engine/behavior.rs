@@ -4,7 +4,7 @@ use super::Consideration;
 use crate::character::brain::{Action, Motion};
 
 /// Most behaviors one brain definition may list, so scoring needs no allocation.
-pub(crate) const MAX_BEHAVIORS: usize = 16;
+pub(super) const MAX_BEHAVIORS: usize = 16;
 
 /// One candidate a brain can choose: a motion, an action, or both, and how
 /// firmly it holds them.
@@ -12,9 +12,9 @@ pub(crate) const MAX_BEHAVIORS: usize = 16;
 pub struct Behavior {
     pub motion: Option<Motion>,
     pub action: Option<Action>,
-    pub commit: CommitPolicy,
-    pub weight: f32,
-    pub considerations: &'static [Consideration],
+    pub(in crate::character::brain) commit: CommitPolicy,
+    pub(in crate::character::brain) weight: f32,
+    pub(in crate::character::brain) considerations: &'static [Consideration],
 }
 
 impl Behavior {
@@ -36,7 +36,7 @@ impl Behavior {
     }
 
     /// Whether both behaviors claim the motion slot or both claim the action slot.
-    pub fn shares_a_slot_with(&self, other: &Self) -> bool {
+    pub(in crate::character::brain) fn shares_a_slot_with(&self, other: &Self) -> bool {
         (self.motion.is_some() && other.motion.is_some())
             || (self.action.is_some() && other.action.is_some())
     }
@@ -55,13 +55,13 @@ pub enum CommitPolicy {
 }
 
 impl CommitPolicy {
-    pub const fn is_committed(self) -> bool {
+    pub(in crate::character::brain) const fn is_committed(self) -> bool {
         matches!(self, Self::UntilFinished { .. })
     }
 
     /// The tier a holder must be outranked by to lose its slots; 0 for a continuously scored
     /// behavior.
-    pub const fn interrupt_tier(self) -> u8 {
+    pub(super) const fn interrupt_tier(self) -> u8 {
         match self {
             Self::UntilFinished { interrupt_tier } => interrupt_tier,
             Self::ContinuouslyScored => 0,
@@ -77,7 +77,7 @@ pub struct BrainDefinition {
 
 /// Rejects brains that compile but cannot behave. Intervals and thresholds
 /// are checked by their constructors at compile time.
-pub fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
+pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
     if brain.behaviors.is_empty() {
         return Err("behavior list is empty".to_string());
     }

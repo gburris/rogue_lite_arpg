@@ -1,29 +1,77 @@
-//! The decision pipeline: build the decision context, drop a stale committed behavior,
-//! score, and commit. This is the only code that changes which behaviors a
-//! [`Brain`] holds.
+//! The decision pipeline: drop a stale committed behavior, score with inputs read on demand, and
+//! commit the winners as [`RunningBehavior`]s. This is the only code that changes which behaviors
+//! a [`Brain`] holds.
 
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::capability::{
-    CapabilityComponents, CapabilityProfiles, MotionActionTable, build_capability_profiles,
-};
 #[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
 use super::engine::{
     Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
 };
+use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
-use super::perception::{
-    DecisionContext, DecisionInputComponents, DecisionInputComponentsItem, UseEligibilityQueries,
-    build_decision_context,
-};
-use super::{Action, ActionFinished, ActionOutcome, Brain};
+use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
 
-/// Seconds between a brain's scheduled decisions.
-const DECISION_PERIOD: f32 = 0.1;
+/// Longest a committed behavior may run, a safety net against a missing finish.
+const COMMIT_TIMEOUT: f32 = 3.0;
+
+/// A behavior that won its slots, with its motion and action copied from the
+/// definition and stamped with a run id so a finite motion's
+/// `CurrentBehaviorRunId` can tell a fresh
+/// start from the run it just finished. Appliers report through it, so the
+/// committed/continuously scored finish policy lives here.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct RunningBehavior {
+    pub(super) behavior: usize,
+    pub(super) motion: Option<Motion>,
+    pub(super) action: Option<Action>,
+    pub(super) behavior_run_id: u32,
+    pub(super) committed: bool,
+    pub(super) started_at: f32,
+}
+
+impl RunningBehavior {
+    pub(super) fn report_completed(self, commands: &mut Commands, entity: Entity) {
+        if let Some(finished) = self.build_action_finished(entity, ActionOutcome::Completed) {
+            commands.trigger(finished);
+        }
+    }
+
+    /// Ends a committed use the live world refused; a continuously scored use waits.
+    pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
+        if self.committed
+            && let Some(finished) = self.build_action_finished(entity, ActionOutcome::NotStarted)
+        {
+            commands.trigger(finished);
+        }
+    }
+
+    /// `None` for a record with no action to report on.
+    fn build_action_finished(
+        self,
+        entity: Entity,
+        outcome: ActionOutcome,
+    ) -> Option<ActionFinished> {
+        Some(ActionFinished {
+            entity,
+            action: self.action?,
+            behavior_run_id: self.behavior_run_id,
+            outcome,
+        })
+    }
+
+    /// Whether a committed behavior lost its target, was stunned, or timed out.
+    pub(super) fn should_drop_committed_behavior(&self, inputs: &DecisionInputs) -> bool {
+        self.committed
+            && (inputs.target().is_none()
+                || inputs.is_stunned()
+                || inputs.now - self.started_at > COMMIT_TIMEOUT)
+    }
+}
 
 type DecidingBrains<'world, 'state> = Query<
     'world,
@@ -31,7 +79,6 @@ type DecidingBrains<'world, 'state> = Query<
     (
         &'static mut Brain,
         DecisionInputComponents,
-        CapabilityComponents,
         Option<&'static mut ScoreTrace>,
     ),
 >;
@@ -43,48 +90,43 @@ pub struct ScoreTrace {
     pub behavior_explanations: Vec<BehaviorScoreExplanation>,
 }
 
-/// Puts a new brain's first decision at a random point in the next period, so brains spawned
-/// together don't all decide on the same frame.
+/// Staggers a new brain's first decision; see [`Brain::randomize_decision_phase`].
 pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookContext) {
     let now = world
         .get_resource::<Time<Virtual>>()
         .map_or(0.0, Time::elapsed_secs);
     if let Some(mut brain) = world.get_mut::<Brain>(context.entity) {
-        brain.next_decision_at = now + rand::rng().random_range(0.0..DECISION_PERIOD);
+        brain.randomize_decision_phase(now);
     }
 }
 
+/// Starts a finished motion's cooldown and, if its run is still current, decides again at once.
 pub(super) fn on_release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
-    use_eligibility_queries: UseEligibilityQueries,
+    queries: DecisionQueries,
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let now = time.elapsed_secs();
-    let Ok((mut brain, decision_input_components, components, mut score_trace)) =
-        brains.get_mut(finished.entity)
-    else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
         return;
     };
-    let capability_profiles =
-        build_capability_profiles(&components, &use_eligibility_queries.equipment);
-    let cooldown = capability_profiles[finished.motion].map_or(0.0, |profile| profile.cooldown);
-    brain.start_cooldown(finished.motion, now + cooldown);
-    if brain.finish_committed_behavior(finished.behavior_run_id) {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::after_motion").entered();
-        redecide_now(
-            &mut brain,
-            &decision_input_components,
-            &capability_profiles,
-            &use_eligibility_queries,
-            score_trace.as_deref_mut(),
-            now,
-        );
+    let inputs = DecisionInputs {
+        components: &components,
+        queries: &queries,
+        now: time.elapsed_secs(),
+    };
+    brain.start_motion_cooldown(finished.motion, &inputs);
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_motion").entered();
+    finish_and_redecide(
+        &mut brain,
+        finished.behavior_run_id,
+        &inputs,
+        score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision();
-    }
+        &mut decision_stats,
+    );
 }
 
 /// Applies an [`ActionFinished`], current or stale. An ability starts its
@@ -93,134 +135,94 @@ pub(super) fn on_release_finished_motion(
 pub(super) fn on_finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
-    use_eligibility_queries: UseEligibilityQueries,
+    queries: DecisionQueries,
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let now = time.elapsed_secs();
-    let Ok((mut brain, decision_input_components, components, mut score_trace)) =
-        brains.get_mut(finished.entity)
-    else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
         return;
     };
-    let capability_profiles =
-        build_capability_profiles(&components, &use_eligibility_queries.equipment);
+    let inputs = DecisionInputs {
+        components: &components,
+        queries: &queries,
+        now: time.elapsed_secs(),
+    };
     match finished.action {
         Action::Use(slot)
             if slot.is_instant_use() && finished.outcome == ActionOutcome::Completed =>
         {
-            brain.attack_finish_pending = true;
+            brain.record_attack_finished();
         }
-        Action::Ability(ability) => {
-            let cooldown = capability_profiles[ability].map_or(0.0, |profile| profile.cooldown);
-            brain.start_cooldown(ability, now + cooldown);
-        }
+        Action::Ability(ability) => brain.start_ability_cooldown(ability, &inputs),
         // A held or unstarted use is no attack, and nothing reports an idle
         // action's finish.
         Action::Use(_) | Action::Idle => {}
     }
-    if brain.finish_committed_behavior(finished.behavior_run_id) {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::after_action").entered();
-        redecide_now(
-            &mut brain,
-            &decision_input_components,
-            &capability_profiles,
-            &use_eligibility_queries,
-            score_trace.as_deref_mut(),
-            now,
-        );
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_action").entered();
+    finish_and_redecide(
+        &mut brain,
+        finished.behavior_run_id,
+        &inputs,
+        score_trace.as_deref_mut(),
+        #[cfg(feature = "dev_tools")]
+        &mut decision_stats,
+    );
+}
+
+/// Ends the committed behavior stamped `behavior_run_id` and, unless the finish was stale,
+/// decides again at once.
+fn finish_and_redecide(
+    brain: &mut Brain,
+    behavior_run_id: u32,
+    inputs: &DecisionInputs,
+    score_trace: Option<&mut ScoreTrace>,
+    #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
+) {
+    if brain.finish_committed_behavior(behavior_run_id) {
+        redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();
     }
 }
 
-/// Decides for every due brain. Each moves to its next period boundary after
-/// now, keeping its phase without a burst of catch-up decisions after a long frame.
+/// Decides for every brain whose scheduled decision is due; see
+/// [`Brain::advance_decision_clock`].
 pub(super) fn decide_behavior(
     time: Res<Time<Virtual>>,
-    use_eligibility_queries: UseEligibilityQueries,
+    queries: DecisionQueries,
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let now = time.elapsed_secs();
-    for (mut brain, decision_input_components, components, mut score_trace) in &mut brains {
-        if now < brain.next_decision_at {
+    for (mut brain, components, mut score_trace) in &mut brains {
+        if !brain.advance_decision_clock(now) {
             continue;
         }
-        let periods_passed = ((now - brain.next_decision_at) / DECISION_PERIOD).floor() + 1.0;
-        brain.next_decision_at += periods_passed * DECISION_PERIOD;
-        // Rounding near an exact multiple can land the boundary on `now`.
-        if brain.next_decision_at <= now {
-            brain.next_decision_at += DECISION_PERIOD;
-        }
-        let capability_profiles =
-            build_capability_profiles(&components, &use_eligibility_queries.equipment);
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::paced").entered();
         redecide_now(
             &mut brain,
-            &decision_input_components,
-            &capability_profiles,
-            &use_eligibility_queries,
+            &DecisionInputs {
+                components: &components,
+                queries: &queries,
+                now,
+            },
             score_trace.as_deref_mut(),
-            now,
         );
         #[cfg(feature = "dev_tools")]
         decision_stats.record_paced_decision();
     }
 }
 
-fn redecide_now(
-    brain: &mut Brain,
-    decision_input_components: &DecisionInputComponentsItem,
-    capability_profiles: &CapabilityProfiles,
-    use_eligibility_queries: &UseEligibilityQueries,
-    score_trace: Option<&mut ScoreTrace>,
-    now: f32,
-) {
-    let context_without_memory = {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::context").entered();
-        build_decision_context(
-            decision_input_components,
-            capability_profiles,
-            use_eligibility_queries,
-            now,
-        )
-    };
-    decide_slot_assignments(
-        brain,
-        context_without_memory,
-        capability_profiles,
-        score_trace,
-        now,
-    );
-}
-
-/// Drops committed behaviors that lost their target, were stunned or timed
-/// out, then fills the slots. A winning finite
-/// motion rolls its start chance; a miss waits out its cooldown and the next
-/// best behavior takes the slot.
-fn decide_slot_assignments(
-    brain: &mut Brain,
-    context_without_memory: DecisionContext,
-    capability_profiles: &CapabilityProfiles,
-    score_trace: Option<&mut ScoreTrace>,
-    now: f32,
-) {
-    for running in brain.running_behaviors.clone() {
-        if running.should_drop_committed_behavior(&context_without_memory, now) {
-            brain.drop_committed_behavior(running, capability_profiles, now);
-        }
-    }
-    let (context, available_motion_action_table) = {
-        #[cfg(feature = "tracy")]
-        let _span = info_span!("decide::scoring_inputs").entered();
-        brain.build_scoring_inputs(context_without_memory, capability_profiles, now)
-    };
+/// Drops stale committed behaviors, then fills the slots. A winning finite motion rolls its
+/// start chance; a miss waits out its cooldown and the next best behavior takes the slot.
+fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
+    brain.drop_stale_committed_behaviors(inputs);
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
+    let read = |input: ConsiderationInput| inputs.read_consideration_input(input, brain);
+    let available = |behavior: &Behavior| brain.is_available(behavior, inputs);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();
@@ -228,59 +230,40 @@ fn decide_slot_assignments(
         score_trace
             .behavior_explanations
             .extend((0..definition.behaviors.len()).map(|index| {
-                explain_behavior(
-                    definition,
-                    index,
-                    &context,
-                    &available_motion_action_table,
-                    &running_behavior_ids,
-                )
+                explain_behavior(definition, index, &read, &available, &running_behavior_ids)
             }));
     }
-    let mut missed_start_cooldowns = MotionActionTable::<Option<f32>>::default();
+    let mut missed_starts = Vec::new();
     let winning_behavior_ids = {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::assign").entered();
         assign_behaviors_to_slots(
             definition,
-            &context,
-            &available_motion_action_table,
+            &read,
+            &available,
             &running_behavior_ids,
-            |index| {
-                passes_start_roll(
-                    capability_profiles,
-                    definition.behaviors[index],
-                    now,
-                    &mut missed_start_cooldowns,
-                )
-            },
+            |index| passes_start_roll(inputs, definition.behaviors[index], &mut missed_starts),
         )
     };
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::commit").entered();
-    brain.commit_decision(
-        &winning_behavior_ids,
-        &missed_start_cooldowns,
-        capability_profiles,
-        now,
-    );
+    brain.commit_decision(&winning_behavior_ids, &missed_starts, inputs);
 }
 
 fn passes_start_roll(
-    capability_profiles: &CapabilityProfiles,
+    inputs: &DecisionInputs,
     behavior: Behavior,
-    now: f32,
-    missed_start_cooldowns: &mut MotionActionTable<Option<f32>>,
+    missed_starts: &mut Vec<Motion>,
 ) -> bool {
     let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) else {
         return true;
     };
-    let Some(capability_profile) = capability_profiles[motion] else {
+    let Some(capability_profile) = inputs.motion_profile(motion) else {
         return false;
     };
     if capability_profile.chance >= 1.0 || rand::rng().random::<f32>() < capability_profile.chance {
         return true;
     }
-    missed_start_cooldowns[motion] = Some(now + capability_profile.cooldown);
+    missed_starts.push(motion);
     false
 }

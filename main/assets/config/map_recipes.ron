@@ -228,6 +228,17 @@ RecipeFile(
             spawns: [],
         ),
         (
+            // One open room with no enemies, where scripts spawn their own fights
+            // (`cargo xtask ai-metrics`).
+            name: "AiTestRoom",
+            size: 40,
+            floor: Ground,
+            structures: [],
+            presets: [],
+            // The exit sits in a far corner, so fights in the middle don't wander into it.
+            spawns: [(what: PlayerStart, at: Center), (what: Exit, at: MapMin((1, 1)))],
+        ),
+        (
             // Enemies packed within reach of the player, the worst case for targeting, aim and
             // decisions. `--stress` overrides the enemy counts and starts the game here
             // (see `dev/stress.rs`).

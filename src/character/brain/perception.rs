@@ -1,4 +1,9 @@
 //! What a brain knows: vision tracks a target and aggro picks one.
+//!
+//! A character notices the watched entity in its vision cone, or at any angle within
+//! [`NOTICE_DISTANCE`], and targets it. While the target is in sight (or a [`TargetLock`] holds)
+//! [`TargetInfo`] follows it live. Out of sight it keeps the last known position, which the
+//! character can still walk to, and [`TARGET_MEMORY_SECONDS`] later the target is dropped.
 
 use std::f32::consts::FRAC_PI_4;
 
@@ -8,6 +13,12 @@ use bevy::prelude::*;
 
 use super::BrainSystems;
 use crate::prelude::*;
+
+/// Seconds a character keeps a target it can no longer see.
+const TARGET_MEMORY_SECONDS: f32 = 3.0;
+
+/// Distance within which a character notices the watched entity even outside its vision cone.
+const NOTICE_DISTANCE: f32 = 3.0 * TILE_SIZE as f32;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_damage_aggro)
@@ -53,7 +64,8 @@ impl VisionCone {
     }
 }
 
-/// Stores calculated perception data for a given potential or current target.
+/// Stores calculated perception data for a given potential or current target. A target out of
+/// sight is tracked at its last known position; see [`update_target_info`].
 #[derive(Component, Default, Clone)]
 pub(crate) struct TargetInfo {
     /// Distance to the observed entity.
@@ -70,7 +82,8 @@ pub(crate) struct TargetInfo {
     pub(super) in_vision_cone: bool,
     /// When the current `Targeting` was acquired, in virtual seconds.
     pub(super) targeted_at: f32,
-    // TODO: Add `last_known_position` for memory/prediction systems.
+    /// When the target was last in sight or held by a `TargetLock`, in virtual seconds.
+    last_seen_at: f32,
 }
 
 impl TargetInfo {
@@ -108,9 +121,10 @@ impl TargetInfo {
         self.in_vision_cone
     }
 
-    /// Whether the observed entity is in line of sight and inside the vision cone.
-    pub(super) fn is_in_view(&self) -> bool {
-        self.line_of_sight && self.in_vision_cone
+    /// Whether the observed entity is in line of sight and either inside the vision cone or
+    /// within [`NOTICE_DISTANCE`].
+    fn is_noticed(&self) -> bool {
+        self.line_of_sight && (self.in_vision_cone || self.is_within(NOTICE_DISTANCE))
     }
 }
 
@@ -188,7 +202,7 @@ pub(in crate::character) struct Watching(pub Entity);
 #[relationship_target(relationship = Watching)]
 pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
-/// Keeps `Targeting` without sight until removed. Damage aggro schedules its removal.
+/// Tracks the target live without sight until removed. Damage aggro schedules its removal.
 #[derive(Component)]
 pub(crate) struct TargetLock;
 
@@ -216,9 +230,11 @@ fn update_aim_position(
     );
 }
 
-/// Tracks direction and distance to the target (or the watched entity without
-/// one) and points the sight ray there.
+/// Points the sight ray at the target (or the watched entity without one) and tracks its
+/// direction and distance. A target that is neither in sight nor held by a [`TargetLock`] stays
+/// at its last known position, as if standing still there.
 fn update_target_info(
+    time: Res<Time<Virtual>>,
     mut npc_query: Query<
         (
             &mut TargetInfo,
@@ -226,26 +242,38 @@ fn update_target_info(
             &Transform,
             &Watching,
             Option<&Targeting>,
+            Has<TargetLock>,
         ),
         Without<Player>,
     >,
     target_query: Query<(&Transform, Option<(&Kinematics, &StatMultipliers)>)>,
 ) {
+    let now = time.elapsed_secs();
     npc_query.par_iter_mut().for_each(
-        |(mut target_info, mut ray_caster, transform, watching, targeting)| {
+        |(mut target_info, mut ray_caster, transform, watching, targeting, has_lock)| {
             let target_entity = targeting.map_or(watching.0, |t| t.0);
+            let Ok((target_transform, target_movement)) = target_query.get(target_entity) else {
+                return;
+            };
+            let position = transform.translation.xy();
+            let target_position = target_transform.translation.xy();
+            // Aimed at the feet, which a wall never covers, unlike the head of a character
+            // standing under one.
+            let target_feet = target_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET;
+            let ray_origin = position + ray_caster.origin;
+            ray_caster.direction = Dir2::new(target_feet - ray_origin).unwrap_or(Dir2::X);
 
-            if let Ok((target_transform, target_movement)) = target_query.get(target_entity) {
+            let tracked_live = targeting.is_none() || target_info.line_of_sight || has_lock;
+            if tracked_live {
                 let target_velocity = target_movement
                     .map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
                         kinematics.velocity(stat_multipliers.speed)
                     });
-                target_info.record_observation(
-                    transform.translation.xy(),
-                    target_transform.translation.xy(),
-                    target_velocity,
-                );
-                ray_caster.direction = Dir2::new(target_info.direction).unwrap_or(Dir2::X);
+                target_info.last_seen_at = now;
+                target_info.record_observation(position, target_position, target_velocity);
+            } else {
+                let last_known_position = target_info.position;
+                target_info.record_observation(position, last_known_position, Vec2::ZERO);
             }
         },
     );
@@ -326,28 +354,31 @@ fn on_targeting_added_record_time(
 ) {
     if let Ok(mut target_info) = target_infos.get_mut(added.entity) {
         target_info.targeted_at = time.elapsed_secs();
+        target_info.last_seen_at = time.elapsed_secs();
     }
 }
 
-/// Starts targeting the watched entity if it is in sight and in the vision cone.
+/// Starts targeting the watched entity once it is noticed; see [`TargetInfo::is_noticed`].
 fn should_target_watched(
     mut commands: Commands,
     npc_query: Query<(&TargetInfo, &Watching, Entity), Without<Targeting>>,
 ) {
     for (target_info, watching, entity) in &npc_query {
-        if target_info.is_in_view() {
+        if target_info.is_noticed() {
             commands.entity(entity).insert(Targeting(watching.0));
         }
     }
 }
 
-/// Stops targeting if the entity loses sight of the target or the target lock has expired.
+/// Stops targeting a target unseen for [`TARGET_MEMORY_SECONDS`].
 fn should_stop_targeting(
     mut commands: Commands,
-    npc_query: Query<(&TargetInfo, Has<TargetLock>, Entity), With<Targeting>>,
+    time: Res<Time<Virtual>>,
+    npc_query: Query<(&TargetInfo, Entity), With<Targeting>>,
 ) {
-    for (target_info, has_lock, entity) in &npc_query {
-        if !target_info.line_of_sight && !has_lock {
+    let now = time.elapsed_secs();
+    for (target_info, entity) in &npc_query {
+        if now - target_info.last_seen_at > TARGET_MEMORY_SECONDS {
             commands.entity(entity).remove::<Targeting>();
         }
     }

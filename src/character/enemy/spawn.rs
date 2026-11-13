@@ -2,6 +2,7 @@ use avian2d::prelude::{RayCaster, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
+use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
 use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
 use crate::character::physical_collider;
 use crate::prelude::*;
@@ -85,7 +86,14 @@ pub(super) fn spawn_enemy_with_equipment(
 pub(super) fn enemy_wander() -> Wander {
     Wander::new(Interval::new(3.0, 5.0), Interval::new(1.0, 2.0))
 }
-const ENEMY_SIGHT_RANGE: f32 = 350.0;
+/// How far a ground enemy sees. Past the cast range, so a caster at its outer edge keeps its
+/// target in sight.
+const ENEMY_SIGHT_RANGE: f32 = 420.0;
+
+const _: () = assert!(
+    CAST_MAX_RANGE + CAST_HYSTERESIS < ENEMY_SIGHT_RANGE,
+    "a caster holding the outer cast edge must still see its target"
+);
 
 /// The scene every enemy kind shares; each kind's file adds the rest.
 fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
@@ -101,8 +109,11 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
     }
 }
 
-pub(super) fn sight_ray(range: f32, mask: SpatialQueryFilter) -> RayCaster {
-    RayCaster::default()
+/// A sight ray cast from `origin_height` above the character's transform. Cast it from the
+/// height of the body collider, which walls keep clear of: a ray from the sprite's center
+/// starts inside the wall the character stands under.
+pub(super) fn sight_ray(range: f32, origin_height: f32, mask: SpatialQueryFilter) -> RayCaster {
+    RayCaster::new(Vec2::new(0.0, origin_height), Dir2::X)
         .with_max_distance(range)
         .with_query_filter(mask)
         .with_max_hits(1)
@@ -112,6 +123,7 @@ pub(super) fn sight_ray(range: f32, mask: SpatialQueryFilter) -> RayCaster {
 pub(super) fn ground_sight_ray() -> RayCaster {
     sight_ray(
         ENEMY_SIGHT_RANGE,
+        CHARACTER_FEET_POS_OFFSET,
         SpatialQueryFilter::from_mask([
             GameCollisionLayer::AllyHurtBox,
             GameCollisionLayer::HighObstacle,

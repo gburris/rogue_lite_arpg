@@ -25,10 +25,14 @@ pub const STAFF_REACH: f32 = 360.0;
 const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
 /// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
 const MAGE_FAN_SPEED_FACTOR: f32 = 0.2;
+/// Seconds between the player's flame staff casts.
+const FLAME_STAFF_COOLDOWN: f32 = 0.5;
+/// Seconds between a fire mage's volleys, leaving time to hop and sidestep in between.
+const MAGE_FLAME_STAFF_COOLDOWN: f32 = 1.1;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball(sprites, sprite_layouts, -FRAC_PI_8)
@@ -47,7 +51,7 @@ pub fn mage_fire_staff_single_bolt(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
@@ -62,7 +66,7 @@ pub fn mage_fire_staff_fan(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Wildfire")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)
@@ -75,9 +79,9 @@ pub fn mage_fire_staff_fan(
 }
 
 /// Shared layout, item data, sprite, and cast observers for every flame staff.
-fn flame_staff_core(sprites: &SpriteAssets) -> impl Scene {
+fn flame_staff_core(sprites: &SpriteAssets, cooldown: f32) -> impl Scene {
     bsn! {
-        @staff(sprites.fire_staff.clone(), 0.5)
+        @staff(sprites.fire_staff.clone(), cooldown)
         Staff { fire_time: 0.1, return_time: 0.1 }
         ~Item::new(1340, ItemKind::Staff)
         ManaCost(6.0)

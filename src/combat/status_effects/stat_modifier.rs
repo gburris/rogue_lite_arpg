@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use bevy::prelude::*;
 
 use super::status::{StatusKind, Statuses};
@@ -27,10 +29,11 @@ impl StatModifier {
         existing: Self,
         existing_remaining_secs: f32,
     ) -> bool {
-        let strength = self.change.abs();
-        let existing_strength = existing.change.abs();
-        strength > existing_strength
-            || (strength == existing_strength && remaining_secs >= existing_remaining_secs)
+        match self.change.abs().total_cmp(&existing.change.abs()) {
+            Ordering::Greater => true,
+            Ordering::Less => false,
+            Ordering::Equal => remaining_secs >= existing_remaining_secs,
+        }
     }
 }
 
@@ -73,7 +76,7 @@ impl Default for StatMultipliers {
 
 impl StatMultipliers {
     /// Whether its speed is lowered to nothing, as by a freeze.
-    pub fn is_stunned(&self) -> bool {
+    pub fn is_stunned(self) -> bool {
         self.speed <= 0.0
     }
 }

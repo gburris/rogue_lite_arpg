@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
 
-/// Rallied by a war cry. Only the look: the effect list that rallies carries its [`StatModifier`]s.
+/// Rallied by a war cry. Only the look: the effect list that rallies carries its
+/// [`StatModifier`](super::stat_modifier::StatModifier)s.
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(StatusKind::Rally)]
 pub struct Rallied;

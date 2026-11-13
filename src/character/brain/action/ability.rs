@@ -257,7 +257,7 @@ pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     bites: Query<(&Bite, &AbilityOf)>,
-    biters: Query<(
+    biting_characters: Query<(
         &Brain,
         &Targeting,
         &TargetInfo,
@@ -268,7 +268,8 @@ pub(super) fn apply_bite(
     let now = time.elapsed_secs();
     for (bite, ability_of) in &bites {
         let entity = ability_of.holder;
-        let Ok((brain, targeting, target_info, stat_multipliers, health)) = biters.get(entity)
+        let Ok((brain, targeting, target_info, stat_multipliers, health)) =
+            biting_characters.get(entity)
         else {
             continue;
         };

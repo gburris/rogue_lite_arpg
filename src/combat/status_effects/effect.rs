@@ -6,7 +6,7 @@ use super::status::{StatusKind, StatusOf, Statuses};
 use crate::prelude::*;
 
 #[derive(Component, Clone)]
-#[require(Disabled)]
+#[require(Disabled, Lifespan)]
 #[relationship(relationship_target = Effects)]
 pub struct EffectOf(Entity);
 
@@ -36,61 +36,51 @@ pub(super) fn on_apply_effects(
     apply_effects: On<ApplyEffects>,
     mut commands: Commands,
     effect_query: Query<
-        (&StatusKind, Option<&StatModifier>, Option<&Lifespan>),
+        (&StatusKind, Option<&StatModifier>, &Lifespan),
         (Without<StatusOf>, Allow<Disabled>),
     >,
     affected_query: Query<&Statuses>,
     status_query: Query<(&StatusKind, Option<&StatModifier>, &Lifespan), With<StatusOf>>,
 ) {
-    let mut new_effects: Vec<(StatusKind, Entity)> = Vec::new();
+    let target = apply_effects.target;
+    let statuses = affected_query.get(target).ok();
+    let mut seen_kinds = Vec::new();
     for &effect in &apply_effects.effects {
-        let Ok((kind, ..)) = effect_query.get(effect) else {
+        let Ok((kind, modifier, lifespan)) = effect_query.get(effect) else {
             warn!("Entity {effect:?} missing StatusKind component, skipping it");
             continue;
         };
-        if new_effects.iter().all(|(new_kind, _)| new_kind != kind) {
-            new_effects.push((*kind, effect));
+        if seen_kinds.contains(kind) {
+            continue;
         }
-    }
+        seen_kinds.push(*kind);
 
-    if let Ok(statuses) = affected_query.get(apply_effects.target) {
-        for status in statuses.iter() {
-            let Ok((kind, existing_modifier, existing_lifespan)) = status_query.get(status) else {
-                continue;
-            };
-            let Some(index) = new_effects
-                .iter()
-                .position(|(new_kind, _)| new_kind == kind)
-            else {
-                continue;
-            };
-            let (_, effect) = new_effects[index];
-            let keeps_existing = existing_modifier.is_some_and(|existing_modifier| {
-                let Ok((_, Some(modifier), lifespan)) = effect_query.get(effect) else {
-                    return false;
-                };
-                // A template without a `Lifespan` gets the default one `StatusOf` requires.
-                let remaining_secs = lifespan.cloned().unwrap_or_default().remaining_secs();
-                !modifier.outranks(
-                    remaining_secs,
+        let existing = statuses
+            .into_iter()
+            .flat_map(Statuses::iter)
+            .find_map(|status| {
+                let (existing_kind, existing_modifier, existing_lifespan) =
+                    status_query.get(status).ok()?;
+                (existing_kind == kind).then_some((status, existing_modifier, existing_lifespan))
+            });
+        if let Some((status, existing_modifier, existing_lifespan)) = existing {
+            if let (Some(modifier), Some(existing_modifier)) = (modifier, existing_modifier)
+                && !modifier.outranks(
+                    lifespan.remaining_secs(),
                     *existing_modifier,
                     existing_lifespan.remaining_secs(),
                 )
-            });
-            if keeps_existing {
-                new_effects.remove(index);
-            } else {
-                commands.entity(status).despawn();
+            {
+                continue;
             }
+            commands.entity(status).despawn();
         }
-    }
 
-    debug!("Applying effects: {new_effects:?}");
-    for (_, effect) in new_effects {
+        debug!("Applying effect {effect:?} to {target:?}");
         commands
             .entity(effect)
             .clone_and_spawn()
             .remove::<(Disabled, EffectOf)>()
-            .insert(StatusOf(apply_effects.target));
+            .insert(StatusOf(target));
     }
 }

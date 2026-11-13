@@ -271,7 +271,10 @@ pub(super) fn reflect_projectiles(
         (&mut ProjectileReflection, &CollidingEntities, &ChildOf),
         With<Collider>,
     >,
-    mut projectile_query: Query<(&mut LinearVelocity, &mut Transform), With<Projectile>>,
+    mut projectile_query: Query<
+        (&mut LinearVelocity, &mut Transform, Option<&mut Lifespan>),
+        With<Projectile>,
+    >,
     holder_query: Query<&CombatSide>,
 ) {
     for (mut reflection, colliding_entities, child_of) in &mut reflector_query {
@@ -282,7 +285,7 @@ pub(super) fn reflect_projectiles(
             if reflection.reflected.contains(&colliding_entity) {
                 continue;
             }
-            if let Ok((mut linear_velocity, mut transform)) =
+            if let Ok((mut linear_velocity, mut transform, lifespan)) =
                 projectile_query.get_mut(colliding_entity)
             {
                 // The blocker takes over: the reflected projectile now hurts the blocker's enemies.
@@ -295,6 +298,11 @@ pub(super) fn reflect_projectiles(
 
                 // Rotate projectile sprite to face new velocity direction
                 transform.rotation = Quat::from_rotation_z(linear_velocity.0.to_angle());
+
+                // A full range again, so it can fly all the way back to whoever fired it.
+                if let Some(mut lifespan) = lifespan {
+                    lifespan.reset();
+                }
 
                 commands.entity(colliding_entity).insert((
                     CollisionLayers::new(

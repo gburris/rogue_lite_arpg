@@ -7,7 +7,9 @@ use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use super::bite_hitbox::BiteHitbox;
-use crate::character::brain::{Action, Allies, Brain, CapabilityProfile, TargetInfo, Targeting};
+use crate::character::brain::{
+    Action, Allies, Brain, CapabilityProfile, Motion, TargetInfo, Targeting,
+};
 use crate::prelude::*;
 
 /// An innate move a brain can ask its character for, carried out by a capability
@@ -252,7 +254,9 @@ pub(super) fn apply_breath(
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
-        let ready = brain.is_cooldown_ready(Ability::Breathe, now);
+        // Never mid-dash or mid-dive: the decision that starts one can still hold a breath.
+        let bursting = brain.motion().is_some_and(Motion::is_finite);
+        let ready = brain.is_cooldown_ready(Ability::Breathe, now) && !bursting;
         let Some(aim_direction) = target_info
             .nonzero_direction()
             .filter(|_| ready && has_target && target_info.line_of_sight)

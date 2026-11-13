@@ -125,11 +125,6 @@ struct SnapshotParams {
     hits_after: u64,
 }
 
-/// `game/snapshot {hits_after?}`: the frame number, app and menu states, game time, the current
-/// map (its entity changes with every build), the player and their inventory, every enemy's
-/// brain, movement and perception, villagers, projectiles, items on the ground, interactables,
-/// portals and the latest hits. Each hit has a `sequence`; pass a snapshot's `last_hit` back as
-/// `hits_after` to get only the hits landed since that snapshot.
 pub(super) fn take_snapshot(
     In(params): In<Option<Value>>,
     frame_count: Res<FrameCount>,

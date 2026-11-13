@@ -7,12 +7,20 @@ use std::time::{Duration, Instant};
 use std::{env, thread};
 
 use anyhow::{Context, Result, bail, ensure};
+use clap::Args;
 use serde_json::{Value, json};
 
 use crate::process::{ChildProcess, run_to_completion};
 
-/// Where the game's `RemoteHttpPlugin` listens.
-const ADDRESS: &str = "127.0.0.1:15702";
+/// Warnings every run logs, by a phrase each contains. Any other warning is a problem.
+const EXPECTED_WARNINGS: [&str; 3] = [
+    // Bevy can't read CPU and memory usage on this platform.
+    "This platform and/or configuration is not supported",
+    // The startup ambiguity report, which lists third-party pairs.
+    "pairs of systems with conflicting data access",
+    // The Helper villager's placeholder interaction.
+    "on_game_guide_start",
+];
 /// Time a started game gets to open its remote server.
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(300);
 /// Time a closed game gets to exit before it is killed.
@@ -36,20 +44,35 @@ pub(super) enum MouseButton {
     Secondary,
 }
 
+/// Options every command that drives the game shares.
+#[derive(Args, Clone, Copy, Debug)]
+pub(super) struct RemoteArgs {
+    #[arg(
+        long,
+        default_value_t = 15702,
+        help = "Port the game's remote protocol server listens on; give each parallel run its own"
+    )]
+    remote_port: u16,
+}
+
 /// A dev build of the game started for a script and driven over the Bevy Remote Protocol with
 /// the `game/…` methods in `src/dev/remote/`. Killed if still running when dropped.
 pub(super) struct ScriptedGame {
     process: ChildProcess,
+    address: String,
     next_request_id: u64,
     last_hit_read: u64,
 }
 
 impl ScriptedGame {
     /// Builds and starts the dev game, logging to `log_file`, and waits for its remote server.
-    pub(super) fn launch(log_file: &Path) -> Result<Self> {
+    pub(super) fn launch(log_file: &Path, remote_args: RemoteArgs) -> Result<Self> {
+        let port = remote_args.remote_port;
+        let address = format!("127.0.0.1:{port}");
         ensure!(
-            send_request(ADDRESS, &request_body(0, "game/snapshot", &Value::Null)).is_err(),
-            "a game is already serving the remote protocol on {ADDRESS}; close it first"
+            send_request(&address, &request_body(0, "game/snapshot", &Value::Null)).is_err(),
+            "a game is already serving the remote protocol on {address}; close it first, or \
+             pass another --remote-port"
         );
 
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
@@ -60,12 +83,14 @@ impl ScriptedGame {
         let process = ChildProcess::spawn(
             "the game",
             Command::new(&cargo)
-                .args(["run", "--quiet"])
+                .args(["run", "--quiet", "--", "--remote-port"])
+                .arg(port.to_string())
                 .stdout(log.try_clone()?)
                 .stderr(log),
         )?;
         let mut game = Self {
             process,
+            address,
             next_request_id: 0,
             last_hit_read: 0,
         };
@@ -91,7 +116,8 @@ impl ScriptedGame {
         self.next_request_id += 1;
         let body = request_body(self.next_request_id, method, &params);
 
-        let response = send_request(ADDRESS, &body).with_context(|| format!("calling {method}"))?;
+        let response =
+            send_request(&self.address, &body).with_context(|| format!("calling {method}"))?;
         let mut response: Value = serde_json::from_str(&response)
             .with_context(|| format!("{method} answered with invalid JSON: {response}"))?;
 
@@ -313,6 +339,43 @@ impl ScriptedGame {
         let _ = self.call("game/exit", Value::Null);
         self.process.wait_or_kill(EXIT_TIMEOUT)
     }
+}
+
+/// The lines of a game log that mark a problem: errors, panics, and warnings other than the
+/// [`EXPECTED_WARNINGS`].
+pub(super) fn log_problems(log_file: &Path) -> Result<Vec<String>> {
+    let log =
+        fs::read_to_string(log_file).with_context(|| format!("reading {}", log_file.display()))?;
+
+    let is_problem = |line: &String| {
+        let is_error = line.contains(" ERROR ") || line.contains("panicked at");
+        let is_unexpected_warning = line.contains(" WARN ")
+            && !EXPECTED_WARNINGS
+                .iter()
+                .any(|expected| line.contains(expected));
+        is_error || is_unexpected_warning
+    };
+    Ok(log
+        .lines()
+        .map(without_terminal_colors)
+        .filter(is_problem)
+        .collect())
+}
+
+/// A log line without the escape sequences that color it in a terminal.
+fn without_terminal_colors(line: &str) -> String {
+    let mut plain = String::new();
+    let mut characters = line.chars();
+
+    while let Some(character) = characters.next() {
+        if character == '\u{1b}' {
+            // A color sequence runs from the escape to its closing `m`.
+            characters.by_ref().find(|&character| character == 'm');
+        } else {
+            plain.push(character);
+        }
+    }
+    plain
 }
 
 /// Whether a snapshot shows the player in the `Playing` state.

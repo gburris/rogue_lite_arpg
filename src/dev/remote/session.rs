@@ -7,7 +7,6 @@ use serde_json::{Value, json};
 use super::json::{debug_name, parse_params};
 use crate::prelude::*;
 
-/// `game/start`: leaves the start screen, as its button does.
 #[expect(
     clippy::unnecessary_wraps,
     reason = "remote method handlers return `BrpResult`"
@@ -30,7 +29,6 @@ struct LoadMapParams {
     seed: Option<u64>,
 }
 
-/// `game/load_map {recipe, seed?}`: builds a map recipe by name, replacing the current map.
 pub(super) fn load_map(In(params): In<Option<Value>>, mut next_map: NextMap) -> BrpResult {
     let LoadMapParams { recipe, seed } = parse_params(params)?;
 
@@ -47,8 +45,6 @@ struct TimeParams {
     speed: Option<f32>,
 }
 
-/// `game/time {paused?, speed?}`: pauses, resumes or rescales game time, then returns it. Physics
-/// and fixed steps follow; menus and real-time tools don't.
 pub(super) fn control_time(
     In(params): In<Option<Value>>,
     mut virtual_time: ResMut<Time<Virtual>>,
@@ -76,7 +72,6 @@ struct ScreenshotParams {
     path: String,
 }
 
-/// `game/screenshot {path}`: saves the primary window to an image file a frame or two later.
 pub(super) fn take_screenshot(In(params): In<Option<Value>>, mut commands: Commands) -> BrpResult {
     let ScreenshotParams { path } = parse_params(params)?;
 
@@ -87,7 +82,6 @@ pub(super) fn take_screenshot(In(params): In<Option<Value>>, mut commands: Comma
     Ok(Value::Null)
 }
 
-/// `game/exit`: closes the game after this frame.
 #[expect(
     clippy::unnecessary_wraps,
     reason = "remote method handlers return `BrpResult`"

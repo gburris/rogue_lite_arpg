@@ -37,10 +37,6 @@ struct PlayerInputParams {
     offhand: bool,
 }
 
-/// `game/player_input {move?, aim?, mainhand?, offhand?}`: drives the player's own input actions,
-/// so the game reacts as it does to the keyboard and mouse. `move` and `offhand` stay held until
-/// the next call, and a call without them lets go. `mainhand` is one click per call, as long as a
-/// frame passes between calls. `aim` moves the reticle to an offset from the player.
 pub(super) fn set_player_input(
     In(params): In<Option<Value>>,
     mut commands: Commands,
@@ -132,10 +128,6 @@ struct KeyParams {
     action: KeyAction,
 }
 
-/// `game/key {key, action}`: presses, releases or taps a key as if typed into the window, so
-/// every binding works, such as `"Space"` to interact, `"KeyI"` for the inventory, `"Escape"` to
-/// pause and the dev keys. `key` is a `KeyCode` name and `action` is `press`, `release` or `tap`.
-/// A key still held by an earlier tap is released first, so every tap counts as a new press.
 pub(super) fn press_key(
     In(params): In<Option<Value>>,
     mut pending_key_events: ResMut<PendingKeyEvents>,
@@ -214,9 +206,6 @@ struct ClickParams {
     button: ClickButton,
 }
 
-/// `game/click {position, button?}`: moves the mouse pointer to `position` in logical window
-/// pixels and clicks there, which activates buttons and inventory slots. `button` is `primary`
-/// (the default) or `secondary`. `game/ui` lists where text is drawn.
 pub(super) fn click(
     In(params): In<Option<Value>>,
     window: Single<Entity, With<PrimaryWindow>>,
@@ -263,8 +252,6 @@ fn press_pending_clicks(
     }
 }
 
-/// `game/ui`: every visible UI text with its center and size in logical window pixels, for
-/// `game/click`.
 #[expect(
     clippy::unnecessary_wraps,
     reason = "remote method handlers return `BrpResult`"

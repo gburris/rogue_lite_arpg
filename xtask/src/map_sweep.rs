@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use serde_json::{Value, json};
 
-use crate::remote::{ScriptedGame, distance, length, list, point};
+use crate::remote::{RemoteArgs, ScriptedGame, distance, length, list, point};
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
 
@@ -22,6 +22,9 @@ const STUCK_DISTANCE: f64 = 5.0;
 /// Options for `map-sweep`.
 #[derive(Args)]
 pub(super) struct MapSweepArgs {
+    #[command(flatten)]
+    remote: RemoteArgs,
+
     #[arg(
         long,
         value_delimiter = ',',
@@ -70,7 +73,7 @@ pub(super) fn run(args: &MapSweepArgs) -> Result<()> {
     fs::create_dir_all(&args.output_directory)
         .with_context(|| format!("creating {}", args.output_directory.display()))?;
 
-    let mut game = ScriptedGame::launch(&args.output_directory.join("game.log"))?;
+    let mut game = ScriptedGame::launch(&args.output_directory.join("game.log"), args.remote)?;
     game.call("game/start", Value::Null)?;
     game.wait_until_playing(Duration::from_secs(120))?;
 

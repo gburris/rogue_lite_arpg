@@ -7,11 +7,11 @@ use clap::Args;
 use serde_json::{Value, json};
 
 use crate::remote::{
-    MouseButton, POLL_INTERVAL, ScriptedGame, attack_input, distance, is_playing, list, nearest,
-    point,
+    MouseButton, POLL_INTERVAL, RemoteArgs, ScriptedGame, attack_input, distance, is_playing, list,
+    log_problems, nearest, point,
 };
 use crate::sweep::enter_repository_root;
-use crate::table::Table;
+use crate::table::{Table, optional_cell};
 
 /// Items the playthrough equips from the starting inventory.
 const MAINHAND: &str = "Sword";
@@ -35,6 +35,9 @@ const FIGHT_REACH: f64 = 60.0;
 /// Options for `playthrough`.
 #[derive(Args)]
 pub(super) struct PlaythroughArgs {
+    #[command(flatten)]
+    remote: RemoteArgs,
+
     #[arg(
         long,
         default_value = "runs/playthrough",
@@ -107,6 +110,21 @@ impl Playthrough {
         );
         self.game.screenshot(&self.output_directory.join(file))
     }
+
+    /// Saves the game's state next to the screenshots, for working out why the current step
+    /// failed. Does nothing if the game no longer answers.
+    fn save_failure_snapshot(&mut self) -> Result<()> {
+        let Ok(snapshot) = self.game.snapshot() else {
+            return Ok(());
+        };
+        let file = self.output_directory.join(format!(
+            "{:02}_{}_failure.json",
+            self.step_index + 1,
+            STEPS[self.step_index].name
+        ));
+        fs::write(&file, serde_json::to_string_pretty(&snapshot)?)
+            .with_context(|| format!("writing {}", file.display()))
+    }
 }
 
 /// Plays the fixed route from the start screen through death and restart, screenshotting each
@@ -120,7 +138,8 @@ pub(super) fn run(args: &PlaythroughArgs) -> Result<()> {
     fs::create_dir_all(&args.output_directory)
         .with_context(|| format!("creating {}", args.output_directory.display()))?;
 
-    let game = ScriptedGame::launch(&args.output_directory.join("game.log"))?;
+    let log_file = args.output_directory.join("game.log");
+    let game = ScriptedGame::launch(&log_file, args.remote)?;
     let mut playthrough = Playthrough {
         game,
         output_directory: args.output_directory.clone(),
@@ -151,12 +170,33 @@ pub(super) fn run(args: &PlaythroughArgs) -> Result<()> {
         ]);
         if result != "ok" {
             failed = true;
+            playthrough.save_failure_snapshot()?;
             break;
         }
     }
     playthrough.game.exit()?;
 
+    let problems = log_problems(&log_file)?;
+    let (result, notes) = if problems.is_empty() {
+        ("ok", "no errors or unexpected warnings".to_owned())
+    } else {
+        failed = true;
+        (
+            "FAILED",
+            format!("{} problems, listed below", problems.len()),
+        )
+    };
+    table.add_row(vec![
+        "log".to_owned(),
+        result.to_owned(),
+        optional_cell(None),
+        notes,
+    ]);
+
     println!("\n{table}");
+    for problem in &problems {
+        println!("log: {problem}");
+    }
     println!("screenshots in {}", args.output_directory.display());
     ensure!(!failed, "the playthrough failed");
     Ok(())

@@ -12,7 +12,6 @@ struct TeleportParams {
     position: Vec2,
 }
 
-/// `game/teleport_player {position}`: moves the player to a world position.
 pub(super) fn teleport_player(
     In(params): In<Option<Value>>,
     mut player: Single<&mut Transform, With<Player>>,
@@ -44,10 +43,6 @@ struct SpawnEnemiesParams {
     aggro: bool,
 }
 
-/// `game/spawn_enemies {kind, positions, facing?, aggro?}`: spawns enemies of one `EnemyKind` at
-/// world positions and returns their entities. `facing` (`up`, `down`, `left` or `right`) turns
-/// them until they first move; `aggro` starts them targeting the player as a hit would, see
-/// [`lock_onto_target`].
 pub(super) fn spawn_enemies(In(params): In<Option<Value>>, world: &mut World) -> BrpResult {
     let SpawnEnemiesParams {
         kind,
@@ -123,7 +118,6 @@ fn aggro_enemies_on_player(world: &mut World, enemies: &[Entity]) -> BrpResult<(
     Ok(())
 }
 
-/// `game/despawn_enemies`: removes every enemy, such as an arena's own before a scripted fight.
 #[expect(
     clippy::unnecessary_wraps,
     reason = "remote method handlers return `BrpResult`"
@@ -146,7 +140,6 @@ struct PlayerHealthParams {
     max_hp: f32,
 }
 
-/// `game/set_player_health {hp, max_hp}`.
 pub(super) fn set_player_health(
     In(params): In<Option<Value>>,
     mut player_health: Single<&mut Health, With<Player>>,
@@ -165,7 +158,6 @@ struct PlayerManaParams {
     max_mana: Option<f32>,
 }
 
-/// `game/set_player_mana {mana, max_mana?}`.
 pub(super) fn set_player_mana(
     In(params): In<Option<Value>>,
     mut player_mana: Single<&mut Mana, With<Player>>,
@@ -185,7 +177,6 @@ struct InvincibleParams {
     invincible: bool,
 }
 
-/// `game/set_invincible {invincible}`.
 pub(super) fn set_invincible(
     In(params): In<Option<Value>>,
     mut commands: Commands,
@@ -207,9 +198,6 @@ struct GiveItemParams {
     item: String,
 }
 
-/// `game/give_item {item}`: adds a new item to the player's inventory and returns its entity.
-/// `item` is one of `sword`, `axe`, `freeze_axe`, `fire_staff`, `ice_staff`, `knight_shield`,
-/// `magic_shield`, `health_potion` or `tome_of_healing`.
 pub(super) fn give_item(
     In(params): In<Option<Value>>,
     mut commands: Commands,
@@ -252,9 +240,6 @@ struct UseItemParams {
     action: ItemAction,
 }
 
-/// `game/use_item {item, action}`: equips, unequips, consumes or drops one of the player's items,
-/// through the same events as the inventory screen, without opening it. `item` is an entity from
-/// the snapshot's `player.inventory`.
 pub(super) fn use_item(
     In(params): In<Option<Value>>,
     mut commands: Commands,

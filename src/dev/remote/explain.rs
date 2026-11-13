@@ -11,10 +11,6 @@ struct ExplainParams {
     entity: Option<u64>,
 }
 
-/// `game/explain {entity?}`: how each of a brain's behaviors scored at its last decision, with
-/// every consideration's input and score, or why the behavior sat out. Without `entity`, returns
-/// a list with every brain. The first call on a brain starts tracing it and returns no behaviors;
-/// it stays traced until it despawns.
 pub(super) fn explain_brains(
     In(params): In<Option<Value>>,
     mut commands: Commands,

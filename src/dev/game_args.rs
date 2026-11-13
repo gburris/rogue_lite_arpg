@@ -19,4 +19,12 @@ pub(crate) struct GameArgs {
         help = "Write the Update and FixedUpdate schedule graphs to runs/schedules, then exit"
     )]
     pub(crate) dump_schedules: bool,
+
+    #[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+    #[arg(
+        long,
+        default_value_t = bevy::remote::http::DEFAULT_PORT,
+        help = "Port the remote protocol server listens on, so several games can run at once"
+    )]
+    pub(super) remote_port: u16,
 }

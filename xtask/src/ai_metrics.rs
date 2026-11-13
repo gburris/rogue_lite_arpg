@@ -10,7 +10,9 @@ use anyhow::{Context, Result, ensure};
 use clap::{Args, ValueEnum};
 use serde_json::{Value, json};
 
-use crate::remote::{Point, ScriptedGame, attack_input, distance, length, list, nearest, point};
+use crate::remote::{
+    Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, point,
+};
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
 
@@ -52,8 +54,18 @@ const METRICS: [&str; 10] = [
 /// Options for `ai-metrics`.
 #[derive(Args)]
 pub(super) struct AiMetricsArgs {
+    #[command(flatten)]
+    remote: RemoteArgs,
+
     #[arg(long, default_value_t = 20.0, help = "Game seconds per scenario")]
     seconds: f64,
+
+    #[arg(
+        long,
+        default_value_t = 1.0,
+        help = "Game speed during scenarios; above 1 the run is shorter but less like real play"
+    )]
+    speed: f64,
 
     #[arg(long, default_value_t = 3, help = "Enemies spawned per scenario")]
     enemies: usize,
@@ -121,11 +133,12 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     fs::create_dir_all(&recordings)
         .with_context(|| format!("creating {}", recordings.display()))?;
 
-    let mut game = ScriptedGame::launch(&recordings.join("game.log"))?;
+    let mut game = ScriptedGame::launch(&recordings.join("game.log"), args.remote)?;
     game.call("game/start", Value::Null)?;
     game.wait_until_playing(Duration::from_secs(120))?;
     thread::sleep(Duration::from_secs(1));
     game.equip_from_inventory(&["Sword"])?;
+    game.call("game/time", json!({ "speed": args.speed }))?;
 
     let mut results = Vec::new();
     for kind in &args.kinds {
@@ -219,7 +232,8 @@ fn record_scenario(
             player_input(script, &snapshot, elapsed),
         )?;
         frames.push(snapshot);
-        thread::sleep(SAMPLE_INTERVAL);
+        // Sampled at the same game-time interval whatever the speed.
+        thread::sleep(SAMPLE_INTERVAL.div_f64(args.speed));
     }
     game.release_player_input()?;
     Ok(frames)

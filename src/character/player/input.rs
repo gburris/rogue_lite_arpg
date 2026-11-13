@@ -116,11 +116,11 @@ fn set_controls(
 
 #[derive(InputAction)]
 #[action_output(bool)]
-struct UseMainhand;
+pub(crate) struct UseMainhand;
 
 #[derive(InputAction)]
 #[action_output(bool)]
-struct UseOffhand;
+pub(crate) struct UseOffhand;
 
 fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut equipment: EquipmentUsage) {
     // Discarded: failures are already queued as `EquipmentUseFailed` for the HUD.

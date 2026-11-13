@@ -27,6 +27,8 @@ pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
+#[cfg(feature = "dev_native")]
+pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{Allies, TargetInfo, Targeting, VisionCone};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;

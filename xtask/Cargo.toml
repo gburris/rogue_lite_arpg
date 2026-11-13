@@ -9,6 +9,7 @@ description = "Stress sweeps, stress summary comparisons and Tracy zone reports 
 anyhow = "1.0.104"
 clap = { workspace = true }
 jiff = "0.2"
+serde_json = "1"
 
 [lints]
 workspace = true

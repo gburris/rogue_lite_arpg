@@ -61,7 +61,7 @@ dev_native = [
     "bevy/file_watcher",
     # Enable embedded asset hot reloading for native dev builds.
     "bevy/embedded_watcher",
-    # Inspect and drive the running game over the Bevy Remote Protocol (see `dev/remote.rs`).
+    # Inspect and drive the running game over the Bevy Remote Protocol (see `dev/remote/`).
     "bevy/bevy_remote",
     "dep:serde_json",
 ]

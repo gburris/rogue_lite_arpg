@@ -10,7 +10,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(InputAction)]
 #[action_output(Vec2)]
-pub(super) struct PlayerMovement;
+pub(crate) struct PlayerMovement;
 
 fn on_player_movement(
     movement: On<Fire<PlayerMovement>>,

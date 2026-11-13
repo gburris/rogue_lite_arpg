@@ -92,6 +92,7 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
     let brain = kind.brain();
     bsn! {
         Enemy
+        template(move |_| Ok(kind))
         template(move |_| Ok(Brain::new(brain)))
         Transform::from_translation({position.extend(ZLayer::OnGround.z())})
         ~HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0)

@@ -48,6 +48,10 @@ impl ChildProcess {
         Ok(())
     }
 
+    pub(super) fn has_exited(&mut self) -> bool {
+        !matches!(self.child.try_wait(), Ok(None))
+    }
+
     fn kill(&mut self) {
         // Either call fails only when the program already exited, which is the goal anyway.
         let _ = self.child.kill();

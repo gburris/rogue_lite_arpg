@@ -157,8 +157,9 @@ const BAT_BREATH_PERIOD: f32 = 1.1;
 const BAT_TURN_RATE: f32 = 6.0;
 /// Half-width of a bat's rerolled orbit-radius offset from the band's centre.
 const BAT_ORBIT_MAX_DISTANCE_OFFSET: f32 = 50.0;
-/// Contact range for a bite in world units. Anatomy, not tuning.
-const BITE_REACH: f32 = 30.0;
+/// Contact range for a bite in world units, where its hitbox's front edge reaches. Short enough
+/// that a sidestep as the dive starts usually gets clear.
+const BITE_REACH: f32 = 24.0;
 const BITE_DAMAGE: f32 = 6.0;
 /// Radius of the bite's hitbox: about the bat's own size.
 const BAT_BITE_RADIUS: f32 = 12.0;

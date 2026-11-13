@@ -166,11 +166,12 @@ The profiling build has no console. To read a panic, redirect stderr:
 ## xtask
 
 ```
-cargo xtask <sweep|compare|perf-report> [options]
+cargo xtask <sweep|compare|perf-report|playthrough|ai-metrics|map-sweep> [options]
 ```
 
 Development commands written in Rust. Run them from any folder in the repository. Add `--help`
-to see all options.
+to see all options. The last three play the game through its remote protocol; see
+[Scripted play tools](#scripted-play-tools).
 
 ### sweep
 
@@ -266,6 +267,153 @@ The dev build writes `runs/schedules/update.dot` and `runs/schedules/fixed_updat
 quits.
 
 **Requires:** Graphviz (`dot`) on `PATH` to make the images.
+
+# Scripted play tools
+
+These tools start the dev build and play it through the Bevy Remote Protocol, so a script or an
+AI agent can test the game without a person at the keyboard.
+
+| Question | Tool |
+| --- | --- |
+| Does the game still work from the start screen to a restart? | [`cargo xtask playthrough`](#playthrough) |
+| Did a change make the enemies fight differently? | [`cargo xtask ai-metrics`](#ai-metrics) on the old and new code |
+| Do the map recipes build without stuck enemies? | [`cargo xtask map-sweep`](#map-sweep) |
+| Why did an enemy choose that behavior? | `game/explain` in the [remote protocol](#remote-protocol) |
+| How do I try one thing by hand, or from my own script? | The [remote protocol](#remote-protocol) |
+
+All output goes to `runs/`.
+
+## Check a change
+
+1. After any gameplay or UI change, play the fixed route:
+
+   ```sh
+   cargo xtask playthrough
+   ```
+
+   Every step must show `ok`, including the `log` row.
+
+2. For an AI change, record the old code first, then the new code:
+
+   ```sh
+   cargo xtask ai-metrics    # on the old code
+   cargo xtask ai-metrics    # on the new code; prints changes against the first run
+   ```
+
+3. For a map recipe or placement change, build many seeds:
+
+   ```sh
+   cargo xtask map-sweep --seeds 20
+   ```
+
+For a fair `ai-metrics` comparison:
+
+- Use the same `--seconds`, `--enemies`, `--repeats` and `--speed` for both runs.
+- Trust only large changes. Enemy decisions are random, so two runs of the same code differ.
+- Check which file the changes are against. The command prints its name.
+
+## Remote protocol
+
+The native dev build serves the Bevy Remote Protocol on `127.0.0.1:15702`. It adds `game/...`
+methods to Bevy's built-in `world....` methods.
+
+```sh
+cargo run -- --remote-port 15702
+curl -d '{"jsonrpc":"2.0","id":1,"method":"game/help"}' 127.0.0.1:15702
+```
+
+| Method | Use it to |
+| --- | --- |
+| `game/help` | List every `game/...` method with its params |
+| `game/snapshot` | Read the state: player, enemies, items, menus, map and recent hits |
+| `game/player_input`, `game/key`, `game/click`, `game/ui` | Play: move, aim, attack, press keys and click UI text |
+| `game/load_map`, `game/spawn_enemies`, `game/set_player_health`, `game/give_item` and others | Set up a test |
+| `game/explain` | See how a brain scored each behavior at its last decision |
+| `game/time`, `game/screenshot`, `game/exit` | Control the session |
+
+Use a different `--remote-port` for each game to run several at the same time.
+
+## playthrough
+
+```
+cargo xtask playthrough [options]
+```
+
+Plays a fixed route: start screen, equip a sword and shield, pause, use and drop items, talk to
+every villager, take the portal, fight two warriors, die and restart. The run stops at the first
+failed step.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--output-directory <path>` | `runs/playthrough` | Output folder. The next run overwrites it |
+| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+
+**Output:** a table with one row for each step, and a `log` row that fails if the game logged an
+error, a panic or an unexpected warning. In the output folder, a screenshot for each step, the
+`game.log`, and a `<step>_failure.json` snapshot of the game state if a step failed.
+
+```sh
+cargo xtask playthrough
+cargo xtask playthrough --remote-port 15710
+```
+
+## ai-metrics
+
+```
+cargo xtask ai-metrics [options]
+```
+
+Fights each enemy kind against each player script in an empty room. Measures how the enemies
+moved and fought, and compares the result with an earlier run.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--kinds <kind,...>` | `Warrior,IceMage,FireMage,Bat` | Enemy kinds |
+| `--scripts <script,...>` | `still,strafe,fight` | What the player does: stands, strafes, or attacks the nearest enemy |
+| `--enemies <n>` | `3` | Enemies for each scenario |
+| `--seconds <n>` | `20` | Game seconds for each scenario |
+| `--repeats <n>` | `3` | Runs for each scenario. The table shows the median |
+| `--speed <n>` | `1` | Game speed. `2` halves the run time, but `reversals/min` is then not comparable with a run at `1` |
+| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against |
+| `--output-directory <path>` | `runs/ai_metrics` | Output folder |
+| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+
+**Output:** a table with one row for each kind and script. The columns are the time to notice the
+player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
+player, the mean distance to the player, and kills. In the output folder, `<commit>.tsv` with the
+table and a `<commit>` folder with a `.jsonl` recording of each run.
+
+```sh
+cargo xtask ai-metrics
+cargo xtask ai-metrics --kinds FireMage --scripts still --repeats 5
+cargo xtask ai-metrics --speed 2 --baseline runs/ai_metrics/765c134.tsv
+```
+
+## map-sweep
+
+```
+cargo xtask map-sweep [options]
+```
+
+Builds each map recipe with each seed. Flags enemies that try to move but stay in place, which
+usually means that they spawned inside or against a wall.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--recipes <name,...>` | `Swamp,SwampWithALotOfEmptySquares,LongHallway,TreasureRoom,FireShrine,SkyTempleAscent` | Map recipes to build |
+| `--seeds <n>` | `10` | Seeds for each recipe, from 1 |
+| `--screenshots` | Off | Takes a screenshot of every map, not only flagged maps |
+| `--output-directory <path>` | `runs/map_sweep` | Output folder |
+| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+
+**Output:** a table with one row for each recipe: maps built, enemy and chest counts, the closest
+enemy to the start, and flagged maps. In the output folder, `sweep.tsv` with one row for each map
+and a screenshot of each flagged map.
+
+```sh
+cargo xtask map-sweep
+cargo xtask map-sweep --recipes Swamp,FireShrine --seeds 50 --screenshots
+```
 
 # Dev keys and logs
 

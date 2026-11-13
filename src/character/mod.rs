@@ -18,6 +18,8 @@ pub mod prelude {
     pub use super::Character;
     #[cfg(feature = "dev")]
     pub(crate) use super::brain::TargetInfo;
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::brain::lock_onto_target;
     pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
@@ -27,6 +29,8 @@ pub mod prelude {
         Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,
         PlayerInteraction, PlayerInteractionRadius,
     };
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::player::prelude::{PlayerMovement, UseMainhand, UseOffhand};
     pub use super::purse::Purse;
     pub use super::state::{Attacking, FacingDirection, Kinematics, Vision};
 }

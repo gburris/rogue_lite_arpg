@@ -11,9 +11,13 @@ pub mod prelude {
     pub(crate) use super::MapRng;
     pub use super::chest::SpawnChests;
     pub use super::gold::DropGold;
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::map::prelude::MapBlueprint;
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::map::prelude::MapRecipe;
     pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::portal::Portal;
     pub use super::portal::portal;
 }
 

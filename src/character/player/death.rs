@@ -1,3 +1,4 @@
+use avian2d::prelude::RigidBody;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -23,7 +24,8 @@ pub(super) fn on_player_defeated(
     commands
         .entity(*player)
         .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
-        .remove::<Health>()
+        // The colliders go with the children, and a dynamic body without them has no inertia.
+        .remove::<(Health, RigidBody)>()
         .despawn_related::<Children>();
     next_playing_state.set(PlayingState::Death);
 }

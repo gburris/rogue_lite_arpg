@@ -88,6 +88,7 @@ type DecidingBrains<'world, 'state> = Query<
 #[derive(Component, Debug, Default)]
 pub struct ScoreTrace {
     pub behavior_explanations: Vec<BehaviorScoreExplanation>,
+    pub decided_at: f32,
 }
 
 /// Staggers a new brain's first decision; see [`Brain::randomize_decision_phase`].
@@ -226,6 +227,7 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();
+        score_trace.decided_at = inputs.now;
         score_trace.behavior_explanations.clear();
         score_trace
             .behavior_explanations

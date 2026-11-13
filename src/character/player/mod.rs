@@ -11,7 +11,11 @@ mod spawn;
 
 pub mod prelude {
     pub use super::aim::PlayerAim;
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::input::{UseMainhand, UseOffhand};
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
+    #[cfg(feature = "dev_native")]
+    pub(crate) use super::movement::PlayerMovement;
     pub use super::progression::GameProgress;
     pub use super::{Attribute, Player, PlayerAttributes};
 }

@@ -102,6 +102,12 @@ impl TargetInfo {
         (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
     }
 
+    /// Whether the observed entity is inside the vision cone, ignoring walls.
+    #[cfg(feature = "dev_native")]
+    pub(crate) fn in_vision_cone(&self) -> bool {
+        self.in_vision_cone
+    }
+
     /// Whether the observed entity is in line of sight and inside the vision cone.
     pub(super) fn is_in_view(&self) -> bool {
         self.line_of_sight && self.in_vision_cone
@@ -278,6 +284,8 @@ fn is_target_in_sight(
 // AGGRO / TARGETING
 // ---------------------
 
+const TARGET_LOCK_SECONDS: f32 = 6.0;
+
 /// Targets the attacker on any hit, ignoring sight, or the watched entity for
 /// attacker-less damage.
 fn on_damage_aggro(
@@ -296,12 +304,17 @@ fn on_damage_aggro(
 
     if let Some(target) = attacker_or_watched {
         debug!("I've been hit: {damaged_entity}, attacking: {target}");
-        commands
-            .entity(damaged_entity)
-            .insert((TargetLock, Targeting(target)));
-
-        schedule_component_removal::<TargetLock>(&mut commands, damaged_entity, 6.0);
+        lock_onto_target(&mut commands, damaged_entity, target);
     }
+}
+
+/// Makes `entity` target `target` and keep it without sight for [`TARGET_LOCK_SECONDS`].
+pub(crate) fn lock_onto_target(commands: &mut Commands, entity: Entity, target: Entity) {
+    commands
+        .entity(entity)
+        .insert((TargetLock, Targeting(target)));
+
+    schedule_component_removal::<TargetLock>(commands, entity, TARGET_LOCK_SECONDS);
 }
 
 /// Records when targeting begins. Only on add, so re-inserts from repeated

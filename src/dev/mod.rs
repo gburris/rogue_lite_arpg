@@ -1,6 +1,7 @@
 //! Development tooling: debug rendering and inspection, the F3 overlay, `game/…` diagnostics,
-//! Tracy plots, hitch marking and detection, time controls, cheat keys, the stress arena and the
-//! schedule dump. Compiled only with the `dev_tools` feature, and never needed to boot the game.
+//! the remote protocol server, Tracy plots, hitch marking and detection, time controls, cheat
+//! keys, the stress arena and the schedule dump. Compiled only with the `dev_tools` feature, and
+//! never needed to boot the game.
 
 mod build_info;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
@@ -13,6 +14,8 @@ mod game_args;
 mod hitch;
 #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
 mod hud;
+#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+mod remote;
 #[cfg(feature = "dev")]
 mod schedule_dump;
 mod stress;
@@ -39,6 +42,9 @@ pub(super) fn plugin(app: &mut App) {
 
     #[cfg(all(feature = "dev", not(target_arch = "wasm32")))]
     app.add_plugins((cheats::plugin, hud::plugin));
+
+    #[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+    app.add_plugins(remote::plugin);
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_plugins(hitch::plugin);

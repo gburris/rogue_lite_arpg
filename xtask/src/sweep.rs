@@ -138,7 +138,7 @@ pub(super) fn run(args: &SweepArgs) -> Result<()> {
 }
 
 /// Moves to the repository root, so relative paths and the game's assets resolve from anywhere.
-fn enter_repository_root() -> Result<()> {
+pub(super) fn enter_repository_root() -> Result<()> {
     let root = repository_root();
     env::set_current_dir(&root).with_context(|| format!("entering {}", root.display()))
 }

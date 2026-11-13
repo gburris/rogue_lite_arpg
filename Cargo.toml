@@ -28,6 +28,8 @@ tracing = "0.1.44"
 tracy-client = { version = "0.19.0", optional = true }
 bevy_mod_debugdump = { version = "0.17",default-features = false, optional = true }
 clap = { workspace = true, optional = true }
+# JSON values for the `game/…` remote methods; the same crate `bevy_remote` uses.
+serde_json = { version = "1", optional = true }
 # CPU name for the stress summary line; the same version Bevy's `sysinfo_plugin` uses.
 sysinfo = { version = "0.38.4", default-features = false, features = ["system"], optional = true }
 
@@ -59,6 +61,9 @@ dev_native = [
     "bevy/file_watcher",
     # Enable embedded asset hot reloading for native dev builds.
     "bevy/embedded_watcher",
+    # Inspect and drive the running game over the Bevy Remote Protocol (see `dev/remote/`).
+    "bevy/bevy_remote",
+    "dep:serde_json",
 ]
 # Compile out low-severity logs and spans. Enabled by the bevy_cli release builds, and left off
 # for profiling since it would also remove Bevy's system spans from Tracy captures.

@@ -47,7 +47,7 @@ fn spawn_npc(
     sprite_layouts: &SpriteSheetLayouts,
     shadows: &Shadows,
 ) {
-    let base = base_npc(spawn_position, shadows, &VILLAGER);
+    let base = base_npc(npc_kind, spawn_position, shadows, &VILLAGER);
 
     match npc_kind {
         NpcKind::Helper => spawn_npc_with_equipment(
@@ -92,12 +92,15 @@ fn spawn_npc_with_equipment(commands: &mut Commands, npc: impl Scene, mainhand: 
 }
 
 fn base_npc(
+    npc_kind: NpcKind,
     spawn_position: Vec2,
     shadows: &Shadows,
     brain: &'static BrainDefinition,
 ) -> impl Scene {
+    let name = Name::new(format!("{npc_kind:?}"));
     bsn! {
         Npc
+        template(move |_| Ok(name.clone()))
         template(move |_| Ok(Brain::new(brain)))
         // Villagers stand briefly between strolls.
         ~Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5))

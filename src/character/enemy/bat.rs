@@ -160,6 +160,8 @@ const BAT_ORBIT_MAX_DISTANCE_OFFSET: f32 = 50.0;
 /// Contact range for a bite in world units. Anatomy, not tuning.
 const BITE_REACH: f32 = 30.0;
 const BITE_DAMAGE: f32 = 6.0;
+/// Radius of the bite's hitbox: about the bat's own size.
+const BAT_BITE_RADIUS: f32 = 12.0;
 /// Seconds between bites; longer than a dive's time in reach, so a pass bites once.
 const BITE_COOLDOWN: f32 = 1.0;
 /// Bat sprites sort and clip at their own 32x32 frame edge.
@@ -213,7 +215,9 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [
-            ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0)
+            ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN)
+                .with_life_steal(1.0)
+                .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
             --
             ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
             Projectiles [

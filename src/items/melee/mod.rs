@@ -3,14 +3,14 @@ mod swing;
 mod weapons;
 
 pub mod prelude {
-    pub use super::{axe, freeze_axe, sword};
+    pub use super::{MeleeWindUp, axe, freeze_axe, sword};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-pub use self::attack::ActiveMeleeAttack;
+pub use self::attack::{ActiveMeleeAttack, MeleeWindUp};
 pub use self::weapons::{axe, freeze_axe, sword};
 use crate::prelude::*;
 

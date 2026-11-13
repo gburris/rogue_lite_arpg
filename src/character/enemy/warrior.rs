@@ -14,6 +14,9 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
+/// Seconds a warrior draws its weapon back before a swing lands: a little past a reaction time,
+/// so a player who reacts quickly usually steps out of reach.
+const WARRIOR_SWING_WIND_UP: f32 = 0.35;
 /// Distance from the target at which a wounded warrior may drink its potion.
 const HEAL_SAFE_DISTANCE: f32 = 200.0;
 
@@ -210,6 +213,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
+        ~{MeleeWindUp(WARRIOR_SWING_WIND_UP)}
         // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
         ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [

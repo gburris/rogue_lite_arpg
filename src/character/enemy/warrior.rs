@@ -8,8 +8,8 @@ use crate::character::brain::considerations::{
     consideration, flag, reach_fraction_threshold, target_within_distance,
 };
 use crate::character::brain::{
-    Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput,
-    Curve, Dash, Heal, Interval, Motion,
+    Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
+    ConsiderationInput, Curve, Dash, Heal, Interval, Motion,
 };
 use crate::prelude::*;
 
@@ -192,7 +192,9 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
         ~Dash::kite(0.8, Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32))
-        ~Heal::new(HEAL_COOLDOWN)
+        Abilities [
+            ~Heal::new(HEAL_COOLDOWN)
+        ]
         enemy_wander()
         template(move |_| Ok(sprite.clone()))
         Items [

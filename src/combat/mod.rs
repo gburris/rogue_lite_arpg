@@ -27,7 +27,9 @@ pub mod prelude {
         FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, ProjectileReflection,
         Projectiles, fireball, fireball_with_speed, icebolt,
     };
-    pub use super::status_effects::prelude::{Effects, Frozen, MovementSlow};
+    pub use super::status_effects::prelude::{
+        ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,
+    };
 }
 
 pub(super) fn plugin(app: &mut App) {

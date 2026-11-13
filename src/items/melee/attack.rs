@@ -14,10 +14,14 @@ pub(super) fn damage_melee_hits(
         &CollidingEntities,
         &ItemOf,
     )>,
+    holders: Query<&StatMultipliers>,
 ) {
     for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities, item_of) in
         &mut melee_query
     {
+        let damage_multiplier = holders
+            .get(item_of.holder)
+            .map_or(1.0, |multipliers| multipliers.damage);
         for &colliding_entity in colliding_entities.iter() {
             // We only hit a given entity once per attack
             if !active_melee_attack
@@ -26,7 +30,7 @@ pub(super) fn damage_melee_hits(
             {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    damage: melee_weapon.damage,
+                    damage: melee_weapon.damage.scaled(damage_multiplier),
                     source_item: Some(weapon_entity),
                     attacker: Some(item_of.holder),
                     direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),

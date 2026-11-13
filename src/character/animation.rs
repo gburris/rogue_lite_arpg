@@ -102,16 +102,28 @@ fn update_animation_state(
     mut character_query: Query<
         (
             &Kinematics,
+            &StatMultipliers,
             &Attacking,
             Option<&Health>,
             &mut CharacterAnimationState,
             &mut FacingDirection,
         ),
-        Or<(Changed<Kinematics>, Changed<Attacking>, Changed<Health>)>,
+        Or<(
+            Changed<Kinematics>,
+            Changed<StatMultipliers>,
+            Changed<Attacking>,
+            Changed<Health>,
+        )>,
     >,
 ) {
-    for (kinematics, attacking, health, mut animation_state, mut facing_direction) in
-        &mut character_query
+    for (
+        kinematics,
+        stat_multipliers,
+        attacking,
+        health,
+        mut animation_state,
+        mut facing_direction,
+    ) in &mut character_query
     {
         if health.is_none_or(|h| h.hp <= 0.0) {
             animation_state.set_if_neq(CharacterAnimationState::Dying);
@@ -126,7 +138,7 @@ fn update_animation_state(
             continue;
         }
 
-        if kinematics.is_moving() {
+        if !kinematics.is_idle() && !stat_multipliers.is_stunned() {
             animation_state.set_if_neq(CharacterAnimationState::Moving);
         } else {
             animation_state.set_if_neq(CharacterAnimationState::Idle);

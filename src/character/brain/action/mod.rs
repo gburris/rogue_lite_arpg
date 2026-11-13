@@ -7,7 +7,7 @@ mod equipment_use;
 use bevy::prelude::*;
 
 pub(super) use self::ability::find_carried_potion;
-pub use self::ability::{Ability, Bite, Breath, Heal};
+pub use self::ability::{Abilities, Ability, Bite, Breath, Heal, Rally, speed_and_damage_rally};
 pub(super) use self::equipment_use::StartedEquipmentUses;
 use super::BrainSystems;
 use crate::prelude::*;
@@ -56,6 +56,7 @@ pub(super) fn plugin(app: &mut App) {
             ability::apply_heal,
             ability::apply_breath,
             ability::apply_bite,
+            ability::apply_rally,
         )
             .in_set(BrainSystems::Execute),
     )

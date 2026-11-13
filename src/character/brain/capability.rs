@@ -3,7 +3,7 @@
 
 use bevy::ecs::query::QueryData;
 
-use super::action::{Ability, Action, Bite, Breath, Heal};
+use super::action::{Ability, Action, Bite, Breath, Heal, Rally};
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
 
 /// The reach, start chance and cooldown a decision reads for one motion or action.
@@ -54,22 +54,25 @@ impl MotionCapabilitiesItem<'_, '_> {
     }
 }
 
-/// Every ability capability component a character may carry.
+/// Every capability component an ability entity may carry; see
+/// [`Abilities`](super::action::Abilities).
 #[derive(QueryData)]
 pub(super) struct AbilityCapabilities {
     bite: Option<&'static Bite>,
     breath: Option<&'static Breath>,
     heal: Option<&'static Heal>,
+    rally: Option<&'static Rally>,
 }
 
 impl AbilityCapabilitiesItem<'_, '_> {
-    /// The profile of the component that carries out `ability`; `None` when the character
-    /// lacks it.
+    /// The profile of the component that carries out `ability`; `None` when this entity is
+    /// another ability.
     pub(super) fn capability_profile(&self, ability: Ability) -> Option<CapabilityProfile> {
         match ability {
             Ability::Heal => self.heal.copied().map(Heal::capability_profile),
             Ability::Breathe => self.breath.copied().map(Breath::capability_profile),
             Ability::Bite => self.bite.copied().map(Bite::capability_profile),
+            Ability::Rally => self.rally.copied().map(Rally::capability_profile),
         }
     }
 }

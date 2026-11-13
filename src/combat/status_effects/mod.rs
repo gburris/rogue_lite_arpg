@@ -1,14 +1,16 @@
 mod burn;
 mod effect;
 mod freeze;
-mod slow;
+mod rally;
+mod stat_modifier;
 mod status;
 
 pub mod prelude {
     pub use super::burn::Burning;
     pub use super::effect::{ApplyEffects, Effects};
     pub use super::freeze::Frozen;
-    pub use super::slow::MovementSlow;
+    pub use super::rally::Rallied;
+    pub use super::stat_modifier::{Stat, StatMultipliers, stat_modifier};
 }
 
 use bevy::prelude::*;
@@ -26,7 +28,8 @@ pub(super) fn plugin(app: &mut App) {
             burn::apply_burning,
             (burn::tick_burn, burn::while_burning).chain(),
             freeze::apply_frozen,
-            slow::sync_slow_from_statuses,
+            rally::apply_rallied,
+            stat_modifier::sync_stat_multipliers_from_statuses,
         )
             .in_set(SimulationSystems::Upkeep),
     );

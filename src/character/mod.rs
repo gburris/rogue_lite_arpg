@@ -24,8 +24,8 @@ pub mod prelude {
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
-        GameProgress, InteractionZone, Player, PlayerAim, PlayerInteraction,
-        PlayerInteractionRadius, PlayerStats, Stat,
+        Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,
+        PlayerInteraction, PlayerInteractionRadius,
     };
     pub use super::purse::Purse;
     pub use super::state::{Attacking, FacingDirection, Kinematics, Vision};
@@ -44,8 +44,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
-    )
-    .add_observer(state::on_movement_slow_changed);
+    );
 }
 
 #[derive(Component, Default)]

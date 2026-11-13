@@ -1,11 +1,12 @@
 use bevy::ecs::entity_disabling::Disabled;
-use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
+use super::stat_modifier::StatModifier;
 use super::status::{StatusKind, StatusOf, Statuses};
+use crate::prelude::*;
 
 #[derive(Component, Clone)]
-#[require(Disabled)]
+#[require(Disabled, Lifespan)]
 #[relationship(relationship_target = Effects)]
 pub struct EffectOf(Entity);
 
@@ -28,43 +29,58 @@ impl ApplyEffects {
     }
 }
 
+/// Applies each effect to the target as a status, one per [`StatusKind`] with the first in the
+/// list winning. A new status replaces the target's existing one of its kind, except that an
+/// existing [`StatModifier`] stays when the new one does not [outrank](StatModifier::outranks) it.
 pub(super) fn on_apply_effects(
     apply_effects: On<ApplyEffects>,
     mut commands: Commands,
-    effect_query: Query<&StatusKind, (Without<StatusOf>, Allow<Disabled>)>,
+    effect_query: Query<
+        (&StatusKind, Option<&StatModifier>, &Lifespan),
+        (Without<StatusOf>, Allow<Disabled>),
+    >,
     affected_query: Query<&Statuses>,
-    status_query: Query<&StatusKind, With<StatusOf>>,
+    status_query: Query<(&StatusKind, Option<&StatModifier>, &Lifespan), With<StatusOf>>,
 ) {
-    let mut new_status_kinds = HashSet::new();
-    let mut deduped_effects = Vec::new();
-    for &entity in &apply_effects.effects {
-        let Ok(status_kind) = effect_query.get(entity) else {
-            warn!("Entity {entity:?} missing StatusKind component, skipping it");
+    let target = apply_effects.target;
+    let statuses = affected_query.get(target).ok();
+    let mut seen_kinds = Vec::new();
+    for &effect in &apply_effects.effects {
+        let Ok((kind, modifier, lifespan)) = effect_query.get(effect) else {
+            warn!("Entity {effect:?} missing StatusKind component, skipping it");
             continue;
         };
-        if new_status_kinds.insert(status_kind) {
-            deduped_effects.push(entity);
+        if seen_kinds.contains(kind) {
+            continue;
         }
-    }
+        seen_kinds.push(*kind);
 
-    // Remove any existing statuses on the target that conflict with new effects
-    if let Ok(statuses) = affected_query.get(apply_effects.target) {
-        for existing_entity in statuses.iter() {
-            if let Ok(existing_kind) = status_query.get(existing_entity)
-                && new_status_kinds.contains(existing_kind)
+        let existing = statuses
+            .into_iter()
+            .flat_map(Statuses::iter)
+            .find_map(|status| {
+                let (existing_kind, existing_modifier, existing_lifespan) =
+                    status_query.get(status).ok()?;
+                (existing_kind == kind).then_some((status, existing_modifier, existing_lifespan))
+            });
+        if let Some((status, existing_modifier, existing_lifespan)) = existing {
+            if let (Some(modifier), Some(existing_modifier)) = (modifier, existing_modifier)
+                && !modifier.outranks(
+                    lifespan.remaining_secs(),
+                    *existing_modifier,
+                    existing_lifespan.remaining_secs(),
+                )
             {
-                debug!("Removing existing status");
-                commands.entity(existing_entity).despawn();
+                continue;
             }
+            commands.entity(status).despawn();
         }
-    }
 
-    debug!("Applying effects: {deduped_effects:?}");
-    for effect in deduped_effects {
+        debug!("Applying effect {effect:?} to {target:?}");
         commands
             .entity(effect)
             .clone_and_spawn()
             .remove::<(Disabled, EffectOf)>()
-            .insert(StatusOf(apply_effects.target));
+            .insert(StatusOf(target));
     }
 }

@@ -49,6 +49,10 @@ pub struct SpriteSheetLayouts {
     pub spell_effect: Handle<TextureAtlasLayout>,
     #[asset(texture_atlas_layout(tile_size_x = 32, tile_size_y = 32, columns = 4, rows = 1))]
     pub shield: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 180, tile_size_y = 74, columns = 8, rows = 1))]
+    pub rally_shout: Handle<TextureAtlasLayout>,
+    #[asset(texture_atlas_layout(tile_size_x = 48, tile_size_y = 56, columns = 12, rows = 1))]
+    pub rallied_aura: Handle<TextureAtlasLayout>,
 }
 
 /// Holds the shared tile atlas used by the map renderer.
@@ -94,6 +98,10 @@ pub struct SpriteAssets {
     pub flame: Handle<Image>,
     #[asset(path = "vfx/grounded_ice.png")]
     pub grounded_ice: Handle<Image>,
+    #[asset(path = "vfx/rally_shout.png")]
+    pub rally_shout: Handle<Image>,
+    #[asset(path = "vfx/rallied_aura.png")]
+    pub rallied_aura: Handle<Image>,
     #[asset(path = "vfx/tome_of_healing_effect.png")]
     pub tome_of_healing_effect: Handle<Image>,
     #[asset(path = "player/player_sprite_sheet.png")]

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::stat_modifier::Stat;
 use crate::prelude::*;
 
 #[derive(Component, Clone)]
@@ -18,7 +19,9 @@ pub(crate) struct StatusApplied;
 pub(super) enum StatusKind {
     Burn,
     Freeze,
-    Slow,
+    Rally,
+    StatRaise { stat: Stat },
+    StatLower { stat: Stat },
 }
 
 #[derive(Component, FromTemplate, Clone)]

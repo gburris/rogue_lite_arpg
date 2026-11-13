@@ -1,4 +1,5 @@
 mod aim;
+mod attributes;
 mod death;
 mod input;
 mod interact;
@@ -7,19 +8,18 @@ mod movement;
 mod overlay;
 mod progression;
 mod spawn;
-mod stats;
 
 pub mod prelude {
     pub use super::aim::PlayerAim;
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::progression::GameProgress;
-    pub use super::{Player, PlayerStats, Stat};
+    pub use super::{Attribute, Player, PlayerAttributes};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::stats::{PlayerStats, Stat};
+pub use self::attributes::{Attribute, PlayerAttributes};
 use crate::character::Character;
 use crate::prelude::*;
 

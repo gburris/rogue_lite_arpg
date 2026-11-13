@@ -3,16 +3,15 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-/// A character's intended movement: a heading and a multiple of `max_speed`,
-/// reduced by any slow, with no acceleration. Player input and AI steering
-/// write it; [`kinematics_to_velocity`] hands it to physics.
+/// A character's intended movement: a heading and a multiple of `max_speed`, with no
+/// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
+/// the character's [`StatMultipliers`] speed and hands it to physics.
 #[derive(Component, Clone)]
-#[require(FacingDirection, Attacking)]
+#[require(FacingDirection, Attacking, StatMultipliers)]
 pub struct Kinematics {
     pub direction: Vec2,
     pub max_speed: f32,
     speed_multiplier: f32,
-    slowed_percentage: f32,
 }
 
 impl Kinematics {
@@ -21,18 +20,7 @@ impl Kinematics {
             max_speed,
             speed_multiplier: 0.0,
             direction: Vec2::ZERO,
-            slowed_percentage: 0.0,
         }
-    }
-
-    /// Sets the fraction of speed removed, where `1.0` is a stun.
-    fn slow(&mut self, percentage: f32) {
-        assert!(
-            (0.0..=1.0).contains(&percentage),
-            "slow percentage is a fraction of speed removed, got {percentage}"
-        );
-
-        self.slowed_percentage = percentage;
     }
 
     /// Moves along `direction` at `speed_multiplier` times max speed: below
@@ -48,33 +36,16 @@ impl Kinematics {
         self.speed_multiplier = 0.0;
     }
 
-    pub fn is_stunned(&self) -> bool {
-        self.slowed_percentage >= 1.0
-    }
-
-    /// Fraction of movement speed retained after the current slow: `1.0` is
-    /// full speed and `0.0` is stunned.
-    pub fn speed_scale(&self) -> f32 {
-        (1.0 - self.slowed_percentage).clamp(0.0, 1.0)
-    }
-
-    pub fn is_moving(&self) -> bool {
-        self.speed_multiplier > 0.0 && !self.is_stunned()
-    }
-
     /// Already fully stopped: lets per-frame drivers skip a no-op write that
     /// would mark `Changed<Kinematics>` and defeat downstream filters.
     pub fn is_idle(&self) -> bool {
         self.speed_multiplier == 0.0
     }
 
-    /// Velocity after any slow, so a stunned character reports zero. An
+    /// Velocity at `stat_speed` times this movement, so a stunned character reports zero. An
     /// over-long `direction` counts as unit length.
-    pub fn velocity(&self) -> Vec2 {
-        self.direction.clamp_length_max(1.0)
-            * self.max_speed
-            * self.speed_multiplier
-            * self.speed_scale()
+    pub fn velocity(&self, stat_speed: f32) -> Vec2 {
+        self.direction.clamp_length_max(1.0) * self.max_speed * self.speed_multiplier * stat_speed
     }
 }
 
@@ -84,20 +55,12 @@ impl Default for Kinematics {
     }
 }
 
-/// Applies a character's new [`MovementSlow`] to its [`Kinematics`].
-pub(super) fn on_movement_slow_changed(
-    slow_changed: On<Insert<MovementSlow>>,
-    mut characters: Query<(&MovementSlow, &mut Kinematics)>,
-) {
-    if let Ok((movement_slow, mut kinematics)) = characters.get_mut(slow_changed.entity) {
-        kinematics.slow(**movement_slow);
-    }
-}
-
 /// Converts [`Kinematics`] into avian's `LinearVelocity`.
-pub(super) fn kinematics_to_velocity(mut query: Query<(&Kinematics, &mut LinearVelocity)>) {
-    for (kinematics, mut velocity) in &mut query {
-        velocity.0 = kinematics.velocity();
+pub(super) fn kinematics_to_velocity(
+    mut query: Query<(&Kinematics, &StatMultipliers, &mut LinearVelocity)>,
+) {
+    for (kinematics, stat_multipliers, mut velocity) in &mut query {
+        velocity.0 = kinematics.velocity(stat_multipliers.speed);
     }
 }
 

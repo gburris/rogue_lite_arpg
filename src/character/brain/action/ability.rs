@@ -1,15 +1,15 @@
-//! Innate abilities. Each is an opt-in capability component plus an applier that re-checks the
-//! live world for the brain's held action and reports
-//! [`ActionFinished`](crate::character::brain::ActionFinished). A defeated character loses its
-//! brain, so appliers never see the dead.
+//! Innate abilities. Each is a capability component on its own entity, linked to its character
+//! by [`AbilityOf`], plus an applier that re-checks the live world for the brain's held action
+//! and reports [`ActionFinished`](crate::character::brain::ActionFinished). A defeated character
+//! loses its brain, so appliers never see a dead caller.
 
 use bevy::prelude::*;
 
-use crate::character::brain::{Action, Brain, CapabilityProfile, TargetInfo, Targeting};
+use crate::character::brain::{Action, Allies, Brain, CapabilityProfile, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// An innate move a brain can ask its character for, carried out by a capability
-/// component in this module.
+/// component in this module on one of the character's [`Abilities`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ability {
     /// Drink a carried potion.
@@ -18,12 +18,28 @@ pub enum Ability {
     Breathe,
     /// Damage a target in contact reach.
     Bite,
+    /// Raise the stats of every ally in reach with a war cry.
+    Rally,
 }
 
 impl Ability {
     /// Every ability, in array order.
-    pub(in crate::character::brain) const ALL: [Self; 3] = [Self::Heal, Self::Breathe, Self::Bite];
+    pub(in crate::character::brain) const ALL: [Self; 4] =
+        [Self::Heal, Self::Breathe, Self::Bite, Self::Rally];
 }
+
+/// Links an ability entity to the character that uses it.
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Abilities)]
+pub struct AbilityOf {
+    pub holder: Entity,
+}
+
+/// A character's ability entities, each carrying one capability component and whatever it
+/// applies or fires.
+#[derive(Component, Clone)]
+#[relationship_target(relationship = AbilityOf, linked_spawn)]
+pub struct Abilities(Vec<Entity>);
 
 /// Drinking carried potions to recover health, paced by `cooldown`.
 #[derive(Component, Clone, Copy, Debug)]
@@ -46,7 +62,7 @@ impl Heal {
     }
 }
 
-/// An innate projectile attack fired from the entity's `Projectiles` template.
+/// An innate projectile attack fired from its ability entity's [`Projectiles`] templates.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Breath {
     cooldown: f32,
@@ -110,6 +126,48 @@ impl Bite {
     }
 }
 
+/// A war cry that gives every other ally within `reach` its ability entity's [`Effects`], at
+/// most once per `cooldown` seconds.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct Rally {
+    reach: f32,
+    cooldown: f32,
+}
+
+impl Rally {
+    /// Rallies allies within `reach`, at most once per `cooldown` seconds.
+    pub fn new(reach: f32, cooldown: f32) -> Self {
+        Self { reach, cooldown }
+    }
+
+    /// What a decision reads of this capability.
+    pub(in crate::character::brain) fn capability_profile(self) -> CapabilityProfile {
+        CapabilityProfile {
+            reach: Some(self.reach),
+            cooldown: self.cooldown,
+            ..CapabilityProfile::default()
+        }
+    }
+}
+
+/// A rally ability whose war cry raises the speed and damage of allies in `reach` by `raise` for
+/// `seconds`, at most once per `cooldown` seconds.
+pub fn speed_and_damage_rally(reach: f32, cooldown: f32, raise: f32, seconds: f32) -> impl Scene {
+    bsn! {
+        ~Rally::new(reach, cooldown)
+        Effects [
+            Rallied
+            Lifespan::new(seconds)
+            --
+            @stat_modifier(Stat::Speed, raise)
+            Lifespan::new(seconds)
+            --
+            @stat_modifier(Stat::Damage, raise)
+            Lifespan::new(seconds)
+        ]
+    }
+}
+
 /// The first consumable the entity carries, the one check both the decision
 /// and `apply_heal` use for whether a potion can be drunk.
 pub(in crate::character::brain) fn find_carried_potion(
@@ -128,11 +186,16 @@ pub(in crate::character::brain) fn find_carried_potion(
 pub(super) fn apply_heal(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    drinkers: Query<(Entity, &Brain, Option<&Items>), With<Heal>>,
+    heals: Query<&AbilityOf, With<Heal>>,
+    drinkers: Query<(&Brain, Option<&Items>)>,
     consumables: Query<(), With<Consumable>>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, brain, items) in &drinkers {
+    for heal in &heals {
+        let entity = heal.holder;
+        let Ok((brain, items)) = drinkers.get(entity) else {
+            continue;
+        };
         let Some(drinking) = brain.held_action(Action::Ability(Ability::Heal)) else {
             continue;
         };
@@ -155,18 +218,15 @@ pub(super) fn apply_heal(
 pub(super) fn apply_breath(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    breathers: Query<(
-        Entity,
-        &Brain,
-        Has<Targeting>,
-        &TargetInfo,
-        &Transform,
-        &CombatSide,
-        &Projectiles,
-    )>,
+    breaths: Query<(&AbilityOf, &Projectiles), With<Breath>>,
+    breathers: Query<(&Brain, Has<Targeting>, &TargetInfo, &Transform, &CombatSide)>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, brain, has_target, target_info, transform, side, templates) in &breathers {
+    for (breath, templates) in &breaths {
+        let entity = breath.holder;
+        let Ok((brain, has_target, target_info, transform, side)) = breathers.get(entity) else {
+            continue;
+        };
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
@@ -196,17 +256,23 @@ pub(super) fn apply_breath(
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    biters: Query<(
-        Entity,
+    bites: Query<(&Bite, &AbilityOf)>,
+    biting_characters: Query<(
         &Brain,
-        &Bite,
         &Targeting,
         &TargetInfo,
+        &StatMultipliers,
         Option<&Health>,
     )>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, brain, bite, targeting, target_info, health) in &biters {
+    for (bite, ability_of) in &bites {
+        let entity = ability_of.holder;
+        let Ok((brain, targeting, target_info, stat_multipliers, health)) =
+            biting_characters.get(entity)
+        else {
+            continue;
+        };
         let Some(biting) = brain.held_action(Action::Ability(Ability::Bite)) else {
             continue;
         };
@@ -214,9 +280,10 @@ pub(super) fn apply_bite(
             biting.report_not_started(&mut commands, entity);
             continue;
         }
+        let damage = bite.damage * stat_multipliers.damage;
         commands.trigger(AttemptDamage {
             entity: targeting.0,
-            damage: Damage::Single(bite.damage),
+            damage: Damage::Single(damage),
             source_item: None,
             attacker: Some(entity),
             direction: Some(target_info.direction),
@@ -226,9 +293,68 @@ pub(super) fn apply_bite(
         if bite.life_steal > 0.0 && health.is_some_and(|health| health.hp < health.max_hp) {
             commands.trigger(AttemptHeal {
                 entity,
-                amount: bite.damage * bite.life_steal,
+                amount: damage * bite.life_steal,
             });
         }
         biting.report_completed(&mut commands, entity);
+    }
+}
+
+/// Gives every other ally in reach the rally's [`Effects`] and sends a shockwave out from the
+/// caller's feet.
+pub(super) fn apply_rally(
+    mut commands: Commands,
+    time: Res<Time<Virtual>>,
+    sprites: Res<SpriteAssets>,
+    sprite_layouts: Res<SpriteSheetLayouts>,
+    rallies: Query<(&Rally, &Effects, &AbilityOf)>,
+    rallyers: Query<&Brain>,
+    allies: Allies,
+) {
+    let now = time.elapsed_secs();
+    for (rally, effects, ability_of) in &rallies {
+        let entity = ability_of.holder;
+        let Ok(brain) = rallyers.get(entity) else {
+            continue;
+        };
+        let Some(rallying) = brain.held_action(Action::Ability(Ability::Rally)) else {
+            continue;
+        };
+        if !brain.is_cooldown_ready(Ability::Rally, now) {
+            rallying.report_not_started(&mut commands, entity);
+            continue;
+        }
+        for ally in allies.within(entity, rally.reach) {
+            commands.trigger(ApplyEffects::new(effects, ally.entity));
+        }
+        commands.spawn_scene(bsn! {
+            @rally_shout_vfx(&sprites, &sprite_layouts)
+            ChildOf(entity)
+        });
+        rallying.report_completed(&mut commands, entity);
+    }
+}
+
+/// Scale of the shockwave sheet, whose ring spans 174 px at its widest.
+const RALLY_SHOUT_SCALE: f32 = 2.0;
+
+/// A one-shot shockwave ring racing out along the ground from the caller's feet.
+fn rally_shout_vfx(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(
+        sprites.rally_shout.clone(),
+        TextureAtlas {
+            layout: sprite_layouts.rally_shout.clone(),
+            index: 0,
+        },
+    );
+    bsn! {
+        template(move |_| Ok(sprite.clone()))
+        ~{AnimationIndices::OneShot(0..=7)}
+        AnimationTimer(Timer::from_seconds(0.071, TimerMode::Repeating))
+        Lifespan::new(0.57)
+        Transform {
+            translation: Vec3::new(0.0, CHARACTER_FEET_POS_OFFSET, {ZLayer::BehindSprite.z()}),
+            scale: Vec3::new(RALLY_SHOUT_SCALE, RALLY_SHOUT_SCALE, 1.0),
+        }
     }
 }

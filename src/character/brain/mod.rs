@@ -12,7 +12,7 @@ mod perception;
 use bevy::prelude::*;
 use rand::RngExt;
 
-pub use self::action::{Ability, Action, Bite, Breath, Heal};
+pub use self::action::{Abilities, Ability, Action, Bite, Breath, Heal, speed_and_damage_rally};
 use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
 use self::capability::{CapabilityProfile, CooldownKey, Cooldowns};
 pub use self::decide::ScoreTrace;
@@ -27,7 +27,7 @@ pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
-pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
+pub(crate) use self::perception::{Allies, TargetInfo, Targeting, VisionCone};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 

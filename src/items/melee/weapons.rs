@@ -40,6 +40,9 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
         Effects [
             Frozen
             Lifespan::new(2.0)
+            --
+            @stat_modifier(Stat::Speed, -1.0)
+            Lifespan::new(2.0)
         ]
     }
 }

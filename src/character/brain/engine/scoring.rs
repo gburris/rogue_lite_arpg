@@ -148,10 +148,10 @@ pub(super) fn score_behavior(
     )
 }
 
-/// Weight times the geometric mean of `scores`; `None` when any score is
-/// `None`. A zero anywhere vetoes, but each passing flag raises graded inputs
-/// to a higher root, so adding a flag shifts a behavior's crossovers. Brains
-/// are tuned against that root.
+/// Weight times the geometric mean of `scores`; `None` when a score before any zero is `None`.
+/// The first zero vetoes and stops there, leaving later scores unread, so a behavior lists its
+/// cheap considerations first. Each passing flag raises graded inputs to a higher root, so adding
+/// a flag shifts a behavior's crossovers. Brains are tuned against that root.
 pub(super) fn combine_consideration_scores(
     weight: f32,
     scores: impl IntoIterator<Item = Option<f32>>,
@@ -159,7 +159,11 @@ pub(super) fn combine_consideration_scores(
     let mut product = 1.0;
     let mut count = 0;
     for score in scores {
-        product *= score?;
+        let score = score?;
+        if score == 0.0 {
+            return Some(0.0);
+        }
+        product *= score;
         count += 1;
     }
     let mut score = weight;

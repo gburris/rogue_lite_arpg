@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use rand::{RngExt, rng};
 
 use super::Enemy;
-use crate::character::player::PlayerStats;
+use crate::character::player::PlayerAttributes;
 use crate::prelude::*;
 
 /// Experience paid out when the player defeats this enemy. Scales with
@@ -23,7 +23,7 @@ pub(super) fn on_enemy_defeated(
         ),
         With<Enemy>,
     >,
-    player_query: Single<(&PlayerStats, &mut Player)>,
+    player_query: Single<(&PlayerAttributes, &mut Player)>,
     item_query: Query<&Item>,
 ) {
     let mut rng = rng();
@@ -31,7 +31,7 @@ pub(super) fn on_enemy_defeated(
     if let Ok((experience_to_gain, transform, items, purse)) =
         defeated_enemy_query.get_mut(defeated.entity)
     {
-        let (player_stats, mut player) = player_query.into_inner();
+        let (player_attributes, mut player) = player_query.into_inner();
 
         if let Some(experience_to_gain) = experience_to_gain {
             player.experience += **experience_to_gain;
@@ -51,7 +51,7 @@ pub(super) fn on_enemy_defeated(
 
         if let Some(purse) = purse {
             // Enemies drop their gold based on player luck
-            if rng.random_range(0.0..1.0) < (0.1 + (player_stats.luck as f32 / 100.0)) {
+            if rng.random_range(0.0..1.0) < (0.1 + (player_attributes.luck as f32 / 100.0)) {
                 commands.trigger(DropGold {
                     location: transform.translation.truncate(),
                     amount: purse.amount,

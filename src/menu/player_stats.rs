@@ -9,10 +9,10 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component, Default, Clone)]
 struct StatsMenu;
 
-fn spawn_stats_menu(mut commands: Commands, player_stats: Single<&PlayerStats>) {
-    let rows: Vec<_> = Stat::ALL
+fn spawn_stats_menu(mut commands: Commands, player_attributes: Single<&PlayerAttributes>) {
+    let rows: Vec<_> = Attribute::ALL
         .into_iter()
-        .map(|stat| stat_row(stat, *player_stats))
+        .map(|attribute| attribute_row(attribute, *player_attributes))
         .collect();
 
     commands.spawn_scene(bsn! {
@@ -28,7 +28,7 @@ fn spawn_stats_menu(mut commands: Commands, player_stats: Single<&PlayerStats>) 
     });
 }
 
-fn stat_row(stat: Stat, stats: &PlayerStats) -> impl Scene {
+fn attribute_row(attribute: Attribute, attributes: &PlayerAttributes) -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
@@ -45,12 +45,12 @@ fn stat_row(stat: Stat, stats: &PlayerStats) -> impl Scene {
                 row_gap: px(4),
             }
             Children [
-                @text({format!("{stat:?}")}, BODY_FONT_SIZE)
+                @text({format!("{attribute:?}")}, BODY_FONT_SIZE)
                 --
-                @muted_text(stat.description(), CAPTION_FONT_SIZE)
+                @muted_text(attribute.description(), CAPTION_FONT_SIZE)
             ]
             --
-            @text({format!("{}/99", stat.value(stats))}, BODY_FONT_SIZE)
+            @text({format!("{}/99", attribute.value(attributes))}, BODY_FONT_SIZE)
         ]
     }
 }

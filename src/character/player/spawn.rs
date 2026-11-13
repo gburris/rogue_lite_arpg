@@ -19,7 +19,7 @@ pub(super) fn spawn_player(
         .spawn_scene(fire_staff(&sprites, &sprite_layouts))
         .id();
 
-    let stats = game_progress.base_stats;
+    let attributes = game_progress.base_attributes;
     let sprite = Sprite::from_atlas_image(
         sprites.player_sprite_sheet.clone(),
         TextureAtlas {
@@ -35,7 +35,7 @@ pub(super) fn spawn_player(
             @pause_actions()
             @player_actions()
             ~Mana::new(100.0, 10.0)
-            stats
+            attributes
             template(move |_| Ok(sprite.clone()))
             on(death::on_player_defeated)
             on(overlay::on_equipment_use_succeeded)

@@ -44,6 +44,17 @@ pub enum Damage {
 }
 
 impl Damage {
+    /// This damage multiplied by `factor`, such as its attacker's [`StatMultipliers`] damage.
+    pub fn scaled(self, factor: f32) -> Self {
+        match self {
+            Self::Range { min, max } => Self::Range {
+                min: min * factor,
+                max: max * factor,
+            },
+            Self::Single(amount) => Self::Single(amount * factor),
+        }
+    }
+
     /// Picks the amount of damage dealt, rolling within a range.
     fn roll(self) -> f32 {
         match self {

@@ -12,7 +12,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component, Default, Clone)]
 pub struct StatShopMenu;
 
-/// Which way a stat shop button moves its stat.
+/// Which way a stats shop button moves its attribute.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum StatChange {
     #[default]
@@ -22,13 +22,13 @@ pub enum StatChange {
 
 #[derive(Component, Clone, Default)]
 pub struct StatShopButton {
-    pub stat: Stat,
+    pub attribute: Attribute,
     pub change: StatChange,
 }
 
 #[derive(Event)]
 pub struct ChangeStat {
-    pub stat: Stat,
+    pub attribute: Attribute,
     pub change: StatChange,
 }
 
@@ -37,14 +37,14 @@ pub struct UpdateStatsUi;
 
 pub fn spawn_stats_shop_menu(
     mut commands: Commands,
-    player_stats: Single<&PlayerStats>,
+    player_attributes: Single<&PlayerAttributes>,
     game_progress: ResMut<GameProgress>,
 ) {
-    let stats = player_stats.into_inner();
+    let attributes = player_attributes.into_inner();
     let points = game_progress.progress_points;
-    let rows: Vec<_> = Stat::ALL
+    let rows: Vec<_> = Attribute::ALL
         .into_iter()
-        .map(|stat| stat_row(stat, stats, points))
+        .map(|attribute| attribute_row(attribute, attributes, points))
         .collect();
 
     commands.spawn_scene(bsn! {
@@ -61,7 +61,7 @@ pub fn spawn_stats_shop_menu(
     });
 }
 
-fn stat_row(stat: Stat, stats: &PlayerStats, points: u32) -> impl Scene {
+fn attribute_row(attribute: Attribute, attributes: &PlayerAttributes, points: u32) -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
@@ -71,24 +71,24 @@ fn stat_row(stat: Stat, stats: &PlayerStats, points: u32) -> impl Scene {
             padding: {px(10).horizontal()},
         }
         Children [
-            @stat_shop_button(stat, StatChange::Decrease, points)
+            @attribute_shop_button(attribute, StatChange::Decrease, points)
             --
             Node {
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
             }
             Children [
-                @text({format!("{stat:?}: {}", stat.value(stats))}, BODY_FONT_SIZE)
+                @text({format!("{attribute:?}: {}", attribute.value(attributes))}, BODY_FONT_SIZE)
                 --
-                @muted_text(stat.description(), CAPTION_FONT_SIZE)
+                @muted_text(attribute.description(), CAPTION_FONT_SIZE)
             ]
             --
-            @stat_shop_button(stat, StatChange::Increase, points)
+            @attribute_shop_button(attribute, StatChange::Increase, points)
         ]
     }
 }
 
-fn stat_shop_button(stat: Stat, change: StatChange, points: u32) -> impl Scene {
+fn attribute_shop_button(attribute: Attribute, change: StatChange, points: u32) -> impl Scene {
     let (label, highlight) = match change {
         // Highlight increases the player can afford.
         StatChange::Increase if points > 0 => ("+", Color::srgb(1.0, 1.0, 0.0)),
@@ -103,7 +103,7 @@ fn stat_shop_button(stat: Stat, change: StatChange, points: u32) -> impl Scene {
 
     bsn! {
         @button(label, BODY_FONT_SIZE, Color::WHITE, colors)
-        StatShopButton { stat, change }
+        StatShopButton { attribute, change }
         Node {
             width: px(30),
             height: px(30),
@@ -117,7 +117,7 @@ fn on_stat_button_activated(
     buttons: Query<&StatShopButton>,
     mut commands: Commands,
     game_progress: Res<GameProgress>,
-    player_stats: Single<&PlayerStats>,
+    player_attributes: Single<&PlayerAttributes>,
 ) {
     let Ok(button) = buttons.get(activate.entity) else {
         return;
@@ -125,11 +125,11 @@ fn on_stat_button_activated(
 
     let can_increase = button.change == StatChange::Increase && game_progress.progress_points > 0;
     let can_decrease =
-        button.change == StatChange::Decrease && button.stat.value(*player_stats) > 1;
+        button.change == StatChange::Decrease && button.attribute.value(*player_attributes) > 1;
 
     if can_increase || can_decrease {
         commands.trigger(ChangeStat {
-            stat: button.stat,
+            attribute: button.attribute,
             change: button.change,
         });
     }
@@ -137,33 +137,35 @@ fn on_stat_button_activated(
 
 pub fn on_change_stat(
     trigger: On<ChangeStat>,
-    mut player_stats: Query<&mut PlayerStats>,
+    mut player_attributes: Query<&mut PlayerAttributes>,
     mut game_progress: ResMut<GameProgress>,
     mut commands: Commands,
 ) {
-    let mut stats = player_stats.single_mut().expect("Player stats not found");
+    let mut attributes = player_attributes
+        .single_mut()
+        .expect("player has no PlayerAttributes");
 
-    match (trigger.stat, trigger.change) {
-        (stat, StatChange::Increase) if game_progress.progress_points > 0 => {
-            match stat {
-                Stat::Agility => stats.agility += 1,
-                Stat::Strength => stats.strength += 1,
-                Stat::Dexterity => stats.dexterity += 1,
-                Stat::Intellect => stats.intellect += 1,
-                Stat::Luck => stats.luck += 1,
+    match (trigger.attribute, trigger.change) {
+        (attribute, StatChange::Increase) if game_progress.progress_points > 0 => {
+            match attribute {
+                Attribute::Agility => attributes.agility += 1,
+                Attribute::Strength => attributes.strength += 1,
+                Attribute::Dexterity => attributes.dexterity += 1,
+                Attribute::Intellect => attributes.intellect += 1,
+                Attribute::Luck => attributes.luck += 1,
             }
             game_progress.progress_points -= 1;
             commands.trigger(UpdateStatsUi);
         }
-        (stat, StatChange::Decrease) => {
-            let current_value = stat.value(&stats);
+        (attribute, StatChange::Decrease) => {
+            let current_value = attribute.value(&attributes);
             if current_value > 1 {
-                match stat {
-                    Stat::Agility => stats.agility -= 1,
-                    Stat::Strength => stats.strength -= 1,
-                    Stat::Dexterity => stats.dexterity -= 1,
-                    Stat::Intellect => stats.intellect -= 1,
-                    Stat::Luck => stats.luck -= 1,
+                match attribute {
+                    Attribute::Agility => attributes.agility -= 1,
+                    Attribute::Strength => attributes.strength -= 1,
+                    Attribute::Dexterity => attributes.dexterity -= 1,
+                    Attribute::Intellect => attributes.intellect -= 1,
+                    Attribute::Luck => attributes.luck -= 1,
                 }
                 game_progress.progress_points += 1;
                 commands.trigger(UpdateStatsUi);
@@ -177,12 +179,12 @@ pub fn on_update_stats_ui(
     _: On<UpdateStatsUi>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
-    player_stats_query: Single<&PlayerStats>,
+    player_attributes_query: Single<&PlayerAttributes>,
     mut game_progress: ResMut<GameProgress>,
 ) {
-    // Set Game Progress to current player stats
-    let player_stats = **player_stats_query;
-    game_progress.base_stats = player_stats;
+    // Set Game Progress to current player attributes
+    let player_attributes = **player_attributes_query;
+    game_progress.base_attributes = player_attributes;
 
     // Despawn existing menu
     for entity in &stats_menu_query {
@@ -190,5 +192,5 @@ pub fn on_update_stats_ui(
     }
 
     // Respawn with updated values
-    spawn_stats_shop_menu(commands, player_stats_query, game_progress);
+    spawn_stats_shop_menu(commands, player_attributes_query, game_progress);
 }

@@ -9,8 +9,8 @@ use crate::character::brain::considerations::{
     MAINHAND, RETURN_TO_HOME, WANDER, consideration, mana_at_or_below, within_reach,
 };
 use crate::character::brain::{
-    Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve, Dash,
-    Interval, Motion, Orbit,
+    Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
+    ConsiderationInput, Curve, Dash, Interval, Motion, Orbit, speed_and_damage_rally,
 };
 use crate::prelude::*;
 
@@ -48,6 +48,22 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
+const RALLY: Action = Action::Ability(Ability::Rally);
+/// Matches the shockwave's drawn radius, so every ally it washes over is rallied.
+const RALLY_REACH: f32 = 174.0;
+const RALLY_COOLDOWN: f32 = 10.0;
+const RALLY_RAISE: f32 = 0.3;
+const RALLY_SECONDS: f32 = 6.0;
+
+/// Full for an ally at the mage's side, empty at the edge of rally reach.
+const ALLY_CLOSE: Consideration = consideration(
+    "ally far",
+    ConsiderationInput::AllyReachFraction(RALLY),
+    Interval::new(0.0, 1.0),
+    Curve::Linear,
+)
+.inverted("ally close");
+
 /// Both mages' cast weight. The cast's other two inputs are flags, so it
 /// scores `CAST_WEIGHT * quality^(1/3)`.
 const CAST_WEIGHT: f32 = 8.0;
@@ -59,6 +75,14 @@ const FIRE_ORBIT: Behavior = Behavior::new(
     CommitPolicy::ContinuouslyScored,
     5.5,
     &[INSIDE_OUTER_CAST_EDGE],
+);
+/// War cry once a fight is on, scored on the closest ally it would reach.
+const FIRE_RALLY: Behavior = Behavior::new(
+    None,
+    Some(RALLY),
+    CommitPolicy::ContinuouslyScored,
+    3.0,
+    &[HAS_TARGET, ALLY_CLOSE],
 );
 /// Plants and lets the ice bolt do the work.
 const ICE_PLANT: Behavior = Behavior::new(
@@ -128,6 +152,13 @@ const ICE_CAST: Behavior = Behavior::new(
 // - The hop beats a running orbit (6.875).
 // - The cast beats a running orbit from about 238 units away, and a newly started one from about
 //   220. A mage crowded closer orbits outward until it is about 238 away, then casts again.
+//
+// Action priority: cast (8 at full quality), rally (3, scaled by the square root of how close its
+// closest ally stands), idle (0.5).
+// - The cast beats rally unless the cast's quality is nearly zero, so a mage with a ready, sighted
+//   staff keeps attacking.
+// - Rally beats idle for any ally in reach, so it shouts while the staff cools down or is out of
+//   mana after a volley, or when line of sight vetoes the cast, at most once per RALLY_COOLDOWN.
 static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
     ACTION_BASELINE_IDLE,
@@ -137,6 +168,7 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     FIRE_ORBIT,
     FIRE_HOP,
     FIRE_CAST,
+    FIRE_RALLY,
 ];
 
 // Motion priority: slide (12), recover (9, or 11.25 once running), cast (8 at
@@ -157,7 +189,8 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
 ];
 
 /// Holds the cast distance range on a moving orbit, hops to a fresh tangent after each
-/// volley, and backs off only long enough to refill a drained mana pool.
+/// volley, backs off only long enough to refill a drained mana pool, and rallies nearby allies
+/// between volleys.
 pub(super) static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,
 };
@@ -270,5 +303,8 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
             CAST_MIN_RANGE - 10.0,
         )
         ~Orbit::new()
+        Abilities [
+            @speed_and_damage_rally(RALLY_REACH, RALLY_COOLDOWN, RALLY_RAISE, RALLY_SECONDS)
+        ]
     }
 }

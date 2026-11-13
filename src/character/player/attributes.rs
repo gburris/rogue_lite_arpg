@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-/// The player's upgradeable stats.
+/// The player's upgradeable attributes.
 #[derive(Component, Clone, Copy)]
-pub struct PlayerStats {
+pub struct PlayerAttributes {
     pub agility: u32,   // Movement speed, roll range
     pub strength: u32,  // Melee swing damage
     pub dexterity: u32, // Critical Strike Chance
@@ -10,7 +10,7 @@ pub struct PlayerStats {
     pub luck: u32,      // Drop rate
 }
 
-impl Default for PlayerStats {
+impl Default for PlayerAttributes {
     fn default() -> Self {
         Self {
             agility: 1,
@@ -22,9 +22,9 @@ impl Default for PlayerStats {
     }
 }
 
-/// One of the [`PlayerStats`] fields, for shop UI and stat changes.
+/// One of the [`PlayerAttributes`] fields, for shop UI and attribute changes.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub enum Stat {
+pub enum Attribute {
     #[default]
     Agility,
     Strength,
@@ -33,8 +33,8 @@ pub enum Stat {
     Luck,
 }
 
-impl Stat {
-    /// Every stat, in the order menus list them.
+impl Attribute {
+    /// Every attribute, in the order menus list them.
     pub const ALL: [Self; 5] = [
         Self::Agility,
         Self::Strength,
@@ -53,13 +53,13 @@ impl Stat {
         }
     }
 
-    pub fn value(self, stats: &PlayerStats) -> u32 {
+    pub fn value(self, attributes: &PlayerAttributes) -> u32 {
         match self {
-            Self::Agility => stats.agility,
-            Self::Strength => stats.strength,
-            Self::Dexterity => stats.dexterity,
-            Self::Intellect => stats.intellect,
-            Self::Luck => stats.luck,
+            Self::Agility => attributes.agility,
+            Self::Strength => attributes.strength,
+            Self::Dexterity => attributes.dexterity,
+            Self::Intellect => attributes.intellect,
+            Self::Luck => attributes.luck,
         }
     }
 }

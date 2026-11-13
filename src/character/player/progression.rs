@@ -13,7 +13,7 @@ pub struct GameProgress {
     pub death_counter: u32,
     pub total_career_level: u32,
     pub progress_points: u32,
-    pub base_stats: PlayerStats, //Base stats are upgraded at the NPC each run
+    pub base_attributes: PlayerAttributes, //Base attributes are upgraded at the NPC each run
 }
 
 impl Default for GameProgress {
@@ -22,7 +22,7 @@ impl Default for GameProgress {
             death_counter: 0,
             total_career_level: 0,
             progress_points: 5,
-            base_stats: PlayerStats::default(),
+            base_attributes: PlayerAttributes::default(),
         }
     }
 }

@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::{DecayingSpeedBoost, HomeArea, Motion, Steering};
 use crate::character::brain::{Brain, TargetInfo, Targeting};
 use crate::character::state::Kinematics;
+use crate::prelude::*;
 
 /// A finite motion completed. The brain starts its cooldown and, if `behavior_run_id` is
 /// still current, ends its behavior and decides again at once.
@@ -82,6 +83,7 @@ pub(super) struct SteeredCharacter {
     pub(super) brain: &'static Brain,
     transform: &'static Transform,
     kinematics: &'static Kinematics,
+    stat_multipliers: &'static StatMultipliers,
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
     home_area: Option<&'static HomeArea>,
@@ -105,7 +107,7 @@ impl SteeredCharacterItem<'_, '_> {
             delta_secs: time.delta_secs(),
             target_info: self.target_info,
             home_area: self.home_area,
-            kinematics: self.kinematics,
+            scaled_max_speed: self.kinematics.max_speed * self.stat_multipliers.speed,
         })
     }
 }
@@ -117,7 +119,7 @@ pub(super) struct SteerInput<'a> {
     pub target_info: Option<&'a TargetInfo>,
     pub home_area: Option<&'a HomeArea>,
     delta_secs: f32,
-    kinematics: &'a Kinematics,
+    scaled_max_speed: f32,
 }
 
 impl SteerInput<'_> {
@@ -137,12 +139,9 @@ impl SteerInput<'_> {
         home_area.direction_home(self.position)
     }
 
-    /// How far the character covers this frame at `speed_multiplier` times
-    /// max speed, after any slow.
+    /// How far the character covers this frame at `speed_multiplier` times its max speed, after
+    /// its [`StatMultipliers`] speed.
     pub(super) fn distance_this_frame(&self, speed_multiplier: f32) -> f32 {
-        self.kinematics.max_speed
-            * speed_multiplier
-            * self.kinematics.speed_scale()
-            * self.delta_secs
+        self.scaled_max_speed * speed_multiplier * self.delta_secs
     }
 }

@@ -168,17 +168,21 @@ fn update_target_info(
         ),
         Without<Player>,
     >,
-    target_query: Query<(&Transform, Option<&Kinematics>)>,
+    target_query: Query<(&Transform, Option<(&Kinematics, &StatMultipliers)>)>,
 ) {
     npc_query.par_iter_mut().for_each(
         |(mut target_info, mut ray_caster, transform, watching, targeting)| {
             let target_entity = targeting.map_or(watching.0, |t| t.0);
 
-            if let Ok((target_transform, target_kinematics)) = target_query.get(target_entity) {
+            if let Ok((target_transform, target_movement)) = target_query.get(target_entity) {
+                let target_velocity = target_movement
+                    .map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
+                        kinematics.velocity(stat_multipliers.speed)
+                    });
                 target_info.record_observation(
                     transform.translation.xy(),
                     target_transform.translation.xy(),
-                    target_kinematics.map_or(Vec2::ZERO, Kinematics::velocity),
+                    target_velocity,
                 );
                 ray_caster.direction = Dir2::new(target_info.direction).unwrap_or(Dir2::X);
             }

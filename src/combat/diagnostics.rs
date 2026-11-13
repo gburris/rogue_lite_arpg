@@ -8,7 +8,7 @@ use super::status_effects::StatusOf;
 use crate::prelude::*;
 
 const PROJECTILES: DiagnosticPath = DiagnosticPath::const_new("game/projectiles");
-/// Burn, freeze and slow effects applied to characters.
+/// Status effects applied to characters.
 const STATUS_EFFECTS: DiagnosticPath = DiagnosticPath::const_new("game/status_effects");
 
 pub(super) fn plugin(app: &mut App) {

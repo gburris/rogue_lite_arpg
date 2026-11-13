@@ -9,8 +9,8 @@ use crate::character::brain::considerations::{
     distance_threshold, flag, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
-    Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy, Consideration,
-    ConsiderationInput, Curve, Interval, Motion, Orbit, Swoop, TurnRate,
+    Abilities, Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy,
+    Consideration, ConsiderationInput, Curve, Interval, Motion, Orbit, Swoop, TurnRate,
 };
 use crate::prelude::*;
 
@@ -196,12 +196,15 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
         enemy_wander()
         ~Swoop::new(0.35, CAST_MAX_RANGE, 2.0)
-        ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0)
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
-        ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
-        Projectiles [
-            @fireball(sprites, sprite_layouts, 0.0)
+        Abilities [
+            ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN).with_life_steal(1.0)
+            --
+            ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
+            Projectiles [
+                @fireball(sprites, sprite_layouts, 0.0)
+            ]
         ]
     }
 }

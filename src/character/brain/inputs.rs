@@ -3,7 +3,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Ability, Action, find_carried_potion};
+use super::action::{Abilities, Ability, Action, find_carried_potion};
 use super::capability::{AbilityCapabilities, CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
@@ -28,6 +28,8 @@ pub enum ConsiderationInput {
     MotionReachFraction(Motion),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
+    /// The closest ally's distance over this action's reach; absent with no ally alive.
+    AllyReachFraction(Action),
     SecondsSinceTargeted,
 }
 
@@ -36,23 +38,36 @@ pub enum ConsiderationInput {
 pub(super) struct DecisionInputComponents {
     entity: Entity,
     transform: &'static Transform,
+    side: &'static CombatSide,
     has_target: Has<Targeting>,
     target_info: Option<&'static TargetInfo>,
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
     home_area: Option<&'static HomeArea>,
-    kinematics: &'static Kinematics,
+    stat_multipliers: &'static StatMultipliers,
     items: Option<&'static Items>,
     motion_capabilities: MotionCapabilities,
-    ability_capabilities: AbilityCapabilities,
+    abilities: Option<&'static Abilities>,
 }
 
-/// The queries behind equipment profiles and the world-allows-use checks.
+/// The queries behind ability and equipment profiles, ally positions and the world-allows-use
+/// checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
     equipment: EquipmentRead<'w, 's>,
     consumables: Query<'w, 's, (), With<Consumable>>,
     items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
+    ability_capabilities: Query<'w, 's, AbilityCapabilities>,
+    characters: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static Transform,
+            &'static CombatSide,
+            &'static Health,
+        ),
+    >,
 }
 
 /// One decision's view of the world: references only, read on demand.
@@ -72,7 +87,7 @@ impl DecisionInputs<'_, '_, '_> {
     }
 
     pub fn is_stunned(&self) -> bool {
-        self.components.kinematics.is_stunned()
+        self.components.stat_multipliers.is_stunned()
     }
 
     /// The profile of the capability that carries out `motion`; see [`MotionCapabilities`].
@@ -83,7 +98,7 @@ impl DecisionInputs<'_, '_, '_> {
     }
 
     /// The profile of the capability that carries out `action`: the equipped
-    /// item's reach, or the ability component's. `Idle` needs none.
+    /// item's reach, or the component of the ability entity carrying it. `Idle` needs none.
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
         match action {
             Action::Use(slot) => self
@@ -96,8 +111,11 @@ impl DecisionInputs<'_, '_, '_> {
                 }),
             Action::Ability(ability) => self
                 .components
-                .ability_capabilities
-                .capability_profile(ability),
+                .abilities
+                .into_iter()
+                .flat_map(Abilities::iter)
+                .filter_map(|entity| self.queries.ability_capabilities.get(entity).ok())
+                .find_map(|capabilities| capabilities.capability_profile(ability)),
             Action::Idle => Some(CapabilityProfile::default()),
         }
     }
@@ -119,7 +137,9 @@ impl DecisionInputs<'_, '_, '_> {
             Action::Ability(Ability::Heal) => {
                 find_carried_potion(self.components.items, &queries.consumables).is_some()
             }
-            Action::Ability(Ability::Breathe | Ability::Bite) | Action::Idle => true,
+            Action::Ability(Ability::Breathe | Ability::Bite | Ability::Rally) | Action::Idle => {
+                true
+            }
         }
     }
 
@@ -157,10 +177,14 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
             ConsiderationInput::MotionReachFraction(motion) => {
-                self.reach_fraction(self.motion_profile(motion))
+                self.target_reach_fraction(self.motion_profile(motion))
             }
             ConsiderationInput::ActionReachFraction(action) => {
-                self.reach_fraction(self.action_profile(action))
+                self.target_reach_fraction(self.action_profile(action))
+            }
+            ConsiderationInput::AllyReachFraction(action) => {
+                let distance = self.closest_ally_distance()?;
+                Some(reach_fraction(distance, self.action_profile(action)))
             }
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
@@ -182,15 +206,32 @@ impl DecisionInputs<'_, '_, '_> {
         }
     }
 
-    /// Target distance over the capability's reach; at most `1.0` is in reach.
-    /// `f32::MAX` for a capability that is missing or has no positive reach.
-    fn reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
+    /// Target distance over the capability's reach; see [`reach_fraction`].
+    fn target_reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
         let target = self.target()?;
-        Some(
-            profile
-                .and_then(|profile| profile.reach)
-                .filter(|&reach| reach > 0.0)
-                .map_or(f32::MAX, |reach| target.distance / reach),
-        )
+        Some(reach_fraction(target.distance, profile))
     }
+
+    /// Distance to the closest other living character on this one's side.
+    fn closest_ally_distance(&self) -> Option<f32> {
+        let entity = self.components.entity;
+        let position = self.components.transform.translation.xy();
+        self.queries
+            .characters
+            .iter()
+            .filter(|(ally, _, side, health)| {
+                *ally != entity && *side == self.components.side && !health.is_dead()
+            })
+            .map(|(_, transform, ..)| transform.translation.xy().distance(position))
+            .reduce(f32::min)
+    }
+}
+
+/// `distance` over the capability's reach; at most `1.0` is in reach. `f32::MAX` for a
+/// capability that is missing or has no positive reach.
+fn reach_fraction(distance: f32, profile: Option<CapabilityProfile>) -> f32 {
+    profile
+        .and_then(|profile| profile.reach)
+        .filter(|&reach| reach > 0.0)
+        .map_or(f32::MAX, |reach| distance / reach)
 }

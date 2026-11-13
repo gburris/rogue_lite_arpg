@@ -135,6 +135,9 @@ pub fn icebolt(
         Effects [
             Frozen
             Lifespan::new(0.7)
+            --
+            @stat_modifier(Stat::Speed, -1.0)
+            Lifespan::new(0.7)
         ]
     }
 }
@@ -194,6 +197,7 @@ fn on_fire_projectile(
     fire: On<FireProjectile>,
     mut commands: Commands,
     projectile_query: Query<&Projectile, Allow<Disabled>>,
+    holders: Query<&StatMultipliers>,
 ) {
     let Ok(projectile) = projectile_query.get(fire.item) else {
         warn!(
@@ -209,6 +213,12 @@ fn on_fire_projectile(
 
     let position = fire.position + (projectile_direction * projectile.spawn_offset);
 
+    // The holder's damage multiplier is locked in at launch.
+    let damage_multiplier = fire
+        .holder
+        .and_then(|holder| holders.get(holder).ok())
+        .map_or(1.0, |multipliers| multipliers.damage);
+
     let mut template = commands.entity(fire.item);
     let mut new_projectile = template.clone_and_spawn_with_opt_out(|builder| {
         builder.linked_cloning(true);
@@ -216,7 +226,7 @@ fn on_fire_projectile(
 
     let projectile_entity = new_projectile.id();
 
-    new_projectile.remove::<(ProjectileOf, Disabled)>().insert((
+    new_projectile.insert((
         ColliderOf {
             body: projectile_entity,
         },
@@ -228,6 +238,10 @@ fn on_fire_projectile(
             ..default()
         },
         LinearVelocity(projectile_direction * projectile.speed),
+        Projectile {
+            damage: projectile.damage.scaled(damage_multiplier),
+            ..projectile.clone()
+        },
         CollisionLayers::new(
             GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
             LayerMask::from(fire.side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
@@ -237,6 +251,8 @@ fn on_fire_projectile(
         },
         DespawnOnExit(AppState::Playing),
     ));
+    // Removed after the insert, since inserting `Projectile` re-adds its required `Disabled`.
+    new_projectile.remove::<(ProjectileOf, Disabled)>();
 }
 
 /// Sends projectiles back at its holder's enemies on contact instead of being destroyed by them.

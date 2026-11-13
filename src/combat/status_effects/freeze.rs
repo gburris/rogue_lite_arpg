@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use super::status::{StatusApplied, StatusKind, StatusOf, StatusVfxOf};
 use crate::prelude::*;
 
+/// Ice under a frozen character's feet. Only the look: the effect list that freezes carries its
+/// speed [`StatModifier`](super::stat_modifier::StatModifier).
 #[derive(Component, Clone, Default)]
 #[require(StatusKind::Freeze)]
 pub struct Frozen;

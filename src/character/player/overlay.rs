@@ -291,7 +291,7 @@ fn action_box(slot: EquipmentSlot) -> impl Scene {
         BackgroundColor(ACTION_BOX_COLOR)
         BorderColor::all(ACTION_BOX_OUTLINE_COLOR)
         Children [
-            ImageNode
+            ImageNode { color: Color::NONE }
             Node {
                 width: percent(100),
                 height: percent(100),

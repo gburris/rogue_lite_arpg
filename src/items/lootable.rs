@@ -19,9 +19,12 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(on_drop_item);
 }
 
+/// Seconds a dropped item lies on the ground before it disappears.
+const LOOT_LIFESPAN_SECONDS: f32 = 30.0;
+
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(
-    Lifespan::new(10.0),
+    Lifespan::new(LOOT_LIFESPAN_SECONDS),
     YSort::from_offset(-6.0),
     PointLight2d {
                 color: Color::WHITE,
@@ -103,8 +106,15 @@ fn on_lootable_item_interaction(
     interaction: On<PlayerInteraction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
+    mut item_visuals: Query<(&mut Sprite, &mut Transform)>,
 ) {
     let item_entity = interaction.entity;
+
+    // Undo the ground glow and spin, so the item looks normal once equipped.
+    if let Ok((mut sprite, mut transform)) = item_visuals.get_mut(item_entity) {
+        sprite.color = Color::WHITE;
+        transform.rotation = Quat::IDENTITY;
+    }
 
     // Make sure item doesn't despawn and is hidden (since its in inventory)
     commands
@@ -130,14 +140,8 @@ fn glow_and_rotate_lootables(
         lootable.elapsed += time.delta_secs();
         let rotation_angle = (lootable.elapsed / 6.0) * 2.0 * PI;
         transform.rotation = Quat::from_rotation_z(rotation_angle);
-        let glow_intensity = (lootable.elapsed * 2.0).sin() * 0.1 + 0.7;
-        let base_color = sprite.color.to_srgba();
-        sprite.color = Color::srgba(
-            base_color.red * glow_intensity + 0.3,
-            base_color.green * glow_intensity + 0.3,
-            base_color.blue * glow_intensity + 0.3,
-            base_color.alpha,
-        );
+        let brightness = 1.1 + 0.25 * (lootable.elapsed * 2.0).sin();
+        sprite.color = Color::srgb(brightness, brightness, brightness);
     }
 }
 

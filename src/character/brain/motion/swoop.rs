@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 
 use super::{
-    CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput, SteeredCharacter, Steering,
-    report_motion_finished,
+    BlockedTimer, CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput,
+    SteeredCharacter, Steering, report_motion_finished,
 };
 use crate::character::brain::{CapabilityProfile, Motion};
 
@@ -15,15 +15,18 @@ const SWOOP_TRACK_LIMIT: f32 = 0.25;
 const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
+/// Seconds a dive pushes against a wall or a crowd before it breaks off.
+const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 
-/// A committed curved dive through the target; on ending it hands steering a
-/// decaying [`DecayingSpeedBoost`].
+/// A committed curved dive through the target, broken off when blocked; on ending it hands
+/// steering a decaying [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
     capability_profile: CapabilityProfile,
     extra_speed: f32,
     exit_turn: f32,
     pass: Option<SwoopPass>,
+    blocked_timer: BlockedTimer,
     current_behavior_run_id: CurrentBehaviorRunId,
 }
 
@@ -40,11 +43,13 @@ impl Swoop {
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,
             pass: None,
+            blocked_timer: BlockedTimer::default(),
             current_behavior_run_id: CurrentBehaviorRunId::default(),
         }
     }
 
     fn end_pass(&mut self) -> Option<DecayingSpeedBoost> {
+        self.blocked_timer.reset();
         // Cleared or cut short, a pass hands its boost to steering to ease off.
         self.pass.take().map(|_| {
             DecayingSpeedBoost::new(
@@ -111,7 +116,9 @@ impl Swoop {
             .pass
             .as_ref()
             .is_some_and(|pass| pass.cleared(input.position, info.distance));
-        if cleared {
+        let blocked = self.pass.is_some()
+            && input.tick_blocked_timer(&mut self.blocked_timer, SWOOP_BLOCKED_SECONDS);
+        if cleared || blocked {
             let decaying_speed_boost = self.end_pass();
             return MotionStep::Finished {
                 decaying_speed_boost,

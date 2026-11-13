@@ -252,7 +252,7 @@ pub(super) fn apply_breath(
     }
 }
 
-/// Bites a target within the true reach; contact needs no line of sight.
+/// Bites a sighted target within the true reach.
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
@@ -276,7 +276,8 @@ pub(super) fn apply_bite(
         let Some(biting) = brain.held_action(Action::Ability(Ability::Bite)) else {
             continue;
         };
-        if !(brain.is_cooldown_ready(Ability::Bite, now) && target_info.is_within(bite.reach)) {
+        let in_contact = target_info.line_of_sight && target_info.is_within(bite.reach);
+        if !(brain.is_cooldown_ready(Ability::Bite, now) && in_contact) {
             biting.report_not_started(&mut commands, entity);
             continue;
         }

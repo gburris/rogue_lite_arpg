@@ -6,7 +6,8 @@ use super::{
 use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
     CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
-    MAINHAND, RETURN_TO_HOME, WANDER, consideration, mana_at_or_below, within_reach,
+    MAINHAND, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, mana_at_or_below,
+    within_reach,
 };
 use crate::character::brain::{
     Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
@@ -39,12 +40,12 @@ const FIRE_CAST_QUALITY: Consideration = consideration(
     Interval::new(CAST_MIN_RANGE, CAST_MIN_RANGE + 60.0),
     Curve::Linear,
 );
-/// Ice mage firing-position quality: full outside its danger ring, zero 60
-/// units inside, where a target reaches it during the wind-up.
+/// Ice mage firing-position quality: full outside its danger ring, falling to zero at
+/// contact, so a mage caught with its slide recharging still shoots back.
 const ICE_CAST_QUALITY: Consideration = consideration(
     "ice cast quality",
     ConsiderationInput::TargetDistance,
-    Interval::new(ICE_SLIDE_REACH - 60.0, ICE_SLIDE_REACH),
+    Interval::new(ICE_SLIDE_REACH - 160.0, ICE_SLIDE_REACH),
     Curve::Linear,
 );
 
@@ -146,7 +147,7 @@ const ICE_CAST: Behavior = Behavior::new(
 );
 
 // Motion priority: recover (9, or 11.25 once running), hop (8.5), cast (8 at
-// full quality), return (6), orbit (5.5), chase (4), wander (1).
+// full quality), seek (7), return (6), orbit (5.5), chase (4), wander (1).
 // - Recover beats the hop on the tick it starts, so a volley that drains mana starts the break
 //   instead of a hop.
 // - The hop beats a running orbit (6.875).
@@ -164,6 +165,7 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     ACTION_BASELINE_IDLE,
     RETURN_TO_HOME,
     FIRE_RECOVER,
+    SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
     FIRE_ORBIT,
     FIRE_HOP,
@@ -172,16 +174,17 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
 ];
 
 // Motion priority: slide (12), recover (9, or 11.25 once running), cast (8 at
-// full quality), return (6), plant (5), chase (4), wander (1).
+// full quality), seek (7), return (6), plant (5), chase (4), wander (1).
 // - The slide beats a running recover and interrupts a cast.
 // - Cast quality is full from the danger ring out to the staff's reach. Inside the ring (while the
-//   slide recharges), the cast beats a running plant (6.25) from about 139 units away, and a newly
-//   started one from about 125.
+//   slide recharges), the cast beats a running plant (6.25) from about 86 units away, and a newly
+//   started one from about 49.
 static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
     ACTION_BASELINE_IDLE,
     RETURN_TO_HOME,
     ICE_RECOVER,
+    SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
     ICE_PLANT,
     ICE_SLIDE,

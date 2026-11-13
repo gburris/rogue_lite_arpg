@@ -5,7 +5,7 @@ use super::{Experience, enemy_wander, sight_ray};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
-    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, WANDER, consideration,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
     distance_threshold, flag, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
@@ -14,7 +14,7 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-/// Core of the cast distance range where shot quality stays full.
+/// Core of the cast distance range, which a bat backs out to after a dive.
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
@@ -55,10 +55,16 @@ const BREATH_WARMED_UP: Consideration = consideration(
     Interval::new(1.0, 2.0),
     Curve::Linear,
 );
+// Both enter at one shared distance, so a bat with no incumbent always has one of the two.
 const PAST_INNER_CAST_EDGE: Consideration = distance_threshold(
     "past inner cast edge",
     CAST_MIN_RANGE + CAST_HYSTERESIS,
     CAST_MIN_RANGE - CAST_HYSTERESIS,
+);
+const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
+    "inside inner cast edge",
+    CAST_MIN_RANGE + CAST_HYSTERESIS,
+    CAST_MIN_RANGE + 2.0 * CAST_HYSTERESIS,
 );
 
 /// Orbits the cast distance range.
@@ -69,13 +75,13 @@ const BAT_ORBIT: Behavior = Behavior::new(
     5.5,
     &[PAST_INNER_CAST_EDGE, INSIDE_OUTER_CAST_EDGE],
 );
-/// Holds the core so it keeps repositioning toward the middle.
+/// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
     Some(Motion::KeepDistance(CAST_CORE_DISTANCE_RANGE)),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
-    &[INSIDE_OUTER_CAST_EDGE],
+    &[INSIDE_INNER_CAST_EDGE],
 );
 /// Bite dive while circling.
 const BAT_SWOOP: Behavior = Behavior::new(
@@ -117,8 +123,11 @@ const BAT_BITE: Behavior = Behavior::new(
     &[NEAR_BITE_REACH],
 );
 
-// Motion priority: swoop (10), return (6), orbit (5.5), keep (5), chase (4),
-// wander (1). A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
+// Motion priority: swoop (10), seek (7), return (6), orbit (5.5), keep (5), chase (4),
+// wander (1).
+// - A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
+// - Keep and orbit never score together: keep holds the slot out to 10 units past the inner cast
+//   edge, where the orbit takes over, and the orbit holds it down to 5 units inside that edge.
 //
 // Action priority: bite (1.5), breathe (up to 1), idle (0.5).
 // - Idle is the bar an action must beat to fire: 0.5, or 0.625 while it holds the slot.
@@ -129,6 +138,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     WANDER,
     BAT_BASELINE_IDLE,
     RETURN_TO_HOME,
+    SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
     BAT_ORBIT,
     BAT_KEEP,
@@ -185,11 +195,15 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         ~Kinematics::new(170.0)
         ~Health::new(15.0)
         Experience(6.0)
-        // Bats fly high: longer reach, and high obstacles never block the
-        // ray, so a bat holds its target through cover.
+        // Bats fly high: longer reach, and only the high obstacles that also stop
+        // their flight block the ray.
         sight_ray(
             BAT_SIGHT_RANGE,
-            SpatialQueryFilter::from_mask([GameCollisionLayer::AllyHurtBox]),
+            BAT_BODY_OFFSET,
+            SpatialQueryFilter::from_mask([
+                GameCollisionLayer::AllyHurtBox,
+                GameCollisionLayer::HighObstacle,
+            ]),
         )
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)

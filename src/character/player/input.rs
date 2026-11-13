@@ -26,8 +26,7 @@ pub(super) fn plugin(app: &mut App) {
     .add_systems(
         OnEnter(PlayingState::Death),
         set_controls(ContextActivity::<Player>::INACTIVE),
-    )
-    .add_observer(on_inventory_opened);
+    );
 }
 
 const MOUSE_SENSITIVITY: f32 = 0.5;
@@ -37,11 +36,6 @@ const CONTROLLER_AIM_SENSITIVITY: f32 = 8.0;
 pub(super) fn player_actions() -> impl Scene {
     bsn! {
         Actions<Player> [
-            Action::<OpenInventory>::new()
-            Bindings [
-                Binding(KeyCode::KeyI)
-            ]
-            --
             Action::<PlayerInteractionInput>::new()
             Bindings [
                 Binding(KeyCode::Space)
@@ -96,14 +90,6 @@ pub(super) fn player_actions() -> impl Scene {
             ]
         ]
     }
-}
-
-#[derive(InputAction)]
-#[action_output(bool)]
-struct OpenInventory;
-
-fn on_inventory_opened(_: On<Start<OpenInventory>>, mut next_menu_state: ResMut<NextState<Menu>>) {
-    next_menu_state.set(Menu::Inventory);
 }
 
 fn set_controls(

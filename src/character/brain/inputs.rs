@@ -1,3 +1,4 @@
+use avian2d::prelude::LinearVelocity;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -31,6 +32,11 @@ pub enum ConsiderationInput {
     /// The closest ally's distance over this action's reach; absent with no ally alive.
     AllyReachFraction(Action),
     SecondsSinceTargeted,
+    /// Whether the character owns this action and the world lets it run, whatever its cooldown.
+    ActionUsable(Action),
+    /// Whether the character is pressed against a wall or a crowd; see
+    /// [`Kinematics::is_blocked_at`].
+    MovementBlocked,
 }
 
 /// The components one decision reads, including every capability a character may carry.
@@ -44,6 +50,8 @@ pub(super) struct DecisionInputComponents {
     mana: Option<&'static Mana>,
     home_area: Option<&'static HomeArea>,
     stat_multipliers: &'static StatMultipliers,
+    kinematics: &'static Kinematics,
+    linear_velocity: Option<&'static LinearVelocity>,
     items: Option<&'static Items>,
     motion_capabilities: MotionCapabilities,
     abilities: Option<&'static Abilities>,
@@ -181,7 +189,22 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
             }
+            ConsiderationInput::ActionUsable(action) => Some(f32::from(
+                self.action_profile(action).is_some() && self.world_allows_use(action),
+            )),
+            ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
         }
+    }
+
+    /// Whether the character is pressed against a wall or a crowd; see
+    /// [`Kinematics::is_blocked_at`].
+    fn is_movement_blocked(&self) -> bool {
+        let components = self.components;
+        components.linear_velocity.is_some_and(|linear_velocity| {
+            components
+                .kinematics
+                .is_blocked_at(linear_velocity.0, components.stat_multipliers.speed)
+        })
     }
 
     /// How far past its home area range the character is. Once already heading

@@ -143,10 +143,30 @@ pub(super) fn on_toggle_pause(
     }
 }
 
+#[derive(InputAction)]
+#[action_output(bool)]
+pub(super) struct ToggleInventory;
+
+/// Opens the inventory during play, and closes it again.
+pub(super) fn on_toggle_inventory(
+    _: On<Start<ToggleInventory>>,
+    menu: Res<State<Menu>>,
+    playing_state: Option<Res<State<PlayingState>>>,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    let is_playing = playing_state.is_some_and(|state| *state.get() == PlayingState::Playing);
+    match menu.get() {
+        Menu::None if is_playing => next_menu_state.set(Menu::Inventory),
+        Menu::Inventory => next_menu_state.set(Menu::None),
+        _ => {}
+    }
+}
+
 #[derive(Component, Default, Clone)]
 pub(crate) struct PauseControl;
 
-/// The pause toggle, added to the player.
+/// The pause and inventory toggles, added to the player. They stay active in menus, so the key
+/// that opened a menu also closes it.
 pub(crate) fn pause_actions() -> impl Scene {
     // Escape un-grabs the cursor on the web, so it can't pause there.
     let escape = (!cfg!(target_family = "wasm")).then_some(bsn_list! {
@@ -157,7 +177,6 @@ pub(crate) fn pause_actions() -> impl Scene {
         PauseControl
         Actions<PauseControl> [
             Action::<TogglePause>::new()
-            // `MenuBack` shares this input, so wait for a release before toggling again.
             ActionSettings { require_reset: true }
             Bindings [
                 Binding(KeyCode::KeyP)
@@ -165,6 +184,11 @@ pub(crate) fn pause_actions() -> impl Scene {
                 Binding(GamepadButton::Start)
                 --
                 {escape}
+            ]
+            --
+            Action::<ToggleInventory>::new()
+            Bindings [
+                Binding(KeyCode::KeyI)
             ]
         ]
     }

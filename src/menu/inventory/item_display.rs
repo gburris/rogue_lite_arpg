@@ -35,6 +35,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scen
         ItemKind::Staff => icons.staff.clone(),
         ItemKind::Potion => icons.potion.clone(),
         ItemKind::Tome => icons.spell_book.clone(),
+        ItemKind::Shield => icons.shield.clone(),
     };
     let equipped_icon = context.equipped.then(|| {
         let image = icons.equip.clone();

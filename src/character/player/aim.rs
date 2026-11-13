@@ -53,20 +53,19 @@ fn on_player_aim(
         // Apply screen-relative input
         let new_world_aim_position = world_aim_position + aim_input.value;
 
-        // Convert back to player-relative, clamped to max distance
-        let player_position = player_transform.translation.xy();
-        let direction = new_world_aim_position - player_position;
-        let distance = direction.length();
-
-        if distance > AIM_DISTANCE {
-            player_aim.translation = (direction.normalize() * AIM_DISTANCE).extend(0.0);
-        } else {
-            player_aim.translation = direction.extend(0.0);
-        }
-
-        player_vision.aim_distance = distance.min(AIM_DISTANCE);
-        player_vision.aim_direction = player_aim.translation.xy().normalize_or_zero();
+        let offset = new_world_aim_position - player_transform.translation.xy();
+        place_player_aim(offset, &mut player_vision, &mut player_aim);
     }
+}
+
+/// Moves the reticle to `offset` from the player, at most [`AIM_DISTANCE`] away, and points the
+/// player's vision at it.
+pub(crate) fn place_player_aim(offset: Vec2, vision: &mut Vision, aim_transform: &mut Transform) {
+    let offset = offset.clamp_length_max(AIM_DISTANCE);
+
+    aim_transform.translation = offset.extend(0.0);
+    vision.aim_distance = offset.length();
+    vision.aim_direction = offset.normalize_or_zero();
 }
 
 fn grab_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {

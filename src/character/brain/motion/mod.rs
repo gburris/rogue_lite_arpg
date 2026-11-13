@@ -19,7 +19,8 @@ pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
 pub(super) use self::step::MotionFinished;
 use self::step::{
-    CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, report_motion_finished,
+    BlockedTimer, CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter,
+    report_motion_finished,
 };
 pub use self::swoop::Swoop;
 pub use self::wander::Wander;
@@ -166,6 +167,7 @@ pub(super) fn plugin(app: &mut App) {
             swoop::apply_swoop,
             orbit::apply_orbit,
             wander::apply_wander,
+            home_area::settle_blocked_returners,
             direct::apply_direct_steering,
             steering::apply_steering,
         )

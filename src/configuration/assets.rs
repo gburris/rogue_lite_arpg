@@ -130,6 +130,8 @@ pub struct GameIcons {
     pub potion: Handle<Image>,
     #[asset(path = "icons/spell-book.png")]
     pub spell_book: Handle<Image>,
+    #[asset(path = "icons/shield.png")]
+    pub shield: Handle<Image>,
     #[asset(path = "icons/sword-brandish.png")]
     pub melee: Handle<Image>,
     #[asset(path = "icons/wizard-staff.png")]

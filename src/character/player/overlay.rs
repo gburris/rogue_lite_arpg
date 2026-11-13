@@ -291,7 +291,7 @@ fn action_box(slot: EquipmentSlot) -> impl Scene {
         BackgroundColor(ACTION_BOX_COLOR)
         BorderColor::all(ACTION_BOX_OUTLINE_COLOR)
         Children [
-            ImageNode
+            ImageNode { color: Color::NONE }
             Node {
                 width: percent(100),
                 height: percent(100),
@@ -315,42 +315,40 @@ fn action_box_overlay(box_entity: Entity, color: Color) -> impl Scene {
     }
 }
 
+/// Shows each slot's equipped item in its action box, and nothing in an empty slot.
 fn update_action_bar(
     action_box_query: Query<(&ActionBox, &Children)>,
     mut image_query: Query<&mut ImageNode>,
-    equipment_query: Option<
-        Single<
-            (Option<&Mainhand>, Option<&Offhand>),
-            (Or<(Changed<Mainhand>, Changed<Offhand>)>, With<Player>),
-        >,
-    >,
+    player_equipment: Single<(Option<&Mainhand>, Option<&Offhand>), With<Player>>,
     item_query: Query<&Sprite, With<Item>>,
 ) {
-    if let Some(player_inventory_result) = equipment_query {
-        let (mainhand, offhand) = player_inventory_result.into_inner();
+    let (mainhand, offhand) = *player_equipment;
 
-        for (action_box, children) in &action_box_query {
-            let equipment: Option<Entity> = action_box.slot.equipped(mainhand, offhand);
-
-            if let Some(&image_entity) = children.first()
-                && let Ok(mut image_node) = image_query.get_mut(image_entity)
-                && let Some(equipped_entity) = equipment
-                && let Ok(item_sprite) = item_query.get(equipped_entity)
-            {
-                let action_bar_sprite = action_bar_sprite(item_sprite);
-
-                image_node.image = action_bar_sprite.image.clone();
-
-                if let Some(atlas) = &action_bar_sprite.texture_atlas {
-                    image_node.texture_atlas = Some(TextureAtlas {
-                        layout: atlas.layout.clone(),
-                        index: atlas.index,
-                    });
-                } else {
-                    image_node.texture_atlas = None;
-                }
+    for (action_box, children) in &action_box_query {
+        let Some(&image_entity) = children.first() else {
+            continue;
+        };
+        let Ok(mut image_node) = image_query.get_mut(image_entity) else {
+            continue;
+        };
+        let item_sprite = action_box
+            .slot
+            .equipped(mainhand, offhand)
+            .and_then(|item| item_query.get(item).ok());
+        let Some(item_sprite) = item_sprite else {
+            // An image node with no image draws a solid square of its color.
+            if image_node.color != Color::NONE {
+                image_node.color = Color::NONE;
             }
+            continue;
+        };
+        if image_node.color == Color::WHITE && image_node.image == item_sprite.image {
+            continue;
         }
+        let action_bar_sprite = action_bar_sprite(item_sprite);
+        image_node.color = Color::WHITE;
+        image_node.image = action_bar_sprite.image;
+        image_node.texture_atlas = action_bar_sprite.texture_atlas;
     }
 }
 

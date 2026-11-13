@@ -158,12 +158,14 @@ pub struct Restart {
     pub player_level: u32,
 }
 
-// Make pause menu visible when we enter the state
-fn resume_game(mut time: ResMut<Time<Physics>>) {
-    time.unpause();
+fn resume_game(mut physics_time: ResMut<Time<Physics>>, mut virtual_time: ResMut<Time<Virtual>>) {
+    physics_time.unpause();
+    virtual_time.unpause();
 }
 
-// Cleanup pause menu once we return to game, set it to hidden
-fn pause_game(mut time: ResMut<Time<Physics>>) {
-    time.pause();
+/// Stops physics and game time. AI cooldowns and timeouts are points on the virtual clock, so
+/// it must not run on while the game is paused.
+fn pause_game(mut physics_time: ResMut<Time<Physics>>, mut virtual_time: ResMut<Time<Virtual>>) {
+    physics_time.pause();
+    virtual_time.pause();
 }

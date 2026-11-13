@@ -24,6 +24,12 @@ const _: () = assert!(
     "staffs must reach the cast range's outer edge"
 );
 
+/// Mana a second a fire mage regenerates.
+const FIRE_MAGE_MANA_REGEN: f32 = 10.0;
+/// Mana a second an ice mage regenerates: nearly what a steady stream of ice bolts costs, so its
+/// breaks to refill come rarely.
+const ICE_MAGE_MANA_REGEN: f32 = 13.0;
+
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
@@ -85,9 +91,9 @@ const FIRE_RALLY: Behavior = Behavior::new(
     3.0,
     &[HAS_TARGET, ALLY_CLOSE],
 );
-/// Plants and lets the ice bolt do the work.
-const ICE_PLANT: Behavior = Behavior::new(
-    Some(Motion::Idle),
+/// Circles on its firing lane between casts, so it never stands around waiting on the staff.
+const ICE_ORBIT: Behavior = Behavior::new(
+    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -137,7 +143,7 @@ const FIRE_CAST: Behavior = Behavior::new(
     CAST_WEIGHT,
     &[LINE_OF_SIGHT, IN_MAINHAND_REACH, FIRE_CAST_QUALITY],
 );
-/// Casts from where the ice mage plants.
+/// Stops on the orbit to cast.
 const ICE_CAST: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),
@@ -174,10 +180,10 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
 ];
 
 // Motion priority: slide (12), recover (9, or 11.25 once running), cast (8 at
-// full quality), seek (7), return (6), plant (5), chase (4), wander (1).
+// full quality), seek (7), return (6), orbit (5), chase (4), wander (1).
 // - The slide beats a running recover and interrupts a cast.
 // - Cast quality is full from the danger ring out to the staff's reach. Inside the ring (while the
-//   slide recharges), the cast beats a running plant (6.25) from about 86 units away, and a newly
+//   slide recharges), the cast beats a running orbit (6.25) from about 86 units away, and a newly
 //   started one from about 49.
 static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
@@ -186,7 +192,7 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     ICE_RECOVER,
     SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
-    ICE_PLANT,
+    ICE_ORBIT,
     ICE_SLIDE,
     ICE_CAST,
 ];
@@ -197,7 +203,7 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
 pub(super) static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,
 };
-/// Plants on a firing lane, slides straight out when the player crosses its
+/// Circles on a firing lane, slides straight out when the player crosses its
 /// danger ring, and retreats until its expensive bolts are affordable again.
 pub(super) static ICE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: ICE_MAGE_BEHAVIORS,
@@ -253,9 +259,11 @@ pub(super) fn spawn_fire_mage(
     }
 }
 
-/// A mage's look and body: an enemy-sheet sprite carrying a spare potion.
+/// A mage's look and body: an enemy-sheet sprite carrying a spare potion, regenerating
+/// `mana_regen` mana a second.
 fn mage_body(
     image: Handle<Image>,
+    mana_regen: f32,
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
 ) -> impl Scene {
@@ -270,7 +278,7 @@ fn mage_body(
         ~Health::new(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        ~Mana::new(100.0, 10.0)
+        ~Mana::new(100.0, mana_regen)
         enemy_wander()
         template(move |_| Ok(sprite.clone()))
         Items [
@@ -281,7 +289,13 @@ fn mage_body(
 
 fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @mage_body(sprites.ice_mage_enemy_sprite_sheet.clone(), sprites, sprite_layouts)
+        @mage_body(
+            sprites.ice_mage_enemy_sprite_sheet.clone(),
+            ICE_MAGE_MANA_REGEN,
+            sprites,
+            sprite_layouts,
+        )
+        ~Orbit::new()
         ~Kinematics::new(100.0)
         Experience(12.0)
         // The cooldown is the player's window to close in again.
@@ -296,7 +310,12 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
 
 fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @mage_body(sprites.fire_mage_enemy_sprite_sheet.clone(), sprites, sprite_layouts)
+        @mage_body(
+            sprites.fire_mage_enemy_sprite_sheet.clone(),
+            FIRE_MAGE_MANA_REGEN,
+            sprites,
+            sprite_layouts,
+        )
         ~Kinematics::new(150.0)
         Experience(15.0)
         // A still target inside the close range gets a step-in hop instead.

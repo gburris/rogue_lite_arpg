@@ -14,6 +14,8 @@ pub mod prelude {
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::map::prelude::MapRecipe;
     pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
+    #[cfg(feature = "dev_tools")]
+    pub(crate) use super::portal::Portal;
     pub use super::portal::portal;
 }
 

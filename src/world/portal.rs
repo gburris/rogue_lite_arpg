@@ -20,12 +20,13 @@ pub(super) fn plugin(app: &mut App) {
     YSort,
     DespawnOnExit::<AppState>(AppState::Playing)
 )]
-struct Portal;
+pub(crate) struct Portal;
 
 pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
     let image = sprites.exit_door.clone();
     bsn! {
         Portal
+        Name::new("Portal")
         Sprite { image }
         Transform::from_translation({position.extend(ZLayer::OnGround.z())})
     }

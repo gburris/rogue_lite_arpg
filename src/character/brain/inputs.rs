@@ -20,8 +20,9 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion's kind is the one running; its payload is ignored.
     MotionRunning(Motion),
-    /// Whether the running motion holds the target at a distance.
-    Circling,
+    /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
+    /// the payload is ignored.
+    SecondsInMotion(Motion),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
@@ -167,10 +168,12 @@ impl DecisionInputs<'_, '_, '_> {
                     .motion()
                     .is_some_and(|running| running.is_same_kind(motion)),
             )),
-            ConsiderationInput::Circling => Some(f32::from(matches!(
-                brain.motion(),
-                Some(Motion::Orbit(_) | Motion::KeepDistance(_))
-            ))),
+            ConsiderationInput::SecondsInMotion(motion) => Some(
+                brain
+                    .current_motion_behavior()
+                    .filter(|running| running.motion.is_some_and(|held| held.is_same_kind(motion)))
+                    .map_or(0.0, |running| self.now - running.started_at),
+            ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
             ConsiderationInput::MotionReachFraction(motion) => {

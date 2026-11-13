@@ -32,6 +32,20 @@ pub const fn consideration(
     }
 }
 
+/// Whether a motion of `motion`'s kind has been running for more than `seconds`; see
+/// [`ConsiderationInput::SecondsInMotion`].
+pub const fn motion_held_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
+    Consideration {
+        name,
+        input: ConsiderationInput::SecondsInMotion(motion),
+        score_mapping: ScoreMapping::Threshold {
+            enter: seconds,
+            exit: seconds,
+        },
+        inverted: true,
+    }
+}
+
 /// A target-distance threshold with hysteresis; see [`ScoreMapping::Threshold`].
 pub const fn distance_threshold(name: &'static str, enter: f32, exit: f32) -> Consideration {
     assert!(

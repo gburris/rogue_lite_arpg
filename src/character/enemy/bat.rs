@@ -6,7 +6,7 @@ use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
-    distance_threshold, flag, reach_fraction_threshold, within_reach,
+    distance_threshold, flag, motion_held_for, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
     Abilities, Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy,
@@ -20,7 +20,13 @@ const CAST_CORE_DISTANCE_RANGE: Interval =
 
 const NOT_SWOOPING: Consideration =
     flag("swooping", ConsiderationInput::MotionRunning(Motion::Swoop)).inverted("not swooping");
-const CIRCLING: Consideration = flag("circling", ConsiderationInput::Circling);
+/// Seconds a bat orbits before it may dive, so it never dives straight out of another move.
+const BAT_SWOOP_WARM_UP: f32 = 0.5;
+const ORBIT_WARMED_UP: Consideration = motion_held_for(
+    "orbit warmed up",
+    Motion::Orbit(CAST_DISTANCE_RANGE),
+    BAT_SWOOP_WARM_UP,
+);
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
     ConsiderationInput::MotionReachFraction(Motion::Swoop),
@@ -83,13 +89,13 @@ const BAT_KEEP: Behavior = Behavior::new(
     5.0,
     &[INSIDE_INNER_CAST_EDGE],
 );
-/// Bite dive while circling.
+/// Bite dive out of an orbit that has run for [`BAT_SWOOP_WARM_UP`].
 const BAT_SWOOP: Behavior = Behavior::new(
     Some(Motion::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
-    &[IN_SWOOP_REACH, CIRCLING],
+    &[IN_SWOOP_REACH, ORBIT_WARMED_UP],
 );
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.

@@ -13,13 +13,11 @@ use serde_json::{Value, json};
 use crate::process::{ChildProcess, run_to_completion};
 
 /// Warnings every run logs, by a phrase each contains. Any other warning is a problem.
-const EXPECTED_WARNINGS: [&str; 3] = [
+const EXPECTED_WARNINGS: [&str; 2] = [
     // Bevy can't read CPU and memory usage on this platform.
     "This platform and/or configuration is not supported",
     // The startup ambiguity report, which lists third-party pairs.
     "pairs of systems with conflicting data access",
-    // The Helper villager's placeholder interaction.
-    "on_game_guide_start",
 ];
 /// Time a started game gets to open its remote server.
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(300);

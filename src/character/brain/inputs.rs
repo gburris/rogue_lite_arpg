@@ -6,7 +6,7 @@ use super::Brain;
 use super::action::{Abilities, Ability, Action, find_carried_potion};
 use super::capability::{AbilityCapabilities, CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
-use super::perception::{TargetInfo, Targeting};
+use super::perception::{Allies, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
@@ -38,7 +38,6 @@ pub enum ConsiderationInput {
 pub(super) struct DecisionInputComponents {
     entity: Entity,
     transform: &'static Transform,
-    side: &'static CombatSide,
     has_target: Has<Targeting>,
     target_info: Option<&'static TargetInfo>,
     health: Option<&'static Health>,
@@ -50,24 +49,14 @@ pub(super) struct DecisionInputComponents {
     abilities: Option<&'static Abilities>,
 }
 
-/// The queries behind ability and equipment profiles, ally positions and the world-allows-use
-/// checks.
+/// The queries behind ability and equipment profiles, allies and the world-allows-use checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
     equipment: EquipmentRead<'w, 's>,
     consumables: Query<'w, 's, (), With<Consumable>>,
     items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
     ability_capabilities: Query<'w, 's, AbilityCapabilities>,
-    characters: Query<
-        'w,
-        's,
-        (
-            Entity,
-            &'static Transform,
-            &'static CombatSide,
-            &'static Health,
-        ),
-    >,
+    allies: Allies<'w, 's>,
 }
 
 /// One decision's view of the world: references only, read on demand.
@@ -183,8 +172,11 @@ impl DecisionInputs<'_, '_, '_> {
                 self.target_reach_fraction(self.action_profile(action))
             }
             ConsiderationInput::AllyReachFraction(action) => {
-                let distance = self.closest_ally_distance()?;
-                Some(reach_fraction(distance, self.action_profile(action)))
+                let closest = self.queries.allies.closest(self.components.entity)?;
+                Some(reach_fraction(
+                    closest.distance,
+                    self.action_profile(action),
+                ))
             }
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
@@ -210,20 +202,6 @@ impl DecisionInputs<'_, '_, '_> {
     fn target_reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
         let target = self.target()?;
         Some(reach_fraction(target.distance, profile))
-    }
-
-    /// Distance to the closest other living character on this one's side.
-    fn closest_ally_distance(&self) -> Option<f32> {
-        let entity = self.components.entity;
-        let position = self.components.transform.translation.xy();
-        self.queries
-            .characters
-            .iter()
-            .filter(|(ally, _, side, health)| {
-                *ally != entity && *side == self.components.side && !health.is_dead()
-            })
-            .map(|(_, transform, ..)| transform.translation.xy().distance(position))
-            .reduce(f32::min)
     }
 }
 

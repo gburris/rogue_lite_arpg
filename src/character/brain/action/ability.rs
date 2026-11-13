@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 
-use crate::character::brain::{Action, Brain, CapabilityProfile, TargetInfo, Targeting};
+use crate::character::brain::{Action, Allies, Brain, CapabilityProfile, TargetInfo, Targeting};
 use crate::prelude::*;
 
 /// An innate move a brain can ask its character for, carried out by a capability
@@ -307,13 +307,13 @@ pub(super) fn apply_rally(
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     rallies: Query<(&Rally, &Effects, &AbilityOf)>,
-    rallyers: Query<(&Brain, &Transform, &CombatSide)>,
-    characters: Query<(Entity, &Transform, &CombatSide, &Health)>,
+    rallyers: Query<&Brain>,
+    allies: Allies,
 ) {
     let now = time.elapsed_secs();
     for (rally, effects, ability_of) in &rallies {
         let entity = ability_of.holder;
-        let Ok((brain, transform, side)) = rallyers.get(entity) else {
+        let Ok(brain) = rallyers.get(entity) else {
             continue;
         };
         let Some(rallying) = brain.held_action(Action::Ability(Ability::Rally)) else {
@@ -323,15 +323,8 @@ pub(super) fn apply_rally(
             rallying.report_not_started(&mut commands, entity);
             continue;
         }
-        let position = transform.translation.xy();
-        for (ally, ally_transform, ally_side, ally_health) in &characters {
-            if ally != entity
-                && ally_side == side
-                && !ally_health.is_dead()
-                && ally_transform.translation.xy().distance(position) <= rally.reach
-            {
-                commands.trigger(ApplyEffects::new(effects, ally));
-            }
+        for ally in allies.within(entity, rally.reach) {
+            commands.trigger(ApplyEffects::new(effects, ally.entity));
         }
         commands.spawn_scene(bsn! {
             @rally_shout_vfx(&sprites, &sprite_layouts)

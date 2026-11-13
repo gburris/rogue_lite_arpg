@@ -192,17 +192,19 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::ActionUsable(action) => Some(f32::from(
                 self.action_profile(action).is_some() && self.world_allows_use(action),
             )),
-            ConsiderationInput::MovementBlocked => {
-                let stat_speed = self.components.stat_multipliers.speed;
-                Some(f32::from(self.components.linear_velocity.is_some_and(
-                    |linear_velocity| {
-                        self.components
-                            .kinematics
-                            .is_blocked_at(linear_velocity.0, stat_speed)
-                    },
-                )))
-            }
+            ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
         }
+    }
+
+    /// Whether the character is pressed against a wall or a crowd; see
+    /// [`Kinematics::is_blocked_at`].
+    fn is_movement_blocked(&self) -> bool {
+        let components = self.components;
+        components.linear_velocity.is_some_and(|linear_velocity| {
+            components
+                .kinematics
+                .is_blocked_at(linear_velocity.0, components.stat_multipliers.speed)
+        })
     }
 
     /// How far past its home area range the character is. Once already heading

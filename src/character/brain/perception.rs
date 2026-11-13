@@ -1,9 +1,4 @@
 //! What a brain knows: vision tracks a target and aggro picks one.
-//!
-//! A character notices the watched entity in its vision cone, or at any angle within
-//! [`NOTICE_DISTANCE`], and targets it. While the target is in sight (or a [`TargetLock`] holds)
-//! [`TargetInfo`] follows it live. Out of sight it keeps the last known position, which the
-//! character can still walk to, and [`TARGET_MEMORY_SECONDS`] later the target is dropped.
 
 use std::f32::consts::FRAC_PI_4;
 

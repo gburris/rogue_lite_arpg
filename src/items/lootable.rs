@@ -106,12 +106,12 @@ fn on_lootable_item_interaction(
     interaction: On<PlayerInteraction>,
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
-    mut sprites: Query<(&mut Sprite, &mut Transform)>,
+    mut item_visuals: Query<(&mut Sprite, &mut Transform)>,
 ) {
     let item_entity = interaction.entity;
 
     // Undo the ground glow and spin, so the item looks normal once equipped.
-    if let Ok((mut sprite, mut transform)) = sprites.get_mut(item_entity) {
+    if let Ok((mut sprite, mut transform)) = item_visuals.get_mut(item_entity) {
         sprite.color = Color::WHITE;
         transform.rotation = Quat::IDENTITY;
     }

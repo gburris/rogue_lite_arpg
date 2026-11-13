@@ -68,11 +68,9 @@ pub(super) fn set_player_input(
     }
 
     if let Some(aim) = aim
-        && let Some(direction) = aim.try_normalize()
+        && aim != Vec2::ZERO
     {
-        vision.aim_direction = direction;
-        vision.aim_distance = aim.length();
-        player_aim.translation = aim.extend(0.0);
+        place_player_aim(aim, &mut vision, &mut player_aim);
     }
 
     Ok(Value::Null)

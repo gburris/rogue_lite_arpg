@@ -30,7 +30,9 @@ pub mod prelude {
         PlayerInteraction, PlayerInteractionRadius,
     };
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::player::prelude::{PlayerMovement, UseMainhand, UseOffhand};
+    pub(crate) use super::player::prelude::{
+        PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
+    };
     pub use super::purse::Purse;
     pub use super::state::{Attacking, FacingDirection, Kinematics, Vision};
 }

@@ -24,14 +24,14 @@ pub(super) fn plugin(app: &mut App) {
 const WALL_CLEARANCE: f32 = 12.0;
 /// Farthest target distance at which an AI holder casts a staff.
 pub const STAFF_REACH: f32 = 360.0;
-/// Fraction of the standard fireball speed used by the fire mage's single-bolt staff.
-const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
-/// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
-const MAGE_FAN_SPEED_FACTOR: f32 = 0.2;
+/// Fraction of the standard fireball speed used by both fire mage staffs.
+const MAGE_BOLT_SPEED_FACTOR: f32 = 0.7;
 /// Seconds between the player's flame staff casts.
 const FLAME_STAFF_COOLDOWN: f32 = 0.5;
-/// Seconds between a fire mage's volleys, leaving time to hop and sidestep in between.
+/// Seconds between a fire mage's single-bolt volleys, leaving time to hop and sidestep in between.
 const MAGE_FLAME_STAFF_COOLDOWN: f32 = 1.1;
+/// Seconds between a fire mage's three-bolt volleys: three times the bolts, fired half as often.
+const MAGE_FAN_STAFF_COOLDOWN: f32 = 2.2;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
@@ -52,7 +52,7 @@ pub fn mage_fire_staff_single_bolt(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
 ) -> impl Scene {
-    let speed = FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR;
+    let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
         @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Flames")
@@ -67,9 +67,9 @@ pub fn mage_fire_staff_fan(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
 ) -> impl Scene {
-    let speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
+    let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN)
         Name::new("Staff of Wildfire")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)

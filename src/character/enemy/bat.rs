@@ -19,8 +19,13 @@ use crate::prelude::*;
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
-const NOT_SWOOPING: Consideration =
-    flag("swooping", ConsiderationInput::MotionRunning(Motion::Swoop)).inverted("not swooping");
+/// Zero while a swoop runs or could start this decision: its cooldown starts only once one ends
+/// or misses its start roll.
+const SWOOP_COOLING_DOWN: Consideration = flag(
+    "swoop ready",
+    ConsiderationInput::MotionReady(Motion::Swoop),
+)
+.inverted("swoop cooling down");
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
     ConsiderationInput::MotionReachFraction(Motion::Swoop),
@@ -29,9 +34,9 @@ const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
     ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breathe)),
 );
-/// Distance out to which the decision arms a bite: 40 units past contact.
-/// Decisions sample at ~10 Hz, so a swoop crossing the reach could otherwise
-/// fall between two samples; the applier still checks the true reach.
+/// Distance out to which the decision arms a bite: 40 units past contact. Decisions sample at
+/// 10 Hz, so a swoop crossing the reach could otherwise fall between two samples; the bite's
+/// jaws stay open long enough to close the gap.
 const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;
 const NEAR_BITE_REACH: Consideration = reach_fraction_threshold(
@@ -100,7 +105,7 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
     0.5,
     &[],
 );
-/// Fireball from range, never mid-swoop.
+/// Fireball from range, only between swoops.
 const BAT_BREATHE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Breathe)),
@@ -111,7 +116,7 @@ const BAT_BREATHE: Behavior = Behavior::new(
         IN_BREATH_REACH,
         BREATH_DISTANCE,
         BREATH_WARMED_UP,
-        NOT_SWOOPING,
+        SWOOP_COOLING_DOWN,
     ],
 );
 /// Arms a bite near contact reach, whether swooping or circling.
@@ -120,7 +125,7 @@ const BAT_BITE: Behavior = Behavior::new(
     Some(Action::Ability(Ability::Bite)),
     CommitPolicy::ContinuouslyScored,
     1.5,
-    &[NEAR_BITE_REACH],
+    &[LINE_OF_SIGHT, NEAR_BITE_REACH],
 );
 
 // Motion priority: swoop (10), seek (7), return (6), orbit (5.5), keep (5), chase (4),

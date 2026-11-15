@@ -5,8 +5,9 @@ use bevy::prelude::*;
 use super::{Ability, AbilityCooldown, AbilityOf, AbilityReleased, AbilitySteps};
 use crate::prelude::*;
 
-/// Seconds a bite's hitbox stays out: about four frames, one quick snap.
-const BITE_HITBOX_SECONDS: f32 = 0.07;
+/// Seconds a bite's hitbox stays out: the jaws stay open through a lunge, so a bite started just
+/// short of its reach still lands on a target the biter closes on.
+const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim.
 #[derive(Component, Clone, Copy, Debug)]

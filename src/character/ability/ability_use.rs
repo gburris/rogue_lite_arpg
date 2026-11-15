@@ -252,11 +252,6 @@ impl AbilityUsage<'_, '_> {
             .insert_if_new(AbilityInUse::default());
         Ok(())
     }
-
-    /// See [`AbilityRead::reach`].
-    pub fn reach(&self, holder: Entity, ability: Ability) -> Option<f32> {
-        self.read.reach(holder, ability)
-    }
 }
 
 /// Runs a new use's first steps at once, so an ability without a hold takes effect on the frame

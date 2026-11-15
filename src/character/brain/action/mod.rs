@@ -1,13 +1,11 @@
-//! What a character does besides moving: the [`Action`] a brain chooses, and the appliers that
-//! carry it out through equipment and abilities.
+//! What a character does besides moving: the [`Action`] a brain chooses, and the applier that
+//! carries it out through items and abilities.
 
-mod ability_use;
-mod equipment_use;
+mod usage;
 
 use bevy::prelude::*;
 
-pub(super) use self::ability_use::StartedAbilityUses;
-pub(super) use self::equipment_use::StartedEquipmentUses;
+pub(super) use self::usage::{ActionRead, ActionReadiness, StartedActions};
 use super::BrainSystems;
 use crate::character::ability::Ability;
 use crate::prelude::*;
@@ -27,14 +25,10 @@ pub enum Action {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            equipment_use::apply_equipment_use_requests,
-            ability_use::apply_ability_requests,
-        )
-            .in_set(BrainSystems::Execute),
+        usage::apply_action_requests.in_set(BrainSystems::Execute),
     )
-    .add_observer(equipment_use::on_report_equipment_use_finished)
-    .add_observer(ability_use::on_report_ability_use_finished);
+    .add_observer(usage::on_report_equipment_use_finished)
+    .add_observer(usage::on_report_ability_use_finished);
 }
 
 /// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`

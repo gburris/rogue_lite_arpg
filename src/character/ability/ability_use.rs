@@ -219,6 +219,11 @@ impl AbilityRead<'_, '_> {
         Ok(state.entity)
     }
 
+    /// Whether `holder` is using `ability` now.
+    pub fn is_using(&self, holder: Entity, ability: Ability) -> bool {
+        self.find(holder, ability).is_some_and(|state| state.in_use)
+    }
+
     /// The abilities `holder` is using now.
     pub fn abilities_in_use(&self, holder: Entity) -> impl Iterator<Item = Ability> + '_ {
         self.holders
@@ -247,6 +252,11 @@ pub struct AbilityUsage<'w, 's> {
 }
 
 impl AbilityUsage<'_, '_> {
+    /// See [`AbilityRead::is_using`].
+    pub fn is_using(&self, holder: Entity, ability: Ability) -> bool {
+        self.read.is_using(holder, ability)
+    }
+
     /// Starts a use of `holder`'s `ability` if [`AbilityRead::can_use`] allows it.
     pub fn try_use(&mut self, holder: Entity, ability: Ability) -> Result<(), AbilityUseFailure> {
         let entity = self.read.can_use(holder, ability)?;

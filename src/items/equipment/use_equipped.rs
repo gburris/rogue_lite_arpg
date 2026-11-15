@@ -29,19 +29,21 @@ pub struct EquipmentUseFinished {
     #[event_target]
     pub holder: Entity,
     pub item: Entity,
+    pub slot: EquipmentSlot,
 }
 
 fn report_equipment_use_finished(mut world: DeferredWorld, context: HookContext) {
-    let Some(holder) = world
-        .get::<ItemOf>(context.entity)
-        .map(|item_of| item_of.holder)
+    let entity = world.entity(context.entity);
+    let (Some(item_of), Some(equippable)) = (entity.get::<ItemOf>(), entity.get::<Equippable>())
     else {
         return;
     };
-    world.commands().trigger(EquipmentUseFinished {
-        holder,
+    let finished = EquipmentUseFinished {
+        holder: item_of.holder,
         item: context.entity,
-    });
+        slot: equippable.slot,
+    };
+    world.commands().trigger(finished);
 }
 
 /// Request to end an in-progress use. Item stop observers own removing `EquipmentInUse`.
@@ -64,6 +66,17 @@ pub enum EquipmentUseFailure {
     UnusableItem,
     /// The character is interrupted; see [`InterruptionState`].
     HolderInterrupted,
+}
+
+impl EquipmentUseFailure {
+    /// Whether the item becomes usable again by waiting, rather than needing something the
+    /// character lacks.
+    pub fn is_temporary(self) -> bool {
+        match self {
+            Self::OutOfMana | Self::OnCooldown | Self::HolderInterrupted => true,
+            Self::NoHolder | Self::EmptySlot | Self::UnusableItem => false,
+        }
+    }
 }
 
 #[derive(EntityEvent)]
@@ -287,6 +300,7 @@ pub struct EquipmentRead<'w, 's> {
         With<Character>,
     >,
     equipment: Query<'w, 's, UsableItemReadOnly>,
+    in_use: Query<'w, 's, (), With<EquipmentInUse>>,
 }
 
 impl EquipmentRead<'_, '_> {
@@ -301,6 +315,12 @@ impl EquipmentRead<'_, '_> {
             .get(item)
             .ok()
             .map(|usable| usable.equippable)
+    }
+
+    /// See [`EquipmentUsage::is_using`].
+    pub fn is_using(&self, holder: Entity, slot: EquipmentSlot) -> bool {
+        self.item_in_slot(holder, slot)
+            .is_some_and(|item| self.in_use.contains(item))
     }
 
     /// Whether the holder could use the slot now, without consuming anything.

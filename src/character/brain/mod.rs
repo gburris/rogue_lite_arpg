@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::Action;
-use self::action::{ActionFinished, ActionOutcome, StartedAbilityUses, StartedEquipmentUses};
+use self::action::{ActionFinished, ActionOutcome, StartedActions};
 use self::capability::{CapabilityProfile, Cooldowns};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
@@ -42,7 +42,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedEquipmentUses, StartedAbilityUses, Steering, Kinematics)]
+#[require(StartedActions, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
@@ -123,7 +123,7 @@ impl Brain {
         };
         let action_available = |action: Action| {
             inputs.action_profile(action).is_some()
-                && inputs.can_start(action)
+                && inputs.can_run(action)
                 && (!behavior.commit.is_committed() || inputs.action_ends_on_its_own(action))
         };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)

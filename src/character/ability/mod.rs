@@ -46,6 +46,5 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         bite::damage_bite_hits.in_set(InGameSystems::Collision),
     )
-    .add_observer(ability_use::on_ability_use_started)
-    .add_observer(ability_use::on_ability_use_ended);
+    .add_observer(ability_use::on_ability_use_started);
 }

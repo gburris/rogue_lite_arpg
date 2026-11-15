@@ -1,5 +1,7 @@
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
@@ -96,6 +98,7 @@ pub struct UseGlow(pub Color);
 /// ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]. Its removal, however the use ended, fires
 /// [`AbilityUseFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
+#[component(on_remove = report_ability_use_finished)]
 pub(super) struct AbilityInUse {
     step: usize,
     held_seconds: f32,
@@ -339,22 +342,21 @@ pub(super) fn advance_ability_uses(
     }
 }
 
-/// Puts out a finished use's glow and reports [`AbilityUseFinished`].
-pub(super) fn on_ability_use_ended(
-    removed: On<Remove<AbilityInUse>>,
-    mut commands: Commands,
-    uses: Query<(&AbilityInUse, &Ability, &AbilityOf)>,
-) {
-    let Ok((in_use, &ability, ability_of)) = uses.get(removed.entity) else {
+fn report_ability_use_finished(mut world: DeferredWorld, context: HookContext) {
+    let entity = world.entity(context.entity);
+    let (Some(in_use), Some(&ability), Some(ability_of)) = (
+        entity.get::<AbilityInUse>().copied(),
+        entity.get::<Ability>(),
+        entity.get::<AbilityOf>(),
+    ) else {
         return;
     };
+    let holder = ability_of.holder;
+    let mut commands = world.commands();
     if let Some(light) = in_use.glow_light {
         commands.entity(light).try_despawn();
     }
-    commands.trigger(AbilityUseFinished {
-        holder: ability_of.holder,
-        ability,
-    });
+    commands.trigger(AbilityUseFinished { holder, ability });
 }
 
 fn advance_steps(

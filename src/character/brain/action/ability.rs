@@ -3,9 +3,13 @@
 //! and reports [`ActionFinished`](crate::character::brain::ActionFinished). A defeated character
 //! loses its brain, so appliers never see a dead caller.
 
+use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
-use crate::character::brain::{Action, Allies, Brain, CapabilityProfile, TargetInfo, Targeting};
+use super::bite_hitbox::BiteHitbox;
+use crate::character::brain::{
+    Action, Allies, Brain, CapabilityProfile, Motion, TargetInfo, Targeting,
+};
 use crate::prelude::*;
 
 /// An innate move a brain can ask its character for, carried out by a capability
@@ -66,6 +70,7 @@ impl Heal {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Breath {
     cooldown: f32,
+    cooldown_jitter: f32,
     reach: f32,
 }
 
@@ -74,8 +79,16 @@ impl Breath {
     pub fn new(period: f32, reach: f32) -> Self {
         Self {
             cooldown: period,
+            cooldown_jitter: 0.0,
             reach,
         }
+    }
+
+    /// Varies each wait between breaths by up to `jitter` seconds either way, so bats that
+    /// start breathing together drift out of step.
+    pub fn with_cooldown_jitter(mut self, jitter: f32) -> Self {
+        self.cooldown_jitter = jitter;
+        self
     }
 
     /// What a decision reads of this capability.
@@ -83,28 +96,49 @@ impl Breath {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,
+            cooldown_jitter: self.cooldown_jitter,
             ..CapabilityProfile::default()
         }
     }
 }
 
-/// Contact damage on a target within reach.
+/// How far past its reach a passing biter still snaps, as a multiple of the reach.
+const PASSING_BITE_REACH_FACTOR: f32 = 2.0;
+
+/// A snap of the jaws: a brief round hitbox in front of the biter, toward its target. It snaps
+/// when the target is within `reach`, or as a pass close by starts to pull away, so a swoop
+/// through the target bites once even when the target steps aside.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Bite {
     reach: f32,
     damage: f32,
     life_steal: f32,
     cooldown: f32,
+    hitbox_radius: f32,
+    mouth_height: f32,
 }
 
 impl Bite {
-    /// Bites for `damage` inside `reach`, at most once per `cooldown` seconds.
+    /// Bites for `damage` inside `reach`, at most once per `cooldown` seconds, with a hitbox
+    /// whose front edge reaches `reach`.
     pub fn new(reach: f32, damage: f32, cooldown: f32) -> Self {
         Self {
             reach,
             damage,
             life_steal: 0.0,
             cooldown,
+            hitbox_radius: reach / 2.0,
+            mouth_height: 0.0,
+        }
+    }
+
+    /// Sizes the hitbox at `radius`, centered `mouth_height` above the biter's transform before
+    /// it is pushed toward the target.
+    pub fn with_hitbox(self, radius: f32, mouth_height: f32) -> Self {
+        Self {
+            hitbox_radius: radius,
+            mouth_height,
+            ..self
         }
     }
 
@@ -230,7 +264,9 @@ pub(super) fn apply_breath(
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
-        let ready = brain.is_cooldown_ready(Ability::Breathe, now);
+        // Never mid-dash or mid-swoop: the decision that starts one can still hold a breath.
+        let bursting = brain.motion().is_some_and(Motion::is_finite);
+        let ready = brain.is_cooldown_ready(Ability::Breathe, now) && !bursting;
         let Some(aim_direction) = target_info
             .nonzero_direction()
             .filter(|_| ready && has_target && target_info.line_of_sight)
@@ -252,23 +288,25 @@ pub(super) fn apply_breath(
     }
 }
 
-/// Bites a target within the true reach; contact needs no line of sight.
+/// Snaps a bite at a sighted target: within the true reach, or as a pass inside
+/// [`PASSING_BITE_REACH_FACTOR`] times the reach starts to pull away, its closest point. The
+/// hitbox decides whether it lands; see [`BiteHitbox`].
 pub(super) fn apply_bite(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     bites: Query<(&Bite, &AbilityOf)>,
     biting_characters: Query<(
         &Brain,
-        &Targeting,
         &TargetInfo,
         &StatMultipliers,
-        Option<&Health>,
+        &CombatSide,
+        Option<&LinearVelocity>,
     )>,
 ) {
     let now = time.elapsed_secs();
     for (bite, ability_of) in &bites {
         let entity = ability_of.holder;
-        let Ok((brain, targeting, target_info, stat_multipliers, health)) =
+        let Ok((brain, target_info, stat_multipliers, side, linear_velocity)) =
             biting_characters.get(entity)
         else {
             continue;
@@ -276,26 +314,24 @@ pub(super) fn apply_bite(
         let Some(biting) = brain.held_action(Action::Ability(Ability::Bite)) else {
             continue;
         };
-        if !(brain.is_cooldown_ready(Ability::Bite, now) && target_info.is_within(bite.reach)) {
+        let own_velocity = linear_velocity.map_or(Vec2::ZERO, |velocity| velocity.0);
+        let pulling_away = (target_info.velocity - own_velocity).dot(target_info.direction) > 0.0;
+        let passing = pulling_away && target_info.is_within(bite.reach * PASSING_BITE_REACH_FACTOR);
+        let in_reach = target_info.is_within(bite.reach) || passing;
+        if !(brain.is_cooldown_ready(Ability::Bite, now) && target_info.line_of_sight && in_reach) {
             biting.report_not_started(&mut commands, entity);
             continue;
         }
-        let damage = bite.damage * stat_multipliers.damage;
-        commands.trigger(AttemptDamage {
-            entity: targeting.0,
-            damage: Damage::Single(damage),
-            source_item: None,
-            attacker: Some(entity),
-            direction: Some(target_info.direction),
-            ..default()
-        });
-        // Skip the heal at full health so the overlay does not pop a zero.
-        if bite.life_steal > 0.0 && health.is_some_and(|health| health.hp < health.max_hp) {
-            commands.trigger(AttemptHeal {
-                entity,
-                amount: damage * bite.life_steal,
-            });
-        }
+
+        let mouth_offset =
+            Vec2::Y * bite.mouth_height + target_info.direction * (bite.reach - bite.hitbox_radius);
+        BiteHitbox::new(
+            entity,
+            bite.damage * stat_multipliers.damage,
+            bite.life_steal,
+            target_info.direction,
+        )
+        .spawn(&mut commands, *side, mouth_offset, bite.hitbox_radius);
         biting.report_completed(&mut commands, entity);
     }
 }

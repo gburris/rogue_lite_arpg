@@ -2,6 +2,7 @@
 //! equipment applier, and the innate abilities.
 
 mod ability;
+mod bite_hitbox;
 mod equipment_use;
 
 use bevy::prelude::*;
@@ -59,6 +60,10 @@ pub(super) fn plugin(app: &mut App) {
             ability::apply_rally,
         )
             .in_set(BrainSystems::Execute),
+    )
+    .add_systems(
+        Update,
+        bite_hitbox::damage_bite_hits.in_set(InGameSystems::Collision),
     )
     .add_observer(equipment_use::on_report_equipment_use_finished);
 }

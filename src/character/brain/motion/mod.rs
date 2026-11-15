@@ -19,7 +19,8 @@ pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
 pub(super) use self::step::MotionFinished;
 use self::step::{
-    CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, report_motion_finished,
+    BlockedTimer, CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter,
+    report_motion_finished,
 };
 pub use self::swoop::Swoop;
 pub use self::wander::Wander;
@@ -47,7 +48,7 @@ pub enum Motion {
     Orbit(Interval),
     /// Committed straight run; its `Dash` constructor (kite, hop, slide) sets its aim.
     Dash,
-    /// Committed dive through a snapshot of the target and back out.
+    /// Committed swoop through a snapshot of the target and back out.
     Swoop,
 }
 
@@ -166,10 +167,12 @@ pub(super) fn plugin(app: &mut App) {
             swoop::apply_swoop,
             orbit::apply_orbit,
             wander::apply_wander,
+            home_area::settle_blocked_returners,
             direct::apply_direct_steering,
             steering::apply_steering,
         )
             .chain()
             .in_set(BrainSystems::Motion),
     );
+    app.add_observer(swoop::on_swooper_knocked_back);
 }

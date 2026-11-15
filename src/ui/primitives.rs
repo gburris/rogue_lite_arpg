@@ -216,7 +216,11 @@ pub fn splash_screen<S: States + Unpin>(
 #[derive(Component, Default, Clone)]
 pub struct PulsingText;
 
-pub(super) fn pulse_text(time: Res<Time>, mut query: Query<&mut TextColor, With<PulsingText>>) {
+pub(super) fn pulse_text(
+    // Real time, so the text keeps pulsing in menus while game time is paused.
+    time: Res<Time<Real>>,
+    mut query: Query<&mut TextColor, With<PulsingText>>,
+) {
     let sine = (time.elapsed_secs() * 4.0).sin() * 0.4 + 0.6;
     for mut color in &mut query {
         color.0 = Color::srgb(sine, 0.5 * sine, 0.3 * sine);

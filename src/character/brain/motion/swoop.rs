@@ -1,12 +1,13 @@
-//! The bat's dive through the target and back out.
+//! The bat's swoop through the target and back out.
 
 use bevy::prelude::*;
 
 use super::{
-    CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput, SteeredCharacter, Steering,
-    report_motion_finished,
+    BlockedTimer, CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput,
+    SteeredCharacter, Steering, report_motion_finished,
 };
 use crate::character::brain::{CapabilityProfile, Motion};
+use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -15,38 +16,44 @@ const SWOOP_TRACK_LIMIT: f32 = 0.25;
 const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
+/// Seconds a swoop pushes against a wall or a crowd before it breaks off.
+const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 
-/// A committed curved dive through the target; on ending it hands steering a
-/// decaying [`DecayingSpeedBoost`].
+/// A committed curved swoop through the target, broken off when blocked; on ending it hands
+/// steering a decaying [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
     capability_profile: CapabilityProfile,
     extra_speed: f32,
     exit_turn: f32,
-    pass: Option<SwoopPass>,
+    path: Option<SwoopPath>,
+    blocked_timer: BlockedTimer,
     current_behavior_run_id: CurrentBehaviorRunId,
 }
 
 impl Swoop {
-    /// Dives at targets within `reach`, rolling `chance` each time it wins and
-    /// waiting `cooldown` seconds after a dive ends.
+    /// Swoops at targets within `reach`, rolling `chance` each time it wins and
+    /// waiting `cooldown` seconds after a swoop ends.
     pub fn new(chance: f32, reach: f32, cooldown: f32) -> Self {
         Self {
             capability_profile: CapabilityProfile {
                 reach: Some(reach),
                 chance,
                 cooldown,
+                ..CapabilityProfile::default()
             },
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,
-            pass: None,
+            path: None,
+            blocked_timer: BlockedTimer::default(),
             current_behavior_run_id: CurrentBehaviorRunId::default(),
         }
     }
 
-    fn end_pass(&mut self) -> Option<DecayingSpeedBoost> {
-        // Cleared or cut short, a pass hands its boost to steering to ease off.
-        self.pass.take().map(|_| {
+    fn end_path(&mut self) -> Option<DecayingSpeedBoost> {
+        self.blocked_timer.reset();
+        // Cleared or cut short, a swoop in flight hands its boost to steering to ease off.
+        self.path.take().map(|_| {
             DecayingSpeedBoost::new(
                 self.extra_speed,
                 SWOOP_RECOVERY_TIME,
@@ -72,7 +79,7 @@ pub(super) fn apply_swoop(
         if swoop
             .current_behavior_run_id
             .follow_brain_run(character.brain, Motion::Swoop)
-            && let Some(decaying_speed_boost) = swoop.end_pass()
+            && let Some(decaying_speed_boost) = swoop.end_path()
         {
             commands.entity(entity).try_insert(decaying_speed_boost);
         }
@@ -100,6 +107,32 @@ pub(super) fn apply_swoop(
     }
 }
 
+/// Ends a swoop the moment the swooper is shoved, so a well-timed hit turns it away.
+pub(super) fn on_swooper_knocked_back(
+    knocked_back: On<Insert<KnockedBack>>,
+    mut commands: Commands,
+    mut swoops: Query<&mut Swoop>,
+) {
+    let Ok(mut swoop) = swoops.get_mut(knocked_back.entity) else {
+        return;
+    };
+    let Some(behavior_run_id) = swoop.current_behavior_run_id.get() else {
+        return;
+    };
+    if swoop.path.is_none() {
+        return;
+    }
+
+    let decaying_speed_boost = swoop.end_path();
+    report_motion_finished(
+        &mut commands,
+        knocked_back.entity,
+        Motion::Swoop,
+        behavior_run_id,
+        decaying_speed_boost,
+    );
+}
+
 impl Swoop {
     fn step(&mut self, input: &SteerInput) -> MotionStep {
         let speed_multiplier = 1.0 + self.extra_speed;
@@ -108,11 +141,13 @@ impl Swoop {
             return steer(None);
         };
         let cleared = self
-            .pass
+            .path
             .as_ref()
-            .is_some_and(|pass| pass.cleared(input.position, info.distance));
-        if cleared {
-            let decaying_speed_boost = self.end_pass();
+            .is_some_and(|path| path.cleared(input.position, info.distance));
+        let blocked = self.path.is_some()
+            && input.tick_blocked_timer(&mut self.blocked_timer, SWOOP_BLOCKED_SECONDS);
+        if cleared || blocked {
+            let decaying_speed_boost = self.end_path();
             return MotionStep::Finished {
                 decaying_speed_boost,
             };
@@ -124,8 +159,8 @@ impl Swoop {
         let heading = input.heading;
         let live_target = info.position;
         let exit_turn = self.exit_turn;
-        let pass = self.pass.get_or_insert_with(|| {
-            SwoopPass::new(
+        let path = self.path.get_or_insert_with(|| {
+            SwoopPath::new(
                 input.position,
                 live_target,
                 info.distance,
@@ -133,15 +168,15 @@ impl Swoop {
                 exit_turn,
             )
         });
-        pass.advance(flight_distance);
-        pass.track(live_target, flight_distance * SWOOP_TRACK_RATIO);
-        let to_lead = pass.lead(SWOOP_LOOKAHEAD) - input.position;
+        path.advance(flight_distance);
+        path.track(live_target, flight_distance * SWOOP_TRACK_RATIO);
+        let to_lead = path.lead(SWOOP_LOOKAHEAD) - input.position;
         steer((to_lead.length_squared() > f32::EPSILON).then(|| to_lead.normalize_or_zero()))
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-struct SwoopPass {
+struct SwoopPath {
     start: Vec2,
     control: Vec2,
     end: Vec2,
@@ -154,13 +189,13 @@ struct SwoopPass {
     progress: f32,
 }
 
-impl SwoopPass {
+impl SwoopPath {
     fn new(start: Vec2, target: Vec2, exit_radius: f32, heading: Vec2, exit_turn: f32) -> Self {
         let entry_bearing = (start - target).normalize_or_zero();
         let heading_side = entry_bearing.perp().dot(heading);
         let side = if heading_side > 0.0 { -1.0 } else { 1.0 };
         let exit_bearing = entry_bearing.rotate(Vec2::from_angle(side * exit_turn));
-        let mut pass = Self {
+        let mut path = Self {
             start,
             control: Vec2::ZERO,
             end: Vec2::ZERO,
@@ -172,8 +207,8 @@ impl SwoopPass {
             length: 0.0,
             progress: 0.0,
         };
-        pass.rebuild();
-        pass
+        path.rebuild();
+        path
     }
 
     fn rebuild(&mut self) {

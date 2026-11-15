@@ -16,6 +16,6 @@ pub(super) fn on_stat_trainer_store_open(
     next_menu_state.set(Menu::StatsShop);
 }
 
-pub(super) fn on_game_guide_start(_: On<PlayerInteraction>, mut _commands: Commands) {
-    warn!("on_game_guide_start");
+pub(super) fn on_game_guide_start(_: On<PlayerInteraction>) {
+    info!("The Helper has nothing to say yet");
 }

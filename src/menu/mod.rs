@@ -29,7 +29,8 @@ pub(super) fn plugin(app: &mut App) {
         .add_input_context::<PauseControl>()
         .add_input_context::<MenuBackground>()
         .add_observer(pause::on_menu_back)
-        .add_observer(pause::on_toggle_pause);
+        .add_observer(pause::on_toggle_pause)
+        .add_observer(pause::on_toggle_inventory);
 }
 
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]

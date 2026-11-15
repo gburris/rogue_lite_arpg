@@ -5,12 +5,15 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{SteerInput, SteeredCharacter, Steering};
+use super::{BlockedTimer, SteerInput, SteeredCharacter, Steering};
 use crate::character::brain::{Interval, Motion};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
+/// Seconds a walk pushes against a wall or a crowd before it ends early.
+const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
-/// Alternates standing and walking one rolled heading while wandering.
+/// Alternates standing and walking one rolled heading while wandering. A blocked walk ends
+/// early.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
     pause: Interval,
@@ -18,6 +21,7 @@ pub struct Wander {
     speed_scale: f32,
     direction: Vec2,
     phase: Option<WanderPhase>,
+    blocked_timer: BlockedTimer,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -42,6 +46,7 @@ impl Wander {
             speed_scale: WANDER_SPEED_SCALE,
             direction: Vec2::ZERO,
             phase: None,
+            blocked_timer: BlockedTimer::default(),
         }
     }
 
@@ -51,11 +56,14 @@ impl Wander {
 
     fn leave_wander(&mut self) {
         self.phase = None;
+        self.blocked_timer.reset();
     }
 
     fn pick_steering_direction(&mut self, input: &SteerInput) -> Option<Vec2> {
+        let walk_blocked = self.is_walking()
+            && input.tick_blocked_timer(&mut self.blocked_timer, WANDER_BLOCKED_SECONDS);
         let phase = match self.phase {
-            Some(phase) if input.now < phase.until() => phase,
+            Some(phase) if input.now < phase.until() && !walk_blocked => phase,
             previous => {
                 let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
                     self.direction = pick_direction(input);

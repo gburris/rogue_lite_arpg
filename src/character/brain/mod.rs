@@ -114,7 +114,7 @@ impl Brain {
     fn start_motion_cooldown(&mut self, motion: Motion, inputs: &DecisionInputs) {
         let cooldown = inputs
             .motion_profile(motion)
-            .map_or(0.0, |profile| profile.cooldown);
+            .map_or(0.0, CapabilityProfile::roll_cooldown);
         self.start_cooldown(motion, inputs.now + cooldown);
     }
 
@@ -122,7 +122,7 @@ impl Brain {
     fn start_ability_cooldown(&mut self, ability: Ability, inputs: &DecisionInputs) {
         let cooldown = inputs
             .action_profile(Action::Ability(ability))
-            .map_or(0.0, |profile| profile.cooldown);
+            .map_or(0.0, CapabilityProfile::roll_cooldown);
         self.start_cooldown(ability, inputs.now + cooldown);
     }
 

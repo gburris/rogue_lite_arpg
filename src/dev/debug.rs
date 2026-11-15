@@ -56,7 +56,8 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         // The overlay only touches its own text and nodes.
         (FpsOverlaySystems::Customize, FpsOverlaySystems::UpdateText)
-            .ambiguous_with(InGameSystems::HudOverlay),
+            .ambiguous_with(InGameSystems::HudOverlay)
+            .ambiguous_with(MainSystems::Shared),
     );
 }
 

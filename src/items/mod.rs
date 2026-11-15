@@ -76,4 +76,5 @@ pub enum ItemKind {
     Staff,
     Potion,
     Tome,
+    Shield,
 }

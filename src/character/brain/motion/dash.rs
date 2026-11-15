@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
+    BlockedTimer, CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
     report_motion_finished,
 };
 use crate::character::brain::{CapabilityProfile, Interval, Motion, TargetInfo};
@@ -19,7 +19,10 @@ const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
 const HOP_STEP_IN_SPREAD: f32 = 0.35;
 const HOP_OUTWARD_BIAS: f32 = 0.15;
 
-/// A committed straight run along a direction fixed at its start.
+/// Seconds a dash pushes against a wall or a crowd before it gives up the rest of its run.
+const DASH_BLOCKED_SECONDS: f32 = 0.15;
+
+/// A committed straight run along a direction fixed at its start, cut short when blocked.
 #[derive(Component, Clone, Debug)]
 pub struct Dash {
     run_distance: Interval,
@@ -178,6 +181,12 @@ impl Dash {
             self.progress
                 .start(direction, self.run_distance.pick_random_value());
         }
+        if input.tick_blocked_timer(&mut self.progress.blocked_timer, DASH_BLOCKED_SECONDS) {
+            self.progress.reset();
+            return MotionStep::Finished {
+                decaying_speed_boost: None,
+            };
+        }
         let distance = input.distance_this_frame(self.speed_multiplier);
         match self.progress.step(distance) {
             Some(direction) => {
@@ -218,6 +227,7 @@ struct DashProgress {
     direction: Vec2,
     remaining: f32,
     started: bool,
+    blocked_timer: BlockedTimer,
 }
 
 impl DashProgress {
@@ -225,11 +235,13 @@ impl DashProgress {
         self.direction = direction;
         self.remaining = run.max(0.0);
         self.started = true;
+        self.blocked_timer.reset();
     }
 
     fn reset(&mut self) {
         self.started = false;
         self.remaining = 0.0;
+        self.blocked_timer.reset();
     }
 
     fn step(&mut self, distance: f32) -> Option<Vec2> {

@@ -1,6 +1,7 @@
 use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
+use avian2d::prelude::{SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
@@ -19,16 +20,22 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+/// Gap a staff's cast point keeps from a wall, about a projectile's radius.
+const WALL_CLEARANCE: f32 = 12.0;
 /// Farthest target distance at which an AI holder casts a staff.
 pub const STAFF_REACH: f32 = 360.0;
-/// Fraction of the standard fireball speed used by the fire mage's single-bolt staff.
-const MAGE_SINGLE_BOLT_SPEED_FACTOR: f32 = 0.7;
-/// Fraction of the standard fireball speed used by the fire mage's three-bolt staff.
-const MAGE_FAN_SPEED_FACTOR: f32 = 0.2;
+/// Fraction of the standard fireball speed used by both fire mage staffs.
+const MAGE_BOLT_SPEED_FACTOR: f32 = 0.7;
+/// Seconds between the player's flame staff casts.
+const FLAME_STAFF_COOLDOWN: f32 = 0.5;
+/// Seconds between a fire mage's single-bolt volleys, leaving time to hop and sidestep in between.
+const MAGE_FLAME_STAFF_COOLDOWN: f32 = 1.1;
+/// Seconds between a fire mage's three-bolt volleys: three times the bolts, fired half as often.
+const MAGE_FAN_STAFF_COOLDOWN: f32 = 2.2;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball(sprites, sprite_layouts, -FRAC_PI_8)
@@ -45,9 +52,9 @@ pub fn mage_fire_staff_single_bolt(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
 ) -> impl Scene {
-    let speed = FIREBALL_SPEED * MAGE_SINGLE_BOLT_SPEED_FACTOR;
+    let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
@@ -60,9 +67,9 @@ pub fn mage_fire_staff_fan(
     sprites: &SpriteAssets,
     sprite_layouts: &SpriteSheetLayouts,
 ) -> impl Scene {
-    let speed = FIREBALL_SPEED * MAGE_FAN_SPEED_FACTOR;
+    let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites)
+        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN)
         Name::new("Staff of Wildfire")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)
@@ -75,9 +82,9 @@ pub fn mage_fire_staff_fan(
 }
 
 /// Shared layout, item data, sprite, and cast observers for every flame staff.
-fn flame_staff_core(sprites: &SpriteAssets) -> impl Scene {
+fn flame_staff_core(sprites: &SpriteAssets, cooldown: f32) -> impl Scene {
     bsn! {
-        @staff(sprites.fire_staff.clone(), 0.5)
+        @staff(sprites.fire_staff.clone(), cooldown)
         Staff { fire_time: 0.1, return_time: 0.1 }
         ~Item::new(1340, ItemKind::Staff)
         ManaCost(6.0)
@@ -223,6 +230,7 @@ fn fire_projectile_on_casting_end(
         &Transform,
     )>,
     holder_query: Query<(&Transform, &Vision, &CombatSide)>,
+    spatial_query: SpatialQuery,
 ) {
     for (staff_entity, staff, mut casting, projectiles, item_of, staff_transform) in staff_query {
         if !casting.fire_time.is_finished() {
@@ -248,8 +256,12 @@ fn fire_projectile_on_casting_end(
 
             // Staff is child of holder so position is relative, need to add holder transform for
             // global position
-            let world_starting_position =
-                holder_transform.translation.truncate() + holder_relative_source_position;
+            let holder_position = holder_transform.translation.truncate();
+            let world_starting_position = clear_of_walls(
+                &spatial_query,
+                holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
+                holder_position + holder_relative_source_position,
+            );
 
             for projectile_entity in projectiles.iter() {
                 commands.trigger(FireProjectile {
@@ -269,6 +281,22 @@ fn fire_projectile_on_casting_end(
                 holder: item_of.holder,
             });
         }
+    }
+}
+
+/// `cast_position` pulled back toward the holder's `feet` until it is [`WALL_CLEARANCE`] short of
+/// any wall in between. The tip of a staff held up against a wall sits inside it, where a
+/// projectile would be destroyed the moment it spawns, whichever way it was aimed.
+fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2) -> Vec2 {
+    let feet_to_cast = cast_position - feet;
+    let Ok(direction) = Dir2::new(feet_to_cast) else {
+        return cast_position;
+    };
+    let walls = SpatialQueryFilter::from_mask(GameCollisionLayer::HighObstacle);
+
+    match spatial_query.cast_ray(feet, direction, feet_to_cast.length(), true, &walls) {
+        Some(wall_hit) => feet + direction * (wall_hit.distance - WALL_CLEARANCE).max(0.0),
+        None => cast_position,
     }
 }
 

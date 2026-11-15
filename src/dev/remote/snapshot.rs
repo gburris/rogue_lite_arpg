@@ -233,6 +233,7 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
         ItemKind::Staff => "Staff",
         ItemKind::Potion => "Potion",
         ItemKind::Tome => "Tome",
+        ItemKind::Shield => "Shield",
     };
 
     json!({

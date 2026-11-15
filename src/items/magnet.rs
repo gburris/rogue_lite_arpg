@@ -26,9 +26,12 @@ pub(super) fn update_magnet_locations(
 
     for (child_of, magnet_transform, colliding_entities) in &magnet_query {
         if colliding_entities.contains(&player_entity) {
-            let direction = (player_transform.translation().truncate()
+            // Touching the player leaves no direction to pull along.
+            let Some(direction) = (player_transform.translation().truncate()
                 - magnet_transform.translation().truncate())
-            .normalize();
+            .try_normalize() else {
+                continue;
+            };
 
             // divide distance by 32 (tile size) so it isn't too large when used in cubic function
             let distance = player_transform

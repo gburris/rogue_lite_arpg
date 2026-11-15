@@ -32,6 +32,20 @@ pub const fn consideration(
     }
 }
 
+/// Whether a motion of `motion`'s kind has been running for more than `seconds`; see
+/// [`ConsiderationInput::SecondsInMotion`].
+pub const fn motion_held_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
+    Consideration {
+        name,
+        input: ConsiderationInput::SecondsInMotion(motion),
+        score_mapping: ScoreMapping::Threshold {
+            enter: seconds,
+            exit: seconds,
+        },
+        inverted: true,
+    }
+}
+
 /// A target-distance threshold with hysteresis; see [`ScoreMapping::Threshold`].
 pub const fn distance_threshold(name: &'static str, enter: f32, exit: f32) -> Consideration {
     assert!(
@@ -99,6 +113,7 @@ pub const fn flag(name: &'static str, input: ConsiderationInput) -> Consideratio
 pub const HAS_TARGET: Consideration = flag("has target", ConsiderationInput::HasTarget);
 pub const NO_TARGET: Consideration = HAS_TARGET.inverted("no target");
 pub const LINE_OF_SIGHT: Consideration = flag("line of sight", ConsiderationInput::LineOfSight);
+const LOST_SIGHT: Consideration = LINE_OF_SIGHT.inverted("lost sight");
 const HOME_AREA_PULL: Consideration = consideration(
     "home area pull",
     ConsiderationInput::HomeAreaPull,
@@ -145,6 +160,15 @@ pub const CHASE_CAST_RANGE: Behavior = Behavior::new(
     CommitPolicy::ContinuouslyScored,
     4.0,
     &[BEYOND_CAST_DISTANCE_RANGE],
+);
+
+/// Walks to where a target that slipped out of sight was last seen.
+pub const SEEK_LOST_TARGET: Behavior = Behavior::new(
+    Some(Motion::Chase),
+    None,
+    CommitPolicy::ContinuouslyScored,
+    7.0,
+    &[LOST_SIGHT],
 );
 
 /// Doing nothing on the action slot, at a low constant weight, for brains whose

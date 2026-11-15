@@ -18,7 +18,7 @@ pub fn sword(sprites: &SpriteAssets) -> impl Scene {
             attack_time: 0.2,
             hold_distance: 15.0,
         }}
-        Knockback(10.0)
+        Knockback(2500.0)
     }
 }
 
@@ -27,7 +27,7 @@ pub fn axe(sprites: &SpriteAssets) -> impl Scene {
         @melee_weapon(sprites.axe.clone(), 220)
         Name::new("Axe")
         ~{axe_swing()}
-        Knockback(20.0)
+        Knockback(5000.0)
     }
 }
 
@@ -36,7 +36,7 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
         @melee_weapon(sprites.axe.clone(), 220)
         Name::new("Freeze Axe")
         ~{axe_swing()}
-        Knockback(2.0)
+        Knockback(500.0)
         Effects [
             Frozen
             Lifespan::new(2.0)

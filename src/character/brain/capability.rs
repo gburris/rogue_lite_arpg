@@ -2,6 +2,7 @@
 //! and action, the capability components behind them, and the [`Cooldowns`] that pace them.
 
 use bevy::ecs::query::QueryData;
+use rand::RngExt;
 
 use super::action::{Ability, Action, Bite, Breath, Heal, Rally};
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
@@ -14,6 +15,19 @@ pub(super) struct CapabilityProfile {
     pub chance: f32,
     /// Seconds to wait after a finish or a missed start roll.
     pub cooldown: f32,
+    pub cooldown_jitter: f32,
+}
+
+impl CapabilityProfile {
+    /// The cooldown to start now: `cooldown` shifted by a random amount of up to
+    /// `cooldown_jitter` seconds either way.
+    pub fn roll_cooldown(self) -> f32 {
+        if self.cooldown_jitter <= 0.0 {
+            return self.cooldown;
+        }
+        let offset = rand::rng().random_range(-self.cooldown_jitter..=self.cooldown_jitter);
+        (self.cooldown + offset).max(0.0)
+    }
 }
 
 impl Default for CapabilityProfile {
@@ -22,6 +36,7 @@ impl Default for CapabilityProfile {
             reach: None,
             chance: 1.0,
             cooldown: 0.0,
+            cooldown_jitter: 0.0,
         }
     }
 }

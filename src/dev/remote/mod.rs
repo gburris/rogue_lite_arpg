@@ -120,7 +120,8 @@ fn add_input_methods(methods: GameMethods) -> GameMethods {
             "Drives the player's own input actions, so the game reacts as it does to the keyboard \
              and mouse. `move` and `offhand` stay held until the next call, and a call without \
              them lets go. `mainhand` is one click per call, as long as a frame passes between \
-             calls. `aim` moves the reticle to an offset from the player.",
+             calls. `aim` moves the reticle to an offset from the player, at most 120 px away \
+             as with the mouse.",
             input::set_player_input,
         )
         .method(

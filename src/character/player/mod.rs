@@ -12,6 +12,8 @@ mod spawn;
 pub mod prelude {
     pub use super::aim::PlayerAim;
     #[cfg(feature = "dev_native")]
+    pub(crate) use super::aim::place_player_aim;
+    #[cfg(feature = "dev_native")]
     pub(crate) use super::input::{UseMainhand, UseOffhand};
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     #[cfg(feature = "dev_native")]

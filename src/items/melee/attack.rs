@@ -109,7 +109,11 @@ pub(super) fn end_melee_attacks(
 
 /// Stop observer: removes the transient swing state queued by `end_melee_attacks`.
 pub(super) fn on_stop_melee(stop: On<StopUsingEquipment>, mut commands: Commands) {
-    commands
-        .entity(stop.item)
-        .remove::<(EquipmentInUse, ActiveMeleeAttack, Collider, CollisionLayers)>();
+    commands.entity(stop.item).remove::<(
+        EquipmentInUse,
+        ActiveMeleeAttack,
+        Collider,
+        CollisionLayers,
+        CollidingEntities,
+    )>();
 }

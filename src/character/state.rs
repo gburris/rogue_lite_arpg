@@ -1,7 +1,42 @@
+use std::time::Duration;
+
 use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use crate::prelude::*;
+
+/// Fraction of its intended speed below which a character counts as blocked.
+const BLOCKED_SPEED_FRACTION: f32 = 0.3;
+/// Seconds a knockback shove lasts, its speed fading linearly to zero.
+const KNOCKBACK_SECONDS: f32 = 0.2;
+
+/// A shove from a hit, added on top of the character's own movement until it fades out.
+#[derive(Component, Clone, Debug)]
+pub struct KnockedBack {
+    initial_velocity: Vec2,
+    timer: Timer,
+}
+
+impl KnockedBack {
+    /// Shoves `distance` world units along `direction` over [`KNOCKBACK_SECONDS`].
+    pub fn new(direction: Vec2, distance: f32) -> Self {
+        // A linear fade covers half of the starting speed times the duration.
+        let initial_speed = 2.0 * distance / KNOCKBACK_SECONDS;
+        Self {
+            initial_velocity: direction.normalize_or_zero() * initial_speed,
+            timer: Timer::from_seconds(KNOCKBACK_SECONDS, TimerMode::Once),
+        }
+    }
+
+    /// Advances the shove by `delta` and returns its velocity, or `None` once it has faded.
+    fn tick_and_compute_velocity(&mut self, delta: Duration) -> Option<Vec2> {
+        self.timer.tick(delta);
+        if self.timer.is_finished() {
+            return None;
+        }
+        Some(self.initial_velocity * self.timer.fraction_remaining())
+    }
+}
 
 /// A character's intended movement: a heading and a multiple of `max_speed`, with no
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
@@ -42,6 +77,17 @@ impl Kinematics {
         self.speed_multiplier == 0.0
     }
 
+    /// Whether `physics_velocity` falls well short of the velocity intended at `stat_speed`: the
+    /// character is pressed against a wall or a crowd. Never true while it stands still or is
+    /// stunned.
+    pub fn is_blocked_at(&self, physics_velocity: Vec2, stat_speed: f32) -> bool {
+        let intended_velocity = self.velocity(stat_speed);
+        let intended_speed_squared = intended_velocity.length_squared();
+        intended_speed_squared > 1.0
+            && physics_velocity.dot(intended_velocity)
+                < BLOCKED_SPEED_FRACTION * intended_speed_squared
+    }
+
     /// Velocity at `stat_speed` times this movement, so a stunned character reports zero. An
     /// over-long `direction` counts as unit length.
     pub fn velocity(&self, stat_speed: f32) -> Vec2 {
@@ -55,12 +101,29 @@ impl Default for Kinematics {
     }
 }
 
-/// Converts [`Kinematics`] into avian's `LinearVelocity`.
+/// Converts [`Kinematics`], plus any [`KnockedBack`] shove, into avian's `LinearVelocity`.
 pub(super) fn kinematics_to_velocity(
-    mut query: Query<(&Kinematics, &StatMultipliers, &mut LinearVelocity)>,
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &Kinematics,
+        &StatMultipliers,
+        &mut LinearVelocity,
+        Option<&mut KnockedBack>,
+    )>,
 ) {
-    for (kinematics, stat_multipliers, mut velocity) in &mut query {
-        velocity.0 = kinematics.velocity(stat_multipliers.speed);
+    for (entity, kinematics, stat_multipliers, mut velocity, knocked_back) in &mut query {
+        let mut shove_velocity = Vec2::ZERO;
+        if let Some(mut knocked_back) = knocked_back {
+            match knocked_back.tick_and_compute_velocity(time.delta()) {
+                Some(velocity) => shove_velocity = velocity,
+                None => {
+                    commands.entity(entity).try_remove::<KnockedBack>();
+                }
+            }
+        }
+        velocity.0 = kinematics.velocity(stat_multipliers.speed) + shove_velocity;
     }
 }
 

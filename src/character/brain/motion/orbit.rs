@@ -3,12 +3,16 @@
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{SteerInput, SteeredCharacter, Steering};
+use super::{BlockedTimer, SteerInput, SteeredCharacter, Steering};
 use crate::character::brain::{Interval, Motion};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
 const ORBIT_RADIAL_GAIN: f32 = 0.5;
+/// Seconds an orbit pushes against a wall or a crowd before circling back the other way.
+const ORBIT_BLOCKED_SECONDS: f32 = 0.25;
+/// Extra seconds a turned-back orbit may stay blocked, so a slow turner gets clear first.
+const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
 
 /// Which way an [`Orbit`] circles its target.
 #[derive(Clone, Copy, Debug)]
@@ -40,7 +44,8 @@ impl OrbitDirection {
     }
 }
 
-/// Circles the target inside a distance range, rerolling its direction over time.
+/// Circles the target inside a distance range, rerolling its direction over time and turning
+/// back when something blocks the way.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Orbit {
     reroll_interval: Interval,
@@ -50,6 +55,7 @@ pub struct Orbit {
     distance_offset: f32,
     reroll_at: f32,
     direction: Option<OrbitDirection>,
+    blocked_timer: BlockedTimer,
 }
 
 impl Orbit {
@@ -62,6 +68,7 @@ impl Orbit {
             distance_offset: 0.0,
             reroll_at: 0.0,
             direction: None,
+            blocked_timer: BlockedTimer::default(),
         }
     }
 
@@ -75,6 +82,7 @@ impl Orbit {
     /// Forgets the circling side, so the next orbit picks it from the heading again.
     fn leave_orbit(&mut self) {
         self.direction = None;
+        self.blocked_timer.reset();
     }
 
     fn roll_distance_offset(&mut self) {
@@ -98,6 +106,13 @@ impl Orbit {
                 self.roll_distance_offset();
                 self.reroll_at = now + self.reroll_interval.min();
                 direction
+            }
+            Some(direction)
+                if input.tick_blocked_timer(&mut self.blocked_timer, ORBIT_BLOCKED_SECONDS) =>
+            {
+                self.blocked_timer.delay_by(ORBIT_TURN_BACK_SECONDS);
+                self.reroll_at = now + self.reroll_interval.pick_random_value();
+                direction.reversed()
             }
             Some(direction) if now >= self.reroll_at => {
                 let switched = if rand::rng().random::<f32>() < self.switch_chance {

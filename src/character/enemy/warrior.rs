@@ -1,11 +1,13 @@
+use avian2d::prelude::Mass;
 use bevy::prelude::*;
 
 use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::brain::considerations::{
-    ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME, WANDER,
-    consideration, flag, reach_fraction_threshold, target_within_distance,
+    ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
+    SEEK_LOST_TARGET, WANDER, consideration, flag, motion_held_for, reach_fraction_threshold,
+    target_within_distance,
 };
 use crate::character::brain::{
     Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
@@ -13,6 +15,9 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
+/// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
+/// step back out of reach first.
+const WARRIOR_SWING_DELAY: f32 = 0.25;
 /// Distance from the target at which a wounded warrior may drink its potion.
 const HEAL_SAFE_DISTANCE: f32 = 200.0;
 
@@ -31,11 +36,16 @@ const NEEDS_POTION: Consideration = consideration(
     Interval::new(0.42, 0.82),
     Curve::Linear,
 );
-const NOT_DASHING: Consideration =
-    flag("dashing", ConsiderationInput::MotionRunning(Motion::Dash)).inverted("not dashing");
+const HELD_IN_REACH: Consideration =
+    motion_held_for("held in reach", Motion::Idle, WARRIOR_SWING_DELAY);
 const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
+const HAS_POTION: Consideration = flag(
+    "has potion",
+    ConsiderationInput::ActionUsable(Action::Ability(Ability::Heal)),
+);
+const CORNERED: Consideration = flag("cornered", ConsiderationInput::MovementBlocked);
 
 // Reach fractions, so a longer weapon stands the warrior farther back. Both
 // enter at `MELEE_ENTER_FRACTION` so one always applies; the wider exits let a
@@ -55,12 +65,13 @@ const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
     1.0,
 );
 
+/// Breaks away to drink. A warrior with no potion left stays and fights.
 const FLEE: Behavior = Behavior::new(
     Some(Motion::Flee),
     None,
     CommitPolicy::ContinuouslyScored,
     7.0,
-    &[HAS_TARGET, BADLY_HURT],
+    &[HAS_TARGET, BADLY_HURT, HAS_POTION],
 );
 const CHASE_MELEE: Behavior = Behavior::new(
     Some(Motion::Chase),
@@ -77,6 +88,15 @@ const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     CommitPolicy::ContinuouslyScored,
     5.0,
     &[INSIDE_MELEE_REACH],
+);
+
+/// Stands still for the whole swing once it has held in reach for [`WARRIOR_SWING_DELAY`].
+const WARRIOR_SWING: Behavior = Behavior::new(
+    Some(Motion::Idle),
+    Some(MAINHAND),
+    CommitPolicy::UntilFinished { interrupt_tier: 1 },
+    6.5,
+    &[IN_MAINHAND_REACH, HELD_IN_REACH],
 );
 
 /// Runs out the break rolled after a swing.
@@ -107,31 +127,34 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
     &[FLEEING],
 );
 
-// Motion priority: kite (10), flee (7), return (6), hold melee (5), chase (4),
-// wander (1). Kite beats a running flee (7 x 1.25 = 8.75).
+// Motion priority: kite (10), flee (7), seek (7), swing (6.5), return (6), hold melee (5),
+// chase (4), wander (1).
+// - Kite beats a running flee (7 x 1.25 = 8.75).
+// - Seek beats a running hold (6.25), so a warrior walks onto the spot it last saw its target
+//   instead of stopping a sword's length short of it.
+// - The swing beats the running hold (6.25) it waits in, taking the action slot with it. It needs
+//   that hold's idle, so a chasing, dashing or fleeing warrior never swings.
 //
-// Action priority: heal (5, scaled by need), hold fire (1.5), swing (1),
-// idle (0.5). Each beats the next even while that one holds the slot.
+// Action priority: swing (6.5, see above), heal (5, scaled by need), hold fire (1.5), idle (0.5).
+// Each beats the next even while that one holds the slot. The swing and heals never compete,
+// since every heal needs distance, no target, or a flee.
 // - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square root of the need. It
 //   beats idle from about 43% missing health and hold fire from about 48%, before the warrior
-//   starts fleeing at about 50% (health never recovers during a flee).
+//   starts fleeing at about 52% (health never recovers during a flee).
+// - The cornered heal has two yes/no inputs, so it scores the cube root of the need, which beats
+//   hold fire at any need a fleeing warrior has.
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
     WARRIOR_BASELINE_IDLE,
     RETURN_TO_HOME,
     FLEE,
+    SEEK_LOST_TARGET,
     CHASE_MELEE,
     HOLD_IN_MELEE_REACH,
     WARRIOR_KITE,
     HOLD_FIRE_WHILE_FLEEING,
-    Behavior::new(
-        None,
-        Some(MAINHAND),
-        CommitPolicy::ContinuouslyScored,
-        1.0,
-        &[IN_MAINHAND_REACH, NOT_DASHING],
-    ),
-    // The two heals: drink only at a safe distance, or with no target.
+    WARRIOR_SWING,
+    // The three heals: drink at a safe distance, with no target, or when a flee hits a wall.
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
@@ -146,10 +169,17 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
         5.0,
         &[NEEDS_POTION, NO_TARGET],
     ),
+    Behavior::new(
+        None,
+        Some(Action::Ability(Ability::Heal)),
+        CommitPolicy::ContinuouslyScored,
+        5.0,
+        &[NEEDS_POTION, FLEEING, CORNERED],
+    ),
 ];
 
-/// Closes to melee reach, plants to swing, usually runs a break away after a
-/// swing, flees when badly hurt, and walks home once disengaged.
+/// Closes to melee reach, plants to swing, often runs a short break away after a
+/// swing, flees to drink its potion when badly hurt, and walks home once disengaged.
 pub(super) static WARRIOR: BrainDefinition = BrainDefinition {
     behaviors: WARRIOR_BEHAVIORS,
 };
@@ -187,11 +217,12 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
     bsn! {
         ~Kinematics::new(200.0)
         ~Health::new(40.0)
+        Mass(80.0)
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        // 80% of swings end in a 6-8 tile run inside a 90° cone away from the target.
-        ~Dash::kite(0.8, Interval::new(6.0 * TILE_SIZE as f32, 8.0 * TILE_SIZE as f32))
+        // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
+        ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             ~Heal::new(HEAL_COOLDOWN)
         ]

@@ -1,6 +1,7 @@
 //! One frame of a motion: what its system reads to steer, and how a finite
 //! motion steps, follows its run, and reports finishing.
 
+use avian2d::prelude::LinearVelocity;
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
@@ -27,6 +28,50 @@ pub(super) enum MotionStep {
     Finished {
         decaying_speed_boost: Option<DecayingSpeedBoost>,
     },
+}
+
+/// How many times faster than it fills a [`BlockedTimer`] empties while the character moves
+/// freely.
+const BLOCKED_DRAIN_RATE: f32 = 4.0;
+
+/// How long a motion has pushed against a wall or a crowd without getting anywhere.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct BlockedTimer {
+    seconds: f32,
+}
+
+impl BlockedTimer {
+    /// Counts up while the character `is_blocked` and back down while it moves freely. True,
+    /// restarting the count, once it reaches `limit` seconds.
+    pub(super) fn tick_and_check_limit(
+        &mut self,
+        is_blocked: bool,
+        delta_secs: f32,
+        limit: f32,
+    ) -> bool {
+        if !is_blocked {
+            // Drained rather than cleared: a blocked character still reads as free on the odd
+            // frame, which must not restart the count.
+            self.seconds = (self.seconds - BLOCKED_DRAIN_RATE * delta_secs).max(0.0);
+            return false;
+        }
+        self.seconds += delta_secs;
+        if self.seconds < limit {
+            return false;
+        }
+        self.seconds = 0.0;
+        true
+    }
+
+    pub(super) fn reset(&mut self) {
+        self.seconds = 0.0;
+    }
+
+    /// Lets the character stay blocked `seconds` longer before the limit counts, such as while
+    /// it turns away from what blocked it.
+    pub(super) fn delay_by(&mut self, seconds: f32) {
+        self.seconds = -seconds;
+    }
 }
 
 /// The behavior run id a finite motion's component is serving, so a new run,
@@ -84,6 +129,7 @@ pub(super) struct SteeredCharacter {
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
+    linear_velocity: Option<&'static LinearVelocity>,
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
     home_area: Option<&'static HomeArea>,
@@ -107,7 +153,11 @@ impl SteeredCharacterItem<'_, '_> {
             delta_secs: time.delta_secs(),
             target_info: self.target_info,
             home_area: self.home_area,
-            scaled_max_speed: self.kinematics.max_speed * self.stat_multipliers.speed,
+            kinematics: self.kinematics,
+            stat_speed: self.stat_multipliers.speed,
+            physics_velocity: self
+                .linear_velocity
+                .map(|linear_velocity| linear_velocity.0),
         })
     }
 }
@@ -119,7 +169,9 @@ pub(super) struct SteerInput<'a> {
     pub target_info: Option<&'a TargetInfo>,
     pub home_area: Option<&'a HomeArea>,
     delta_secs: f32,
-    scaled_max_speed: f32,
+    kinematics: &'a Kinematics,
+    stat_speed: f32,
+    physics_velocity: Option<Vec2>,
 }
 
 impl SteerInput<'_> {
@@ -139,9 +191,19 @@ impl SteerInput<'_> {
         home_area.direction_home(self.position)
     }
 
+    /// Advances `blocked_timer` by this frame; see [`BlockedTimer::tick_and_check_limit`] and
+    /// [`Kinematics::is_blocked_at`].
+    pub(super) fn tick_blocked_timer(&self, blocked_timer: &mut BlockedTimer, limit: f32) -> bool {
+        let is_blocked = self.physics_velocity.is_some_and(|physics_velocity| {
+            self.kinematics
+                .is_blocked_at(physics_velocity, self.stat_speed)
+        });
+        blocked_timer.tick_and_check_limit(is_blocked, self.delta_secs, limit)
+    }
+
     /// How far the character covers this frame at `speed_multiplier` times its max speed, after
     /// its [`StatMultipliers`] speed.
     pub(super) fn distance_this_frame(&self, speed_multiplier: f32) -> f32 {
-        self.scaled_max_speed * speed_multiplier * self.delta_secs
+        self.kinematics.max_speed * self.stat_speed * speed_multiplier * self.delta_secs
     }
 }

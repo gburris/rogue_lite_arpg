@@ -1,5 +1,7 @@
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -18,6 +20,7 @@ pub struct StartUsingEquipment {
 /// Inserted by the item's `StartUsingEquipment` observer, removed by its stop path.
 /// Its removal, however the use ended, fires [`EquipmentUseFinished`].
 #[derive(Component, Default)]
+#[component(on_remove = report_equipment_use_finished)]
 pub struct EquipmentInUse;
 
 /// Fired at the holder when an item stops being in use.
@@ -28,17 +31,17 @@ pub struct EquipmentUseFinished {
     pub item: Entity,
 }
 
-pub(super) fn on_equipment_use_ended(
-    removed: On<Remove<EquipmentInUse>>,
-    mut commands: Commands,
-    items: Query<&ItemOf>,
-) {
-    if let Ok(item_of) = items.get(removed.entity) {
-        commands.trigger(EquipmentUseFinished {
-            holder: item_of.holder,
-            item: removed.entity,
-        });
-    }
+fn report_equipment_use_finished(mut world: DeferredWorld, context: HookContext) {
+    let Some(holder) = world
+        .get::<ItemOf>(context.entity)
+        .map(|item_of| item_of.holder)
+    else {
+        return;
+    };
+    world.commands().trigger(EquipmentUseFinished {
+        holder,
+        item: context.entity,
+    });
 }
 
 /// Request to end an in-progress use. Item stop observers own removing `EquipmentInUse`.

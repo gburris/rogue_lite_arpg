@@ -2,7 +2,7 @@ use core::fmt;
 
 use bevy::prelude::*;
 
-use super::equippable::{EquipmentUseStyle, Equippable};
+use super::equippable::Equippable;
 use super::use_equipped::EquipmentInUse;
 
 /// Goes on the equipment marking where it should be equipped
@@ -40,7 +40,7 @@ impl EquipmentSlot {
     }
 
     /// Whether the holder with these slots is using an item whose use ends on its own; see
-    /// [`EquipmentUseStyle::Instant`].
+    /// [`EquipmentUseStyle`](super::equippable::EquipmentUseStyle).
     pub fn is_instant_item_in_use(
         mainhand: Option<&Mainhand>,
         offhand: Option<&Offhand>,
@@ -50,7 +50,7 @@ impl EquipmentSlot {
             .into_iter()
             .filter_map(|slot| slot.equipped(mainhand, offhand))
             .filter_map(|item| in_use.get(item).ok())
-            .any(|equippable| equippable.use_style == EquipmentUseStyle::Instant)
+            .any(|equippable| equippable.use_style.ends_on_its_own())
     }
 }
 

@@ -48,5 +48,15 @@ pub enum EquipmentUseStyle {
     Held,
 }
 
+impl EquipmentUseStyle {
+    /// Whether a use in this style ends without being released.
+    pub fn ends_on_its_own(self) -> bool {
+        match self {
+            Self::Instant => true,
+            Self::Held => false,
+        }
+    }
+}
+
 #[derive(Component, Clone, Debug)]
 pub struct Equipped;

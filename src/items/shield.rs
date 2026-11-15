@@ -144,8 +144,9 @@ fn on_stop_shield(
         (With<Shield>, With<ActiveShield>),
     >,
 ) {
+    // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
+    // has nothing left to stop.
     let Ok((mut shield_sprite, _, equippable)) = shield_query.get_mut(shield.item) else {
-        warn!("Offhand missing Shield or ActiveShield");
         return;
     };
 

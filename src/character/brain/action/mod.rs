@@ -1,6 +1,3 @@
-//! What a character does besides moving: the [`Action`] a brain chooses, and the applier that
-//! carries it out through items and abilities.
-
 mod usage;
 
 use bevy::prelude::*;

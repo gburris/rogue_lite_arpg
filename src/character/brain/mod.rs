@@ -122,9 +122,14 @@ impl Brain {
             inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
         };
         let action_available = |action: Action| {
-            inputs.action_profile(action).is_some()
-                && inputs.can_run(action)
-                && (!behavior.commit.is_committed() || inputs.action_ends_on_its_own(action))
+            if inputs.action_profile(action).is_none() || !inputs.can_run(action) {
+                return false;
+            }
+            let finishes = !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
+            if !finishes {
+                warn_once!("a committed behavior over {action:?} never runs: its use is held");
+            }
+            finishes
         };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
     }

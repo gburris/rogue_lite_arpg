@@ -78,7 +78,7 @@ impl ActionRead<'_, '_> {
             Action::Use(slot) => self
                 .equipment
                 .equippable_in_slot(holder, slot)
-                .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Instant),
+                .is_some_and(|equippable| equippable.use_style.ends_on_its_own()),
             Action::Ability(_) => true,
             Action::Idle => false,
         }
@@ -112,7 +112,6 @@ impl ActionUsage<'_, '_> {
         }
     }
 
-    /// Starts `holder`'s `action` if the game allows it, returning whether it started.
     fn try_start(&mut self, holder: Entity, action: Action) -> bool {
         match action {
             Action::Use(slot) => self.equipment.try_use(holder, slot).is_ok(),
@@ -121,14 +120,10 @@ impl ActionUsage<'_, '_> {
         }
     }
 
-    /// Releases `holder`'s held use in `slot`, if one is in progress.
-    fn release_held_use(&mut self, holder: Entity, slot: EquipmentSlot) {
-        let is_held_use = self
-            .equipment
-            .equippable_in_slot(holder, slot)
-            .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Held);
-        if is_held_use {
-            self.equipment.stop_using(holder, slot);
+    fn release_held_use(&mut self, holder: Entity, action: Action) {
+        match action {
+            Action::Use(slot) => self.equipment.release_held_use(holder, slot),
+            Action::Ability(_) | Action::Idle => {}
         }
     }
 }
@@ -142,8 +137,7 @@ pub(in crate::character::brain) struct StartedActions {
 }
 
 impl StartedActions {
-    /// The run id of the last use started of `action`; `None` for `Idle`, which has no use.
-    fn run_id_mut(&mut self, action: Action) -> Option<&mut Option<u32>> {
+    fn behavior_run_id_mut(&mut self, action: Action) -> Option<&mut Option<u32>> {
         match action {
             Action::Use(slot) => Some(&mut self.uses[slot as usize]),
             Action::Ability(ability) => Some(&mut self.abilities[ability as usize]),
@@ -151,7 +145,7 @@ impl StartedActions {
         }
     }
 
-    fn run_id(&self, action: Action) -> Option<u32> {
+    fn behavior_run_id(&self, action: Action) -> Option<u32> {
         match action {
             Action::Use(slot) => self.uses[slot as usize],
             Action::Ability(ability) => self.abilities[ability as usize],
@@ -171,28 +165,29 @@ pub(super) fn apply_action_requests(
 ) {
     for (entity, brain, mut started_actions) in &mut brains {
         for slot in EquipmentSlot::ALL {
-            if brain.held_action(Action::Use(slot)).is_none() {
-                usage.release_held_use(entity, slot);
+            let action = Action::Use(slot);
+            if brain.held_action(action).is_none() {
+                usage.release_held_use(entity, action);
             }
         }
         for &running in &brain.running_behaviors {
             let Some(action) = running.action else {
                 continue;
             };
-            let Some(started_run_id) = started_actions.run_id_mut(action) else {
+            let Some(started_behavior_run_id) = started_actions.behavior_run_id_mut(action) else {
                 continue;
             };
-            if running.committed && *started_run_id == Some(running.behavior_run_id) {
+            if running.committed && *started_behavior_run_id == Some(running.behavior_run_id) {
                 continue;
             }
             if usage.is_in_progress(entity, action) {
                 if running.committed {
-                    *started_run_id = Some(running.behavior_run_id);
+                    *started_behavior_run_id = Some(running.behavior_run_id);
                 }
                 continue;
             }
             if usage.try_start(entity, action) {
-                *started_run_id = Some(running.behavior_run_id);
+                *started_behavior_run_id = Some(running.behavior_run_id);
             } else {
                 running.report_not_started(&mut commands, entity);
             }
@@ -237,7 +232,7 @@ fn report_action_finished(
     let Some(behavior_run_id) = started_actions
         .get(holder)
         .ok()
-        .and_then(|started_actions| started_actions.run_id(action))
+        .and_then(|started_actions| started_actions.behavior_run_id(action))
     else {
         return;
     };

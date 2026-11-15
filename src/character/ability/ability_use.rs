@@ -93,8 +93,8 @@ impl Default for AbilitySteps {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct UseGlow(pub Color);
 
-/// Present on an ability entity while a use runs its [`AbilitySteps`]. A use its
-/// [`InterruptionState`] holder loses makes the ability wait [`INTERRUPTED_LOCKOUT_SECONDS`]. Its
+/// Present on an ability entity while a use runs its [`AbilitySteps`]. An interrupted holder's use
+/// ends and the ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]; see [`InterruptionState`]. Its
 /// removal, however the use ended, fires [`AbilityUseFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = report_ability_use_finished)]

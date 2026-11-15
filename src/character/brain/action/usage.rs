@@ -162,7 +162,8 @@ impl StartedActions {
 
 /// Starts the brain's held actions and releases held uses it no longer holds. Considerations
 /// already judged the target, so the game decides only whether a use can start. A committed action
-/// starts once; a continuously scored one again whenever it isn't in progress.
+/// starts once, or adopts a use of it already in progress so that use's finish ends the behavior;
+/// a continuously scored one starts again whenever it isn't in progress.
 pub(super) fn apply_action_requests(
     mut commands: Commands,
     mut usage: ActionUsage,
@@ -181,12 +182,13 @@ pub(super) fn apply_action_requests(
             let Some(started_run_id) = started_actions.run_id_mut(action) else {
                 continue;
             };
-            let already_started = if running.committed {
-                *started_run_id == Some(running.behavior_run_id)
-            } else {
-                usage.is_in_progress(entity, action)
-            };
-            if already_started {
+            if running.committed && *started_run_id == Some(running.behavior_run_id) {
+                continue;
+            }
+            if usage.is_in_progress(entity, action) {
+                if running.committed {
+                    *started_run_id = Some(running.behavior_run_id);
+                }
                 continue;
             }
             if usage.try_start(entity, action) {

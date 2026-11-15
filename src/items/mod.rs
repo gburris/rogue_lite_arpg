@@ -22,7 +22,7 @@ pub mod prelude {
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;
     pub use super::magnet::Magnet;
-    pub use super::melee::prelude::{MeleeWindUp, axe, freeze_axe, sword};
+    pub use super::melee::prelude::{axe, freeze_axe, sword};
     pub use super::shield::{knight_shield, magic_shield};
     pub use super::staff::{
         STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,

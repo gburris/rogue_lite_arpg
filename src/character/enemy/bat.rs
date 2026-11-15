@@ -1,4 +1,4 @@
-use avian2d::prelude::{Collider, CollisionLayers, SpatialQueryFilter};
+use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::{Experience, enemy_wander, sight_ray};
@@ -6,7 +6,7 @@ use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
-    distance_threshold, flag, motion_held_for, reach_fraction_threshold, within_reach,
+    distance_threshold, flag, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
     Abilities, Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy,
@@ -14,19 +14,13 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-/// Core of the cast distance range, which a bat backs out to after a dive.
+/// Core of the cast distance range, which a bat backs out to after a swoop.
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
 const NOT_SWOOPING: Consideration =
     flag("swooping", ConsiderationInput::MotionRunning(Motion::Swoop)).inverted("not swooping");
-/// Seconds a bat orbits before it may dive, so it never dives straight out of another move.
-const BAT_SWOOP_WARM_UP: f32 = 0.5;
-const ORBIT_WARMED_UP: Consideration = motion_held_for(
-    "orbit warmed up",
-    Motion::Orbit(CAST_DISTANCE_RANGE),
-    BAT_SWOOP_WARM_UP,
-);
+const CIRCLING: Consideration = flag("circling", ConsiderationInput::Circling);
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
     ConsiderationInput::MotionReachFraction(Motion::Swoop),
@@ -36,7 +30,7 @@ const IN_BREATH_REACH: Consideration = within_reach(
     ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breathe)),
 );
 /// Distance out to which the decision arms a bite: 40 units past contact.
-/// Decisions sample at ~10 Hz, so a dive crossing the reach could otherwise
+/// Decisions sample at ~10 Hz, so a swoop crossing the reach could otherwise
 /// fall between two samples; the applier still checks the true reach.
 const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;
@@ -89,13 +83,13 @@ const BAT_KEEP: Behavior = Behavior::new(
     5.0,
     &[INSIDE_INNER_CAST_EDGE],
 );
-/// Bite dive out of an orbit that has run for [`BAT_SWOOP_WARM_UP`].
+/// Swoops in to bite while circling.
 const BAT_SWOOP: Behavior = Behavior::new(
     Some(Motion::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
-    &[IN_SWOOP_REACH, ORBIT_WARMED_UP],
+    &[IN_SWOOP_REACH, CIRCLING],
 );
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
@@ -106,7 +100,7 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
     0.5,
     &[],
 );
-/// Fireball from range, never mid-dive.
+/// Fireball from range, never mid-swoop.
 const BAT_BREATHE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Breathe)),
@@ -120,7 +114,7 @@ const BAT_BREATHE: Behavior = Behavior::new(
         NOT_SWOOPING,
     ],
 );
-/// Arms a bite near contact reach, whether diving or circling.
+/// Arms a bite near contact reach, whether swooping or circling.
 const BAT_BITE: Behavior = Behavior::new(
     None,
     Some(Action::Ability(Ability::Bite)),
@@ -153,7 +147,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     BAT_BITE,
 ];
 
-/// Circles its target, dives to bite, and breathes fireballs.
+/// Circles its target, swoops in to bite, and breathes fireballs.
 pub(super) static BAT: BrainDefinition = BrainDefinition {
     behaviors: BAT_BEHAVIORS,
 };
@@ -164,12 +158,12 @@ const BAT_TURN_RATE: f32 = 6.0;
 /// Half-width of a bat's rerolled orbit-radius offset from the band's centre.
 const BAT_ORBIT_MAX_DISTANCE_OFFSET: f32 = 50.0;
 /// Contact range for a bite in world units, where its hitbox's front edge reaches. Short enough
-/// that a sidestep as the dive starts usually gets clear.
+/// that a sidestep as the swoop starts usually gets clear.
 const BITE_REACH: f32 = 24.0;
 const BITE_DAMAGE: f32 = 6.0;
 /// Radius of the bite's hitbox: about the bat's own size.
 const BAT_BITE_RADIUS: f32 = 12.0;
-/// Seconds between bites; longer than a dive's time in reach, so a pass bites once.
+/// Seconds between bites; longer than a swoop's time in reach, so a swoop bites once.
 const BITE_COOLDOWN: f32 = 1.0;
 /// Bat sprites sort and clip at their own 32x32 frame edge.
 const BAT_FEET_POS_OFFSET: f32 = -16.0;
@@ -203,6 +197,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
     bsn! {
         ~Kinematics::new(170.0)
         ~Health::new(15.0)
+        Mass(25.0)
         Experience(6.0)
         // Bats fly high: longer reach, and only the high obstacles that also stop
         // their flight block the ray.

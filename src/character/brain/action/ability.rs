@@ -96,7 +96,7 @@ impl Breath {
 const PASSING_BITE_REACH_FACTOR: f32 = 2.0;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, toward its target. It snaps
-/// when the target is within `reach`, or as a pass close by starts to pull away, so a dive
+/// when the target is within `reach`, or as a pass close by starts to pull away, so a swoop
 /// through the target bites once even when the target steps aside.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Bite {
@@ -254,7 +254,7 @@ pub(super) fn apply_breath(
         let Some(breathing) = brain.held_action(Action::Ability(Ability::Breathe)) else {
             continue;
         };
-        // Never mid-dash or mid-dive: the decision that starts one can still hold a breath.
+        // Never mid-dash or mid-swoop: the decision that starts one can still hold a breath.
         let bursting = brain.motion().is_some_and(Motion::is_finite);
         let ready = brain.is_cooldown_ready(Ability::Breathe, now) && !bursting;
         let Some(aim_direction) = target_info

@@ -48,7 +48,7 @@ pub enum Motion {
     Orbit(Interval),
     /// Committed straight run; its `Dash` constructor (kite, hop, slide) sets its aim.
     Dash,
-    /// Committed dive through a snapshot of the target and back out.
+    /// Committed swoop through a snapshot of the target and back out.
     Swoop,
 }
 
@@ -174,4 +174,5 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .in_set(BrainSystems::Motion),
     );
+    app.add_observer(swoop::on_swooper_knocked_back);
 }

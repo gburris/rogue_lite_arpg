@@ -258,21 +258,24 @@ pub(super) fn tick_and_remove_damage_flash(
         });
 }
 
-#[derive(Component, Default, Clone)]
+/// The impulse a weapon or projectile's hit deals: it shoves a character `impulse / mass` world
+/// units; see [`KnockedBack`].
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Knockback(pub f32);
 
 pub(super) fn on_damage_dealt_knockback(
     damage_dealt: On<DamageDealt>,
-    knockback_query: Query<&Knockback>,
-    mut forces: Query<Forces>,
-) -> Result {
+    mut commands: Commands,
+    knockbacks: Query<&Knockback>,
+    masses: Query<&Mass, With<Kinematics>>,
+) {
     if let Some(source_item) = damage_dealt.source_item
-        && let Ok(knockback) = knockback_query.get(source_item)
+        && let Ok(knockback) = knockbacks.get(source_item)
         && let Some(damage_direction) = damage_dealt.direction
+        && let Ok(mass) = masses.get(damage_dealt.entity)
     {
-        forces
-            .get_mut(damage_dealt.entity)?
-            .apply_force(damage_direction * knockback.0 * 1_000_000.0);
+        commands
+            .entity(damage_dealt.entity)
+            .try_insert(KnockedBack::new(damage_direction, knockback.0 / mass.0));
     }
-    Ok(())
 }

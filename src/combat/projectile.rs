@@ -96,7 +96,7 @@ pub fn fireball_with_speed(
         @point_light(Color::from(YELLOW_300), 1.4, 50.0, 5.0)
         ~Collider::circle(10.0)
         AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating))
-        Knockback(5.0)
+        Knockback(1250.0)
         Effects [
             Burning
             Lifespan::new(2.5)
@@ -131,7 +131,7 @@ pub fn icebolt(
         ~Collider::rectangle(40.0, 5.0)
         ~{AnimationIndices::Cycle((0..=2).cycle())}
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))
-        Knockback(5.0)
+        Knockback(1250.0)
         Effects [
             Frozen
             Lifespan::new(0.7)

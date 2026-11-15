@@ -12,9 +12,9 @@ mod perception;
 use bevy::prelude::*;
 use rand::RngExt;
 
-pub use self::action::{Abilities, Ability, Action, Bite, Breath, Heal, speed_and_damage_rally};
-use self::action::{ActionFinished, ActionOutcome, StartedEquipmentUses};
-use self::capability::{CapabilityProfile, CooldownKey, Cooldowns};
+pub use self::action::Action;
+use self::action::{ActionFinished, ActionOutcome, StartedAbilityUses, StartedEquipmentUses};
+use self::capability::{CapabilityProfile, Cooldowns};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -29,7 +29,7 @@ pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
-pub(crate) use self::perception::{Allies, TargetInfo, Targeting, VisionCone};
+pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -42,7 +42,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`ActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedEquipmentUses, Steering, Kinematics)]
+#[require(StartedEquipmentUses, StartedAbilityUses, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
@@ -102,28 +102,16 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    fn is_cooldown_ready(&self, key: impl CooldownKey, now: f32) -> bool {
-        self.cooldowns.is_ready(key, now)
-    }
-
-    fn start_cooldown(&mut self, key: impl CooldownKey, ready_at: f32) {
-        self.cooldowns.start(key, ready_at);
+    fn is_cooldown_ready(&self, motion: Motion, now: f32) -> bool {
+        self.cooldowns.is_ready(motion, now)
     }
 
     /// Starts `motion`'s cooldown for as long as its capability profile says.
     fn start_motion_cooldown(&mut self, motion: Motion, inputs: &DecisionInputs) {
         let cooldown = inputs
             .motion_profile(motion)
-            .map_or(0.0, CapabilityProfile::roll_cooldown);
-        self.start_cooldown(motion, inputs.now + cooldown);
-    }
-
-    /// Starts `ability`'s cooldown for as long as its capability profile says.
-    fn start_ability_cooldown(&mut self, ability: Ability, inputs: &DecisionInputs) {
-        let cooldown = inputs
-            .action_profile(Action::Ability(ability))
-            .map_or(0.0, CapabilityProfile::roll_cooldown);
-        self.start_cooldown(ability, inputs.now + cooldown);
+            .map_or(0.0, |profile| profile.cooldown);
+        self.cooldowns.start(motion, inputs.now + cooldown);
     }
 
     /// Whether `behavior` may start now: each part's capability is owned, off its
@@ -132,11 +120,8 @@ impl Brain {
         let motion_available = |motion: Motion| {
             inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
         };
-        let action_available = |action: Action| {
-            inputs.action_profile(action).is_some()
-                && self.is_cooldown_ready(action, inputs.now)
-                && inputs.world_allows_use(action)
-        };
+        let action_available =
+            |action: Action| inputs.action_profile(action).is_some() && inputs.can_start(action);
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
     }
 
@@ -250,16 +235,14 @@ impl Brain {
         }
     }
 
-    /// Ends `running` and starts its finite part's cooldown so it can't
-    /// restart next tick. Equipment keeps its own cooldown, so a use starts none.
+    /// Ends `running` and starts its finite motion's cooldown so it can't restart next tick.
+    /// Equipment and abilities keep their own cooldowns, so an action starts none.
     fn drop_committed_behavior(&mut self, running: RunningBehavior, inputs: &DecisionInputs) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);
         let behavior = self.definition_of_running_behavior(running);
-        match (behavior.motion, behavior.action) {
-            (Some(motion), _) if motion.is_finite() => self.start_motion_cooldown(motion, inputs),
-            (_, Some(Action::Ability(ability))) => self.start_ability_cooldown(ability, inputs),
-            (_, Some(Action::Use(_) | Action::Idle) | None) => {}
+        if let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) {
+            self.start_motion_cooldown(motion, inputs);
         }
     }
 

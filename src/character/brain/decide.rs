@@ -35,33 +35,18 @@ pub(super) struct RunningBehavior {
 }
 
 impl RunningBehavior {
-    pub(super) fn report_completed(self, commands: &mut Commands, entity: Entity) {
-        if let Some(finished) = self.build_action_finished(entity, ActionOutcome::Completed) {
-            commands.trigger(finished);
-        }
-    }
-
     /// Ends a committed use the live world refused; a continuously scored use waits.
     pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
         if self.committed
-            && let Some(finished) = self.build_action_finished(entity, ActionOutcome::NotStarted)
+            && let Some(action) = self.action
         {
-            commands.trigger(finished);
+            commands.trigger(ActionFinished {
+                entity,
+                action,
+                behavior_run_id: self.behavior_run_id,
+                outcome: ActionOutcome::NotStarted,
+            });
         }
-    }
-
-    /// `None` for a record with no action to report on.
-    fn build_action_finished(
-        self,
-        entity: Entity,
-        outcome: ActionOutcome,
-    ) -> Option<ActionFinished> {
-        Some(ActionFinished {
-            entity,
-            action: self.action?,
-            behavior_run_id: self.behavior_run_id,
-            outcome,
-        })
     }
 
     /// Whether a committed behavior lost its target, was stunned, or timed out.
@@ -130,9 +115,7 @@ pub(super) fn on_release_finished_motion(
     );
 }
 
-/// Applies an [`ActionFinished`], current or stale. An ability starts its
-/// cooldown even if it never started, so the next decision can't pick it
-/// straight back.
+/// Applies an [`ActionFinished`], current or stale.
 pub(super) fn on_finish_action(
     finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
@@ -154,10 +137,9 @@ pub(super) fn on_finish_action(
         {
             brain.record_attack_finished();
         }
-        Action::Ability(ability) => brain.start_ability_cooldown(ability, &inputs),
-        // A held or unstarted use is no attack, and nothing reports an idle
-        // action's finish.
-        Action::Use(_) | Action::Idle => {}
+        // A held or unstarted use is no attack, an ability keeps its own cooldown, and nothing
+        // reports an idle action's finish.
+        Action::Use(_) | Action::Ability(_) | Action::Idle => {}
     }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();

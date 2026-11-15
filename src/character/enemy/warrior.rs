@@ -4,14 +4,17 @@ use bevy::prelude::*;
 use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
+use crate::character::ability::{
+    Abilities, Ability, AbilityCooldown, AbilityStep, AbilitySteps, Heal, UseGlow,
+};
 use crate::character::brain::considerations::{
     ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
     SEEK_LOST_TARGET, WANDER, consideration, flag, motion_held_for, reach_fraction_threshold,
     target_within_distance,
 };
 use crate::character::brain::{
-    Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
-    ConsiderationInput, Curve, Dash, Heal, Interval, Motion,
+    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    Dash, Interval, Motion,
 };
 use crate::prelude::*;
 
@@ -143,6 +146,8 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 //   starts fleeing at about 52% (health never recovers during a flee).
 // - The cornered heal has two yes/no inputs, so it scores the cube root of the need, which beats
 //   hold fire at any need a fleeing warrior has.
+// - A heal with a target is committed, so the action slot holds the drink until it ends. The
+//   no-target heal stays continuously scored, since a committed behavior drops without a target.
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
     WARRIOR_BASELINE_IDLE,
@@ -158,7 +163,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
-        CommitPolicy::ContinuouslyScored,
+        CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, FAR_FROM_TARGET],
     ),
@@ -172,7 +177,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
-        CommitPolicy::ContinuouslyScored,
+        CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, FLEEING, CORNERED],
     ),
@@ -186,6 +191,9 @@ pub(super) static WARRIOR: BrainDefinition = BrainDefinition {
 
 /// Seconds between potions, so a hurt warrior drinks one at a time.
 const HEAL_COOLDOWN: f32 = 1.0;
+/// A drink takes 0.6 s, a window for a hit to cancel it.
+const HEAL_STEPS: &[AbilityStep] = &[AbilityStep::Hold { seconds: 0.6 }, AbilityStep::Release];
+const HEAL_GLOW_COLOR: Color = Color::srgb(0.3, 1.0, 0.4);
 
 /// Spawns a sword-carrying warrior on top of the shared enemy `base` scene.
 pub(super) fn spawn_warrior(
@@ -224,7 +232,10 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
         ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
-            ~Heal::new(HEAL_COOLDOWN)
+            Heal
+            ~AbilityCooldown::new(HEAL_COOLDOWN)
+            AbilitySteps(HEAL_STEPS)
+            UseGlow(HEAL_GLOW_COLOR)
         ]
         enemy_wander()
         template(move |_| Ok(sprite.clone()))

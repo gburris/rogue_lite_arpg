@@ -4,10 +4,12 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Abilities, Ability, Action, find_carried_potion};
-use super::capability::{AbilityCapabilities, CapabilityProfile, MotionCapabilities};
+use super::action::Action;
+use super::capability::{CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
-use super::perception::{Allies, TargetInfo, Targeting};
+use super::perception::{TargetInfo, Targeting};
+use crate::character::Allies;
+use crate::character::ability::{AbilityRead, AbilityUseFailure};
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
@@ -53,18 +55,15 @@ pub(super) struct DecisionInputComponents {
     stat_multipliers: &'static StatMultipliers,
     kinematics: &'static Kinematics,
     linear_velocity: Option<&'static LinearVelocity>,
-    items: Option<&'static Items>,
     motion_capabilities: MotionCapabilities,
-    abilities: Option<&'static Abilities>,
 }
 
 /// The queries behind ability and equipment profiles, allies and the world-allows-use checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
     equipment: EquipmentRead<'w, 's>,
-    consumables: Query<'w, 's, (), With<Consumable>>,
     items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
-    ability_capabilities: Query<'w, 's, AbilityCapabilities>,
+    abilities: AbilityRead<'w, 's>,
     allies: Allies<'w, 's>,
 }
 
@@ -95,8 +94,8 @@ impl DecisionInputs<'_, '_, '_> {
             .capability_profile(motion)
     }
 
-    /// The profile of the capability that carries out `action`: the equipped
-    /// item's reach, or the component of the ability entity carrying it. `Idle` needs none.
+    /// The profile of the capability that carries out `action`: the equipped item's reach, or the
+    /// ability's. `Idle` needs none.
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
         match action {
             Action::Use(slot) => self
@@ -107,20 +106,35 @@ impl DecisionInputs<'_, '_, '_> {
                     reach: equippable.reach,
                     ..CapabilityProfile::default()
                 }),
-            Action::Ability(ability) => self
-                .components
-                .abilities
-                .into_iter()
-                .flat_map(Abilities::iter)
-                .filter_map(|entity| self.queries.ability_capabilities.get(entity).ok())
-                .find_map(|capabilities| capabilities.capability_profile(ability)),
+            Action::Ability(ability) => {
+                let abilities = &self.queries.abilities;
+                let entity = self.components.entity;
+                abilities.has(entity, ability).then(|| CapabilityProfile {
+                    reach: abilities.reach(entity, ability),
+                    ..CapabilityProfile::default()
+                })
+            }
             Action::Idle => Some(CapabilityProfile::default()),
         }
     }
 
-    /// Whether the world lets `action` run now: usable equipment (or a held use
-    /// already running), and a carried potion for `Heal`.
-    pub fn world_allows_use(&self, action: Action) -> bool {
+    /// Whether `action` can start now: allowed by the world, and for an ability also off cooldown
+    /// and not already in use.
+    pub fn can_start(&self, action: Action) -> bool {
+        match action {
+            Action::Ability(ability) => self
+                .queries
+                .abilities
+                .can_use(self.components.entity, ability)
+                .is_ok(),
+            Action::Use(_) | Action::Idle => self.world_allows_use(action),
+        }
+    }
+
+    /// Whether the world lets `action` run, whatever only waiting would fix: usable equipment (or a
+    /// held use already running), or an ability with nothing missing; see
+    /// [`AbilityUseFailure::is_temporary`].
+    fn world_allows_use(&self, action: Action) -> bool {
         let entity = self.components.entity;
         let queries = self.queries;
         match action {
@@ -132,12 +146,11 @@ impl DecisionInputs<'_, '_, '_> {
                         .is_some_and(|item| queries.items_in_use.contains(item));
                 held_item_in_use || queries.equipment.can_use(entity, slot).is_ok()
             }
-            Action::Ability(Ability::Heal) => {
-                find_carried_potion(self.components.items, &queries.consumables).is_some()
-            }
-            Action::Ability(Ability::Breathe | Ability::Bite | Ability::Rally) | Action::Idle => {
-                true
-            }
+            Action::Ability(ability) => queries
+                .abilities
+                .can_use(entity, ability)
+                .map_or_else(AbilityUseFailure::is_temporary, |_| true),
+            Action::Idle => true,
         }
     }
 

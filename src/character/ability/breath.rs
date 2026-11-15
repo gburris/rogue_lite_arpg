@@ -23,8 +23,16 @@ impl Breath {
     }
 }
 
+/// A breath ability that fires its [`Projectiles`] templates at targets within `reach`.
+pub fn breath(reach: f32) -> impl Scene {
+    bsn! {
+        ~Breath::new(reach)
+        on(on_breath_released)
+    }
+}
+
 /// Fires each projectile template along the holder's aim.
-pub(super) fn on_breath_released(
+fn on_breath_released(
     released: On<AbilityReleased>,
     mut commands: Commands,
     breaths: Query<(&AbilityOf, &Projectiles), With<Breath>>,

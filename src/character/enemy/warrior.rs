@@ -5,7 +5,7 @@ use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::{
-    Abilities, Ability, AbilityCooldown, AbilityStep, AbilitySteps, Heal, UseGlow,
+    Abilities, Ability, AbilityCooldown, AbilityStep, AbilitySteps, UseGlow, heal,
 };
 use crate::character::brain::considerations::{
     ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
@@ -232,7 +232,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
         ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
-            Heal
+            @heal()
             ~AbilityCooldown::new(HEAL_COOLDOWN)
             AbilitySteps(HEAL_STEPS)
             UseGlow(HEAL_GLOW_COLOR)

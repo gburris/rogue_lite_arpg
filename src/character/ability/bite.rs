@@ -67,8 +67,16 @@ pub(super) struct BiteHitbox {
     bitten: HashSet<Entity>,
 }
 
+/// A bite ability carrying `bite`.
+pub fn bite(bite: Bite) -> impl Scene {
+    bsn! {
+        template(move |_| Ok(bite))
+        on(on_bite_released)
+    }
+}
+
 /// Snaps a bite along the holder's aim. The hitbox decides whether it lands.
-pub(super) fn on_bite_released(
+fn on_bite_released(
     released: On<AbilityReleased>,
     mut commands: Commands,
     bites: Query<(&Bite, &AbilityOf)>,

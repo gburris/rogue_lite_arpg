@@ -11,14 +11,15 @@ pub use self::ability_use::{
     AbilityUseFailure, AbilityUseFinished, UseGlow,
 };
 use self::ability_use::{AbilityOf, AbilityReleased};
-pub use self::bite::Bite;
-pub use self::breath::Breath;
-pub use self::heal::Heal;
+pub use self::bite::{Bite, bite};
+pub use self::breath::breath;
+pub use self::heal::heal;
 pub use self::rally::speed_and_damage_rally;
 use crate::prelude::*;
 
-/// An innate move a character can use, carried out by a capability component ([`Heal`],
-/// [`Breath`], [`Bite`] or [`Rally`](self::rally::Rally)) on one of its [`Abilities`].
+/// An innate move a character can use, carried out by a capability component
+/// ([`Heal`](self::heal::Heal), [`Breath`](self::breath::Breath), [`Bite`] or
+/// [`Rally`](self::rally::Rally)) on one of its [`Abilities`].
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ability {
     /// Drink a carried potion.
@@ -46,9 +47,5 @@ pub(super) fn plugin(app: &mut App) {
         bite::damage_bite_hits.in_set(InGameSystems::Collision),
     )
     .add_observer(ability_use::on_ability_use_started)
-    .add_observer(ability_use::on_ability_use_ended)
-    .add_observer(heal::on_heal_released)
-    .add_observer(breath::on_breath_released)
-    .add_observer(bite::on_bite_released)
-    .add_observer(rally::on_rally_released);
+    .add_observer(ability_use::on_ability_use_ended);
 }

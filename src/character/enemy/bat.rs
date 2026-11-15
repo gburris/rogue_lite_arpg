@@ -2,7 +2,7 @@ use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::{Experience, enemy_wander, sight_ray};
-use crate::character::ability::{Abilities, Ability, AbilityCooldown, Bite, Breath};
+use crate::character::ability::{Abilities, Ability, AbilityCooldown, Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
@@ -224,12 +224,14 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [
-            ~Bite::new(BITE_REACH, BITE_DAMAGE)
-                .with_life_steal(1.0)
-                .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
+            @bite(
+                Bite::new(BITE_REACH, BITE_DAMAGE)
+                    .with_life_steal(1.0)
+                    .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
+            )
             ~AbilityCooldown::new(BITE_COOLDOWN)
             --
-            ~Breath::new(CAST_MAX_RANGE)
+            @breath(CAST_MAX_RANGE)
             ~AbilityCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)

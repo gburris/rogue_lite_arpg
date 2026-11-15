@@ -8,6 +8,14 @@ use crate::prelude::*;
 #[require(Ability::Heal, AbilityCooldown, AbilitySteps)]
 pub struct Heal;
 
+/// A heal ability that drinks the holder's first carried potion when released.
+pub fn heal() -> impl Scene {
+    bsn! {
+        Heal
+        on(on_heal_released)
+    }
+}
+
 /// The first consumable the holder carries, the potion a [`Heal`] drinks.
 pub(super) fn find_carried_potion(
     items: Option<&Items>,
@@ -20,7 +28,7 @@ pub(super) fn find_carried_potion(
 }
 
 /// Drinks the holder's first carried potion, if it still carries one.
-pub(super) fn on_heal_released(
+fn on_heal_released(
     released: On<AbilityReleased>,
     mut commands: Commands,
     heals: Query<&AbilityOf, With<Heal>>,

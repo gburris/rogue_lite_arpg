@@ -30,6 +30,7 @@ impl Rally {
 pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         ~Rally::new(reach)
+        on(on_rally_released)
         Effects [
             Rallied
             Lifespan::new(seconds)
@@ -45,7 +46,7 @@ pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scen
 
 /// Gives every other ally in reach the rally's [`Effects`] and sends a shockwave out from the
 /// holder's feet.
-pub(super) fn on_rally_released(
+fn on_rally_released(
     released: On<AbilityReleased>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,

@@ -91,9 +91,9 @@ impl Default for AbilitySteps {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct UseGlow(pub Color);
 
-/// Present on an ability entity while a use runs its [`AbilitySteps`]. A holder that is knocked
-/// back, stunned or defeated can't start a use and cancels one under way, after which the ability
-/// waits [`INTERRUPTED_LOCKOUT_SECONDS`]. Its removal, however the use ended, fires
+/// Present on an ability entity while a use runs its [`AbilitySteps`]. An interrupted holder
+/// (knocked back, stunned or defeated) can't start a use and loses one under way, after which the
+/// ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]. Its removal, however the use ended, fires
 /// [`AbilityUseFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct AbilityInUse {
@@ -122,10 +122,10 @@ pub struct AbilityUseFinished {
 pub enum AbilityUseFailure {
     /// The character has no ability entity for it.
     NotOwned,
-    /// A heal with no potion to drink.
-    NoPotion,
+    /// The ability uses up an item the character doesn't carry, such as a heal's potion.
+    MissingRequiredItem,
     /// The character is knocked back, stunned or defeated.
-    HolderDisabled,
+    HolderInterrupted,
     InUse,
     OnCooldown,
 }
@@ -135,8 +135,8 @@ impl AbilityUseFailure {
     /// character lacks.
     pub fn is_temporary(self) -> bool {
         match self {
-            Self::HolderDisabled | Self::InUse | Self::OnCooldown => true,
-            Self::NotOwned | Self::NoPotion => false,
+            Self::HolderInterrupted | Self::InUse | Self::OnCooldown => true,
+            Self::NotOwned | Self::MissingRequiredItem => false,
         }
     }
 }
@@ -150,7 +150,7 @@ pub(super) struct HolderState {
 }
 
 impl HolderStateItem<'_, '_> {
-    fn is_disabled(&self) -> bool {
+    fn is_interrupted(&self) -> bool {
         self.knocked_back
             || self.health.is_some_and(Health::is_dead)
             || self
@@ -213,10 +213,10 @@ impl AbilityRead<'_, '_> {
             .get(holder)
             .map_err(|_| AbilityUseFailure::NotOwned)?;
         if ability == Ability::Heal && find_carried_potion(items, &self.consumables).is_none() {
-            return Err(AbilityUseFailure::NoPotion);
+            return Err(AbilityUseFailure::MissingRequiredItem);
         }
-        if holder_state.is_disabled() {
-            return Err(AbilityUseFailure::HolderDisabled);
+        if holder_state.is_interrupted() {
+            return Err(AbilityUseFailure::HolderInterrupted);
         }
         if state.in_use {
             return Err(AbilityUseFailure::InUse);
@@ -292,7 +292,8 @@ pub(super) fn on_ability_use_started(
     }
 }
 
-/// Advances every use under way, and cancels the use of a disabled holder; see [`AbilityInUse`].
+/// Advances every use under way, and interrupts the use of an interrupted holder; see
+/// [`AbilityInUse`].
 pub(super) fn advance_ability_uses(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
@@ -307,12 +308,12 @@ pub(super) fn advance_ability_uses(
 ) {
     let now = time.elapsed_secs();
     for (entity, mut in_use, steps, mut cooldown, ability_of) in &mut uses {
-        let holder_disabled = holders
+        let holder_interrupted = holders
             .get(ability_of.holder)
             .ok()
-            .is_none_or(|holder_state| holder_state.is_disabled());
-        if holder_disabled {
-            cancel_ability_use(&mut commands, entity, &mut cooldown, now);
+            .is_none_or(|holder_state| holder_state.is_interrupted());
+        if holder_interrupted {
+            interrupt_ability_use(&mut commands, entity, &mut cooldown, now);
             continue;
         }
         advance_steps(
@@ -377,7 +378,7 @@ fn advance_steps(
     }
 }
 
-fn cancel_ability_use(
+fn interrupt_ability_use(
     commands: &mut Commands,
     entity: Entity,
     cooldown: &mut AbilityCooldown,

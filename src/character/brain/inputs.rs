@@ -121,17 +121,43 @@ impl DecisionInputs<'_, '_, '_> {
         }
     }
 
-    /// Whether `action` can start now: allowed by the world, and for an ability also off cooldown
-    /// and not already in use.
+    /// Whether `action` can start now: allowed by the world, for an ability also off cooldown and
+    /// not already in use, and with no other action in progress. `Idle` always can.
     pub fn can_start(&self, action: Action) -> bool {
-        match action {
+        let allowed = match action {
             Action::Ability(ability) => self
                 .queries
                 .abilities
                 .can_use(self.components.entity, ability)
                 .is_ok(),
-            Action::Use(_) | Action::Idle => self.world_allows_use(action),
-        }
+            Action::Use(_) => self.world_allows_use(action),
+            Action::Idle => return true,
+        };
+        allowed
+            && self
+                .actions_in_progress()
+                .all(|in_progress| in_progress == action)
+    }
+
+    /// The actions the character's equipment and abilities are carrying out now, whether or not
+    /// the brain still holds them.
+    fn actions_in_progress(&self) -> impl Iterator<Item = Action> + '_ {
+        let entity = self.components.entity;
+        let queries = self.queries;
+        let equipment_uses = EquipmentSlot::ALL
+            .into_iter()
+            .filter(move |&slot| {
+                queries
+                    .equipment
+                    .item_in_slot(entity, slot)
+                    .is_some_and(|item| queries.items_in_use.contains(item))
+            })
+            .map(Action::Use);
+        let ability_uses = queries
+            .abilities
+            .abilities_in_use(entity)
+            .map(Action::Ability);
+        equipment_uses.chain(ability_uses)
     }
 
     /// Whether the world lets `action` run, whatever only waiting would fix: usable equipment (or a

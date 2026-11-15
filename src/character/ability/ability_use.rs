@@ -227,6 +227,17 @@ impl AbilityRead<'_, '_> {
         Ok(state.entity)
     }
 
+    /// The abilities `holder` is using now.
+    pub fn abilities_in_use(&self, holder: Entity) -> impl Iterator<Item = Ability> + '_ {
+        self.holders
+            .get(holder)
+            .into_iter()
+            .flat_map(|(abilities, ..)| abilities.iter())
+            .filter_map(|entity| self.abilities.get(entity).ok())
+            .filter(|state| state.in_use)
+            .map(|state| *state.ability)
+    }
+
     fn find(&self, holder: Entity, ability: Ability) -> Option<AbilityStateItem<'_, '_>> {
         let (abilities, ..) = self.holders.get(holder).ok()?;
         abilities

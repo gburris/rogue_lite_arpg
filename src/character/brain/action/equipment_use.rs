@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use super::{Action, ActionFinished, ActionOutcome};
-use crate::character::brain::{Brain, TargetInfo, Targeting};
+use crate::character::brain::Brain;
 use crate::prelude::*;
 
 /// The last use started in each slot, stamped with its behavior's run id, so a
@@ -55,68 +55,45 @@ pub(super) fn on_report_equipment_use_finished(
     }
 }
 
-/// Starts and releases the brain's equipment uses. Decisions check range at
-/// 10 Hz, so continuously scored uses are re-gated on the live target every frame; a
-/// committed use starts once, unconditionally.
+/// Starts and releases the brain's equipment uses. Considerations already judged the target, so
+/// the item itself decides only whether it can start; see [`EquipmentUsage::try_use`]. A committed
+/// use starts once; a continuously scored one again whenever its item allows. A held use is
+/// released once no behavior holds it.
 pub(super) fn apply_equipment_use_requests(
     mut commands: Commands,
     mut equipment: EquipmentUsage,
-    mut requests: Query<(
-        Entity,
-        &Brain,
-        &mut StartedEquipmentUses,
-        Has<Targeting>,
-        Option<&TargetInfo>,
-    )>,
+    mut requests: Query<(Entity, &Brain, &mut StartedEquipmentUses)>,
 ) {
-    for (entity, brain, mut started_equipment_uses, has_target, target_info) in &mut requests {
-        let sighted = target_info.is_some_and(|info| info.line_of_sight);
+    for (entity, brain, mut started_equipment_uses) in &mut requests {
         for slot in EquipmentSlot::ALL {
             let in_use = equipment.is_using(entity, slot);
-            let is_held_use = equipment
-                .equippable_in_slot(entity, slot)
-                .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Held);
-            let started_use = started_equipment_uses.started_use_mut(slot);
-
-            // The same item reach the equipment considerations scored, checked live.
-            let reach = equipment
-                .equippable_in_slot(entity, slot)
-                .and_then(|equippable| equippable.reach);
-            let in_range =
-                reach.is_some_and(|reach| target_info.is_some_and(|info| info.is_within(reach)));
-            let live = has_target && sighted && in_range;
-            let slot_behavior = brain.held_action(Action::Use(slot));
-
-            if let Some(committed) = slot_behavior.filter(|slot_behavior| slot_behavior.committed) {
-                if started_use
-                    .is_none_or(|started| started.behavior_run_id != committed.behavior_run_id)
-                {
-                    match equipment.try_use(entity, slot) {
-                        Ok(item) => {
-                            *started_use = Some(StartedEquipmentUse {
-                                behavior_run_id: committed.behavior_run_id,
-                                item,
-                            });
-                        }
-                        Err(_) => committed.report_not_started(&mut commands, entity),
-                    }
-                }
-                continue;
-            }
-
-            match slot_behavior.filter(|_| live) {
-                Some(requested) if !in_use => {
-                    if let Ok(item) = equipment.try_use(entity, slot) {
-                        *started_use = Some(StartedEquipmentUse {
-                            behavior_run_id: requested.behavior_run_id,
-                            item,
-                        });
-                    }
-                }
-                None if in_use && is_held_use => {
+            let Some(requested) = brain.held_action(Action::Use(slot)) else {
+                let is_held_use = equipment
+                    .equippable_in_slot(entity, slot)
+                    .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Held);
+                if in_use && is_held_use {
                     equipment.stop_using(entity, slot);
                 }
-                _ => {}
+                continue;
+            };
+            let started_use = started_equipment_uses.started_use_mut(slot);
+            let already_started = if requested.committed {
+                started_use
+                    .is_some_and(|started| started.behavior_run_id == requested.behavior_run_id)
+            } else {
+                in_use
+            };
+            if already_started {
+                continue;
+            }
+            match equipment.try_use(entity, slot) {
+                Ok(item) => {
+                    *started_use = Some(StartedEquipmentUse {
+                        behavior_run_id: requested.behavior_run_id,
+                        item,
+                    });
+                }
+                Err(_) => requested.report_not_started(&mut commands, entity),
             }
         }
     }

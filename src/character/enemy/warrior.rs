@@ -17,7 +17,7 @@ use crate::prelude::*;
 
 /// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
 /// step back out of reach first.
-const WARRIOR_SWING_DELAY: f32 = 0.5;
+const WARRIOR_SWING_DELAY: f32 = 0.25;
 /// Distance from the target at which a wounded warrior may drink its potion.
 const HEAL_SAFE_DISTANCE: f32 = 200.0;
 

@@ -70,6 +70,7 @@ impl Heal {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Breath {
     cooldown: f32,
+    cooldown_jitter: f32,
     reach: f32,
 }
 
@@ -78,8 +79,16 @@ impl Breath {
     pub fn new(period: f32, reach: f32) -> Self {
         Self {
             cooldown: period,
+            cooldown_jitter: 0.0,
             reach,
         }
+    }
+
+    /// Varies each wait between breaths by up to `jitter` seconds either way, so bats that
+    /// start breathing together drift out of step.
+    pub fn with_cooldown_jitter(mut self, jitter: f32) -> Self {
+        self.cooldown_jitter = jitter;
+        self
     }
 
     /// What a decision reads of this capability.
@@ -87,6 +96,7 @@ impl Breath {
         CapabilityProfile {
             reach: Some(self.reach),
             cooldown: self.cooldown,
+            cooldown_jitter: self.cooldown_jitter,
             ..CapabilityProfile::default()
         }
     }

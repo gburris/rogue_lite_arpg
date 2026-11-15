@@ -20,7 +20,6 @@ const CAST_CORE_DISTANCE_RANGE: Interval =
 
 const NOT_SWOOPING: Consideration =
     flag("swooping", ConsiderationInput::MotionRunning(Motion::Swoop)).inverted("not swooping");
-const CIRCLING: Consideration = flag("circling", ConsiderationInput::Circling);
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
     ConsiderationInput::MotionReachFraction(Motion::Swoop),
@@ -83,13 +82,13 @@ const BAT_KEEP: Behavior = Behavior::new(
     5.0,
     &[INSIDE_INNER_CAST_EDGE],
 );
-/// Swoops in to bite while circling.
+/// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
     Some(Motion::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
-    &[IN_SWOOP_REACH, CIRCLING],
+    &[IN_SWOOP_REACH],
 );
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
@@ -154,6 +153,8 @@ pub(super) static BAT: BrainDefinition = BrainDefinition {
 
 const BAT_SIGHT_RANGE: f32 = 550.0;
 const BAT_BREATH_PERIOD: f32 = 1.1;
+/// Seconds either way each wait between a bat's breaths may vary.
+const BAT_BREATH_JITTER: f32 = 0.3;
 const BAT_TURN_RATE: f32 = 6.0;
 /// Half-width of a bat's rerolled orbit-radius offset from the band's centre.
 const BAT_ORBIT_MAX_DISTANCE_OFFSET: f32 = 50.0;
@@ -222,6 +223,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
                 .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
             --
             ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
+                .with_cooldown_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

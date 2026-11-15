@@ -146,8 +146,7 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 //   starts fleeing at about 52% (health never recovers during a flee).
 // - The cornered heal has two yes/no inputs, so it scores the cube root of the need, which beats
 //   hold fire at any need a fleeing warrior has.
-// - A heal with a target is committed, so the action slot holds the drink until it ends. The
-//   no-target heal stays continuously scored, since a committed behavior drops without a target.
+// - Every heal is committed, so the action slot holds the drink until it ends.
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
     WARRIOR_BASELINE_IDLE,
@@ -170,7 +169,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     Behavior::new(
         None,
         Some(Action::Ability(Ability::Heal)),
-        CommitPolicy::ContinuouslyScored,
+        CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, NO_TARGET],
     ),

@@ -230,10 +230,13 @@ impl Brain {
         }
     }
 
-    /// Drops each committed behavior that lost its target, was stunned or timed out.
+    /// Drops each stale committed behavior; see
+    /// [`RunningBehavior::should_drop_committed_behavior`].
     fn drop_stale_committed_behaviors(&mut self, inputs: &DecisionInputs) {
         for running in self.running_behaviors.clone() {
-            if running.should_drop_committed_behavior(inputs) {
+            let behavior = self.definition_of_running_behavior(running);
+            let read = |input| inputs.read_consideration_input(input, self);
+            if running.should_drop_committed_behavior(&behavior, &read, inputs) {
                 self.drop_committed_behavior(running, inputs);
             }
         }

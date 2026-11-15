@@ -11,6 +11,7 @@ use rand::RngExt;
 use super::diagnostics::DecisionStats;
 use super::engine::{
     Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
+    has_absent_input,
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
@@ -49,11 +50,18 @@ impl RunningBehavior {
         }
     }
 
-    /// Whether a committed behavior lost its target, was stunned, or timed out.
-    pub(super) fn should_drop_committed_behavior(&self, inputs: &DecisionInputs) -> bool {
+    /// Whether a committed behavior lost an input it was chosen on, was stunned during its motion,
+    /// or timed out. The game ends an interrupted use itself, so a stun during an action needs no
+    /// drop.
+    pub(super) fn should_drop_committed_behavior(
+        &self,
+        behavior: &Behavior,
+        read: &impl Fn(ConsiderationInput) -> Option<f32>,
+        inputs: &DecisionInputs,
+    ) -> bool {
         self.committed
-            && (inputs.target().is_none()
-                || inputs.is_stunned()
+            && (has_absent_input(behavior, read)
+                || (self.motion.is_some() && inputs.is_stunned())
                 || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }

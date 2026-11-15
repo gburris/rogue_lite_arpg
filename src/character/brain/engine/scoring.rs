@@ -133,6 +133,18 @@ impl Curve {
     }
 }
 
+/// Whether one of `behavior`'s considerations reads an input that is now absent, such as a
+/// target distance with no target.
+pub(in crate::character::brain) fn has_absent_input(
+    behavior: &Behavior,
+    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+) -> bool {
+    behavior
+        .considerations
+        .iter()
+        .any(|consideration| read(consideration.input).is_none())
+}
+
 /// Final bounded score for one behavior, reading each consideration's input
 /// through `read`. `is_current` switches threshold considerations to their exit side.
 pub(super) fn score_behavior(

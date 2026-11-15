@@ -47,9 +47,9 @@ impl Behavior {
 pub enum CommitPolicy {
     /// Re-scored every tick with momentum and exit-side thresholds. Tier 0.
     ContinuouslyScored,
-    /// Not re-scored until its finite part finishes or the brain drops it
-    /// (target lost, stunned, or timed out), so its start conditions are read
-    /// once. Only a committed behavior with a higher `interrupt_tier` may take
+    /// Not re-scored until its finite part finishes or the brain drops it (an input it was
+    /// chosen on goes absent, a stun during its motion, or a timeout), so its start conditions
+    /// are read once. Only a committed behavior with a higher `interrupt_tier` may take
     /// one of its slots, which ends the whole behavior.
     UntilFinished { interrupt_tier: u8 },
 }

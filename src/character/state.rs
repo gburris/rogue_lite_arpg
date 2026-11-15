@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use avian2d::prelude::LinearVelocity;
+use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -35,6 +36,26 @@ impl KnockedBack {
             return None;
         }
         Some(self.initial_velocity * self.timer.fraction_remaining())
+    }
+}
+
+/// Whether a character is interrupted: knocked back, stunned or defeated. An interrupted character
+/// can't start using an item or ability and loses any use in progress.
+#[derive(QueryData)]
+pub struct InterruptionState {
+    health: Option<&'static Health>,
+    stat_multipliers: Option<&'static StatMultipliers>,
+    knocked_back: Has<KnockedBack>,
+}
+
+impl InterruptionStateItem<'_, '_> {
+    /// See [`InterruptionState`].
+    pub fn is_interrupted(&self) -> bool {
+        self.knocked_back
+            || self.health.is_some_and(Health::is_dead)
+            || self
+                .stat_multipliers
+                .is_some_and(|multipliers| multipliers.is_stunned())
     }
 }
 

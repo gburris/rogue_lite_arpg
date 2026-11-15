@@ -30,7 +30,11 @@ pub(super) fn plugin(app: &mut App) {
             // Always run this system InGame and InMenu so weapon transforms update as inventory is
             // interacted with
             equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-            use_equipped::tick_equippable_cooldown.in_set(SimulationSystems::Upkeep),
+            (
+                use_equipped::tick_equippable_cooldown,
+                use_equipped::interrupt_equipment_uses,
+            )
+                .in_set(SimulationSystems::Upkeep),
         ),
     );
 }

@@ -93,10 +93,9 @@ impl Default for AbilitySteps {
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct UseGlow(pub Color);
 
-/// Present on an ability entity while a use runs its [`AbilitySteps`]. An interrupted holder
-/// (knocked back, stunned or defeated) can't start a use and loses one under way, after which the
-/// ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]. Its removal, however the use ended, fires
-/// [`AbilityUseFinished`].
+/// Present on an ability entity while a use runs its [`AbilitySteps`]. A use its
+/// [`InterruptionState`] holder loses makes the ability wait [`INTERRUPTED_LOCKOUT_SECONDS`]. Its
+/// removal, however the use ended, fires [`AbilityUseFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = report_ability_use_finished)]
 pub(super) struct AbilityInUse {
@@ -127,7 +126,7 @@ pub enum AbilityUseFailure {
     NotOwned,
     /// The ability uses up an item the character doesn't carry, such as a heal's potion.
     MissingRequiredItem,
-    /// The character is knocked back, stunned or defeated.
+    /// The character is interrupted; see [`InterruptionState`].
     HolderInterrupted,
     InUse,
     OnCooldown,
@@ -141,24 +140,6 @@ impl AbilityUseFailure {
             Self::HolderInterrupted | Self::InUse | Self::OnCooldown => true,
             Self::NotOwned | Self::MissingRequiredItem => false,
         }
-    }
-}
-
-/// Whether a holder is able to use its abilities; see [`AbilityInUse`].
-#[derive(QueryData)]
-pub(super) struct HolderState {
-    health: Option<&'static Health>,
-    stat_multipliers: Option<&'static StatMultipliers>,
-    knocked_back: Has<KnockedBack>,
-}
-
-impl HolderStateItem<'_, '_> {
-    fn is_interrupted(&self) -> bool {
-        self.knocked_back
-            || self.health.is_some_and(Health::is_dead)
-            || self
-                .stat_multipliers
-                .is_some_and(|multipliers| multipliers.is_stunned())
     }
 }
 
@@ -189,7 +170,15 @@ impl AbilityStateItem<'_, '_> {
 #[derive(SystemParam)]
 pub struct AbilityRead<'w, 's> {
     time: Res<'w, Time<Virtual>>,
-    holders: Query<'w, 's, (&'static Abilities, Option<&'static Items>, HolderState)>,
+    holders: Query<
+        'w,
+        's,
+        (
+            &'static Abilities,
+            Option<&'static Items>,
+            InterruptionState,
+        ),
+    >,
     abilities: Query<'w, 's, AbilityState>,
     consumables: Query<'w, 's, (), With<Consumable>>,
 }
@@ -211,14 +200,14 @@ impl AbilityRead<'_, '_> {
         let state = self
             .find(holder, ability)
             .ok_or(AbilityUseFailure::NotOwned)?;
-        let (_, items, holder_state) = self
+        let (_, items, interruption) = self
             .holders
             .get(holder)
             .map_err(|_| AbilityUseFailure::NotOwned)?;
         if ability == Ability::Heal && find_carried_potion(items, &self.consumables).is_none() {
             return Err(AbilityUseFailure::MissingRequiredItem);
         }
-        if holder_state.is_interrupted() {
+        if interruption.is_interrupted() {
             return Err(AbilityUseFailure::HolderInterrupted);
         }
         if state.in_use {
@@ -306,8 +295,8 @@ pub(super) fn on_ability_use_started(
     }
 }
 
-/// Advances every use under way, and interrupts the use of an interrupted holder; see
-/// [`AbilityInUse`].
+/// Advances every use under way, and ends the use of an interrupted holder; see
+/// [`InterruptionState`].
 pub(super) fn advance_ability_uses(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
@@ -318,14 +307,14 @@ pub(super) fn advance_ability_uses(
         &mut AbilityCooldown,
         &AbilityOf,
     )>,
-    holders: Query<HolderState>,
+    holders: Query<InterruptionState>,
 ) {
     let now = time.elapsed_secs();
     for (entity, mut in_use, steps, mut cooldown, ability_of) in &mut uses {
         let holder_interrupted = holders
             .get(ability_of.holder)
             .ok()
-            .is_none_or(|holder_state| holder_state.is_interrupted());
+            .is_none_or(|interruption| interruption.is_interrupted());
         if holder_interrupted {
             interrupt_ability_use(&mut commands, entity, &mut cooldown, now);
             continue;

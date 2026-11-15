@@ -37,7 +37,9 @@ pub mod prelude {
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
     pub use super::purse::Purse;
-    pub use super::state::{Attacking, FacingDirection, Kinematics, KnockedBack, Vision};
+    pub use super::state::{
+        Attacking, FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
+    };
 }
 
 pub(super) fn plugin(app: &mut App) {

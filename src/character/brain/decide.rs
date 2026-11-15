@@ -132,8 +132,9 @@ pub(super) fn on_finish_action(
         now: time.elapsed_secs(),
     };
     match finished.action {
-        Action::Use(slot)
-            if slot.is_instant_use() && finished.outcome == ActionOutcome::Completed =>
+        Action::Use(_)
+            if finished.outcome == ActionOutcome::Completed
+                && inputs.action_ends_on_its_own(finished.action) =>
         {
             brain.record_attack_finished();
         }

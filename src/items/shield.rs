@@ -41,6 +41,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
     bsn! {
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES)
+            .with_use_style(EquipmentUseStyle::Held)
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}

@@ -13,7 +13,7 @@ pub mod prelude {
     pub use super::equipment_transform::{
         DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
     };
-    pub use super::equippable::{Equippable, Equipped};
+    pub use super::equippable::{EquipmentUseStyle, Equippable, Equipped};
     pub use super::slot::{EquipmentSlot, Mainhand, Offhand};
     pub use super::use_equipped::{
         EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,

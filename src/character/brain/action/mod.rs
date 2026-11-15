@@ -24,18 +24,6 @@ pub enum Action {
     Idle,
 }
 
-impl Action {
-    /// Whether this action ends on its own and reports it, so a committed
-    /// behavior over it can finish. A held use ends only when released.
-    pub(super) fn reports_finish(self) -> bool {
-        match self {
-            Self::Use(slot) => slot.is_instant_use(),
-            Self::Ability(_) => true,
-            Self::Idle => false,
-        }
-    }
-}
-
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,

@@ -94,13 +94,9 @@ pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Re
             ));
         }
         let committed = behavior.commit.is_committed();
-        if committed
-            && behavior
-                .action
-                .is_some_and(|action| !action.reports_finish())
-        {
+        if committed && behavior.action == Some(Action::Idle) {
             return Err(format!(
-                "behavior {index} commits to an action that never reports a finish"
+                "behavior {index} commits to idling, which never reports a finish"
             ));
         }
         if committed && behavior.commit.interrupt_tier() == 0 {

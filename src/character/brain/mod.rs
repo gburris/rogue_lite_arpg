@@ -115,13 +115,17 @@ impl Brain {
     }
 
     /// Whether `behavior` may start now: each part's capability is owned, off its
-    /// cooldown, and allowed by the world.
+    /// cooldown, and allowed by the world. A committed behavior also needs an action that ends on
+    /// its own, since nothing else would finish it.
     fn is_available(&self, behavior: &Behavior, inputs: &DecisionInputs) -> bool {
         let motion_available = |motion: Motion| {
             inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
         };
-        let action_available =
-            |action: Action| inputs.action_profile(action).is_some() && inputs.can_start(action);
+        let action_available = |action: Action| {
+            inputs.action_profile(action).is_some()
+                && inputs.can_start(action)
+                && (!behavior.commit.is_committed() || inputs.action_ends_on_its_own(action))
+        };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
     }
 

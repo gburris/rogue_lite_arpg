@@ -2,6 +2,7 @@ use core::fmt;
 
 use bevy::prelude::*;
 
+use super::equippable::{EquipmentUseStyle, Equippable};
 use super::use_equipped::EquipmentInUse;
 
 /// Goes on the equipment marking where it should be equipped
@@ -38,24 +39,18 @@ impl EquipmentSlot {
         };
     }
 
-    /// Whether the equipment in this slot is used instantly (sword swing) rather
-    /// than held until released (shield block).
-    pub fn is_instant_use(self) -> bool {
-        matches!(self, Self::Mainhand)
-    }
-
-    /// Whether the holder with these slots is using an instant-use item; see
-    /// [`Self::is_instant_use`].
+    /// Whether the holder with these slots is using an item whose use ends on its own; see
+    /// [`EquipmentUseStyle::Instant`].
     pub fn is_instant_item_in_use(
         mainhand: Option<&Mainhand>,
         offhand: Option<&Offhand>,
-        in_use: &Query<(), With<EquipmentInUse>>,
+        in_use: &Query<&Equippable, With<EquipmentInUse>>,
     ) -> bool {
         Self::ALL
             .into_iter()
-            .filter(|slot| slot.is_instant_use())
             .filter_map(|slot| slot.equipped(mainhand, offhand))
-            .any(|item| in_use.contains(item))
+            .filter_map(|item| in_use.get(item).ok())
+            .any(|equippable| equippable.use_style == EquipmentUseStyle::Instant)
     }
 }
 

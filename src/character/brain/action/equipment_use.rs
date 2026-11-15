@@ -73,6 +73,9 @@ pub(super) fn apply_equipment_use_requests(
         let sighted = target_info.is_some_and(|info| info.line_of_sight);
         for slot in EquipmentSlot::ALL {
             let in_use = equipment.is_using(entity, slot);
+            let is_held_use = equipment
+                .equippable_in_slot(entity, slot)
+                .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Held);
             let started_use = started_equipment_uses.started_use_mut(slot);
 
             // The same item reach the equipment considerations scored, checked live.
@@ -110,7 +113,7 @@ pub(super) fn apply_equipment_use_requests(
                         });
                     }
                 }
-                None if in_use && !slot.is_instant_use() => {
+                None if in_use && is_held_use => {
                     equipment.stop_using(entity, slot);
                 }
                 _ => {}

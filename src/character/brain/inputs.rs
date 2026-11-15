@@ -121,6 +121,20 @@ impl DecisionInputs<'_, '_, '_> {
         }
     }
 
+    /// Whether `action` ends on its own, so a committed behavior over it can finish: an instant
+    /// item use or an ability. A held use ends only when released.
+    pub fn action_ends_on_its_own(&self, action: Action) -> bool {
+        match action {
+            Action::Use(slot) => self
+                .queries
+                .equipment
+                .equippable_in_slot(self.components.entity, slot)
+                .is_some_and(|equippable| equippable.use_style == EquipmentUseStyle::Instant),
+            Action::Ability(_) => true,
+            Action::Idle => false,
+        }
+    }
+
     /// Whether `action` can start now: allowed by the world, for an ability also off cooldown and
     /// not already in use, and with no other action in progress. `Idle` always can.
     pub fn can_start(&self, action: Action) -> bool {
@@ -168,7 +182,7 @@ impl DecisionInputs<'_, '_, '_> {
         let queries = self.queries;
         match action {
             Action::Use(slot) => {
-                let held_item_in_use = !slot.is_instant_use()
+                let held_item_in_use = !self.action_ends_on_its_own(action)
                     && queries
                         .equipment
                         .item_in_slot(entity, slot)

@@ -39,8 +39,8 @@ const NEEDS_POTION: Consideration = consideration(
     Interval::new(0.42, 0.82),
     Curve::Linear,
 );
-const IDLE_IN_REACH: Consideration =
-    motion_running_for("idle in reach", Motion::Idle, WARRIOR_SWING_DELAY);
+const STOOD_STILL_IN_REACH: Consideration =
+    motion_running_for("stood still in reach", Motion::Idle, WARRIOR_SWING_DELAY);
 const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
@@ -52,7 +52,7 @@ const CORNERED: Consideration = flag("cornered", ConsiderationInput::MovementBlo
 
 // Reach fractions, so a longer weapon stands the warrior farther back. Both
 // enter at `MELEE_ENTER_FRACTION` so one always applies; the wider exits let a
-// chase close a little deeper and a hold stay until out of reach.
+// chase close a little deeper and standing still last until out of reach.
 const MELEE_ENTER_FRACTION: f32 = 0.97;
 
 const OUTSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
@@ -85,7 +85,7 @@ const CHASE_MELEE: Behavior = Behavior::new(
 );
 
 /// Stands still in melee reach instead of orbiting.
-const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
+const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
     Some(Motion::Idle),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -93,13 +93,13 @@ const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     &[INSIDE_MELEE_REACH],
 );
 
-/// Stands still for the whole swing once it has been idle in reach for [`WARRIOR_SWING_DELAY`].
+/// Stands still for the whole swing once it has stood still in reach for [`WARRIOR_SWING_DELAY`].
 const WARRIOR_SWING: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     6.5,
-    &[IN_MAINHAND_REACH, IDLE_IN_REACH],
+    &[IN_MAINHAND_REACH, STOOD_STILL_IN_REACH],
 );
 
 /// Runs out the break rolled after a swing.
@@ -130,13 +130,13 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
     &[FLEEING],
 );
 
-// Motion priority: kite (10), flee (7), seek (7), swing (6.5), return (6), hold melee (5),
-// chase (4), wander (1).
+// Motion priority: kite (10), flee (7), seek (7), swing (6.5), return (6),
+// stand still in melee reach (5), chase (4), wander (1).
 // - Kite beats a running flee (7 x 1.25 = 8.75).
-// - Seek beats a running hold (6.25), so a warrior walks onto the spot it last saw its target
-//   instead of stopping a sword's length short of it.
-// - The swing beats the running hold (6.25) it waits in, taking the action slot with it. It needs
-//   that hold's idle, so a chasing, dashing or fleeing warrior never swings.
+// - Seek beats a running stand still (6.25), so a warrior walks onto the spot it last saw its
+//   target instead of stopping a sword's length short of it.
+// - The swing beats the running stand still (6.25) it waits in, taking the action slot with it. It
+//   needs that idle motion, so a chasing, dashing or fleeing warrior never swings.
 //
 // Action priority: swing (6.5, see above), heal (5, scaled by need), hold fire (1.5), idle (0.5).
 // Each beats the next even while that one holds the slot. The swing and heals never compete,
@@ -154,7 +154,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     FLEE,
     SEEK_LOST_TARGET,
     CHASE_MELEE,
-    HOLD_IN_MELEE_REACH,
+    STAND_STILL_IN_MELEE_REACH,
     WARRIOR_KITE,
     HOLD_FIRE_WHILE_FLEEING,
     WARRIOR_SWING,

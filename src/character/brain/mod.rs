@@ -95,7 +95,7 @@ impl Brain {
             .find(|running| running.motion.is_some())
     }
 
-    fn held_action(&self, action: Action) -> Option<RunningBehavior> {
+    fn running_behavior_with(&self, action: Action) -> Option<RunningBehavior> {
         self.running_behaviors
             .iter()
             .copied()
@@ -127,7 +127,7 @@ impl Brain {
             }
             let finishes = !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
             if !finishes {
-                warn_once!("a committed behavior over {action:?} never runs: its use is held");
+                warn_once!("a committed behavior over {action:?} never runs: its use is sustained");
             }
             finishes
         };

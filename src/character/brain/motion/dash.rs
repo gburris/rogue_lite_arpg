@@ -128,7 +128,7 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
     (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
-/// Runs a held dash and reports [`MotionFinished`](super::MotionFinished) at
+/// Advances each running dash and reports [`MotionFinished`](super::MotionFinished) at
 /// the end of its distance.
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,

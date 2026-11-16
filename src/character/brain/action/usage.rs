@@ -72,7 +72,7 @@ impl ActionRead<'_, '_> {
     }
 
     /// Whether `holder`'s `action` ends on its own, so a committed behavior over it can finish:
-    /// an instant item use or an ability. A held use ends only when released.
+    /// an instant item use or an ability. A sustained use ends only when stopped.
     pub fn ends_on_its_own(&self, holder: Entity, action: Action) -> bool {
         match action {
             Action::Use(slot) => self
@@ -84,8 +84,8 @@ impl ActionRead<'_, '_> {
         }
     }
 
-    /// The actions `holder`'s items and abilities are carrying out now, whether or not the brain
-    /// still holds them.
+    /// The actions `holder`'s items and abilities are carrying out now, whether or not a running
+    /// behavior still chooses them.
     pub fn actions_in_progress(&self, holder: Entity) -> impl Iterator<Item = Action> + '_ {
         let equipment_uses = EquipmentSlot::ALL
             .into_iter()
@@ -120,9 +120,9 @@ impl ActionUsage<'_, '_> {
         }
     }
 
-    fn release_held_use(&mut self, holder: Entity, action: Action) {
+    fn stop_sustained_use(&mut self, holder: Entity, action: Action) {
         match action {
-            Action::Use(slot) => self.equipment.release_held_use(holder, slot),
+            Action::Use(slot) => self.equipment.stop_sustained_use(holder, slot),
             Action::Ability(_) | Action::Idle => {}
         }
     }
@@ -154,10 +154,11 @@ impl StartedActions {
     }
 }
 
-/// Starts the brain's held actions and releases held uses it no longer holds. Considerations
-/// already judged the target, so the game decides only whether a use can start. A committed action
-/// starts once, or adopts a use of it already in progress so that use's finish ends the behavior;
-/// a continuously scored one starts again whenever it isn't in progress.
+/// Starts the actions of the brain's running behaviors and stops sustained uses none of them
+/// still chooses. Considerations already judged the target, so the game decides only whether a use
+/// can start. A committed action starts once, or adopts a use of it already in progress so that
+/// use's finish ends the behavior; a continuously scored one starts again whenever it isn't in
+/// progress.
 pub(super) fn apply_action_requests(
     mut commands: Commands,
     mut usage: ActionUsage,
@@ -166,8 +167,8 @@ pub(super) fn apply_action_requests(
     for (entity, brain, mut started_actions) in &mut brains {
         for slot in EquipmentSlot::ALL {
             let action = Action::Use(slot);
-            if brain.held_action(action).is_none() {
-                usage.release_held_use(entity, action);
+            if brain.running_behavior_with(action).is_none() {
+                usage.stop_sustained_use(entity, action);
             }
         }
         for &running in &brain.running_behaviors {

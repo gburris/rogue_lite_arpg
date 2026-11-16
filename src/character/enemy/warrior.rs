@@ -9,7 +9,7 @@ use crate::character::ability::{
 };
 use crate::character::brain::considerations::{
     ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
-    SEEK_LOST_TARGET, WANDER, consideration, flag, motion_held_for, reach_fraction_threshold,
+    SEEK_LOST_TARGET, WANDER, consideration, flag, motion_running_for, reach_fraction_threshold,
     target_within_distance,
 };
 use crate::character::brain::{
@@ -39,8 +39,8 @@ const NEEDS_POTION: Consideration = consideration(
     Interval::new(0.42, 0.82),
     Curve::Linear,
 );
-const HELD_IN_REACH: Consideration =
-    motion_held_for("held in reach", Motion::Idle, WARRIOR_SWING_DELAY);
+const IDLE_IN_REACH: Consideration =
+    motion_running_for("idle in reach", Motion::Idle, WARRIOR_SWING_DELAY);
 const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
@@ -93,13 +93,13 @@ const HOLD_IN_MELEE_REACH: Behavior = Behavior::new(
     &[INSIDE_MELEE_REACH],
 );
 
-/// Stands still for the whole swing once it has held in reach for [`WARRIOR_SWING_DELAY`].
+/// Stands still for the whole swing once it has been idle in reach for [`WARRIOR_SWING_DELAY`].
 const WARRIOR_SWING: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     6.5,
-    &[IN_MAINHAND_REACH, HELD_IN_REACH],
+    &[IN_MAINHAND_REACH, IDLE_IN_REACH],
 );
 
 /// Runs out the break rolled after a swing.

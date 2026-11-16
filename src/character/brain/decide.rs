@@ -147,7 +147,7 @@ pub(super) fn on_finish_action(
         {
             brain.record_attack_finished();
         }
-        // A held or unstarted use is no attack, an ability keeps its own cooldown, and nothing
+        // A sustained or unstarted use is no attack, an ability keeps its own cooldown, and nothing
         // reports an idle action's finish.
         Action::Use(_) | Action::Ability(_) | Action::Idle => {}
     }

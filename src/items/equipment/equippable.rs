@@ -44,16 +44,16 @@ impl Equippable {
 pub enum EquipmentUseStyle {
     /// The use ends on its own, like a sword swing or a staff cast.
     Instant,
-    /// The use lasts until its holder releases it, like a shield block.
-    Held,
+    /// The use lasts until it is stopped, like a shield block.
+    Sustained,
 }
 
 impl EquipmentUseStyle {
-    /// Whether a use in this style ends without being released.
+    /// Whether a use in this style ends without being stopped.
     pub fn ends_on_its_own(self) -> bool {
         match self {
             Self::Instant => true,
-            Self::Held => false,
+            Self::Sustained => false,
         }
     }
 }

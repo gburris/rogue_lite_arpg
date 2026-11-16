@@ -266,13 +266,13 @@ impl EquipmentUsage<'_, '_> {
         }
     }
 
-    /// Releases the holder's use in `slot` if it is a held use in progress; a use that ends on its
-    /// own can't be released. See [`EquipmentUseStyle`].
-    pub fn release_held_use(&mut self, holder: Entity, slot: EquipmentSlot) {
-        let is_held_use = self
+    /// Stops the holder's use in `slot` if it is a sustained use in progress; a use that ends on
+    /// its own can't be stopped. See [`EquipmentUseStyle`].
+    pub fn stop_sustained_use(&mut self, holder: Entity, slot: EquipmentSlot) {
+        let is_sustained_use = self
             .equippable_in_slot(holder, slot)
             .is_some_and(|equippable| !equippable.use_style.ends_on_its_own());
-        if is_held_use {
+        if is_sustained_use {
             self.stop_using(holder, slot);
         }
     }

@@ -70,7 +70,7 @@ pub(super) struct BiteHitbox {
 /// A bite ability carrying `bite`.
 pub fn bite(bite: Bite) -> impl Scene {
     bsn! {
-        template(move |_| Ok(bite))
+        ~{bite}
         on(on_bite_took_effect)
     }
 }

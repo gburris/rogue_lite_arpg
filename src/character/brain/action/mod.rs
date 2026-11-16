@@ -13,6 +13,7 @@ use crate::prelude::*;
 pub enum Action {
     /// Use the item equipped in a slot.
     Use(EquipmentSlot),
+    /// Use one of the character's abilities.
     Ability(Ability),
     /// Chose to do nothing, unlike an empty action slot where nothing scored.
     /// Always available; no applier carries it out.

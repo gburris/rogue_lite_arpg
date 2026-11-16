@@ -96,7 +96,7 @@ impl ActionRead<'_, '_> {
     }
 }
 
-/// Starts and releases the item and ability uses behind the brain's actions.
+/// Starts and stops the item and ability uses behind the brain's actions.
 #[derive(SystemParam)]
 pub(super) struct ActionUsage<'w, 's> {
     equipment: EquipmentUsage<'w, 's>,

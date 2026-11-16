@@ -4,8 +4,8 @@ use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
 use crate::character::Allies;
 use crate::prelude::*;
 
-/// Scale of the shockwave sheet, whose ring spans 174 px at its widest.
-const RALLY_SHOUT_SCALE: f32 = 2.0;
+/// Radius of the shockwave sheet's ring at its widest, in sheet pixels.
+const RALLY_SHOUT_RING_RADIUS: f32 = 87.0;
 
 /// A war cry that gives every other ally within `reach` its ability entity's [`Effects`].
 #[derive(Component, Clone, Copy, Debug)]
@@ -62,13 +62,18 @@ fn on_rally_took_effect(
         commands.trigger(ApplyEffects::new(effects, ally.entity));
     }
     commands.spawn_scene(bsn! {
-        @rally_shout_vfx(&sprites, &sprite_layouts)
+        @rally_shout_vfx(&sprites, &sprite_layouts, rally.reach)
         ChildOf(holder)
     });
 }
 
-/// A one-shot shockwave ring racing out along the ground from the holder's feet.
-fn rally_shout_vfx(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
+/// A one-shot shockwave ring racing out along the ground from the holder's feet to `reach`.
+fn rally_shout_vfx(
+    sprites: &SpriteAssets,
+    sprite_layouts: &SpriteSheetLayouts,
+    reach: f32,
+) -> impl Scene {
+    let scale = reach / RALLY_SHOUT_RING_RADIUS;
     let sprite = Sprite::from_atlas_image(
         sprites.rally_shout.clone(),
         TextureAtlas {
@@ -83,7 +88,7 @@ fn rally_shout_vfx(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) 
         Lifespan::new(0.57)
         Transform {
             translation: Vec3::new(0.0, CHARACTER_FEET_POS_OFFSET, {ZLayer::BehindSprite.z()}),
-            scale: Vec3::new(RALLY_SHOUT_SCALE, RALLY_SHOUT_SCALE, 1.0),
+            scale: Vec3::new(scale, scale, 1.0),
         }
     }
 }

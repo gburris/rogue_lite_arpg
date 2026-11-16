@@ -59,7 +59,7 @@ const ICE_CAST_QUALITY: Consideration = consideration(
 );
 
 const RALLY: Action = Action::Ability(Ability::Rally);
-/// Matches the shockwave's drawn radius, so every ally it washes over is rallied.
+/// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
 /// Seconds a war cry winds up before it rallies.

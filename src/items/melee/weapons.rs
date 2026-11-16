@@ -66,9 +66,9 @@ fn axe_swing() -> MeleeWeapon {
 fn melee_weapon(image: Handle<Image>, value: u32) -> impl Scene {
     bsn! {
         ~Equippable::new(EquipmentSlot::Mainhand, &MELEE_EQUIPMENT_POSES)
-        ~UseCooldown::new(0.4)
-        ~{UseReach(MELEE_WEAPON_REACH)}
-        ~{UseStyle::Timed}
+        ~ActionCooldown::new(0.4)
+        ~{ActionReach(MELEE_WEAPON_REACH)}
+        ~{ActionUseStyle::Timed}
         ~Item::new(value, ItemKind::Melee)
         Sprite { image }
         on(on_stop_melee)

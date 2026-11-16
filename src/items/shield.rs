@@ -41,8 +41,8 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
     bsn! {
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~UseCooldown::new(0.5)
-        ~{UseStyle::Sustained}
+        ~ActionCooldown::new(0.5)
+        ~{ActionUseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
@@ -118,7 +118,7 @@ fn orient_active_shields(
 
 /// Raises the shield and begins blocking.
 fn on_shield_took_effect(
-    used_shield: On<UseTookEffect>,
+    used_shield: On<ActionTookEffect>,
     mut commands: Commands,
     mut shield_query: Query<&Shield>,
 ) {
@@ -136,7 +136,7 @@ fn on_shield_took_effect(
 
 /// Lowers the shield and restores its resting transform.
 fn on_stop_shield(
-    shield: On<StopUse>,
+    shield: On<StopAction>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
     mut shield_query: Query<

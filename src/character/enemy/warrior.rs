@@ -16,7 +16,7 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-const HEAL: Action = Action::Use(UseSlot::Ability(Ability::Heal));
+const HEAL: Action = Action::Use(ActionSlot::Ability(Ability::Heal));
 
 /// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
 /// step back out of reach first.
@@ -219,9 +219,9 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()
-            ~UseCooldown::new(HEAL_COOLDOWN)
-            UseWindup { seconds: HEAL_WINDUP_SECONDS }
-            UseGlow(HEAL_GLOW_COLOR)
+            ~ActionCooldown::new(HEAL_COOLDOWN)
+            ActionWindup { seconds: HEAL_WINDUP_SECONDS }
+            ActionGlow(HEAL_GLOW_COLOR)
         ]
         enemy_wander()
         template(move |_| Ok(sprite.clone()))

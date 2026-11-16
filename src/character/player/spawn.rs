@@ -38,7 +38,7 @@ pub(super) fn spawn_player(
             attributes
             template(move |_| Ok(sprite.clone()))
             on(death::on_player_defeated)
-            on(overlay::on_use_failed)
+            on(overlay::on_action_failed)
             Items [
                 @ice_staff(&sprites, &sprite_layouts)
                 --

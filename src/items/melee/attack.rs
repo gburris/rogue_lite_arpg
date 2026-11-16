@@ -66,7 +66,7 @@ impl ActiveMeleeAttack {
 
 /// Spawns the transient swing hitbox removed by `on_stop_melee`.
 pub(super) fn on_melee_took_effect(
-    melee: On<UseTookEffect>,
+    melee: On<ActionTookEffect>,
     mut commands: Commands,
     weapon_query: Query<&MeleeWeapon>,
     holder_query: Query<(&Vision, &CombatSide)>,
@@ -98,13 +98,13 @@ pub(super) fn end_melee_attacks(
 ) {
     for (entity, attack) in &swings {
         if attack.duration.just_finished() {
-            commands.trigger(StopUse { entity });
+            commands.trigger(StopAction { entity });
         }
     }
 }
 
 /// Removes the transient swing state.
-pub(super) fn on_stop_melee(stop: On<StopUse>, mut commands: Commands) {
+pub(super) fn on_stop_melee(stop: On<StopAction>, mut commands: Commands) {
     commands.entity(stop.entity).remove::<(
         ActiveMeleeAttack,
         Collider,

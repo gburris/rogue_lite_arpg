@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// ([`Heal`](self::heal::Heal), [`Breath`](self::breath::Breath), [`Bite`] or
 /// [`Rally`](self::rally::Rally)) on one of its [`Abilities`].
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
-#[require(Usable)]
+#[require(ActionSource)]
 pub enum Ability {
     /// Drink a carried potion.
     Heal,

@@ -19,7 +19,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_observer(despawn_all::<Restart, PlayerOverlay>)
-        .add_observer(on_player_use_took_effect);
+        .add_observer(on_player_action_took_effect);
 }
 
 #[derive(Component, Default, Clone)]
@@ -255,8 +255,8 @@ pub(super) struct ActionBox {
 }
 
 impl ActionBox {
-    fn slot(&self) -> UseSlot {
-        UseSlot::Equipment(self.slot)
+    fn slot(&self) -> ActionSlot {
+        ActionSlot::Equipment(self.slot)
     }
 }
 
@@ -360,13 +360,13 @@ fn update_action_bar(
 }
 
 /// Adds a cooldown indicator to the action box of the slot whose use took effect.
-fn on_player_use_took_effect(
-    took_effect: On<UseTookEffect>,
+fn on_player_action_took_effect(
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     players: Query<(), With<Player>>,
     action_box_query: Query<(Entity, &ActionBox)>,
-    cooldowns: Query<&UseCooldown>,
+    cooldowns: Query<&ActionCooldown>,
 ) {
     if !players.contains(took_effect.holder) {
         return;
@@ -385,17 +385,17 @@ fn on_player_use_took_effect(
     }
 }
 
-pub(super) fn on_use_failed(
-    use_failed: On<UseFailed>,
+pub(super) fn on_action_failed(
+    use_failed: On<ActionFailed>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
     let is_flashed = match use_failed.reason {
-        UseFailure::InUse | UseFailure::OnCooldown => false,
-        UseFailure::EmptySlot
-        | UseFailure::MissingRequiredItem
-        | UseFailure::HolderInterrupted
-        | UseFailure::OutOfMana => true,
+        ActionFailure::InProgress | ActionFailure::OnCooldown => false,
+        ActionFailure::EmptySlot
+        | ActionFailure::MissingRequiredItem
+        | ActionFailure::HolderInterrupted
+        | ActionFailure::OutOfMana => true,
     };
     if is_flashed
         && let Some((box_entity, _)) = action_box_query

@@ -56,7 +56,7 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
-const RALLY: Action = Action::Use(UseSlot::Ability(Ability::Rally));
+const RALLY: Action = Action::Use(ActionSlot::Ability(Ability::Rally));
 /// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
@@ -332,9 +332,9 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Orbit::new()
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
-            ~UseCooldown::new(RALLY_COOLDOWN)
-            UseWindup { seconds: RALLY_WINDUP_SECONDS }
-            UseGlow(RALLY_GLOW_COLOR)
+            ~ActionCooldown::new(RALLY_COOLDOWN)
+            ActionWindup { seconds: RALLY_WINDUP_SECONDS }
+            ActionGlow(RALLY_GLOW_COLOR)
         ]
     }
 }

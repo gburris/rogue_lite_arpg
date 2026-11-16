@@ -7,6 +7,7 @@ use bevy::prelude::*;
 #[cfg(feature = "dev_tools")]
 use clap::Parser;
 
+mod action;
 mod animation;
 mod character;
 mod combat;
@@ -17,10 +18,10 @@ mod items;
 mod lifespan;
 mod menu;
 mod ui;
-mod usable;
 mod world;
 
 pub mod prelude {
+    pub use super::action::prelude::*;
     pub use super::animation::{AnimationData, AnimationIndices, AnimationTimer};
     pub use super::character::prelude::*;
     pub use super::combat::prelude::*;
@@ -31,7 +32,6 @@ pub mod prelude {
     pub use super::lifespan::{Lifespan, despawn_all, schedule_component_removal};
     pub use super::menu::prelude::*;
     pub use super::ui::prelude::*;
-    pub use super::usable::prelude::*;
     pub use super::world::prelude::*;
 }
 
@@ -64,7 +64,7 @@ fn plugin(app: &mut App) {
     app.add_plugins((
         world::plugin,
         items::plugin,
-        usable::plugin,
+        action::plugin,
         character::plugin,
     ));
 

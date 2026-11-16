@@ -10,7 +10,7 @@ use crate::prelude::*;
 const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim, whose front
-/// edge sits at the ability's [`UseReach`].
+/// edge sits at the ability's [`ActionReach`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Ability::Bite)]
 pub struct Bite {
@@ -65,19 +65,19 @@ pub(super) struct BiteHitbox {
 pub fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
-        ~{UseReach(reach)}
+        ~{ActionReach(reach)}
         on(on_bite_took_effect)
     }
 }
 
 /// Snaps a bite along the holder's aim. The hitbox decides whether it lands.
 fn on_bite_took_effect(
-    took_effect: On<UseTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    bites: Query<(&Bite, &UseReach)>,
+    bites: Query<(&Bite, &ActionReach)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
 ) {
-    let Ok((bite, &UseReach(reach))) = bites.get(took_effect.entity) else {
+    let Ok((bite, &ActionReach(reach))) = bites.get(took_effect.entity) else {
         return;
     };
     let holder = took_effect.holder;

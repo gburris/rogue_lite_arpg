@@ -39,17 +39,17 @@ impl EquipmentSlot {
     }
 
     /// Whether the holder with these slots is using an item whose use plays out and ends itself,
-    /// such as a swing; see [`UseStyle::Timed`].
+    /// such as a swing; see [`ActionUseStyle::Timed`].
     pub fn is_timed_item_in_use(
         mainhand: Option<&Mainhand>,
         offhand: Option<&Offhand>,
-        in_use: &Query<&UseStyle, With<InUse>>,
+        in_use: &Query<&ActionUseStyle, With<ActionInProgress>>,
     ) -> bool {
         Self::ALL
             .into_iter()
             .filter_map(|slot| slot.equipped(mainhand, offhand))
             .filter_map(|item| in_use.get(item).ok())
-            .any(|&style| style == UseStyle::Timed)
+            .any(|&style| style == ActionUseStyle::Timed)
     }
 }
 

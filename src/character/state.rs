@@ -183,7 +183,7 @@ pub struct Attacking(pub bool);
 /// Syncs whether a holder is attacking; see [`EquipmentSlot::is_timed_item_in_use`].
 pub(super) fn sync_attacking_from_equipment(
     mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
-    in_use: Query<&UseStyle, With<InUse>>,
+    in_use: Query<&ActionUseStyle, With<ActionInProgress>>,
 ) {
     for (mut attacking, mainhand, offhand) in &mut holders {
         let using_timed_item = EquipmentSlot::is_timed_item_in_use(mainhand, offhand, &in_use);

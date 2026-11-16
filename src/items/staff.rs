@@ -111,9 +111,9 @@ fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
     bsn! {
         Staff { source_offset: Vec2::new(0.0, 26.0) }
         ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
-        ~UseCooldown::new(cooldown)
-        ~{UseReach(STAFF_REACH)}
-        ~{UseStyle::Timed}
+        ~ActionCooldown::new(cooldown)
+        ~{ActionReach(STAFF_REACH)}
+        ~{ActionUseStyle::Timed}
         Sprite { image }
         on(on_staff_took_effect)
         on(on_stop_staff)
@@ -156,7 +156,7 @@ impl Casting {
 
 /// Begins the cast; projectiles fire later in `fire_projectile_on_casting_end`.
 fn on_staff_took_effect(
-    staff_used: On<UseTookEffect>,
+    staff_used: On<ActionTookEffect>,
     mut commands: Commands,
     staff_query: Query<(&Staff, &Transform), With<Projectiles>>,
     holder_query: Query<&FacingDirection>,
@@ -277,7 +277,7 @@ fn fire_projectile_on_casting_end(
 
         // Return complete, cast attack is finished; the stop observer owns the removal.
         if casting.return_time.is_finished() {
-            commands.trigger(StopUse {
+            commands.trigger(StopAction {
                 entity: staff_entity,
             });
         }
@@ -300,7 +300,7 @@ fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2)
     }
 }
 
-fn on_stop_staff(stop: On<StopUse>, mut commands: Commands) {
+fn on_stop_staff(stop: On<StopAction>, mut commands: Commands) {
     commands
         .entity(stop.entity)
         .remove::<(Casting, TweenAnim)>()

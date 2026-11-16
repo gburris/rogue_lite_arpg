@@ -15,8 +15,8 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-const BREATH: Action = Action::Use(UseSlot::Ability(Ability::Breath));
-const BITE: Action = Action::Use(UseSlot::Ability(Ability::Bite));
+const BREATH: Action = Action::Use(ActionSlot::Ability(Ability::Breath));
+const BITE: Action = Action::Use(ActionSlot::Ability(Ability::Bite));
 
 /// Core of the cast distance range, which a bat backs out to after a swoop.
 const CAST_CORE_DISTANCE_RANGE: Interval =
@@ -233,10 +233,10 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
                     .with_life_steal(1.0)
                     .with_mouth_height(BAT_HURTBOX_OFFSET)
             )
-            ~UseCooldown::new(BITE_COOLDOWN)
+            ~ActionCooldown::new(BITE_COOLDOWN)
             --
             @breath(CAST_MAX_RANGE)
-            ~UseCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
+            ~ActionCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

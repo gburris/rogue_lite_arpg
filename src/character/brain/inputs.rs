@@ -4,12 +4,22 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Action, ActionRead, ActionReadiness};
+use super::action::Action;
 use super::capability::{CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
 use crate::character::Allies;
 use crate::prelude::*;
+
+/// Whether an action could start now; see [`DecisionInputs::action_readiness`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActionReadiness {
+    Ready,
+    /// Only waiting stands in the way, such as a cooldown, mana or an interruption.
+    Waiting,
+    /// The character lacks what the action needs, such as the item, the ability or a potion.
+    Missing,
+}
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -95,16 +105,44 @@ impl DecisionInputs<'_, '_, '_> {
             .capability_profile(motion)
     }
 
-    /// See [`ActionRead::profile`].
+    /// The profile of the action source that carries out `action`: its reach. `Idle` needs none.
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
-        self.queries.actions.profile(self.components.entity, action)
+        let actions = &self.queries.actions;
+        let entity = self.components.entity;
+        match action {
+            Action::Use(slot) => {
+                actions.source_in_slot(entity, slot)?;
+                Some(CapabilityProfile {
+                    reach: actions.reach(entity, slot),
+                    ..CapabilityProfile::default()
+                })
+            }
+            Action::Idle => None,
+        }
     }
 
-    /// See [`ActionRead::ends_on_its_own`].
+    /// Whether `action` ends on its own, so a committed behavior over it can finish; see
+    /// [`ActionUseStyle`].
     pub fn action_ends_on_its_own(&self, action: Action) -> bool {
-        self.queries
-            .actions
-            .ends_on_its_own(self.components.entity, action)
+        match action {
+            Action::Use(slot) => self
+                .queries
+                .actions
+                .ends_on_its_own(self.components.entity, slot),
+            Action::Idle => false,
+        }
+    }
+
+    /// Whether the character could start `action` now, or what stands in the way.
+    fn action_readiness(&self, action: Action) -> ActionReadiness {
+        match action {
+            Action::Use(slot) => match self.queries.actions.can_use(self.components.entity, slot) {
+                Ok(_) => ActionReadiness::Ready,
+                Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
+                Err(_) => ActionReadiness::Missing,
+            },
+            Action::Idle => ActionReadiness::Ready,
+        }
     }
 
     /// Whether `action` can run now: it is already in progress, or it is ready and no other action
@@ -116,14 +154,13 @@ impl DecisionInputs<'_, '_, '_> {
             Action::Idle => true,
             Action::Use(_) => {
                 let mut other_action_in_progress = false;
-                for in_progress in actions.actions_in_progress(entity) {
-                    if in_progress == action {
+                for slot in actions.slots_in_progress(entity) {
+                    if Action::Use(slot) == action {
                         return true;
                     }
                     other_action_in_progress = true;
                 }
-                !other_action_in_progress
-                    && actions.readiness(entity, action) == ActionReadiness::Ready
+                !other_action_in_progress && self.action_readiness(action) == ActionReadiness::Ready
             }
         }
     }
@@ -184,11 +221,7 @@ impl DecisionInputs<'_, '_, '_> {
             }
             ConsiderationInput::ActionUsable(action) => Some(f32::from(
                 self.action_profile(action).is_some()
-                    && self
-                        .queries
-                        .actions
-                        .readiness(self.components.entity, action)
-                        != ActionReadiness::Missing,
+                    && self.action_readiness(action) != ActionReadiness::Missing,
             )),
             ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
         }

@@ -19,7 +19,7 @@ pub fn heal() -> impl Scene {
 
 /// Drinks the holder's first carried potion, if it still carries one.
 fn on_heal_took_effect(
-    took_effect: On<UseTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     heals: Query<&RequiredItem, With<Heal>>,
     holders: Query<&Items>,

@@ -5,7 +5,7 @@ use crate::prelude::*;
 
 /// An item that can be equipped in a slot and used from it.
 #[derive(Component, Clone, Debug)]
-#[require(Usable)]
+#[require(ActionSource)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
     pub poses: &'static DirectionalPoses,

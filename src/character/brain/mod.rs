@@ -13,7 +13,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::Action;
-use self::action::{ActionFinished, ActionOutcome, StartedActions};
+use self::action::{ActionOutcome, BehaviorActionFinished, StartedActions};
 use self::capability::{CapabilityProfile, Cooldowns};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
@@ -40,7 +40,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
 /// at 10 Hz on a random per-brain phase; motion and action systems read it
 /// and answer with [`MotionFinished`](motion::MotionFinished) or
-/// [`ActionFinished`].
+/// [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
 #[require(StartedActions, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]

@@ -18,7 +18,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
         Name::new("Tome Of Healing")
         ~Item::new(355, ItemKind::Tome)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~UseCooldown::new(2.0)
+        ~ActionCooldown::new(2.0)
         ManaCost(40.0)
         ~{HealingTome {
             min_healing: 25.0,
@@ -30,7 +30,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
 }
 
 fn on_healing_tome_took_effect(
-    healing_tome: On<UseTookEffect>,
+    healing_tome: On<ActionTookEffect>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
     sprites: Res<SpriteAssets>,

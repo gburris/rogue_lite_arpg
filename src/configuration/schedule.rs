@@ -97,10 +97,10 @@ pub enum InGameSystems {
 
 /// Ordered phases within [`InGameSystems::Simulation`].
 ///
-/// Producers that may start or stop a use (directly, or through `UseCommands`, whose queued
-/// `InUse` inserts and `StopUse` triggers flush between systems) run before `Derive`. State derived
-/// from the `InUse` marker, such as attack animation state, belongs in `Derive` and is guaranteed
-/// to see every same-frame use and cancellation.
+/// Producers that may start or stop a use (directly, or through `ActionCommands`, whose queued
+/// `ActionInProgress` inserts and `StopAction` triggers flush between systems) run before `Derive`.
+/// State derived from the `ActionInProgress` marker, such as attack animation state, belongs in
+/// `Derive` and is guaranteed to see every same-frame use and cancellation.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SimulationSystems {
     /// Advances ongoing state: regeneration, cooldowns, status effects, in-progress swings and

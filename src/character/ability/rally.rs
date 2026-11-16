@@ -7,7 +7,7 @@ use crate::prelude::*;
 /// Radius of the shockwave sheet's ring at its widest, in sheet pixels.
 const RALLY_SHOUT_RING_RADIUS: f32 = 87.0;
 
-/// A war cry that gives every other ally within the ability's [`UseReach`] its ability entity's
+/// A war cry that gives every other ally within the ability's [`ActionReach`] its ability entity's
 /// [`Effects`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(Ability::Rally)]
@@ -18,7 +18,7 @@ pub struct Rally;
 pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         Rally
-        ~{UseReach(reach)}
+        ~{ActionReach(reach)}
         on(on_rally_took_effect)
         Effects [
             Rallied
@@ -36,14 +36,14 @@ pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scen
 /// Gives every other ally in reach the rally's [`Effects`] and sends a shockwave out from the
 /// holder's feet.
 fn on_rally_took_effect(
-    took_effect: On<UseTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-    rallies: Query<(&Effects, &UseReach), With<Rally>>,
+    rallies: Query<(&Effects, &ActionReach), With<Rally>>,
     allies: Allies,
 ) {
-    let Ok((effects, &UseReach(reach))) = rallies.get(took_effect.entity) else {
+    let Ok((effects, &ActionReach(reach))) = rallies.get(took_effect.entity) else {
         return;
     };
     let holder = took_effect.holder;

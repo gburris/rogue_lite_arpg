@@ -14,14 +14,14 @@ pub struct Breath;
 pub fn breath(reach: f32) -> impl Scene {
     bsn! {
         Breath
-        ~{UseReach(reach)}
+        ~{ActionReach(reach)}
         on(on_breath_took_effect)
     }
 }
 
 /// Fires each projectile template along the holder's aim.
 fn on_breath_took_effect(
-    took_effect: On<UseTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     breaths: Query<&Projectiles, With<Breath>>,
     breathers: Query<(&Transform, &CombatSide, &Vision)>,

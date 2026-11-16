@@ -15,7 +15,7 @@ pub const CAST_DISTANCE_RANGE: Interval = Interval::new(CAST_MIN_RANGE, CAST_MAX
 
 pub const CAST_HYSTERESIS: f32 = 5.0;
 
-pub const MAINHAND: Action = Action::Use(UseSlot::Equipment(EquipmentSlot::Mainhand));
+pub const MAINHAND: Action = Action::Use(ActionSlot::Equipment(EquipmentSlot::Mainhand));
 
 /// Maps `input` over `range` through `curve`.
 pub const fn consideration(

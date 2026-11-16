@@ -15,7 +15,7 @@ use super::engine::{
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
-use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
+use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
 use crate::prelude::*;
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
@@ -42,7 +42,7 @@ impl RunningBehavior {
         if self.committed
             && let Some(action) = self.action
         {
-            commands.trigger(ActionFinished {
+            commands.trigger(BehaviorActionFinished {
                 entity,
                 action,
                 behavior_run_id: self.behavior_run_id,
@@ -125,9 +125,9 @@ pub(super) fn on_release_finished_motion(
     );
 }
 
-/// Applies an [`ActionFinished`], current or stale.
+/// Applies an [`BehaviorActionFinished`], current or stale.
 pub(super) fn on_finish_action(
-    finished: On<ActionFinished>,
+    finished: On<BehaviorActionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
@@ -142,14 +142,14 @@ pub(super) fn on_finish_action(
         now: time.elapsed_secs(),
     };
     match finished.action {
-        Action::Use(UseSlot::Equipment(_))
+        Action::Use(ActionSlot::Equipment(_))
             if finished.outcome == ActionOutcome::Completed
                 && inputs.action_ends_on_its_own(finished.action) =>
         {
             brain.record_attack_finished();
         }
         // Only a completed item use that ends on its own is an attack.
-        Action::Use(UseSlot::Equipment(_) | UseSlot::Ability(_)) | Action::Idle => {}
+        Action::Use(ActionSlot::Equipment(_) | ActionSlot::Ability(_)) | Action::Idle => {}
     }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();

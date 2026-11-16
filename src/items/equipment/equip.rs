@@ -62,7 +62,7 @@ pub struct Unequip {
 fn on_unequip(
     unequip: On<Unequip>,
     mut commands: Commands,
-    mut items: Query<(&mut Visibility, Has<InUse>), With<Equipped>>,
+    mut items: Query<(&mut Visibility, Has<ActionInProgress>), With<Equipped>>,
 ) {
     let Ok((mut visibility, in_use)) = items.get_mut(unequip.item) else {
         // Expected race: equipment was despawned prior to unequip.
@@ -70,7 +70,7 @@ fn on_unequip(
         return;
     };
     if in_use {
-        commands.trigger(StopUse {
+        commands.trigger(StopAction {
             entity: unequip.item,
         });
     }

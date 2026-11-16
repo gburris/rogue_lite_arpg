@@ -43,19 +43,15 @@ impl KnockedBack {
 /// can't start using an item or ability and loses any use in progress.
 #[derive(QueryData)]
 pub struct InterruptionState {
-    health: Option<&'static Health>,
-    stat_multipliers: Option<&'static StatMultipliers>,
+    health: &'static Health,
+    stat_multipliers: &'static StatMultipliers,
     knocked_back: Has<KnockedBack>,
 }
 
 impl InterruptionStateItem<'_, '_> {
     /// See [`InterruptionState`].
     pub fn is_interrupted(&self) -> bool {
-        self.knocked_back
-            || self.health.is_some_and(Health::is_dead)
-            || self
-                .stat_multipliers
-                .is_some_and(|multipliers| multipliers.is_stunned())
+        self.knocked_back || self.health.is_dead() || self.stat_multipliers.is_stunned()
     }
 }
 

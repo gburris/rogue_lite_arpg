@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// An innate projectile attack fired from its ability entity's [`Projectiles`] templates along the
 /// holder's aim.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Breathe, AbilityCooldown)]
+#[require(Ability::Breath, AbilityCooldown)]
 pub struct Breath {
     reach: f32,
 }

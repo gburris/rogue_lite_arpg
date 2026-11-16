@@ -132,14 +132,14 @@ impl ActionUsage<'_, '_> {
 /// and its finish names its behavior.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(in crate::character::brain) struct StartedActions {
-    uses: [Option<u32>; EquipmentSlot::ALL.len()],
+    equipment_uses: [Option<u32>; EquipmentSlot::ALL.len()],
     abilities: [Option<u32>; Ability::ALL.len()],
 }
 
 impl StartedActions {
     fn behavior_run_id_mut(&mut self, action: Action) -> Option<&mut Option<u32>> {
         match action {
-            Action::Use(slot) => Some(&mut self.uses[slot as usize]),
+            Action::Use(slot) => Some(&mut self.equipment_uses[slot as usize]),
             Action::Ability(ability) => Some(&mut self.abilities[ability as usize]),
             Action::Idle => None,
         }
@@ -147,7 +147,7 @@ impl StartedActions {
 
     fn behavior_run_id(&self, action: Action) -> Option<u32> {
         match action {
-            Action::Use(slot) => self.uses[slot as usize],
+            Action::Use(slot) => self.equipment_uses[slot as usize],
             Action::Ability(ability) => self.abilities[ability as usize],
             Action::Idle => None,
         }
@@ -197,7 +197,7 @@ pub(super) fn apply_action_requests(
 }
 
 /// Reports [`ActionFinished`] for the use whose item finished.
-pub(super) fn on_report_equipment_use_finished(
+pub(super) fn on_equipment_use_finished(
     finished: On<EquipmentUseFinished>,
     mut commands: Commands,
     started_actions: Query<&StartedActions>,
@@ -211,7 +211,7 @@ pub(super) fn on_report_equipment_use_finished(
 }
 
 /// Reports [`ActionFinished`] for the use whose ability finished.
-pub(super) fn on_report_ability_use_finished(
+pub(super) fn on_ability_use_finished(
     finished: On<AbilityUseFinished>,
     mut commands: Commands,
     started_actions: Query<&StartedActions>,

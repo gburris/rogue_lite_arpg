@@ -32,7 +32,7 @@ const IN_SWOOP_REACH: Consideration = within_reach(
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
-    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breathe)),
+    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breath)),
 );
 /// Distance out to which the decision arms a bite: 40 units past contact. Decisions are
 /// sampled, so a swoop crossing the reach could otherwise fall between two samples; the bite's
@@ -106,9 +106,9 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
     &[],
 );
 /// Fireball from range, only between swoops.
-const BAT_BREATHE: Behavior = Behavior::new(
+const BAT_BREATH: Behavior = Behavior::new(
     None,
-    Some(Action::Ability(Ability::Breathe)),
+    Some(Action::Ability(Ability::Breath)),
     CommitPolicy::ContinuouslyScored,
     1.0,
     &[
@@ -148,7 +148,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     BAT_ORBIT,
     BAT_KEEP,
     BAT_SWOOP,
-    BAT_BREATHE,
+    BAT_BREATH,
     BAT_BITE,
 ];
 

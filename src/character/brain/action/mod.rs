@@ -24,8 +24,8 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         usage::apply_action_requests.in_set(BrainSystems::Execute),
     )
-    .add_observer(usage::on_report_equipment_use_finished)
-    .add_observer(usage::on_report_ability_use_finished);
+    .add_observer(usage::on_equipment_use_finished)
+    .add_observer(usage::on_ability_use_finished);
 }
 
 /// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`

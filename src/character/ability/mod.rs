@@ -25,7 +25,7 @@ pub enum Ability {
     /// Drink a carried potion.
     Heal,
     /// Loose an innate projectile with no weapon.
-    Breathe,
+    Breath,
     /// Damage a target in contact reach.
     Bite,
     /// Raise the stats of every ally in reach with a war cry.
@@ -34,7 +34,7 @@ pub enum Ability {
 
 impl Ability {
     /// Every ability, in array order.
-    pub const ALL: [Self; 4] = [Self::Heal, Self::Breathe, Self::Bite, Self::Rally];
+    pub const ALL: [Self; 4] = [Self::Heal, Self::Breath, Self::Bite, Self::Rally];
 }
 
 pub(super) fn plugin(app: &mut App) {

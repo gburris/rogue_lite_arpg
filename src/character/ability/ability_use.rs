@@ -152,7 +152,7 @@ impl AbilityStateItem<'_, '_> {
     fn reach(&self) -> Option<f32> {
         match self.ability {
             Ability::Heal => None,
-            Ability::Breathe => self.breath.copied().map(Breath::reach),
+            Ability::Breath => self.breath.copied().map(Breath::reach),
             Ability::Bite => self.bite.map(Bite::reach),
             Ability::Rally => self.rally.copied().map(Rally::reach),
         }

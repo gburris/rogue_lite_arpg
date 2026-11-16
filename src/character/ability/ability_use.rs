@@ -69,45 +69,38 @@ impl AbilityCooldown {
     }
 }
 
-/// One step of an ability's use; see [`AbilitySteps`].
-#[derive(Clone, Copy, Debug)]
-pub enum AbilityStep {
-    /// Waits before the next step.
-    Hold { seconds: f32 },
-    /// The ability takes effect and starts its [`AbilityCooldown`].
-    Release,
+/// How long each use of the ability winds up before it takes effect, a window for a hit to
+/// interrupt it. Without it, the ability takes effect on the frame it is used.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct AbilityWindup {
+    pub seconds: f32,
 }
 
-/// The steps each use of an ability runs through, in order. By default it takes effect at once.
-#[derive(Component, Clone, Copy, Debug, Deref)]
-pub struct AbilitySteps(pub &'static [AbilityStep]);
+/// Counts down a use's [`AbilityWindup`].
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub(super) struct AbilityWindupProgress(Timer);
 
-impl Default for AbilitySteps {
-    fn default() -> Self {
-        Self(&[AbilityStep::Release])
-    }
-}
-
-/// Lights the holder in this color while the ability is in use, a stand-in until abilities have
-/// animations.
+/// Lights the holder in this color while a use of the ability winds up, a stand-in until abilities
+/// have animations.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct UseGlow(pub Color);
 
-/// Present on an ability entity while a use runs its [`AbilitySteps`]. An interrupted holder's use
-/// ends and the ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]; see [`InterruptionState`]. Its
-/// removal, however the use ended, fires [`AbilityUseFinished`].
+/// The light a winding-up use of a [`UseGlow`] ability shines on its holder.
+#[derive(Component, Clone, Copy, Debug)]
+#[component(on_remove = despawn_use_glow_light)]
+pub(super) struct UseGlowLight(Entity);
+
+/// Present on an ability entity while a use is under way, until it takes effect. An interrupted
+/// holder's use ends and the ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]; see
+/// [`InterruptionState`]. Its removal, however the use ended, fires [`AbilityUseFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = report_ability_use_finished)]
-pub(super) struct AbilityInUse {
-    step: usize,
-    held_seconds: f32,
-    glow_light: Option<Entity>,
-}
+pub(super) struct AbilityInUse;
 
-/// A use of the ability entity `entity` reached its [`AbilityStep::Release`]. The observer of
-/// its capability component applies the effect.
+/// A use of the ability entity `entity` took effect. The observer of its capability component
+/// applies the effect.
 #[derive(EntityEvent, Clone, Copy, Debug)]
-pub(super) struct AbilityReleased {
+pub(super) struct AbilityTookEffect {
     pub entity: Entity,
 }
 
@@ -260,142 +253,116 @@ impl AbilityUsage<'_, '_> {
     /// Starts a use of `holder`'s `ability` if [`AbilityRead::can_use`] allows it.
     pub fn try_use(&mut self, holder: Entity, ability: Ability) -> Result<(), AbilityUseFailure> {
         let entity = self.read.can_use(holder, ability)?;
-        self.commands
-            .entity(entity)
-            .insert_if_new(AbilityInUse::default());
+        self.commands.entity(entity).insert_if_new(AbilityInUse);
         Ok(())
     }
 }
 
-/// Runs a new use's first steps at once, so an ability without a hold takes effect on the frame
-/// it is used, and lights the holder for a use that goes on.
+/// Starts a new use's [`AbilityWindup`], or has the ability take effect at once if it has none.
 pub(super) fn on_ability_use_started(
     added: On<Add<AbilityInUse>>,
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut uses: Query<(
-        &mut AbilityInUse,
-        &AbilitySteps,
-        &mut AbilityCooldown,
-        &AbilityOf,
-        Option<&UseGlow>,
-    )>,
+    mut uses: Query<(Option<&AbilityWindup>, &mut AbilityCooldown)>,
 ) {
-    let Ok((mut in_use, steps, mut cooldown, ability_of, glow)) = uses.get_mut(added.entity) else {
+    let Ok((windup, mut cooldown)) = uses.get_mut(added.entity) else {
         return;
     };
-    let finished = advance_steps(
-        &mut commands,
-        added.entity,
-        &mut in_use,
-        steps,
-        &mut cooldown,
-        time.elapsed_secs(),
-        0.0,
-    );
-    if let Some(&UseGlow(color)) = glow.filter(|_| !finished) {
-        let holder = ability_of.holder;
-        let light = commands
-            .spawn_scene(bsn! {
-                @point_light(color, 3.0, 40.0, 3.0)
-                ChildOf(holder)
-            })
-            .id();
-        in_use.glow_light = Some(light);
+    match windup {
+        Some(windup) => {
+            let timer = Timer::from_seconds(windup.seconds, TimerMode::Once);
+            commands
+                .entity(added.entity)
+                .insert(AbilityWindupProgress(timer));
+        }
+        None => apply_ability_effect(
+            &mut commands,
+            added.entity,
+            &mut cooldown,
+            time.elapsed_secs(),
+        ),
     }
 }
 
-/// Advances every use under way, and ends the use of an interrupted holder; see
-/// [`InterruptionState`].
-pub(super) fn advance_ability_uses(
+/// Lights the holder of a [`UseGlow`] ability while its use winds up.
+pub(super) fn on_ability_windup_started(
+    added: On<Add<AbilityWindupProgress>>,
+    mut commands: Commands,
+    glows: Query<(&UseGlow, &AbilityOf)>,
+) {
+    let Ok((&UseGlow(color), ability_of)) = glows.get(added.entity) else {
+        return;
+    };
+    let holder = ability_of.holder;
+    let light = commands
+        .spawn_scene(bsn! {
+            @point_light(color, 3.0, 40.0, 3.0)
+            ChildOf(holder)
+        })
+        .id();
+    commands.entity(added.entity).insert(UseGlowLight(light));
+}
+
+/// Has each use winding up take effect once its [`AbilityWindup`] is up, and ends the use of an
+/// interrupted holder; see [`InterruptionState`].
+pub(super) fn advance_ability_windups(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut uses: Query<(
+    mut windups: Query<(
         Entity,
-        &mut AbilityInUse,
-        &AbilitySteps,
+        &mut AbilityWindupProgress,
         &mut AbilityCooldown,
         &AbilityOf,
     )>,
     holders: Query<InterruptionState>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, mut in_use, steps, mut cooldown, ability_of) in &mut uses {
+    for (entity, mut progress, mut cooldown, ability_of) in &mut windups {
         let holder_interrupted = holders
             .get(ability_of.holder)
             .ok()
             .is_none_or(|interruption| interruption.is_interrupted());
         if holder_interrupted {
-            interrupt_ability_use(&mut commands, entity, &mut cooldown, now);
-            continue;
+            cooldown.start_interrupted_lockout(now);
+            end_ability_use(&mut commands, entity);
+        } else if progress.tick(time.delta()).is_finished() {
+            apply_ability_effect(&mut commands, entity, &mut cooldown, now);
         }
-        advance_steps(
-            &mut commands,
-            entity,
-            &mut in_use,
-            steps,
-            &mut cooldown,
-            now,
-            time.delta_secs(),
-        );
     }
 }
 
 fn report_ability_use_finished(mut world: DeferredWorld, context: HookContext) {
     let entity = world.entity(context.entity);
-    let (Some(in_use), Some(&ability), Some(ability_of)) = (
-        entity.get::<AbilityInUse>().copied(),
-        entity.get::<Ability>(),
-        entity.get::<AbilityOf>(),
-    ) else {
+    let (Some(&ability), Some(ability_of)) = (entity.get::<Ability>(), entity.get::<AbilityOf>())
+    else {
         return;
     };
     let holder = ability_of.holder;
-    let mut commands = world.commands();
-    if let Some(light) = in_use.glow_light {
-        commands.entity(light).try_despawn();
-    }
-    commands.trigger(AbilityUseFinished { holder, ability });
+    world
+        .commands()
+        .trigger(AbilityUseFinished { holder, ability });
 }
 
-fn advance_steps(
-    commands: &mut Commands,
-    entity: Entity,
-    in_use: &mut AbilityInUse,
-    steps: &AbilitySteps,
-    cooldown: &mut AbilityCooldown,
-    now: f32,
-    mut delta_seconds: f32,
-) -> bool {
-    loop {
-        match steps.get(in_use.step) {
-            None => {
-                commands.entity(entity).remove::<AbilityInUse>();
-                return true;
-            }
-            Some(AbilityStep::Release) => {
-                cooldown.start(now);
-                commands.trigger(AbilityReleased { entity });
-            }
-            Some(&AbilityStep::Hold { seconds }) => {
-                in_use.held_seconds += delta_seconds;
-                delta_seconds = 0.0;
-                if in_use.held_seconds < seconds {
-                    return false;
-                }
-                in_use.held_seconds = 0.0;
-            }
-        }
-        in_use.step += 1;
-    }
+fn despawn_use_glow_light(mut world: DeferredWorld, context: HookContext) {
+    let Some(&UseGlowLight(light)) = world.entity(context.entity).get::<UseGlowLight>() else {
+        return;
+    };
+    world.commands().entity(light).try_despawn();
 }
 
-fn interrupt_ability_use(
+fn apply_ability_effect(
     commands: &mut Commands,
     entity: Entity,
     cooldown: &mut AbilityCooldown,
     now: f32,
 ) {
-    cooldown.start_interrupted_lockout(now);
-    commands.entity(entity).remove::<AbilityInUse>();
+    cooldown.start(now);
+    commands.trigger(AbilityTookEffect { entity });
+    end_ability_use(commands, entity);
+}
+
+fn end_ability_use(commands: &mut Commands, entity: Entity) {
+    commands
+        .entity(entity)
+        .remove::<(AbilityInUse, AbilityWindupProgress, UseGlowLight)>();
 }

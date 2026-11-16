@@ -1,18 +1,18 @@
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityReleased, AbilitySteps};
+use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
 use crate::prelude::*;
 
 /// Drinking a carried potion to recover health.
 #[derive(Component, Clone, Copy, Debug, Default)]
-#[require(Ability::Heal, AbilityCooldown, AbilitySteps)]
+#[require(Ability::Heal, AbilityCooldown)]
 pub struct Heal;
 
-/// A heal ability that drinks the holder's first carried potion when released.
+/// A heal ability that drinks the holder's first carried potion when it takes effect.
 pub fn heal() -> impl Scene {
     bsn! {
         Heal
-        on(on_heal_released)
+        on(on_heal_took_effect)
     }
 }
 
@@ -28,14 +28,14 @@ pub(super) fn find_carried_potion(
 }
 
 /// Drinks the holder's first carried potion, if it still carries one.
-fn on_heal_released(
-    released: On<AbilityReleased>,
+fn on_heal_took_effect(
+    took_effect: On<AbilityTookEffect>,
     mut commands: Commands,
     heals: Query<&AbilityOf, With<Heal>>,
     holders: Query<Option<&Items>>,
     consumables: Query<(), With<Consumable>>,
 ) {
-    let Ok(ability_of) = heals.get(released.entity) else {
+    let Ok(ability_of) = heals.get(took_effect.entity) else {
         return;
     };
     let items = holders.get(ability_of.holder).ok().flatten();

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityReleased, AbilitySteps};
+use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
 use crate::character::Allies;
 use crate::prelude::*;
 
@@ -9,7 +9,7 @@ const RALLY_SHOUT_SCALE: f32 = 2.0;
 
 /// A war cry that gives every other ally within `reach` its ability entity's [`Effects`].
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Rally, AbilityCooldown, AbilitySteps)]
+#[require(Ability::Rally, AbilityCooldown)]
 pub struct Rally {
     reach: f32,
 }
@@ -30,7 +30,7 @@ impl Rally {
 pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         ~Rally::new(reach)
-        on(on_rally_released)
+        on(on_rally_took_effect)
         Effects [
             Rallied
             Lifespan::new(seconds)
@@ -46,15 +46,15 @@ pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scen
 
 /// Gives every other ally in reach the rally's [`Effects`] and sends a shockwave out from the
 /// holder's feet.
-fn on_rally_released(
-    released: On<AbilityReleased>,
+fn on_rally_took_effect(
+    took_effect: On<AbilityTookEffect>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
     rallies: Query<(&Rally, &Effects, &AbilityOf)>,
     allies: Allies,
 ) {
-    let Ok((rally, effects, ability_of)) = rallies.get(released.entity) else {
+    let Ok((rally, effects, ability_of)) = rallies.get(took_effect.entity) else {
         return;
     };
     let holder = ability_of.holder;

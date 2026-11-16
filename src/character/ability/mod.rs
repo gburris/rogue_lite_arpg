@@ -7,10 +7,10 @@ mod rally;
 use bevy::prelude::*;
 
 pub use self::ability_use::{
-    Abilities, AbilityCooldown, AbilityRead, AbilityStep, AbilitySteps, AbilityUsage,
-    AbilityUseFailure, AbilityUseFinished, UseGlow,
+    Abilities, AbilityCooldown, AbilityRead, AbilityUsage, AbilityUseFailure, AbilityUseFinished,
+    AbilityWindup, UseGlow,
 };
-use self::ability_use::{AbilityOf, AbilityReleased};
+use self::ability_use::{AbilityOf, AbilityTookEffect};
 pub use self::bite::{Bite, bite};
 pub use self::breath::breath;
 pub use self::heal::heal;
@@ -40,11 +40,12 @@ impl Ability {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        ability_use::advance_ability_uses.in_set(SimulationSystems::Upkeep),
+        ability_use::advance_ability_windups.in_set(SimulationSystems::Upkeep),
     )
     .add_systems(
         Update,
         bite::damage_bite_hits.in_set(InGameSystems::Collision),
     )
-    .add_observer(ability_use::on_ability_use_started);
+    .add_observer(ability_use::on_ability_use_started)
+    .add_observer(ability_use::on_ability_windup_started);
 }

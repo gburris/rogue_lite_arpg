@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityReleased, AbilitySteps};
+use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
 use crate::prelude::*;
 
 /// Seconds a bite's hitbox stays out: the jaws stay open through a lunge, so a bite started just
@@ -11,7 +11,7 @@ const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Bite, AbilityCooldown, AbilitySteps)]
+#[require(Ability::Bite, AbilityCooldown)]
 pub struct Bite {
     reach: f32,
     damage: f32,
@@ -71,18 +71,18 @@ pub(super) struct BiteHitbox {
 pub fn bite(bite: Bite) -> impl Scene {
     bsn! {
         template(move |_| Ok(bite))
-        on(on_bite_released)
+        on(on_bite_took_effect)
     }
 }
 
 /// Snaps a bite along the holder's aim. The hitbox decides whether it lands.
-fn on_bite_released(
-    released: On<AbilityReleased>,
+fn on_bite_took_effect(
+    took_effect: On<AbilityTookEffect>,
     mut commands: Commands,
     bites: Query<(&Bite, &AbilityOf)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
 ) {
-    let Ok((bite, ability_of)) = bites.get(released.entity) else {
+    let Ok((bite, ability_of)) = bites.get(took_effect.entity) else {
         return;
     };
     let holder = ability_of.holder;

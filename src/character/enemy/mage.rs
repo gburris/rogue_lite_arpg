@@ -4,7 +4,7 @@ use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::{
-    Abilities, Ability, AbilityCooldown, AbilityStep, AbilitySteps, UseGlow, speed_and_damage_rally,
+    Abilities, Ability, AbilityCooldown, AbilityWindup, UseGlow, speed_and_damage_rally,
 };
 use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
@@ -62,8 +62,8 @@ const RALLY: Action = Action::Ability(Ability::Rally);
 /// Matches the shockwave's drawn radius, so every ally it washes over is rallied.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
-/// A war cry takes 0.8 s to wind up, a window for a hit to cancel it.
-const RALLY_STEPS: &[AbilityStep] = &[AbilityStep::Hold { seconds: 0.8 }, AbilityStep::Release];
+/// Seconds a war cry winds up before it rallies.
+const RALLY_WINDUP_SECONDS: f32 = 0.8;
 const RALLY_GLOW_COLOR: Color = Color::srgb(1.0, 0.9, 0.5);
 const RALLY_RAISE: f32 = 0.3;
 const RALLY_SECONDS: f32 = 6.0;
@@ -335,7 +335,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
             ~AbilityCooldown::new(RALLY_COOLDOWN)
-            AbilitySteps(RALLY_STEPS)
+            AbilityWindup { seconds: RALLY_WINDUP_SECONDS }
             UseGlow(RALLY_GLOW_COLOR)
         ]
     }

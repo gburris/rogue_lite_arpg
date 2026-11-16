@@ -5,7 +5,7 @@ use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::{
-    Abilities, Ability, AbilityCooldown, AbilityStep, AbilitySteps, UseGlow, heal,
+    Abilities, Ability, AbilityCooldown, AbilityWindup, UseGlow, heal,
 };
 use crate::character::brain::considerations::{
     ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
@@ -190,8 +190,8 @@ pub(super) static WARRIOR: BrainDefinition = BrainDefinition {
 
 /// Seconds between potions, so a hurt warrior drinks one at a time.
 const HEAL_COOLDOWN: f32 = 1.0;
-/// A drink takes 0.6 s, a window for a hit to cancel it.
-const HEAL_STEPS: &[AbilityStep] = &[AbilityStep::Hold { seconds: 0.6 }, AbilityStep::Release];
+/// Seconds a drink takes before the potion heals.
+const HEAL_WINDUP_SECONDS: f32 = 0.6;
 const HEAL_GLOW_COLOR: Color = Color::srgb(0.3, 1.0, 0.4);
 
 /// Spawns a sword-carrying warrior on top of the shared enemy `base` scene.
@@ -233,7 +233,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Abilities [
             @heal()
             ~AbilityCooldown::new(HEAL_COOLDOWN)
-            AbilitySteps(HEAL_STEPS)
+            AbilityWindup { seconds: HEAL_WINDUP_SECONDS }
             UseGlow(HEAL_GLOW_COLOR)
         ]
         enemy_wander()

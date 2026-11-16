@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityReleased, AbilitySteps};
+use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
 use crate::prelude::*;
 
 /// An innate projectile attack fired from its ability entity's [`Projectiles`] templates along the
 /// holder's aim.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Breathe, AbilityCooldown, AbilitySteps)]
+#[require(Ability::Breathe, AbilityCooldown)]
 pub struct Breath {
     reach: f32,
 }
@@ -27,18 +27,18 @@ impl Breath {
 pub fn breath(reach: f32) -> impl Scene {
     bsn! {
         ~Breath::new(reach)
-        on(on_breath_released)
+        on(on_breath_took_effect)
     }
 }
 
 /// Fires each projectile template along the holder's aim.
-fn on_breath_released(
-    released: On<AbilityReleased>,
+fn on_breath_took_effect(
+    took_effect: On<AbilityTookEffect>,
     mut commands: Commands,
     breaths: Query<(&AbilityOf, &Projectiles), With<Breath>>,
     breathers: Query<(&Transform, &CombatSide, &Vision)>,
 ) {
-    let Ok((ability_of, templates)) = breaths.get(released.entity) else {
+    let Ok((ability_of, templates)) = breaths.get(took_effect.entity) else {
         return;
     };
     let holder = ability_of.holder;

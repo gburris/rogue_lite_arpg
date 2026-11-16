@@ -93,7 +93,8 @@ const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
     &[INSIDE_MELEE_REACH],
 );
 
-/// Stands still for the whole swing once it has stood still in reach for [`WARRIOR_SWING_DELAY`].
+/// Swings once it has stood still in reach for [`WARRIOR_SWING_DELAY`], standing still
+/// throughout.
 const WARRIOR_SWING: Behavior = Behavior::new(
     Some(Motion::Idle),
     Some(MAINHAND),

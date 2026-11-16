@@ -114,9 +114,9 @@ impl Brain {
         self.cooldowns.start(motion, inputs.now + cooldown);
     }
 
-    /// Whether `behavior` may start now: each part's capability is owned, off its
-    /// cooldown, and allowed by the world. A committed behavior also needs an action that ends on
-    /// its own, since nothing else would finish it.
+    /// Whether `behavior` may start now: its motion is owned and off cooldown, and its action can
+    /// run (see [`DecisionInputs::can_run`]). A committed behavior also needs an action that ends
+    /// on its own, since nothing else would finish it.
     fn is_available(&self, behavior: &Behavior, inputs: &DecisionInputs) -> bool {
         let motion_available = |motion: Motion| {
             inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
@@ -248,7 +248,6 @@ impl Brain {
     }
 
     /// Ends `running` and starts its finite motion's cooldown so it can't restart next tick.
-    /// Equipment and abilities keep their own cooldowns, so an action starts none.
     fn drop_committed_behavior(&mut self, running: RunningBehavior, inputs: &DecisionInputs) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);

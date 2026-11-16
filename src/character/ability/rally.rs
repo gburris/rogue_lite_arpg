@@ -25,7 +25,7 @@ impl Rally {
     }
 }
 
-/// A `rally` ability whose war cry raises the speed and damage of allies within `reach` by
+/// A [`Rally`] ability whose war cry raises the speed and damage of allies within `reach` by
 /// `raise` for `seconds`.
 pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {

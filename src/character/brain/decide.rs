@@ -147,8 +147,7 @@ pub(super) fn on_finish_action(
         {
             brain.record_attack_finished();
         }
-        // A sustained or unstarted use is no attack, an ability keeps its own cooldown, and nothing
-        // reports an idle action's finish.
+        // Only a completed use that ends on its own is an attack.
         Action::Use(_) | Action::Ability(_) | Action::Idle => {}
     }
     #[cfg(feature = "tracy")]

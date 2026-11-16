@@ -1,12 +1,9 @@
-//! What a character can do and when: the [`CapabilityProfile`] a decision reads for each motion
-//! and action, the motion capability components behind them, and the [`Cooldowns`] that pace
-//! motions.
-
 use bevy::ecs::query::QueryData;
 
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
 
-/// The reach, start chance and cooldown a decision reads for one motion or action.
+/// The reach, start chance and cooldown a decision reads for one motion; an action fills only
+/// its reach.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct CapabilityProfile {
     pub reach: Option<f32>,

@@ -34,8 +34,8 @@ const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
     ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breathe)),
 );
-/// Distance out to which the decision arms a bite: 40 units past contact. Decisions sample at
-/// 10 Hz, so a swoop crossing the reach could otherwise fall between two samples; the bite's
+/// Distance out to which the decision arms a bite: 40 units past contact. Decisions are
+/// sampled, so a swoop crossing the reach could otherwise fall between two samples; the bite's
 /// jaws stay open long enough to close the gap.
 const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;

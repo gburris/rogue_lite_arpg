@@ -110,10 +110,12 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
 fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
     bsn! {
         Staff { source_offset: Vec2::new(0.0, 26.0) }
-        ~Equippable::new(EquipmentSlot::Mainhand, cooldown, &STAFF_EQUIPMENT_POSES)
-            .with_reach(STAFF_REACH)
+        ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
+        ~UseCooldown::new(cooldown)
+        ~{UseReach(STAFF_REACH)}
+        ~{UseStyle::Timed}
         Sprite { image }
-        on(on_start_staff)
+        on(on_staff_took_effect)
         on(on_stop_staff)
     }
 }
@@ -152,14 +154,14 @@ impl Casting {
     }
 }
 
-/// Start observer: begins the cast (projectiles fire later in `fire_projectile_on_casting_end`).
-fn on_start_staff(
-    staff_used: On<StartUsingEquipment>,
+/// Begins the cast; projectiles fire later in `fire_projectile_on_casting_end`.
+fn on_staff_took_effect(
+    staff_used: On<UseTookEffect>,
     mut commands: Commands,
     staff_query: Query<(&Staff, &Transform), With<Projectiles>>,
     holder_query: Query<&FacingDirection>,
 ) {
-    let Ok((staff, staff_transform)) = staff_query.get(staff_used.item) else {
+    let Ok((staff, staff_transform)) = staff_query.get(staff_used.entity) else {
         warn!("Unable to cast staff, no projectiles");
         return;
     };
@@ -176,8 +178,7 @@ fn on_start_staff(
         FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
 
-    commands.entity(staff_used.item).insert((
-        EquipmentInUse,
+    commands.entity(staff_used.entity).insert((
         Casting::new(staff.fire_time, staff.return_time),
         TweenAnim::new(
             // Swing
@@ -204,7 +205,7 @@ fn on_start_staff(
 
     // A spark at the tip while the cast winds up.
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
-    let staff_entity = staff_used.item;
+    let staff_entity = staff_used.entity;
     commands.spawn_scene(bsn! {
         @point_light(Color::WHITE, 10.0, 3.0, 1.0)
         Transform::from_translation(tip)
@@ -276,9 +277,8 @@ fn fire_projectile_on_casting_end(
 
         // Return complete, cast attack is finished; the stop observer owns the removal.
         if casting.return_time.is_finished() {
-            commands.trigger(StopUsingEquipment {
-                item: staff_entity,
-                holder: item_of.holder,
+            commands.trigger(StopUse {
+                entity: staff_entity,
             });
         }
     }
@@ -300,9 +300,9 @@ fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2)
     }
 }
 
-fn on_stop_staff(stop: On<StopUsingEquipment>, mut commands: Commands) {
+fn on_stop_staff(stop: On<StopUse>, mut commands: Commands) {
     commands
-        .entity(stop.item)
-        .remove::<(EquipmentInUse, Casting, TweenAnim)>()
+        .entity(stop.entity)
+        .remove::<(Casting, TweenAnim)>()
         .despawn_children();
 }

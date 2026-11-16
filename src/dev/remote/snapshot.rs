@@ -107,7 +107,7 @@ pub(super) struct InventoryItemData {
     name: Option<&'static Name>,
     equippable: Option<&'static Equippable>,
     is_equipped: Has<Equipped>,
-    is_in_use: Has<EquipmentInUse>,
+    is_in_use: Has<InUse>,
     is_consumable: Has<Consumable>,
 }
 

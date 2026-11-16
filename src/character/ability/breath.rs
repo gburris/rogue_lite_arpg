@@ -1,47 +1,35 @@
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
+use super::Ability;
 use crate::prelude::*;
 
 /// An innate projectile attack fired from its ability entity's [`Projectiles`] templates along the
 /// holder's aim.
-#[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Breath, AbilityCooldown)]
-pub struct Breath {
-    reach: f32,
-}
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[require(Ability::Breath)]
+pub struct Breath;
 
-impl Breath {
-    /// Breathes at targets within `reach`. The reach only tells a brain when to breathe; a
-    /// projectile may fly past it.
-    pub fn new(reach: f32) -> Self {
-        Self { reach }
-    }
-
-    pub(super) fn reach(self) -> f32 {
-        self.reach
-    }
-}
-
-/// A breath ability that fires its [`Projectiles`] templates at targets within `reach`.
+/// A breath ability that fires its [`Projectiles`] templates at targets within `reach`. The reach
+/// only tells a brain when to breathe; a projectile may fly past it.
 pub fn breath(reach: f32) -> impl Scene {
     bsn! {
-        ~Breath::new(reach)
+        Breath
+        ~{UseReach(reach)}
         on(on_breath_took_effect)
     }
 }
 
 /// Fires each projectile template along the holder's aim.
 fn on_breath_took_effect(
-    took_effect: On<AbilityTookEffect>,
+    took_effect: On<UseTookEffect>,
     mut commands: Commands,
-    breaths: Query<(&AbilityOf, &Projectiles), With<Breath>>,
+    breaths: Query<&Projectiles, With<Breath>>,
     breathers: Query<(&Transform, &CombatSide, &Vision)>,
 ) {
-    let Ok((ability_of, templates)) = breaths.get(took_effect.entity) else {
+    let Ok(templates) = breaths.get(took_effect.entity) else {
         return;
     };
-    let holder = ability_of.holder;
+    let holder = took_effect.holder;
     let Ok((transform, side, vision)) = breathers.get(holder) else {
         return;
     };

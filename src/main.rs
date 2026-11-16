@@ -17,6 +17,7 @@ mod items;
 mod lifespan;
 mod menu;
 mod ui;
+mod usable;
 mod world;
 
 pub mod prelude {
@@ -30,6 +31,7 @@ pub mod prelude {
     pub use super::lifespan::{Lifespan, despawn_all, schedule_component_removal};
     pub use super::menu::prelude::*;
     pub use super::ui::prelude::*;
+    pub use super::usable::prelude::*;
     pub use super::world::prelude::*;
 }
 
@@ -59,7 +61,12 @@ fn plugin(app: &mut App) {
     ));
 
     // Entity systems
-    app.add_plugins((world::plugin, items::plugin, character::plugin));
+    app.add_plugins((
+        world::plugin,
+        items::plugin,
+        usable::plugin,
+        character::plugin,
+    ));
 
     // UI
     app.add_plugins((ui::plugin, menu::plugin));

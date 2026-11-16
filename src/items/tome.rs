@@ -17,25 +17,26 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
     bsn! {
         Name::new("Tome Of Healing")
         ~Item::new(355, ItemKind::Tome)
-        ~Equippable::new(EquipmentSlot::Offhand, 2.0, &DEFAULT_EQUIPMENT_POSES)
+        ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
+        ~UseCooldown::new(2.0)
         ManaCost(40.0)
         ~{HealingTome {
             min_healing: 25.0,
             max_healing: 50.0,
         }}
         Sprite { image }
-        on(on_healing_tome_cast)
+        on(on_healing_tome_took_effect)
     }
 }
 
-fn on_healing_tome_cast(
-    healing_tome: On<StartUsingEquipment>,
+fn on_healing_tome_took_effect(
+    healing_tome: On<UseTookEffect>,
     mut commands: Commands,
-    tome_query: Query<(&HealingTome, &ItemOf)>,
+    tome_query: Query<&HealingTome>,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) -> Result {
-    let (tome, _) = tome_query.get(healing_tome.item)?;
+    let tome = tome_query.get(healing_tome.entity)?;
     let health_to_add = rand::rng().random_range(tome.min_healing..tome.max_healing);
     commands.trigger(AttemptHeal {
         entity: healing_tome.holder,

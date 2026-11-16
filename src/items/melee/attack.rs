@@ -64,14 +64,14 @@ impl ActiveMeleeAttack {
     }
 }
 
-/// Start observer: spawns the transient swing hitbox removed by `on_stop_melee`.
-pub(super) fn on_start_melee(
-    melee: On<StartUsingEquipment>,
+/// Spawns the transient swing hitbox removed by `on_stop_melee`.
+pub(super) fn on_melee_took_effect(
+    melee: On<UseTookEffect>,
     mut commands: Commands,
     weapon_query: Query<&MeleeWeapon>,
     holder_query: Query<(&Vision, &CombatSide)>,
 ) {
-    let Ok(melee_weapon) = weapon_query.get(melee.item) else {
+    let Ok(melee_weapon) = weapon_query.get(melee.entity) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
@@ -84,33 +84,28 @@ pub(super) fn on_start_melee(
     let attack_angle = vision.aim_direction.to_angle();
 
     // Hitbox and layers only exist for the swing; the stop observer removes them.
-    commands.entity(melee.item).insert((
-        EquipmentInUse,
+    commands.entity(melee.entity).insert((
         ActiveMeleeAttack::new(attack_angle, melee_weapon.attack_time),
         melee_weapon.hitbox.clone(),
         MeleeWeapon::collision_layers(*side),
     ));
 }
 
-/// End polling: queues `StopUsingEquipment` once each swing timer finishes.
+/// Ends each swing whose timer has finished.
 pub(super) fn end_melee_attacks(
     mut commands: Commands,
-    swings: Query<(Entity, &ItemOf, &ActiveMeleeAttack)>,
+    swings: Query<(Entity, &ActiveMeleeAttack)>,
 ) {
-    for (item, item_of, attack) in &swings {
+    for (entity, attack) in &swings {
         if attack.duration.just_finished() {
-            commands.trigger(StopUsingEquipment {
-                item,
-                holder: item_of.holder,
-            });
+            commands.trigger(StopUse { entity });
         }
     }
 }
 
-/// Stop observer: removes the transient swing state queued by `end_melee_attacks`.
-pub(super) fn on_stop_melee(stop: On<StopUsingEquipment>, mut commands: Commands) {
-    commands.entity(stop.item).remove::<(
-        EquipmentInUse,
+/// Removes the transient swing state.
+pub(super) fn on_stop_melee(stop: On<StopUse>, mut commands: Commands) {
+    commands.entity(stop.entity).remove::<(
         ActiveMeleeAttack,
         Collider,
         CollisionLayers,

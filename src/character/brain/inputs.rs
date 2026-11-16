@@ -114,7 +114,7 @@ impl DecisionInputs<'_, '_, '_> {
         let entity = self.components.entity;
         match action {
             Action::Idle => true,
-            Action::Use(_) | Action::Ability(_) => {
+            Action::Use(_) => {
                 let mut other_action_in_progress = false;
                 for in_progress in actions.actions_in_progress(entity) {
                     if in_progress == action {

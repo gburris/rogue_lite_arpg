@@ -108,16 +108,19 @@ pub(crate) struct UseMainhand;
 #[action_output(bool)]
 pub(crate) struct UseOffhand;
 
-fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut equipment: EquipmentUsage) {
-    // Discarded: failures are already queued as `EquipmentUseFailed` for the HUD.
-    let _ = equipment.try_use(use_mainhand.context, EquipmentSlot::Mainhand);
+const MAINHAND: UseSlot = UseSlot::Equipment(EquipmentSlot::Mainhand);
+const OFFHAND: UseSlot = UseSlot::Equipment(EquipmentSlot::Offhand);
+
+fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut uses: UseCommands) {
+    // Discarded: failures are already queued as `UseFailed` for the HUD.
+    let _ = uses.try_use(use_mainhand.context, MAINHAND);
 }
 
-fn on_use_offhand_input(use_offhand: On<Start<UseOffhand>>, mut equipment: EquipmentUsage) {
-    // Discarded: failures are already queued as `EquipmentUseFailed` for the HUD.
-    let _ = equipment.try_use(use_offhand.context, EquipmentSlot::Offhand);
+fn on_use_offhand_input(use_offhand: On<Start<UseOffhand>>, mut uses: UseCommands) {
+    // Discarded: failures are already queued as `UseFailed` for the HUD.
+    let _ = uses.try_use(use_offhand.context, OFFHAND);
 }
 
-fn on_use_offhand_complete(use_offhand: On<Complete<UseOffhand>>, mut equipment: EquipmentUsage) {
-    equipment.stop_using(use_offhand.context, EquipmentSlot::Offhand);
+fn on_use_offhand_complete(use_offhand: On<Complete<UseOffhand>>, mut uses: UseCommands) {
+    uses.stop_sustained_use(use_offhand.context, OFFHAND);
 }

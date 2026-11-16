@@ -19,6 +19,7 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::Character;
+    pub use super::ability::{Abilities, Ability};
     #[cfg(feature = "dev")]
     pub(crate) use super::brain::TargetInfo;
     #[cfg(feature = "dev_native")]

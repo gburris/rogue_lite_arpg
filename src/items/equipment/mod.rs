@@ -4,7 +4,6 @@ mod equip;
 mod equipment_transform;
 mod equippable;
 mod slot;
-mod use_equipped;
 
 use crate::prelude::*;
 
@@ -13,12 +12,8 @@ pub mod prelude {
     pub use super::equipment_transform::{
         DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
     };
-    pub use super::equippable::{EquipmentUseStyle, Equippable, Equipped};
+    pub use super::equippable::{Equippable, Equipped};
     pub use super::slot::{EquipmentSlot, Mainhand, Offhand};
-    pub use super::use_equipped::{
-        EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
-        EquipmentUseFinished, EquipmentUseSucceeded, StartUsingEquipment, StopUsingEquipment,
-    };
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -26,15 +21,8 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            // Always run this system InGame and InMenu so weapon transforms update as inventory is
-            // interacted with
-            equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-            (
-                use_equipped::tick_equippable_cooldown,
-                use_equipped::interrupt_equipment_uses,
-            )
-                .in_set(SimulationSystems::Upkeep),
-        ),
+        // Always run this system InGame and InMenu so weapon transforms update as inventory is
+        // interacted with
+        equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
     );
 }

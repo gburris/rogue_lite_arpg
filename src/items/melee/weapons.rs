@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use super::attack::{on_start_melee, on_stop_melee};
+use super::attack::{on_melee_took_effect, on_stop_melee};
 use super::swing::MeleeSwingKind;
 use super::{MELEE_WEAPON_REACH, MeleeWeapon};
 use crate::items::equipment::prelude::{DirectionalPoses, EquipmentPose};
@@ -65,12 +65,14 @@ fn axe_swing() -> MeleeWeapon {
 /// swings when used.
 fn melee_weapon(image: Handle<Image>, value: u32) -> impl Scene {
     bsn! {
-        ~Equippable::new(EquipmentSlot::Mainhand, 0.4, &MELEE_EQUIPMENT_POSES)
-            .with_reach(MELEE_WEAPON_REACH)
+        ~Equippable::new(EquipmentSlot::Mainhand, &MELEE_EQUIPMENT_POSES)
+        ~UseCooldown::new(0.4)
+        ~{UseReach(MELEE_WEAPON_REACH)}
+        ~{UseStyle::Timed}
         ~Item::new(value, ItemKind::Melee)
         Sprite { image }
         on(on_stop_melee)
-        on(on_start_melee)
+        on(on_melee_took_effect)
     }
 }
 

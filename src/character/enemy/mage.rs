@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
-use crate::character::ability::{
-    Abilities, Ability, AbilityCooldown, AbilityWindup, UseGlow, speed_and_damage_rally,
-};
+use crate::character::ability::speed_and_damage_rally;
 use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
     CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
@@ -58,7 +56,7 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
-const RALLY: Action = Action::Ability(Ability::Rally);
+const RALLY: Action = Action::Use(UseSlot::Ability(Ability::Rally));
 /// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
@@ -334,8 +332,8 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Orbit::new()
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
-            ~AbilityCooldown::new(RALLY_COOLDOWN)
-            AbilityWindup { seconds: RALLY_WINDUP_SECONDS }
+            ~UseCooldown::new(RALLY_COOLDOWN)
+            UseWindup { seconds: RALLY_WINDUP_SECONDS }
             UseGlow(RALLY_GLOW_COLOR)
         ]
     }

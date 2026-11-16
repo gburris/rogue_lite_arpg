@@ -62,17 +62,16 @@ pub struct Unequip {
 fn on_unequip(
     unequip: On<Unequip>,
     mut commands: Commands,
-    mut items: Query<(&ItemOf, &mut Visibility, Has<EquipmentInUse>), With<Equipped>>,
+    mut items: Query<(&mut Visibility, Has<InUse>), With<Equipped>>,
 ) {
-    let Ok((item_of, mut visibility, in_use)) = items.get_mut(unequip.item) else {
+    let Ok((mut visibility, in_use)) = items.get_mut(unequip.item) else {
         // Expected race: equipment was despawned prior to unequip.
         info!("Equipment was despawned prior to unequip");
         return;
     };
     if in_use {
-        commands.trigger(StopUsingEquipment {
-            item: unequip.item,
-            holder: item_of.holder,
+        commands.trigger(StopUse {
+            entity: unequip.item,
         });
     }
     *visibility = Visibility::Hidden;

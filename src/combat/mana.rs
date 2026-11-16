@@ -58,26 +58,23 @@ pub(super) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
     }
 }
 
-/// Drains each in-use item's [`ManaDrainRate`] from its holder, and stops the use once the holder
+/// Drains each in-use usable's [`ManaDrainRate`] from its holder, and stops the use once the holder
 /// can't pay.
 pub(super) fn drain_mana_for_items_in_use(
     mut commands: Commands,
     time: Res<Time>,
-    draining_items: Query<(Entity, &ManaDrainRate, &ItemOf), With<EquipmentInUse>>,
+    draining_uses: Query<(Entity, &ManaDrainRate, &InUse)>,
     mut holder_query: Query<&mut Mana>,
 ) {
-    for (item, drain_rate, item_of) in &draining_items {
-        let Ok(mut mana) = holder_query.get_mut(item_of.holder) else {
+    for (entity, drain_rate, in_use) in &draining_uses {
+        let Ok(mut mana) = holder_query.get_mut(in_use.holder()) else {
             continue;
         };
         let drain_amount = ManaCost(drain_rate.0 * time.delta_secs());
         if mana.can_afford(drain_amount) {
             mana.spend(drain_amount);
         } else {
-            commands.trigger(StopUsingEquipment {
-                item,
-                holder: item_of.holder,
-            });
+            commands.trigger(StopUse { entity });
         }
     }
 }

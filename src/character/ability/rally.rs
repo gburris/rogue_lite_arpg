@@ -1,35 +1,24 @@
 use bevy::prelude::*;
 
-use super::{Ability, AbilityCooldown, AbilityOf, AbilityTookEffect};
+use super::Ability;
 use crate::character::Allies;
 use crate::prelude::*;
 
 /// Radius of the shockwave sheet's ring at its widest, in sheet pixels.
 const RALLY_SHOUT_RING_RADIUS: f32 = 87.0;
 
-/// A war cry that gives every other ally within `reach` its ability entity's [`Effects`].
-#[derive(Component, Clone, Copy, Debug)]
-#[require(Ability::Rally, AbilityCooldown)]
-pub struct Rally {
-    reach: f32,
-}
-
-impl Rally {
-    /// Rallies allies within `reach`.
-    pub fn new(reach: f32) -> Self {
-        Self { reach }
-    }
-
-    pub(super) fn reach(self) -> f32 {
-        self.reach
-    }
-}
+/// A war cry that gives every other ally within the ability's [`UseReach`] its ability entity's
+/// [`Effects`].
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[require(Ability::Rally)]
+pub struct Rally;
 
 /// A [`Rally`] ability whose war cry raises the speed and damage of allies within `reach` by
 /// `raise` for `seconds`.
 pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
-        ~Rally::new(reach)
+        Rally
+        ~{UseReach(reach)}
         on(on_rally_took_effect)
         Effects [
             Rallied
@@ -47,22 +36,22 @@ pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scen
 /// Gives every other ally in reach the rally's [`Effects`] and sends a shockwave out from the
 /// holder's feet.
 fn on_rally_took_effect(
-    took_effect: On<AbilityTookEffect>,
+    took_effect: On<UseTookEffect>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-    rallies: Query<(&Rally, &Effects, &AbilityOf)>,
+    rallies: Query<(&Effects, &UseReach), With<Rally>>,
     allies: Allies,
 ) {
-    let Ok((rally, effects, ability_of)) = rallies.get(took_effect.entity) else {
+    let Ok((effects, &UseReach(reach))) = rallies.get(took_effect.entity) else {
         return;
     };
-    let holder = ability_of.holder;
-    for ally in allies.within(holder, rally.reach) {
+    let holder = took_effect.holder;
+    for ally in allies.within(holder, reach) {
         commands.trigger(ApplyEffects::new(effects, ally.entity));
     }
     commands.spawn_scene(bsn! {
-        @rally_shout_vfx(&sprites, &sprite_layouts, rally.reach)
+        @rally_shout_vfx(&sprites, &sprite_layouts, reach)
         ChildOf(holder)
     });
 }

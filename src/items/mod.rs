@@ -15,9 +15,7 @@ mod tome;
 pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
-        Equip, EquipmentInUse, EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed,
-        EquipmentUseFailure, EquipmentUseFinished, EquipmentUseStyle, EquipmentUseSucceeded,
-        Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment, StopUsingEquipment, Unequip,
+        Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;
@@ -70,7 +68,7 @@ impl Item {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ItemKind {
     Melee,
     Staff,

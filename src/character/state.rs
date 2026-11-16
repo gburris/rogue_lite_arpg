@@ -175,19 +175,19 @@ impl FacingDirection {
     }
 }
 
-/// Animation/physics flag mirroring whether an instant-use item is active.
+/// Animation/physics flag mirroring whether a timed item use, such as a swing, is in progress.
 /// Written only by `sync_attacking_from_equipment`.
 #[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
 pub struct Attacking(pub bool);
 
-/// Syncs whether a holder is attacking; see [`EquipmentSlot::is_instant_item_in_use`].
+/// Syncs whether a holder is attacking; see [`EquipmentSlot::is_timed_item_in_use`].
 pub(super) fn sync_attacking_from_equipment(
     mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
-    in_use: Query<&Equippable, With<EquipmentInUse>>,
+    in_use: Query<&UseStyle, With<InUse>>,
 ) {
     for (mut attacking, mainhand, offhand) in &mut holders {
-        let using_instant_item = EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use);
-        attacking.set_if_neq(Attacking(using_instant_item));
+        let using_timed_item = EquipmentSlot::is_timed_item_in_use(mainhand, offhand, &in_use);
+        attacking.set_if_neq(Attacking(using_timed_item));
     }
 }
 

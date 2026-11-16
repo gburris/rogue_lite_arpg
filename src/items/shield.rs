@@ -40,13 +40,14 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
     );
     bsn! {
         ~Item::new(355, ItemKind::Shield)
-        ~Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES)
-            .with_use_style(EquipmentUseStyle::Sustained)
+        ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
+        ~UseCooldown::new(0.5)
+        ~{UseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
         template(move |_| Ok(sprite.clone()))
-        on(on_start_shield)
+        on(on_shield_took_effect)
         on(on_stop_shield)
     }
 }
@@ -115,28 +116,27 @@ fn orient_active_shields(
     Ok(())
 }
 
-/// Start observer: raises the shield and begins blocking.
-fn on_start_shield(
-    used_shield: On<StartUsingEquipment>,
+/// Raises the shield and begins blocking.
+fn on_shield_took_effect(
+    used_shield: On<UseTookEffect>,
     mut commands: Commands,
     mut shield_query: Query<&Shield>,
 ) {
-    let Ok(shield) = shield_query.get_mut(used_shield.item) else {
+    let Ok(shield) = shield_query.get_mut(used_shield.entity) else {
         warn!("Tried to block with invalid shield");
         return;
     };
 
-    commands.entity(used_shield.item).insert((
-        EquipmentInUse,
+    commands.entity(used_shield.entity).insert((
         ActiveShield,
         shield.hitbox.clone(),
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
     ));
 }
 
-/// Stop observer: lowers the shield and restores its resting transform.
+/// Lowers the shield and restores its resting transform.
 fn on_stop_shield(
-    shield: On<StopUsingEquipment>,
+    shield: On<StopUse>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
     mut shield_query: Query<
@@ -146,18 +146,18 @@ fn on_stop_shield(
 ) {
     // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
     // has nothing left to stop.
-    let Ok((mut shield_sprite, _, equippable)) = shield_query.get_mut(shield.item) else {
+    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(shield.entity) else {
         return;
     };
 
-    let Ok(facing_direction) = holder_query.get(shield.holder) else {
+    let Ok(facing_direction) = holder_query.get(item_of.holder) else {
         warn!("Tried to stop blocking but entity no facing direction");
         return;
     };
 
     commands
-        .entity(shield.item)
-        .remove::<(EquipmentInUse, ActiveShield, Collider, CollisionLayers)>()
+        .entity(shield.entity)
+        .remove::<(ActiveShield, Collider, CollisionLayers)>()
         .insert(equippable.poses.transform(*facing_direction));
 
     if let Some(atlas) = &mut shield_sprite.texture_atlas {

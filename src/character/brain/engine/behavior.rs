@@ -47,10 +47,9 @@ impl Behavior {
 pub enum CommitPolicy {
     /// Re-scored every tick with momentum and exit-side thresholds. Tier 0.
     ContinuouslyScored,
-    /// Not re-scored until its finite part finishes or the brain drops it
-    /// (target lost, stunned, or timed out), so its start conditions are read
-    /// once. Only a committed behavior with a higher `interrupt_tier` may take
-    /// one of its slots, which ends the whole behavior.
+    /// Not re-scored until its finite part finishes or the brain drops it as stale, so its start
+    /// conditions are read once. Only a committed behavior with a higher `interrupt_tier` may
+    /// take one of its slots, which ends the whole behavior.
     UntilFinished { interrupt_tier: u8 },
 }
 
@@ -94,13 +93,9 @@ pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Re
             ));
         }
         let committed = behavior.commit.is_committed();
-        if committed
-            && behavior
-                .action
-                .is_some_and(|action| !action.reports_finish())
-        {
+        if committed && behavior.action == Some(Action::Idle) {
             return Err(format!(
-                "behavior {index} commits to an action that never reports a finish"
+                "behavior {index} commits to idling, which never reports a finish"
             ));
         }
         if committed && behavior.commit.interrupt_tier() == 0 {

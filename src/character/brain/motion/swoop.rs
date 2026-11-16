@@ -40,7 +40,6 @@ impl Swoop {
                 reach: Some(reach),
                 chance,
                 cooldown,
-                ..CapabilityProfile::default()
             },
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,

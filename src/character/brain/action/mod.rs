@@ -1,16 +1,10 @@
-//! What a character does besides moving: the [`Action`] a brain chooses, the
-//! equipment applier, and the innate abilities.
-
-mod ability;
-mod bite_hitbox;
-mod equipment_use;
+mod usage;
 
 use bevy::prelude::*;
 
-pub(super) use self::ability::find_carried_potion;
-pub use self::ability::{Abilities, Ability, Bite, Breath, Heal, Rally, speed_and_damage_rally};
-pub(super) use self::equipment_use::StartedEquipmentUses;
+pub(super) use self::usage::{ActionRead, ActionReadiness, StartedActions};
 use super::BrainSystems;
+use crate::character::ability::Ability;
 use crate::prelude::*;
 
 /// The one non-movement thing a character does at a time: use equipment, use an
@@ -19,53 +13,20 @@ use crate::prelude::*;
 pub enum Action {
     /// Use the item equipped in a slot.
     Use(EquipmentSlot),
+    /// Use one of the character's abilities.
     Ability(Ability),
     /// Chose to do nothing, unlike an empty action slot where nothing scored.
     /// Always available; no applier carries it out.
     Idle,
 }
 
-impl Action {
-    /// Number of distinct actions, for per-action arrays.
-    pub(super) const COUNT: usize = EquipmentSlot::ALL.len() + Ability::ALL.len() + 1;
-
-    /// Position of this action in per-action arrays.
-    pub(super) const fn index(self) -> usize {
-        match self {
-            Self::Use(slot) => slot as usize,
-            Self::Ability(ability) => EquipmentSlot::ALL.len() + ability as usize,
-            Self::Idle => EquipmentSlot::ALL.len() + Ability::ALL.len(),
-        }
-    }
-
-    /// Whether this action ends on its own and reports it, so a committed
-    /// behavior over it can finish. A held use ends only when released.
-    pub(super) fn reports_finish(self) -> bool {
-        match self {
-            Self::Use(slot) => slot.is_instant_use(),
-            Self::Ability(_) => true,
-            Self::Idle => false,
-        }
-    }
-}
-
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            equipment_use::apply_equipment_use_requests,
-            ability::apply_heal,
-            ability::apply_breath,
-            ability::apply_bite,
-            ability::apply_rally,
-        )
-            .in_set(BrainSystems::Execute),
+        usage::apply_action_requests.in_set(BrainSystems::Execute),
     )
-    .add_systems(
-        Update,
-        bite_hitbox::damage_bite_hits.in_set(InGameSystems::Collision),
-    )
-    .add_observer(equipment_use::on_report_equipment_use_finished);
+    .add_observer(usage::on_equipment_use_finished)
+    .add_observer(usage::on_ability_use_finished);
 }
 
 /// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`

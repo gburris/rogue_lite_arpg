@@ -16,8 +16,8 @@ pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
         Equip, EquipmentInUse, EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed,
-        EquipmentUseFailure, EquipmentUseFinished, EquipmentUseSucceeded, Equippable, Equipped,
-        Mainhand, Offhand, StartUsingEquipment, StopUsingEquipment, Unequip,
+        EquipmentUseFailure, EquipmentUseFinished, EquipmentUseStyle, EquipmentUseSucceeded,
+        Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment, StopUsingEquipment, Unequip,
     };
     pub use super::inventory::{ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;

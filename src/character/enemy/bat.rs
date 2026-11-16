@@ -2,6 +2,7 @@ use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::{Experience, enemy_wander, sight_ray};
+use crate::character::ability::{Abilities, Ability, AbilityCooldown, Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
@@ -9,8 +10,8 @@ use crate::character::brain::considerations::{
     distance_threshold, flag, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
-    Abilities, Ability, Action, Behavior, Bite, BrainDefinition, Breath, CommitPolicy,
-    Consideration, ConsiderationInput, Curve, Interval, Motion, Orbit, Swoop, TurnRate,
+    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    Interval, Motion, Orbit, Swoop, TurnRate,
 };
 use crate::prelude::*;
 
@@ -18,19 +19,24 @@ use crate::prelude::*;
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
-const NOT_SWOOPING: Consideration =
-    flag("swooping", ConsiderationInput::MotionRunning(Motion::Swoop)).inverted("not swooping");
+/// Zero while a swoop runs or could start this decision: its cooldown starts only once one ends
+/// or misses its start roll.
+const SWOOP_COOLING_DOWN: Consideration = flag(
+    "swoop ready",
+    ConsiderationInput::MotionReady(Motion::Swoop),
+)
+.inverted("swoop cooling down");
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
     ConsiderationInput::MotionReachFraction(Motion::Swoop),
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
-    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breathe)),
+    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breath)),
 );
-/// Distance out to which the decision arms a bite: 40 units past contact.
-/// Decisions sample at ~10 Hz, so a swoop crossing the reach could otherwise
-/// fall between two samples; the applier still checks the true reach.
+/// Distance out to which the decision arms a bite: 40 units past contact. Decisions are
+/// sampled, so a swoop crossing the reach could otherwise fall between two samples; the bite's
+/// jaws stay open long enough to close the gap.
 const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;
 const NEAR_BITE_REACH: Consideration = reach_fraction_threshold(
@@ -99,10 +105,10 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
     0.5,
     &[],
 );
-/// Fireball from range, never mid-swoop.
-const BAT_BREATHE: Behavior = Behavior::new(
+/// Fireball from range, only between swoops.
+const BAT_BREATH: Behavior = Behavior::new(
     None,
-    Some(Action::Ability(Ability::Breathe)),
+    Some(Action::Ability(Ability::Breath)),
     CommitPolicy::ContinuouslyScored,
     1.0,
     &[
@@ -110,7 +116,7 @@ const BAT_BREATHE: Behavior = Behavior::new(
         IN_BREATH_REACH,
         BREATH_DISTANCE,
         BREATH_WARMED_UP,
-        NOT_SWOOPING,
+        SWOOP_COOLING_DOWN,
     ],
 );
 /// Arms a bite near contact reach, whether swooping or circling.
@@ -119,7 +125,7 @@ const BAT_BITE: Behavior = Behavior::new(
     Some(Action::Ability(Ability::Bite)),
     CommitPolicy::ContinuouslyScored,
     1.5,
-    &[NEAR_BITE_REACH],
+    &[LINE_OF_SIGHT, NEAR_BITE_REACH],
 );
 
 // Motion priority: swoop (10), seek (7), return (6), orbit (5.5), keep (5), chase (4),
@@ -142,7 +148,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     BAT_ORBIT,
     BAT_KEEP,
     BAT_SWOOP,
-    BAT_BREATHE,
+    BAT_BREATH,
     BAT_BITE,
 ];
 
@@ -218,12 +224,15 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [
-            ~Bite::new(BITE_REACH, BITE_DAMAGE, BITE_COOLDOWN)
-                .with_life_steal(1.0)
-                .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
+            @bite(
+                Bite::new(BITE_REACH, BITE_DAMAGE)
+                    .with_life_steal(1.0)
+                    .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
+            )
+            ~AbilityCooldown::new(BITE_COOLDOWN)
             --
-            ~Breath::new(BAT_BREATH_PERIOD, CAST_MAX_RANGE)
-                .with_cooldown_jitter(BAT_BREATH_JITTER)
+            @breath(CAST_MAX_RANGE)
+            ~AbilityCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

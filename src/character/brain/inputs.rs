@@ -4,10 +4,11 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Abilities, Ability, Action, find_carried_potion};
-use super::capability::{AbilityCapabilities, CapabilityProfile, MotionCapabilities};
+use super::action::{Action, ActionRead, ActionReadiness};
+use super::capability::{CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
-use super::perception::{Allies, TargetInfo, Targeting};
+use super::perception::{TargetInfo, Targeting};
+use crate::character::Allies;
 use crate::prelude::*;
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
@@ -20,6 +21,9 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion's kind is the one running; its payload is ignored.
     MotionRunning(Motion),
+    /// Whether the character owns this motion and its cooldown has run out; the payload is
+    /// ignored.
+    MotionReady(Motion),
     /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
     /// the payload is ignored.
     SecondsInMotion(Motion),
@@ -33,7 +37,8 @@ pub enum ConsiderationInput {
     /// The closest ally's distance over this action's reach; absent with no ally alive.
     AllyReachFraction(Action),
     SecondsSinceTargeted,
-    /// Whether the character owns this action and the world lets it run, whatever its cooldown.
+    /// Whether the character owns this action and has what it needs, whatever only waiting would
+    /// fix.
     ActionUsable(Action),
     /// Whether the character is pressed against a wall or a crowd; see
     /// [`Kinematics::is_blocked_at`].
@@ -53,18 +58,13 @@ pub(super) struct DecisionInputComponents {
     stat_multipliers: &'static StatMultipliers,
     kinematics: &'static Kinematics,
     linear_velocity: Option<&'static LinearVelocity>,
-    items: Option<&'static Items>,
     motion_capabilities: MotionCapabilities,
-    abilities: Option<&'static Abilities>,
 }
 
-/// The queries behind ability and equipment profiles, allies and the world-allows-use checks.
+/// The queries behind action profiles, allies and the can-run checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
-    equipment: EquipmentRead<'w, 's>,
-    consumables: Query<'w, 's, (), With<Consumable>>,
-    items_in_use: Query<'w, 's, (), With<EquipmentInUse>>,
-    ability_capabilities: Query<'w, 's, AbilityCapabilities>,
+    actions: ActionRead<'w, 's>,
     allies: Allies<'w, 's>,
 }
 
@@ -95,48 +95,35 @@ impl DecisionInputs<'_, '_, '_> {
             .capability_profile(motion)
     }
 
-    /// The profile of the capability that carries out `action`: the equipped
-    /// item's reach, or the component of the ability entity carrying it. `Idle` needs none.
+    /// See [`ActionRead::profile`].
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
-        match action {
-            Action::Use(slot) => self
-                .queries
-                .equipment
-                .equippable_in_slot(self.components.entity, slot)
-                .map(|equippable| CapabilityProfile {
-                    reach: equippable.reach,
-                    ..CapabilityProfile::default()
-                }),
-            Action::Ability(ability) => self
-                .components
-                .abilities
-                .into_iter()
-                .flat_map(Abilities::iter)
-                .filter_map(|entity| self.queries.ability_capabilities.get(entity).ok())
-                .find_map(|capabilities| capabilities.capability_profile(ability)),
-            Action::Idle => Some(CapabilityProfile::default()),
-        }
+        self.queries.actions.profile(self.components.entity, action)
     }
 
-    /// Whether the world lets `action` run now: usable equipment (or a held use
-    /// already running), and a carried potion for `Heal`.
-    pub fn world_allows_use(&self, action: Action) -> bool {
+    /// See [`ActionRead::ends_on_its_own`].
+    pub fn action_ends_on_its_own(&self, action: Action) -> bool {
+        self.queries
+            .actions
+            .ends_on_its_own(self.components.entity, action)
+    }
+
+    /// Whether `action` can run now: it is already in progress, or it is ready and no other action
+    /// is in progress, so a drink the brain dropped still blocks a swing. `Idle` always can.
+    pub fn can_run(&self, action: Action) -> bool {
+        let actions = &self.queries.actions;
         let entity = self.components.entity;
-        let queries = self.queries;
         match action {
-            Action::Use(slot) => {
-                let held_item_in_use = !slot.is_instant_use()
-                    && queries
-                        .equipment
-                        .item_in_slot(entity, slot)
-                        .is_some_and(|item| queries.items_in_use.contains(item));
-                held_item_in_use || queries.equipment.can_use(entity, slot).is_ok()
-            }
-            Action::Ability(Ability::Heal) => {
-                find_carried_potion(self.components.items, &queries.consumables).is_some()
-            }
-            Action::Ability(Ability::Breathe | Ability::Bite | Ability::Rally) | Action::Idle => {
-                true
+            Action::Idle => true,
+            Action::Use(_) | Action::Ability(_) => {
+                let mut other_action_in_progress = false;
+                for in_progress in actions.actions_in_progress(entity) {
+                    if in_progress == action {
+                        return true;
+                    }
+                    other_action_in_progress = true;
+                }
+                !other_action_in_progress
+                    && actions.readiness(entity, action) == ActionReadiness::Ready
             }
         }
     }
@@ -168,6 +155,9 @@ impl DecisionInputs<'_, '_, '_> {
                     .motion()
                     .is_some_and(|running| running.is_same_kind(motion)),
             )),
+            ConsiderationInput::MotionReady(motion) => Some(f32::from(
+                self.motion_profile(motion).is_some() && brain.is_cooldown_ready(motion, self.now),
+            )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
                     .current_motion_behavior()
@@ -193,7 +183,12 @@ impl DecisionInputs<'_, '_, '_> {
                 self.target().map(|target| self.now - target.targeted_at)
             }
             ConsiderationInput::ActionUsable(action) => Some(f32::from(
-                self.action_profile(action).is_some() && self.world_allows_use(action),
+                self.action_profile(action).is_some()
+                    && self
+                        .queries
+                        .actions
+                        .readiness(self.components.entity, action)
+                        != ActionReadiness::Missing,
             )),
             ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
         }

@@ -34,7 +34,7 @@ pub const fn consideration(
 
 /// Whether a motion of `motion`'s kind has been running for more than `seconds`; see
 /// [`ConsiderationInput::SecondsInMotion`].
-pub const fn motion_held_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
+pub const fn motion_running_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
     Consideration {
         name,
         input: ConsiderationInput::SecondsInMotion(motion),

@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use avian2d::prelude::LinearVelocity;
+use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -35,6 +36,22 @@ impl KnockedBack {
             return None;
         }
         Some(self.initial_velocity * self.timer.fraction_remaining())
+    }
+}
+
+/// Whether a character is interrupted: knocked back, stunned or defeated. An interrupted character
+/// can't start using an item or ability and loses any use in progress.
+#[derive(QueryData)]
+pub struct InterruptionState {
+    health: &'static Health,
+    stat_multipliers: &'static StatMultipliers,
+    knocked_back: Has<KnockedBack>,
+}
+
+impl InterruptionStateItem<'_, '_> {
+    /// See [`InterruptionState`].
+    pub fn is_interrupted(&self) -> bool {
+        self.knocked_back || self.health.is_dead() || self.stat_multipliers.is_stunned()
     }
 }
 
@@ -166,7 +183,7 @@ pub struct Attacking(pub bool);
 /// Syncs whether a holder is attacking; see [`EquipmentSlot::is_instant_item_in_use`].
 pub(super) fn sync_attacking_from_equipment(
     mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
-    in_use: Query<(), With<EquipmentInUse>>,
+    in_use: Query<&Equippable, With<EquipmentInUse>>,
 ) {
     for (mut attacking, mainhand, offhand) in &mut holders {
         let using_instant_item = EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use);

@@ -41,6 +41,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
     bsn! {
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES)
+            .with_use_style(EquipmentUseStyle::Sustained)
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
@@ -143,8 +144,9 @@ fn on_stop_shield(
         (With<Shield>, With<ActiveShield>),
     >,
 ) {
+    // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
+    // has nothing left to stop.
     let Ok((mut shield_sprite, _, equippable)) = shield_query.get_mut(shield.item) else {
-        warn!("Offhand missing Shield or ActiveShield");
         return;
     };
 

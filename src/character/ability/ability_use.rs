@@ -1,0 +1,368 @@
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::query::QueryData;
+use bevy::ecs::system::SystemParam;
+use bevy::ecs::world::DeferredWorld;
+use bevy::prelude::*;
+use rand::RngExt;
+
+use super::Ability;
+use super::bite::Bite;
+use super::breath::Breath;
+use super::heal::find_carried_potion;
+use super::rally::Rally;
+use crate::prelude::*;
+
+/// Seconds an ability waits after an interrupted use before it can be used again.
+const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
+
+/// Links an ability entity to the character that uses it.
+#[derive(Component, Clone)]
+#[relationship(relationship_target = Abilities)]
+pub struct AbilityOf {
+    pub holder: Entity,
+}
+
+/// A character's ability entities, each carrying one capability component and whatever it
+/// applies or fires.
+#[derive(Component, Clone)]
+#[relationship_target(relationship = AbilityOf, linked_spawn)]
+pub struct Abilities(Vec<Entity>);
+
+/// How long an ability waits after it takes effect before it can be used again.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct AbilityCooldown {
+    seconds: f32,
+    jitter: f32,
+    ready_at: f32,
+}
+
+impl AbilityCooldown {
+    /// Waits `seconds` after each use takes effect.
+    pub fn new(seconds: f32) -> Self {
+        Self {
+            seconds,
+            ..default()
+        }
+    }
+
+    /// Varies each wait by up to `jitter` seconds either way, so characters that start using the
+    /// ability together drift out of step.
+    pub fn with_jitter(self, jitter: f32) -> Self {
+        Self { jitter, ..self }
+    }
+
+    fn is_ready(&self, now: f32) -> bool {
+        now >= self.ready_at
+    }
+
+    fn start(&mut self, now: f32) {
+        let offset = if self.jitter > 0.0 {
+            rand::rng().random_range(-self.jitter..=self.jitter)
+        } else {
+            0.0
+        };
+        self.ready_at = now + (self.seconds + offset).max(0.0);
+    }
+
+    fn start_interrupted_lockout(&mut self, now: f32) {
+        self.ready_at = self.ready_at.max(now + INTERRUPTED_LOCKOUT_SECONDS);
+    }
+}
+
+/// How long each use of the ability winds up before it takes effect, a window for a hit to
+/// interrupt it. Without it, the ability takes effect on the frame it is used.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct AbilityWindup {
+    pub seconds: f32,
+}
+
+/// Counts down a use's [`AbilityWindup`].
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub(super) struct AbilityWindupProgress(Timer);
+
+/// Lights the holder in this color while a use of the ability winds up, a stand-in until abilities
+/// have animations.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct UseGlow(pub Color);
+
+/// The light a winding-up use of a [`UseGlow`] ability shines on its holder.
+#[derive(Component, Clone, Copy, Debug)]
+#[component(on_remove = despawn_use_glow_light)]
+pub(super) struct UseGlowLight(Entity);
+
+/// Present on an ability entity while a use is under way, until it takes effect. An interrupted
+/// holder's use ends and the ability waits [`INTERRUPTED_LOCKOUT_SECONDS`]; see
+/// [`InterruptionState`]. Its removal, however the use ended, fires [`AbilityUseFinished`].
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[component(on_remove = report_ability_use_finished)]
+pub(super) struct AbilityInUse;
+
+/// A use of the ability entity `entity` took effect. The observer of its capability component
+/// applies the effect.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub(super) struct AbilityTookEffect {
+    pub entity: Entity,
+}
+
+/// Fired at the holder when one of its abilities stops being in use, however the use ended.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct AbilityUseFinished {
+    #[event_target]
+    pub holder: Entity,
+    pub ability: Ability,
+}
+
+/// Why a character can't use an ability now.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AbilityUseFailure {
+    /// The character has no ability entity for it.
+    NotOwned,
+    /// The ability uses up an item the character doesn't carry, such as a heal's potion.
+    MissingRequiredItem,
+    /// The character is interrupted; see [`InterruptionState`].
+    HolderInterrupted,
+    InUse,
+    OnCooldown,
+}
+
+impl AbilityUseFailure {
+    /// Whether the ability becomes usable again by waiting, rather than needing something the
+    /// character lacks.
+    pub fn is_temporary(self) -> bool {
+        match self {
+            Self::HolderInterrupted | Self::InUse | Self::OnCooldown => true,
+            Self::NotOwned | Self::MissingRequiredItem => false,
+        }
+    }
+}
+
+/// What [`AbilityRead`] reads of one ability entity.
+#[derive(QueryData)]
+struct AbilityState {
+    entity: Entity,
+    ability: &'static Ability,
+    cooldown: &'static AbilityCooldown,
+    in_use: Has<AbilityInUse>,
+    bite: Option<&'static Bite>,
+    breath: Option<&'static Breath>,
+    rally: Option<&'static Rally>,
+}
+
+impl AbilityStateItem<'_, '_> {
+    fn reach(&self) -> Option<f32> {
+        match self.ability {
+            Ability::Heal => None,
+            Ability::Breath => self.breath.copied().map(Breath::reach),
+            Ability::Bite => self.bite.map(Bite::reach),
+            Ability::Rally => self.rally.copied().map(Rally::reach),
+        }
+    }
+}
+
+/// Reads which abilities a character has and whether it can use each now.
+#[derive(SystemParam)]
+pub struct AbilityRead<'w, 's> {
+    time: Res<'w, Time<Virtual>>,
+    holders: Query<
+        'w,
+        's,
+        (
+            &'static Abilities,
+            Option<&'static Items>,
+            InterruptionState,
+        ),
+    >,
+    abilities: Query<'w, 's, AbilityState>,
+    consumables: Query<'w, 's, (), With<Consumable>>,
+}
+
+impl AbilityRead<'_, '_> {
+    /// Whether `holder` has `ability`.
+    pub fn has(&self, holder: Entity, ability: Ability) -> bool {
+        self.find(holder, ability).is_some()
+    }
+
+    /// How far `holder`'s `ability` reaches; `None` for an ability without a reach or one it
+    /// doesn't have.
+    pub fn reach(&self, holder: Entity, ability: Ability) -> Option<f32> {
+        self.find(holder, ability)?.reach()
+    }
+
+    /// The ability entity `holder` would use for `ability` now, or why it can't.
+    pub fn can_use(&self, holder: Entity, ability: Ability) -> Result<Entity, AbilityUseFailure> {
+        let state = self
+            .find(holder, ability)
+            .ok_or(AbilityUseFailure::NotOwned)?;
+        let (_, items, interruption) = self
+            .holders
+            .get(holder)
+            .map_err(|_| AbilityUseFailure::NotOwned)?;
+        if ability == Ability::Heal && find_carried_potion(items, &self.consumables).is_none() {
+            return Err(AbilityUseFailure::MissingRequiredItem);
+        }
+        if interruption.is_interrupted() {
+            return Err(AbilityUseFailure::HolderInterrupted);
+        }
+        if state.in_use {
+            return Err(AbilityUseFailure::InUse);
+        }
+        if !state.cooldown.is_ready(self.time.elapsed_secs()) {
+            return Err(AbilityUseFailure::OnCooldown);
+        }
+        Ok(state.entity)
+    }
+
+    /// Whether `holder` is using `ability` now.
+    pub fn is_using(&self, holder: Entity, ability: Ability) -> bool {
+        self.find(holder, ability).is_some_and(|state| state.in_use)
+    }
+
+    /// The abilities `holder` is using now.
+    pub fn abilities_in_use(&self, holder: Entity) -> impl Iterator<Item = Ability> + '_ {
+        self.holders
+            .get(holder)
+            .into_iter()
+            .flat_map(|(abilities, ..)| abilities.iter())
+            .filter_map(|entity| self.abilities.get(entity).ok())
+            .filter(|state| state.in_use)
+            .map(|state| *state.ability)
+    }
+
+    fn find(&self, holder: Entity, ability: Ability) -> Option<AbilityStateItem<'_, '_>> {
+        let (abilities, ..) = self.holders.get(holder).ok()?;
+        abilities
+            .iter()
+            .filter_map(|entity| self.abilities.get(entity).ok())
+            .find(|state| *state.ability == ability)
+    }
+}
+
+/// Starts ability uses.
+#[derive(SystemParam)]
+pub struct AbilityUsage<'w, 's> {
+    commands: Commands<'w, 's>,
+    read: AbilityRead<'w, 's>,
+}
+
+impl AbilityUsage<'_, '_> {
+    /// See [`AbilityRead::is_using`].
+    pub fn is_using(&self, holder: Entity, ability: Ability) -> bool {
+        self.read.is_using(holder, ability)
+    }
+
+    /// Starts a use of `holder`'s `ability` if [`AbilityRead::can_use`] allows it.
+    pub fn try_use(&mut self, holder: Entity, ability: Ability) -> Result<(), AbilityUseFailure> {
+        let entity = self.read.can_use(holder, ability)?;
+        self.commands.entity(entity).insert_if_new(AbilityInUse);
+        Ok(())
+    }
+}
+
+/// Starts a new use's [`AbilityWindup`], or has the ability take effect at once if it has none.
+pub(super) fn on_ability_use_started(
+    added: On<Add<AbilityInUse>>,
+    mut commands: Commands,
+    time: Res<Time<Virtual>>,
+    mut uses: Query<(Option<&AbilityWindup>, &mut AbilityCooldown)>,
+) {
+    let Ok((windup, mut cooldown)) = uses.get_mut(added.entity) else {
+        return;
+    };
+    match windup {
+        Some(windup) => {
+            let timer = Timer::from_seconds(windup.seconds, TimerMode::Once);
+            commands
+                .entity(added.entity)
+                .insert(AbilityWindupProgress(timer));
+        }
+        None => apply_ability_effect(
+            &mut commands,
+            added.entity,
+            &mut cooldown,
+            time.elapsed_secs(),
+        ),
+    }
+}
+
+/// Lights the holder of a [`UseGlow`] ability while its use winds up.
+pub(super) fn on_ability_windup_started(
+    added: On<Add<AbilityWindupProgress>>,
+    mut commands: Commands,
+    glows: Query<(&UseGlow, &AbilityOf)>,
+) {
+    let Ok((&UseGlow(color), ability_of)) = glows.get(added.entity) else {
+        return;
+    };
+    let holder = ability_of.holder;
+    let light = commands
+        .spawn_scene(bsn! {
+            @point_light(color, 3.0, 40.0, 3.0)
+            ChildOf(holder)
+        })
+        .id();
+    commands.entity(added.entity).insert(UseGlowLight(light));
+}
+
+/// Has each use winding up take effect once its [`AbilityWindup`] is up, and ends the use of an
+/// interrupted holder; see [`InterruptionState`].
+pub(super) fn advance_ability_windups(
+    mut commands: Commands,
+    time: Res<Time<Virtual>>,
+    mut windups: Query<(
+        Entity,
+        &mut AbilityWindupProgress,
+        &mut AbilityCooldown,
+        &AbilityOf,
+    )>,
+    holders: Query<InterruptionState>,
+) {
+    let now = time.elapsed_secs();
+    for (entity, mut progress, mut cooldown, ability_of) in &mut windups {
+        let holder_interrupted = holders
+            .get(ability_of.holder)
+            .ok()
+            .is_none_or(|interruption| interruption.is_interrupted());
+        if holder_interrupted {
+            cooldown.start_interrupted_lockout(now);
+            end_ability_use(&mut commands, entity);
+        } else if progress.tick(time.delta()).is_finished() {
+            apply_ability_effect(&mut commands, entity, &mut cooldown, now);
+        }
+    }
+}
+
+fn report_ability_use_finished(mut world: DeferredWorld, context: HookContext) {
+    let entity = world.entity(context.entity);
+    let (Some(&ability), Some(ability_of)) = (entity.get::<Ability>(), entity.get::<AbilityOf>())
+    else {
+        return;
+    };
+    let holder = ability_of.holder;
+    world
+        .commands()
+        .trigger(AbilityUseFinished { holder, ability });
+}
+
+fn despawn_use_glow_light(mut world: DeferredWorld, context: HookContext) {
+    let Some(&UseGlowLight(light)) = world.entity(context.entity).get::<UseGlowLight>() else {
+        return;
+    };
+    world.commands().entity(light).try_despawn();
+}
+
+fn apply_ability_effect(
+    commands: &mut Commands,
+    entity: Entity,
+    cooldown: &mut AbilityCooldown,
+    now: f32,
+) {
+    cooldown.start(now);
+    commands.trigger(AbilityTookEffect { entity });
+    end_ability_use(commands, entity);
+}
+
+fn end_ability_use(commands: &mut Commands, entity: Entity) {
+    commands
+        .entity(entity)
+        .remove::<(AbilityInUse, AbilityWindupProgress, UseGlowLight)>();
+}

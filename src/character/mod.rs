@@ -1,3 +1,5 @@
+mod ability;
+mod allies;
 mod animation;
 mod brain;
 mod collider;
@@ -10,6 +12,7 @@ mod state;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+pub(in crate::character) use self::allies::Allies;
 use self::animation::{AnimationSheet, CharacterAnimationState};
 pub(in crate::character) use self::collider::physical_collider;
 use crate::prelude::*;
@@ -34,13 +37,15 @@ pub mod prelude {
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
     pub use super::purse::Purse;
-    pub use super::state::{Attacking, FacingDirection, Kinematics, KnockedBack, Vision};
+    pub use super::state::{
+        Attacking, FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
+    };
 }
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-    app.add_plugins((animation::plugin, brain::plugin));
+    app.add_plugins((ability::plugin, animation::plugin, brain::plugin));
 
     app.add_systems(
         FixedUpdate,

@@ -3,6 +3,9 @@ use bevy::prelude::*;
 use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
+use crate::character::ability::{
+    Abilities, Ability, AbilityCooldown, AbilityWindup, UseGlow, speed_and_damage_rally,
+};
 use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
     CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
@@ -10,8 +13,8 @@ use crate::character::brain::considerations::{
     within_reach,
 };
 use crate::character::brain::{
-    Abilities, Ability, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
-    ConsiderationInput, Curve, Dash, Interval, Motion, Orbit, speed_and_damage_rally,
+    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    Dash, Interval, Motion, Orbit,
 };
 use crate::prelude::*;
 
@@ -56,9 +59,12 @@ const ICE_CAST_QUALITY: Consideration = consideration(
 );
 
 const RALLY: Action = Action::Ability(Ability::Rally);
-/// Matches the shockwave's drawn radius, so every ally it washes over is rallied.
+/// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
+/// Seconds a war cry winds up before it rallies.
+const RALLY_WINDUP_SECONDS: f32 = 0.8;
+const RALLY_GLOW_COLOR: Color = Color::srgb(1.0, 0.9, 0.5);
 const RALLY_RAISE: f32 = 0.3;
 const RALLY_SECONDS: f32 = 6.0;
 
@@ -87,7 +93,7 @@ const FIRE_ORBIT: Behavior = Behavior::new(
 const FIRE_RALLY: Behavior = Behavior::new(
     None,
     Some(RALLY),
-    CommitPolicy::ContinuouslyScored,
+    CommitPolicy::UntilFinished { interrupt_tier: 1 },
     3.0,
     &[HAS_TARGET, ALLY_CLOSE],
 );
@@ -165,7 +171,8 @@ const ICE_CAST: Behavior = Behavior::new(
 // - The cast beats rally unless the cast's quality is nearly zero, so a mage with a ready, sighted
 //   staff keeps attacking.
 // - Rally beats idle for any ally in reach, so it shouts while the staff cools down or is out of
-//   mana after a volley, or when line of sight vetoes the cast, at most once per RALLY_COOLDOWN.
+//   mana after a volley, or when line of sight vetoes the cast, at most once per RALLY_COOLDOWN. A
+//   started rally is committed, so a staff coming ready waits for the war cry.
 static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     WANDER,
     ACTION_BASELINE_IDLE,
@@ -326,7 +333,10 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         )
         ~Orbit::new()
         Abilities [
-            @speed_and_damage_rally(RALLY_REACH, RALLY_COOLDOWN, RALLY_RAISE, RALLY_SECONDS)
+            @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
+            ~AbilityCooldown::new(RALLY_COOLDOWN)
+            AbilityWindup { seconds: RALLY_WINDUP_SECONDS }
+            UseGlow(RALLY_GLOW_COLOR)
         ]
     }
 }

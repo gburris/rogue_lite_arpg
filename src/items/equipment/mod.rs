@@ -13,7 +13,7 @@ pub mod prelude {
     pub use super::equipment_transform::{
         DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
     };
-    pub use super::equippable::{Equippable, Equipped};
+    pub use super::equippable::{EquipmentUseStyle, Equippable, Equipped};
     pub use super::slot::{EquipmentSlot, Mainhand, Offhand};
     pub use super::use_equipped::{
         EquipmentInUse, EquipmentRead, EquipmentUsage, EquipmentUseFailed, EquipmentUseFailure,
@@ -22,8 +22,7 @@ pub mod prelude {
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(equip::plugin)
-        .add_observer(use_equipped::on_equipment_use_ended);
+    app.add_plugins(equip::plugin);
 
     app.add_systems(
         Update,
@@ -31,7 +30,11 @@ pub(super) fn plugin(app: &mut App) {
             // Always run this system InGame and InMenu so weapon transforms update as inventory is
             // interacted with
             equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
-            use_equipped::tick_equippable_cooldown.in_set(SimulationSystems::Upkeep),
+            (
+                use_equipped::tick_equippable_cooldown,
+                use_equipped::interrupt_equipment_uses,
+            )
+                .in_set(SimulationSystems::Upkeep),
         ),
     );
 }

@@ -1,5 +1,7 @@
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -18,6 +20,7 @@ pub struct StartUsingEquipment {
 /// Inserted by the item's `StartUsingEquipment` observer, removed by its stop path.
 /// Its removal, however the use ended, fires [`EquipmentUseFinished`].
 #[derive(Component, Default)]
+#[component(on_remove = report_equipment_use_finished)]
 pub struct EquipmentInUse;
 
 /// Fired at the holder when an item stops being in use.
@@ -26,19 +29,21 @@ pub struct EquipmentUseFinished {
     #[event_target]
     pub holder: Entity,
     pub item: Entity,
+    pub slot: EquipmentSlot,
 }
 
-pub(super) fn on_equipment_use_ended(
-    removed: On<Remove<EquipmentInUse>>,
-    mut commands: Commands,
-    items: Query<&ItemOf>,
-) {
-    if let Ok(item_of) = items.get(removed.entity) {
-        commands.trigger(EquipmentUseFinished {
-            holder: item_of.holder,
-            item: removed.entity,
-        });
-    }
+fn report_equipment_use_finished(mut world: DeferredWorld, context: HookContext) {
+    let entity = world.entity(context.entity);
+    let (Some(item_of), Some(equippable)) = (entity.get::<ItemOf>(), entity.get::<Equippable>())
+    else {
+        return;
+    };
+    let finished = EquipmentUseFinished {
+        holder: item_of.holder,
+        item: context.entity,
+        slot: equippable.slot,
+    };
+    world.commands().trigger(finished);
 }
 
 /// Request to end an in-progress use. Item stop observers own removing `EquipmentInUse`.
@@ -59,6 +64,19 @@ pub enum EquipmentUseFailure {
     EmptySlot,
     /// The equipped item lacks usable equipment data (`Equippable`).
     UnusableItem,
+    /// The character is interrupted; see [`InterruptionState`].
+    HolderInterrupted,
+}
+
+impl EquipmentUseFailure {
+    /// Whether the item becomes usable again by waiting, rather than needing something the
+    /// character lacks.
+    pub fn is_temporary(self) -> bool {
+        match self {
+            Self::OutOfMana | Self::OnCooldown | Self::HolderInterrupted => true,
+            Self::NoHolder | Self::EmptySlot | Self::UnusableItem => false,
+        }
+    }
 }
 
 #[derive(EntityEvent)]
@@ -76,6 +94,26 @@ pub struct EquipmentUseSucceeded {
     pub holder: Entity,
     pub slot: EquipmentSlot,
     pub item: Entity,
+}
+
+/// Ends the use in progress of each interrupted holder's item; see [`InterruptionState`].
+pub(super) fn interrupt_equipment_uses(
+    mut commands: Commands,
+    uses: Query<(Entity, &ItemOf), With<EquipmentInUse>>,
+    holders: Query<InterruptionState>,
+) {
+    for (item, item_of) in &uses {
+        let holder_interrupted = holders
+            .get(item_of.holder)
+            .ok()
+            .is_none_or(|interruption| interruption.is_interrupted());
+        if holder_interrupted {
+            commands.trigger(StopUsingEquipment {
+                item,
+                holder: item_of.holder,
+            });
+        }
+    }
 }
 
 /// Advances every equipped item's cooldown timer.
@@ -150,6 +188,7 @@ pub struct EquipmentUsage<'w, 's> {
             Option<&'static Mainhand>,
             Option<&'static Offhand>,
             Option<&'static mut Mana>,
+            InterruptionState,
         ),
         With<Character>,
     >,
@@ -160,7 +199,7 @@ pub struct EquipmentUsage<'w, 's> {
 impl EquipmentUsage<'_, '_> {
     /// Item currently equipped in the holder's slot, if any.
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
-        let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
+        let (mainhand, offhand, ..) = self.holders.get(holder).ok()?;
         slot.equipped(mainhand, offhand)
     }
 
@@ -198,7 +237,7 @@ impl EquipmentUsage<'_, '_> {
         holder: Entity,
         slot: EquipmentSlot,
     ) -> Result<Entity, EquipmentUseFailure> {
-        let (mainhand, offhand, mana) = self
+        let (mainhand, offhand, mana, interruption) = self
             .holders
             .get_mut(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
@@ -209,6 +248,9 @@ impl EquipmentUsage<'_, '_> {
             .equipment
             .get_mut(item)
             .map_err(|_| EquipmentUseFailure::UnusableItem)?;
+        if interruption.is_interrupted() {
+            return Err(EquipmentUseFailure::HolderInterrupted);
+        }
         usable.consume(mana)?;
         Ok(item)
     }
@@ -221,6 +263,17 @@ impl EquipmentUsage<'_, '_> {
                 true
             }
             _ => false,
+        }
+    }
+
+    /// Stops the holder's use in `slot` if it is a sustained use in progress; a use that ends on
+    /// its own can't be stopped. See [`EquipmentUseStyle`].
+    pub fn stop_sustained_use(&mut self, holder: Entity, slot: EquipmentSlot) {
+        let is_sustained_use = self
+            .equippable_in_slot(holder, slot)
+            .is_some_and(|equippable| !equippable.use_style.ends_on_its_own());
+        if is_sustained_use {
+            self.stop_using(holder, slot);
         }
     }
 
@@ -253,15 +306,17 @@ pub struct EquipmentRead<'w, 's> {
             Option<&'static Mainhand>,
             Option<&'static Offhand>,
             Option<&'static Mana>,
+            InterruptionState,
         ),
         With<Character>,
     >,
     equipment: Query<'w, 's, UsableItemReadOnly>,
+    in_use: Query<'w, 's, (), With<EquipmentInUse>>,
 }
 
 impl EquipmentRead<'_, '_> {
     pub fn item_in_slot(&self, holder: Entity, slot: EquipmentSlot) -> Option<Entity> {
-        let (mainhand, offhand, _) = self.holders.get(holder).ok()?;
+        let (mainhand, offhand, ..) = self.holders.get(holder).ok()?;
         slot.equipped(mainhand, offhand)
     }
 
@@ -273,9 +328,15 @@ impl EquipmentRead<'_, '_> {
             .map(|usable| usable.equippable)
     }
 
+    /// See [`EquipmentUsage::is_using`].
+    pub fn is_using(&self, holder: Entity, slot: EquipmentSlot) -> bool {
+        self.item_in_slot(holder, slot)
+            .is_some_and(|item| self.in_use.contains(item))
+    }
+
     /// Whether the holder could use the slot now, without consuming anything.
     pub fn can_use(&self, holder: Entity, slot: EquipmentSlot) -> Result<(), EquipmentUseFailure> {
-        let (mainhand, offhand, mana) = self
+        let (mainhand, offhand, mana, interruption) = self
             .holders
             .get(holder)
             .map_err(|_| EquipmentUseFailure::NoHolder)?;
@@ -286,6 +347,9 @@ impl EquipmentRead<'_, '_> {
             .equipment
             .get(item)
             .map_err(|_| EquipmentUseFailure::UnusableItem)?;
+        if interruption.is_interrupted() {
+            return Err(EquipmentUseFailure::HolderInterrupted);
+        }
         usable.can_use(mana)
     }
 }

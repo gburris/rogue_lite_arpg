@@ -1,13 +1,9 @@
-//! What a character can do and when: the [`CapabilityProfile`] a decision reads for each motion
-//! and action, the capability components behind them, and the [`Cooldowns`] that pace them.
-
 use bevy::ecs::query::QueryData;
-use rand::RngExt;
 
-use super::action::{Ability, Action, Bite, Breath, Heal, Rally};
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
 
-/// The reach, start chance and cooldown a decision reads for one motion or action.
+/// The reach, start chance and cooldown a decision reads for one motion; an action fills only
+/// its reach.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct CapabilityProfile {
     pub reach: Option<f32>,
@@ -15,19 +11,6 @@ pub(super) struct CapabilityProfile {
     pub chance: f32,
     /// Seconds to wait after a finish or a missed start roll.
     pub cooldown: f32,
-    pub cooldown_jitter: f32,
-}
-
-impl CapabilityProfile {
-    /// The cooldown to start now: `cooldown` shifted by a random amount of up to
-    /// `cooldown_jitter` seconds either way.
-    pub fn roll_cooldown(self) -> f32 {
-        if self.cooldown_jitter <= 0.0 {
-            return self.cooldown;
-        }
-        let offset = rand::rng().random_range(-self.cooldown_jitter..=self.cooldown_jitter);
-        (self.cooldown + offset).max(0.0)
-    }
 }
 
 impl Default for CapabilityProfile {
@@ -36,7 +19,6 @@ impl Default for CapabilityProfile {
             reach: None,
             chance: 1.0,
             cooldown: 0.0,
-            cooldown_jitter: 0.0,
         }
     }
 }
@@ -69,70 +51,22 @@ impl MotionCapabilitiesItem<'_, '_> {
     }
 }
 
-/// Every capability component an ability entity may carry; see
-/// [`Abilities`](super::action::Abilities).
-#[derive(QueryData)]
-pub(super) struct AbilityCapabilities {
-    bite: Option<&'static Bite>,
-    breath: Option<&'static Breath>,
-    heal: Option<&'static Heal>,
-    rally: Option<&'static Rally>,
-}
-
-impl AbilityCapabilitiesItem<'_, '_> {
-    /// The profile of the component that carries out `ability`; `None` when this entity is
-    /// another ability.
-    pub(super) fn capability_profile(&self, ability: Ability) -> Option<CapabilityProfile> {
-        match ability {
-            Ability::Heal => self.heal.copied().map(Heal::capability_profile),
-            Ability::Breathe => self.breath.copied().map(Breath::capability_profile),
-            Ability::Bite => self.bite.copied().map(Bite::capability_profile),
-            Ability::Rally => self.rally.copied().map(Rally::capability_profile),
-        }
-    }
-}
-
-/// A motion or action with its own entry in [`Cooldowns`].
-pub(super) trait CooldownKey: Copy {
-    fn cooldown_index(self) -> usize;
-}
-
-/// Motions come first in [`Cooldowns`].
-impl CooldownKey for Motion {
-    fn cooldown_index(self) -> usize {
-        self.index()
-    }
-}
-
-/// Actions follow the motions in [`Cooldowns`].
-impl CooldownKey for Action {
-    fn cooldown_index(self) -> usize {
-        Motion::COUNT + self.index()
-    }
-}
-
-impl CooldownKey for Ability {
-    fn cooldown_index(self) -> usize {
-        Action::Ability(self).cooldown_index()
-    }
-}
-
-/// The virtual time at which each motion and action is off cooldown.
+/// The virtual time at which each motion is off cooldown.
 #[derive(Clone, Copy, Debug)]
-pub(super) struct Cooldowns([f32; Motion::COUNT + Action::COUNT]);
+pub(super) struct Cooldowns([f32; Motion::COUNT]);
 
 impl Default for Cooldowns {
     fn default() -> Self {
-        Self([0.0; Motion::COUNT + Action::COUNT])
+        Self([0.0; Motion::COUNT])
     }
 }
 
 impl Cooldowns {
-    pub(super) fn is_ready(&self, key: impl CooldownKey, now: f32) -> bool {
-        now >= self.0[key.cooldown_index()]
+    pub(super) fn is_ready(&self, motion: Motion, now: f32) -> bool {
+        now >= self.0[motion.index()]
     }
 
-    pub(super) fn start(&mut self, key: impl CooldownKey, ready_at: f32) {
-        self.0[key.cooldown_index()] = ready_at;
+    pub(super) fn start(&mut self, motion: Motion, ready_at: f32) {
+        self.0[motion.index()] = ready_at;
     }
 }

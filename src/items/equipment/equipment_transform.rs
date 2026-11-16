@@ -83,7 +83,7 @@ pub(super) fn update_equipment_transforms(
     mut ended_uses: RemovedComponents<EquipmentInUse>,
     item_holders: Query<&ItemOf>,
     holders: Query<(Option<&Mainhand>, Option<&Offhand>, &FacingDirection), With<Items>>,
-    in_use: Query<(), With<EquipmentInUse>>,
+    in_use: Query<&Equippable, With<EquipmentInUse>>,
     mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
     let ended_use_holders = ended_uses

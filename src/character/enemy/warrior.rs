@@ -120,16 +120,6 @@ const WARRIOR_BASELINE_IDLE: Behavior = Behavior::new(
     &[],
 );
 
-/// A fleeing warrior stops swinging until the flee ends. Flee is read from the
-/// last decision, so the tick a flee starts can still swing.
-const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
-    None,
-    Some(Action::Idle),
-    CommitPolicy::ContinuouslyScored,
-    1.5,
-    &[FLEEING],
-);
-
 // Motion priority: kite (10), flee (7), seek (7), swing (6.5), return (6),
 // stand still in melee reach (5), chase (4), wander (1).
 // - Kite beats a running flee (7 x 1.25 = 8.75).
@@ -138,14 +128,14 @@ const HOLD_FIRE_WHILE_FLEEING: Behavior = Behavior::new(
 // - The swing beats the running stand still (6.25) it waits in, taking the action slot with it. It
 //   needs that idle motion, so a chasing, dashing or fleeing warrior never swings.
 //
-// Action priority: swing (6.5, see above), heal (5, scaled by need), hold fire (1.5), idle (0.5).
+// Action priority: swing (6.5, see above), heal (5, scaled by need), idle (0.5).
 // Each beats the next even while that one holds the slot. The swing and heals never compete,
 // since every heal needs distance, no target, or a flee.
 // - Heal pairs `NEEDS_POTION` with a yes/no input, so its score is the square root of the need. It
-//   beats idle from about 43% missing health and hold fire from about 48%, before the warrior
-//   starts fleeing at about 52% (health never recovers during a flee).
+//   beats idle from about 43% missing health, before the warrior starts fleeing at about 52%
+//   (health never recovers during a flee).
 // - The cornered heal has two yes/no inputs, so it scores the cube root of the need, which beats
-//   hold fire at any need a fleeing warrior has.
+//   idle at any need a fleeing warrior has.
 // - Every heal is committed, so the action slot holds the drink until it ends.
 static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WANDER,
@@ -156,7 +146,6 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     CHASE_MELEE,
     STAND_STILL_IN_MELEE_REACH,
     WARRIOR_KITE,
-    HOLD_FIRE_WHILE_FLEEING,
     WARRIOR_SWING,
     // The three heals: drink at a safe distance, with no target, or when a flee hits a wall.
     Behavior::new(

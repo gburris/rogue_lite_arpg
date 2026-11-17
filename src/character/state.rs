@@ -175,18 +175,14 @@ impl FacingDirection {
     }
 }
 
-/// Animation/physics flag mirroring whether a timed item use, such as a swing, is in progress.
-/// Written only by `sync_attacking_from_equipment`.
+/// Animation flag mirroring whether an attack, such as a swing or a bite, is in progress; see
+/// [`ActionRead::is_attacking`]. Written only by `sync_attacking`.
 #[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
 pub struct Attacking(pub bool);
 
-/// Syncs whether a holder is attacking; see [`ActionRead::is_using_timed_item`].
-pub(super) fn sync_attacking_from_equipment(
-    mut holders: Query<(Entity, &mut Attacking)>,
-    actions: ActionRead,
-) {
+pub(super) fn sync_attacking(mut holders: Query<(Entity, &mut Attacking)>, actions: ActionRead) {
     for (holder, mut attacking) in &mut holders {
-        attacking.set_if_neq(Attacking(actions.is_using_timed_item(holder)));
+        attacking.set_if_neq(Attacking(actions.is_attacking(holder)));
     }
 }
 

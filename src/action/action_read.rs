@@ -182,6 +182,21 @@ impl ActionRead<'_, '_> {
             })
     }
 
+    /// Whether `holder` is using an action source marked [`Attack`] now.
+    pub fn is_attacking(&self, holder: Entity) -> bool {
+        let Ok(holder) = self.holders.get(holder) else {
+            return false;
+        };
+        holder
+            .equipped_items()
+            .chain(holder.ability_sources())
+            .any(|entity| {
+                self.sources
+                    .get(entity)
+                    .is_ok_and(|state| state.is_attack && state.in_progress.is_some())
+            })
+    }
+
     /// Whether `holder` is using any of its action sources now.
     pub fn is_using_any(&self, holder: Entity) -> bool {
         let Ok(holder) = self.holders.get(holder) else {

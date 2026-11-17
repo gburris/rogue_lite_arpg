@@ -1,11 +1,13 @@
 use avian2d::prelude::*;
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::Ability;
 use crate::prelude::*;
 
-/// Seconds a bite's hitbox stays out: the jaws stay open through a lunge, so a bite started just
-/// short of its reach still lands on a target the biter closes on.
+/// Seconds a bite lasts with its hitbox out: the jaws stay open through a lunge, so a bite started
+/// just short of its reach still lands on a target the biter closes on.
 const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim, whose front
@@ -48,13 +50,21 @@ impl Bite {
     }
 }
 
+/// The hitbox of the bite in progress, on the bite ability. Removing it, however the bite ended,
+/// despawns the hitbox.
+#[derive(Component, Clone, Copy, Debug)]
+#[component(on_remove = despawn_bite_hitbox)]
+struct ActiveBiteHitbox(Entity);
+
 /// A bite ability carrying `bite` that reaches `reach`.
 pub fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
         ~{ActionReach(reach)}
+        ~{ActionUseStyle::Timed { seconds: BITE_HITBOX_SECONDS }}
         Attack
         on(on_bite_took_effect)
+        on(on_stop_bite)
     }
 }
 
@@ -77,7 +87,6 @@ fn on_bite_took_effect(
     let damage = Damage::Single(bite.damage * stat_multipliers.damage);
     let mut hitbox = commands.spawn((
         HitBox::new(holder, damage, direction),
-        Lifespan::new(BITE_HITBOX_SECONDS),
         Collider::circle(bite.hitbox_radius),
         side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),
@@ -86,5 +95,24 @@ fn on_bite_took_effect(
     if bite.life_steal > 0.0 {
         hitbox.insert(LifeSteal(bite.life_steal));
     }
+    let hitbox = hitbox.id();
+    commands
+        .entity(took_effect.source)
+        .insert(ActiveBiteHitbox(hitbox));
     Ok(())
+}
+
+/// Closes the jaws when the bite ends, whether it played out or its holder was interrupted.
+fn on_stop_bite(stop: On<StopAction>, mut commands: Commands) {
+    commands
+        .entity(stop.source)
+        .try_remove::<ActiveBiteHitbox>();
+}
+
+fn despawn_bite_hitbox(mut world: DeferredWorld, context: HookContext) {
+    let Some(&ActiveBiteHitbox(hitbox)) = world.entity(context.entity).get::<ActiveBiteHitbox>()
+    else {
+        return;
+    };
+    world.commands().entity(hitbox).try_despawn();
 }

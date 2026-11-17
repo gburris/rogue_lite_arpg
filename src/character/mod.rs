@@ -55,7 +55,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
+        state::sync_attacking.in_set(SimulationSystems::Derive),
     );
 }
 

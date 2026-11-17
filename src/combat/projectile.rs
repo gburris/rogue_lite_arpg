@@ -253,7 +253,8 @@ fn on_fire_projectiles(
 }
 
 /// Sends projectiles back at its holder's enemies on contact instead of being destroyed by them.
-/// It reflects only while it has a collider.
+/// On an item it only marks the item as reflecting; the entity it spawns for a use (see
+/// [`SpawnedForUse`]) carries a fresh one that does the reflecting.
 #[derive(Component, Default, Clone)]
 #[require(CollidingEntities, Sensor)]
 pub struct ProjectileReflection {
@@ -264,17 +265,23 @@ pub struct ProjectileReflection {
 /// the reflector's holder.
 pub(super) fn reflect_projectiles(
     mut commands: Commands,
-    mut reflector_query: Query<
-        (&mut ProjectileReflection, &CollidingEntities, &ChildOf),
-        With<Collider>,
-    >,
+    mut reflector_query: Query<(
+        &mut ProjectileReflection,
+        &CollidingEntities,
+        &SpawnedForUse,
+    )>,
+    uses_in_progress: Query<&ActionInProgress>,
     mut projectile_query: Query<
         (&mut LinearVelocity, &mut Transform, Option<&mut Lifespan>),
         With<Projectile>,
     >,
     holder_query: Query<&CombatSide>,
 ) {
-    for (mut reflection, colliding_entities, child_of) in &mut reflector_query {
+    for (mut reflection, colliding_entities, spawned_for_use) in &mut reflector_query {
+        let Ok(in_progress) = uses_in_progress.get(spawned_for_use.source) else {
+            continue;
+        };
+        let holder = in_progress.holder();
         reflection
             .reflected
             .retain(|&projectile| projectile_query.contains(projectile));
@@ -286,7 +293,7 @@ pub(super) fn reflect_projectiles(
                 projectile_query.get_mut(colliding_entity)
             {
                 // The blocker takes over: the reflected projectile now hurts the blocker's enemies.
-                let Ok(side) = holder_query.get(child_of.parent()) else {
+                let Ok(side) = holder_query.get(holder) else {
                     continue;
                 };
 
@@ -304,7 +311,7 @@ pub(super) fn reflect_projectiles(
                 commands.entity(colliding_entity).insert((
                     side.projectile_layers(),
                     ProjectileAttacker {
-                        attacker: Some(child_of.parent()),
+                        attacker: Some(holder),
                     },
                 ));
 

@@ -4,14 +4,16 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-/// A sensor that damages each opponent it touches once, on behalf of `attacker`. Its entity is
-/// the hit's `source_item`, so the [`Knockback`], [`Effects`] and [`LifeSteal`] on it apply.
+/// A sensor that damages each opponent it touches once, on behalf of `attacker`. The hit's
+/// `source_item` is the item set by [`HitBox::with_source_item`], or else the hitbox itself, so the
+/// [`Knockback`], [`Effects`] and [`LifeSteal`] on that entity apply.
 #[derive(Component, Clone, Debug)]
 #[require(Sensor, CollidingEntities)]
 pub struct HitBox {
     attacker: Entity,
     damage: Damage,
     direction: Vec2,
+    source_item: Option<Entity>,
     already_hit: HashSet<Entity>,
 }
 
@@ -22,7 +24,16 @@ impl HitBox {
             attacker,
             damage,
             direction,
+            source_item: None,
             already_hit: HashSet::default(),
+        }
+    }
+
+    /// Credits its hits to `source_item`, such as the weapon swinging it.
+    pub fn with_source_item(self, source_item: Entity) -> Self {
+        Self {
+            source_item: Some(source_item),
+            ..self
         }
     }
 }
@@ -65,7 +76,7 @@ pub(super) fn damage_hitbox_contacts(
             commands.trigger(AttemptDamage {
                 entity: touched,
                 damage: hitbox.damage,
-                source_item: Some(hitbox_entity),
+                source_item: Some(hitbox.source_item.unwrap_or(hitbox_entity)),
                 attacker: Some(hitbox.attacker),
                 direction: Some(hitbox.direction),
                 ..default()

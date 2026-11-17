@@ -1,4 +1,3 @@
-use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use super::MeleeWeapon;
@@ -11,7 +10,7 @@ pub(super) struct ActiveMeleeAttack {
     pub(super) initial_angle: f32,
 }
 
-/// Spawns the transient swing hitbox removed by `on_melee_finished`, dealing damage scaled by the
+/// Spawns the swing's hitbox on the weapon for the length of the use, dealing damage scaled by the
 /// holder's stats at the moment of the swing.
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
@@ -25,25 +24,24 @@ pub(super) fn on_melee_took_effect(
     };
     let angle = vision.aim_direction.to_angle();
     let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
-    // Hitbox and layers only exist for the swing; the finish observer removes them.
-    commands.entity(took_effect.source).insert((
-        ActiveMeleeAttack {
-            initial_angle: angle,
-        },
-        HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)),
+    let weapon = took_effect.source;
+    commands.entity(weapon).insert(ActiveMeleeAttack {
+        initial_angle: angle,
+    });
+    commands.spawn((
+        HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)).with_source_item(weapon),
         melee_weapon.hitbox.clone(),
         side.hitbox_layers(),
+        Transform::default(),
+        ChildOf(weapon),
+        SpawnedForUse { source: weapon },
     ));
     Ok(())
 }
 
-/// Removes the transient swing state.
+/// Ends the swing's motion.
 pub(super) fn on_melee_finished(finished: On<ActionFinished>, mut commands: Commands) {
-    commands.entity(finished.source).try_remove::<(
-        ActiveMeleeAttack,
-        HitBox,
-        Collider,
-        CollisionLayers,
-        CollidingEntities,
-    )>();
+    commands
+        .entity(finished.source)
+        .try_remove::<ActiveMeleeAttack>();
 }

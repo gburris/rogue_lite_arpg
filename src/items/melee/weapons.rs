@@ -9,7 +9,7 @@ use crate::prelude::*;
 
 pub fn sword(sprites: &SpriteAssets) -> impl Scene {
     bsn! {
-        @melee_weapon(sprites.sword.clone(), 120, 0.2)
+        @melee_weapon(sprites.sword.clone(), 120, SWORD_SWING_SECONDS)
         Name::new("Sword")
         ~{MeleeWeapon {
             damage: Damage::Range { min: 1.0, max: 6.0 },
@@ -46,8 +46,12 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
     }
 }
 
+/// Seconds a sword's stab takes.
+const SWORD_SWING_SECONDS: f32 = 0.2;
 /// Seconds the heavy slash both axes share takes.
 const AXE_SWING_SECONDS: f32 = 0.3;
+/// Seconds every melee weapon waits after a swing starts before it can swing again.
+const MELEE_WEAPON_COOLDOWN: f32 = 0.4;
 
 /// The heavy slash both axes share.
 fn axe_swing() -> MeleeWeapon {
@@ -67,7 +71,7 @@ fn axe_swing() -> MeleeWeapon {
 fn melee_weapon(image: Handle<Image>, value: u32, swing_seconds: f32) -> impl Scene {
     bsn! {
         ~Equippable::new(EquipmentSlot::Mainhand, &MELEE_EQUIPMENT_POSES)
-        ~ActionCooldown::new(0.4)
+        ~ActionCooldown::new(MELEE_WEAPON_COOLDOWN)
         ~{ActionReach(MELEE_WEAPON_REACH)}
         ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         Attack

@@ -6,6 +6,11 @@ use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use super::{Item, ItemKind};
 use crate::prelude::*;
 
+/// Seconds a tome waits after a heal before it can heal again.
+const TOME_COOLDOWN: f32 = 2.0;
+/// Mana each tome heal costs.
+const TOME_MANA_COST: f32 = 40.0;
+
 #[derive(Component, Clone)]
 struct HealingTome {
     min_healing: f32,
@@ -18,8 +23,8 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
         Name::new("Tome Of Healing")
         ~Item::new(355, ItemKind::Tome)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(2.0)
-        ManaCost(40.0)
+        ~ActionCooldown::new(TOME_COOLDOWN)
+        ManaCost(TOME_MANA_COST)
         ~{HealingTome {
             min_healing: 25.0,
             max_healing: 50.0,

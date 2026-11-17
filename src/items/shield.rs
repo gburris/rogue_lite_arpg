@@ -8,6 +8,8 @@ use crate::prelude::*;
 
 /// Distance from its holder at which a raised shield sits.
 const RAISED_SHIELD_DISTANCE: f32 = 40.0;
+/// Seconds a shield waits after it is raised before it can be raised again.
+const SHIELD_COOLDOWN: f32 = 0.5;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -41,7 +43,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
         @atlas_sprite(image, sprite_layouts.shield.clone())
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(0.5)
+        ~ActionCooldown::new(SHIELD_COOLDOWN)
         ~{ActionUseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),

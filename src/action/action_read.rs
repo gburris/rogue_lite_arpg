@@ -3,36 +3,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::ActionSource;
-use super::in_progress::{ActionCooldown, ActionInProgress, ActionUseStyle, StopAction};
+use super::in_progress::{ActionInProgress, StopAction};
+use super::source::{ActionCooldown, ActionKey, ActionReach, ActionUseStyle, Attack, RequiredItem};
 use crate::prelude::*;
-
-/// Names an [`ActionSource`] of a character: the item equipped in a slot, or one of its abilities
-/// by kind.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ActionKey {
-    Equipped(EquipmentSlot),
-    Ability(Ability),
-}
-
-impl ActionKey {
-    /// Every key, equipment first.
-    pub fn all() -> impl Iterator<Item = Self> {
-        let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipped);
-        equipment.chain(Ability::ALL.into_iter().map(Self::Ability))
-    }
-}
-
-/// The farthest target distance at which an AI holder uses this action source.
-#[derive(Component, Clone, Copy, Debug, Deref)]
-pub struct ActionReach(pub f32);
-
-/// Marks an action source whose use is an attack, like a swing, a cast or a bite.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct Attack;
-
-/// A kind of item the holder must carry to use this action source, such as a heal's potion.
-#[derive(Component, Clone, Copy, Debug, Deref)]
-pub struct RequiredItem(pub ItemKind);
 
 /// Why a character can't use an action source now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

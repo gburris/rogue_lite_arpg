@@ -1,5 +1,6 @@
 mod action_read;
 mod in_progress;
+mod source;
 
 use bevy::prelude::*;
 
@@ -7,13 +8,13 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::ActionSource;
-    pub use super::action_read::{
-        ActionCommands, ActionFailed, ActionFailure, ActionKey, ActionReach, ActionRead, Attack,
-        RequiredItem,
-    };
+    pub use super::action_read::{ActionCommands, ActionFailed, ActionFailure, ActionRead};
     pub use super::in_progress::{
-        ActionCooldown, ActionFinished, ActionGlow, ActionInProgress, ActionTookEffect,
-        ActionUseStyle, ActionWindup, StopAction, TimedActionProgress,
+        ActionFinished, ActionInProgress, ActionTookEffect, StopAction, TimedActionProgress,
+    };
+    pub use super::source::{
+        ActionCooldown, ActionGlow, ActionKey, ActionReach, ActionUseStyle, ActionWindup, Attack,
+        RequiredItem,
     };
 }
 

@@ -276,8 +276,8 @@ impl Brain {
     }
 }
 
-/// Ordered brain phases. Perception feeds targeting, aim, decisions, execution
-/// of those decisions, and finally the motion driver.
+/// Ordered brain phases. Perception feeds targeting, aim, decisions, and execution of those
+/// decisions.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) enum BrainSystems {
     Perception,
@@ -285,7 +285,6 @@ pub(super) enum BrainSystems {
     Aim,
     Decision,
     Execute,
-    Motion,
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -311,11 +310,7 @@ pub(super) fn plugin(app: &mut App) {
             )
                 .chain()
                 .in_set(SimulationSystems::Perceive),
-            (
-                BrainSystems::Decision,
-                BrainSystems::Execute,
-                BrainSystems::Motion,
-            )
+            (BrainSystems::Decision, BrainSystems::Execute)
                 .chain()
                 .in_set(SimulationSystems::Act),
         ),

@@ -28,8 +28,8 @@ use self::step::{
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};
-use super::BrainSystems;
 use super::engine::Interval;
+use crate::prelude::*;
 
 /// How a character moves: a continuous motion that runs until replaced, or a
 /// finite committed move that steers alone until it ends. Add a variant only for a new steering
@@ -176,6 +176,6 @@ pub(super) fn plugin(app: &mut App) {
             steering::apply_steering,
         )
             .chain()
-            .in_set(BrainSystems::Motion),
+            .in_set(SimulationSystems::Steer),
     );
 }

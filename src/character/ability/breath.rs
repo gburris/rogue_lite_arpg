@@ -20,29 +20,19 @@ pub fn breath(reach: f32) -> impl Scene {
     }
 }
 
-/// Fires each projectile template along the holder's aim.
+/// Fires the breath's projectile templates from the holder along its aim.
 fn on_breath_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    breaths: Query<&Projectiles, With<Breath>>,
-    breathers: Query<(&Transform, &CombatSide, &Vision)>,
-) -> Result {
-    let templates = breaths.get(took_effect.source)?;
-    let holder = took_effect.holder;
-    let Ok((transform, side, vision)) = breathers.get(holder) else {
-        return Ok(());
+    breathers: Query<(&Transform, &Vision)>,
+) {
+    let Ok((transform, vision)) = breathers.get(took_effect.holder) else {
+        return;
     };
-    let Some(aim_direction) = vision.aim_direction.try_normalize() else {
-        return Ok(());
-    };
-    for template in templates.iter() {
-        commands.trigger(FireProjectile {
-            item: template,
-            side: *side,
-            holder: Some(holder),
-            position: transform.translation.xy(),
-            aim_direction,
-        });
-    }
-    Ok(())
+    commands.trigger(FireProjectiles {
+        source: took_effect.source,
+        holder: took_effect.holder,
+        position: transform.translation.xy(),
+        aim_direction: vision.aim_direction,
+    });
 }

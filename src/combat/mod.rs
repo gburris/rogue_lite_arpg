@@ -26,8 +26,8 @@ pub mod prelude {
     pub use super::invulnerable::IFrames;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
-        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, ProjectileReflection,
-        Projectiles, fireball, fireball_with_speed, icebolt,
+        FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileAttacker, ProjectileReflection,
+        Projectiles, fireball, fireball_with_speed, icebolt, pull_back_from_walls,
     };
     pub use super::status_effects::prelude::{
         ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,

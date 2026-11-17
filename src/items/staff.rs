@@ -1,7 +1,7 @@
 use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
-use avian2d::prelude::{SpatialQuery, SpatialQueryFilter};
+use avian2d::prelude::SpatialQuery;
 use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
@@ -17,8 +17,6 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Gap a staff's cast point keeps from a wall, about a projectile's radius.
-const WALL_CLEARANCE: f32 = 12.0;
 /// Farthest target distance at which an AI holder casts a staff.
 pub const STAFF_REACH: f32 = 360.0;
 /// Fraction of the standard fireball speed used by both fire mage staffs.
@@ -205,26 +203,17 @@ fn on_staff_took_effect(
 fn fire_staff_projectiles(
     mut commands: Commands,
     time: Res<Time>,
-    mut staff_query: Query<(
-        Entity,
-        &Staff,
-        &mut StaffSwingProgress,
-        &Projectiles,
-        &ItemOf,
-        &Transform,
-    )>,
-    holder_query: Query<(&Transform, &Vision, &CombatSide)>,
+    mut staff_query: Query<(Entity, &Staff, &mut StaffSwingProgress, &ItemOf, &Transform)>,
+    holder_query: Query<(&Transform, &Vision)>,
     spatial_query: SpatialQuery,
 ) {
-    for (staff_entity, staff, mut swing_progress, projectiles, item_of, staff_transform) in
-        &mut staff_query
-    {
+    for (staff_entity, staff, mut swing_progress, item_of, staff_transform) in &mut staff_query {
         if !swing_progress.tick(time.delta()).just_finished() {
             continue;
         }
         commands.entity(staff_entity).remove::<StaffSwingProgress>();
 
-        let Ok((holder_transform, holder_vision, side)) = holder_query.get(item_of.holder) else {
+        let Ok((holder_transform, holder_vision)) = holder_query.get(item_of.holder) else {
             continue;
         };
 
@@ -239,37 +228,18 @@ fn fire_staff_projectiles(
         // Staff is child of holder so position is relative, need to add holder transform for
         // global position
         let holder_position = holder_transform.translation.truncate();
-        let world_starting_position = clear_of_walls(
+        let world_starting_position = pull_back_from_walls(
             &spatial_query,
             holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
             holder_position + holder_relative_source_position,
         );
 
-        for projectile_entity in projectiles.iter() {
-            commands.trigger(FireProjectile {
-                item: projectile_entity,
-                side: *side,
-                holder: Some(item_of.holder),
-                position: world_starting_position,
-                aim_direction: target_angle,
-            });
-        }
-    }
-}
-
-/// `cast_position` pulled back toward the holder's `feet` until it is [`WALL_CLEARANCE`] short of
-/// any wall in between. The tip of a staff held up against a wall sits inside it, where a
-/// projectile would be destroyed the moment it spawns, whichever way it was aimed.
-fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2) -> Vec2 {
-    let feet_to_cast = cast_position - feet;
-    let Ok(direction) = Dir2::new(feet_to_cast) else {
-        return cast_position;
-    };
-    let walls = SpatialQueryFilter::from_mask(GameCollisionLayer::HighObstacle);
-
-    match spatial_query.cast_ray(feet, direction, feet_to_cast.length(), true, &walls) {
-        Some(wall_hit) => feet + direction * (wall_hit.distance - WALL_CLEARANCE).max(0.0),
-        None => cast_position,
+        commands.trigger(FireProjectiles {
+            source: staff_entity,
+            holder: item_of.holder,
+            position: world_starting_position,
+            aim_direction: target_angle,
+        });
     }
 }
 

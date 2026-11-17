@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         damage_on_projectile_hit.in_set(InGameSystems::Collision),
     )
-    .add_observer(on_fire_projectile);
+    .add_observer(on_fire_projectiles);
 }
 
 #[derive(Component, Clone)]
@@ -181,78 +181,92 @@ pub struct ProjectileAttacker {
     pub attacker: Option<Entity>,
 }
 
-/// Request to launch a projectile template. The template is cloned; the clone
-/// becomes the live projectile carrying `ProjectileAttacker`.
-#[derive(EntityEvent)]
-pub struct FireProjectile {
+/// Gap a launch point keeps from a wall, about a projectile's radius.
+const WALL_CLEARANCE: f32 = 12.0;
+
+/// Request to launch every projectile template of `source` from `position` along
+/// `aim_direction`, on behalf of `holder`. Each template is cloned; the clone becomes the live
+/// projectile carrying [`ProjectileAttacker`].
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub struct FireProjectiles {
     #[event_target]
-    pub item: Entity,
-    pub side: CombatSide,
-    pub holder: Option<Entity>,
+    pub source: Entity,
+    pub holder: Entity,
     pub position: Vec2,
     pub aim_direction: Vec2,
 }
 
-fn on_fire_projectile(
-    fire: On<FireProjectile>,
-    mut commands: Commands,
-    projectile_query: Query<&Projectile, Allow<Disabled>>,
-    holders: Query<&StatMultipliers>,
-) {
-    let Ok(projectile) = projectile_query.get(fire.item) else {
-        warn!(
-            "Tried to fire projectile from missing template {:?}",
-            fire.item
-        );
-        return;
+/// `launch_point` pulled back toward the holder's `feet` until it is [`WALL_CLEARANCE`] short of
+/// any wall in between. A launch point held up against a wall sits inside it, where a projectile
+/// would be destroyed the moment it spawns, whichever way it was aimed.
+pub fn pull_back_from_walls(spatial_query: &SpatialQuery, feet: Vec2, launch_point: Vec2) -> Vec2 {
+    let feet_to_launch = launch_point - feet;
+    let Ok(direction) = Dir2::new(feet_to_launch) else {
+        return launch_point;
     };
-    let aim_direction = fire.aim_direction.normalize();
+    let walls = SpatialQueryFilter::from_mask(GameCollisionLayer::HighObstacle);
 
-    // Rotate the aim direction by the projectile’s angle offset
-    let projectile_direction = aim_direction.rotate(Vec2::from_angle(projectile.angle_offset));
+    match spatial_query.cast_ray(feet, direction, feet_to_launch.length(), true, &walls) {
+        Some(wall_hit) => feet + direction * (wall_hit.distance - WALL_CLEARANCE).max(0.0),
+        None => launch_point,
+    }
+}
 
-    let position = fire.position + (projectile_direction * projectile.spawn_offset);
+fn on_fire_projectiles(
+    fire: On<FireProjectiles>,
+    mut commands: Commands,
+    sources: Query<&Projectiles>,
+    templates: Query<&Projectile, Allow<Disabled>>,
+    holders: Query<(&CombatSide, &StatMultipliers)>,
+) -> Result {
+    let projectiles = sources.get(fire.source)?;
+    let Ok((&side, stat_multipliers)) = holders.get(fire.holder) else {
+        return Ok(());
+    };
+    let Some(aim_direction) = fire.aim_direction.try_normalize() else {
+        return Ok(());
+    };
+    for template in projectiles.iter() {
+        let projectile = templates.get(template)?;
+        // Rotate the aim direction by the projectile's angle offset
+        let projectile_direction = aim_direction.rotate(Vec2::from_angle(projectile.angle_offset));
+        let position = fire.position + (projectile_direction * projectile.spawn_offset);
 
-    // The holder's damage multiplier is locked in at launch.
-    let damage_multiplier = fire
-        .holder
-        .and_then(|holder| holders.get(holder).ok())
-        .map_or(1.0, |multipliers| multipliers.damage);
-
-    let mut template = commands.entity(fire.item);
-    let mut new_projectile = template.clone_and_spawn_with_opt_out(|builder| {
-        builder.linked_cloning(true);
-    });
-
-    let projectile_entity = new_projectile.id();
-
-    new_projectile.insert((
-        ColliderOf {
-            body: projectile_entity,
-        },
-        Position(position),
-        Rotation::radians(projectile_direction.to_angle()),
-        Transform {
-            translation: position.extend(ZLayer::InAir.z()),
-            rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
-            ..default()
-        },
-        LinearVelocity(projectile_direction * projectile.speed),
-        Projectile {
-            damage: projectile.damage.scaled(damage_multiplier),
-            ..projectile.clone()
-        },
-        CollisionLayers::new(
-            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-            LayerMask::from(fire.side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
-        ),
-        ProjectileAttacker {
-            attacker: fire.holder,
-        },
-        DespawnOnExit(AppState::Playing),
-    ));
-    // Removed after the insert, since inserting `Projectile` re-adds its required `Disabled`.
-    new_projectile.remove::<(ProjectileOf, Disabled)>();
+        let mut template_commands = commands.entity(template);
+        let mut new_projectile = template_commands.clone_and_spawn_with_opt_out(|builder| {
+            builder.linked_cloning(true);
+        });
+        let projectile_entity = new_projectile.id();
+        new_projectile.insert((
+            ColliderOf {
+                body: projectile_entity,
+            },
+            Position(position),
+            Rotation::radians(projectile_direction.to_angle()),
+            Transform {
+                translation: position.extend(ZLayer::InAir.z()),
+                rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
+                ..default()
+            },
+            LinearVelocity(projectile_direction * projectile.speed),
+            // The holder's damage multiplier is locked in at launch.
+            Projectile {
+                damage: projectile.damage.scaled(stat_multipliers.damage),
+                ..projectile.clone()
+            },
+            CollisionLayers::new(
+                GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+                LayerMask::from(side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
+            ),
+            ProjectileAttacker {
+                attacker: Some(fire.holder),
+            },
+            DespawnOnExit(AppState::Playing),
+        ));
+        // Removed after the insert, since inserting `Projectile` re-adds its required `Disabled`.
+        new_projectile.remove::<(ProjectileOf, Disabled)>();
+    }
+    Ok(())
 }
 
 /// Sends projectiles back at its holder's enemies on contact instead of being destroyed by them.

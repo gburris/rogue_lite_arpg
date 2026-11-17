@@ -22,7 +22,7 @@ impl ActiveMeleeAttack {
     }
 }
 
-/// Spawns the transient swing hitbox removed by `on_stop_melee`, dealing damage scaled by the
+/// Spawns the transient swing hitbox removed by `on_melee_finished`, dealing damage scaled by the
 /// holder's stats at the moment of the swing.
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
@@ -39,7 +39,7 @@ pub(super) fn on_melee_took_effect(
     };
     let angle = vision.aim_direction.to_angle();
     let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
-    // Hitbox and layers only exist for the swing; the stop observer removes them.
+    // Hitbox and layers only exist for the swing; the finish observer removes them.
     commands.entity(took_effect.source).insert((
         ActiveMeleeAttack::new(angle, seconds),
         HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)),
@@ -50,8 +50,8 @@ pub(super) fn on_melee_took_effect(
 }
 
 /// Removes the transient swing state.
-pub(super) fn on_stop_melee(stop: On<StopAction>, mut commands: Commands) {
-    commands.entity(stop.source).remove::<(
+pub(super) fn on_melee_finished(finished: On<ActionFinished>, mut commands: Commands) {
+    commands.entity(finished.source).try_remove::<(
         ActiveMeleeAttack,
         HitBox,
         Collider,

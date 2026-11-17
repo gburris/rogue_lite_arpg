@@ -64,7 +64,7 @@ pub fn bite(reach: f32, bite: Bite) -> impl Scene {
         ~{ActionUseStyle::Timed { seconds: BITE_HITBOX_SECONDS }}
         Attack
         on(on_bite_took_effect)
-        on(on_stop_bite)
+        on(on_bite_finished)
     }
 }
 
@@ -103,9 +103,9 @@ fn on_bite_took_effect(
 }
 
 /// Closes the jaws when the bite ends, whether it played out or its holder was interrupted.
-fn on_stop_bite(stop: On<StopAction>, mut commands: Commands) {
+fn on_bite_finished(finished: On<ActionFinished>, mut commands: Commands) {
     commands
-        .entity(stop.source)
+        .entity(finished.source)
         .try_remove::<ActiveBiteHitbox>();
 }
 

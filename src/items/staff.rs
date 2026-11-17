@@ -111,7 +111,7 @@ fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
         Attack
         Sprite { image }
         on(on_staff_took_effect)
-        on(on_stop_staff)
+        on(on_staff_finished)
     }
 }
 
@@ -243,9 +243,9 @@ fn fire_staff_projectiles(
     }
 }
 
-fn on_stop_staff(stop: On<StopAction>, mut commands: Commands) {
+fn on_staff_finished(finished: On<ActionFinished>, mut commands: Commands) {
     commands
-        .entity(stop.source)
+        .entity(finished.source)
         .remove::<(StaffSwingProgress, TweenAnim)>()
         .despawn_children();
 }

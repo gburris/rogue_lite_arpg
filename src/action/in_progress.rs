@@ -152,20 +152,20 @@ pub struct ActionTookEffect {
     pub key: ActionKey,
 }
 
-/// Request to end the use of the action `source` in progress. Action sources whose effect leaves
-/// state behind, such as a swing's hitbox, observe it to clean up.
+/// Request to end the use of the action `source` in progress, whatever stage it is in.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct StopAction {
     #[event_target]
     pub source: Entity,
 }
 
-/// Fired at the holder when one of its sources stops being in use, however the use ended.
+/// Fired at the action `source` when its use ends, however it ended. Action sources whose effect
+/// leaves state behind, such as a swing's hitbox, observe it to clean up.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFinished {
     #[event_target]
-    pub holder: Entity,
     pub source: Entity,
+    pub holder: Entity,
     pub key: ActionKey,
 }
 
@@ -256,7 +256,6 @@ pub(super) fn on_action_windup_started(
     commands.entity(added.entity).insert(ActionGlowLight(light));
 }
 
-/// Ends the use, whatever stage it is in.
 pub(super) fn on_stop_action(stop: On<StopAction>, mut commands: Commands) {
     end_use(&mut commands, stop.source);
 }
@@ -320,8 +319,8 @@ fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
         return;
     };
     world.commands().trigger(ActionFinished {
-        holder,
         source: context.entity,
+        holder,
         key,
     });
 }

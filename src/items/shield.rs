@@ -47,7 +47,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
         on(on_shield_took_effect)
-        on(on_stop_shield)
+        on(on_shield_finished)
     }
 }
 
@@ -119,19 +119,17 @@ fn on_shield_took_effect(
 
 /// Lowers the shield. Its resting pose comes back with the rest of the holder's equipment once
 /// the use ends.
-fn on_stop_shield(
-    stop: On<StopAction>,
+fn on_shield_finished(
+    finished: On<ActionFinished>,
     mut commands: Commands,
-    mut shield_query: Query<&mut Sprite, (With<Shield>, With<ActiveShield>)>,
+    mut shield_query: Query<&mut Sprite, With<Shield>>,
 ) {
-    // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
-    // has nothing left to stop.
-    let Ok(mut shield_sprite) = shield_query.get_mut(stop.source) else {
+    let Ok(mut shield_sprite) = shield_query.get_mut(finished.source) else {
         return;
     };
     commands
-        .entity(stop.source)
-        .remove::<(ActiveShield, Collider, CollisionLayers)>();
+        .entity(finished.source)
+        .try_remove::<(ActiveShield, Collider, CollisionLayers)>();
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;
     }

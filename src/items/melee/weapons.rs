@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use super::attack::{on_melee_took_effect, on_stop_melee};
+use super::attack::{on_melee_finished, on_melee_took_effect};
 use super::swing::MeleeSwingKind;
 use super::{MELEE_WEAPON_REACH, MeleeWeapon};
 use crate::items::equipment::prelude::{DirectionalPoses, EquipmentPose};
@@ -73,8 +73,8 @@ fn melee_weapon(image: Handle<Image>, value: u32, swing_seconds: f32) -> impl Sc
         Attack
         ~Item::new(value, ItemKind::Melee)
         Sprite { image }
-        on(on_stop_melee)
         on(on_melee_took_effect)
+        on(on_melee_finished)
     }
 }
 

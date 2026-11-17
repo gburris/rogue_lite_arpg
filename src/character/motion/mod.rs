@@ -3,8 +3,8 @@ mod direct;
 mod home_area;
 mod orbit;
 mod running_motion;
+mod steer_input;
 mod steering;
-mod step;
 mod swoop;
 mod wander;
 
@@ -17,12 +17,12 @@ pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus, MotionTarget};
+use self::steer_input::{
+    BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
+};
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
-use self::step::{
-    BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
-};
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};

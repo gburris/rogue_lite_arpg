@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-use super::motion::{MotionCommands, TargetRef};
-use super::{Brain, Motion, RunningBehavior, TargetingData};
+use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetRef, TargetingData};
 
 /// The behavior run the brain last started a motion for and the target it gave it, so each run
 /// starts its motion once, a new target reaches it, and a finished motion names its behavior.

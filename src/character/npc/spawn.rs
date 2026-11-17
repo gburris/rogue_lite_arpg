@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 use super::{Npc, NpcKind, VILLAGER, interaction};
-use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
+use crate::character::brain::{Brain, BrainDefinition, Interval};
+use crate::character::motion::{HomeArea, Wander};
 use crate::character::physical_collider;
 use crate::prelude::*;
 

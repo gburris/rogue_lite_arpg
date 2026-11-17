@@ -4,6 +4,7 @@ mod animation;
 mod brain;
 mod collider;
 mod enemy;
+mod motion;
 mod npc;
 mod player;
 mod purse;
@@ -24,10 +25,11 @@ pub mod prelude {
     pub(crate) use super::brain::TargetInfo;
     #[cfg(feature = "dev_native")]
     pub(crate) use super::brain::lock_onto_target;
-    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander, WanderProgress};
+    pub use super::brain::{Brain, ScoreTrace};
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
+    pub use super::motion::{Dash, Motion, Wander, WanderProgress};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
         Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,
@@ -44,7 +46,7 @@ pub mod prelude {
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-    app.add_plugins((animation::plugin, brain::plugin));
+    app.add_plugins((animation::plugin, brain::plugin, motion::plugin));
 
     app.add_systems(
         FixedUpdate,

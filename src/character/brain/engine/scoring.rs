@@ -23,17 +23,17 @@ impl Interval {
         Self { min, max }
     }
 
-    pub(in crate::character::brain) const fn min(self) -> f32 {
+    pub(in crate::character) const fn min(self) -> f32 {
         self.min
     }
 
     /// A uniformly random value from `min` up to, not including, `max`.
-    pub(in crate::character::brain) fn pick_random_value(self) -> f32 {
+    pub(in crate::character) fn pick_random_value(self) -> f32 {
         rand::rng().random_range(self.min..self.max)
     }
 
     /// Signed distance outside the interval; zero inside it.
-    pub(in crate::character::brain) fn error(self, value: f32) -> f32 {
+    pub(in crate::character) fn error(self, value: f32) -> f32 {
         if value < self.min {
             value - self.min
         } else if value > self.max {
@@ -44,7 +44,7 @@ impl Interval {
     }
 
     /// Offset from the center as a fraction of the half-width, clamped to `-1.0..=1.0`.
-    pub(in crate::character::brain) fn center_error(self, value: f32) -> f32 {
+    pub(in crate::character) fn center_error(self, value: f32) -> f32 {
         let half_width = (self.max - self.min) * 0.5;
         ((value - self.min.midpoint(self.max)) / half_width).clamp(-1.0, 1.0)
     }

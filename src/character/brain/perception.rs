@@ -6,8 +6,7 @@ use avian2d::prelude::{RayCaster, RayHits};
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
-use super::BrainSystems;
-use super::motion::TargetRef;
+use super::{BrainSystems, TargetRef};
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.

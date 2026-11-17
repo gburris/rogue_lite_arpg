@@ -3,7 +3,8 @@ use bevy::prelude::*;
 
 use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
-use crate::character::brain::{Brain, HomeArea, Interval, Wander, Watching};
+use crate::character::brain::{Brain, Interval, Watching};
+use crate::character::motion::{HomeArea, Wander};
 use crate::character::physical_collider;
 use crate::prelude::*;
 

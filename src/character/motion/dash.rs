@@ -8,10 +8,10 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
+    BlockedTimer, Motion, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
     Steering, SteeringTarget, SteeringTargets,
 };
-use crate::character::brain::{Interval, Motion};
+use crate::character::brain::Interval;
 use crate::prelude::*;
 
 /// Speed below which a target counts as holding still rather than orbiting.

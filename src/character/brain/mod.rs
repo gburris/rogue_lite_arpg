@@ -5,7 +5,6 @@ mod decide;
 mod diagnostics;
 mod engine;
 mod inputs;
-mod motion;
 mod perception;
 mod started_motion;
 
@@ -21,8 +20,6 @@ pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
 pub use self::engine::{BrainDefinition, Interval};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
-use self::motion::Steering;
-pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander, WanderProgress};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 use self::perception::TargetingData;
@@ -31,6 +28,9 @@ pub(super) use self::perception::Watching;
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
+use super::motion::{
+    HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, Steering, TargetRef,
+};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -40,7 +40,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its start roll retries. Only [`decide`] writes it,
 /// at 10 Hz on a random per-brain phase. Its requests start and stop the game's motions and
-/// actions, which answer with [`MotionFinished`](motion::MotionFinished) or
+/// actions, which answer with [`MotionFinished`] or
 /// [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
 #[require(StartedActions, StartedMotion, Steering, Kinematics)]
@@ -118,7 +118,7 @@ impl Brain {
     }
 
     /// Whether behavior `index` may start now: no missed start roll is waiting out its retry, its
-    /// motion is ready (see [`MotionStatus::is_ready`](motion::MotionStatus::is_ready)), and its
+    /// motion is ready (see [`MotionStatus::is_ready`]), and its
     /// action can run (see [`DecisionInputs::can_run`]).
     /// A committed behavior also needs an action that ends on its own, since nothing else would
     /// finish it.
@@ -316,7 +316,7 @@ pub(super) fn plugin(app: &mut App) {
         ),
     );
 
-    app.add_plugins((perception::plugin, action::plugin, motion::plugin))
+    app.add_plugins((perception::plugin, action::plugin))
         .add_observer(decide::on_release_finished_motion)
         .add_observer(decide::on_finish_action)
         .add_systems(

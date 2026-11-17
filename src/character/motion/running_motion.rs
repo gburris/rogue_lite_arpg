@@ -9,7 +9,7 @@ use crate::prelude::*;
 
 /// What a motion acts on: a character or object, or a place.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(in crate::character::brain) enum TargetRef {
+pub(in crate::character) enum TargetRef {
     Entity(Entity),
     Point(Vec2),
 }
@@ -18,7 +18,7 @@ pub(in crate::character::brain) enum TargetRef {
 /// finite motion also carries its run's progress component, whose removal ends the run and fires
 /// [`MotionFinished`]; the motion stays here until the next request.
 #[derive(Component, Clone, Copy, Debug)]
-pub(in crate::character::brain) struct RunningMotion {
+pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
     pub target: Option<TargetRef>,
 }
@@ -26,7 +26,7 @@ pub(in crate::character::brain) struct RunningMotion {
 /// A finite motion's run ended, however it ended: it played out, lost its target, or its
 /// character was interrupted (see [`InterruptionState`]) or given another motion.
 #[derive(EntityEvent, Clone, Copy, Debug)]
-pub(in crate::character::brain) struct MotionFinished {
+pub(in crate::character) struct MotionFinished {
     pub entity: Entity,
     pub motion: Motion,
 }
@@ -47,24 +47,20 @@ struct MotionHolder {
 
 /// Reads which motion a character runs and which motions it could start.
 #[derive(SystemParam)]
-pub(in crate::character::brain) struct MotionStatus<'w, 's> {
+pub(in crate::character) struct MotionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     characters: Query<'w, 's, MotionHolder>,
 }
 
 impl MotionStatus<'_, '_> {
     /// The motion `character` runs; `None` while it runs none.
-    pub(in crate::character::brain) fn running_motion(&self, character: Entity) -> Option<Motion> {
+    pub(in crate::character) fn running_motion(&self, character: Entity) -> Option<Motion> {
         let holder = self.characters.get(character).ok()?;
         holder.running.map(|running| running.motion)
     }
 
     /// Whether `character` runs a motion of `motion`'s kind that hasn't ended.
-    pub(in crate::character::brain) fn is_in_progress(
-        &self,
-        character: Entity,
-        motion: Motion,
-    ) -> bool {
+    pub(in crate::character) fn is_in_progress(&self, character: Entity, motion: Motion) -> bool {
         let Ok(holder) = self.characters.get(character) else {
             return false;
         };
@@ -104,7 +100,7 @@ impl MotionStatus<'_, '_> {
 
     /// Whether `character` could start `motion` now: it has the capability, and a finite motion is
     /// off cooldown and its character not interrupted (see [`InterruptionState`]).
-    pub(in crate::character::brain) fn is_ready(&self, character: Entity, motion: Motion) -> bool {
+    pub(in crate::character) fn is_ready(&self, character: Entity, motion: Motion) -> bool {
         let Ok(holder) = self.characters.get(character) else {
             return false;
         };
@@ -126,11 +122,7 @@ impl MotionStatus<'_, '_> {
 
     /// The farthest target distance at which `character`'s capability for `motion` counts as in
     /// reach; `None` without the capability or a reach.
-    pub(in crate::character::brain) fn reach(
-        &self,
-        character: Entity,
-        motion: Motion,
-    ) -> Option<f32> {
+    pub(in crate::character) fn reach(&self, character: Entity, motion: Motion) -> Option<f32> {
         let holder = self.characters.get(character).ok()?;
         match motion {
             Motion::Dash => holder.dash.and_then(Dash::reach),
@@ -148,21 +140,21 @@ impl MotionStatus<'_, '_> {
 
 /// Starts and stops motions.
 #[derive(SystemParam)]
-pub(in crate::character::brain) struct MotionCommands<'w, 's> {
+pub(in crate::character) struct MotionCommands<'w, 's> {
     commands: Commands<'w, 's>,
     status: MotionStatus<'w, 's>,
 }
 
 impl<'w, 's> MotionCommands<'w, 's> {
     /// The status these commands check against.
-    pub(in crate::character::brain) fn status(&self) -> &MotionStatus<'w, 's> {
+    pub(in crate::character) fn status(&self) -> &MotionStatus<'w, 's> {
         &self.status
     }
 
     /// Makes `motion` the one `character` runs, steering by `target`. A finite motion starts a
     /// fresh run, and any other motion's run ends. A continuous motion of the kind already running
     /// only takes the new settings, keeping its progress.
-    pub(in crate::character::brain) fn start(
+    pub(in crate::character) fn start(
         &mut self,
         character: Entity,
         motion: Motion,
@@ -211,11 +203,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
     }
 
     /// Points the motion `character` runs at `target`, keeping its run.
-    pub(in crate::character::brain) fn retarget(
-        &mut self,
-        character: Entity,
-        target: Option<TargetRef>,
-    ) {
+    pub(in crate::character) fn retarget(&mut self, character: Entity, target: Option<TargetRef>) {
         if let Some(motion) = self.status.running_motion(character) {
             self.commands
                 .entity(character)
@@ -224,7 +212,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
     }
 
     /// Stops whatever motion `character` runs, ending any run in progress.
-    pub(in crate::character::brain) fn stop(&mut self, character: Entity) {
+    pub(in crate::character) fn stop(&mut self, character: Entity) {
         self.commands.entity(character).try_remove::<(
             RunningMotion,
             DashProgress,

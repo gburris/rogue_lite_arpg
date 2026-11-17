@@ -14,9 +14,8 @@ use super::engine::{
     has_absent_input,
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::motion::MotionFinished;
 use super::started_motion::StartedMotion;
-use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
+use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;

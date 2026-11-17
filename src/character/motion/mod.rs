@@ -28,7 +28,7 @@ use self::step::{
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};
-use super::engine::Interval;
+use super::brain::Interval;
 use crate::prelude::*;
 
 /// How a character moves: a continuous motion that runs until replaced, or a

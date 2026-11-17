@@ -5,10 +5,9 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTargets,
+    BlockedTimer, DecayingSpeedBoost, Motion, MotionFinished, MotionStep, RunningMotion,
+    SteerInput, SteeredCharacter, Steering, SteeringTargets,
 };
-use crate::character::brain::Motion;
 use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;

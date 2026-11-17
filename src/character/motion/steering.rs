@@ -43,7 +43,7 @@ impl DecayingSpeedBoost {
 /// This frame's steering request, written by the system that owns the held
 /// motion.
 #[derive(Component, Clone, Copy, Debug)]
-pub(in crate::character::brain) struct Steering {
+pub(in crate::character) struct Steering {
     direction: Option<Vec2>,
     effort: SteeringEffort,
 }

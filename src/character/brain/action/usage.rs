@@ -1,13 +1,27 @@
 use bevy::prelude::*;
 
 use super::{Action, ActionOutcome, BehaviorActionFinished};
-use crate::character::brain::Brain;
+use crate::character::brain::{Brain, RunningBehavior};
 use crate::prelude::*;
 
 /// The behavior run id of the last use started in each slot, so a committed action starts once
 /// and its finish names its behavior.
-#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub(in crate::character::brain) struct StartedActions([Option<u32>; ActionSlot::COUNT]);
+
+impl StartedActions {
+    fn behavior_run_id(&self, slot: ActionSlot) -> Option<u32> {
+        self.0[slot.index()]
+    }
+
+    fn was_started_by(&self, slot: ActionSlot, running: RunningBehavior) -> bool {
+        running.committed && self.behavior_run_id(slot) == Some(running.behavior_run_id)
+    }
+
+    fn record_start(&mut self, slot: ActionSlot, running: RunningBehavior) {
+        self.0[slot.index()] = Some(running.behavior_run_id);
+    }
+}
 
 /// Starts the actions of the brain's running behaviors and stops sustained actions none of them
 /// still chooses. Considerations already judged the target, so the game decides only whether a use
@@ -20,28 +34,26 @@ pub(super) fn apply_action_requests(
     mut brains: Query<(Entity, &Brain, &mut StartedActions)>,
 ) {
     for (entity, brain, mut started_actions) in &mut brains {
-        for slot in ActionSlot::ALL {
+        for slot in ActionSlot::all() {
             if brain.running_behavior_with(Action::Use(slot)).is_none() {
                 actions.stop_sustained_use(entity, slot);
             }
         }
         for &running in &brain.running_behaviors {
-            let slot = match running.action {
-                Some(Action::Use(slot)) => slot,
-                Some(Action::Idle) | None => continue,
+            let Some(slot) = running.action.and_then(Action::slot) else {
+                continue;
             };
-            let started_behavior_run_id = &mut started_actions[slot.index()];
-            if running.committed && *started_behavior_run_id == Some(running.behavior_run_id) {
+            if started_actions.was_started_by(slot, running) {
                 continue;
             }
             if actions.read().is_using(entity, slot) {
                 if running.committed {
-                    *started_behavior_run_id = Some(running.behavior_run_id);
+                    started_actions.record_start(slot, running);
                 }
                 continue;
             }
             if actions.try_use(entity, slot).is_ok() {
-                *started_behavior_run_id = Some(running.behavior_run_id);
+                started_actions.record_start(slot, running);
             } else {
                 running.report_not_started(&mut commands, entity);
             }
@@ -58,7 +70,7 @@ pub(super) fn on_action_finished(
     let Some(behavior_run_id) = started_actions
         .get(finished.holder)
         .ok()
-        .and_then(|started_actions| started_actions[finished.slot.index()])
+        .and_then(|started_actions| started_actions.behavior_run_id(finished.slot))
     else {
         return;
     };

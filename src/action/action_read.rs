@@ -19,23 +19,12 @@ impl ActionSlot {
     pub const COUNT: usize = EquipmentSlot::ALL.len() + Ability::ALL.len();
 
     /// Every slot, equipment first, in [`index`](Self::index) order.
-    pub const ALL: [Self; Self::COUNT] = {
-        let mut all = [Self::Equipment(EquipmentSlot::Mainhand); Self::COUNT];
-        let mut index = 0;
-        while index < EquipmentSlot::ALL.len() {
-            all[index] = Self::Equipment(EquipmentSlot::ALL[index]);
-            index += 1;
-        }
-        let mut ability_index = 0;
-        while ability_index < Ability::ALL.len() {
-            all[EquipmentSlot::ALL.len() + ability_index] =
-                Self::Ability(Ability::ALL[ability_index]);
-            ability_index += 1;
-        }
-        all
-    };
+    pub fn all() -> impl Iterator<Item = Self> {
+        let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipment);
+        equipment.chain(Ability::ALL.into_iter().map(Self::Ability))
+    }
 
-    /// This slot's position in [`ALL`](Self::ALL), for arrays with one entry per slot.
+    /// This slot's position in [`all`](Self::all), for arrays with one entry per slot.
     pub fn index(self) -> usize {
         match self {
             Self::Equipment(slot) => slot as usize,

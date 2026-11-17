@@ -17,6 +17,16 @@ pub enum Action {
     Idle,
 }
 
+impl Action {
+    /// The slot this action uses; `None` for `Idle`.
+    pub fn slot(self) -> Option<ActionSlot> {
+        match self {
+            Self::Use(slot) => Some(slot),
+            Self::Idle => None,
+        }
+    }
+}
+
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,

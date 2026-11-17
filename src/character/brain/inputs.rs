@@ -109,47 +109,40 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
-        match action {
-            Action::Use(slot) => {
-                actions.source_in_slot(entity, slot)?;
-                Some(CapabilityProfile {
-                    reach: actions.reach(entity, slot),
-                    ..CapabilityProfile::default()
-                })
-            }
-            Action::Idle => None,
-        }
+        let slot = action.slot()?;
+        actions.source_in_slot(entity, slot)?;
+        Some(CapabilityProfile {
+            reach: actions.reach(entity, slot),
+            ..CapabilityProfile::default()
+        })
     }
 
     /// Whether `action` ends on its own, so a committed behavior over it can finish; see
     /// [`ActionUseStyle`].
     pub fn action_ends_on_its_own(&self, action: Action) -> bool {
-        match action {
-            Action::Use(slot) => self
-                .queries
-                .actions
-                .ends_on_its_own(self.components.entity, slot),
-            Action::Idle => false,
-        }
+        let entity = self.components.entity;
+        action
+            .slot()
+            .is_some_and(|slot| self.queries.actions.ends_on_its_own(entity, slot))
     }
 
     /// Whether a use of `action` is an attack; see [`Attack`].
     pub fn action_is_attack(&self, action: Action) -> bool {
-        match action {
-            Action::Use(slot) => self.queries.actions.is_attack(self.components.entity, slot),
-            Action::Idle => false,
-        }
+        let entity = self.components.entity;
+        action
+            .slot()
+            .is_some_and(|slot| self.queries.actions.is_attack(entity, slot))
     }
 
     /// Whether the character could start `action` now, or what stands in the way.
     fn action_readiness(&self, action: Action) -> ActionReadiness {
-        match action {
-            Action::Use(slot) => match self.queries.actions.can_use(self.components.entity, slot) {
-                Ok(_) => ActionReadiness::Ready,
-                Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
-                Err(_) => ActionReadiness::Missing,
-            },
-            Action::Idle => ActionReadiness::Ready,
+        let Some(slot) = action.slot() else {
+            return ActionReadiness::Ready;
+        };
+        match self.queries.actions.can_use(self.components.entity, slot) {
+            Ok(_) => ActionReadiness::Ready,
+            Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
+            Err(_) => ActionReadiness::Missing,
         }
     }
 
@@ -158,16 +151,13 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn can_run(&self, action: Action) -> bool {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
-        match action {
-            Action::Idle => true,
-            Action::Use(slot) => {
-                if actions.is_using(entity, slot) {
-                    return true;
-                }
-                !actions.is_using_any(entity)
-                    && self.action_readiness(action) == ActionReadiness::Ready
-            }
+        let Some(slot) = action.slot() else {
+            return true;
+        };
+        if actions.is_using(entity, slot) {
+            return true;
         }
+        !actions.is_using_any(entity) && self.action_readiness(action) == ActionReadiness::Ready
     }
 
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.

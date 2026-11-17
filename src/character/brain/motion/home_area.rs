@@ -1,7 +1,7 @@
-use avian2d::prelude::LinearVelocity;
 use bevy::prelude::*;
 
 use super::{BlockedTimer, Motion};
+use crate::character::state::BlockedState;
 use crate::prelude::*;
 
 /// Seconds a walk home pushes against a wall or a crowd before the character settles where it
@@ -76,25 +76,15 @@ impl HomeArea {
 /// Moves the home of each character whose walk back is blocked to where it stands.
 pub(super) fn settle_blocked_returners(
     time: Res<Time<Virtual>>,
-    mut returners: Query<(
-        &Brain,
-        &Transform,
-        &Kinematics,
-        &StatMultipliers,
-        &LinearVelocity,
-        &mut HomeArea,
-    )>,
+    mut returners: Query<(&Brain, &Transform, BlockedState, &mut HomeArea)>,
 ) {
-    for (brain, transform, kinematics, stat_multipliers, linear_velocity, mut home_area) in
-        &mut returners
-    {
+    for (brain, transform, blocked, mut home_area) in &mut returners {
         if brain.motion() != Some(Motion::ReturnToHome) {
             home_area.return_blocked_timer.reset();
             continue;
         }
-        let is_blocked = kinematics.is_blocked_at(linear_velocity.0, stat_multipliers.speed);
         if home_area.return_blocked_timer.tick_and_check_limit(
-            is_blocked,
+            blocked.is_blocked(),
             time.delta_secs(),
             RETURN_BLOCKED_SECONDS,
         ) {

@@ -55,6 +55,22 @@ impl InterruptionStateItem<'_, '_> {
     }
 }
 
+/// Whether a character is pressed against a wall or a crowd; see [`Kinematics::is_blocked_at`].
+#[derive(QueryData)]
+pub struct BlockedState {
+    kinematics: &'static Kinematics,
+    stat_multipliers: &'static StatMultipliers,
+    linear_velocity: &'static LinearVelocity,
+}
+
+impl BlockedStateItem<'_, '_> {
+    /// See [`BlockedState`].
+    pub fn is_blocked(&self) -> bool {
+        self.kinematics
+            .is_blocked_at(self.linear_velocity.0, self.stat_multipliers.speed)
+    }
+}
+
 /// A character's intended movement: a heading and a multiple of `max_speed`, with no
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
 /// the character's [`StatMultipliers`] speed and hands it to physics.

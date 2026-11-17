@@ -1,4 +1,3 @@
-use avian2d::prelude::LinearVelocity;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -9,6 +8,7 @@ use super::capability::{CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
 use crate::character::Allies;
+use crate::character::state::BlockedState;
 use crate::prelude::*;
 
 /// Whether an action could start now; see [`DecisionInputs::action_readiness`].
@@ -50,8 +50,7 @@ pub enum ConsiderationInput {
     /// Whether the character owns this action and has what it needs, whatever only waiting would
     /// fix.
     ActionUsable(Action),
-    /// Whether the character is pressed against a wall or a crowd; see
-    /// [`Kinematics::is_blocked_at`].
+    /// Whether the character is pressed against a wall or a crowd; see [`BlockedState`].
     MovementBlocked,
 }
 
@@ -65,9 +64,7 @@ pub(super) struct DecisionInputComponents {
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
     home_area: Option<&'static HomeArea>,
-    stat_multipliers: &'static StatMultipliers,
-    kinematics: &'static Kinematics,
-    linear_velocity: Option<&'static LinearVelocity>,
+    blocked: BlockedState,
     motion_capabilities: MotionCapabilities,
 }
 
@@ -214,19 +211,10 @@ impl DecisionInputs<'_, '_, '_> {
                 self.action_profile(action).is_some()
                     && self.action_readiness(action) != ActionReadiness::Missing,
             )),
-            ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
+            ConsiderationInput::MovementBlocked => {
+                Some(f32::from(self.components.blocked.is_blocked()))
+            }
         }
-    }
-
-    /// Whether the character is pressed against a wall or a crowd; see
-    /// [`Kinematics::is_blocked_at`].
-    fn is_movement_blocked(&self) -> bool {
-        let components = self.components;
-        components.linear_velocity.is_some_and(|linear_velocity| {
-            components
-                .kinematics
-                .is_blocked_at(linear_velocity.0, components.stat_multipliers.speed)
-        })
     }
 
     /// How far past its home area range the character is. Once already heading

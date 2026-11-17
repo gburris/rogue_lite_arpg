@@ -1,13 +1,12 @@
 //! One frame of a motion: what its system reads to steer, and how a finite
 //! motion steps, follows its run, and reports finishing.
 
-use avian2d::prelude::LinearVelocity;
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
 use super::{DecayingSpeedBoost, HomeArea, Motion, Steering};
 use crate::character::brain::{Brain, TargetInfo, Targeting};
-use crate::character::state::Kinematics;
+use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
 /// A finite motion completed. The brain starts its cooldown and, if `behavior_run_id` is
@@ -129,11 +128,11 @@ pub(super) struct SteeredCharacter {
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
-    linear_velocity: Option<&'static LinearVelocity>,
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
     home_area: Option<&'static HomeArea>,
     interruption: InterruptionState,
+    blocked: BlockedState,
 }
 
 impl SteeredCharacterItem<'_, '_> {
@@ -160,9 +159,7 @@ impl SteeredCharacterItem<'_, '_> {
             home_area: self.home_area,
             kinematics: self.kinematics,
             stat_speed: self.stat_multipliers.speed,
-            physics_velocity: self
-                .linear_velocity
-                .map(|linear_velocity| linear_velocity.0),
+            is_blocked: self.blocked.is_blocked(),
         })
     }
 }
@@ -176,7 +173,7 @@ pub(super) struct SteerInput<'a> {
     delta_secs: f32,
     kinematics: &'a Kinematics,
     stat_speed: f32,
-    physics_velocity: Option<Vec2>,
+    is_blocked: bool,
 }
 
 impl SteerInput<'_> {
@@ -197,13 +194,9 @@ impl SteerInput<'_> {
     }
 
     /// Advances `blocked_timer` by this frame; see [`BlockedTimer::tick_and_check_limit`] and
-    /// [`Kinematics::is_blocked_at`].
+    /// [`BlockedState`].
     pub(super) fn tick_blocked_timer(&self, blocked_timer: &mut BlockedTimer, limit: f32) -> bool {
-        let is_blocked = self.physics_velocity.is_some_and(|physics_velocity| {
-            self.kinematics
-                .is_blocked_at(physics_velocity, self.stat_speed)
-        });
-        blocked_timer.tick_and_check_limit(is_blocked, self.delta_secs, limit)
+        blocked_timer.tick_and_check_limit(self.is_blocked, self.delta_secs, limit)
     }
 
     /// How far the character covers this frame at `speed_multiplier` times its max speed, after

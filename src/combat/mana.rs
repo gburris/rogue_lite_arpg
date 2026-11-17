@@ -20,7 +20,7 @@ impl Mana {
 
     /// Whether the current mana covers `cost`.
     pub fn can_afford(&self, cost: ManaCost) -> bool {
-        self.current >= cost.0
+        self.current >= *cost
     }
 
     /// Current mana as a `0.0..=1.0` fraction, or `None` when the values can't form one.
@@ -34,7 +34,7 @@ impl Mana {
 
     /// Subtracts `cost`, flooring at zero.
     pub fn spend(&mut self, cost: ManaCost) {
-        self.current = (self.current - cost.0).max(0.0);
+        self.current = (self.current - *cost).max(0.0);
     }
 
     pub fn regenerate(&mut self, delta_time: f32) {
@@ -43,11 +43,26 @@ impl Mana {
 }
 
 /// Attach it to projectiles, weapons, spells, etc... if they cost mana to use.
-#[derive(Component, Default, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default, Deref)]
 pub struct ManaCost(pub f32);
 
-#[derive(Component, Default, Clone)]
+impl ManaCost {
+    /// Whether `mana` covers this cost. A character without a mana pool can't pay any cost.
+    pub fn is_affordable_by(self, mana: Option<&Mana>) -> bool {
+        mana.is_some_and(|mana| mana.can_afford(self))
+    }
+}
+
+/// Mana per second an action source drains from its holder while a use of it is in progress.
+#[derive(Component, Clone, Copy, Debug, Default, Deref)]
 pub struct ManaDrainRate(pub f32);
+
+impl ManaDrainRate {
+    /// The mana this rate drains over `delta_seconds`.
+    pub fn cost_over(self, delta_seconds: f32) -> ManaCost {
+        ManaCost(*self * delta_seconds)
+    }
+}
 
 /// Regenerates all `Mana` in game based on time elapsed and the given mana instance's regeneration
 /// rate.
@@ -66,11 +81,11 @@ pub(super) fn drain_mana_for_items_in_use(
     draining_uses: Query<(Entity, &ManaDrainRate, &ActionInProgress)>,
     mut holder_query: Query<&mut Mana>,
 ) {
-    for (entity, drain_rate, in_use) in &draining_uses {
+    for (entity, &drain_rate, in_use) in &draining_uses {
         let Ok(mut mana) = holder_query.get_mut(in_use.holder()) else {
             continue;
         };
-        let drain_amount = ManaCost(drain_rate.0 * time.delta_secs());
+        let drain_amount = drain_rate.cost_over(time.delta_secs());
         if mana.can_afford(drain_amount) {
             mana.spend(drain_amount);
         } else {

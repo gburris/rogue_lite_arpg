@@ -243,14 +243,12 @@ impl ActionRead<'_, '_> {
         if !state.cooldown.is_ready(self.time.elapsed_secs()) {
             return Err(ActionFailure::OnCooldown);
         }
-        // A holder without a mana pool can't pay any mana cost.
-        match (state.mana_cost, holder.mana) {
-            (Some(&mana_cost), Some(mana)) if !mana.can_afford(mana_cost) => {
-                Err(ActionFailure::OutOfMana)
-            }
-            (Some(_), None) => Err(ActionFailure::OutOfMana),
-            (Some(_), Some(_)) | (None, _) => Ok(state.entity),
+        if let Some(&mana_cost) = state.mana_cost
+            && !mana_cost.is_affordable_by(holder.mana)
+        {
+            return Err(ActionFailure::OutOfMana);
         }
+        Ok(state.entity)
     }
 
     fn state(&self, holder: Entity, slot: ActionSlot) -> Option<ActionSourceStateItem<'_, '_>> {

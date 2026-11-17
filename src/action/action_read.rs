@@ -177,7 +177,9 @@ impl ActionRead<'_, '_> {
         holder
             .equipped_items()
             .filter_map(|item| self.sources.get(item).ok())
-            .any(|state| state.in_progress.is_some() && *state.style == ActionUseStyle::Timed)
+            .any(|state| {
+                state.in_progress.is_some() && matches!(state.style, ActionUseStyle::Timed { .. })
+            })
     }
 
     /// Whether `holder` is using any of its action sources now.

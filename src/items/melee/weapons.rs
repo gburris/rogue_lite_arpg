@@ -9,13 +9,12 @@ use crate::prelude::*;
 
 pub fn sword(sprites: &SpriteAssets) -> impl Scene {
     bsn! {
-        @melee_weapon(sprites.sword.clone(), 120)
+        @melee_weapon(sprites.sword.clone(), 120, 0.2)
         Name::new("Sword")
         ~{MeleeWeapon {
             damage: Damage::Range { min: 1.0, max: 6.0 },
             hitbox: Collider::rectangle(10.0, 40.0),
             swing_kind: MeleeSwingKind::STAB,
-            attack_time: 0.2,
             hold_distance: 15.0,
         }}
         Knockback(2500.0)
@@ -24,7 +23,7 @@ pub fn sword(sprites: &SpriteAssets) -> impl Scene {
 
 pub fn axe(sprites: &SpriteAssets) -> impl Scene {
     bsn! {
-        @melee_weapon(sprites.axe.clone(), 220)
+        @melee_weapon(sprites.axe.clone(), 220, AXE_SWING_SECONDS)
         Name::new("Axe")
         ~{axe_swing()}
         Knockback(5000.0)
@@ -33,7 +32,7 @@ pub fn axe(sprites: &SpriteAssets) -> impl Scene {
 
 pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
     bsn! {
-        @melee_weapon(sprites.axe.clone(), 220)
+        @melee_weapon(sprites.axe.clone(), 220, AXE_SWING_SECONDS)
         Name::new("Freeze Axe")
         ~{axe_swing()}
         Knockback(500.0)
@@ -47,6 +46,9 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
     }
 }
 
+/// Seconds the heavy slash both axes share takes.
+const AXE_SWING_SECONDS: f32 = 0.3;
+
 /// The heavy slash both axes share.
 fn axe_swing() -> MeleeWeapon {
     MeleeWeapon {
@@ -56,19 +58,18 @@ fn axe_swing() -> MeleeWeapon {
         },
         hitbox: Collider::rectangle(10.0, 40.0),
         swing_kind: MeleeSwingKind::SLASH,
-        attack_time: 0.3,
         hold_distance: 30.0,
     }
 }
 
 /// What every melee weapon shares: a mainhand item worth `value`, drawn with `image`, that
-/// swings when used.
-fn melee_weapon(image: Handle<Image>, value: u32) -> impl Scene {
+/// swings for `swing_seconds` when used.
+fn melee_weapon(image: Handle<Image>, value: u32, swing_seconds: f32) -> impl Scene {
     bsn! {
         ~Equippable::new(EquipmentSlot::Mainhand, &MELEE_EQUIPMENT_POSES)
         ~ActionCooldown::new(0.4)
         ~{ActionReach(MELEE_WEAPON_REACH)}
-        ~{ActionUseStyle::Timed}
+        ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         Attack
         ~Item::new(value, ItemKind::Melee)
         Sprite { image }

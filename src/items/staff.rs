@@ -13,9 +13,7 @@ use crate::prelude::*;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (fire_staff_projectiles, end_staff_casts)
-            .chain()
-            .in_set(SimulationSystems::Act),
+        fire_staff_projectiles.in_set(SimulationSystems::Act),
     );
 }
 
@@ -84,7 +82,7 @@ pub fn mage_fire_staff_fan(
 fn flame_staff_core(sprites: &SpriteAssets, cooldown: f32) -> impl Scene {
     bsn! {
         @staff(sprites.fire_staff.clone(), cooldown)
-        Staff { fire_time: 0.1, return_time: 0.1 }
+        @staff_cast(0.1, 0.1)
         ~Item::new(1340, ItemKind::Staff)
         ManaCost(6.0)
     }
@@ -94,7 +92,7 @@ pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) ->
     bsn! {
         @staff(sprites.ice_staff.clone(), 1.0)
         Name::new("Staff of Ice")
-        Staff { fire_time: 0.15, return_time: 0.15 }
+        @staff_cast(0.15, 0.15)
         ~Item::new(2050, ItemKind::Staff)
         // big mana cost
         ManaCost(15.0)
@@ -112,11 +110,19 @@ fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
         ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
         ~ActionCooldown::new(cooldown)
         ~{ActionReach(STAFF_REACH)}
-        ~{ActionUseStyle::Timed}
         Attack
         Sprite { image }
         on(on_staff_took_effect)
         on(on_stop_staff)
+    }
+}
+
+/// A staff's cast: it swings for `fire_time` seconds, fires, then swings back for `return_time`,
+/// a timed use lasting both.
+fn staff_cast(fire_time: f32, return_time: f32) -> impl Scene {
+    bsn! {
+        Staff { fire_time: fire_time, return_time: return_time }
+        ~{ActionUseStyle::Timed { seconds: fire_time + return_time }}
     }
 }
 
@@ -138,10 +144,6 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
 /// Counts down a staff's swing toward its target, after which it fires.
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 struct StaffSwingProgress(Timer);
-
-/// Counts down a staff's swing back after it fires, after which the cast ends.
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-struct StaffReturnProgress(Timer);
 
 /// Begins the cast; projectiles fire later in `fire_staff_projectiles`.
 fn on_staff_took_effect(
@@ -198,7 +200,8 @@ fn on_staff_took_effect(
     Ok(())
 }
 
-/// Fires each staff's projectiles once its swing finishes, then swings it back.
+/// Fires each staff's projectiles once its swing finishes. The swing back plays out the rest of
+/// the timed use.
 fn fire_staff_projectiles(
     mut commands: Commands,
     time: Res<Time>,
@@ -219,11 +222,7 @@ fn fire_staff_projectiles(
         if !swing_progress.tick(time.delta()).just_finished() {
             continue;
         }
-        let return_progress = Timer::from_seconds(staff.return_time, TimerMode::Once);
-        commands
-            .entity(staff_entity)
-            .remove::<StaffSwingProgress>()
-            .insert(StaffReturnProgress(return_progress));
+        commands.entity(staff_entity).remove::<StaffSwingProgress>();
 
         let Ok((holder_transform, holder_vision, side)) = holder_query.get(item_of.holder) else {
             continue;
@@ -258,21 +257,6 @@ fn fire_staff_projectiles(
     }
 }
 
-/// Ends each staff's cast once its swing back finishes; the stop observer owns the removal.
-fn end_staff_casts(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut staff_query: Query<(Entity, &mut StaffReturnProgress)>,
-) {
-    for (staff_entity, mut return_progress) in &mut staff_query {
-        if return_progress.tick(time.delta()).just_finished() {
-            commands.trigger(StopAction {
-                source: staff_entity,
-            });
-        }
-    }
-}
-
 /// `cast_position` pulled back toward the holder's `feet` until it is [`WALL_CLEARANCE`] short of
 /// any wall in between. The tip of a staff held up against a wall sits inside it, where a
 /// projectile would be destroyed the moment it spawns, whichever way it was aimed.
@@ -292,6 +276,6 @@ fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2)
 fn on_stop_staff(stop: On<StopAction>, mut commands: Commands) {
     commands
         .entity(stop.source)
-        .remove::<(StaffSwingProgress, StaffReturnProgress, TweenAnim)>()
+        .remove::<(StaffSwingProgress, TweenAnim)>()
         .despawn_children();
 }

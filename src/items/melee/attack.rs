@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming.
     pub(super) initial_angle: f32,
-    /// Comes from "`attack_time`" defined on `MeleeWeapon`.
+    /// Comes from the weapon's [`ActionUseStyle::Timed`] seconds.
     pub(super) duration: Timer,
 }
 
@@ -27,10 +27,13 @@ impl ActiveMeleeAttack {
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    weapon_query: Query<&MeleeWeapon>,
+    weapon_query: Query<(&MeleeWeapon, &ActionUseStyle)>,
     holder_query: Query<(&Vision, &CombatSide, &StatMultipliers)>,
 ) -> Result {
-    let melee_weapon = weapon_query.get(took_effect.source)?;
+    let (melee_weapon, style) = weapon_query.get(took_effect.source)?;
+    let seconds = style
+        .timed_seconds()
+        .ok_or("a melee weapon's use must be timed")?;
     let Ok((vision, side, stat_multipliers)) = holder_query.get(took_effect.holder) else {
         return Ok(());
     };
@@ -38,24 +41,12 @@ pub(super) fn on_melee_took_effect(
     let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
     // Hitbox and layers only exist for the swing; the stop observer removes them.
     commands.entity(took_effect.source).insert((
-        ActiveMeleeAttack::new(angle, melee_weapon.attack_time),
+        ActiveMeleeAttack::new(angle, seconds),
         HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)),
         melee_weapon.hitbox.clone(),
         side.hitbox_layers(),
     ));
     Ok(())
-}
-
-/// Ends each swing whose timer has finished.
-pub(super) fn end_melee_attacks(
-    mut commands: Commands,
-    swings: Query<(Entity, &ActiveMeleeAttack)>,
-) {
-    for (entity, attack) in &swings {
-        if attack.duration.just_finished() {
-            commands.trigger(StopAction { source: entity });
-        }
-    }
 }
 
 /// Removes the transient swing state.

@@ -57,22 +57,31 @@ impl ActionCooldown {
 }
 
 /// How a use ends once it takes effect.
-#[derive(Component, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
 pub enum ActionUseStyle {
     /// Ends the moment it takes effect, like a heal or a tome's spell.
     #[default]
     Instant,
-    /// Plays out after it takes effect and ends itself, like a sword swing or a staff cast.
-    Timed,
+    /// Plays out for `seconds` after it takes effect, then ends, like a sword swing or a staff
+    /// cast.
+    Timed { seconds: f32 },
     /// Lasts until it is stopped, like a shield block.
     Sustained,
 }
 
 impl ActionUseStyle {
+    /// How long a timed use plays out; `None` for the other styles.
+    pub fn timed_seconds(self) -> Option<f32> {
+        match self {
+            Self::Timed { seconds } => Some(seconds),
+            Self::Instant | Self::Sustained => None,
+        }
+    }
+
     /// Whether a use in this style ends without being stopped.
     pub fn ends_on_its_own(self) -> bool {
         match self {
-            Self::Instant | Self::Timed => true,
+            Self::Instant | Self::Timed { .. } => true,
             Self::Sustained => false,
         }
     }
@@ -94,6 +103,10 @@ impl ActionWindupProgress {
         Self(Timer::from_seconds(windup.seconds, TimerMode::Once))
     }
 }
+
+/// Counts down a timed use after it takes effect; see [`ActionUseStyle::Timed`].
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+pub(super) struct TimedActionProgress(Timer);
 
 /// Lights the holder in this color while a use winds up, a stand-in until uses have animations.
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -168,7 +181,7 @@ pub(super) struct ActionUseInProgress {
 
 impl ActionUseInProgressItem<'_, '_> {
     /// Starts the cooldown and fires [`ActionTookEffect`]. An instant use ends here; any other
-    /// use's wind-up state goes.
+    /// use's wind-up state goes, and a timed use starts counting down.
     fn take_effect(&mut self, commands: &mut Commands, now: f32) {
         self.cooldown.start(now);
         commands.trigger(ActionTookEffect {
@@ -176,9 +189,16 @@ impl ActionUseInProgressItem<'_, '_> {
             holder: self.in_progress.holder,
             key: self.in_progress.key,
         });
-        match self.style {
+        match *self.style {
             ActionUseStyle::Instant => end_use(commands, self.entity),
-            ActionUseStyle::Timed | ActionUseStyle::Sustained => {
+            ActionUseStyle::Timed { seconds } => {
+                let progress = Timer::from_seconds(seconds, TimerMode::Once);
+                commands
+                    .entity(self.entity)
+                    .remove::<(ActionWindupProgress, ActionGlowLight)>()
+                    .insert(TimedActionProgress(progress));
+            }
+            ActionUseStyle::Sustained => {
                 commands
                     .entity(self.entity)
                     .remove::<(ActionWindupProgress, ActionGlowLight)>();
@@ -242,15 +262,20 @@ pub(super) fn on_stop_action(stop: On<StopAction>, mut commands: Commands) {
 }
 
 /// Ends each use whose holder is interrupted (see [`InterruptionState`]), locking out one
-/// interrupted during its wind-up, and has each finished wind-up take effect.
+/// interrupted during its wind-up, has each finished wind-up take effect, and ends each timed use
+/// that has played out.
 pub(super) fn advance_actions(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut sources: Query<(ActionUseInProgress, Option<&mut ActionWindupProgress>)>,
+    mut sources: Query<(
+        ActionUseInProgress,
+        Option<&mut ActionWindupProgress>,
+        Option<&mut TimedActionProgress>,
+    )>,
     holders: Query<InterruptionState>,
 ) {
     let now = time.elapsed_secs();
-    for (mut use_in_progress, windup_progress) in &mut sources {
+    for (mut use_in_progress, windup_progress, timed_progress) in &mut sources {
         if is_holder_gone_or_interrupted(&holders, use_in_progress.in_progress.holder) {
             if windup_progress.is_some() {
                 use_in_progress.cooldown.start_interrupted_lockout(now);
@@ -258,10 +283,16 @@ pub(super) fn advance_actions(
             commands.trigger(StopAction {
                 source: use_in_progress.entity,
             });
-        } else if let Some(mut windup_progress) = windup_progress
-            && windup_progress.tick(time.delta()).is_finished()
+        } else if let Some(mut windup_progress) = windup_progress {
+            if windup_progress.tick(time.delta()).is_finished() {
+                use_in_progress.take_effect(&mut commands, now);
+            }
+        } else if let Some(mut timed_progress) = timed_progress
+            && timed_progress.tick(time.delta()).is_finished()
         {
-            use_in_progress.take_effect(&mut commands, now);
+            commands.trigger(StopAction {
+                source: use_in_progress.entity,
+            });
         }
     }
 }
@@ -274,9 +305,12 @@ fn is_holder_gone_or_interrupted(holders: &Query<InterruptionState>, holder: Ent
 }
 
 fn end_use(commands: &mut Commands, entity: Entity) {
-    commands
-        .entity(entity)
-        .try_remove::<(ActionInProgress, ActionWindupProgress, ActionGlowLight)>();
+    commands.entity(entity).try_remove::<(
+        ActionInProgress,
+        ActionWindupProgress,
+        TimedActionProgress,
+        ActionGlowLight,
+    )>();
 }
 
 fn report_action_finished(mut world: DeferredWorld, context: HookContext) {

@@ -23,17 +23,13 @@ pub const MELEE_WEAPON_REACH: f32 = 68.0;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (swing::process_melee_attacks, attack::end_melee_attacks)
-            .chain()
-            .in_set(SimulationSystems::Upkeep),
+        swing::process_melee_attacks.in_set(SimulationSystems::Upkeep),
     );
 }
 
 /// A weapon that swings a hitbox along its holder's aim when used.
 #[derive(Component, Clone, Debug)]
 struct MeleeWeapon {
-    // Time it takes (seconds) to complete the attack, smaller = faster
-    attack_time: f32,
     damage: Damage,
     hitbox: Collider,
     swing_kind: swing::MeleeSwingKind,

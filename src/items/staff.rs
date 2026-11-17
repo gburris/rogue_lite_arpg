@@ -28,12 +28,17 @@ const FLAME_STAFF_SWING_SECONDS: f32 = 0.1;
 const ICE_STAFF_SWING_SECONDS: f32 = 0.15;
 /// Mana each flame staff cast costs.
 const FLAME_STAFF_MANA_COST: f32 = 6.0;
+/// Mana each single-bolt cast of a fire mage's staff costs.
+const MAGE_FLAME_STAFF_MANA_COST: f32 = 10.0;
+/// Mana each fan cast of a fire mage's staff costs: twice a single bolt, since it casts half as
+/// often.
+const MAGE_FAN_STAFF_MANA_COST: f32 = 2.0 * MAGE_FLAME_STAFF_MANA_COST;
 /// Mana each ice staff cast costs.
 const ICE_STAFF_MANA_COST: f32 = 15.0;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN, FLAME_STAFF_MANA_COST)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball(sprites, sprite_layouts, -FRAC_PI_8)
@@ -52,7 +57,7 @@ pub fn mage_fire_staff_single_bolt(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN, MAGE_FLAME_STAFF_MANA_COST)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
@@ -67,7 +72,7 @@ pub fn mage_fire_staff_fan(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN, MAGE_FAN_STAFF_MANA_COST)
         Name::new("Staff of Wildfire")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)
@@ -79,12 +84,17 @@ pub fn mage_fire_staff_fan(
     }
 }
 
-/// Shared item data, sprite and cast for every flame staff, casting every `seconds_between_casts`.
-fn flame_staff_core(sprites: &SpriteAssets, seconds_between_casts: f32) -> impl Scene {
+/// Shared item data, sprite and cast for every flame staff, casting every `seconds_between_casts`
+/// for `mana_cost` mana.
+fn flame_staff_core(
+    sprites: &SpriteAssets,
+    seconds_between_casts: f32,
+    mana_cost: f32,
+) -> impl Scene {
     bsn! {
         @staff(sprites.fire_staff.clone(), seconds_between_casts, FLAME_STAFF_SWING_SECONDS)
         ~Item::new(1340, ItemKind::Staff)
-        ManaCost(FLAME_STAFF_MANA_COST)
+        ManaCost(mana_cost)
     }
 }
 

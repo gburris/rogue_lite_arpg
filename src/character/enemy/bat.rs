@@ -7,7 +7,7 @@ use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
-    distance_threshold, flag, reach_fraction_threshold, within_reach,
+    distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
@@ -95,6 +95,19 @@ const BAT_KEEP: Behavior = Behavior::new(
     5.0,
     &[INSIDE_INNER_CAST_EDGE],
 );
+/// Blocked while moving; see [`flag_kept_while_current`].
+const CORNERED: Consideration =
+    flag_kept_while_current("cornered", ConsiderationInput::MovementBlocked);
+
+/// Slides along whatever pins a bat backing away, circling the target until the bat is back
+/// past the inner cast edge.
+const BAT_SLIP_AWAY: Behavior = Behavior::new(
+    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    None,
+    CommitPolicy::ContinuouslyScored,
+    6.5,
+    &[CORNERED, INSIDE_INNER_CAST_EDGE],
+);
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
     Some(Motion::Swoop),
@@ -136,8 +149,11 @@ const BAT_BITE: Behavior = Behavior::new(
     &[LINE_OF_SIGHT, NEAR_BITE_REACH],
 );
 
-// Motion priority: swoop (10), seek (7), return (6), orbit (5.5), keep (5), chase (4),
-// wander (1).
+// Motion priority: swoop (10), seek (7), slip away (6.5), return (6), orbit (5.5), keep (5),
+// chase (4), wander (1).
+// - Slipping away beats a running keep (6.25), so a bat pinned against a wall circles out instead
+//   of pushing into it. It holds the slot past the orbit's entry edge, where the orbit continues
+//   the same circling.
 // - A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
 // - Keep and orbit never score together: keep holds the slot out to 10 units past the inner cast
 //   edge, where the orbit takes over, and the orbit holds it down to 5 units inside that edge.
@@ -155,6 +171,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     CHASE_CAST_RANGE,
     BAT_ORBIT,
     BAT_KEEP,
+    BAT_SLIP_AWAY,
     BAT_SWOOP,
     BAT_BREATH,
     BAT_BITE,

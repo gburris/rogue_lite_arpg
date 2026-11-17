@@ -26,11 +26,12 @@ const _: () = assert!(
     "staffs must reach the cast range's outer edge"
 );
 
-/// Mana a second a fire mage regenerates.
-const FIRE_MAGE_MANA_REGEN: f32 = 10.0;
-/// Mana a second an ice mage regenerates: nearly what a steady stream of ice bolts costs, so its
-/// breaks to refill come rarely.
-const ICE_MAGE_MANA_REGEN: f32 = 13.0;
+/// Mana a second a fire mage regenerates: a little less than steady casting costs, so a long fight
+/// drains it into a break to refill, later than an ice mage's.
+const FIRE_MAGE_MANA_REGEN: f32 = 4.0;
+/// Mana a second an ice mage regenerates: less than a steady stream of ice bolts costs, so a long
+/// fight drains it into a break to refill.
+const ICE_MAGE_MANA_REGEN: f32 = 10.0;
 
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;

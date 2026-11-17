@@ -108,6 +108,23 @@ pub const fn flag(name: &'static str, input: ConsiderationInput) -> Consideratio
     consideration(name, input, Interval::new(0.0, 1.0), Curve::Linear)
 }
 
+/// A 0-or-1 input that must be 1 to start its behavior, and passes while the behavior holds its
+/// slot.
+pub const fn flag_kept_while_current(
+    name: &'static str,
+    input: ConsiderationInput,
+) -> Consideration {
+    Consideration {
+        name,
+        input,
+        score_mapping: ScoreMapping::Threshold {
+            enter: 1.0,
+            exit: -1.0,
+        },
+        inverted: false,
+    }
+}
+
 pub const HAS_TARGET: Consideration = flag("has target", ConsiderationInput::HasTarget);
 pub const NO_TARGET: Consideration = HAS_TARGET.inverted("no target");
 pub const LINE_OF_SIGHT: Consideration = flag("line of sight", ConsiderationInput::LineOfSight);

@@ -44,7 +44,7 @@ pub struct ActionFailed {
     pub reason: ActionFailure,
 }
 
-/// What [`ActionRead`] reads of one action source.
+/// What [`ActionStatus`] reads of one action source.
 #[derive(QueryData)]
 struct ActionSourceData {
     entity: Entity,
@@ -58,7 +58,7 @@ struct ActionSourceData {
     in_progress: Option<&'static ActionInProgress>,
 }
 
-/// What [`ActionRead`] reads of a character holding action sources.
+/// What [`ActionStatus`] reads of a character holding action sources.
 #[derive(QueryData)]
 struct ActionHolder {
     mainhand: Option<&'static Mainhand>,
@@ -81,14 +81,14 @@ impl ActionHolderItem<'_, '_> {
 
 /// Reads which action sources a character has and whether it can use each now.
 #[derive(SystemParam)]
-pub struct ActionRead<'w, 's> {
+pub struct ActionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolder, With<Character>>,
     sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
     carried_items: CarriedItems<'w, 's>,
 }
 
-impl ActionRead<'_, '_> {
+impl ActionStatus<'_, '_> {
     /// The action source `key` names on `holder`, if any.
     pub fn source_for_key(&self, holder: Entity, key: ActionKey) -> Option<Entity> {
         let holder = self.holders.get(holder).ok()?;
@@ -208,20 +208,20 @@ impl ActionRead<'_, '_> {
 #[derive(SystemParam)]
 pub struct ActionCommands<'w, 's> {
     commands: Commands<'w, 's>,
-    read: ActionRead<'w, 's>,
+    status: ActionStatus<'w, 's>,
 }
 
 impl<'w, 's> ActionCommands<'w, 's> {
-    /// The reads these commands check against.
-    pub fn read(&self) -> &ActionRead<'w, 's> {
-        &self.read
+    /// The status these commands check against.
+    pub fn status(&self) -> &ActionStatus<'w, 's> {
+        &self.status
     }
 
-    /// Starts a use of `holder`'s action source named by `key` if [`ActionRead::can_use`] allows
+    /// Starts a use of `holder`'s action source named by `key` if [`ActionStatus::can_use`] allows
     /// it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may retry
     /// it every frame.
     pub fn try_use(&mut self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
-        let result = self.read.can_use(holder, key);
+        let result = self.status.can_use(holder, key);
         match result {
             Ok(entity) => {
                 self.commands
@@ -242,7 +242,7 @@ impl<'w, 's> ActionCommands<'w, 's> {
     /// Stops `holder`'s use of the action source named by `key` if it is a sustained use in
     /// progress; a use that ends on its own can't be stopped. See [`ActionUseStyle`].
     pub fn stop_sustained_use(&mut self, holder: Entity, key: ActionKey) {
-        let Some(source) = self.read.source_data(holder, key) else {
+        let Some(source) = self.status.source_data(holder, key) else {
             return;
         };
         if source.in_progress.is_some() && *source.style == ActionUseStyle::Sustained {

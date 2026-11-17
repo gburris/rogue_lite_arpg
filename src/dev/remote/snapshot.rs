@@ -136,7 +136,7 @@ pub(super) fn take_snapshot(
     player: Option<Single<PlayerData, With<Player>>>,
     inventory_items: Query<InventoryItemData>,
     names: Query<&Name>,
-    (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionRead),
+    (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionStatus),
     npcs: Query<NpcData, With<Npc>>,
     projectiles: Query<&Transform, With<Projectile>>,
     ground_items: Query<GroundItemData, (With<Item>, Without<ItemOf>)>,

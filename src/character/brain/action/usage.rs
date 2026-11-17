@@ -47,7 +47,7 @@ pub(super) fn apply_action_requests(
             if started_actions.was_started_by(key, running) {
                 continue;
             }
-            if actions.read().is_using(entity, key) {
+            if actions.status().is_using(entity, key) {
                 if running.committed {
                     started_actions.record_start(key, running);
                 }

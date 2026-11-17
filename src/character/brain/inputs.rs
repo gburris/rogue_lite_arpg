@@ -74,7 +74,7 @@ pub(super) struct DecisionInputComponents {
 /// The queries behind action profiles, allies and the can-run checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
-    actions: ActionRead<'w, 's>,
+    actions: ActionStatus<'w, 's>,
     allies: Allies<'w, 's>,
 }
 

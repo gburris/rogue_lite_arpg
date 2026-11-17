@@ -1,4 +1,4 @@
-mod action_read;
+mod action_status;
 mod in_progress;
 mod source;
 
@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::ActionSource;
-    pub use super::action_read::{ActionCommands, ActionFailed, ActionFailure, ActionRead};
+    pub use super::action_status::{ActionCommands, ActionFailed, ActionFailure, ActionStatus};
     pub use super::in_progress::{
         ActionFinished, ActionInProgress, ActionTookEffect, StopAction, TimedActionProgress,
     };

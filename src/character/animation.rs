@@ -107,7 +107,7 @@ fn update_animation_state(
         &mut CharacterAnimationState,
         &mut FacingDirection,
     )>,
-    actions: ActionRead,
+    actions: ActionStatus,
 ) {
     for (
         character,

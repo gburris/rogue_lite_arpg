@@ -168,7 +168,7 @@ fn update_enemy_ai_labels(
         With<Enemy>,
     >,
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
-    actions: ActionRead,
+    actions: ActionStatus,
 ) {
     for (parent, mut text) in &mut labels {
         let Ok((brain, target_info, has_target, dash, wander, score_trace)) =

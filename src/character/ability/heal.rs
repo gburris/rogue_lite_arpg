@@ -24,7 +24,7 @@ fn on_heal_took_effect(
     heals: Query<&RequiredItem, With<Heal>>,
     carried_items: CarriedItems,
 ) {
-    let Ok(&RequiredItem(kind)) = heals.get(took_effect.entity) else {
+    let Ok(&RequiredItem(kind)) = heals.get(took_effect.source) else {
         return;
     };
     if let Some(potion) = carried_items.first_of_kind(took_effect.holder, kind) {

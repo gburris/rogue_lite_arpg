@@ -30,19 +30,19 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
 }
 
 fn on_healing_tome_took_effect(
-    healing_tome: On<ActionTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     tome_query: Query<&HealingTome>,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) -> Result {
-    let tome = tome_query.get(healing_tome.entity)?;
+    let tome = tome_query.get(took_effect.source)?;
     let health_to_add = rand::rng().random_range(tome.min_healing..tome.max_healing);
     commands.trigger(AttemptHeal {
-        entity: healing_tome.holder,
+        entity: took_effect.holder,
         amount: health_to_add,
     });
-    let holder = healing_tome.holder;
+    let holder = took_effect.holder;
     commands.spawn_scene(bsn! {
         @heal_tome_vfx(&sprites, &sprite_layouts)
         ChildOf(holder)

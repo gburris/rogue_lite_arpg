@@ -80,17 +80,17 @@ pub(super) fn update_equipment_transforms(
         ),
     >,
     // Update when an item stops swinging, casting, etc...
-    mut ended_uses: RemovedComponents<ActionInProgress>,
+    mut ended_actions: RemovedComponents<ActionInProgress>,
     item_holders: Query<&ItemOf>,
     holders: Query<(Option<&Mainhand>, Option<&Offhand>, &FacingDirection), With<Items>>,
     actions: ActionRead,
     mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
-    let ended_use_holders = ended_uses
+    let ended_action_holders = ended_actions
         .read()
         .filter_map(|item| item_holders.get(item).ok())
         .map(|item_of| item_of.holder);
-    for holder in changed_holders.iter().chain(ended_use_holders) {
+    for holder in changed_holders.iter().chain(ended_action_holders) {
         let Ok((mainhand, offhand, direction)) = holders.get(holder) else {
             continue;
         };

@@ -41,7 +41,11 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             (
-                (mana::regenerate_mana, mana::drain_mana_for_items_in_use).chain(),
+                (
+                    mana::regenerate_mana,
+                    mana::drain_mana_for_actions_in_progress,
+                )
+                    .chain(),
                 projectile::reflect_projectiles,
             )
                 .in_set(SimulationSystems::Upkeep),

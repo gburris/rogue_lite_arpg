@@ -118,16 +118,16 @@ fn orient_active_shields(
 
 /// Raises the shield and begins blocking.
 fn on_shield_took_effect(
-    used_shield: On<ActionTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     mut shield_query: Query<&Shield>,
 ) {
-    let Ok(shield) = shield_query.get_mut(used_shield.entity) else {
+    let Ok(shield) = shield_query.get_mut(took_effect.source) else {
         warn!("Tried to block with invalid shield");
         return;
     };
 
-    commands.entity(used_shield.entity).insert((
+    commands.entity(took_effect.source).insert((
         ActiveShield,
         shield.hitbox.clone(),
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
@@ -136,7 +136,7 @@ fn on_shield_took_effect(
 
 /// Lowers the shield and restores its resting transform.
 fn on_stop_shield(
-    shield: On<StopAction>,
+    stop: On<StopAction>,
     mut commands: Commands,
     holder_query: Query<&FacingDirection>,
     mut shield_query: Query<
@@ -146,7 +146,7 @@ fn on_stop_shield(
 ) {
     // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
     // has nothing left to stop.
-    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(shield.entity) else {
+    let Ok((mut shield_sprite, item_of, equippable)) = shield_query.get_mut(stop.source) else {
         return;
     };
 
@@ -156,7 +156,7 @@ fn on_stop_shield(
     };
 
     commands
-        .entity(shield.entity)
+        .entity(stop.source)
         .remove::<(ActiveShield, Collider, CollisionLayers)>()
         .insert(equippable.poses.transform(*facing_direction));
 

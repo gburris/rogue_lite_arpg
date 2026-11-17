@@ -43,7 +43,7 @@ fn on_rally_took_effect(
     rallies: Query<(&Effects, &ActionReach), With<Rally>>,
     allies: Allies,
 ) {
-    let Ok((effects, &ActionReach(reach))) = rallies.get(took_effect.entity) else {
+    let Ok((effects, &ActionReach(reach))) = rallies.get(took_effect.source) else {
         return;
     };
     let holder = took_effect.holder;

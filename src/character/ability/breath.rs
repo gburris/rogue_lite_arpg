@@ -27,7 +27,7 @@ fn on_breath_took_effect(
     breaths: Query<&Projectiles, With<Breath>>,
     breathers: Query<(&Transform, &CombatSide, &Vision)>,
 ) {
-    let Ok(templates) = breaths.get(took_effect.entity) else {
+    let Ok(templates) = breaths.get(took_effect.source) else {
         return;
     };
     let holder = took_effect.holder;

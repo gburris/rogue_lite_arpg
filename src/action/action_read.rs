@@ -54,8 +54,11 @@ pub enum ActionFailure {
     MissingRequiredItem,
     /// The character is interrupted; see [`InterruptionState`].
     HolderInterrupted,
+    /// A use of the action source is already under way.
     InProgress,
+    /// The action source's [`ActionCooldown`] hasn't run out.
     OnCooldown,
+    /// The character can't pay the action source's [`ManaCost`].
     OutOfMana,
 }
 
@@ -271,7 +274,7 @@ impl<'w, 's> ActionCommands<'w, 's> {
         };
         if state.in_progress.is_some() && *state.style == ActionUseStyle::Sustained {
             self.commands.trigger(StopAction {
-                entity: state.entity,
+                source: state.entity,
             });
         }
     }

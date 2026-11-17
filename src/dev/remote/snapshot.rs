@@ -107,7 +107,7 @@ pub(super) struct InventoryItemData {
     name: Option<&'static Name>,
     equippable: Option<&'static Equippable>,
     is_equipped: Has<Equipped>,
-    is_in_use: Has<ActionInProgress>,
+    is_in_progress: Has<ActionInProgress>,
     is_consumable: Has<Consumable>,
 }
 
@@ -242,7 +242,7 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
         "kind": kind,
         "slot": item.equippable.map(|equippable| debug_name(equippable.slot)),
         "equipped": item.is_equipped,
-        "in_use": item.is_in_use,
+        "in_use": item.is_in_progress,
         "consumable": item.is_consumable,
         "value": item.item.value,
     })

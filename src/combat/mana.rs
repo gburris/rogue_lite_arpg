@@ -75,21 +75,21 @@ pub(super) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
 
 /// Drains each in-progress action's [`ManaDrainRate`] from its holder, and stops the use once the
 /// holder can't pay.
-pub(super) fn drain_mana_for_items_in_use(
+pub(super) fn drain_mana_for_actions_in_progress(
     mut commands: Commands,
     time: Res<Time>,
-    draining_uses: Query<(Entity, &ManaDrainRate, &ActionInProgress)>,
+    draining_sources: Query<(Entity, &ManaDrainRate, &ActionInProgress)>,
     mut holder_query: Query<&mut Mana>,
 ) {
-    for (entity, &drain_rate, in_use) in &draining_uses {
-        let Ok(mut mana) = holder_query.get_mut(in_use.holder()) else {
+    for (source, &drain_rate, in_progress) in &draining_sources {
+        let Ok(mut mana) = holder_query.get_mut(in_progress.holder()) else {
             continue;
         };
         let drain_amount = drain_rate.cost_over(time.delta_secs());
         if mana.can_afford(drain_amount) {
             mana.spend(drain_amount);
         } else {
-            commands.trigger(StopAction { entity });
+            commands.trigger(StopAction { source });
         }
     }
 }

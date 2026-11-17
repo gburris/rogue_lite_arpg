@@ -378,7 +378,7 @@ fn on_player_action_took_effect(
     if !players.contains(took_effect.holder) {
         return;
     }
-    if let Ok(cooldown) = cooldowns.get(took_effect.entity)
+    if let Ok(cooldown) = cooldowns.get(took_effect.source)
         && let Some(box_entity) = find_action_box(&action_box_query, took_effect.slot)
     {
         let cooldown = cooldown.remaining_seconds(time.elapsed_secs());
@@ -391,18 +391,18 @@ fn on_player_action_took_effect(
 }
 
 pub(super) fn on_action_failed(
-    use_failed: On<ActionFailed>,
+    failed: On<ActionFailed>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    let is_flashed = match use_failed.reason {
+    let is_flashed = match failed.reason {
         ActionFailure::InProgress | ActionFailure::OnCooldown => false,
         ActionFailure::EmptySlot
         | ActionFailure::MissingRequiredItem
         | ActionFailure::HolderInterrupted
         | ActionFailure::OutOfMana => true,
     };
-    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, use_failed.slot) {
+    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, failed.slot) {
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
             ErrorFlash

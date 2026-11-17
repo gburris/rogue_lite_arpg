@@ -64,14 +64,14 @@ fn on_unequip(
     mut commands: Commands,
     mut items: Query<(&mut Visibility, Has<ActionInProgress>), With<Equipped>>,
 ) {
-    let Ok((mut visibility, in_use)) = items.get_mut(unequip.item) else {
+    let Ok((mut visibility, in_progress)) = items.get_mut(unequip.item) else {
         // Expected race: equipment was despawned prior to unequip.
         info!("Equipment was despawned prior to unequip");
         return;
     };
-    if in_use {
+    if in_progress {
         commands.trigger(StopAction {
-            entity: unequip.item,
+            source: unequip.item,
         });
     }
     *visibility = Visibility::Hidden;

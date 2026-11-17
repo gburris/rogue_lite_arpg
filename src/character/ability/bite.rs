@@ -78,7 +78,7 @@ fn on_bite_took_effect(
     bites: Query<(&Bite, &ActionReach)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
 ) {
-    let Ok((bite, &ActionReach(reach))) = bites.get(took_effect.entity) else {
+    let Ok((bite, &ActionReach(reach))) = bites.get(took_effect.source) else {
         return;
     };
     let holder = took_effect.holder;

@@ -66,17 +66,17 @@ impl ActiveMeleeAttack {
 
 /// Spawns the transient swing hitbox removed by `on_stop_melee`.
 pub(super) fn on_melee_took_effect(
-    melee: On<ActionTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     weapon_query: Query<&MeleeWeapon>,
     holder_query: Query<(&Vision, &CombatSide)>,
 ) {
-    let Ok(melee_weapon) = weapon_query.get(melee.entity) else {
+    let Ok(melee_weapon) = weapon_query.get(took_effect.source) else {
         warn!("Tried to melee attack with invalid weapon");
         return;
     };
 
-    let Ok((vision, side)) = holder_query.get(melee.holder) else {
+    let Ok((vision, side)) = holder_query.get(took_effect.holder) else {
         warn!("Holder missing vision");
         return;
     };
@@ -84,7 +84,7 @@ pub(super) fn on_melee_took_effect(
     let attack_angle = vision.aim_direction.to_angle();
 
     // Hitbox and layers only exist for the swing; the stop observer removes them.
-    commands.entity(melee.entity).insert((
+    commands.entity(took_effect.source).insert((
         ActiveMeleeAttack::new(attack_angle, melee_weapon.attack_time),
         melee_weapon.hitbox.clone(),
         MeleeWeapon::collision_layers(*side),
@@ -98,14 +98,14 @@ pub(super) fn end_melee_attacks(
 ) {
     for (entity, attack) in &swings {
         if attack.duration.just_finished() {
-            commands.trigger(StopAction { entity });
+            commands.trigger(StopAction { source: entity });
         }
     }
 }
 
 /// Removes the transient swing state.
 pub(super) fn on_stop_melee(stop: On<StopAction>, mut commands: Commands) {
-    commands.entity(stop.entity).remove::<(
+    commands.entity(stop.source).remove::<(
         ActiveMeleeAttack,
         Collider,
         CollisionLayers,

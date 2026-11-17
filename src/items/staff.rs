@@ -157,17 +157,17 @@ impl Casting {
 
 /// Begins the cast; projectiles fire later in `fire_projectile_on_casting_end`.
 fn on_staff_took_effect(
-    staff_used: On<ActionTookEffect>,
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     staff_query: Query<(&Staff, &Transform), With<Projectiles>>,
     holder_query: Query<&FacingDirection>,
 ) {
-    let Ok((staff, staff_transform)) = staff_query.get(staff_used.entity) else {
+    let Ok((staff, staff_transform)) = staff_query.get(took_effect.source) else {
         warn!("Unable to cast staff, no projectiles");
         return;
     };
 
-    let Ok(facing_direction) = holder_query.get(staff_used.holder) else {
+    let Ok(facing_direction) = holder_query.get(took_effect.holder) else {
         warn!("Tried to fire staff with holder missing facing direction");
         return;
     };
@@ -179,7 +179,7 @@ fn on_staff_took_effect(
         FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
 
-    commands.entity(staff_used.entity).insert((
+    commands.entity(took_effect.source).insert((
         Casting::new(staff.fire_time, staff.return_time),
         TweenAnim::new(
             // Swing
@@ -206,7 +206,7 @@ fn on_staff_took_effect(
 
     // A spark at the tip while the cast winds up.
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
-    let staff_entity = staff_used.entity;
+    let staff_entity = took_effect.source;
     commands.spawn_scene(bsn! {
         @point_light(Color::WHITE, 10.0, 3.0, 1.0)
         Transform::from_translation(tip)
@@ -279,7 +279,7 @@ fn fire_projectile_on_casting_end(
         // Return complete, cast attack is finished; the stop observer owns the removal.
         if casting.return_time.is_finished() {
             commands.trigger(StopAction {
-                entity: staff_entity,
+                source: staff_entity,
             });
         }
     }
@@ -303,7 +303,7 @@ fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2)
 
 fn on_stop_staff(stop: On<StopAction>, mut commands: Commands) {
     commands
-        .entity(stop.entity)
+        .entity(stop.source)
         .remove::<(Casting, TweenAnim)>()
         .despawn_children();
 }

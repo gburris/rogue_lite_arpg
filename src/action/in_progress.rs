@@ -130,20 +130,21 @@ impl ActionInProgress {
     }
 }
 
-/// A use of the action source `entity` took effect. The source's own observer carries out the
-/// effect.
+/// A use of the action `source` took effect. The source's own observer carries out the effect.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionTookEffect {
-    pub entity: Entity,
+    #[event_target]
+    pub source: Entity,
     pub holder: Entity,
     pub slot: ActionSlot,
 }
 
-/// Request to end the use of `entity` in progress. Action sources whose effect leaves state behind,
-/// such as a swing's hitbox, observe it to clean up.
+/// Request to end the use of the action `source` in progress. Action sources whose effect leaves
+/// state behind, such as a swing's hitbox, observe it to clean up.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct StopAction {
-    pub entity: Entity,
+    #[event_target]
+    pub source: Entity,
 }
 
 /// Fired at the holder when one of its sources stops being in use, however the use ended.
@@ -151,7 +152,7 @@ pub struct StopAction {
 pub struct ActionFinished {
     #[event_target]
     pub holder: Entity,
-    pub entity: Entity,
+    pub source: Entity,
     pub slot: ActionSlot,
 }
 
@@ -171,7 +172,7 @@ impl ActionUseInProgressItem<'_, '_> {
     fn take_effect(&mut self, commands: &mut Commands, now: f32) {
         self.cooldown.start(now);
         commands.trigger(ActionTookEffect {
-            entity: self.entity,
+            source: self.entity,
             holder: self.in_progress.holder,
             slot: self.in_progress.slot,
         });
@@ -237,7 +238,7 @@ pub(super) fn on_action_windup_started(
 
 /// Ends the use, whatever stage it is in.
 pub(super) fn on_stop_action(stop: On<StopAction>, mut commands: Commands) {
-    end_use(&mut commands, stop.entity);
+    end_use(&mut commands, stop.source);
 }
 
 /// Ends each use whose holder is interrupted (see [`InterruptionState`]), locking out one
@@ -255,7 +256,7 @@ pub(super) fn advance_actions(
                 use_in_progress.cooldown.start_interrupted_lockout(now);
             }
             commands.trigger(StopAction {
-                entity: use_in_progress.entity,
+                source: use_in_progress.entity,
             });
         } else if let Some(mut windup_progress) = windup_progress
             && windup_progress.tick(time.delta()).is_finished()
@@ -286,7 +287,7 @@ fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
     };
     world.commands().trigger(ActionFinished {
         holder,
-        entity: context.entity,
+        source: context.entity,
         slot,
     });
 }

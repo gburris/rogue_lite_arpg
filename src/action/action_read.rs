@@ -46,7 +46,7 @@ pub struct ActionFailed {
 
 /// What [`ActionRead`] reads of one action source.
 #[derive(QueryData)]
-struct ActionSourceState {
+struct ActionSourceData {
     entity: Entity,
     ability: Option<&'static Ability>,
     cooldown: &'static ActionCooldown,
@@ -69,7 +69,7 @@ struct ActionHolder {
 }
 
 impl ActionHolderItem<'_, '_> {
-    fn equipped_items(&self) -> impl Iterator<Item = Entity> {
+    fn equipped_sources(&self) -> impl Iterator<Item = Entity> {
         let mainhand = self.mainhand.map(Mainhand::get);
         mainhand.into_iter().chain(self.offhand.map(Offhand::get))
     }
@@ -84,7 +84,7 @@ impl ActionHolderItem<'_, '_> {
 pub struct ActionRead<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolder, With<Character>>,
-    sources: Query<'w, 's, ActionSourceState, With<ActionSource>>,
+    sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
     carried_items: CarriedItems<'w, 's>,
 }
 
@@ -99,7 +99,7 @@ impl ActionRead<'_, '_> {
             ActionKey::Ability(ability) => holder.ability_sources().find(|&entity| {
                 self.sources
                     .get(entity)
-                    .is_ok_and(|state| state.ability == Some(&ability))
+                    .is_ok_and(|source| source.ability == Some(&ability))
             }),
         }
     }
@@ -107,7 +107,7 @@ impl ActionRead<'_, '_> {
     /// How far `holder`'s action source named by `key` reaches; `None` without an [`ActionReach`]
     /// or an action source.
     pub fn reach(&self, holder: Entity, key: ActionKey) -> Option<f32> {
-        self.state(holder, key)?
+        self.source_data(holder, key)?
             .reach
             .map(|&ActionReach(reach)| reach)
     }
@@ -115,32 +115,33 @@ impl ActionRead<'_, '_> {
     /// Whether a use of `holder`'s action source named by `key` ends without being stopped; see
     /// [`ActionUseStyle::ends_on_its_own`].
     pub fn ends_on_its_own(&self, holder: Entity, key: ActionKey) -> bool {
-        self.state(holder, key)
-            .is_some_and(|state| state.style.ends_on_its_own())
+        self.source_data(holder, key)
+            .is_some_and(|source| source.style.ends_on_its_own())
     }
 
     /// Whether a use of `holder`'s action source named by `key` is an attack; see [`Attack`].
     pub fn is_attack(&self, holder: Entity, key: ActionKey) -> bool {
-        self.state(holder, key).is_some_and(|state| state.is_attack)
+        self.source_data(holder, key)
+            .is_some_and(|source| source.is_attack)
     }
 
     /// Whether `holder` is using its action source named by `key` now.
     pub fn is_using(&self, holder: Entity, key: ActionKey) -> bool {
-        self.state(holder, key)
-            .is_some_and(|state| state.in_progress.is_some())
+        self.source_data(holder, key)
+            .is_some_and(|source| source.in_progress.is_some())
     }
 
     /// Whether `holder` is using an item whose use plays out and ends itself, such as a swing; see
     /// [`ActionUseStyle::Timed`].
     pub fn is_using_timed_item(&self, holder: Entity) -> bool {
-        self.is_using_any_matching(holder, |state| {
-            state.ability.is_none() && matches!(state.style, ActionUseStyle::Timed { .. })
+        self.is_using_any_matching(holder, |source| {
+            source.ability.is_none() && matches!(source.style, ActionUseStyle::Timed { .. })
         })
     }
 
     /// Whether `holder` is using an action source marked [`Attack`] now.
     pub fn is_attacking(&self, holder: Entity) -> bool {
-        self.is_using_any_matching(holder, |state| state.is_attack)
+        self.is_using_any_matching(holder, |source| source.is_attack)
     }
 
     /// Whether `holder` is using any of its action sources now.
@@ -150,8 +151,10 @@ impl ActionRead<'_, '_> {
 
     /// The action source `holder` would use for `key` now, or why it can't.
     pub fn can_use(&self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
-        let state = self.state(holder, key).ok_or(ActionFailure::NoSource)?;
-        if let Some(&RequiredItem(kind)) = state.required_item
+        let source = self
+            .source_data(holder, key)
+            .ok_or(ActionFailure::NoSource)?;
+        if let Some(&RequiredItem(kind)) = source.required_item
             && self.carried_items.first_of_kind(holder, kind).is_none()
         {
             return Err(ActionFailure::MissingRequiredItem);
@@ -163,39 +166,39 @@ impl ActionRead<'_, '_> {
         if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }
-        if state.in_progress.is_some() {
+        if source.in_progress.is_some() {
             return Err(ActionFailure::InProgress);
         }
-        if !state.cooldown.is_ready(self.time.elapsed_secs()) {
+        if !source.cooldown.is_ready(self.time.elapsed_secs()) {
             return Err(ActionFailure::OnCooldown);
         }
-        if let Some(&mana_cost) = state.mana_cost
+        if let Some(&mana_cost) = source.mana_cost
             && !mana_cost.is_affordable_by(holder.mana)
         {
             return Err(ActionFailure::OutOfMana);
         }
-        Ok(state.entity)
+        Ok(source.entity)
     }
 
     fn is_using_any_matching(
         &self,
         holder: Entity,
-        predicate: impl Fn(&ActionSourceStateItem) -> bool,
+        predicate: impl Fn(&ActionSourceDataItem) -> bool,
     ) -> bool {
         let Ok(holder) = self.holders.get(holder) else {
             return false;
         };
         holder
-            .equipped_items()
+            .equipped_sources()
             .chain(holder.ability_sources())
             .any(|entity| {
                 self.sources
                     .get(entity)
-                    .is_ok_and(|state| state.in_progress.is_some() && predicate(&state))
+                    .is_ok_and(|source| source.in_progress.is_some() && predicate(&source))
             })
     }
 
-    fn state(&self, holder: Entity, key: ActionKey) -> Option<ActionSourceStateItem<'_, '_>> {
+    fn source_data(&self, holder: Entity, key: ActionKey) -> Option<ActionSourceDataItem<'_, '_>> {
         let entity = self.source_for_key(holder, key)?;
         self.sources.get(entity).ok()
     }
@@ -239,12 +242,12 @@ impl<'w, 's> ActionCommands<'w, 's> {
     /// Stops `holder`'s use of the action source named by `key` if it is a sustained use in
     /// progress; a use that ends on its own can't be stopped. See [`ActionUseStyle`].
     pub fn stop_sustained_use(&mut self, holder: Entity, key: ActionKey) {
-        let Some(state) = self.read.state(holder, key) else {
+        let Some(source) = self.read.source_data(holder, key) else {
             return;
         };
-        if state.in_progress.is_some() && *state.style == ActionUseStyle::Sustained {
+        if source.in_progress.is_some() && *source.style == ActionUseStyle::Sustained {
             self.commands.trigger(StopAction {
-                source: state.entity,
+                source: source.entity,
             });
         }
     }

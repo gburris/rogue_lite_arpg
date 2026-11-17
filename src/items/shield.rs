@@ -66,7 +66,7 @@ struct ActiveShield;
 fn orient_active_shields(
     mut active_shield_query: Query<
         (&ItemOf, &mut Sprite, &mut Transform),
-        (With<ActiveShield>, With<Equipped>),
+        (With<Shield>, With<ActiveShield>, With<Equipped>),
     >,
     holder_query: Query<&Vision>,
 ) {

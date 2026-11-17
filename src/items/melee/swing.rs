@@ -26,7 +26,8 @@ impl MeleeSwingKind {
 /// Determines path of melee weapon based on swing type, along the timed use's progress.
 // TODO: Consider using bevy curve functions to reduce math needed here
 pub(super) fn process_melee_attacks(
-    // Melee weapons are never projectiles; the filter lets this run beside projectile systems.
+    // Melee weapons are never projectiles or shields; the filter lets this run beside the systems
+    // that move those.
     mut attack_query: Query<
         (
             &MeleeWeapon,
@@ -34,7 +35,7 @@ pub(super) fn process_melee_attacks(
             &ActiveMeleeAttack,
             &TimedActionProgress,
         ),
-        Without<Projectile>,
+        (Without<Projectile>, Without<Shield>),
     >,
 ) {
     for (melee_weapon, mut transform, active_attack, timed_progress) in &mut attack_query {

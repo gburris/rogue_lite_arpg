@@ -22,7 +22,7 @@ pub const MELEE_WEAPON_REACH: f32 = 68.0;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        swing::process_melee_attacks.in_set(SimulationSystems::Act),
+        swing::process_melee_attacks.in_set(SimulationSystems::Derive),
     );
 }
 

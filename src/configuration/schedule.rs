@@ -103,14 +103,13 @@ pub enum InGameSystems {
 /// `Derive` and is guaranteed to see every same-frame use and cancellation.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SimulationSystems {
-    /// Advances ongoing state: regeneration, cooldowns, status effects, in-progress swings and
-    /// shield drain.
+    /// Advances ongoing state: regeneration, status effects, uses in progress and mana drain.
     Upkeep,
     /// Updates who sees and aims at what.
     Perceive,
     /// Decides and acts on this frame's perception: AI decisions, motion and equipment use.
     Act,
-    /// State derived from simulation results.
+    /// State derived from simulation results, such as attack flags and swing poses.
     Derive,
 }
 

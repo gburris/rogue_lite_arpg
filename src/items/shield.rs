@@ -101,7 +101,7 @@ fn orient_raised_shields(
     }
 }
 
-/// Raises the shield and begins blocking with a blocker spawned on it for the length of the use.
+/// Raises the shield and spawns its blocker for the duration of the use.
 fn on_shield_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,

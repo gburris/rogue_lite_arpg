@@ -1,5 +1,3 @@
-//! Ambling inside the home area.
-
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;
@@ -9,11 +7,10 @@ use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering,
 use crate::character::brain::Interval;
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
-/// Seconds a walk pushes against a wall or a crowd before it ends early.
+/// Seconds a walk may stay blocked before it ends early.
 const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
-/// Alternates standing and walking one rolled heading while wandering. A blocked walk ends
-/// early.
+/// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Wander {
     pause: Interval,
@@ -21,7 +18,7 @@ pub struct Wander {
     speed_scale: f32,
 }
 
-/// Where a character's [`Wander`] is in its stand-and-walk cycle, present while it wanders.
+/// A [`Wander`] in progress: its current phase and walk direction.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct WanderProgress {
     direction: Vec2,
@@ -54,7 +51,7 @@ impl Wander {
 }
 
 impl WanderProgress {
-    /// Whether the character is walking rather than standing.
+    /// Whether the character is walking rather than pausing.
     pub fn is_walking(&self) -> bool {
         matches!(self.phase, Some(WanderPhase::Walking { .. }))
     }
@@ -62,6 +59,7 @@ impl WanderProgress {
     fn pick_steering_direction(&mut self, wander: &Wander, input: &SteerInput) -> Option<Vec2> {
         let walk_blocked = self.is_walking()
             && input.tick_blocked_timer(&mut self.blocked_timer, WANDER_BLOCKED_SECONDS);
+
         let phase = match self.phase {
             Some(phase) if input.now < phase.until() && !walk_blocked => phase,
             previous => {
@@ -86,7 +84,7 @@ impl WanderProgress {
     }
 }
 
-/// Ambles inside the home area while the character runs [`Motion::Wander`](super::Motion::Wander).
+/// Steers each character running [`Motion::Wander`](super::Motion::Wander).
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,

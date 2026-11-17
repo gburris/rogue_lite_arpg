@@ -3,13 +3,12 @@ use bevy::prelude::*;
 use super::{BlockedTimer, Motion, RunningMotion};
 use crate::character::state::BlockedState;
 
-/// Seconds a walk home pushes against a wall or a crowd before the character settles where it
-/// stands.
+/// Seconds a return home may stay blocked before the home moves to where the character stands.
 const RETURN_BLOCKED_SECONDS: f32 = 1.0;
 
-/// A character's home: its center, how far it may wander from it, and how
-/// close to the center counts as being back home. A character that cannot walk back makes
-/// the place it got stuck its new home.
+/// A character's home: its center, how far it may wander from it, and how close to the center
+/// counts as arrived. If the character is blocked on the way back, its home moves to where it
+/// stands.
 #[derive(Component, Clone)]
 pub struct HomeArea {
     origin: Vec2,
@@ -44,7 +43,7 @@ impl HomeArea {
         self.origin.distance(position)
     }
 
-    /// Whether `position` is close enough to the origin to count as back home.
+    /// Whether `position` is within the arrival radius.
     pub(in crate::character) fn has_arrived(&self, position: Vec2) -> bool {
         self.distance_from(position) <= self.arrival_radius
     }
@@ -59,9 +58,8 @@ impl HomeArea {
         self.distance_from(position) - self.radius
     }
 
-    /// Overshoot as a fraction of the home area range (`1.0` is one full range
-    /// beyond it). Returns `None` for a non-positive or non-finite radius
-    /// so callers treat it as having no home area.
+    /// [`Self::overshoot`] as a fraction of the radius; `None` unless the radius is finite and
+    /// positive.
     pub(in crate::character) fn overshoot_fraction(&self, position: Vec2) -> Option<f32> {
         let radius = self.radius();
         if radius.is_finite() && radius > 0.0 {
@@ -72,21 +70,22 @@ impl HomeArea {
     }
 }
 
-/// Moves the home of each character whose walk back is blocked to where it stands.
-pub(super) fn settle_blocked_returners(
+/// Moves the home of each character whose return home is blocked to where it stands.
+pub(super) fn move_homes_of_blocked_characters(
     time: Res<Time<Virtual>>,
-    mut returners: Query<(
+    mut characters: Query<(
         Option<&RunningMotion>,
         &Transform,
         BlockedState,
         &mut HomeArea,
     )>,
 ) {
-    for (running, transform, blocked, mut home_area) in &mut returners {
+    for (running, transform, blocked, mut home_area) in &mut characters {
         if running.map(|running| running.motion) != Some(Motion::ReturnToHome) {
             home_area.return_blocked_timer.reset();
             continue;
         }
+
         if home_area.return_blocked_timer.tick_and_check_limit(
             blocked.is_blocked(),
             time.delta_secs(),

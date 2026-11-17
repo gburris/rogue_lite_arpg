@@ -23,11 +23,11 @@ const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
-/// Seconds a bat waits to swoop again after a swoop ends or misses its start roll.
+/// Seconds before a bat can swoop again after a swoop ends or misses its start roll.
 const SWOOP_COOLDOWN: f32 = 2.0;
 
-/// Zero while a swoop runs or could start this decision: it waits out its cooldown once one ends
-/// and its retry once it misses its start roll.
+/// One during the swoop's cooldown or start roll retry delay; zero while a swoop is in progress or
+/// can start.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
     ConsiderationInput::MotionReady(Motion::Swoop),

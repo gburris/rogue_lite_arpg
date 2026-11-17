@@ -16,8 +16,8 @@ pub enum SkipReason {
     SlotCommitted,
     /// This is the committed behavior holding its slots, so it is not re-scored.
     RunningCommitted,
-    /// It may not start now: a missing capability, a cooldown, a missed start roll's retry wait,
-    /// or the world.
+    /// It cannot start now: a missing capability, a cooldown, a start roll retry delay, or the
+    /// world state.
     Unavailable,
 }
 

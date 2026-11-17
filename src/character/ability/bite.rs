@@ -4,8 +4,8 @@ use bevy::prelude::*;
 use super::Ability;
 use crate::prelude::*;
 
-/// Seconds a bite lasts with its hitbox out: the jaws stay open through a lunge, so a bite started
-/// just short of its reach still lands on a target the biter closes on.
+/// Seconds a bite's hitbox lasts, so a bite started just outside its reach can still hit a target
+/// that moves into range.
 const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim, whose front

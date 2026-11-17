@@ -13,7 +13,7 @@ use crate::prelude::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActionReadiness {
     Ready,
-    /// Only waiting stands in the way, such as a cooldown, mana or an interruption.
+    /// Only waiting prevents it, such as for a cooldown, mana or an interruption to end.
     Waiting,
     /// The character lacks what the action needs, such as the item, the ability or a potion.
     Missing,
@@ -29,8 +29,8 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion's kind is the one running; its payload is ignored.
     MotionRunning(Motion),
-    /// Whether the character could start this motion (see [`MotionStatus::is_ready`]) and no
-    /// behavior over it waits out a missed start roll; the payload is ignored.
+    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and no
+    /// behavior with it is in a start roll retry delay; the payload is ignored.
     MotionReady(Motion),
     /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
     /// the payload is ignored.
@@ -48,7 +48,7 @@ pub enum ConsiderationInput {
     /// Whether the character owns this action and has what it needs, whatever only waiting would
     /// fix.
     ActionUsable(Action),
-    /// Whether the character is pressed against a wall or a crowd; see [`BlockedState`].
+    /// Whether the character is blocked; see [`BlockedState`].
     MovementBlocked,
 }
 
@@ -106,7 +106,7 @@ impl DecisionInputs<'_, '_, '_> {
         })
     }
 
-    /// How far the action source for `action` reaches; `None` without one or its reach.
+    /// How far the action source for `action` reaches; `None` without a source or a reach.
     fn action_reach(&self, action: Action) -> Option<f32> {
         let key = action.key()?;
         self.queries.actions.reach(self.components.entity, key)
@@ -129,7 +129,7 @@ impl DecisionInputs<'_, '_, '_> {
             .is_some_and(|key| self.queries.actions.is_attack(entity, key))
     }
 
-    /// Whether the character could start `action` now, or what stands in the way.
+    /// Whether the character can start `action` now, or why not.
     fn action_readiness(&self, action: Action) -> ActionReadiness {
         let Some(key) = action.key() else {
             return ActionReadiness::Ready;

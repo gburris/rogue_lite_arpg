@@ -1,5 +1,3 @@
-//! Orbiting the target inside a distance range.
-
 use bevy::prelude::*;
 use rand::RngExt;
 
@@ -11,9 +9,9 @@ use crate::character::brain::Interval;
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
 const ORBIT_RADIAL_GAIN: f32 = 0.5;
-/// Seconds an orbit pushes against a wall or a crowd before circling back the other way.
+/// Seconds an orbit may stay blocked before it reverses direction.
 const ORBIT_BLOCKED_SECONDS: f32 = 0.25;
-/// Extra seconds a turned-back orbit may stay blocked, so a slow turner gets clear first.
+/// Extra seconds a reversed orbit may stay blocked, so a slow-turning character can get clear.
 const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
 
 /// Which way an [`Orbit`] circles its target.
@@ -31,7 +29,7 @@ impl OrbitDirection {
         } else if heading_side < -f32::EPSILON {
             Self::CounterClockwise
         } else if rand::rng().random_bool(0.5) {
-            // Standing still or heading straight along the bearing favors neither side.
+            // No sideways heading, so pick a side at random.
             Self::Clockwise
         } else {
             Self::CounterClockwise
@@ -46,8 +44,8 @@ impl OrbitDirection {
     }
 }
 
-/// Circles the target inside a distance range, rerolling its direction over time and turning
-/// back when something blocks the way.
+/// Circles the target within a distance range. It rerolls its direction over time and reverses
+/// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Orbit {
     reroll_interval: Interval,
@@ -80,8 +78,7 @@ impl Default for Orbit {
     }
 }
 
-/// One stretch of a character's [`Orbit`]: the side it circles and when it next rerolls, present
-/// while it orbits.
+/// An [`Orbit`] in progress: its direction and when it next rerolls.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct OrbitProgress {
     distance_offset: f32,
@@ -104,7 +101,7 @@ impl OrbitProgress {
         input: &SteerInput,
         distance_range: Interval,
     ) -> Option<Vec2> {
-        let info = input.target?;
+        let target = input.target?;
         let bearing = input.direction_to_target()?;
         let now = input.now;
         let direction = match self.direction {
@@ -134,6 +131,7 @@ impl OrbitProgress {
             Some(direction) => direction,
         };
         self.direction = Some(direction);
+
         // `bearing.perp()` circles the target clockwise.
         let tangent = match direction {
             OrbitDirection::Clockwise => bearing.perp(),
@@ -141,7 +139,7 @@ impl OrbitProgress {
         };
         // Positive error means too far out, so the correction points at the target.
         let radial = bearing
-            * distance_range.center_error(info.distance - self.distance_offset)
+            * distance_range.center_error(target.distance - self.distance_offset)
             * orbit.radial_gain;
         Some((tangent + radial).normalize_or_zero())
     }

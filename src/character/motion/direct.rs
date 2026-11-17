@@ -1,6 +1,3 @@
-//! Motions with no state of their own: chase, flee, return home, hold a
-//! distance, and standing still.
-
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;
@@ -11,7 +8,7 @@ use crate::character::brain::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
-/// Steers every running motion no component owns, and halts a character that runs none.
+/// Steers each running motion without a system of its own, and halts characters without one.
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
@@ -23,7 +20,7 @@ pub(super) fn apply_direct_steering(
             continue;
         };
         *steering = match running.motion {
-            // Steered by their components' systems.
+            // Steered by their own systems.
             Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => continue,
             motion => character
                 .build_steer_input(running, &targets, &time)
@@ -47,8 +44,7 @@ fn steer_direct_motion(motion: Motion, input: &SteerInput) -> Option<Vec2> {
 fn steer_to_hold_distance_range(input: &SteerInput, distance_range: Interval) -> Option<Vec2> {
     let distance = input.target.map_or(0.0, |target| target.distance);
     let Some(direction) = input.direction_to_target() else {
-        // Sitting on the target leaves no bearing, so keep the current heading
-        // to peel off it.
+        // On top of the target there is no direction to it, so keep the current heading.
         if distance < distance_range.min() {
             return Some(
                 input

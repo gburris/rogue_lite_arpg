@@ -1,6 +1,3 @@
-//! Per-frame steering: the [`Steering`] request each motion system writes, and
-//! [`apply_steering`], which turns it into [`Kinematics`].
-
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -11,8 +8,8 @@ use crate::character::state::Kinematics;
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct TurnRate(pub f32);
 
-/// Extra speed left over from a finite motion's burst, easing off over
-/// `duration`. Multiplies scaled steering until it decays.
+/// Extra speed left after a finite motion ends, decreasing to zero over `duration`. Multiplies
+/// scaled steering until then.
 #[derive(Component, Clone, Debug)]
 pub(super) struct DecayingSpeedBoost {
     extra_speed: f32,
@@ -40,8 +37,7 @@ impl DecayingSpeedBoost {
     }
 }
 
-/// This frame's steering request, written by the system that owns the held
-/// motion.
+/// This frame's steering request, written by the system of the running motion.
 #[derive(Component, Clone, Copy, Debug)]
 pub(in crate::character) struct Steering {
     direction: Option<Vec2>,
@@ -66,8 +62,8 @@ impl Steering {
         }
     }
 
-    /// Moves at a fixed `speed_multiplier` (at least `1.0`) times max speed. A finite
-    /// motion measures its own distance at that speed, so leftover boosts stay out.
+    /// Moves at a fixed `speed_multiplier` (at least `1.0`) times max speed, ignoring any
+    /// [`DecayingSpeedBoost`], since a finite motion measures its distance at this speed.
     pub(super) const fn boosted(direction: Option<Vec2>, speed_multiplier: f32) -> Self {
         Self {
             direction,
@@ -91,8 +87,8 @@ impl SteeringEffort {
     }
 }
 
-/// Turns each brain character's [`Steering`] into [`Kinematics`], capping how
-/// fast it turns and dropping a [`DecayingSpeedBoost`] once it decays.
+/// Turns each character's [`Steering`] into [`Kinematics`], limiting its turn rate and removing a
+/// [`DecayingSpeedBoost`] once it ends.
 pub(super) fn apply_steering(
     time: Res<Time<Virtual>>,
     mut commands: Commands,

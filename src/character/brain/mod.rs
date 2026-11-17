@@ -29,7 +29,7 @@ pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
 use super::motion::{
-    HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, Steering, TargetRef,
+    HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, MotionTarget, Steering,
 };
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -37,11 +37,10 @@ use crate::prelude::*;
 /// Seconds between a brain's scheduled decisions.
 const DECISION_PERIOD: f32 = 0.1;
 
-/// A character's utility brain: its static definition, the behaviors running
-/// in its motion and action slots, and its start roll retries. Only [`decide`] writes it,
-/// at 10 Hz on a random per-brain phase. Its requests start and stop the game's motions and
-/// actions, which answer with [`MotionFinished`] or
-/// [`BehaviorActionFinished`].
+/// A character's utility brain: its static definition, the behaviors running in its motion and
+/// action slots, and its start roll retry delays. Only [`decide`] writes it, every
+/// [`DECISION_PERIOD`] with a random per-brain offset. Its requests start and stop the game's
+/// motions and actions, which report back with [`MotionFinished`] or [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
 #[require(StartedActions, StartedMotion, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
@@ -100,7 +99,7 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    /// Whether any behavior over a motion of `motion`'s kind waits out a missed start roll.
+    /// Whether any behavior with a motion of `motion`'s kind is in a start roll retry delay.
     fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
         self.definition
             .behaviors
@@ -114,16 +113,16 @@ impl Brain {
             })
     }
 
-    /// Whether behavior `index` may start now: no missed start roll is waiting out its retry, its
-    /// motion is ready (see [`MotionStatus::is_ready`]), and its
-    /// action can run (see [`DecisionInputs::can_run`]).
-    /// A committed behavior also needs an action that ends on its own, since nothing else would
-    /// finish it.
+    /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
+    /// is ready (see [`MotionStatus::is_ready`]), and its action can run (see
+    /// [`DecisionInputs::can_run`]). A committed behavior also needs an action that ends on its
+    /// own, since nothing else would end it.
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
         let behavior = &self.definition.behaviors[index];
         if inputs.now < self.start_roll_ready_at[index] {
             return false;
         }
+
         let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
         let action_available = |action: Action| {
             if !inputs.has_action_source(action) || !inputs.can_run(action) {
@@ -227,7 +226,7 @@ impl Brain {
         }
     }
 
-    /// Stamps a new run of behavior `index` with the next run id.
+    /// Creates a running behavior for behavior `index` with the next run id.
     fn start_running_behavior(&mut self, index: usize, now: f32) -> RunningBehavior {
         self.next_behavior_run_id = self.next_behavior_run_id.wrapping_add(1);
         let behavior = self.definition.behaviors[index];
@@ -253,7 +252,6 @@ impl Brain {
         }
     }
 
-    /// Ends `running`.
     fn drop_committed_behavior(&mut self, running: RunningBehavior) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);

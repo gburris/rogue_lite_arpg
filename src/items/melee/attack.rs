@@ -10,8 +10,8 @@ pub(super) struct ActiveMeleeAttack {
     pub(super) initial_angle: f32,
 }
 
-/// Spawns the swing's hitbox on the weapon for the length of the use, dealing damage scaled by the
-/// holder's stats at the moment of the swing.
+/// Spawns the swing's hitbox on the weapon for the duration of the use. Its damage is scaled by the
+/// holder's stats at the time of the swing.
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
@@ -39,7 +39,7 @@ pub(super) fn on_melee_took_effect(
     Ok(())
 }
 
-/// Ends the swing's motion.
+/// Stops the swing.
 pub(super) fn on_melee_finished(finished: On<ActionFinished>, mut commands: Commands) {
     commands
         .entity(finished.source)

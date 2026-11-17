@@ -4,9 +4,9 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-/// A sensor that damages each opponent it touches once, on behalf of `attacker`. The hit's
-/// `source_item` is the item set by [`HitBox::with_source_item`], or else the hitbox itself, so the
-/// [`Knockback`], [`Effects`] and [`LifeSteal`] on that entity apply.
+/// A sensor that damages each opponent it touches once, on behalf of `attacker`. Its hits name the
+/// item set by [`HitBox::with_source_item`] as their source, or the hitbox itself without one, so
+/// the [`Knockback`], [`Effects`] and [`LifeSteal`] on that entity apply.
 #[derive(Component, Clone, Debug)]
 #[require(Sensor, CollidingEntities)]
 pub struct HitBox {
@@ -29,7 +29,7 @@ impl HitBox {
         }
     }
 
-    /// Credits its hits to `source_item`, such as the weapon swinging it.
+    /// Names `source_item`, such as a weapon, as the source of its hits.
     pub fn with_source_item(self, source_item: Entity) -> Self {
         Self {
             source_item: Some(source_item),

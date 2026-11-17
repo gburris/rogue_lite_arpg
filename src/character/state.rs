@@ -55,8 +55,8 @@ impl InterruptionStateItem<'_, '_> {
     }
 }
 
-/// Whether a character is pressed against a wall or a crowd: its physics velocity falls well short
-/// of the velocity its [`Kinematics`] intend. Never true while it stands still or is stunned.
+/// Whether a character is blocked: its physics velocity is well below the velocity its
+/// [`Kinematics`] intend. Never true while it stands still or is stunned.
 #[derive(QueryData)]
 pub struct BlockedState {
     kinematics: &'static Kinematics,
@@ -77,7 +77,7 @@ impl BlockedStateItem<'_, '_> {
 
 /// A character's intended movement: a heading and a multiple of `max_speed`, with no
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
-/// the character's [`StatMultipliers`] speed and hands it to physics.
+/// the character's [`StatMultipliers`] speed and passes it to physics.
 #[derive(Component, Clone)]
 #[require(FacingDirection, StatMultipliers)]
 pub struct Kinematics {

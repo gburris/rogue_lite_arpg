@@ -25,7 +25,7 @@ const WARRIOR_SWING_DELAY: f32 = 0.25;
 /// Distance from the target at which a wounded warrior may drink its potion.
 const HEAL_SAFE_DISTANCE: f32 = 200.0;
 
-/// Empty above half health, full just past it: warriors break at ~50% hp.
+/// Zero above half health, one just below it.
 const BADLY_HURT: Consideration = consideration(
     "badly hurt",
     ConsiderationInput::MissingHealth,
@@ -217,7 +217,6 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        // A 3-5 tile run inside a 90° cone away from the target.
         ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()

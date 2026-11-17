@@ -1,5 +1,3 @@
-//! A character's [`Motion`] and the systems that steer it. Steering lives in [`steering`].
-
 mod dash;
 mod direct;
 mod home_area;
@@ -18,7 +16,7 @@ pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus, TargetRef};
+pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus, MotionTarget};
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
@@ -31,34 +29,30 @@ pub use self::wander::{Wander, WanderProgress};
 use super::brain::Interval;
 use crate::prelude::*;
 
-/// How a character moves: a continuous motion that runs until replaced, or a
-/// finite committed move that steers alone until it ends. Add a variant only for a new steering
-/// contract.
+/// How a character moves: a continuous motion that runs until replaced, or a finite motion that
+/// ends on its own. Add a variant only for a new kind of steering.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Motion {
-    /// Disengaged: alternates standing and ambling, paced by `Wander`.
+    /// Alternates pausing and walking; see [`Wander`].
     #[default]
     Wander,
     Chase,
     ReturnToHome,
-    /// Wounded break: still in the fight, just getting away from the target.
+    /// Moves directly away from the target.
     Flee,
     KeepDistance(Interval),
-    /// Stands still on purpose. Scored like any motion, so it can win the
-    /// slot and keep momentum; an empty slot also stands still, but nothing
-    /// chose it.
+    /// Stands still. Unlike an empty motion slot, it is scored and chosen like any other motion.
     Idle,
-    /// Circles the target inside the distance range.
+    /// Circles the target within the distance range; see [`Orbit`].
     Orbit(Interval),
-    /// Committed straight run; its `Dash` constructor (kite, hop, slide) sets its aim.
+    /// See [`Dash`].
     Dash,
-    /// Committed swoop through a snapshot of the target and back out.
+    /// See [`Swoop`].
     Swoop,
 }
 
 impl Motion {
-    /// Every motion in array order. A payload here only stands in; arrays
-    /// index by variant.
+    /// Every motion in [`Self::index`] order. Payloads are placeholders.
     pub(super) const ALL: &'static [Self] = &[
         Self::Wander,
         Self::Chase,
@@ -108,10 +102,10 @@ impl Motion {
         }
     }
 
-    /// Whether steering this motion needs a live target.
+    /// Whether steering this motion needs a target.
     pub(super) fn needs_target(self) -> bool {
         match self {
-            // Flee is still fighting: the target is live, the goal is just distance.
+            // Flee steers away from the target, so it needs one.
             Self::Chase
             | Self::KeepDistance(_)
             | Self::Orbit(_)
@@ -171,7 +165,7 @@ pub(super) fn plugin(app: &mut App) {
             swoop::apply_swoop,
             orbit::apply_orbit,
             wander::apply_wander,
-            home_area::settle_blocked_returners,
+            home_area::move_homes_of_blocked_characters,
             direct::apply_direct_steering,
             steering::apply_steering,
         )

@@ -37,8 +37,8 @@ impl Behavior {
         }
     }
 
-    /// Starts a winning run only with probability `chance`. A miss lets the next best behavior
-    /// take the slot, and this one waits `retry_seconds` before it may win again.
+    /// When this behavior wins, it starts only with probability `chance`. On a miss, the next best
+    /// behavior takes the slot and this one cannot win for `retry_seconds`.
     pub const fn with_start_chance(self, chance: f32, retry_seconds: f32) -> Self {
         Self {
             start_chance: Some(StartChance {

@@ -64,7 +64,6 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::Vfx),
     );
 
-    // Setup Pausing!
     app.init_state::<PauseState>()
         .add_systems(OnEnter(PauseState::Paused), pause_game)
         .add_systems(OnEnter(PauseState::Running), resume_game);

@@ -1,34 +1,31 @@
-//! One frame of a motion: what its system reads to steer, and how a finite
-//! motion steps.
-
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{HomeArea, RunningMotion, Steering, TargetRef};
+use super::{HomeArea, MotionTarget, RunningMotion, Steering};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
-/// One frame of a finite motion.
+/// The result of advancing a finite motion by one frame.
 pub(super) enum MotionStep {
     Steer(Steering),
-    /// Ended this frame; its system removes the run's progress component.
+    /// The motion ended this frame; its system removes the progress component.
     Finished,
 }
 
-/// How many times faster than it fills a [`BlockedTimer`] empties while the character moves
-/// freely.
+/// How much faster a [`BlockedTimer`] counts down while unblocked than it counts up while
+/// blocked.
 const BLOCKED_DRAIN_RATE: f32 = 4.0;
 
-/// How long a motion has pushed against a wall or a crowd without getting anywhere.
+/// How long a character has been blocked; see [`BlockedState`].
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct BlockedTimer {
     seconds: f32,
 }
 
 impl BlockedTimer {
-    /// Counts up while the character `is_blocked` and back down while it moves freely. True,
-    /// restarting the count, once it reaches `limit` seconds.
+    /// Counts up while `is_blocked` and down otherwise. Returns true and resets once the count
+    /// reaches `limit` seconds.
     pub(super) fn tick_and_check_limit(
         &mut self,
         is_blocked: bool,
@@ -36,11 +33,12 @@ impl BlockedTimer {
         limit: f32,
     ) -> bool {
         if !is_blocked {
-            // Drained rather than cleared: a blocked character still reads as free on the odd
-            // frame, which must not restart the count.
+            // Count down instead of resetting: a blocked character can read as unblocked for
+            // single frames.
             self.seconds = (self.seconds - BLOCKED_DRAIN_RATE * delta_secs).max(0.0);
             return false;
         }
+
         self.seconds += delta_secs;
         if self.seconds < limit {
             return false;
@@ -53,8 +51,7 @@ impl BlockedTimer {
         self.seconds = 0.0;
     }
 
-    /// Lets the character stay blocked `seconds` longer before the limit counts, such as while
-    /// it turns away from what blocked it.
+    /// Allows `seconds` more of being blocked before the limit is reached.
     pub(super) fn delay_by(&mut self, seconds: f32) {
         self.seconds = -seconds;
     }
@@ -71,8 +68,8 @@ pub(super) struct SteeredCharacter {
 }
 
 impl SteeredCharacterItem<'_, '_> {
-    /// This frame's input for steering the `running` motion, or `None` while it needs a target
-    /// that is missing.
+    /// This frame's input for steering `running`; `None` if it needs a target and the target is
+    /// missing.
     pub(super) fn build_steer_input(
         &self,
         running: &RunningMotion,
@@ -86,6 +83,7 @@ impl SteeredCharacterItem<'_, '_> {
         if running.motion.needs_target() && target.is_none() {
             return None;
         }
+
         Some(SteerInput {
             position,
             heading: self.kinematics.direction,
@@ -100,7 +98,7 @@ impl SteeredCharacterItem<'_, '_> {
     }
 }
 
-/// Where a motion's target is this frame, seen from the character steering toward it.
+/// A motion's target this frame, relative to the steering character.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SteeringTarget {
     pub position: Vec2,
@@ -110,17 +108,16 @@ pub(super) struct SteeringTarget {
 }
 
 impl SteeringTarget {
-    /// The direction to the target; `None` while the two overlap, leaving no direction to aim
-    /// along.
+    /// The direction to the target; `None` while the characters overlap.
     fn nonzero_direction(&self) -> Option<Vec2> {
         (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
     }
 }
 
-/// Finds where the target a running motion names is.
+/// Locates the targets of running motions.
 #[derive(SystemParam)]
 pub(super) struct SteeringTargets<'w, 's> {
-    bodies: Query<
+    targets: Query<
         'w,
         's,
         (
@@ -131,18 +128,17 @@ pub(super) struct SteeringTargets<'w, 's> {
 }
 
 impl SteeringTargets<'_, '_> {
-    /// Where `target` is relative to `observer_position`, and how it moves; `None` once a target
-    /// entity is gone.
-    fn locate(&self, observer_position: Vec2, target: TargetRef) -> Option<SteeringTarget> {
+    /// `target` relative to `observer_position`; `None` if the target entity no longer exists.
+    fn locate(&self, observer_position: Vec2, target: MotionTarget) -> Option<SteeringTarget> {
         let (position, velocity) = match target {
-            TargetRef::Entity(entity) => {
-                let (transform, movement) = self.bodies.get(entity).ok()?;
+            MotionTarget::Entity(entity) => {
+                let (transform, movement) = self.targets.get(entity).ok()?;
                 let velocity = movement.map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
                     kinematics.velocity(stat_multipliers.speed)
                 });
                 (transform.translation.xy(), velocity)
             }
-            TargetRef::Point(point) => (point, Vec2::ZERO),
+            MotionTarget::Point(point) => (point, Vec2::ZERO),
         };
         Some(SteeringTarget {
             position,
@@ -190,8 +186,8 @@ impl SteerInput<'_> {
         blocked_timer.tick_and_check_limit(self.is_blocked, self.delta_secs, limit)
     }
 
-    /// How far the character covers this frame at `speed_multiplier` times its max speed, after
-    /// its [`StatMultipliers`] speed.
+    /// Distance covered this frame at `speed_multiplier` times max speed, scaled by the
+    /// [`StatMultipliers`] speed.
     pub(super) fn distance_this_frame(&self, speed_multiplier: f32) -> f32 {
         self.kinematics.max_speed * self.stat_speed * speed_multiplier * self.delta_secs
     }

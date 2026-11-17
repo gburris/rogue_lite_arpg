@@ -1,6 +1,3 @@
-//! Considerations and behaviors every brain shares; each enemy's own live in
-//! its file in `character/enemy`.
-
 use super::Motion;
 use super::action::Action;
 use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, ScoreMapping};

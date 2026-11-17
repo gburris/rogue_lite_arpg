@@ -53,8 +53,8 @@ impl ActionInProgress {
     }
 }
 
-/// Marks an entity spawned for the use of the action `source` in progress, such as a hitbox, so it
-/// goes when that use ends; see [`ActionInProgress`].
+/// Marks an entity, such as a hitbox, spawned for the use of the action `source` in progress. It is
+/// despawned when that use ends; see [`ActionInProgress`].
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = UseSpawnedEntities)]
 pub struct SpawnedForUse {
@@ -237,6 +237,7 @@ fn end_action_use(mut world: DeferredWorld, context: HookContext) {
     let Some(&ActionInProgress { holder, key }) = source.get::<ActionInProgress>() else {
         return;
     };
+
     let spawned_for_use: Vec<Entity> = source
         .get::<UseSpawnedEntities>()
         .map(|spawned| spawned.iter().collect())
@@ -244,6 +245,7 @@ fn end_action_use(mut world: DeferredWorld, context: HookContext) {
     for spawned in spawned_for_use {
         world.commands().entity(spawned).try_despawn();
     }
+
     world.commands().trigger(ActionFinished {
         source: context.entity,
         holder,

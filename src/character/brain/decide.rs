@@ -17,13 +17,12 @@ use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs,
 use super::started_motion::StartedMotion;
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
 
-/// Longest a committed behavior may run, a safety net against a missing finish.
+/// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won its slots, with its motion and action copied from the
-/// definition and stamped with a run id so each run starts its motion and action once and their
-/// finishes name it. Appliers report through it, so the
-/// committed/continuously scored finish policy lives here.
+/// A behavior that won its slots, with its motion and action copied from the definition. Its run
+/// id makes it start its motion and action once and lets their finish events name it. The finish
+/// rules for committed and continuously scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
@@ -35,7 +34,7 @@ pub(super) struct RunningBehavior {
 }
 
 impl RunningBehavior {
-    /// Ends a committed use the live world refused; a continuously scored use waits.
+    /// Ends a committed use the game could not start; a continuously scored use waits.
     pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
         if self.committed
             && let Some(action) = self.action
@@ -49,8 +48,8 @@ impl RunningBehavior {
         }
     }
 
-    /// Whether a committed behavior lost an input it was chosen on, or timed out. The game ends an
-    /// interrupted use, and a finite motion that is interrupted or loses its target, itself.
+    /// Whether a committed behavior lost an input it was chosen on or timed out. The game ends
+    /// interrupted uses and finite motions itself.
     pub(super) fn should_drop_committed_behavior(
         &self,
         behavior: &Behavior,
@@ -90,8 +89,8 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Ends the behavior a finished motion was started for and, if that run was still current, decides
-/// again at once.
+/// Ends the behavior a finished motion was started for and, if that behavior was still running,
+/// decides again immediately.
 pub(super) fn on_release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -203,8 +202,8 @@ pub(super) fn decide_behavior(
     }
 }
 
-/// Drops stale committed behaviors, then fills the slots. A winner with a start chance rolls it;
-/// see [`Behavior::with_start_chance`].
+/// Drops stale committed behaviors, then fills the slots. A winner with a start chance must pass
+/// its roll; see [`Behavior::with_start_chance`].
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
     brain.drop_stale_committed_behaviors(inputs);
     let definition = brain.definition();

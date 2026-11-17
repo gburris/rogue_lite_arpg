@@ -84,6 +84,6 @@ pub struct ActionWindup {
     pub seconds: f32,
 }
 
-/// Lights the holder in this color while a use winds up, a stand-in until uses have animations.
+/// Lights the holder in this color while a use winds up.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct ActionGlow(pub Color);

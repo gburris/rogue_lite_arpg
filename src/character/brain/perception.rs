@@ -6,7 +6,7 @@ use avian2d::prelude::{RayCaster, RayHits};
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
-use super::{BrainSystems, TargetRef};
+use super::{BrainSystems, MotionTarget};
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.
@@ -137,11 +137,12 @@ pub(in crate::character) struct Watching(pub Entity);
 #[relationship_target(relationship = Watching)]
 pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
-/// Tracks the target live without sight until removed. Damage aggro schedules its removal.
+/// Tracks the target's position without line of sight until removed. Damage aggro schedules its
+/// removal.
 #[derive(Component)]
 pub(crate) struct TargetLock;
 
-/// Whom a character targets and whether it still tracks them live.
+/// What a character targets, and whether it sees the target or holds a [`TargetLock`].
 #[derive(QueryData)]
 pub(super) struct TargetingData {
     target_info: Option<&'static TargetInfo>,
@@ -150,18 +151,18 @@ pub(super) struct TargetingData {
 }
 
 impl TargetingDataItem<'_, '_> {
-    /// What a motion steers by: the targeted entity while it is in sight or held by a
-    /// [`TargetLock`], otherwise the spot it was last seen; `None` without a target.
-    pub(super) fn motion_target(&self) -> Option<TargetRef> {
+    /// The target for a motion: the targeted entity while it is visible or locked, otherwise its
+    /// last seen position; `None` without a target.
+    pub(super) fn motion_target(&self) -> Option<MotionTarget> {
         let targeting = self.targeting?;
         let target_info = self.target_info?;
         if !target_info.has_finite_distance() {
             return None;
         }
         Some(if target_info.line_of_sight || self.has_lock {
-            TargetRef::Entity(targeting.0)
+            MotionTarget::Entity(targeting.0)
         } else {
-            TargetRef::Point(target_info.position)
+            MotionTarget::Point(target_info.position)
         })
     }
 }

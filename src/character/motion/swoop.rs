@@ -1,5 +1,3 @@
-//! The bat's swoop through the target and back out.
-
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
@@ -17,11 +15,11 @@ const SWOOP_TRACK_LIMIT: f32 = 0.25;
 const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
-/// Seconds a swoop pushes against a wall or a crowd before it breaks off.
+/// Seconds a swoop may stay blocked before it ends early.
 const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 
-/// A committed curved swoop through the target, broken off when blocked or interrupted; on ending
-/// it hands steering a decaying [`DecayingSpeedBoost`].
+/// A committed curved move through the target and back out. It ends early when blocked or
+/// interrupted, and leaves a [`DecayingSpeedBoost`] when it ends.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Swoop {
     reach: f32,
@@ -50,8 +48,7 @@ impl Swoop {
     }
 }
 
-/// Applies swoop each tick and ends it once far enough away from target or once the target is
-/// lost.
+/// Advances each swoop in progress. Ends it once past the target or when the target is lost.
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -70,6 +67,7 @@ pub(super) fn apply_swoop(
             Some(input) => progress.step(swoop, &input),
             None => MotionStep::Finished,
         };
+
         match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
@@ -79,9 +77,8 @@ pub(super) fn apply_swoop(
     }
 }
 
-/// One run of a character's [`Swoop`], present from its start until it ends. Its removal, however
-/// the run ended, starts the swoop's cooldown, hands a swoop in flight's speed to steering as a
-/// [`DecayingSpeedBoost`] and reports [`MotionFinished`].
+/// A [`Swoop`] in progress. Removing it, however the swoop ended, starts the swoop's cooldown,
+/// gives a swoop in flight a [`DecayingSpeedBoost`] and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = end_swoop)]
 pub(super) struct SwoopProgress {
@@ -93,32 +90,33 @@ impl SwoopProgress {
     fn step(&mut self, swoop: &Swoop, input: &SteerInput) -> MotionStep {
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
-        let Some(info) = input.target else {
+        let Some(target) = input.target else {
             return steer(None);
         };
+
         let cleared = self
             .path
             .as_ref()
-            .is_some_and(|path| path.cleared(input.position, info.distance));
+            .is_some_and(|path| path.cleared(input.position, target.distance));
         let blocked = self.path.is_some()
             && input.tick_blocked_timer(&mut self.blocked_timer, SWOOP_BLOCKED_SECONDS);
         if cleared || blocked {
             return MotionStep::Finished;
         }
+
         let flight_distance = input.distance_this_frame(speed_multiplier);
-        let heading = input.heading;
-        let live_target = info.position;
         let path = self.path.get_or_insert_with(|| {
             SwoopPath::new(
                 input.position,
-                live_target,
-                info.distance,
-                heading,
+                target.position,
+                target.distance,
+                input.heading,
                 swoop.exit_turn,
             )
         });
         path.advance(flight_distance);
-        path.track(live_target, flight_distance * SWOOP_TRACK_RATIO);
+        path.track(target.position, flight_distance * SWOOP_TRACK_RATIO);
+
         let to_lead = path.lead(SWOOP_LOOKAHEAD) - input.position;
         steer((to_lead.length_squared() > f32::EPSILON).then(|| to_lead.normalize_or_zero()))
     }
@@ -129,6 +127,7 @@ fn end_swoop(mut world: DeferredWorld, context: HookContext) {
     let Some(&SwoopProgress { path, .. }) = world.entity(entity).get::<SwoopProgress>() else {
         return;
     };
+
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
     let extra_speed = world.get_mut::<Swoop>(entity).map(|mut swoop| {
         swoop.cooldown.start(now);

@@ -160,45 +160,19 @@ impl ActionRead<'_, '_> {
     /// Whether `holder` is using an item whose use plays out and ends itself, such as a swing; see
     /// [`ActionUseStyle::Timed`].
     pub fn is_using_timed_item(&self, holder: Entity) -> bool {
-        let Ok(holder) = self.holders.get(holder) else {
-            return false;
-        };
-        holder
-            .equipped_items()
-            .filter_map(|item| self.sources.get(item).ok())
-            .any(|state| {
-                state.in_progress.is_some() && matches!(state.style, ActionUseStyle::Timed { .. })
-            })
+        self.is_using_any_matching(holder, |state| {
+            state.ability.is_none() && matches!(state.style, ActionUseStyle::Timed { .. })
+        })
     }
 
     /// Whether `holder` is using an action source marked [`Attack`] now.
     pub fn is_attacking(&self, holder: Entity) -> bool {
-        let Ok(holder) = self.holders.get(holder) else {
-            return false;
-        };
-        holder
-            .equipped_items()
-            .chain(holder.ability_sources())
-            .any(|entity| {
-                self.sources
-                    .get(entity)
-                    .is_ok_and(|state| state.is_attack && state.in_progress.is_some())
-            })
+        self.is_using_any_matching(holder, |state| state.is_attack)
     }
 
     /// Whether `holder` is using any of its action sources now.
     pub fn is_using_any(&self, holder: Entity) -> bool {
-        let Ok(holder) = self.holders.get(holder) else {
-            return false;
-        };
-        holder
-            .equipped_items()
-            .chain(holder.ability_sources())
-            .any(|entity| {
-                self.sources
-                    .get(entity)
-                    .is_ok_and(|state| state.in_progress.is_some())
-            })
+        self.is_using_any_matching(holder, |_| true)
     }
 
     /// The action source `holder` would use for `key` now, or why it can't.
@@ -228,6 +202,24 @@ impl ActionRead<'_, '_> {
             return Err(ActionFailure::OutOfMana);
         }
         Ok(state.entity)
+    }
+
+    fn is_using_any_matching(
+        &self,
+        holder: Entity,
+        predicate: impl Fn(&ActionSourceStateItem) -> bool,
+    ) -> bool {
+        let Ok(holder) = self.holders.get(holder) else {
+            return false;
+        };
+        holder
+            .equipped_items()
+            .chain(holder.ability_sources())
+            .any(|entity| {
+                self.sources
+                    .get(entity)
+                    .is_ok_and(|state| state.in_progress.is_some() && predicate(&state))
+            })
     }
 
     fn state(&self, holder: Entity, key: ActionKey) -> Option<ActionSourceStateItem<'_, '_>> {

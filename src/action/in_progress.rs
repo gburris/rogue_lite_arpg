@@ -28,8 +28,8 @@ pub(super) struct ActionGlowLight(Entity);
 
 /// Present on an [`ActionSource`] while a use of it is under way, from the start of its wind-up
 /// until the use ends as its [`ActionUseStyle`] says. An interrupted holder's use ends; see
-/// [`InterruptionState`]. Its removal, however the use ended, despawns the entities spawned for
-/// the use (see [`SpawnedForUse`]) and fires [`ActionFinished`].
+/// [`InterruptionState`]. Its removal, however the use ended, despawns the use's parts (see
+/// [`PartOfActionUse`]) and fires [`ActionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[component(on_remove = end_action_use)]
 pub struct ActionInProgress {
@@ -53,18 +53,18 @@ impl ActionInProgress {
     }
 }
 
-/// Marks an entity, such as a hitbox, spawned for the use of the action `source` in progress. It is
+/// Marks an entity, such as a hitbox, as part of the use of the action `source` in progress. It is
 /// despawned when that use ends; see [`ActionInProgress`].
 #[derive(Component, Clone, Copy, Debug)]
-#[relationship(relationship_target = UseSpawnedEntities)]
-pub struct SpawnedForUse {
+#[relationship(relationship_target = ActionUseParts)]
+pub struct PartOfActionUse {
     pub source: Entity,
 }
 
-/// The entities spawned for the use of this action source in progress; see [`SpawnedForUse`].
+/// The parts of the use of this action source in progress; see [`PartOfActionUse`].
 #[derive(Component, Clone, Debug)]
-#[relationship_target(relationship = SpawnedForUse)]
-pub struct UseSpawnedEntities(Vec<Entity>);
+#[relationship_target(relationship = PartOfActionUse)]
+pub struct ActionUseParts(Vec<Entity>);
 
 /// A use of the action `source` took effect. The source's own observer carries out the effect.
 #[derive(EntityEvent, Clone, Copy, Debug)]
@@ -238,12 +238,12 @@ fn end_action_use(mut world: DeferredWorld, context: HookContext) {
         return;
     };
 
-    let spawned_for_use: Vec<Entity> = source
-        .get::<UseSpawnedEntities>()
-        .map(|spawned| spawned.iter().collect())
+    let parts: Vec<Entity> = source
+        .get::<ActionUseParts>()
+        .map(|parts| parts.iter().collect())
         .unwrap_or_default();
-    for spawned in spawned_for_use {
-        world.commands().entity(spawned).try_despawn();
+    for part in parts {
+        world.commands().entity(part).try_despawn();
     }
 
     world.commands().trigger(ActionFinished {

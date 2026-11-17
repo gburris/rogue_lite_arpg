@@ -10,7 +10,7 @@ pub mod prelude {
     pub use super::ActionSource;
     pub use super::action_status::{ActionCommands, ActionFailed, ActionFailure, ActionStatus};
     pub use super::in_progress::{
-        ActionFinished, ActionInProgress, ActionTookEffect, SpawnedForUse, StopAction,
+        ActionFinished, ActionInProgress, ActionTookEffect, PartOfActionUse, StopAction,
         TimedActionProgress,
     };
     pub use super::source::{

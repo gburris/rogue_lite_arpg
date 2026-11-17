@@ -253,8 +253,8 @@ fn on_fire_projectiles(
 }
 
 /// Sends projectiles back at its holder's enemies on contact instead of being destroyed by them.
-/// On an item it only marks the item as reflecting; the entity spawned for each use (see
-/// [`SpawnedForUse`]) gets its own copy, which does the reflecting.
+/// On an item it only marks the item as reflecting; a part of each use (see [`PartOfActionUse`])
+/// gets its own copy, which does the reflecting.
 #[derive(Component, Default, Clone)]
 #[require(CollidingEntities, Sensor)]
 pub struct ProjectileReflection {
@@ -268,7 +268,7 @@ pub(super) fn reflect_projectiles(
     mut reflector_query: Query<(
         &mut ProjectileReflection,
         &CollidingEntities,
-        &SpawnedForUse,
+        &PartOfActionUse,
     )>,
     uses_in_progress: Query<&ActionInProgress>,
     mut projectile_query: Query<
@@ -277,8 +277,8 @@ pub(super) fn reflect_projectiles(
     >,
     holder_query: Query<&CombatSide>,
 ) {
-    for (mut reflection, colliding_entities, spawned_for_use) in &mut reflector_query {
-        let Ok(in_progress) = uses_in_progress.get(spawned_for_use.source) else {
+    for (mut reflection, colliding_entities, part_of_action_use) in &mut reflector_query {
+        let Ok(in_progress) = uses_in_progress.get(part_of_action_use.source) else {
             continue;
         };
         let holder = in_progress.holder();

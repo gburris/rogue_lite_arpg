@@ -159,7 +159,7 @@ fn on_melee_took_effect(
         side.hitbox_layers(),
         Transform::default(),
         ChildOf(weapon),
-        SpawnedForUse { source: weapon },
+        PartOfActionUse { source: weapon },
     ));
     Ok(())
 }

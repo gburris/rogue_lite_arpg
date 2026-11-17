@@ -82,7 +82,7 @@ fn on_bite_took_effect(
         side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),
         ChildOf(holder),
-        SpawnedForUse {
+        PartOfActionUse {
             source: took_effect.source,
         },
     ));

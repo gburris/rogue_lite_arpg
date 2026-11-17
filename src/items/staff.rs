@@ -189,7 +189,7 @@ fn on_staff_cast_started(
         @point_light(Color::WHITE, 10.0, 3.0, 1.0)
         Transform::from_translation(tip)
         ChildOf(staff_entity)
-        ~{SpawnedForUse { source: staff_entity }}
+        ~{PartOfActionUse { source: staff_entity }}
     });
     commands
         .entity(staff_entity)

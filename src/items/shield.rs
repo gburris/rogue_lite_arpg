@@ -114,7 +114,7 @@ fn on_shield_took_effect(
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
         Transform::default(),
         ChildOf(shield_entity),
-        SpawnedForUse {
+        PartOfActionUse {
             source: shield_entity,
         },
     ));

@@ -7,20 +7,13 @@ use super::{
 };
 use crate::prelude::*;
 
-/// What a motion steers by: an entity, or a fixed point.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(in crate::character) enum MotionTarget {
-    Entity(Entity),
-    Point(Vec2),
-}
-
-/// The motion a character runs, set through [`MotionCommands`]. A finite motion also has a
-/// progress component; removing it ends the motion and fires [`MotionFinished`]. This component
-/// stays until the next request.
+/// The motion a character runs and the entity it steers by, set through [`MotionCommands`]. A
+/// finite motion also has a progress component; removing it ends the motion and fires
+/// [`MotionFinished`]. This component stays until the next request.
 #[derive(Component, Clone, Copy, Debug)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
-    pub target: Option<MotionTarget>,
+    pub target: Option<Entity>,
 }
 
 /// A finite motion ended: it completed, lost its target, was interrupted (see
@@ -147,7 +140,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
         &mut self,
         character: Entity,
         motion: Motion,
-        target: Option<MotionTarget>,
+        target: Option<Entity>,
     ) {
         let keeps_progress = !motion.is_finite()
             && self
@@ -194,11 +187,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
     }
 
     /// Changes the target of `character`'s running motion, keeping its progress.
-    pub(in crate::character) fn retarget(
-        &mut self,
-        character: Entity,
-        target: Option<MotionTarget>,
-    ) {
+    pub(in crate::character) fn retarget(&mut self, character: Entity, target: Option<Entity>) {
         if let Some(running) = self.status.running_motion(character) {
             self.commands.entity(character).try_insert(RunningMotion {
                 motion: running.motion,

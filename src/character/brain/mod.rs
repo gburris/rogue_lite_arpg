@@ -28,9 +28,7 @@ pub(super) use self::perception::Watching;
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
-use super::motion::{
-    HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, MotionTarget, Steering,
-};
+use super::motion::{HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, Steering};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 

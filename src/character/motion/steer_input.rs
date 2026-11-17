@@ -2,7 +2,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{HomeArea, MotionTarget, RunningMotion, Steering};
+use super::{HomeArea, RunningMotion, Steering};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
@@ -128,18 +128,14 @@ pub(super) struct SteeringTargets<'w, 's> {
 }
 
 impl SteeringTargets<'_, '_> {
-    /// `target` relative to `observer_position`; `None` if the target entity no longer exists.
-    fn locate(&self, observer_position: Vec2, target: MotionTarget) -> Option<SteeringTarget> {
-        let (position, velocity) = match target {
-            MotionTarget::Entity(entity) => {
-                let (transform, movement) = self.targets.get(entity).ok()?;
-                let velocity = movement.map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
-                    kinematics.velocity(stat_multipliers.speed)
-                });
-                (transform.translation.xy(), velocity)
-            }
-            MotionTarget::Point(point) => (point, Vec2::ZERO),
-        };
+    /// `target` relative to `observer_position`; `None` if the target no longer exists.
+    fn locate(&self, observer_position: Vec2, target: Entity) -> Option<SteeringTarget> {
+        let (transform, movement) = self.targets.get(target).ok()?;
+        let position = transform.translation.xy();
+        let velocity = movement.map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
+            kinematics.velocity(stat_multipliers.speed)
+        });
+
         Some(SteeringTarget {
             position,
             distance: position.distance(observer_position),

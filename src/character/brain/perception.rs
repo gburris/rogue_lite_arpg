@@ -6,7 +6,7 @@ use avian2d::prelude::{RayCaster, RayHits};
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
-use super::{BrainSystems, MotionTarget};
+use super::BrainSystems;
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.
@@ -18,10 +18,12 @@ const NOTICE_DISTANCE: f32 = 3.0 * TILE_SIZE as f32;
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_damage_aggro)
         .add_observer(on_targeting_added_record_time)
+        .add_observer(on_targeting_added_spawn_location_hint)
+        .add_observer(on_targeting_removed_despawn_location_hint)
         .add_systems(
             Update,
             (
-                (update_target_info, is_target_in_sight)
+                (update_target_info, is_target_in_sight, move_location_hints)
                     .chain()
                     .in_set(BrainSystems::Perception),
                 (should_target_watched, should_stop_targeting).in_set(BrainSystems::Targeting),
@@ -137,33 +139,50 @@ pub(in crate::character) struct Watching(pub Entity);
 #[relationship_target(relationship = Watching)]
 pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
+/// Where a character believes its target is, as an entity a motion can steer toward. A targeting
+/// character has one, kept at the target's last known position (see [`TargetInfo`]), from when
+/// targeting starts until it ends.
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = TargetLocationHint)]
+pub(crate) struct LocationHint {
+    pub character: Entity,
+}
+
+/// The [`LocationHint`] for this character's target.
+#[derive(Component, Debug)]
+#[relationship_target(relationship = LocationHint, linked_spawn)]
+pub(crate) struct TargetLocationHint(Entity);
+
 /// Tracks the target's position without line of sight until removed. Damage aggro schedules its
 /// removal.
 #[derive(Component)]
 pub(crate) struct TargetLock;
 
-/// What a character targets, and whether it sees the target or holds a [`TargetLock`].
+/// What a character targets, whether it sees the target or holds a [`TargetLock`], and its
+/// [`LocationHint`].
 #[derive(QueryData)]
 pub(super) struct TargetingData {
     target_info: Option<&'static TargetInfo>,
     targeting: Option<&'static Targeting>,
+    location_hint: Option<&'static TargetLocationHint>,
     has_lock: Has<TargetLock>,
 }
 
 impl TargetingDataItem<'_, '_> {
-    /// The target for a motion: the targeted entity while it is visible or locked, otherwise its
-    /// last seen position; `None` without a target.
-    pub(super) fn motion_target(&self) -> Option<MotionTarget> {
+    /// The entity a motion steers by: the target while it is visible or locked, otherwise the
+    /// target's [`LocationHint`]; `None` without a target.
+    pub(super) fn motion_target(&self) -> Option<Entity> {
         let targeting = self.targeting?;
         let target_info = self.target_info?;
         if !target_info.has_finite_distance() {
             return None;
         }
-        Some(if target_info.line_of_sight || self.has_lock {
-            MotionTarget::Entity(targeting.0)
+
+        if target_info.line_of_sight || self.has_lock {
+            Some(targeting.0)
         } else {
-            MotionTarget::Point(target_info.position)
-        })
+            self.location_hint.map(|location_hint| location_hint.0)
+        }
     }
 }
 
@@ -269,6 +288,18 @@ fn is_target_in_sight(
     );
 }
 
+/// Moves each [`LocationHint`] to its character's last known target position.
+fn move_location_hints(
+    characters: Query<(&TargetInfo, &TargetLocationHint)>,
+    mut location_hints: Query<&mut Transform, With<LocationHint>>,
+) {
+    for (target_info, location_hint) in &characters {
+        if let Ok(mut transform) = location_hints.get_mut(location_hint.0) {
+            transform.translation = target_info.position.extend(transform.translation.z);
+        }
+    }
+}
+
 // ---------------------
 // AGGRO / TARGETING
 // ---------------------
@@ -316,6 +347,34 @@ fn on_targeting_added_record_time(
     if let Ok(mut target_info) = target_infos.get_mut(added.entity) {
         target_info.targeted_at = time.elapsed_secs();
         target_info.last_seen_at = time.elapsed_secs();
+    }
+}
+
+fn on_targeting_added_spawn_location_hint(
+    added: On<Add<Targeting>>,
+    mut commands: Commands,
+    target_infos: Query<&TargetInfo>,
+) {
+    let position = target_infos
+        .get(added.entity)
+        .map_or(Vec2::ZERO, |target_info| target_info.position);
+
+    commands.spawn((
+        Name::new("Location hint"),
+        LocationHint {
+            character: added.entity,
+        },
+        Transform::from_translation(position.extend(0.0)),
+    ));
+}
+
+fn on_targeting_removed_despawn_location_hint(
+    removed: On<Remove<Targeting>>,
+    mut commands: Commands,
+    location_hints: Query<&TargetLocationHint>,
+) {
+    if let Ok(location_hint) = location_hints.get(removed.entity) {
+        commands.entity(location_hint.0).try_despawn();
     }
 }
 

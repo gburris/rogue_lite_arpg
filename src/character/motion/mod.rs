@@ -16,7 +16,7 @@ pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus, MotionTarget};
+pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
 use self::steer_input::{
     BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
 };

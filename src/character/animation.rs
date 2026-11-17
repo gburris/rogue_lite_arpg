@@ -99,27 +99,20 @@ fn direction_index(direction: FacingDirection) -> usize {
 }
 
 fn update_animation_state(
-    mut character_query: Query<
-        (
-            &Kinematics,
-            &StatMultipliers,
-            &Attacking,
-            Option<&Health>,
-            &mut CharacterAnimationState,
-            &mut FacingDirection,
-        ),
-        Or<(
-            Changed<Kinematics>,
-            Changed<StatMultipliers>,
-            Changed<Attacking>,
-            Changed<Health>,
-        )>,
-    >,
+    mut character_query: Query<(
+        Entity,
+        &Kinematics,
+        &StatMultipliers,
+        Option<&Health>,
+        &mut CharacterAnimationState,
+        &mut FacingDirection,
+    )>,
+    actions: ActionRead,
 ) {
     for (
+        character,
         kinematics,
         stat_multipliers,
-        attacking,
         health,
         mut animation_state,
         mut facing_direction,
@@ -133,7 +126,7 @@ fn update_animation_state(
         facing_direction.set_if_neq(facing_direction.turned_toward(kinematics.direction));
 
         // Attacking animation takes priority over walking / idle
-        if **attacking {
+        if actions.is_attacking(character) {
             animation_state.set_if_neq(CharacterAnimationState::Attacking);
             continue;
         }

@@ -59,7 +59,7 @@ impl InterruptionStateItem<'_, '_> {
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
 /// the character's [`StatMultipliers`] speed and hands it to physics.
 #[derive(Component, Clone)]
-#[require(FacingDirection, Attacking, StatMultipliers)]
+#[require(FacingDirection, StatMultipliers)]
 pub struct Kinematics {
     pub direction: Vec2,
     pub max_speed: f32,
@@ -172,17 +172,6 @@ impl FacingDirection {
             Self::Left => Vec2::new(-1.0, 0.0),
             Self::Right => Vec2::new(1.0, 0.0),
         }
-    }
-}
-
-/// Animation flag mirroring whether an attack, such as a swing or a bite, is in progress; see
-/// [`ActionRead::is_attacking`]. Written only by `sync_attacking`.
-#[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
-pub struct Attacking(pub bool);
-
-pub(super) fn sync_attacking(mut holders: Query<(Entity, &mut Attacking)>, actions: ActionRead) {
-    for (holder, mut attacking) in &mut holders {
-        attacking.set_if_neq(Attacking(actions.is_attacking(holder)));
     }
 }
 

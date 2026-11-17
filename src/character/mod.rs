@@ -38,9 +38,7 @@ pub mod prelude {
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
     pub use super::purse::Purse;
-    pub use super::state::{
-        Attacking, FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
-    };
+    pub use super::state::{FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision};
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -51,11 +49,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         state::kinematics_to_velocity.in_set(MainSystems::InGame),
-    );
-
-    app.add_systems(
-        Update,
-        state::sync_attacking.in_set(SimulationSystems::Derive),
     );
 }
 

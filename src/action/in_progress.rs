@@ -116,7 +116,8 @@ impl ActionSourceInUseItem<'_, '_> {
     }
 }
 
-/// Spends a new use's mana cost, then starts its [`ActionWindup`] or has it take effect at once.
+/// Spends a new use's mana cost up front, so a use interrupted during its wind-up still costs it,
+/// then starts its [`ActionWindup`] or has it take effect at once.
 pub(super) fn on_action_started(
     added: On<Add<ActionInProgress>>,
     mut commands: Commands,

@@ -109,10 +109,10 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
-        let slot = action.slot()?;
-        actions.source_in_slot(entity, slot)?;
+        let key = action.key()?;
+        actions.source_for_key(entity, key)?;
         Some(CapabilityProfile {
-            reach: actions.reach(entity, slot),
+            reach: actions.reach(entity, key),
             ..CapabilityProfile::default()
         })
     }
@@ -122,24 +122,24 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn action_ends_on_its_own(&self, action: Action) -> bool {
         let entity = self.components.entity;
         action
-            .slot()
-            .is_some_and(|slot| self.queries.actions.ends_on_its_own(entity, slot))
+            .key()
+            .is_some_and(|key| self.queries.actions.ends_on_its_own(entity, key))
     }
 
     /// Whether a use of `action` is an attack; see [`Attack`].
     pub fn action_is_attack(&self, action: Action) -> bool {
         let entity = self.components.entity;
         action
-            .slot()
-            .is_some_and(|slot| self.queries.actions.is_attack(entity, slot))
+            .key()
+            .is_some_and(|key| self.queries.actions.is_attack(entity, key))
     }
 
     /// Whether the character could start `action` now, or what stands in the way.
     fn action_readiness(&self, action: Action) -> ActionReadiness {
-        let Some(slot) = action.slot() else {
+        let Some(key) = action.key() else {
             return ActionReadiness::Ready;
         };
-        match self.queries.actions.can_use(self.components.entity, slot) {
+        match self.queries.actions.can_use(self.components.entity, key) {
             Ok(_) => ActionReadiness::Ready,
             Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
             Err(_) => ActionReadiness::Missing,
@@ -151,10 +151,10 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn can_run(&self, action: Action) -> bool {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
-        let Some(slot) = action.slot() else {
+        let Some(key) = action.key() else {
             return true;
         };
-        if actions.is_using(entity, slot) {
+        if actions.is_using(entity, key) {
             return true;
         }
         !actions.is_using_any(entity) && self.action_readiness(action) == ActionReadiness::Ready

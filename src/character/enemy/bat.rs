@@ -15,8 +15,8 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-const BREATH: Action = Action::Use(ActionSlot::Ability(Ability::Breath));
-const BITE: Action = Action::Use(ActionSlot::Ability(Ability::Bite));
+const BREATH: Action = Action::Use(ActionKey::Ability(Ability::Breath));
+const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
 
 /// Core of the cast distance range, which a bat backs out to after a swoop.
 const CAST_CORE_DISTANCE_RANGE: Interval =

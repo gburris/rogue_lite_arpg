@@ -108,8 +108,8 @@ pub(crate) struct UseMainhand;
 #[action_output(bool)]
 pub(crate) struct UseOffhand;
 
-const MAINHAND: ActionSlot = ActionSlot::Equipment(EquipmentSlot::Mainhand);
-const OFFHAND: ActionSlot = ActionSlot::Equipment(EquipmentSlot::Offhand);
+const MAINHAND: ActionKey = ActionKey::Equipped(EquipmentSlot::Mainhand);
+const OFFHAND: ActionKey = ActionKey::Equipped(EquipmentSlot::Offhand);
 
 fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut actions: ActionCommands) {
     // Discarded: failures are already queued as `ActionFailed` for the HUD.

@@ -11,17 +11,17 @@ use crate::prelude::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Use the item equipped in a slot or one of the character's abilities.
-    Use(ActionSlot),
+    Use(ActionKey),
     /// Chose to do nothing, unlike an empty action slot where nothing scored.
     /// Always available; no applier carries it out.
     Idle,
 }
 
 impl Action {
-    /// The slot this action uses; `None` for `Idle`.
-    pub fn slot(self) -> Option<ActionSlot> {
+    /// The key of the action source this action uses; `None` for `Idle`.
+    pub fn key(self) -> Option<ActionKey> {
         match self {
-            Self::Use(slot) => Some(slot),
+            Self::Use(key) => Some(key),
             Self::Idle => None,
         }
     }

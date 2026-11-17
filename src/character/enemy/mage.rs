@@ -56,7 +56,7 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
-const RALLY: Action = Action::Use(ActionSlot::Ability(Ability::Rally));
+const RALLY: Action = Action::Use(ActionKey::Ability(Ability::Rally));
 /// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;

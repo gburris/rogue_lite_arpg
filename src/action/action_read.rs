@@ -6,28 +6,28 @@ use super::ActionSource;
 use super::in_progress::{ActionCooldown, ActionInProgress, ActionUseStyle, StopAction};
 use crate::prelude::*;
 
-/// Where a character finds an [`ActionSource`]: the item equipped in a slot, or one of its
-/// abilities.
+/// Names an [`ActionSource`] of a character: the item equipped in a slot, or one of its abilities
+/// by kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ActionSlot {
-    Equipment(EquipmentSlot),
+pub enum ActionKey {
+    Equipped(EquipmentSlot),
     Ability(Ability),
 }
 
-impl ActionSlot {
-    /// How many slots there are.
+impl ActionKey {
+    /// How many keys there are.
     pub const COUNT: usize = EquipmentSlot::ALL.len() + Ability::ALL.len();
 
-    /// Every slot, equipment first, in [`index`](Self::index) order.
+    /// Every key, equipment first, in [`index`](Self::index) order.
     pub fn all() -> impl Iterator<Item = Self> {
-        let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipment);
+        let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipped);
         equipment.chain(Ability::ALL.into_iter().map(Self::Ability))
     }
 
-    /// This slot's position in [`all`](Self::all), for arrays with one entry per slot.
+    /// This key's position in [`all`](Self::all), for arrays with one entry per key.
     pub fn index(self) -> usize {
         match self {
-            Self::Equipment(slot) => slot as usize,
+            Self::Equipped(equipment_slot) => equipment_slot as usize,
             Self::Ability(ability) => EquipmentSlot::ALL.len() + ability as usize,
         }
     }
@@ -45,7 +45,7 @@ pub struct Attack;
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct RequiredItem(pub ItemKind);
 
-/// Why a character can't use a slot now.
+/// Why a character can't use an action source now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionFailure {
     /// The character has no item equipped in the slot, or lacks the ability.
@@ -63,8 +63,8 @@ pub enum ActionFailure {
 }
 
 impl ActionFailure {
-    /// Whether the slot becomes usable again by waiting, rather than needing something the
-    /// character lacks.
+    /// Whether the action source becomes usable again by waiting, rather than needing something
+    /// the character lacks.
     pub fn is_temporary(self) -> bool {
         match self {
             Self::HolderInterrupted | Self::InProgress | Self::OnCooldown | Self::OutOfMana => true,
@@ -78,7 +78,7 @@ impl ActionFailure {
 pub struct ActionFailed {
     #[event_target]
     pub holder: Entity,
-    pub slot: ActionSlot,
+    pub key: ActionKey,
     pub reason: ActionFailure,
 }
 
@@ -117,7 +117,7 @@ impl ActionHolderItem<'_, '_> {
     }
 }
 
-/// Reads which sources a character has in each slot and whether it can use each now.
+/// Reads which action sources a character has and whether it can use each now.
 #[derive(SystemParam)]
 pub struct ActionRead<'w, 's> {
     time: Res<'w, Time<Virtual>>,
@@ -127,14 +127,14 @@ pub struct ActionRead<'w, 's> {
 }
 
 impl ActionRead<'_, '_> {
-    /// The action source `holder` has in `slot`, if any.
-    pub fn source_in_slot(&self, holder: Entity, slot: ActionSlot) -> Option<Entity> {
+    /// The action source `key` names on `holder`, if any.
+    pub fn source_for_key(&self, holder: Entity, key: ActionKey) -> Option<Entity> {
         let holder = self.holders.get(holder).ok()?;
-        match slot {
-            ActionSlot::Equipment(equipment_slot) => {
+        match key {
+            ActionKey::Equipped(equipment_slot) => {
                 equipment_slot.equipped(holder.mainhand, holder.offhand)
             }
-            ActionSlot::Ability(ability) => holder.ability_sources().find(|&entity| {
+            ActionKey::Ability(ability) => holder.ability_sources().find(|&entity| {
                 self.sources
                     .get(entity)
                     .is_ok_and(|state| state.ability == Some(&ability))
@@ -142,30 +142,29 @@ impl ActionRead<'_, '_> {
         }
     }
 
-    /// How far `holder`'s action source in `slot` reaches; `None` without an [`ActionReach`] or an
-    /// action source.
-    pub fn reach(&self, holder: Entity, slot: ActionSlot) -> Option<f32> {
-        self.state(holder, slot)?
+    /// How far `holder`'s action source named by `key` reaches; `None` without an [`ActionReach`]
+    /// or an action source.
+    pub fn reach(&self, holder: Entity, key: ActionKey) -> Option<f32> {
+        self.state(holder, key)?
             .reach
             .map(|&ActionReach(reach)| reach)
     }
 
-    /// Whether a use of `holder`'s action source in `slot` ends without being stopped; see
+    /// Whether a use of `holder`'s action source named by `key` ends without being stopped; see
     /// [`ActionUseStyle::ends_on_its_own`].
-    pub fn ends_on_its_own(&self, holder: Entity, slot: ActionSlot) -> bool {
-        self.state(holder, slot)
+    pub fn ends_on_its_own(&self, holder: Entity, key: ActionKey) -> bool {
+        self.state(holder, key)
             .is_some_and(|state| state.style.ends_on_its_own())
     }
 
-    /// Whether a use of `holder`'s action source in `slot` is an attack; see [`Attack`].
-    pub fn is_attack(&self, holder: Entity, slot: ActionSlot) -> bool {
-        self.state(holder, slot)
-            .is_some_and(|state| state.is_attack)
+    /// Whether a use of `holder`'s action source named by `key` is an attack; see [`Attack`].
+    pub fn is_attack(&self, holder: Entity, key: ActionKey) -> bool {
+        self.state(holder, key).is_some_and(|state| state.is_attack)
     }
 
-    /// Whether `holder` is using its action source in `slot` now.
-    pub fn is_using(&self, holder: Entity, slot: ActionSlot) -> bool {
-        self.state(holder, slot)
+    /// Whether `holder` is using its action source named by `key` now.
+    pub fn is_using(&self, holder: Entity, key: ActionKey) -> bool {
+        self.state(holder, key)
             .is_some_and(|state| state.in_progress.is_some())
     }
 
@@ -196,9 +195,9 @@ impl ActionRead<'_, '_> {
             })
     }
 
-    /// The action source `holder` would use for `slot` now, or why it can't.
-    pub fn can_use(&self, holder: Entity, slot: ActionSlot) -> Result<Entity, ActionFailure> {
-        let state = self.state(holder, slot).ok_or(ActionFailure::EmptySlot)?;
+    /// The action source `holder` would use for `key` now, or why it can't.
+    pub fn can_use(&self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
+        let state = self.state(holder, key).ok_or(ActionFailure::EmptySlot)?;
         if let Some(&RequiredItem(kind)) = state.required_item
             && self.carried_items.first_of_kind(holder, kind).is_none()
         {
@@ -225,8 +224,8 @@ impl ActionRead<'_, '_> {
         Ok(state.entity)
     }
 
-    fn state(&self, holder: Entity, slot: ActionSlot) -> Option<ActionSourceStateItem<'_, '_>> {
-        let entity = self.source_in_slot(holder, slot)?;
+    fn state(&self, holder: Entity, key: ActionKey) -> Option<ActionSourceStateItem<'_, '_>> {
+        let entity = self.source_for_key(holder, key)?;
         self.sources.get(entity).ok()
     }
 }
@@ -244,21 +243,21 @@ impl<'w, 's> ActionCommands<'w, 's> {
         &self.read
     }
 
-    /// Starts a use of `holder`'s action source in `slot` if [`ActionRead::can_use`] allows it, or
-    /// fires [`ActionFailed`]. A refused use changes nothing else, so callers may retry it
-    /// every frame.
-    pub fn try_use(&mut self, holder: Entity, slot: ActionSlot) -> Result<Entity, ActionFailure> {
-        let result = self.read.can_use(holder, slot);
+    /// Starts a use of `holder`'s action source named by `key` if [`ActionRead::can_use`] allows
+    /// it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may retry
+    /// it every frame.
+    pub fn try_use(&mut self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
+        let result = self.read.can_use(holder, key);
         match result {
             Ok(entity) => {
                 self.commands
                     .entity(entity)
-                    .insert(ActionInProgress::new(holder, slot));
+                    .insert(ActionInProgress::new(holder, key));
             }
             Err(reason) => {
                 self.commands.trigger(ActionFailed {
                     holder,
-                    slot,
+                    key,
                     reason,
                 });
             }
@@ -266,10 +265,10 @@ impl<'w, 's> ActionCommands<'w, 's> {
         result
     }
 
-    /// Stops `holder`'s use in `slot` if it is a sustained use in progress; a use that ends on its
-    /// own can't be stopped. See [`ActionUseStyle`].
-    pub fn stop_sustained_use(&mut self, holder: Entity, slot: ActionSlot) {
-        let Some(state) = self.read.state(holder, slot) else {
+    /// Stops `holder`'s use of the action source named by `key` if it is a sustained use in
+    /// progress; a use that ends on its own can't be stopped. See [`ActionUseStyle`].
+    pub fn stop_sustained_use(&mut self, holder: Entity, key: ActionKey) {
+        let Some(state) = self.read.state(holder, key) else {
             return;
         };
         if state.in_progress.is_some() && *state.style == ActionUseStyle::Sustained {

@@ -16,7 +16,7 @@ use crate::character::brain::{
 };
 use crate::prelude::*;
 
-const HEAL: Action = Action::Use(ActionSlot::Ability(Ability::Heal));
+const HEAL: Action = Action::Use(ActionKey::Ability(Ability::Heal));
 
 /// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
 /// step back out of reach first.

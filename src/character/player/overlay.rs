@@ -255,15 +255,15 @@ pub(super) struct ActionBox {
 }
 
 impl ActionBox {
-    fn slot(&self) -> ActionSlot {
-        ActionSlot::Equipment(self.slot)
+    fn key(&self) -> ActionKey {
+        ActionKey::Equipped(self.slot)
     }
 }
 
-fn find_action_box(action_boxes: &Query<(Entity, &ActionBox)>, slot: ActionSlot) -> Option<Entity> {
+fn find_action_box(action_boxes: &Query<(Entity, &ActionBox)>, key: ActionKey) -> Option<Entity> {
     action_boxes
         .iter()
-        .find(|(_, action_box)| action_box.slot() == slot)
+        .find(|(_, action_box)| action_box.key() == key)
         .map(|(box_entity, _)| box_entity)
 }
 
@@ -379,7 +379,7 @@ fn on_player_action_took_effect(
         return;
     }
     if let Ok(cooldown) = cooldowns.get(took_effect.source)
-        && let Some(box_entity) = find_action_box(&action_box_query, took_effect.slot)
+        && let Some(box_entity) = find_action_box(&action_box_query, took_effect.key)
     {
         let cooldown = cooldown.remaining_seconds(time.elapsed_secs());
         commands.spawn_scene(bsn! {
@@ -402,7 +402,7 @@ pub(super) fn on_action_failed(
         | ActionFailure::HolderInterrupted
         | ActionFailure::OutOfMana => true,
     };
-    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, failed.slot) {
+    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, failed.key) {
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
             ErrorFlash

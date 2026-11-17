@@ -111,12 +111,12 @@ pub(super) struct ActionGlowLight(Entity);
 #[component(on_remove = report_action_finished)]
 pub struct ActionInProgress {
     holder: Entity,
-    slot: ActionSlot,
+    key: ActionKey,
 }
 
 impl ActionInProgress {
-    pub(super) fn new(holder: Entity, slot: ActionSlot) -> Self {
-        Self { holder, slot }
+    pub(super) fn new(holder: Entity, key: ActionKey) -> Self {
+        Self { holder, key }
     }
 
     /// The character using it.
@@ -124,9 +124,9 @@ impl ActionInProgress {
         self.holder
     }
 
-    /// The slot the holder uses it from.
-    pub fn slot(&self) -> ActionSlot {
-        self.slot
+    /// The key the holder named it by.
+    pub fn key(&self) -> ActionKey {
+        self.key
     }
 }
 
@@ -136,7 +136,7 @@ pub struct ActionTookEffect {
     #[event_target]
     pub source: Entity,
     pub holder: Entity,
-    pub slot: ActionSlot,
+    pub key: ActionKey,
 }
 
 /// Request to end the use of the action `source` in progress. Action sources whose effect leaves
@@ -153,7 +153,7 @@ pub struct ActionFinished {
     #[event_target]
     pub holder: Entity,
     pub source: Entity,
-    pub slot: ActionSlot,
+    pub key: ActionKey,
 }
 
 /// What the pipeline reads and writes of an action source while a use of it is in progress.
@@ -174,7 +174,7 @@ impl ActionUseInProgressItem<'_, '_> {
         commands.trigger(ActionTookEffect {
             source: self.entity,
             holder: self.in_progress.holder,
-            slot: self.in_progress.slot,
+            key: self.in_progress.key,
         });
         match self.style {
             ActionUseStyle::Instant => end_use(commands, self.entity),
@@ -280,7 +280,7 @@ fn end_use(commands: &mut Commands, entity: Entity) {
 }
 
 fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
-    let Some(&ActionInProgress { holder, slot }) =
+    let Some(&ActionInProgress { holder, key }) =
         world.entity(context.entity).get::<ActionInProgress>()
     else {
         return;
@@ -288,7 +288,7 @@ fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
     world.commands().trigger(ActionFinished {
         holder,
         source: context.entity,
-        slot,
+        key,
     });
 }
 

@@ -55,7 +55,8 @@ impl InterruptionStateItem<'_, '_> {
     }
 }
 
-/// Whether a character is pressed against a wall or a crowd; see [`Kinematics::is_blocked_at`].
+/// Whether a character is pressed against a wall or a crowd: its physics velocity falls well short
+/// of the velocity its [`Kinematics`] intend. Never true while it stands still or is stunned.
 #[derive(QueryData)]
 pub struct BlockedState {
     kinematics: &'static Kinematics,
@@ -66,8 +67,11 @@ pub struct BlockedState {
 impl BlockedStateItem<'_, '_> {
     /// See [`BlockedState`].
     pub fn is_blocked(&self) -> bool {
-        self.kinematics
-            .is_blocked_at(self.linear_velocity.0, self.stat_multipliers.speed)
+        let intended_velocity = self.kinematics.velocity(self.stat_multipliers.speed);
+        let intended_speed_squared = intended_velocity.length_squared();
+        intended_speed_squared > 1.0
+            && self.linear_velocity.dot(intended_velocity)
+                < BLOCKED_SPEED_FRACTION * intended_speed_squared
     }
 }
 
@@ -108,17 +112,6 @@ impl Kinematics {
     /// would mark `Changed<Kinematics>` and defeat downstream filters.
     pub fn is_idle(&self) -> bool {
         self.speed_multiplier == 0.0
-    }
-
-    /// Whether `physics_velocity` falls well short of the velocity intended at `stat_speed`: the
-    /// character is pressed against a wall or a crowd. Never true while it stands still or is
-    /// stunned.
-    pub fn is_blocked_at(&self, physics_velocity: Vec2, stat_speed: f32) -> bool {
-        let intended_velocity = self.velocity(stat_speed);
-        let intended_speed_squared = intended_velocity.length_squared();
-        intended_speed_squared > 1.0
-            && physics_velocity.dot(intended_velocity)
-                < BLOCKED_SPEED_FRACTION * intended_speed_squared
     }
 
     /// Velocity at `stat_speed` times this movement, so a stunned character reports zero. An

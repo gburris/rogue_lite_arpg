@@ -188,8 +188,8 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
                     .current_motion_behavior()
-                    .filter(|running| running.motion.is_some_and(|held| held.is_same_kind(motion)))
-                    .map_or(0.0, |running| self.now - running.started_at),
+                    .filter(|(_, held)| held.is_same_kind(motion))
+                    .map_or(0.0, |(running, _)| self.now - running.started_at),
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),

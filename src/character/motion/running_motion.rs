@@ -53,48 +53,28 @@ pub(in crate::character) struct MotionStatus<'w, 's> {
 }
 
 impl MotionStatus<'_, '_> {
-    /// The motion `character` runs; `None` while it runs none.
-    pub(in crate::character) fn running_motion(&self, character: Entity) -> Option<Motion> {
+    /// The motion `character` runs and its target; `None` while it runs none.
+    pub(in crate::character) fn running_motion(&self, character: Entity) -> Option<RunningMotion> {
         let holder = self.characters.get(character).ok()?;
-        holder.running.map(|running| running.motion)
+        holder.running.copied()
     }
 
-    /// Whether `character` runs a motion of `motion`'s kind that hasn't ended.
+    /// Whether a run of the finite `motion` is in progress on `character`; never for a continuous
+    /// motion.
     pub(in crate::character) fn is_in_progress(&self, character: Entity, motion: Motion) -> bool {
         let Ok(holder) = self.characters.get(character) else {
             return false;
         };
-        let runs_kind = holder
-            .running
-            .is_some_and(|running| running.motion.is_same_kind(motion));
-        runs_kind
-            && match motion {
-                Motion::Dash => holder.has_dash_progress,
-                Motion::Swoop => holder.has_swoop_progress,
-                Motion::Wander
-                | Motion::Chase
-                | Motion::ReturnToHome
-                | Motion::Flee
-                | Motion::KeepDistance(_)
-                | Motion::Idle
-                | Motion::Orbit(_) => true,
-            }
-    }
-
-    fn has_motion(&self, character: Entity, motion: Motion) -> bool {
-        let Ok(holder) = self.characters.get(character) else {
-            return false;
-        };
         match motion {
-            Motion::Dash => holder.dash.is_some(),
-            Motion::Swoop => holder.swoop.is_some(),
-            Motion::Orbit(_) => holder.has_orbit,
-            Motion::Wander => holder.has_wander,
-            Motion::Chase
+            Motion::Dash => holder.has_dash_progress,
+            Motion::Swoop => holder.has_swoop_progress,
+            Motion::Wander
+            | Motion::Chase
             | Motion::ReturnToHome
             | Motion::Flee
             | Motion::KeepDistance(_)
-            | Motion::Idle => true,
+            | Motion::Idle
+            | Motion::Orbit(_) => false,
         }
     }
 
@@ -105,19 +85,28 @@ impl MotionStatus<'_, '_> {
             return false;
         };
         let now = self.time.elapsed_secs();
-        let cooldown = match motion {
-            Motion::Dash => holder.dash.map(Dash::cooldown),
-            Motion::Swoop => holder.swoop.map(Swoop::cooldown),
-            Motion::Wander
-            | Motion::Chase
+        let is_interrupted = holder.interruption.is_interrupted();
+        match motion {
+            Motion::Dash => {
+                !is_interrupted
+                    && holder
+                        .dash
+                        .is_some_and(|dash| dash.cooldown().is_ready(now))
+            }
+            Motion::Swoop => {
+                !is_interrupted
+                    && holder
+                        .swoop
+                        .is_some_and(|swoop| swoop.cooldown().is_ready(now))
+            }
+            Motion::Orbit(_) => holder.has_orbit,
+            Motion::Wander => holder.has_wander,
+            Motion::Chase
             | Motion::ReturnToHome
             | Motion::Flee
             | Motion::KeepDistance(_)
-            | Motion::Idle
-            | Motion::Orbit(_) => return self.has_motion(character, motion),
-        };
-        cooldown.is_some_and(|cooldown| cooldown.is_ready(now))
-            && !holder.interruption.is_interrupted()
+            | Motion::Idle => true,
+        }
     }
 
     /// The farthest target distance at which `character`'s capability for `motion` counts as in
@@ -164,7 +153,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
             && self
                 .status
                 .running_motion(character)
-                .is_some_and(|running| running.is_same_kind(motion));
+                .is_some_and(|running| running.motion.is_same_kind(motion));
         let mut entity = self.commands.entity(character);
         entity.try_insert(RunningMotion { motion, target });
         if keeps_progress {
@@ -204,10 +193,11 @@ impl<'w, 's> MotionCommands<'w, 's> {
 
     /// Points the motion `character` runs at `target`, keeping its run.
     pub(in crate::character) fn retarget(&mut self, character: Entity, target: Option<TargetRef>) {
-        if let Some(motion) = self.status.running_motion(character) {
-            self.commands
-                .entity(character)
-                .try_insert(RunningMotion { motion, target });
+        if let Some(running) = self.status.running_motion(character) {
+            self.commands.entity(character).try_insert(RunningMotion {
+                motion: running.motion,
+                target,
+            });
         }
     }
 

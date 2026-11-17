@@ -1,13 +1,12 @@
 use bevy::prelude::*;
 
-use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetRef, TargetingData};
+use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetingData};
 
-/// The behavior run the brain last started a motion for and the target it gave it, so each run
-/// starts its motion once, a new target reaches it, and a finished motion names its behavior.
+/// The behavior run the brain last started a motion for, so each run starts its motion once and a
+/// finished motion names its behavior.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct StartedMotion {
     running: Option<RunningBehavior>,
-    target: Option<TargetRef>,
 }
 
 impl StartedMotion {
@@ -32,14 +31,10 @@ pub(super) fn apply_motion_requests(
     mut brains: Query<(Entity, &Brain, TargetingData, &mut StartedMotion)>,
 ) {
     for (entity, brain, targeting, mut started_motion) in &mut brains {
-        let Some(running) = brain.current_motion_behavior() else {
+        let Some((running, motion)) = brain.current_motion_behavior() else {
             if started_motion.running.take().is_some() {
                 motions.stop(entity);
-                started_motion.target = None;
             }
-            continue;
-        };
-        let Some(motion) = running.motion else {
             continue;
         };
         let target = if motion.needs_target() {
@@ -48,15 +43,19 @@ pub(super) fn apply_motion_requests(
             None
         };
         if started_motion.behavior_run_id() != Some(running.behavior_run_id) {
-            if !(motion.is_finite() && motions.status().is_in_progress(entity, motion)) {
-                motions.start(entity, motion, target);
-                started_motion.target = target;
-            }
             started_motion.running = Some(running);
+            if !motions.status().is_in_progress(entity, motion) {
+                // Started with `target`; a retarget now would read the motion this replaces.
+                motions.start(entity, motion, target);
+                continue;
+            }
         }
-        if started_motion.target != target {
+        let running_target = motions
+            .status()
+            .running_motion(entity)
+            .and_then(|running| running.target);
+        if running_target != target {
             motions.retarget(entity, target);
-            started_motion.target = target;
         }
     }
 }

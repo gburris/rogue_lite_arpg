@@ -73,9 +73,7 @@ impl Brain {
 
     /// The held motion; `None` while the slot is empty.
     pub fn motion(&self) -> Option<Motion> {
-        self.running_behaviors
-            .iter()
-            .find_map(|running| running.motion)
+        self.current_motion_behavior().map(|(_, motion)| motion)
     }
 
     /// The held action, including a deliberate `Idle`; `None` while the slot is empty.
@@ -89,11 +87,10 @@ impl Brain {
         self.definition.behaviors[running.behavior]
     }
 
-    fn current_motion_behavior(&self) -> Option<RunningBehavior> {
+    fn current_motion_behavior(&self) -> Option<(RunningBehavior, Motion)> {
         self.running_behaviors
             .iter()
-            .copied()
-            .find(|running| running.motion.is_some())
+            .find_map(|&running| running.motion.map(|motion| (running, motion)))
     }
 
     fn running_behavior_with(&self, action: Action) -> Option<RunningBehavior> {

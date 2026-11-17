@@ -2,6 +2,8 @@ use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
 use avian2d::prelude::SpatialQuery;
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
@@ -9,13 +11,6 @@ use bevy_tweening::{Tween, TweenAnim};
 use super::equipment::prelude::{DirectionalPoses, EquipmentPose};
 use super::{Item, ItemKind};
 use crate::prelude::*;
-
-pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        fire_staff_projectiles.in_set(SimulationSystems::Act),
-    );
-}
 
 /// Farthest target distance at which an AI holder casts a staff.
 pub const STAFF_REACH: f32 = 360.0;
@@ -27,6 +22,16 @@ const FLAME_STAFF_COOLDOWN: f32 = 0.5;
 const MAGE_FLAME_STAFF_COOLDOWN: f32 = 1.1;
 /// Seconds between a fire mage's three-bolt volleys: three times the bolts, fired half as often.
 const MAGE_FAN_STAFF_COOLDOWN: f32 = 2.2;
+/// Seconds between ice staff casts.
+const ICE_STAFF_COOLDOWN: f32 = 1.0;
+/// Seconds a flame staff takes to swing toward its target, and again to swing back.
+const FLAME_STAFF_SWING_SECONDS: f32 = 0.1;
+/// Seconds an ice staff takes to swing toward its target, and again to swing back.
+const ICE_STAFF_SWING_SECONDS: f32 = 0.15;
+/// Mana each flame staff cast costs.
+const FLAME_STAFF_MANA_COST: f32 = 6.0;
+/// Mana each ice staff cast costs.
+const ICE_STAFF_MANA_COST: f32 = 15.0;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
@@ -76,51 +81,48 @@ pub fn mage_fire_staff_fan(
     }
 }
 
-/// Shared layout, item data, sprite, and cast observers for every flame staff.
-fn flame_staff_core(sprites: &SpriteAssets, cooldown: f32) -> impl Scene {
+/// Shared item data, sprite and cast for every flame staff, casting every `seconds_between_casts`.
+fn flame_staff_core(sprites: &SpriteAssets, seconds_between_casts: f32) -> impl Scene {
     bsn! {
-        @staff(sprites.fire_staff.clone(), cooldown)
-        @staff_cast(0.1, 0.1)
+        @staff(sprites.fire_staff.clone(), seconds_between_casts, FLAME_STAFF_SWING_SECONDS)
         ~Item::new(1340, ItemKind::Staff)
-        ManaCost(6.0)
+        ManaCost(FLAME_STAFF_MANA_COST)
     }
 }
 
 pub fn ice_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @staff(sprites.ice_staff.clone(), 1.0)
+        @staff(sprites.ice_staff.clone(), ICE_STAFF_COOLDOWN, ICE_STAFF_SWING_SECONDS)
         Name::new("Staff of Ice")
-        @staff_cast(0.15, 0.15)
         ~Item::new(2050, ItemKind::Staff)
-        // big mana cost
-        ManaCost(15.0)
+        ManaCost(ICE_STAFF_MANA_COST)
         Projectiles [
             @icebolt(sprites, sprite_layouts, 0.0)
         ]
     }
 }
 
-/// What every staff shares: a mainhand item drawn with `image` that swings and casts its
-/// projectiles every `cooldown` seconds.
-fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
+/// What every staff shares: a mainhand item drawn with `image` that casts its projectiles every
+/// `seconds_between_casts`. A cast winds up by swinging toward the target for `swing_seconds`,
+/// fires, then swings back for as long.
+fn staff(image: Handle<Image>, seconds_between_casts: f32, swing_seconds: f32) -> impl Scene {
+    // The cooldown starts when the staff fires, at the end of its wind-up.
+    let cooldown = (seconds_between_casts - swing_seconds).max(0.0);
     bsn! {
-        Staff { source_offset: Vec2::new(0.0, 26.0) }
+        Staff {
+            source_offset: Vec2::new(0.0, 26.0),
+            swing_seconds: swing_seconds,
+        }
         ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
         ~ActionCooldown::new(cooldown)
+        ActionWindup { seconds: swing_seconds }
+        ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         ~{ActionReach(STAFF_REACH)}
         Attack
         Sprite { image }
+        on(on_staff_cast_started)
         on(on_staff_took_effect)
         on(on_staff_finished)
-    }
-}
-
-/// A staff's cast: it swings for `fire_time` seconds, fires, then swings back for `return_time`,
-/// a timed use lasting both.
-fn staff_cast(fire_time: f32, return_time: f32) -> impl Scene {
-    bsn! {
-        Staff { fire_time: fire_time, return_time: return_time }
-        ~{ActionUseStyle::Timed { seconds: fire_time + return_time }}
     }
 }
 
@@ -128,8 +130,7 @@ fn staff_cast(fire_time: f32, return_time: f32) -> impl Scene {
 struct Staff {
     /// X, y offset relative to center of staff sprite where projectiles should be spawned.
     source_offset: Vec2,
-    fire_time: f32,
-    return_time: f32,
+    swing_seconds: f32,
 }
 
 static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
@@ -139,113 +140,110 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     right: EquipmentPose::above(4.0, -8.0, -50.0),
 };
 
-/// Counts down a staff's swing toward its target, after which it fires.
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-struct StaffSwingProgress(Timer);
+/// The spark at the tip of a casting staff. Removing it despawns the spark.
+#[derive(Component, Clone, Copy, Debug)]
+#[component(on_remove = despawn_staff_spark)]
+struct StaffSpark(Entity);
 
-/// Begins the cast; projectiles fire later in `fire_staff_projectiles`.
-fn on_staff_took_effect(
-    took_effect: On<ActionTookEffect>,
+/// Swings the staff toward its holder's facing and back, with a spark at its tip.
+fn on_staff_cast_started(
+    added: On<Add<ActionInProgress>>,
     mut commands: Commands,
-    staff_query: Query<(&Staff, &Transform), With<Projectiles>>,
+    staff_query: Query<(&Staff, &Transform, &ActionInProgress)>,
     holder_query: Query<&FacingDirection>,
 ) -> Result {
-    let (staff, staff_transform) = staff_query.get(took_effect.source)?;
-    let Ok(facing_direction) = holder_query.get(took_effect.holder) else {
+    let (staff, staff_transform, in_progress) = staff_query.get(added.entity)?;
+    let Ok(facing_direction) = holder_query.get(in_progress.holder()) else {
         return Ok(());
     };
 
     let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
-
     let swing_angle = match facing_direction {
         FacingDirection::Up | FacingDirection::Right => -FRAC_PI_4,
         FacingDirection::Down | FacingDirection::Left => FRAC_PI_4,
     };
+    let swing_duration = Duration::from_secs_f32(staff.swing_seconds);
+    let swing_toward = Tween::new(
+        EaseFunction::BackIn,
+        swing_duration,
+        TransformRotateZLens {
+            start: staff_rotation,
+            end: staff_rotation + swing_angle,
+        },
+    );
+    let swing_back = Tween::new(
+        EaseFunction::CubicOut,
+        swing_duration,
+        TransformRotateZLens {
+            start: staff_rotation + swing_angle,
+            end: staff_rotation,
+        },
+    );
 
-    commands.entity(took_effect.source).insert((
-        StaffSwingProgress(Timer::from_seconds(staff.fire_time, TimerMode::Once)),
-        TweenAnim::new(
-            // Swing
-            Tween::new(
-                EaseFunction::BackIn,
-                Duration::from_secs_f32(staff.fire_time),
-                TransformRotateZLens {
-                    start: staff_rotation,
-                    end: staff_rotation + swing_angle,
-                },
-            )
-            // Return
-            .then(Tween::new(
-                EaseFunction::CubicOut,
-                Duration::from_secs_f32(staff.return_time),
-                TransformRotateZLens {
-                    start: staff_rotation + swing_angle,
-                    end: staff_rotation,
-                },
-            )),
-        )
-        .with_destroy_on_completed(true),
-    ));
-
-    // A spark at the tip while the cast winds up.
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
-    let staff_entity = took_effect.source;
-    commands.spawn_scene(bsn! {
-        @point_light(Color::WHITE, 10.0, 3.0, 1.0)
-        Transform::from_translation(tip)
-        ChildOf(staff_entity)
-    });
+    let staff_entity = added.entity;
+    let spark = commands
+        .spawn_scene(bsn! {
+            @point_light(Color::WHITE, 10.0, 3.0, 1.0)
+            Transform::from_translation(tip)
+            ChildOf(staff_entity)
+        })
+        .id();
+    commands.entity(staff_entity).insert((
+        TweenAnim::new(swing_toward.then(swing_back)).with_destroy_on_completed(true),
+        StaffSpark(spark),
+    ));
     Ok(())
 }
 
-/// Fires each staff's projectiles once its swing finishes. The swing back plays out the rest of
-/// the timed use.
-fn fire_staff_projectiles(
+/// Fires the staff's projectiles from its tip at the end of its swing toward the target.
+fn on_staff_took_effect(
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    time: Res<Time>,
-    mut staff_query: Query<(Entity, &Staff, &mut StaffSwingProgress, &ItemOf, &Transform)>,
+    staff_query: Query<(&Staff, &Transform)>,
     holder_query: Query<(&Transform, &Vision)>,
     spatial_query: SpatialQuery,
-) {
-    for (staff_entity, staff, mut swing_progress, item_of, staff_transform) in &mut staff_query {
-        if !swing_progress.tick(time.delta()).just_finished() {
-            continue;
-        }
-        commands.entity(staff_entity).remove::<StaffSwingProgress>();
+) -> Result {
+    let (staff, staff_transform) = staff_query.get(took_effect.source)?;
+    let Ok((holder_transform, holder_vision)) = holder_query.get(took_effect.holder) else {
+        return Ok(());
+    };
 
-        let Ok((holder_transform, holder_vision)) = holder_query.get(item_of.holder) else {
-            continue;
-        };
+    let rotated_source_offset =
+        (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
+    let holder_relative_source_position =
+        staff_transform.translation.truncate() + rotated_source_offset;
 
-        let rotated_source_offset =
-            (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-        let holder_relative_source_position =
-            staff_transform.translation.truncate() + rotated_source_offset;
+    let target_angle: Vec2 =
+        holder_vision.aim_direction * holder_vision.aim_distance - holder_relative_source_position;
 
-        let target_angle: Vec2 = holder_vision.aim_direction * holder_vision.aim_distance
-            - holder_relative_source_position;
+    // Staff is child of holder so position is relative, need to add holder transform for
+    // global position
+    let holder_position = holder_transform.translation.truncate();
+    let world_starting_position = pull_back_from_walls(
+        &spatial_query,
+        holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
+        holder_position + holder_relative_source_position,
+    );
 
-        // Staff is child of holder so position is relative, need to add holder transform for
-        // global position
-        let holder_position = holder_transform.translation.truncate();
-        let world_starting_position = pull_back_from_walls(
-            &spatial_query,
-            holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
-            holder_position + holder_relative_source_position,
-        );
-
-        commands.trigger(FireProjectiles {
-            source: staff_entity,
-            holder: item_of.holder,
-            position: world_starting_position,
-            aim_direction: target_angle,
-        });
-    }
+    commands.trigger(FireProjectiles {
+        source: took_effect.source,
+        holder: took_effect.holder,
+        position: world_starting_position,
+        aim_direction: target_angle,
+    });
+    Ok(())
 }
 
 fn on_staff_finished(finished: On<ActionFinished>, mut commands: Commands) {
     commands
         .entity(finished.source)
-        .remove::<(StaffSwingProgress, TweenAnim)>()
-        .despawn_children();
+        .try_remove::<(TweenAnim, StaffSpark)>();
+}
+
+fn despawn_staff_spark(mut world: DeferredWorld, context: HookContext) {
+    let Some(&StaffSpark(spark)) = world.entity(context.entity).get::<StaffSpark>() else {
+        return;
+    };
+    world.commands().entity(spark).try_despawn();
 }

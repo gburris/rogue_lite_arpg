@@ -35,7 +35,6 @@ pub(super) fn plugin(app: &mut App) {
         lootable::plugin,
         melee::plugin,
         shield::plugin,
-        staff::plugin,
     ));
 
     app.add_systems(

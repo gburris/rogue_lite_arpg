@@ -34,6 +34,14 @@ impl CombatSide {
         CollisionLayers::new(GameCollisionLayer::HitBox, self.target_hurtbox())
     }
 
+    /// Collision layers for a projectile that hits this side's opponents and stops at walls.
+    pub fn projectile_layers(self) -> CollisionLayers {
+        CollisionLayers::new(
+            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+            LayerMask::from(self.target_hurtbox()) | GameCollisionLayer::HighObstacle,
+        )
+    }
+
     pub fn opposite(self) -> Self {
         match self {
             Self::Ally => Self::Enemy,

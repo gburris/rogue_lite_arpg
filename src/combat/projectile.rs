@@ -1,8 +1,7 @@
-use std::collections::HashSet;
-
 use avian2d::prelude::*;
 use bevy::color::palettes::tailwind::{BLUE_400, YELLOW_300};
 use bevy::ecs::entity_disabling::Disabled;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
@@ -77,14 +76,8 @@ pub fn fireball_with_speed(
     angle_offset: f32,
     speed: f32,
 ) -> impl Scene {
-    let sprite = Sprite::from_atlas_image(
-        sprites.fire_ball.clone(),
-        TextureAtlas {
-            layout: sprite_layouts.fireball.clone(),
-            index: 0,
-        },
-    );
     bsn! {
+        @atlas_sprite(sprites.fire_ball.clone(), sprite_layouts.fireball.clone())
         Projectile {
             damage: Damage::Single(3.0),
             speed,
@@ -92,7 +85,6 @@ pub fn fireball_with_speed(
             angle_offset,
         }
         Lifespan::new({FIREBALL_RANGE / speed})
-        template(move |_| Ok(sprite.clone()))
         @point_light(Color::from(YELLOW_300), 1.4, 50.0, 5.0)
         ~Collider::circle(10.0)
         AnimationTimer(Timer::from_seconds(0.042, TimerMode::Repeating))
@@ -109,14 +101,8 @@ pub fn icebolt(
     sprite_layouts: &SpriteSheetLayouts,
     angle_offset: f32,
 ) -> impl Scene {
-    let sprite = Sprite::from_atlas_image(
-        sprites.ice_bolt.clone(),
-        TextureAtlas {
-            layout: sprite_layouts.ice_bolt.clone(),
-            index: 0,
-        },
-    );
     bsn! {
+        @atlas_sprite(sprites.ice_bolt.clone(), sprite_layouts.ice_bolt.clone())
         Projectile {
             damage: Damage::Range {
                 min: 10.0,
@@ -126,7 +112,6 @@ pub fn icebolt(
             spawn_offset: 26.0,
             angle_offset,
         }
-        template(move |_| Ok(sprite.clone()))
         @point_light(Color::from(BLUE_400), 1.4, 80.0, 5.0)
         ~Collider::rectangle(40.0, 5.0)
         ~{AnimationIndices::Cycle((0..=2).cycle())}
@@ -254,10 +239,7 @@ fn on_fire_projectiles(
                 damage: projectile.damage.scaled(stat_multipliers.damage),
                 ..projectile.clone()
             },
-            CollisionLayers::new(
-                GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                LayerMask::from(side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
-            ),
+            side.projectile_layers(),
             ProjectileAttacker {
                 attacker: Some(fire.holder),
             },
@@ -319,10 +301,7 @@ pub(super) fn reflect_projectiles(
                 }
 
                 commands.entity(colliding_entity).insert((
-                    CollisionLayers::new(
-                        GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
-                        LayerMask::from(side.target_hurtbox()) | GameCollisionLayer::HighObstacle,
-                    ),
+                    side.projectile_layers(),
                     ProjectileAttacker {
                         attacker: Some(child_of.parent()),
                     },

@@ -94,10 +94,6 @@ impl DecisionInputs<'_, '_, '_> {
             .filter(|info| self.components.has_target && info.has_finite_distance())
     }
 
-    pub fn is_stunned(&self) -> bool {
-        self.components.stat_multipliers.is_stunned()
-    }
-
     /// The profile of the capability that carries out `motion`; see [`MotionCapabilities`].
     pub fn motion_profile(&self, motion: Motion) -> Option<CapabilityProfile> {
         self.components

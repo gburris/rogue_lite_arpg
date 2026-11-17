@@ -40,7 +40,7 @@ impl KnockedBack {
 }
 
 /// Whether a character is interrupted: knocked back, stunned or defeated. An interrupted character
-/// can't start using an item or ability and loses any use in progress.
+/// can't start using an item or ability, and loses any use or finite motion in progress.
 #[derive(QueryData)]
 pub struct InterruptionState {
     health: &'static Health,

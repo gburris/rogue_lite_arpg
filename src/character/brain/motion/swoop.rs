@@ -7,7 +7,6 @@ use super::{
     SteeredCharacter, Steering, report_motion_finished,
 };
 use crate::character::brain::{CapabilityProfile, Motion};
-use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -19,8 +18,8 @@ const SWOOP_RECOVERY_TIME: f32 = 0.4;
 /// Seconds a swoop pushes against a wall or a crowd before it breaks off.
 const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 
-/// A committed curved swoop through the target, broken off when blocked; on ending it hands
-/// steering a decaying [`DecayingSpeedBoost`].
+/// A committed curved swoop through the target, broken off when blocked or interrupted; on ending
+/// it hands steering a decaying [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Debug)]
 pub struct Swoop {
     capability_profile: CapabilityProfile,
@@ -68,7 +67,8 @@ impl Swoop {
 }
 
 /// Applies swoop each tick and reports [`MotionFinished`](super::MotionFinished)
-/// once far enough away from target
+/// once far enough away from target or once its character is interrupted (see
+/// [`InterruptionState`](crate::prelude::InterruptionState)).
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -85,11 +85,18 @@ pub(super) fn apply_swoop(
         let Some(behavior_run_id) = swoop.current_behavior_run_id.get() else {
             continue;
         };
-        let Some(input) = character.build_steer_input(Motion::Swoop, &time) else {
-            *steering = Steering::HALT;
-            continue;
+        let step = if character.is_interrupted() {
+            MotionStep::Finished {
+                decaying_speed_boost: swoop.end_path(),
+            }
+        } else {
+            let Some(input) = character.build_steer_input(Motion::Swoop, &time) else {
+                *steering = Steering::HALT;
+                continue;
+            };
+            swoop.step(&input)
         };
-        match swoop.step(&input) {
+        match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished {
                 decaying_speed_boost,
@@ -104,32 +111,6 @@ pub(super) fn apply_swoop(
             }
         }
     }
-}
-
-/// Ends a swoop the moment the swooper is shoved, so a well-timed hit turns it away.
-pub(super) fn on_swooper_knocked_back(
-    knocked_back: On<Insert<KnockedBack>>,
-    mut commands: Commands,
-    mut swoops: Query<&mut Swoop>,
-) {
-    let Ok(mut swoop) = swoops.get_mut(knocked_back.entity) else {
-        return;
-    };
-    let Some(behavior_run_id) = swoop.current_behavior_run_id.get() else {
-        return;
-    };
-    if swoop.path.is_none() {
-        return;
-    }
-
-    let decaying_speed_boost = swoop.end_path();
-    report_motion_finished(
-        &mut commands,
-        knocked_back.entity,
-        Motion::Swoop,
-        behavior_run_id,
-        decaying_speed_boost,
-    );
 }
 
 impl Swoop {

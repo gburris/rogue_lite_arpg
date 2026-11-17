@@ -22,7 +22,8 @@ const HOP_OUTWARD_BIAS: f32 = 0.15;
 /// Seconds a dash pushes against a wall or a crowd before it gives up the rest of its run.
 const DASH_BLOCKED_SECONDS: f32 = 0.15;
 
-/// A committed straight run along a direction fixed at its start, cut short when blocked.
+/// A committed straight run along a direction fixed at its start, cut short when blocked or
+/// interrupted.
 #[derive(Component, Clone, Debug)]
 pub struct Dash {
     run_distance: Interval,
@@ -129,7 +130,8 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
 }
 
 /// Advances each running dash and reports [`MotionFinished`](super::MotionFinished) at
-/// the end of its distance.
+/// the end of its distance or once its character is interrupted (see
+/// [`InterruptionState`](crate::prelude::InterruptionState)).
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -145,11 +147,19 @@ pub(super) fn apply_dash(
         let Some(behavior_run_id) = dash.current_behavior_run_id.get() else {
             continue;
         };
-        let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
-            *steering = Steering::HALT;
-            continue;
+        let step = if character.is_interrupted() {
+            dash.progress.reset();
+            MotionStep::Finished {
+                decaying_speed_boost: None,
+            }
+        } else {
+            let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
+                *steering = Steering::HALT;
+                continue;
+            };
+            dash.step(&input)
         };
-        match dash.step(&input) {
+        match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished {
                 decaying_speed_boost,

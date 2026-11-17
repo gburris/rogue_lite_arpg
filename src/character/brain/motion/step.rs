@@ -133,9 +133,14 @@ pub(super) struct SteeredCharacter {
     target_info: Option<&'static TargetInfo>,
     has_target: Has<Targeting>,
     home_area: Option<&'static HomeArea>,
+    interruption: InterruptionState,
 }
 
 impl SteeredCharacterItem<'_, '_> {
+    pub(super) fn is_interrupted(&self) -> bool {
+        self.interruption.is_interrupted()
+    }
+
     /// This frame's input for steering `motion`, or `None` while it needs a
     /// target the character lacks.
     pub(super) fn build_steer_input(

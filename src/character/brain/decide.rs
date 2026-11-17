@@ -51,8 +51,7 @@ impl RunningBehavior {
     }
 
     /// Whether a committed behavior lost an input it was chosen on or the target its motion steers
-    /// by, was stunned during its motion, or timed out. The game ends an interrupted use itself, so
-    /// a stun during an action needs no drop.
+    /// by, or timed out. The game ends an interrupted use or finite motion itself.
     pub(super) fn should_drop_committed_behavior(
         &self,
         behavior: &Behavior,
@@ -62,7 +61,6 @@ impl RunningBehavior {
         self.committed
             && (has_absent_input(behavior, read)
                 || (self.motion.is_some_and(Motion::needs_target) && inputs.target().is_none())
-                || (self.motion.is_some() && inputs.is_stunned())
                 || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }

@@ -174,5 +174,4 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .in_set(BrainSystems::Motion),
     );
-    app.add_observer(swoop::on_swooper_knocked_back);
 }

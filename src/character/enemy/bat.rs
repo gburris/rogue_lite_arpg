@@ -11,9 +11,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Interval,
 };
 use crate::character::motion::{Motion, Orbit, Swoop, TurnRate};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 const BREATH: Action = Action::Use(ActionKey::Ability(Ability::Breath));

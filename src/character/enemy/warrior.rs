@@ -12,9 +12,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Interval,
 };
 use crate::character::motion::{Dash, Motion};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 const HEAL: Action = Action::Use(ActionKey::Ability(Ability::Heal));

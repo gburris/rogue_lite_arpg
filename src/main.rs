@@ -15,6 +15,7 @@ mod configuration;
 mod cooldown;
 #[cfg(feature = "dev_tools")]
 mod dev;
+mod interval;
 mod items;
 mod lifespan;
 mod menu;

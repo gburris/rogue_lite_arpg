@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{Motion, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
-use crate::character::brain::Interval;
+use crate::interval::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 

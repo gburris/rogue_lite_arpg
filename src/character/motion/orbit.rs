@@ -4,7 +4,7 @@ use rand::RngExt;
 use super::{
     BlockedTimer, Motion, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
 };
-use crate::character::brain::Interval;
+use crate::interval::Interval;
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;

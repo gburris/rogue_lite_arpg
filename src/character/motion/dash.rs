@@ -9,7 +9,7 @@ use super::{
     BlockedTimer, Motion, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
     Steering, SteeringTarget, SteeringTargets,
 };
-use crate::character::brain::Interval;
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Speed below which a target counts as stationary.

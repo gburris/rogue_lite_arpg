@@ -15,9 +15,9 @@ pub use self::action::Action;
 use self::action::{ActionOutcome, BehaviorActionFinished, StartedActions};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
+pub use self::engine::BrainDefinition;
 use self::engine::validate_brain;
 pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
-pub use self::engine::{BrainDefinition, Interval};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
 #[cfg(feature = "dev_tools")]

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
-use crate::character::brain::Interval;
+use crate::interval::Interval;
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 /// Seconds a walk may stay blocked before it ends early.

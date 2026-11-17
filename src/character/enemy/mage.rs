@@ -12,9 +12,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Interval,
 };
 use crate::character::motion::{Dash, Motion, Orbit};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Distance a caster opens before it stops casting to regenerate mana.

@@ -8,28 +8,17 @@ use crate::prelude::*;
 
 /// Names an [`ActionSource`] of a character: the item equipped in a slot, or one of its abilities
 /// by kind.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ActionKey {
     Equipped(EquipmentSlot),
     Ability(Ability),
 }
 
 impl ActionKey {
-    /// How many keys there are.
-    pub const COUNT: usize = EquipmentSlot::ALL.len() + Ability::ALL.len();
-
-    /// Every key, equipment first, in [`index`](Self::index) order.
+    /// Every key, equipment first.
     pub fn all() -> impl Iterator<Item = Self> {
         let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipped);
         equipment.chain(Ability::ALL.into_iter().map(Self::Ability))
-    }
-
-    /// This key's position in [`all`](Self::all), for arrays with one entry per key.
-    pub fn index(self) -> usize {
-        match self {
-            Self::Equipped(equipment_slot) => equipment_slot as usize,
-            Self::Ability(ability) => EquipmentSlot::ALL.len() + ability as usize,
-        }
     }
 }
 

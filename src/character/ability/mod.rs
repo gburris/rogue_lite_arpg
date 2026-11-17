@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// An innate move a character can use, carried out by a capability component
 /// ([`Heal`](self::heal::Heal), [`Breath`](self::breath::Breath), [`Bite`] or
 /// [`Rally`](self::rally::Rally)) on one of its [`Abilities`].
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[require(ActionSource)]
 pub enum Ability {
     /// Drink a carried potion.
@@ -30,6 +30,11 @@ pub enum Ability {
 }
 
 impl Ability {
-    /// Every ability, in array order.
+    /// Every ability.
     pub const ALL: [Self; 4] = [Self::Heal, Self::Breath, Self::Bite, Self::Rally];
 }
+
+// A new variant fails to compile here: add it to this match and to `Ability::ALL`.
+const _: () = match Ability::Heal {
+    Ability::Heal | Ability::Breath | Ability::Bite | Ability::Rally => {}
+};

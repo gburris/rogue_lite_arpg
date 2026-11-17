@@ -1,3 +1,4 @@
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 
 use super::{Action, ActionOutcome, BehaviorActionFinished};
@@ -6,12 +7,12 @@ use crate::prelude::*;
 
 /// The behavior run id of the last use started by each key, so a committed action starts once
 /// and its finish names its behavior.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub(in crate::character::brain) struct StartedActions([Option<u32>; ActionKey::COUNT]);
+#[derive(Component, Clone, Debug, Default)]
+pub(in crate::character::brain) struct StartedActions(HashMap<ActionKey, u32>);
 
 impl StartedActions {
     fn behavior_run_id(&self, key: ActionKey) -> Option<u32> {
-        self.0[key.index()]
+        self.0.get(&key).copied()
     }
 
     fn was_started_by(&self, key: ActionKey, running: RunningBehavior) -> bool {
@@ -19,7 +20,7 @@ impl StartedActions {
     }
 
     fn record_start(&mut self, key: ActionKey, running: RunningBehavior) {
-        self.0[key.index()] = Some(running.behavior_run_id);
+        self.0.insert(key, running.behavior_run_id);
     }
 }
 

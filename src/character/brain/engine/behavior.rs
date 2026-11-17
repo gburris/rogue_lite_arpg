@@ -15,6 +15,7 @@ pub struct Behavior {
     pub(in crate::character::brain) commit: CommitPolicy,
     pub(in crate::character::brain) weight: f32,
     pub(in crate::character::brain) considerations: &'static [Consideration],
+    pub(in crate::character::brain) start_chance: Option<StartChance>,
 }
 
 impl Behavior {
@@ -32,6 +33,19 @@ impl Behavior {
             commit,
             weight,
             considerations,
+            start_chance: None,
+        }
+    }
+
+    /// Starts a winning run only with probability `chance`. A miss lets the next best behavior
+    /// take the slot, and this one waits `retry_seconds` before it may win again.
+    pub const fn with_start_chance(self, chance: f32, retry_seconds: f32) -> Self {
+        Self {
+            start_chance: Some(StartChance {
+                chance,
+                retry_seconds,
+            }),
+            ..self
         }
     }
 
@@ -40,6 +54,13 @@ impl Behavior {
         (self.motion.is_some() && other.motion.is_some())
             || (self.action.is_some() && other.action.is_some())
     }
+}
+
+/// The roll a behavior makes when it wins; see [`Behavior::with_start_chance`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct StartChance {
+    pub chance: f32,
+    pub retry_seconds: f32,
 }
 
 /// How firmly a behavior holds its slots once it wins them.
@@ -111,6 +132,17 @@ pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Re
             return Err(format!(
                 "behavior {index} is committed with {finite_parts} finite parts; one finish must \
                  end it"
+            ));
+        }
+        if let Some(StartChance {
+            chance,
+            retry_seconds,
+        }) = behavior.start_chance
+            && !(chance > 0.0 && chance <= 1.0 && retry_seconds.is_finite() && retry_seconds >= 0.0)
+        {
+            return Err(format!(
+                "behavior {index} start chance {chance} must be in (0, 1] and its retry \
+                 {retry_seconds} s finite and non-negative"
             ));
         }
         if !committed && finite_motion {

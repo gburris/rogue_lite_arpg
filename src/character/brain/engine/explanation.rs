@@ -2,7 +2,7 @@
 //! slot assignment.
 
 use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
-use super::behavior::{Behavior, BrainDefinition};
+use super::behavior::BrainDefinition;
 use super::scoring::{combine_consideration_scores, score_consideration};
 use crate::character::brain::ConsiderationInput;
 
@@ -33,14 +33,14 @@ pub(in crate::character::brain) fn explain_behavior(
     definition: &BrainDefinition,
     index: usize,
     read: &impl Fn(ConsiderationInput) -> Option<f32>,
-    available: &impl Fn(&Behavior) -> bool,
+    available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],
 ) -> BehaviorScoreExplanation {
     let behavior = &definition.behaviors[index];
     let is_current = running_behavior_ids.contains(&index);
     let momentum = momentum_multiplier(is_current);
     let skipped =
-        find_skip_reason(definition, behavior, available, running_behavior_ids).map(|reason| {
+        find_skip_reason(definition, index, available, running_behavior_ids).map(|reason| {
             // The committed holder sits out too, but it is the one running.
             match reason {
                 SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,

@@ -30,13 +30,11 @@ pub struct Swoop {
 }
 
 impl Swoop {
-    /// Swoops at targets within `reach`, rolling `chance` each time it wins and
-    /// waiting `cooldown` seconds after a swoop ends.
-    pub fn new(chance: f32, reach: f32, cooldown: f32) -> Self {
+    /// Swoops at targets within `reach`, waiting `cooldown` seconds after a swoop ends.
+    pub fn new(reach: f32, cooldown: f32) -> Self {
         Self {
             capability_profile: CapabilityProfile {
                 reach: Some(reach),
-                chance,
                 cooldown,
             },
             extra_speed: SWOOP_EXTRA_SPEED,

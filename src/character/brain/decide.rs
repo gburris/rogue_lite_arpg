@@ -205,14 +205,14 @@ pub(super) fn decide_behavior(
     }
 }
 
-/// Drops stale committed behaviors, then fills the slots. A winning finite motion rolls its
-/// start chance; a miss waits out its cooldown and the next best behavior takes the slot.
+/// Drops stale committed behaviors, then fills the slots. A winner with a start chance rolls it;
+/// see [`Behavior::with_start_chance`].
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
     brain.drop_stale_committed_behaviors(inputs);
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
     let read = |input: ConsiderationInput| inputs.read_consideration_input(input, brain);
-    let available = |behavior: &Behavior| brain.is_available(behavior, inputs);
+    let available = |index: usize| brain.is_available(index, inputs);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();
@@ -224,7 +224,7 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
                 explain_behavior(definition, index, &read, &available, &running_behavior_ids)
             }));
     }
-    let mut missed_starts = Vec::new();
+    let mut missed_start_ids = Vec::new();
     let winning_behavior_ids = {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::assign").entered();
@@ -233,28 +233,21 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
             &read,
             &available,
             &running_behavior_ids,
-            |index| passes_start_roll(inputs, definition.behaviors[index], &mut missed_starts),
+            |index| passes_start_roll(definition.behaviors[index], index, &mut missed_start_ids),
         )
     };
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::commit").entered();
-    brain.commit_decision(&winning_behavior_ids, &missed_starts, inputs);
+    brain.commit_decision(&winning_behavior_ids, &missed_start_ids, inputs);
 }
 
-fn passes_start_roll(
-    inputs: &DecisionInputs,
-    behavior: Behavior,
-    missed_starts: &mut Vec<Motion>,
-) -> bool {
-    let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) else {
+fn passes_start_roll(behavior: Behavior, index: usize, missed_start_ids: &mut Vec<usize>) -> bool {
+    let Some(start_chance) = behavior.start_chance else {
         return true;
     };
-    let Some(capability_profile) = inputs.motion_profile(motion) else {
-        return false;
-    };
-    if capability_profile.chance >= 1.0 || rand::rng().random::<f32>() < capability_profile.chance {
+    if start_chance.chance >= 1.0 || rand::rng().random::<f32>() < start_chance.chance {
         return true;
     }
-    missed_starts.push(motion);
+    missed_start_ids.push(index);
     false
 }

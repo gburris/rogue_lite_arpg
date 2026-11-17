@@ -22,8 +22,11 @@ const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
-/// Zero while a swoop runs or could start this decision: its cooldown starts only once one ends
-/// or misses its start roll.
+/// Seconds a bat waits to swoop again after a swoop ends or misses its start roll.
+const SWOOP_COOLDOWN: f32 = 2.0;
+
+/// Zero while a swoop runs or could start this decision: it waits out its cooldown once one ends
+/// and its retry once it misses its start roll.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
     ConsiderationInput::MotionReady(Motion::Swoop),
@@ -98,7 +101,8 @@ const BAT_SWOOP: Behavior = Behavior::new(
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
     &[IN_SWOOP_REACH],
-);
+)
+.with_start_chance(0.35, SWOOP_COOLDOWN);
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
 const BAT_BASELINE_IDLE: Behavior = Behavior::new(
@@ -223,7 +227,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         TurnRate(BAT_TURN_RATE)
         ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
         enemy_wander()
-        ~Swoop::new(0.35, CAST_MAX_RANGE, 2.0)
+        ~Swoop::new(CAST_MAX_RANGE, SWOOP_COOLDOWN)
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [

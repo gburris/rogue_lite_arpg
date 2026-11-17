@@ -2,25 +2,12 @@ use bevy::ecs::query::QueryData;
 
 use super::motion::{Dash, Motion, Orbit, Swoop, Wander};
 
-/// The reach, start chance and cooldown a decision reads for one motion; an action fills only
-/// its reach.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// The reach and cooldown a decision reads for one motion; an action fills only its reach.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(super) struct CapabilityProfile {
     pub reach: Option<f32>,
-    /// Probability that a winning finite motion actually starts.
-    pub chance: f32,
     /// Seconds to wait after a finish or a missed start roll.
     pub cooldown: f32,
-}
-
-impl Default for CapabilityProfile {
-    fn default() -> Self {
-        Self {
-            reach: None,
-            chance: 1.0,
-            cooldown: 0.0,
-        }
-    }
 }
 
 /// Every motion capability component a character may carry.

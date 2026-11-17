@@ -52,6 +52,7 @@ pub struct Brain {
     running_behaviors: Vec<RunningBehavior>,
     next_behavior_run_id: u32,
     cooldowns: Cooldowns,
+    start_roll_ready_at: Vec<f32>,
     attack_finish_pending: bool,
     next_decision_at: f32,
 }
@@ -64,6 +65,7 @@ impl Brain {
             running_behaviors: Vec::with_capacity(2),
             next_behavior_run_id: 0,
             cooldowns: Cooldowns::default(),
+            start_roll_ready_at: vec![0.0; definition.behaviors.len()],
             attack_finish_pending: false,
             next_decision_at: 0.0,
         }
@@ -117,10 +119,29 @@ impl Brain {
         self.cooldowns.start(motion, inputs.now + cooldown);
     }
 
-    /// Whether `behavior` may start now: its motion is owned and off cooldown, and its action can
-    /// run (see [`DecisionInputs::can_run`]). A committed behavior also needs an action that ends
-    /// on its own, since nothing else would finish it.
-    fn is_available(&self, behavior: &Behavior, inputs: &DecisionInputs) -> bool {
+    /// Whether any behavior over a motion of `motion`'s kind waits out a missed start roll.
+    fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
+        self.definition
+            .behaviors
+            .iter()
+            .zip(&self.start_roll_ready_at)
+            .any(|(behavior, &ready_at)| {
+                now < ready_at
+                    && behavior
+                        .motion
+                        .is_some_and(|held| held.is_same_kind(motion))
+            })
+    }
+
+    /// Whether behavior `index` may start now: no missed start roll is waiting out its retry, its
+    /// motion is owned and off cooldown, and its action can run (see [`DecisionInputs::can_run`]).
+    /// A committed behavior also needs an action that ends on its own, since nothing else would
+    /// finish it.
+    fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
+        let behavior = &self.definition.behaviors[index];
+        if inputs.now < self.start_roll_ready_at[index] {
+            return false;
+        }
         let motion_available = |motion: Motion| {
             inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
         };
@@ -177,16 +198,18 @@ impl Brain {
     }
 
     /// Applies a decision. The only place an attack-finished edge is consumed.
-    /// `missed_starts` are the finite motions that won but failed their start roll.
+    /// `missed_start_ids` are the behaviors that won but failed their start roll.
     fn commit_decision(
         &mut self,
         winning_behavior_ids: &[usize],
-        missed_starts: &[Motion],
+        missed_start_ids: &[usize],
         inputs: &DecisionInputs,
     ) {
         self.assign_slots(winning_behavior_ids, inputs);
-        for &motion in missed_starts {
-            self.start_motion_cooldown(motion, inputs);
+        for &index in missed_start_ids {
+            if let Some(start_chance) = self.definition.behaviors[index].start_chance {
+                self.start_roll_ready_at[index] = inputs.now + start_chance.retry_seconds;
+            }
         }
         self.attack_finish_pending = false;
     }

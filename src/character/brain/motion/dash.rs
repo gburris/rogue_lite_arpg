@@ -52,14 +52,11 @@ impl Dash {
         }
     }
 
-    pub fn kite(chance: f32, run_distance: Interval) -> Self {
+    pub fn kite(run_distance: Interval) -> Self {
         Self::new(
             run_distance,
             1.0,
-            CapabilityProfile {
-                chance,
-                ..CapabilityProfile::default()
-            },
+            CapabilityProfile::default(),
             DashAimRule::Away {
                 spread: KITE_SPREAD,
             },
@@ -89,7 +86,6 @@ impl Dash {
             CapabilityProfile {
                 reach: Some(danger_range),
                 cooldown,
-                ..CapabilityProfile::default()
             },
             DashAimRule::Away { spread: 0.0 },
             "Slide",

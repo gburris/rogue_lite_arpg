@@ -107,7 +107,8 @@ const WARRIOR_KITE: Behavior = Behavior::new(
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
     &[ATTACK_FINISHED, HAS_TARGET],
-);
+)
+.with_start_chance(0.6, 0.0);
 
 /// Doing nothing on the action slot: the bar a heal must clear to fire.
 const WARRIOR_BASELINE_IDLE: Behavior = Behavior::new(
@@ -215,8 +216,8 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
-        ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
+        // A 3-5 tile run inside a 90° cone away from the target.
+        ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()
             ~ActionCooldown::new(HEAL_COOLDOWN)

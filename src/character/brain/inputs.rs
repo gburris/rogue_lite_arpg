@@ -31,8 +31,8 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion's kind is the one running; its payload is ignored.
     MotionRunning(Motion),
-    /// Whether the character owns this motion and its cooldown has run out; the payload is
-    /// ignored.
+    /// Whether the character owns this motion, its cooldown has run out, and no behavior over it
+    /// waits out a missed start roll; the payload is ignored.
     MotionReady(Motion),
     /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
     /// the payload is ignored.
@@ -181,7 +181,9 @@ impl DecisionInputs<'_, '_, '_> {
                     .is_some_and(|running| running.is_same_kind(motion)),
             )),
             ConsiderationInput::MotionReady(motion) => Some(f32::from(
-                self.motion_profile(motion).is_some() && brain.is_cooldown_ready(motion, self.now),
+                self.motion_profile(motion).is_some()
+                    && brain.is_cooldown_ready(motion, self.now)
+                    && !brain.is_start_roll_waiting(motion, self.now),
             )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain

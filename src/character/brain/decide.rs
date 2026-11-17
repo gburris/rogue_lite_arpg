@@ -15,14 +15,15 @@ use super::engine::{
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
+use super::started_motion::StartedMotion;
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
 /// A behavior that won its slots, with its motion and action copied from the
-/// definition and stamped with a run id so a finite motion's progress can tell a fresh
-/// start from the run it just finished. Appliers report through it, so the
+/// definition and stamped with a run id so each run starts its motion and action once and their
+/// finishes name it. Appliers report through it, so the
 /// committed/continuously scored finish policy lives here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
@@ -49,8 +50,8 @@ impl RunningBehavior {
         }
     }
 
-    /// Whether a committed behavior lost an input it was chosen on or the target its motion steers
-    /// by, or timed out. The game ends an interrupted use or finite motion itself.
+    /// Whether a committed behavior lost an input it was chosen on, or timed out. The game ends an
+    /// interrupted use, and a finite motion that is interrupted or loses its target, itself.
     pub(super) fn should_drop_committed_behavior(
         &self,
         behavior: &Behavior,
@@ -58,9 +59,7 @@ impl RunningBehavior {
         inputs: &DecisionInputs,
     ) -> bool {
         self.committed
-            && (has_absent_input(behavior, read)
-                || (self.motion.is_some_and(Motion::needs_target) && inputs.target().is_none())
-                || inputs.now - self.started_at > COMMIT_TIMEOUT)
+            && (has_absent_input(behavior, read) || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }
 
@@ -92,12 +91,14 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Starts a finished motion's cooldown and, if its run is still current, decides again at once.
+/// Starts a finished motion's cooldown and, if the run it started for is still current, decides
+/// again at once.
 pub(super) fn on_release_finished_motion(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
+    started_motions: Query<&StartedMotion>,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
@@ -109,11 +110,18 @@ pub(super) fn on_release_finished_motion(
         now: time.elapsed_secs(),
     };
     brain.start_motion_cooldown(finished.motion, &inputs);
+    let Some(behavior_run_id) = started_motions
+        .get(finished.entity)
+        .ok()
+        .and_then(|started_motion| started_motion.behavior_run_id_of(finished.motion))
+    else {
+        return;
+    };
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        finished.behavior_run_id,
+        behavior_run_id,
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]

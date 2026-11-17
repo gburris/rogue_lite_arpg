@@ -6,18 +6,18 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{Motion, SteerInput, SteeredCharacter, Steering};
+use super::{Motion, RunningMotion, SteerInput, SteeredCharacter, Steering};
 use crate::character::brain::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
-/// Steers every held motion no component owns, including an empty slot.
+/// Steers every running motion no component owns, and halts a character that runs none.
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
-    mut characters: Query<(SteeredCharacter, &mut Steering)>,
+    mut characters: Query<(SteeredCharacter, Option<&RunningMotion>, &mut Steering)>,
 ) {
-    for (character, mut steering) in &mut characters {
-        *steering = match character.brain.motion() {
+    for (character, running, mut steering) in &mut characters {
+        *steering = match running.map(|running| running.motion) {
             // Steered by their components' systems.
             Some(Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop) => continue,
             None => Steering::HALT,

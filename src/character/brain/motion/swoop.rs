@@ -50,7 +50,8 @@ impl Swoop {
     }
 }
 
-/// Applies swoop each tick and ends it once far enough away from target.
+/// Applies swoop each tick and ends it once far enough away from target or once the target is
+/// lost.
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -63,11 +64,11 @@ pub(super) fn apply_swoop(
     )>,
 ) {
     for (entity, character, swoop, mut progress, mut steering) in &mut swoopers {
-        let Some(input) = character.build_steer_input(Motion::Swoop, &time) else {
-            *steering = Steering::HALT;
-            continue;
+        let step = match character.build_steer_input(Motion::Swoop, &time) {
+            Some(input) => progress.step(swoop, &input),
+            None => MotionStep::Finished,
         };
-        match progress.step(swoop, &input) {
+        match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
                 commands.entity(entity).try_remove::<SwoopProgress>();
@@ -79,27 +80,14 @@ pub(super) fn apply_swoop(
 /// One run of a character's [`Swoop`], present from its start until it ends. Its removal, however
 /// the run ended, hands a swoop in flight's speed to steering as a [`DecayingSpeedBoost`] and
 /// reports [`MotionFinished`].
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = end_swoop)]
 pub(super) struct SwoopProgress {
-    behavior_run_id: u32,
     path: Option<SwoopPath>,
     blocked_timer: BlockedTimer,
 }
 
 impl SwoopProgress {
-    pub(super) fn new(behavior_run_id: u32) -> Self {
-        Self {
-            behavior_run_id,
-            path: None,
-            blocked_timer: BlockedTimer::default(),
-        }
-    }
-
-    pub(super) fn behavior_run_id(&self) -> u32 {
-        self.behavior_run_id
-    }
-
     fn step(&mut self, swoop: &Swoop, input: &SteerInput) -> MotionStep {
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
@@ -139,12 +127,7 @@ impl SwoopProgress {
 
 fn end_swoop(mut world: DeferredWorld, context: HookContext) {
     let entity = context.entity;
-    let Some(&SwoopProgress {
-        behavior_run_id,
-        path,
-        ..
-    }) = world.entity(entity).get::<SwoopProgress>()
-    else {
+    let Some(&SwoopProgress { path, .. }) = world.entity(entity).get::<SwoopProgress>() else {
         return;
     };
     let extra_speed = world
@@ -164,7 +147,6 @@ fn end_swoop(mut world: DeferredWorld, context: HookContext) {
     world.commands().trigger(MotionFinished {
         entity,
         motion: Motion::Swoop,
-        behavior_run_id,
     });
 }
 

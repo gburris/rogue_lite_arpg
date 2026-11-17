@@ -24,7 +24,7 @@ pub mod prelude {
     pub(crate) use super::brain::TargetInfo;
     #[cfg(feature = "dev_native")]
     pub(crate) use super::brain::lock_onto_target;
-    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander};
+    pub use super::brain::{Brain, Dash, Motion, ScoreTrace, Wander, WanderProgress};
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};

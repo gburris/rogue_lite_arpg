@@ -162,7 +162,7 @@ fn update_enemy_ai_labels(
             &TargetInfo,
             Has<Targeting>,
             Option<&Dash>,
-            Option<&Wander>,
+            Option<&WanderProgress>,
             Option<&ScoreTrace>,
         ),
         With<Enemy>,
@@ -270,12 +270,16 @@ fn cleanup_enemy_ai_labels(
 
 /// One-word name for what the enemy is doing: its current motion, with a
 /// dash's own policy name and an enemy's wander or rest beat.
-fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
+fn short_activity(
+    brain: &Brain,
+    dash: Option<&Dash>,
+    wander: Option<&WanderProgress>,
+) -> &'static str {
     match brain.motion() {
         None => "Stopped",
         Some(Motion::Dash) => dash.map_or(Motion::Dash.name(), Dash::name),
         Some(Motion::Wander) => {
-            if wander.is_some_and(Wander::is_walking) {
+            if wander.is_some_and(WanderProgress::is_walking) {
                 "Wander"
             } else {
                 "Rest"

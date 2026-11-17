@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, Motion};
+use super::{BlockedTimer, Motion, RunningMotion};
 use crate::character::state::BlockedState;
-use crate::prelude::*;
 
 /// Seconds a walk home pushes against a wall or a crowd before the character settles where it
 /// stands.
@@ -76,10 +75,15 @@ impl HomeArea {
 /// Moves the home of each character whose walk back is blocked to where it stands.
 pub(super) fn settle_blocked_returners(
     time: Res<Time<Virtual>>,
-    mut returners: Query<(&Brain, &Transform, BlockedState, &mut HomeArea)>,
+    mut returners: Query<(
+        Option<&RunningMotion>,
+        &Transform,
+        BlockedState,
+        &mut HomeArea,
+    )>,
 ) {
-    for (brain, transform, blocked, mut home_area) in &mut returners {
-        if brain.motion() != Some(Motion::ReturnToHome) {
+    for (running, transform, blocked, mut home_area) in &mut returners {
+        if running.map(|running| running.motion) != Some(Motion::ReturnToHome) {
             home_area.return_blocked_timer.reset();
             continue;
         }

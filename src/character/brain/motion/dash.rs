@@ -124,7 +124,7 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
     (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
-/// Advances each running dash and ends it at the end of its distance.
+/// Advances each running dash and ends it at the end of its distance or once its target is lost.
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
@@ -137,11 +137,11 @@ pub(super) fn apply_dash(
     )>,
 ) {
     for (entity, character, dash, mut progress, mut steering) in &mut dashers {
-        let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
-            *steering = Steering::HALT;
-            continue;
+        let step = match character.build_steer_input(Motion::Dash, &time) {
+            Some(input) => progress.step(dash, &input),
+            None => MotionStep::Finished,
         };
-        match progress.step(dash, &input) {
+        match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
                 commands.entity(entity).try_remove::<DashProgress>();
@@ -175,29 +175,15 @@ impl DashAimRule {
 
 /// One run of a character's [`Dash`], present from its start until it ends. Its removal, however
 /// the run ended, reports [`MotionFinished`].
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = report_dash_finished)]
 pub(super) struct DashProgress {
-    behavior_run_id: u32,
     direction: Option<Vec2>,
     remaining: f32,
     blocked_timer: BlockedTimer,
 }
 
 impl DashProgress {
-    pub(super) fn new(behavior_run_id: u32) -> Self {
-        Self {
-            behavior_run_id,
-            direction: None,
-            remaining: 0.0,
-            blocked_timer: BlockedTimer::default(),
-        }
-    }
-
-    pub(super) fn behavior_run_id(&self) -> u32 {
-        self.behavior_run_id
-    }
-
     fn aim_run(&mut self, dash: &Dash, input: &SteerInput) -> Option<Vec2> {
         // A target with no finite distance gives nothing to aim at, so this waits rather than
         // aiming blind.
@@ -227,15 +213,8 @@ impl DashProgress {
 }
 
 fn report_dash_finished(mut world: DeferredWorld, context: HookContext) {
-    let Some(&DashProgress {
-        behavior_run_id, ..
-    }) = world.entity(context.entity).get::<DashProgress>()
-    else {
-        return;
-    };
     world.commands().trigger(MotionFinished {
         entity: context.entity,
         motion: Motion::Dash,
-        behavior_run_id,
     });
 }

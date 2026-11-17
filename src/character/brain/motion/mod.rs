@@ -4,6 +4,7 @@ mod dash;
 mod direct;
 mod home_area;
 mod orbit;
+mod running_motion;
 mod steering;
 mod step;
 mod swoop;
@@ -15,14 +16,16 @@ pub use self::dash::Dash;
 use self::dash::DashProgress;
 pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
+use self::orbit::OrbitProgress;
+use self::running_motion::RunningMotion;
+pub(super) use self::running_motion::{MotionCommands, MotionFinished};
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
-pub(super) use self::step::MotionFinished;
 use self::step::{BlockedTimer, MotionStep, SteerInput, SteeredCharacter};
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
-pub use self::wander::Wander;
+pub use self::wander::{Wander, WanderProgress};
 use super::BrainSystems;
 use super::engine::Interval;
 
@@ -161,8 +164,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            step::start_finite_motion_runs,
-            step::end_interrupted_motions,
+            running_motion::end_interrupted_motions,
             dash::apply_dash,
             swoop::apply_swoop,
             orbit::apply_orbit,

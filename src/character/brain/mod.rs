@@ -8,6 +8,7 @@ mod engine;
 mod inputs;
 mod motion;
 mod perception;
+mod started_motion;
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -23,13 +24,14 @@ pub use self::engine::{BrainDefinition, Interval};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
 use self::motion::Steering;
-pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander};
+pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander, WanderProgress};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
+use self::started_motion::StartedMotion;
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -38,11 +40,11 @@ const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running
 /// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
-/// at 10 Hz on a random per-brain phase; motion and action systems read it
-/// and answer with [`MotionFinished`](motion::MotionFinished) or
+/// at 10 Hz on a random per-brain phase. Its requests start and stop the game's motions and
+/// actions, which answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedActions, Steering, Kinematics)]
+#[require(StartedActions, StartedMotion, Steering, Kinematics)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
@@ -321,6 +323,9 @@ pub(super) fn plugin(app: &mut App) {
         .add_observer(decide::on_finish_action)
         .add_systems(
             Update,
-            decide::decide_behavior.in_set(BrainSystems::Decision),
+            (
+                decide::decide_behavior.in_set(BrainSystems::Decision),
+                started_motion::apply_motion_requests.in_set(BrainSystems::Execute),
+            ),
         );
 }

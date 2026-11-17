@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, SteerInput, SteeredCharacter, Steering};
+use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering};
 use crate::character::brain::{Interval, Motion};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
@@ -52,10 +52,6 @@ pub struct Orbit {
     switch_chance: f32,
     radial_gain: f32,
     max_distance_offset: f32,
-    distance_offset: f32,
-    reroll_at: f32,
-    direction: Option<OrbitDirection>,
-    blocked_timer: BlockedTimer,
 }
 
 impl Orbit {
@@ -65,10 +61,6 @@ impl Orbit {
             switch_chance: ORBIT_SWITCH_CHANCE,
             radial_gain: ORBIT_RADIAL_GAIN,
             max_distance_offset: 0.0,
-            distance_offset: 0.0,
-            reroll_at: 0.0,
-            direction: None,
-            blocked_timer: BlockedTimer::default(),
         }
     }
 
@@ -78,22 +70,35 @@ impl Orbit {
             ..self
         }
     }
+}
 
-    /// Forgets the circling side, so the next orbit picks it from the heading again.
-    fn leave_orbit(&mut self) {
-        self.direction = None;
-        self.blocked_timer.reset();
+impl Default for Orbit {
+    fn default() -> Self {
+        Self::new()
     }
+}
 
-    fn roll_distance_offset(&mut self) {
-        if self.max_distance_offset > 0.0 {
+/// One stretch of a character's [`Orbit`]: the side it circles and when it next rerolls, present
+/// while it orbits.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub(super) struct OrbitProgress {
+    distance_offset: f32,
+    reroll_at: f32,
+    direction: Option<OrbitDirection>,
+    blocked_timer: BlockedTimer,
+}
+
+impl OrbitProgress {
+    fn roll_distance_offset(&mut self, orbit: &Orbit) {
+        if orbit.max_distance_offset > 0.0 {
             self.distance_offset =
-                rand::rng().random_range(-self.max_distance_offset..self.max_distance_offset);
+                rand::rng().random_range(-orbit.max_distance_offset..orbit.max_distance_offset);
         }
     }
 
     fn pick_steering_direction(
         &mut self,
+        orbit: &Orbit,
         input: &SteerInput,
         distance_range: Interval,
     ) -> Option<Vec2> {
@@ -103,25 +108,25 @@ impl Orbit {
         let direction = match self.direction {
             None => {
                 let direction = OrbitDirection::from_heading(bearing, input.heading);
-                self.roll_distance_offset();
-                self.reroll_at = now + self.reroll_interval.min();
+                self.roll_distance_offset(orbit);
+                self.reroll_at = now + orbit.reroll_interval.min();
                 direction
             }
             Some(direction)
                 if input.tick_blocked_timer(&mut self.blocked_timer, ORBIT_BLOCKED_SECONDS) =>
             {
                 self.blocked_timer.delay_by(ORBIT_TURN_BACK_SECONDS);
-                self.reroll_at = now + self.reroll_interval.pick_random_value();
+                self.reroll_at = now + orbit.reroll_interval.pick_random_value();
                 direction.reversed()
             }
             Some(direction) if now >= self.reroll_at => {
-                let switched = if rand::rng().random::<f32>() < self.switch_chance {
+                let switched = if rand::rng().random::<f32>() < orbit.switch_chance {
                     direction.reversed()
                 } else {
                     direction
                 };
-                self.roll_distance_offset();
-                self.reroll_at = now + self.reroll_interval.pick_random_value();
+                self.roll_distance_offset(orbit);
+                self.reroll_at = now + orbit.reroll_interval.pick_random_value();
                 switched
             }
             Some(direction) => direction,
@@ -135,31 +140,31 @@ impl Orbit {
         // Positive error means too far out, so the correction points at the target.
         let radial = bearing
             * distance_range.center_error(info.distance - self.distance_offset)
-            * self.radial_gain;
+            * orbit.radial_gain;
         Some((tangent + radial).normalize_or_zero())
     }
 }
 
-impl Default for Orbit {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Circles the target while the brain holds [`Motion::Orbit`].
+/// Circles the target while the character runs [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
-    mut orbiters: Query<(SteeredCharacter, &mut Orbit, &mut Steering)>,
+    mut orbiters: Query<(
+        SteeredCharacter,
+        &RunningMotion,
+        &Orbit,
+        &mut OrbitProgress,
+        &mut Steering,
+    )>,
 ) {
-    for (character, mut orbit, mut steering) in &mut orbiters {
-        let Some(motion @ Motion::Orbit(distance_range)) = character.brain.motion() else {
-            orbit.leave_orbit();
+    for (character, running, orbit, mut progress, mut steering) in &mut orbiters {
+        let motion @ Motion::Orbit(distance_range) = running.motion else {
             continue;
         };
         *steering = character
             .build_steer_input(motion, &time)
             .map_or(Steering::HALT, |input| {
-                Steering::scaled(orbit.pick_steering_direction(&input, distance_range), 1.0)
+                let direction = progress.pick_steering_direction(orbit, &input, distance_range);
+                Steering::scaled(direction, 1.0)
             });
     }
 }

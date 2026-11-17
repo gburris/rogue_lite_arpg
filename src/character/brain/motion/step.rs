@@ -1,22 +1,13 @@
 //! One frame of a motion: what its system reads to steer, and how a finite
-//! motion steps, follows its run, and reports finishing.
+//! motion steps.
 
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
-use super::{DashProgress, HomeArea, Motion, Steering, SwoopProgress};
-use crate::character::brain::{Brain, TargetInfo, Targeting};
+use super::{HomeArea, Motion, Steering};
+use crate::character::brain::{TargetInfo, Targeting};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
-
-/// A finite motion ended, however it ended. The brain starts its cooldown and, if
-/// `behavior_run_id` is still current, ends its behavior and decides again at once.
-#[derive(EntityEvent, Clone, Copy, Debug)]
-pub(in crate::character::brain) struct MotionFinished {
-    pub entity: Entity,
-    pub motion: Motion,
-    pub behavior_run_id: u32,
-}
 
 /// One frame of a finite motion.
 pub(super) enum MotionStep {
@@ -69,70 +60,9 @@ impl BlockedTimer {
     }
 }
 
-/// Gives the brain's current run of a finite motion its progress component, replacing one left
-/// from an earlier run, and removes progress the brain no longer runs.
-pub(super) fn start_finite_motion_runs(
-    mut commands: Commands,
-    characters: Query<(
-        Entity,
-        &Brain,
-        Option<&DashProgress>,
-        Option<&SwoopProgress>,
-    )>,
-) {
-    for (entity, brain, dash_progress, swoop_progress) in &characters {
-        let running = brain.current_motion_behavior();
-        let run_of = |motion: Motion| {
-            running
-                .filter(|running| running.motion == Some(motion))
-                .map(|running| running.behavior_run_id)
-        };
-        let mut character = commands.entity(entity);
-        match (
-            dash_progress.map(DashProgress::behavior_run_id),
-            run_of(Motion::Dash),
-        ) {
-            (Some(_), None) => {
-                character.try_remove::<DashProgress>();
-            }
-            (current, Some(run)) if current != Some(run) => {
-                character.try_insert(DashProgress::new(run));
-            }
-            _ => {}
-        }
-        match (
-            swoop_progress.map(SwoopProgress::behavior_run_id),
-            run_of(Motion::Swoop),
-        ) {
-            (Some(_), None) => {
-                character.try_remove::<SwoopProgress>();
-            }
-            (current, Some(run)) if current != Some(run) => {
-                character.try_insert(SwoopProgress::new(run));
-            }
-            _ => {}
-        }
-    }
-}
-
-/// Ends the finite motion of each interrupted character; see [`InterruptionState`].
-pub(super) fn end_interrupted_motions(
-    mut commands: Commands,
-    characters: Query<(Entity, InterruptionState), Or<(With<DashProgress>, With<SwoopProgress>)>>,
-) {
-    for (entity, interruption) in &characters {
-        if interruption.is_interrupted() {
-            commands
-                .entity(entity)
-                .try_remove::<(DashProgress, SwoopProgress)>();
-        }
-    }
-}
-
 /// What every motion system reads to steer a character.
 #[derive(QueryData)]
 pub(super) struct SteeredCharacter {
-    pub(super) brain: &'static Brain,
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,

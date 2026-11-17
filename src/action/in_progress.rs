@@ -28,9 +28,10 @@ pub(super) struct ActionGlowLight(Entity);
 
 /// Present on an [`ActionSource`] while a use of it is under way, from the start of its wind-up
 /// until the use ends as its [`ActionUseStyle`] says. An interrupted holder's use ends; see
-/// [`InterruptionState`]. Its removal, however the use ended, fires [`ActionFinished`].
+/// [`InterruptionState`]. Its removal, however the use ended, despawns the entities spawned for
+/// the use (see [`SpawnedForUse`]) and fires [`ActionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
-#[component(on_remove = report_action_finished)]
+#[component(on_remove = end_action_use)]
 pub struct ActionInProgress {
     holder: Entity,
     key: ActionKey,
@@ -51,6 +52,19 @@ impl ActionInProgress {
         self.key
     }
 }
+
+/// Marks an entity spawned for the use of the action `source` in progress, such as a hitbox, so it
+/// goes when that use ends; see [`ActionInProgress`].
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = UseSpawnedEntities)]
+pub struct SpawnedForUse {
+    pub source: Entity,
+}
+
+/// The entities spawned for the use of this action source in progress; see [`SpawnedForUse`].
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = SpawnedForUse)]
+pub struct UseSpawnedEntities(Vec<Entity>);
 
 /// A use of the action `source` took effect. The source's own observer carries out the effect.
 #[derive(EntityEvent, Clone, Copy, Debug)]
@@ -218,12 +232,18 @@ fn end_use(commands: &mut Commands, entity: Entity) {
     )>();
 }
 
-fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
-    let Some(&ActionInProgress { holder, key }) =
-        world.entity(context.entity).get::<ActionInProgress>()
-    else {
+fn end_action_use(mut world: DeferredWorld, context: HookContext) {
+    let source = world.entity(context.entity);
+    let Some(&ActionInProgress { holder, key }) = source.get::<ActionInProgress>() else {
         return;
     };
+    let spawned_for_use: Vec<Entity> = source
+        .get::<UseSpawnedEntities>()
+        .map(|spawned| spawned.iter().collect())
+        .unwrap_or_default();
+    for spawned in spawned_for_use {
+        world.commands().entity(spawned).try_despawn();
+    }
     world.commands().trigger(ActionFinished {
         source: context.entity,
         holder,

@@ -2,8 +2,6 @@ use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
 use avian2d::prelude::SpatialQuery;
-use bevy::ecs::lifecycle::HookContext;
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
@@ -140,11 +138,6 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     right: EquipmentPose::above(4.0, -8.0, -50.0),
 };
 
-/// The spark at the tip of a casting staff. Removing it despawns the spark.
-#[derive(Component, Clone, Copy, Debug)]
-#[component(on_remove = despawn_staff_spark)]
-struct StaffSpark(Entity);
-
 /// Swings the staff toward its holder's facing and back, with a spark at its tip.
 fn on_staff_cast_started(
     added: On<Add<ActionInProgress>>,
@@ -182,17 +175,15 @@ fn on_staff_cast_started(
 
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
     let staff_entity = added.entity;
-    let spark = commands
-        .spawn_scene(bsn! {
-            @point_light(Color::WHITE, 10.0, 3.0, 1.0)
-            Transform::from_translation(tip)
-            ChildOf(staff_entity)
-        })
-        .id();
-    commands.entity(staff_entity).insert((
-        TweenAnim::new(swing_toward.then(swing_back)).with_destroy_on_completed(true),
-        StaffSpark(spark),
-    ));
+    commands.spawn_scene(bsn! {
+        @point_light(Color::WHITE, 10.0, 3.0, 1.0)
+        Transform::from_translation(tip)
+        ChildOf(staff_entity)
+        ~{SpawnedForUse { source: staff_entity }}
+    });
+    commands
+        .entity(staff_entity)
+        .insert(TweenAnim::new(swing_toward.then(swing_back)).with_destroy_on_completed(true));
     Ok(())
 }
 
@@ -236,14 +227,5 @@ fn on_staff_took_effect(
 }
 
 fn on_staff_finished(finished: On<ActionFinished>, mut commands: Commands) {
-    commands
-        .entity(finished.source)
-        .try_remove::<(TweenAnim, StaffSpark)>();
-}
-
-fn despawn_staff_spark(mut world: DeferredWorld, context: HookContext) {
-    let Some(&StaffSpark(spark)) = world.entity(context.entity).get::<StaffSpark>() else {
-        return;
-    };
-    world.commands().entity(spark).try_despawn();
+    commands.entity(finished.source).try_remove::<TweenAnim>();
 }

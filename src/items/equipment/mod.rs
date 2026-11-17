@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 mod equip;
 mod equipment_transform;
-mod equippable;
 mod slot;
 
 use crate::prelude::*;
@@ -12,8 +11,7 @@ pub mod prelude {
     pub use super::equipment_transform::{
         DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
     };
-    pub use super::equippable::{Equippable, Equipped};
-    pub use super::slot::{EquipmentSlot, Mainhand, Offhand};
+    pub use super::slot::{EquipmentSlot, Equippable, Equipped, Mainhand, Offhand};
 }
 
 pub(super) fn plugin(app: &mut App) {

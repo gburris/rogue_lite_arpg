@@ -27,11 +27,6 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .in_set(SimulationSystems::Upkeep),
     );
-
-    app.add_systems(
-        Update,
-        attack::damage_melee_hits.in_set(InGameSystems::Collision),
-    );
 }
 
 /// A weapon that swings a hitbox along its holder's aim when used.

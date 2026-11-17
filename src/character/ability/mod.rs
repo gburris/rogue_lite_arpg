@@ -33,10 +33,3 @@ impl Ability {
     /// Every ability, in array order.
     pub const ALL: [Self; 4] = [Self::Heal, Self::Breath, Self::Bite, Self::Rally];
 }
-
-pub(super) fn plugin(app: &mut App) {
-    app.add_systems(
-        Update,
-        bite::damage_bite_hits.in_set(InGameSystems::Collision),
-    );
-}

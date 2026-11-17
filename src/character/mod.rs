@@ -46,7 +46,7 @@ pub mod prelude {
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-    app.add_plugins((ability::plugin, animation::plugin, brain::plugin));
+    app.add_plugins((animation::plugin, brain::plugin));
 
     app.add_systems(
         FixedUpdate,

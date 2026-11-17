@@ -2,6 +2,7 @@ mod damage;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod health;
+mod hitbox;
 #[cfg(feature = "dev_tools")]
 mod invincible;
 mod invulnerable;
@@ -19,6 +20,7 @@ pub mod prelude {
         hurtbox_at,
     };
     pub use super::health::{AttemptHeal, Healed, Health};
+    pub use super::hitbox::{HitBox, LifeSteal};
     #[cfg(feature = "dev_tools")]
     pub use super::invincible::Invincible;
     pub use super::invulnerable::IFrames;
@@ -56,10 +58,12 @@ pub(super) fn plugin(app: &mut App) {
             )
                 .chain()
                 .in_set(VfxSystems::Tint),
+            hitbox::damage_hitbox_contacts.in_set(InGameSystems::Collision),
         ),
     )
     .add_observer(health::on_attempt_heal)
     .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
-    .add_observer(damage::on_damage_dealt_knockback);
+    .add_observer(damage::on_damage_dealt_knockback)
+    .add_observer(hitbox::on_damage_dealt_life_steal);
 }

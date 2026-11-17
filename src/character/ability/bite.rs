@@ -1,5 +1,4 @@
 use avian2d::prelude::*;
-use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
 use super::Ability;
@@ -49,18 +48,6 @@ impl Bite {
     }
 }
 
-/// The short-lived hitbox of one bite, a child of the biter. It damages each opponent it touches
-/// once, and heals the biter by `life_steal` of every bite that lands.
-#[derive(Component, Clone, Debug)]
-#[require(Sensor, CollidingEntities, Lifespan::new(BITE_HITBOX_SECONDS))]
-pub(super) struct BiteHitbox {
-    biter: Entity,
-    damage: f32,
-    life_steal: f32,
-    direction: Vec2,
-    bitten: HashSet<Entity>,
-}
-
 /// A bite ability carrying `bite` that reaches `reach`.
 pub fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
@@ -87,46 +74,17 @@ fn on_bite_took_effect(
         return Ok(());
     };
     let mouth_offset = Vec2::Y * bite.mouth_height + direction * (reach - bite.hitbox_radius);
-    commands.spawn((
-        BiteHitbox {
-            biter: holder,
-            damage: bite.damage * stat_multipliers.damage,
-            life_steal: bite.life_steal,
-            direction,
-            bitten: HashSet::default(),
-        },
+    let damage = Damage::Single(bite.damage * stat_multipliers.damage);
+    let mut hitbox = commands.spawn((
+        HitBox::new(holder, damage, direction),
+        Lifespan::new(BITE_HITBOX_SECONDS),
         Collider::circle(bite.hitbox_radius),
         side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),
         ChildOf(holder),
     ));
-    Ok(())
-}
-
-/// Damages each opponent a bite hitbox touches, once per bite.
-pub(super) fn damage_bite_hits(
-    mut commands: Commands,
-    mut hitboxes: Query<(&mut BiteHitbox, &CollidingEntities)>,
-) {
-    for (mut hitbox, colliding_entities) in &mut hitboxes {
-        for &bitten in colliding_entities.iter() {
-            if !hitbox.bitten.insert(bitten) {
-                continue;
-            }
-            commands.trigger(AttemptDamage {
-                entity: bitten,
-                damage: Damage::Single(hitbox.damage),
-                source_item: None,
-                attacker: Some(hitbox.biter),
-                direction: Some(hitbox.direction),
-                ..default()
-            });
-            if hitbox.life_steal > 0.0 {
-                commands.trigger(AttemptHeal {
-                    entity: hitbox.biter,
-                    amount: hitbox.damage * hitbox.life_steal,
-                });
-            }
-        }
+    if bite.life_steal > 0.0 {
+        hitbox.insert(LifeSteal(bite.life_steal));
     }
+    Ok(())
 }

@@ -4,7 +4,8 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
-use super::damage::{AttemptDamage, Damage, HurtBox, Knockback};
+use super::damage::{AttemptDamage, Damage, Knockback};
+use super::hitbox::HurtBox;
 use super::status_effects::prelude::Burning;
 use crate::prelude::*;
 

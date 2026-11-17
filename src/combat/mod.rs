@@ -15,12 +15,9 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::damage::{
-        AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, HurtBox, Knockback, hurtbox,
-        hurtbox_at,
-    };
+    pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
     pub use super::health::{AttemptHeal, Healed, Health};
-    pub use super::hitbox::{HitBox, LifeSteal};
+    pub use super::hitbox::{HitBox, HurtBox, LifeSteal, hurtbox, hurtbox_at};
     #[cfg(feature = "dev_tools")]
     pub use super::invincible::Invincible;
     pub use super::invulnerable::IFrames;

@@ -1,5 +1,4 @@
 mod action;
-mod capability;
 pub(super) mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
@@ -15,7 +14,6 @@ use rand::RngExt;
 
 pub use self::action::Action;
 use self::action::{ActionOutcome, BehaviorActionFinished, StartedActions};
-use self::capability::{CapabilityProfile, Cooldowns};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -40,7 +38,7 @@ use crate::prelude::*;
 const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running
-/// in its motion and action slots, and its cooldowns. Only [`decide`] writes it,
+/// in its motion and action slots, and its start roll retries. Only [`decide`] writes it,
 /// at 10 Hz on a random per-brain phase. Its requests start and stop the game's motions and
 /// actions, which answer with [`MotionFinished`](motion::MotionFinished) or
 /// [`BehaviorActionFinished`].
@@ -51,7 +49,6 @@ pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
     next_behavior_run_id: u32,
-    cooldowns: Cooldowns,
     start_roll_ready_at: Vec<f32>,
     attack_finish_pending: bool,
     next_decision_at: f32,
@@ -64,7 +61,6 @@ impl Brain {
             definition,
             running_behaviors: Vec::with_capacity(2),
             next_behavior_run_id: 0,
-            cooldowns: Cooldowns::default(),
             start_roll_ready_at: vec![0.0; definition.behaviors.len()],
             attack_finish_pending: false,
             next_decision_at: 0.0,
@@ -107,18 +103,6 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    fn is_cooldown_ready(&self, motion: Motion, now: f32) -> bool {
-        self.cooldowns.is_ready(motion, now)
-    }
-
-    /// Starts `motion`'s cooldown for as long as its capability profile says.
-    fn start_motion_cooldown(&mut self, motion: Motion, inputs: &DecisionInputs) {
-        let cooldown = inputs
-            .motion_profile(motion)
-            .map_or(0.0, |profile| profile.cooldown);
-        self.cooldowns.start(motion, inputs.now + cooldown);
-    }
-
     /// Whether any behavior over a motion of `motion`'s kind waits out a missed start roll.
     fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
         self.definition
@@ -134,7 +118,8 @@ impl Brain {
     }
 
     /// Whether behavior `index` may start now: no missed start roll is waiting out its retry, its
-    /// motion is owned and off cooldown, and its action can run (see [`DecisionInputs::can_run`]).
+    /// motion is ready (see [`MotionStatus::is_ready`](motion::MotionStatus::is_ready)), and its
+    /// action can run (see [`DecisionInputs::can_run`]).
     /// A committed behavior also needs an action that ends on its own, since nothing else would
     /// finish it.
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
@@ -142,11 +127,9 @@ impl Brain {
         if inputs.now < self.start_roll_ready_at[index] {
             return false;
         }
-        let motion_available = |motion: Motion| {
-            inputs.motion_profile(motion).is_some() && self.is_cooldown_ready(motion, inputs.now)
-        };
+        let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
         let action_available = |action: Action| {
-            if inputs.action_profile(action).is_none() || !inputs.can_run(action) {
+            if !inputs.has_action_source(action) || !inputs.can_run(action) {
                 return false;
             }
             let finishes = !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
@@ -227,7 +210,7 @@ impl Brain {
                         .shares_a_slot_with(&behaviors[running.behavior])
             });
             if running.committed && displaced {
-                self.drop_committed_behavior(running, inputs);
+                self.drop_committed_behavior(running);
             }
         }
         let previous = std::mem::take(&mut self.running_behaviors);
@@ -268,19 +251,15 @@ impl Brain {
             let behavior = self.definition_of_running_behavior(running);
             let read = |input| inputs.read_consideration_input(input, self);
             if running.should_drop_committed_behavior(&behavior, &read, inputs) {
-                self.drop_committed_behavior(running, inputs);
+                self.drop_committed_behavior(running);
             }
         }
     }
 
-    /// Ends `running` and starts its finite motion's cooldown so it can't restart next tick.
-    fn drop_committed_behavior(&mut self, running: RunningBehavior, inputs: &DecisionInputs) {
+    /// Ends `running`.
+    fn drop_committed_behavior(&mut self, running: RunningBehavior) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);
-        let behavior = self.definition_of_running_behavior(running);
-        if let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) {
-            self.start_motion_cooldown(motion, inputs);
-        }
     }
 
     /// Ends the committed behavior stamped `behavior_run_id`; `false` for a stale finish.

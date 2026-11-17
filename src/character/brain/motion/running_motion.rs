@@ -1,7 +1,10 @@
+use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{DashProgress, Motion, OrbitProgress, SwoopProgress, WanderProgress};
+use super::{
+    Dash, DashProgress, Motion, Orbit, OrbitProgress, Swoop, SwoopProgress, Wander, WanderProgress,
+};
 use crate::prelude::*;
 
 /// What a motion acts on: a character or object, or a place.
@@ -28,25 +31,32 @@ pub(in crate::character::brain) struct MotionFinished {
     pub motion: Motion,
 }
 
-/// Reads which motion a character runs.
+/// What [`MotionStatus`] reads of a character: the motion it runs and the motion capabilities
+/// it carries.
+#[derive(QueryData)]
+struct MotionHolder {
+    running: Option<&'static RunningMotion>,
+    dash: Option<&'static Dash>,
+    swoop: Option<&'static Swoop>,
+    has_orbit: Has<Orbit>,
+    has_wander: Has<Wander>,
+    has_dash_progress: Has<DashProgress>,
+    has_swoop_progress: Has<SwoopProgress>,
+    interruption: InterruptionState,
+}
+
+/// Reads which motion a character runs and which motions it could start.
 #[derive(SystemParam)]
 pub(in crate::character::brain) struct MotionStatus<'w, 's> {
-    characters: Query<
-        'w,
-        's,
-        (
-            &'static RunningMotion,
-            Has<DashProgress>,
-            Has<SwoopProgress>,
-        ),
-    >,
+    time: Res<'w, Time<Virtual>>,
+    characters: Query<'w, 's, MotionHolder>,
 }
 
 impl MotionStatus<'_, '_> {
     /// The motion `character` runs; `None` while it runs none.
     pub(in crate::character::brain) fn running_motion(&self, character: Entity) -> Option<Motion> {
-        let (running, ..) = self.characters.get(character).ok()?;
-        Some(running.motion)
+        let holder = self.characters.get(character).ok()?;
+        holder.running.map(|running| running.motion)
     }
 
     /// Whether `character` runs a motion of `motion`'s kind that hasn't ended.
@@ -55,14 +65,16 @@ impl MotionStatus<'_, '_> {
         character: Entity,
         motion: Motion,
     ) -> bool {
-        let Ok((running, has_dash_progress, has_swoop_progress)) = self.characters.get(character)
-        else {
+        let Ok(holder) = self.characters.get(character) else {
             return false;
         };
-        running.motion.is_same_kind(motion)
+        let runs_kind = holder
+            .running
+            .is_some_and(|running| running.motion.is_same_kind(motion));
+        runs_kind
             && match motion {
-                Motion::Dash => has_dash_progress,
-                Motion::Swoop => has_swoop_progress,
+                Motion::Dash => holder.has_dash_progress,
+                Motion::Swoop => holder.has_swoop_progress,
                 Motion::Wander
                 | Motion::Chase
                 | Motion::ReturnToHome
@@ -71,6 +83,66 @@ impl MotionStatus<'_, '_> {
                 | Motion::Idle
                 | Motion::Orbit(_) => true,
             }
+    }
+
+    fn has_motion(&self, character: Entity, motion: Motion) -> bool {
+        let Ok(holder) = self.characters.get(character) else {
+            return false;
+        };
+        match motion {
+            Motion::Dash => holder.dash.is_some(),
+            Motion::Swoop => holder.swoop.is_some(),
+            Motion::Orbit(_) => holder.has_orbit,
+            Motion::Wander => holder.has_wander,
+            Motion::Chase
+            | Motion::ReturnToHome
+            | Motion::Flee
+            | Motion::KeepDistance(_)
+            | Motion::Idle => true,
+        }
+    }
+
+    /// Whether `character` could start `motion` now: it has the capability, and a finite motion is
+    /// off cooldown and its character not interrupted (see [`InterruptionState`]).
+    pub(in crate::character::brain) fn is_ready(&self, character: Entity, motion: Motion) -> bool {
+        let Ok(holder) = self.characters.get(character) else {
+            return false;
+        };
+        let now = self.time.elapsed_secs();
+        let cooldown = match motion {
+            Motion::Dash => holder.dash.map(Dash::cooldown),
+            Motion::Swoop => holder.swoop.map(Swoop::cooldown),
+            Motion::Wander
+            | Motion::Chase
+            | Motion::ReturnToHome
+            | Motion::Flee
+            | Motion::KeepDistance(_)
+            | Motion::Idle
+            | Motion::Orbit(_) => return self.has_motion(character, motion),
+        };
+        cooldown.is_some_and(|cooldown| cooldown.is_ready(now))
+            && !holder.interruption.is_interrupted()
+    }
+
+    /// The farthest target distance at which `character`'s capability for `motion` counts as in
+    /// reach; `None` without the capability or a reach.
+    pub(in crate::character::brain) fn reach(
+        &self,
+        character: Entity,
+        motion: Motion,
+    ) -> Option<f32> {
+        let holder = self.characters.get(character).ok()?;
+        match motion {
+            Motion::Dash => holder.dash.and_then(Dash::reach),
+            Motion::Swoop => holder.swoop.map(Swoop::reach),
+            Motion::Wander
+            | Motion::Chase
+            | Motion::ReturnToHome
+            | Motion::Flee
+            | Motion::KeepDistance(_)
+            | Motion::Idle
+            | Motion::Orbit(_) => None,
+        }
     }
 }
 

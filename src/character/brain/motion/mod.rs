@@ -18,7 +18,7 @@ pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished, TargetRef};
+pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus, TargetRef};
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;

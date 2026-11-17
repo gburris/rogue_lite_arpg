@@ -91,7 +91,7 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Starts a finished motion's cooldown and, if the run it started for is still current, decides
+/// Ends the behavior a finished motion was started for and, if that run was still current, decides
 /// again at once.
 pub(super) fn on_release_finished_motion(
     finished: On<MotionFinished>,
@@ -109,7 +109,6 @@ pub(super) fn on_release_finished_motion(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    brain.start_motion_cooldown(finished.motion, &inputs);
     let Some(behavior_run_id) = started_motions
         .get(finished.entity)
         .ok()

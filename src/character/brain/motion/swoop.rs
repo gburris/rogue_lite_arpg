@@ -8,7 +8,8 @@ use super::{
     BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionStep, RunningMotion, SteerInput,
     SteeredCharacter, Steering, SteeringTargets,
 };
-use crate::character::brain::{CapabilityProfile, Motion};
+use crate::character::brain::Motion;
+use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -24,7 +25,8 @@ const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 /// it hands steering a decaying [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Swoop {
-    capability_profile: CapabilityProfile,
+    reach: f32,
+    cooldown: Cooldown,
     extra_speed: f32,
     exit_turn: f32,
 }
@@ -33,18 +35,19 @@ impl Swoop {
     /// Swoops at targets within `reach`, waiting `cooldown` seconds after a swoop ends.
     pub fn new(reach: f32, cooldown: f32) -> Self {
         Self {
-            capability_profile: CapabilityProfile {
-                reach: Some(reach),
-                cooldown,
-            },
+            reach,
+            cooldown: Cooldown::new(cooldown),
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,
         }
     }
 
-    /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
-        self.capability_profile
+    pub(super) fn reach(&self) -> f32 {
+        self.reach
+    }
+
+    pub(super) fn cooldown(&self) -> &Cooldown {
+        &self.cooldown
     }
 }
 
@@ -78,8 +81,8 @@ pub(super) fn apply_swoop(
 }
 
 /// One run of a character's [`Swoop`], present from its start until it ends. Its removal, however
-/// the run ended, hands a swoop in flight's speed to steering as a [`DecayingSpeedBoost`] and
-/// reports [`MotionFinished`].
+/// the run ended, starts the swoop's cooldown, hands a swoop in flight's speed to steering as a
+/// [`DecayingSpeedBoost`] and reports [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = end_swoop)]
 pub(super) struct SwoopProgress {
@@ -127,10 +130,11 @@ fn end_swoop(mut world: DeferredWorld, context: HookContext) {
     let Some(&SwoopProgress { path, .. }) = world.entity(entity).get::<SwoopProgress>() else {
         return;
     };
-    let extra_speed = world
-        .entity(entity)
-        .get::<Swoop>()
-        .map(|swoop| swoop.extra_speed);
+    let now = world.resource::<Time<Virtual>>().elapsed_secs();
+    let extra_speed = world.get_mut::<Swoop>(entity).map(|mut swoop| {
+        swoop.cooldown.start(now);
+        swoop.extra_speed
+    });
     if path.is_some()
         && let Some(extra_speed) = extra_speed
     {

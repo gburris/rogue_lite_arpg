@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use rand::RngExt;
 
 use crate::prelude::*;
 
@@ -36,48 +35,22 @@ pub struct RequiredItem(pub ItemKind);
 const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
 
 /// How long an action source waits after a use takes effect before it can be used again.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct ActionCooldown {
-    seconds: f32,
-    jitter: f32,
-    ready_at: f32,
-}
+#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
+pub struct ActionCooldown(Cooldown);
 
 impl ActionCooldown {
     /// Waits `seconds` after each use takes effect.
     pub fn new(seconds: f32) -> Self {
-        Self {
-            seconds,
-            ..default()
-        }
+        Self(Cooldown::new(seconds))
     }
 
-    /// Varies each wait by up to `jitter` seconds either way, so characters that start using the
-    /// same thing together drift out of step.
+    /// See [`Cooldown::with_jitter`].
     pub fn with_jitter(self, jitter: f32) -> Self {
-        Self { jitter, ..self }
-    }
-
-    /// Seconds left at virtual time `now` before the next use can start.
-    pub fn remaining_seconds(&self, now: f32) -> f32 {
-        (self.ready_at - now).max(0.0)
-    }
-
-    pub(super) fn is_ready(&self, now: f32) -> bool {
-        now >= self.ready_at
-    }
-
-    pub(super) fn start(&mut self, now: f32) {
-        let offset = if self.jitter > 0.0 {
-            rand::rng().random_range(-self.jitter..=self.jitter)
-        } else {
-            0.0
-        };
-        self.ready_at = now + (self.seconds + offset).max(0.0);
+        Self(self.0.with_jitter(jitter))
     }
 
     pub(super) fn start_interrupted_lockout(&mut self, now: f32) {
-        self.ready_at = self.ready_at.max(now + INTERRUPTED_LOCKOUT_SECONDS);
+        self.lock_out(now, INTERRUPTED_LOCKOUT_SECONDS);
     }
 }
 

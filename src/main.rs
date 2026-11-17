@@ -12,6 +12,7 @@ mod animation;
 mod character;
 mod combat;
 mod configuration;
+mod cooldown;
 #[cfg(feature = "dev_tools")]
 mod dev;
 mod items;
@@ -28,6 +29,7 @@ pub mod prelude {
     pub use super::character::prelude::*;
     pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;
+    pub use super::cooldown::Cooldown;
     #[cfg(feature = "dev_tools")]
     pub use super::dev::prelude::*;
     pub use super::items::prelude::*;

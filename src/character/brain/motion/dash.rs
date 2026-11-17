@@ -11,7 +11,8 @@ use super::{
     BlockedTimer, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
     Steering, SteeringTarget, SteeringTargets,
 };
-use crate::character::brain::{CapabilityProfile, Interval, Motion};
+use crate::character::brain::{Interval, Motion};
+use crate::prelude::*;
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -30,7 +31,8 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 pub struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,
-    capability_profile: CapabilityProfile,
+    reach: Option<f32>,
+    cooldown: Cooldown,
     aim_rule: DashAimRule,
     debug_name: &'static str,
 }
@@ -39,14 +41,14 @@ impl Dash {
     fn new(
         run_distance: Interval,
         speed_multiplier: f32,
-        capability_profile: CapabilityProfile,
         aim_rule: DashAimRule,
         debug_name: &'static str,
     ) -> Self {
         Self {
             run_distance,
             speed_multiplier,
-            capability_profile,
+            reach: None,
+            cooldown: Cooldown::default(),
             aim_rule,
             debug_name,
         }
@@ -56,7 +58,6 @@ impl Dash {
         Self::new(
             run_distance,
             1.0,
-            CapabilityProfile::default(),
             DashAimRule::Away {
                 spread: KITE_SPREAD,
             },
@@ -68,7 +69,6 @@ impl Dash {
         Self::new(
             run_distance,
             speed_multiplier,
-            CapabilityProfile::default(),
             DashAimRule::HopTangent { close_range },
             "Hop",
         )
@@ -80,25 +80,28 @@ impl Dash {
         danger_range: f32,
         cooldown: f32,
     ) -> Self {
-        Self::new(
-            run_distance,
-            speed_multiplier,
-            CapabilityProfile {
-                reach: Some(danger_range),
-                cooldown,
-            },
-            DashAimRule::Away { spread: 0.0 },
-            "Slide",
-        )
+        Self {
+            reach: Some(danger_range),
+            cooldown: Cooldown::new(cooldown),
+            ..Self::new(
+                run_distance,
+                speed_multiplier,
+                DashAimRule::Away { spread: 0.0 },
+                "Slide",
+            )
+        }
     }
 
     pub fn name(&self) -> &'static str {
         self.debug_name
     }
 
-    /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
-        self.capability_profile
+    pub(super) fn reach(&self) -> Option<f32> {
+        self.reach
+    }
+
+    pub(super) fn cooldown(&self) -> &Cooldown {
+        &self.cooldown
     }
 }
 
@@ -210,6 +213,10 @@ impl DashProgress {
 }
 
 fn report_dash_finished(mut world: DeferredWorld, context: HookContext) {
+    let now = world.resource::<Time<Virtual>>().elapsed_secs();
+    if let Some(mut dash) = world.get_mut::<Dash>(context.entity) {
+        dash.cooldown.start(now);
+    }
     world.commands().trigger(MotionFinished {
         entity: context.entity,
         motion: Motion::Dash,

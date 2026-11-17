@@ -56,21 +56,6 @@ pub struct Attack;
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct RequiredItem(pub ItemKind);
 
-impl RequiredItem {
-    /// The first item of the required kind among `items`.
-    pub fn find_carried(
-        self,
-        items: Option<&Items>,
-        carried_items: &Query<&Item>,
-    ) -> Option<Entity> {
-        items.into_iter().flat_map(Items::iter).find(|&item| {
-            carried_items
-                .get(item)
-                .is_ok_and(|carried| carried.kind == *self)
-        })
-    }
-}
-
 /// Why a character can't use a slot now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionFailure {
@@ -125,7 +110,6 @@ struct ActionHolder {
     mainhand: Option<&'static Mainhand>,
     offhand: Option<&'static Offhand>,
     abilities: Option<&'static Abilities>,
-    items: Option<&'static Items>,
     mana: Option<&'static Mana>,
     interruption: InterruptionState,
 }
@@ -147,7 +131,7 @@ pub struct ActionRead<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolder, With<Character>>,
     sources: Query<'w, 's, ActionSourceState, With<ActionSource>>,
-    carried_items: Query<'w, 's, &'static Item>,
+    carried_items: CarriedItems<'w, 's>,
 }
 
 impl ActionRead<'_, '_> {
@@ -223,17 +207,15 @@ impl ActionRead<'_, '_> {
     /// The action source `holder` would use for `slot` now, or why it can't.
     pub fn can_use(&self, holder: Entity, slot: ActionSlot) -> Result<Entity, ActionFailure> {
         let state = self.state(holder, slot).ok_or(ActionFailure::EmptySlot)?;
+        if let Some(&RequiredItem(kind)) = state.required_item
+            && self.carried_items.first_of_kind(holder, kind).is_none()
+        {
+            return Err(ActionFailure::MissingRequiredItem);
+        }
         let holder = self
             .holders
             .get(holder)
             .map_err(|_| ActionFailure::EmptySlot)?;
-        if let Some(&required_item) = state.required_item
-            && required_item
-                .find_carried(holder.items, &self.carried_items)
-                .is_none()
-        {
-            return Err(ActionFailure::MissingRequiredItem);
-        }
         if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }

@@ -17,7 +17,7 @@ pub mod prelude {
     pub use super::equipment::prelude::{
         Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip,
     };
-    pub use super::inventory::{ItemCapacity, ItemOf, Items};
+    pub use super::inventory::{CarriedItems, ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;
     pub use super::magnet::Magnet;
     pub use super::melee::prelude::{axe, freeze_axe, sword};

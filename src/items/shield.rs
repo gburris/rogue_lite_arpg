@@ -14,7 +14,7 @@ const SHIELD_COOLDOWN: f32 = 0.5;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        orient_active_shields.in_set(SimulationSystems::Derive),
+        orient_raised_shields.in_set(SimulationSystems::Derive),
     );
 }
 
@@ -59,18 +59,15 @@ pub struct Shield {
     pub hitbox: Collider,
 }
 
-#[derive(Component)]
-struct ActiveShield;
-
-/// Turns each active shield's sprite and offset toward its holder's aim.
-fn orient_active_shields(
-    mut active_shield_query: Query<
+/// Turns each raised shield's sprite and offset toward its holder's aim.
+fn orient_raised_shields(
+    mut raised_shield_query: Query<
         (&ItemOf, &mut Sprite, &mut Transform),
-        (With<Shield>, With<ActiveShield>, With<Equipped>),
+        (With<Shield>, With<ActionInProgress>),
     >,
     holder_query: Query<&Vision>,
 ) {
-    for (item_of, mut shield_sprite, mut transform) in &mut active_shield_query {
+    for (item_of, mut shield_sprite, mut transform) in &mut raised_shield_query {
         let Ok(vision) = holder_query.get(item_of.holder) else {
             continue;
         };
@@ -112,7 +109,6 @@ fn on_shield_took_effect(
 ) -> Result {
     let shield = shield_query.get(took_effect.source)?;
     commands.entity(took_effect.source).insert((
-        ActiveShield,
         shield.hitbox.clone(),
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
     ));
@@ -131,7 +127,7 @@ fn on_shield_finished(
     };
     commands
         .entity(finished.source)
-        .try_remove::<(ActiveShield, Collider, CollisionLayers)>();
+        .try_remove::<(Collider, CollisionLayers)>();
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;
     }

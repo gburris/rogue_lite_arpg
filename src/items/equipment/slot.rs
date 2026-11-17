@@ -2,8 +2,6 @@ use core::fmt;
 
 use bevy::prelude::*;
 
-use crate::prelude::*;
-
 /// Goes on the equipment marking where it should be equipped
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this
@@ -36,20 +34,6 @@ impl EquipmentSlot {
             Self::Mainhand => item.insert(MainhandOf(holder)),
             Self::Offhand => item.insert(OffhandOf(holder)),
         };
-    }
-
-    /// Whether the holder with these slots is using an item whose use plays out and ends itself,
-    /// such as a swing; see [`ActionUseStyle::Timed`].
-    pub fn is_timed_item_in_use(
-        mainhand: Option<&Mainhand>,
-        offhand: Option<&Offhand>,
-        in_use: &Query<&ActionUseStyle, With<ActionInProgress>>,
-    ) -> bool {
-        Self::ALL
-            .into_iter()
-            .filter_map(|slot| slot.equipped(mainhand, offhand))
-            .filter_map(|item| in_use.get(item).ok())
-            .any(|&style| style == ActionUseStyle::Timed)
     }
 }
 

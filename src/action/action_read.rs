@@ -116,54 +116,62 @@ struct ActionSourceState {
     is_attack: Has<Attack>,
     mana_cost: Option<&'static ManaCost>,
     required_item: Option<&'static RequiredItem>,
-    in_progress: Has<ActionInProgress>,
+    in_progress: Option<&'static ActionInProgress>,
+}
+
+/// What [`ActionRead`] reads of a character holding action sources.
+#[derive(QueryData)]
+struct ActionHolder {
+    mainhand: Option<&'static Mainhand>,
+    offhand: Option<&'static Offhand>,
+    abilities: Option<&'static Abilities>,
+    items: Option<&'static Items>,
+    mana: Option<&'static Mana>,
+    interruption: InterruptionState,
+}
+
+impl ActionHolderItem<'_, '_> {
+    fn equipped_items(&self) -> impl Iterator<Item = Entity> {
+        let mainhand = self.mainhand.map(Mainhand::get);
+        mainhand.into_iter().chain(self.offhand.map(Offhand::get))
+    }
+
+    fn ability_sources(&self) -> impl Iterator<Item = Entity> {
+        self.abilities.into_iter().flat_map(Abilities::iter)
+    }
 }
 
 /// Reads which sources a character has in each slot and whether it can use each now.
 #[derive(SystemParam)]
 pub struct ActionRead<'w, 's> {
     time: Res<'w, Time<Virtual>>,
-    holders: Query<
-        'w,
-        's,
-        (
-            Option<&'static Mainhand>,
-            Option<&'static Offhand>,
-            Option<&'static Abilities>,
-            Option<&'static Items>,
-            Option<&'static Mana>,
-            InterruptionState,
-        ),
-        With<Character>,
-    >,
+    holders: Query<'w, 's, ActionHolder, With<Character>>,
     sources: Query<'w, 's, ActionSourceState, With<ActionSource>>,
-    actions_in_progress: Query<'w, 's, &'static ActionInProgress>,
     carried_items: Query<'w, 's, &'static Item>,
 }
 
 impl ActionRead<'_, '_> {
     /// The action source `holder` has in `slot`, if any.
     pub fn source_in_slot(&self, holder: Entity, slot: ActionSlot) -> Option<Entity> {
-        let (mainhand, offhand, abilities, ..) = self.holders.get(holder).ok()?;
+        let holder = self.holders.get(holder).ok()?;
         match slot {
-            ActionSlot::Equipment(equipment_slot) => equipment_slot.equipped(mainhand, offhand),
-            ActionSlot::Ability(ability) => {
-                abilities
-                    .into_iter()
-                    .flat_map(Abilities::iter)
-                    .find(|&entity| {
-                        self.sources
-                            .get(entity)
-                            .is_ok_and(|state| state.ability == Some(&ability))
-                    })
+            ActionSlot::Equipment(equipment_slot) => {
+                equipment_slot.equipped(holder.mainhand, holder.offhand)
             }
+            ActionSlot::Ability(ability) => holder.ability_sources().find(|&entity| {
+                self.sources
+                    .get(entity)
+                    .is_ok_and(|state| state.ability == Some(&ability))
+            }),
         }
     }
 
     /// How far `holder`'s action source in `slot` reaches; `None` without an [`ActionReach`] or an
     /// action source.
     pub fn reach(&self, holder: Entity, slot: ActionSlot) -> Option<f32> {
-        self.state(holder, slot)?.reach.map(|reach| **reach)
+        self.state(holder, slot)?
+            .reach
+            .map(|&ActionReach(reach)| reach)
     }
 
     /// Whether a use of `holder`'s action source in `slot` ends without being stopped; see
@@ -182,50 +190,61 @@ impl ActionRead<'_, '_> {
     /// Whether `holder` is using its action source in `slot` now.
     pub fn is_using(&self, holder: Entity, slot: ActionSlot) -> bool {
         self.state(holder, slot)
-            .is_some_and(|state| state.in_progress)
+            .is_some_and(|state| state.in_progress.is_some())
     }
 
-    /// The slots whose sources `holder` is using now.
-    pub fn slots_in_progress(&self, holder: Entity) -> impl Iterator<Item = ActionSlot> + '_ {
-        self.holders
-            .get(holder)
-            .into_iter()
-            .flat_map(|(mainhand, offhand, abilities, ..)| {
-                let equipped = mainhand
-                    .map(Mainhand::get)
-                    .into_iter()
-                    .chain(offhand.map(Offhand::get));
-                equipped.chain(abilities.into_iter().flat_map(Abilities::iter))
+    /// Whether `holder` is using an item whose use plays out and ends itself, such as a swing; see
+    /// [`ActionUseStyle::Timed`].
+    pub fn is_using_timed_item(&self, holder: Entity) -> bool {
+        let Ok(holder) = self.holders.get(holder) else {
+            return false;
+        };
+        holder
+            .equipped_items()
+            .filter_map(|item| self.sources.get(item).ok())
+            .any(|state| state.in_progress.is_some() && *state.style == ActionUseStyle::Timed)
+    }
+
+    /// Whether `holder` is using any of its action sources now.
+    pub fn is_using_any(&self, holder: Entity) -> bool {
+        let Ok(holder) = self.holders.get(holder) else {
+            return false;
+        };
+        holder
+            .equipped_items()
+            .chain(holder.ability_sources())
+            .any(|entity| {
+                self.sources
+                    .get(entity)
+                    .is_ok_and(|state| state.in_progress.is_some())
             })
-            .filter_map(|entity| self.actions_in_progress.get(entity).ok())
-            .map(ActionInProgress::slot)
     }
 
     /// The action source `holder` would use for `slot` now, or why it can't.
     pub fn can_use(&self, holder: Entity, slot: ActionSlot) -> Result<Entity, ActionFailure> {
-        let (.., items, mana, interruption) = self
+        let state = self.state(holder, slot).ok_or(ActionFailure::EmptySlot)?;
+        let holder = self
             .holders
             .get(holder)
             .map_err(|_| ActionFailure::EmptySlot)?;
-        let state = self.state(holder, slot).ok_or(ActionFailure::EmptySlot)?;
         if let Some(&required_item) = state.required_item
             && required_item
-                .find_carried(items, &self.carried_items)
+                .find_carried(holder.items, &self.carried_items)
                 .is_none()
         {
             return Err(ActionFailure::MissingRequiredItem);
         }
-        if interruption.is_interrupted() {
+        if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }
-        if state.in_progress {
+        if state.in_progress.is_some() {
             return Err(ActionFailure::InProgress);
         }
         if !state.cooldown.is_ready(self.time.elapsed_secs()) {
             return Err(ActionFailure::OnCooldown);
         }
         // A holder without a mana pool can't pay any mana cost.
-        match (state.mana_cost, mana) {
+        match (state.mana_cost, holder.mana) {
             (Some(&mana_cost), Some(mana)) if !mana.can_afford(mana_cost) => {
                 Err(ActionFailure::OutOfMana)
             }
@@ -281,7 +300,7 @@ impl<'w, 's> ActionCommands<'w, 's> {
         let Some(state) = self.read.state(holder, slot) else {
             return;
         };
-        if state.in_progress && *state.style == ActionUseStyle::Sustained {
+        if state.in_progress.is_some() && *state.style == ActionUseStyle::Sustained {
             self.commands.trigger(StopAction {
                 entity: state.entity,
             });

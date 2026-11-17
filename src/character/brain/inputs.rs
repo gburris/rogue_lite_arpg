@@ -160,15 +160,12 @@ impl DecisionInputs<'_, '_, '_> {
         let entity = self.components.entity;
         match action {
             Action::Idle => true,
-            Action::Use(_) => {
-                let mut other_action_in_progress = false;
-                for slot in actions.slots_in_progress(entity) {
-                    if Action::Use(slot) == action {
-                        return true;
-                    }
-                    other_action_in_progress = true;
+            Action::Use(slot) => {
+                if actions.is_using(entity, slot) {
+                    return true;
                 }
-                !other_action_in_progress && self.action_readiness(action) == ActionReadiness::Ready
+                !actions.is_using_any(entity)
+                    && self.action_readiness(action) == ActionReadiness::Ready
             }
         }
     }

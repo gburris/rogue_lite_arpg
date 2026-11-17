@@ -180,14 +180,13 @@ impl FacingDirection {
 #[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
 pub struct Attacking(pub bool);
 
-/// Syncs whether a holder is attacking; see [`EquipmentSlot::is_timed_item_in_use`].
+/// Syncs whether a holder is attacking; see [`ActionRead::is_using_timed_item`].
 pub(super) fn sync_attacking_from_equipment(
-    mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
-    in_use: Query<&ActionUseStyle, With<ActionInProgress>>,
+    mut holders: Query<(Entity, &mut Attacking)>,
+    actions: ActionRead,
 ) {
-    for (mut attacking, mainhand, offhand) in &mut holders {
-        let using_timed_item = EquipmentSlot::is_timed_item_in_use(mainhand, offhand, &in_use);
-        attacking.set_if_neq(Attacking(using_timed_item));
+    for (holder, mut attacking) in &mut holders {
+        attacking.set_if_neq(Attacking(actions.is_using_timed_item(holder)));
     }
 }
 

@@ -16,8 +16,6 @@ use crate::remote::{
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
 
-/// An open room with no enemies of its own, the player starting in the middle.
-const ROOM_RECIPE: &str = "AiTestRoom";
 const SPAWN_RADIUS: f64 = 220.0;
 /// Player health during a scenario, topped up whenever it falls below half, so hits register
 /// without the player dying.
@@ -66,6 +64,13 @@ pub(super) struct AiMetricsArgs {
         help = "Game speed during scenarios; above 1 the run is shorter but less like real play"
     )]
     speed: f64,
+
+    #[arg(
+        long,
+        default_value = "AiTestRoom",
+        help = "Map recipe each scenario loads: `AiTestRoom`, or `AiTestRoomWall` with a wall"
+    )]
+    room: String,
 
     #[arg(long, default_value_t = 3, help = "Enemies spawned per scenario")]
     enemies: usize,
@@ -181,7 +186,7 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     Ok(())
 }
 
-/// Loads the test room, spawns a ring of `kind` around the player and samples snapshots for
+/// Loads `args.room`, spawns a ring of `kind` around the player and samples snapshots for
 /// `args.seconds` of game time while the player follows `script`. Each frame keeps only the
 /// spawned enemies.
 fn record_scenario(
@@ -191,7 +196,7 @@ fn record_scenario(
     args: &AiMetricsArgs,
 ) -> Result<Vec<Value>> {
     game.release_player_input()?;
-    game.load_map(ROOM_RECIPE, 1)?;
+    game.load_map(&args.room, 1)?;
     thread::sleep(Duration::from_millis(500));
     game.set_player_health(SCENARIO_HEALTH, SCENARIO_HEALTH)?;
 

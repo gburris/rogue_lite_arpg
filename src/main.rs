@@ -22,7 +22,9 @@ mod world;
 
 pub mod prelude {
     pub use super::action::prelude::*;
-    pub use super::animation::{AnimationData, AnimationIndices, AnimationTimer};
+    pub use super::animation::{
+        AnimationData, AnimationIndices, AnimationTimer, atlas_sprite, looping_vfx, one_shot_vfx,
+    };
     pub use super::character::prelude::*;
     pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;

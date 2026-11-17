@@ -70,22 +70,13 @@ fn burn_vfx(
     sprite_layouts: &SpriteSheetLayouts,
     status: Entity,
 ) -> impl Scene {
-    let sprite = Sprite::from_atlas_image(
-        sprites.flame.clone(),
-        TextureAtlas {
-            layout: sprite_layouts.flame_vfx.clone(),
-            ..default()
-        },
-    );
     bsn! {
+        @looping_vfx(sprites.flame.clone(), sprite_layouts.flame_vfx.clone(), 8, 0.1)
         StatusVfxOf(status)
-        template(move |_| Ok(sprite.clone()))
         Transform {
             translation: Vec3::new(0.0, {CHARACTER_FEET_POS_OFFSET + 8.0}, {ZLayer::SpriteForeground.z()}),
             scale: Vec3::new(1.2, 1.2, 1.0),
         }
         @point_light(Color::from(YELLOW_300), 2.0, 150.0, 10.0)
-        ~{AnimationIndices::Cycle((0..=7).cycle())}
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))
     }
 }

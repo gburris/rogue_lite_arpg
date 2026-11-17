@@ -62,18 +62,8 @@ fn rally_shout_vfx(
     reach: f32,
 ) -> impl Scene {
     let scale = reach / RALLY_SHOUT_RING_RADIUS;
-    let sprite = Sprite::from_atlas_image(
-        sprites.rally_shout.clone(),
-        TextureAtlas {
-            layout: sprite_layouts.rally_shout.clone(),
-            index: 0,
-        },
-    );
     bsn! {
-        template(move |_| Ok(sprite.clone()))
-        ~{AnimationIndices::OneShot(0..=7)}
-        AnimationTimer(Timer::from_seconds(0.071, TimerMode::Repeating))
-        Lifespan::new(0.57)
+        @one_shot_vfx(sprites.rally_shout.clone(), sprite_layouts.rally_shout.clone(), 8, 0.071)
         Transform {
             translation: Vec3::new(0.0, CHARACTER_FEET_POS_OFFSET, {ZLayer::BehindSprite.z()}),
             scale: Vec3::new(scale, scale, 1.0),

@@ -37,14 +37,8 @@ pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts
 
 /// What every shield shares: an offhand item with a square block hitbox, shown with `image`.
 fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
-    let sprite = Sprite::from_atlas_image(
-        image,
-        TextureAtlas {
-            layout: sprite_layouts.shield.clone(),
-            index: 0,
-        },
-    );
     bsn! {
+        @atlas_sprite(image, sprite_layouts.shield.clone())
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
         ~ActionCooldown::new(0.5)
@@ -52,7 +46,6 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
-        template(move |_| Ok(sprite.clone()))
         on(on_shield_took_effect)
         on(on_stop_shield)
     }

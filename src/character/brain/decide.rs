@@ -15,7 +15,7 @@ use super::engine::{
 };
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
-use super::{Action, ActionFinished, ActionOutcome, Brain, Motion};
+use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
@@ -41,7 +41,7 @@ impl RunningBehavior {
         if self.committed
             && let Some(action) = self.action
         {
-            commands.trigger(ActionFinished {
+            commands.trigger(BehaviorActionFinished {
                 entity,
                 action,
                 behavior_run_id: self.behavior_run_id,
@@ -124,9 +124,9 @@ pub(super) fn on_release_finished_motion(
     );
 }
 
-/// Applies an [`ActionFinished`], current or stale.
+/// Applies an [`BehaviorActionFinished`], current or stale.
 pub(super) fn on_finish_action(
-    finished: On<ActionFinished>,
+    finished: On<BehaviorActionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
@@ -140,15 +140,8 @@ pub(super) fn on_finish_action(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    match finished.action {
-        Action::Use(_)
-            if finished.outcome == ActionOutcome::Completed
-                && inputs.action_ends_on_its_own(finished.action) =>
-        {
-            brain.record_attack_finished();
-        }
-        // Only a completed use that ends on its own is an attack.
-        Action::Use(_) | Action::Ability(_) | Action::Idle => {}
+    if finished.outcome == ActionOutcome::Completed && inputs.action_is_attack(finished.action) {
+        brain.record_attack_finished();
     }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();

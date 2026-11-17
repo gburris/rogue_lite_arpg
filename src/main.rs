@@ -7,6 +7,7 @@ use bevy::prelude::*;
 #[cfg(feature = "dev_tools")]
 use clap::Parser;
 
+mod action;
 mod animation;
 mod character;
 mod combat;
@@ -20,7 +21,10 @@ mod ui;
 mod world;
 
 pub mod prelude {
-    pub use super::animation::{AnimationData, AnimationIndices, AnimationTimer};
+    pub use super::action::prelude::*;
+    pub use super::animation::{
+        AnimationData, AnimationIndices, AnimationTimer, atlas_sprite, looping_vfx, one_shot_vfx,
+    };
     pub use super::character::prelude::*;
     pub use super::combat::prelude::*;
     pub use super::configuration::prelude::*;
@@ -59,7 +63,12 @@ fn plugin(app: &mut App) {
     ));
 
     // Entity systems
-    app.add_plugins((world::plugin, items::plugin, character::plugin));
+    app.add_plugins((
+        world::plugin,
+        items::plugin,
+        action::plugin,
+        character::plugin,
+    ));
 
     // UI
     app.add_plugins((ui::plugin, menu::plugin));

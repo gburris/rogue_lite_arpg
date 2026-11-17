@@ -15,15 +15,13 @@ mod tome;
 pub mod prelude {
     pub use super::consumable::{Consumable, Consume, health_potion};
     pub use super::equipment::prelude::{
-        Equip, EquipmentInUse, EquipmentRead, EquipmentSlot, EquipmentUsage, EquipmentUseFailed,
-        EquipmentUseFailure, EquipmentUseFinished, EquipmentUseStyle, EquipmentUseSucceeded,
-        Equippable, Equipped, Mainhand, Offhand, StartUsingEquipment, StopUsingEquipment, Unequip,
+        Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip,
     };
-    pub use super::inventory::{ItemCapacity, ItemOf, Items};
+    pub use super::inventory::{CarriedItems, ItemCapacity, ItemOf, Items};
     pub use super::lootable::DropItem;
     pub use super::magnet::Magnet;
     pub use super::melee::prelude::{axe, freeze_axe, sword};
-    pub use super::shield::{knight_shield, magic_shield};
+    pub use super::shield::{Shield, knight_shield, magic_shield};
     pub use super::staff::{
         STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,
     };
@@ -37,7 +35,6 @@ pub(super) fn plugin(app: &mut App) {
         lootable::plugin,
         melee::plugin,
         shield::plugin,
-        staff::plugin,
     ));
 
     app.add_systems(
@@ -70,7 +67,7 @@ impl Item {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ItemKind {
     Melee,
     Staff,

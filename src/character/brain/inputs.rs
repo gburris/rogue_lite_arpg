@@ -4,12 +4,22 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::Brain;
-use super::action::{Action, ActionRead, ActionReadiness};
+use super::action::Action;
 use super::capability::{CapabilityProfile, MotionCapabilities};
 use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
 use crate::character::Allies;
 use crate::prelude::*;
+
+/// Whether an action could start now; see [`DecisionInputs::action_readiness`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActionReadiness {
+    Ready,
+    /// Only waiting stands in the way, such as a cooldown, mana or an interruption.
+    Waiting,
+    /// The character lacks what the action needs, such as the item, the ability or a potion.
+    Missing,
+}
 
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -64,7 +74,7 @@ pub(super) struct DecisionInputComponents {
 /// The queries behind action profiles, allies and the can-run checks.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
-    actions: ActionRead<'w, 's>,
+    actions: ActionStatus<'w, 's>,
     allies: Allies<'w, 's>,
 }
 
@@ -95,16 +105,45 @@ impl DecisionInputs<'_, '_, '_> {
             .capability_profile(motion)
     }
 
-    /// See [`ActionRead::profile`].
+    /// The profile of the action source that carries out `action`: its reach. `Idle` needs none.
     pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
-        self.queries.actions.profile(self.components.entity, action)
+        let actions = &self.queries.actions;
+        let entity = self.components.entity;
+        let key = action.key()?;
+        actions.source_for_key(entity, key)?;
+        Some(CapabilityProfile {
+            reach: actions.reach(entity, key),
+            ..CapabilityProfile::default()
+        })
     }
 
-    /// See [`ActionRead::ends_on_its_own`].
+    /// Whether `action` ends on its own, so a committed behavior over it can finish; see
+    /// [`ActionUseStyle`].
     pub fn action_ends_on_its_own(&self, action: Action) -> bool {
-        self.queries
-            .actions
-            .ends_on_its_own(self.components.entity, action)
+        let entity = self.components.entity;
+        action
+            .key()
+            .is_some_and(|key| self.queries.actions.ends_on_its_own(entity, key))
+    }
+
+    /// Whether a use of `action` is an attack; see [`Attack`].
+    pub fn action_is_attack(&self, action: Action) -> bool {
+        let entity = self.components.entity;
+        action
+            .key()
+            .is_some_and(|key| self.queries.actions.is_attack(entity, key))
+    }
+
+    /// Whether the character could start `action` now, or what stands in the way.
+    fn action_readiness(&self, action: Action) -> ActionReadiness {
+        let Some(key) = action.key() else {
+            return ActionReadiness::Ready;
+        };
+        match self.queries.actions.can_use(self.components.entity, key) {
+            Ok(_) => ActionReadiness::Ready,
+            Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
+            Err(_) => ActionReadiness::Missing,
+        }
     }
 
     /// Whether `action` can run now: it is already in progress, or it is ready and no other action
@@ -112,20 +151,13 @@ impl DecisionInputs<'_, '_, '_> {
     pub fn can_run(&self, action: Action) -> bool {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
-        match action {
-            Action::Idle => true,
-            Action::Use(_) | Action::Ability(_) => {
-                let mut other_action_in_progress = false;
-                for in_progress in actions.actions_in_progress(entity) {
-                    if in_progress == action {
-                        return true;
-                    }
-                    other_action_in_progress = true;
-                }
-                !other_action_in_progress
-                    && actions.readiness(entity, action) == ActionReadiness::Ready
-            }
+        let Some(key) = action.key() else {
+            return true;
+        };
+        if actions.is_using(entity, key) {
+            return true;
         }
+        !actions.is_using_any(entity) && self.action_readiness(action) == ActionReadiness::Ready
     }
 
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.
@@ -184,11 +216,7 @@ impl DecisionInputs<'_, '_, '_> {
             }
             ConsiderationInput::ActionUsable(action) => Some(f32::from(
                 self.action_profile(action).is_some()
-                    && self
-                        .queries
-                        .actions
-                        .readiness(self.components.entity, action)
-                        != ActionReadiness::Missing,
+                    && self.action_readiness(action) != ActionReadiness::Missing,
             )),
             ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
         }

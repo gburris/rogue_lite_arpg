@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::health::Health;
+use super::hitbox::HurtBox;
 use super::invulnerable::IFrames;
 use super::status_effects::prelude::{ApplyEffects, Effects};
 use crate::prelude::*;
@@ -27,6 +28,19 @@ impl CombatSide {
     /// Layer my attacks collide with (the enemy's hurtbox layer).
     pub fn target_hurtbox(self) -> GameCollisionLayer {
         self.opposite().hurtbox_layer()
+    }
+
+    /// Collision layers for a hitbox that hits this side's opponents.
+    pub fn hitbox_layers(self) -> CollisionLayers {
+        CollisionLayers::new(GameCollisionLayer::HitBox, self.target_hurtbox())
+    }
+
+    /// Collision layers for a projectile that hits this side's opponents and stops at walls.
+    pub fn projectile_layers(self) -> CollisionLayers {
+        CollisionLayers::new(
+            GameCollisionLayer::PROJECTILE_MEMBERSHIPS,
+            LayerMask::from(self.target_hurtbox()) | GameCollisionLayer::HighObstacle,
+        )
     }
 
     pub fn opposite(self) -> Self {
@@ -69,28 +83,6 @@ impl Default for Damage {
         Self::Single(0.0)
     }
 }
-
-#[derive(Component, Default, Clone)]
-#[require(Sensor)]
-pub struct HurtBox;
-
-pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Scene {
-    hurtbox_at(size, membership, HURTBOX_OFFSET)
-}
-
-/// Hurtbox with a custom vertical centre, for sheets whose body does not sit
-/// at the humanoid offset.
-pub fn hurtbox_at(size: Vec2, membership: GameCollisionLayer, y_offset: f32) -> impl Scene {
-    bsn! {
-        HurtBox
-        ~Collider::rectangle(size.x, size.y)
-        Transform::from_xyz(0.0, y_offset, 0.0)
-        ~CollisionLayers::new(membership, [GameCollisionLayer::HitBox])
-    }
-}
-
-/// Default hurtbox centre relative to the character transform.
-const HURTBOX_OFFSET: f32 = -8.0;
 
 /// Bright white damage shader at home: linear channels far above 1.0 overexpose the sprite
 /// so a hit flashes it white.

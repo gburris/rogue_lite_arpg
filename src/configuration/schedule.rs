@@ -97,21 +97,19 @@ pub enum InGameSystems {
 
 /// Ordered phases within [`InGameSystems::Simulation`].
 ///
-/// Producers that may start or stop equipment use (directly, or via queued
-/// `StartUsingEquipment` / `StopUsingEquipment` observers, which flush between
-/// systems) run before `Derive`. State derived from the `EquipmentInUse` marker, such as
-/// attack animation state, belongs in `Derive` and is guaranteed to see every
-/// same-frame use and cancellation.
+/// Producers that may start or stop a use (directly, or through `ActionCommands`, whose queued
+/// `ActionInProgress` inserts and `StopAction` triggers flush between systems) run before `Derive`.
+/// State derived from the `ActionInProgress` marker, such as attack animation state, belongs in
+/// `Derive` and is guaranteed to see every same-frame use and cancellation.
 #[derive(SystemSet, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SimulationSystems {
-    /// Advances ongoing state: regeneration, cooldowns, status effects, in-progress swings and
-    /// shield drain.
+    /// Advances ongoing state: regeneration, status effects, uses in progress and mana drain.
     Upkeep,
     /// Updates who sees and aims at what.
     Perceive,
     /// Decides and acts on this frame's perception: AI decisions, motion and equipment use.
     Act,
-    /// State derived from simulation results.
+    /// State derived from simulation results, such as attack flags and swing poses.
     Derive,
 }
 

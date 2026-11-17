@@ -4,9 +4,7 @@ use bevy::prelude::*;
 use super::{
     Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
 };
-use crate::character::ability::{
-    Abilities, Ability, AbilityCooldown, AbilityWindup, UseGlow, heal,
-};
+use crate::character::ability::heal;
 use crate::character::brain::considerations::{
     ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
     SEEK_LOST_TARGET, WANDER, consideration, flag, motion_running_for, reach_fraction_threshold,
@@ -17,6 +15,8 @@ use crate::character::brain::{
     Dash, Interval, Motion,
 };
 use crate::prelude::*;
+
+const HEAL: Action = Action::Use(ActionKey::Ability(Ability::Heal));
 
 /// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
 /// step back out of reach first.
@@ -44,10 +44,7 @@ const STOOD_STILL_IN_REACH: Consideration =
 const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
-const HAS_POTION: Consideration = flag(
-    "has potion",
-    ConsiderationInput::ActionUsable(Action::Ability(Ability::Heal)),
-);
+const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL));
 const CORNERED: Consideration = flag("cornered", ConsiderationInput::MovementBlocked);
 
 // Reach fractions, so a longer weapon stands the warrior farther back. Both
@@ -151,21 +148,21 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     // The three heals: drink at a safe distance, with no target, or when a flee hits a wall.
     Behavior::new(
         None,
-        Some(Action::Ability(Ability::Heal)),
+        Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, FAR_FROM_TARGET],
     ),
     Behavior::new(
         None,
-        Some(Action::Ability(Ability::Heal)),
+        Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, NO_TARGET],
     ),
     Behavior::new(
         None,
-        Some(Action::Ability(Ability::Heal)),
+        Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },
         5.0,
         &[NEEDS_POTION, FLEEING, CORNERED],
@@ -222,9 +219,9 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()
-            ~AbilityCooldown::new(HEAL_COOLDOWN)
-            AbilityWindup { seconds: HEAL_WINDUP_SECONDS }
-            UseGlow(HEAL_GLOW_COLOR)
+            ~ActionCooldown::new(HEAL_COOLDOWN)
+            ActionWindup { seconds: HEAL_WINDUP_SECONDS }
+            ActionGlow(HEAL_GLOW_COLOR)
         ]
         enemy_wander()
         template(move |_| Ok(sprite.clone()))

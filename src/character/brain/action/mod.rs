@@ -2,22 +2,29 @@ mod usage;
 
 use bevy::prelude::*;
 
-pub(super) use self::usage::{ActionRead, ActionReadiness, StartedActions};
+pub(super) use self::usage::StartedActions;
 use super::BrainSystems;
-use crate::character::ability::Ability;
 use crate::prelude::*;
 
-/// The one non-movement thing a character does at a time: use equipment, use an
-/// ability, or deliberately do nothing.
+/// The one non-movement thing a character does at a time: use what it has in a slot, or
+/// deliberately do nothing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
-    /// Use the item equipped in a slot.
-    Use(EquipmentSlot),
-    /// Use one of the character's abilities.
-    Ability(Ability),
+    /// Use the item equipped in a slot or one of the character's abilities.
+    Use(ActionKey),
     /// Chose to do nothing, unlike an empty action slot where nothing scored.
     /// Always available; no applier carries it out.
     Idle,
+}
+
+impl Action {
+    /// The key of the action source this action uses; `None` for `Idle`.
+    pub fn key(self) -> Option<ActionKey> {
+        match self {
+            Self::Use(key) => Some(key),
+            Self::Idle => None,
+        }
+    }
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -25,21 +32,20 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         usage::apply_action_requests.in_set(BrainSystems::Execute),
     )
-    .add_observer(usage::on_equipment_use_finished)
-    .add_observer(usage::on_ability_use_finished);
+    .add_observer(usage::on_action_finished);
 }
 
-/// An equipment or ability use ended. It ends the behavior stamped `behavior_run_id`
-/// only while that behavior still runs, so a stale finish clears nothing.
+/// A use ended. It ends the behavior stamped `behavior_run_id` only while that behavior still
+/// runs, so a stale finish clears nothing.
 #[derive(EntityEvent, Clone, Copy, Debug)]
-pub(super) struct ActionFinished {
+pub(super) struct BehaviorActionFinished {
     pub entity: Entity,
     pub action: Action,
     pub behavior_run_id: u32,
     pub outcome: ActionOutcome,
 }
 
-/// How an action reported in [`ActionFinished`] ended.
+/// How an action reported in [`BehaviorActionFinished`] ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ActionOutcome {
     Completed,

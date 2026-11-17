@@ -2,14 +2,34 @@ use core::fmt;
 
 use bevy::prelude::*;
 
-use super::equippable::Equippable;
-use super::use_equipped::EquipmentInUse;
+use super::equipment_transform::DirectionalPoses;
+use crate::prelude::*;
+
+/// An item that can be equipped in a slot and used from it.
+#[derive(Component, Clone, Debug)]
+#[require(ActionSource)]
+pub struct Equippable {
+    pub slot: EquipmentSlot,
+    pub poses: &'static DirectionalPoses,
+}
+
+impl Equippable {
+    /// Equips into `slot`, resting in `poses` while not in use.
+    pub fn new(slot: EquipmentSlot, poses: &'static DirectionalPoses) -> Self {
+        Self { slot, poses }
+    }
+}
+
+/// Present on an item while it sits in one of its holder's equipment slots. Required by the slot
+/// relationships, and removed with them on unequip.
+#[derive(Component, Clone, Debug, Default)]
+pub struct Equipped;
 
 /// Goes on the equipment marking where it should be equipped
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this
 /// by reference.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum EquipmentSlot {
     #[default]
     Mainhand,
@@ -38,20 +58,6 @@ impl EquipmentSlot {
             Self::Offhand => item.insert(OffhandOf(holder)),
         };
     }
-
-    /// Whether the holder with these slots is using an item whose use ends on its own; see
-    /// [`EquipmentUseStyle`](super::equippable::EquipmentUseStyle).
-    pub fn is_instant_item_in_use(
-        mainhand: Option<&Mainhand>,
-        offhand: Option<&Offhand>,
-        in_use: &Query<&Equippable, With<EquipmentInUse>>,
-    ) -> bool {
-        Self::ALL
-            .into_iter()
-            .filter_map(|slot| slot.equipped(mainhand, offhand))
-            .filter_map(|item| in_use.get(item).ok())
-            .any(|equippable| equippable.use_style.ends_on_its_own())
-    }
 }
 
 impl fmt::Display for EquipmentSlot {
@@ -66,6 +72,7 @@ impl fmt::Display for EquipmentSlot {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]
+#[require(Equipped)]
 pub struct MainhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
@@ -80,6 +87,7 @@ impl Mainhand {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Offhand)]
+#[require(Equipped)]
 pub struct OffhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]

@@ -59,7 +59,7 @@ impl InterruptionStateItem<'_, '_> {
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
 /// the character's [`StatMultipliers`] speed and hands it to physics.
 #[derive(Component, Clone)]
-#[require(FacingDirection, Attacking, StatMultipliers)]
+#[require(FacingDirection, StatMultipliers)]
 pub struct Kinematics {
     pub direction: Vec2,
     pub max_speed: f32,
@@ -172,22 +172,6 @@ impl FacingDirection {
             Self::Left => Vec2::new(-1.0, 0.0),
             Self::Right => Vec2::new(1.0, 0.0),
         }
-    }
-}
-
-/// Animation/physics flag mirroring whether an instant-use item is active.
-/// Written only by `sync_attacking_from_equipment`.
-#[derive(Component, Clone, Copy, Default, PartialEq, Deref, DerefMut)]
-pub struct Attacking(pub bool);
-
-/// Syncs whether a holder is attacking; see [`EquipmentSlot::is_instant_item_in_use`].
-pub(super) fn sync_attacking_from_equipment(
-    mut holders: Query<(&mut Attacking, Option<&Mainhand>, Option<&Offhand>)>,
-    in_use: Query<&Equippable, With<EquipmentInUse>>,
-) {
-    for (mut attacking, mainhand, offhand) in &mut holders {
-        let using_instant_item = EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use);
-        attacking.set_if_neq(Attacking(using_instant_item));
     }
 }
 

@@ -6,6 +6,48 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, animate_sprites.in_set(VfxSystems::Animate));
 }
 
+/// A sprite showing the first frame of `image` as cut by `layout`.
+pub fn atlas_sprite(image: Handle<Image>, layout: Handle<TextureAtlasLayout>) -> impl Scene {
+    let sprite = Sprite::from_atlas_image(image, TextureAtlas { layout, index: 0 });
+    bsn! {
+        template(move |_| Ok(sprite.clone()))
+    }
+}
+
+/// An effect that plays the `frame_count` frames of `image` once, `frame_seconds` apart, then
+/// despawns.
+pub fn one_shot_vfx(
+    image: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+    frame_count: u16,
+    frame_seconds: f32,
+) -> impl Scene {
+    let last_frame = usize::from(frame_count.saturating_sub(1));
+    let lifespan_seconds = f32::from(frame_count) * frame_seconds;
+    bsn! {
+        @atlas_sprite(image, layout)
+        ~{AnimationIndices::OneShot(0..=last_frame)}
+        AnimationTimer(Timer::from_seconds(frame_seconds, TimerMode::Repeating))
+        Lifespan::new(lifespan_seconds)
+    }
+}
+
+/// An effect that loops the `frame_count` frames of `image`, `frame_seconds` apart, until it is
+/// despawned.
+pub fn looping_vfx(
+    image: Handle<Image>,
+    layout: Handle<TextureAtlasLayout>,
+    frame_count: u16,
+    frame_seconds: f32,
+) -> impl Scene {
+    let last_frame = usize::from(frame_count.saturating_sub(1));
+    bsn! {
+        @atlas_sprite(image, layout)
+        ~{AnimationIndices::Cycle((0..=last_frame).cycle())}
+        AnimationTimer(Timer::from_seconds(frame_seconds, TimerMode::Repeating))
+    }
+}
+
 fn animate_sprites(
     time: Res<Time>,
     mut commands: Commands,

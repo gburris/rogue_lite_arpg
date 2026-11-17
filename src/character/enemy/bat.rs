@@ -2,7 +2,7 @@ use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::{Experience, enemy_wander, sight_ray};
-use crate::character::ability::{Abilities, Ability, AbilityCooldown, Bite, bite, breath};
+use crate::character::ability::{Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
@@ -14,6 +14,9 @@ use crate::character::brain::{
     Interval, Motion, Orbit, Swoop, TurnRate,
 };
 use crate::prelude::*;
+
+const BREATH: Action = Action::Use(ActionKey::Ability(Ability::Breath));
+const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
 
 /// Core of the cast distance range, which a bat backs out to after a swoop.
 const CAST_CORE_DISTANCE_RANGE: Interval =
@@ -32,7 +35,7 @@ const IN_SWOOP_REACH: Consideration = within_reach(
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
-    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Breath)),
+    ConsiderationInput::ActionReachFraction(BREATH),
 );
 /// Distance out to which the decision arms a bite: 40 units past contact. Decisions are
 /// sampled, so a swoop crossing the reach could otherwise fall between two samples; the bite's
@@ -41,7 +44,7 @@ const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;
 const NEAR_BITE_REACH: Consideration = reach_fraction_threshold(
     "near bite reach",
-    ConsiderationInput::ActionReachFraction(Action::Ability(Ability::Bite)),
+    ConsiderationInput::ActionReachFraction(BITE),
     BITE_ARMING_REACH_FRACTION,
     BITE_ARMING_REACH_FRACTION,
 );
@@ -108,7 +111,7 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
 /// Fireball from range, only between swoops.
 const BAT_BREATH: Behavior = Behavior::new(
     None,
-    Some(Action::Ability(Ability::Breath)),
+    Some(BREATH),
     CommitPolicy::ContinuouslyScored,
     1.0,
     &[
@@ -122,7 +125,7 @@ const BAT_BREATH: Behavior = Behavior::new(
 /// Arms a bite near contact reach, whether swooping or circling.
 const BAT_BITE: Behavior = Behavior::new(
     None,
-    Some(Action::Ability(Ability::Bite)),
+    Some(BITE),
     CommitPolicy::ContinuouslyScored,
     1.5,
     &[LINE_OF_SIGHT, NEAR_BITE_REACH],
@@ -225,14 +228,15 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         ~AnimationSheet::bat()
         Abilities [
             @bite(
-                Bite::new(BITE_REACH, BITE_DAMAGE)
+                BITE_REACH,
+                Bite::new(BITE_DAMAGE, BAT_BITE_RADIUS)
                     .with_life_steal(1.0)
-                    .with_hitbox(BAT_BITE_RADIUS, BAT_HURTBOX_OFFSET)
+                    .with_mouth_height(BAT_HURTBOX_OFFSET)
             )
-            ~AbilityCooldown::new(BITE_COOLDOWN)
+            ~ActionCooldown::new(BITE_COOLDOWN)
             --
             @breath(CAST_MAX_RANGE)
-            ~AbilityCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
+            ~ActionCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

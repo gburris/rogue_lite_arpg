@@ -2,6 +2,7 @@ mod damage;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod health;
+mod hitbox;
 #[cfg(feature = "dev_tools")]
 mod invincible;
 mod invulnerable;
@@ -14,18 +15,16 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::damage::{
-        AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, HurtBox, Knockback, hurtbox,
-        hurtbox_at,
-    };
+    pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
     pub use super::health::{AttemptHeal, Healed, Health};
+    pub use super::hitbox::{HitBox, HurtBox, LifeSteal, hurtbox, hurtbox_at};
     #[cfg(feature = "dev_tools")]
     pub use super::invincible::Invincible;
     pub use super::invulnerable::IFrames;
     pub use super::mana::{Mana, ManaCost, ManaDrainRate};
     pub use super::projectile::{
-        FIREBALL_SPEED, FireProjectile, Projectile, ProjectileAttacker, ProjectileReflection,
-        Projectiles, fireball, fireball_with_speed, icebolt,
+        FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileAttacker, ProjectileReflection,
+        Projectiles, fireball, fireball_with_speed, icebolt, pull_back_from_walls,
     };
     pub use super::status_effects::prelude::{
         ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,
@@ -41,7 +40,11 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             (
-                (mana::regenerate_mana, mana::drain_mana_for_items_in_use).chain(),
+                (
+                    mana::regenerate_mana,
+                    mana::drain_mana_for_actions_in_progress,
+                )
+                    .chain(),
                 projectile::reflect_projectiles,
             )
                 .in_set(SimulationSystems::Upkeep),
@@ -52,10 +55,12 @@ pub(super) fn plugin(app: &mut App) {
             )
                 .chain()
                 .in_set(VfxSystems::Tint),
+            hitbox::damage_hitbox_contacts.in_set(InGameSystems::Collision),
         ),
     )
     .add_observer(health::on_attempt_heal)
     .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
-    .add_observer(damage::on_damage_dealt_knockback);
+    .add_observer(damage::on_damage_dealt_knockback)
+    .add_observer(hitbox::on_damage_dealt_life_steal);
 }

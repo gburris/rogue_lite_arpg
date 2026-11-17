@@ -6,8 +6,16 @@ use bevy::prelude::*;
 use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use crate::prelude::*;
 
+/// Distance from its holder at which a raised shield sits.
+const RAISED_SHIELD_DISTANCE: f32 = 40.0;
+/// Seconds a shield waits after it is raised before it can be raised again.
+const SHIELD_COOLDOWN: f32 = 0.5;
+
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, orient_active_shields.in_set(SimulationSystems::Act));
+    app.add_systems(
+        Update,
+        orient_raised_shields.in_set(SimulationSystems::Derive),
+    );
 }
 
 pub fn magic_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
@@ -31,135 +39,95 @@ pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts
 
 /// What every shield shares: an offhand item with a square block hitbox, shown with `image`.
 fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
-    let sprite = Sprite::from_atlas_image(
-        image,
-        TextureAtlas {
-            layout: sprite_layouts.shield.clone(),
-            index: 0,
-        },
-    );
     bsn! {
+        @atlas_sprite(image, sprite_layouts.shield.clone())
         ~Item::new(355, ItemKind::Shield)
-        ~Equippable::new(EquipmentSlot::Offhand, 0.5, &DEFAULT_EQUIPMENT_POSES)
-            .with_use_style(EquipmentUseStyle::Sustained)
+        ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
+        ~ActionCooldown::new(SHIELD_COOLDOWN)
+        ~{ActionUseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
         }}
-        template(move |_| Ok(sprite.clone()))
-        on(on_start_shield)
-        on(on_stop_shield)
+        on(on_shield_took_effect)
+        on(on_shield_finished)
     }
 }
 
+/// An offhand item that blocks with `hitbox` while raised.
 #[derive(Component, Clone)]
 pub struct Shield {
     pub hitbox: Collider,
 }
 
-#[derive(Component)]
-struct ActiveShield;
-
-/// Turns each active shield's sprite and offset toward its holder's aim.
-fn orient_active_shields(
-    mut commands: Commands,
-    mut active_shield_query: Query<
-        (Entity, &ItemOf, &mut Sprite),
-        (With<ActiveShield>, With<Equipped>),
+/// Turns each raised shield's sprite and offset toward its holder's aim.
+fn orient_raised_shields(
+    mut raised_shield_query: Query<
+        (&ItemOf, &mut Sprite, &mut Transform),
+        (With<Shield>, With<ActionInProgress>),
     >,
     holder_query: Query<&Vision>,
-) -> Result {
-    for (shield_entity, item_of, mut shield_sprite) in &mut active_shield_query {
-        let vision = holder_query.get(item_of.holder)?;
-
-        let block_angle = vision.aim_direction.y.atan2(vision.aim_direction.x) + FRAC_PI_2;
-
-        let normalized_angle = if block_angle < -PI {
-            block_angle + 2.0 * PI
-        } else if block_angle > PI {
-            block_angle - 2.0 * PI
-        } else {
-            block_angle
+) {
+    for (item_of, mut shield_sprite, mut transform) in &mut raised_shield_query {
+        let Ok(vision) = holder_query.get(item_of.holder) else {
+            continue;
         };
+        // Measured from straight down, wrapped into -PI..PI.
+        let block_angle =
+            (vision.aim_direction.to_angle() + FRAC_PI_2 + PI).rem_euclid(2.0 * PI) - PI;
 
-        let atlas_index = if normalized_angle > -FRAC_PI_4 && normalized_angle < FRAC_PI_4 {
+        let atlas_index = if block_angle > -FRAC_PI_4 && block_angle < FRAC_PI_4 {
             0
-        } else if (-3.0 * FRAC_PI_4..=-FRAC_PI_4).contains(&normalized_angle) {
+        } else if (-3.0 * FRAC_PI_4..=-FRAC_PI_4).contains(&block_angle) {
             2
-        } else if (normalized_angle <= -3.0 * FRAC_PI_4) || (normalized_angle >= 3.0 * FRAC_PI_4) {
+        } else if (block_angle <= -3.0 * FRAC_PI_4) || (block_angle >= 3.0 * FRAC_PI_4) {
             3
         } else {
             1
         };
-
-        let offset_distance = 40.0;
-        let position_offset = Vec3::new(
-            offset_distance * normalized_angle.sin(),
-            -offset_distance * normalized_angle.cos(),
-            if atlas_index == 0 {
-                ZLayer::AboveSprite.z()
-            } else {
-                ZLayer::BehindSprite.z()
-            },
-        );
+        let z = if atlas_index == 0 {
+            ZLayer::AboveSprite.z()
+        } else {
+            ZLayer::BehindSprite.z()
+        };
 
         if let Some(atlas) = &mut shield_sprite.texture_atlas {
             atlas.index = atlas_index;
         }
-
-        commands.entity(shield_entity).insert(Transform::from_xyz(
-            position_offset.x,
-            position_offset.y,
-            position_offset.z,
-        ));
+        *transform = Transform::from_xyz(
+            RAISED_SHIELD_DISTANCE * block_angle.sin(),
+            -RAISED_SHIELD_DISTANCE * block_angle.cos(),
+            z,
+        );
     }
-    Ok(())
 }
 
-/// Start observer: raises the shield and begins blocking.
-fn on_start_shield(
-    used_shield: On<StartUsingEquipment>,
+/// Raises the shield and begins blocking.
+fn on_shield_took_effect(
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    mut shield_query: Query<&Shield>,
-) {
-    let Ok(shield) = shield_query.get_mut(used_shield.item) else {
-        warn!("Tried to block with invalid shield");
-        return;
-    };
-
-    commands.entity(used_shield.item).insert((
-        EquipmentInUse,
-        ActiveShield,
+    shield_query: Query<&Shield>,
+) -> Result {
+    let shield = shield_query.get(took_effect.source)?;
+    commands.entity(took_effect.source).insert((
         shield.hitbox.clone(),
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
     ));
+    Ok(())
 }
 
-/// Stop observer: lowers the shield and restores its resting transform.
-fn on_stop_shield(
-    shield: On<StopUsingEquipment>,
+/// Lowers the shield. Its resting pose comes back with the rest of the holder's equipment once
+/// the use ends.
+fn on_shield_finished(
+    finished: On<ActionFinished>,
     mut commands: Commands,
-    holder_query: Query<&FacingDirection>,
-    mut shield_query: Query<
-        (&mut Sprite, &ItemOf, &Equippable),
-        (With<Shield>, With<ActiveShield>),
-    >,
+    mut shield_query: Query<&mut Sprite, With<Shield>>,
 ) {
-    // A shield lowered earlier in the frame, say by an interruption and a drained pool at once,
-    // has nothing left to stop.
-    let Ok((mut shield_sprite, _, equippable)) = shield_query.get_mut(shield.item) else {
+    let Ok(mut shield_sprite) = shield_query.get_mut(finished.source) else {
         return;
     };
-
-    let Ok(facing_direction) = holder_query.get(shield.holder) else {
-        warn!("Tried to stop blocking but entity no facing direction");
-        return;
-    };
-
     commands
-        .entity(shield.item)
-        .remove::<(EquipmentInUse, ActiveShield, Collider, CollisionLayers)>()
-        .insert(equippable.poses.transform(*facing_direction));
-
+        .entity(finished.source)
+        .try_remove::<(Collider, CollisionLayers)>();
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;
     }

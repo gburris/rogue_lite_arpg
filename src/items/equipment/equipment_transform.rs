@@ -63,8 +63,8 @@ pub static DEFAULT_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     right: EquipmentPose::behind(8.0, -15.0, -90.0),
 };
 
-/// Puts a holder's equipped items in their resting poses, except while an instant-use item is in
-/// use, since its use moves the items itself.
+/// Puts a holder's equipped items in their resting poses, except while a timed use is in progress,
+/// since it moves the items itself.
 pub(super) fn update_equipment_transforms(
     changed_holders: Query<
         Entity,
@@ -80,21 +80,21 @@ pub(super) fn update_equipment_transforms(
         ),
     >,
     // Update when an item stops swinging, casting, etc...
-    mut ended_uses: RemovedComponents<EquipmentInUse>,
+    mut ended_actions: RemovedComponents<ActionInProgress>,
     item_holders: Query<&ItemOf>,
     holders: Query<(Option<&Mainhand>, Option<&Offhand>, &FacingDirection), With<Items>>,
-    in_use: Query<&Equippable, With<EquipmentInUse>>,
+    actions: ActionStatus,
     mut transforms: Query<(&Equippable, &mut Transform), With<Equipped>>,
 ) {
-    let ended_use_holders = ended_uses
+    let ended_action_holders = ended_actions
         .read()
         .filter_map(|item| item_holders.get(item).ok())
         .map(|item_of| item_of.holder);
-    for holder in changed_holders.iter().chain(ended_use_holders) {
+    for holder in changed_holders.iter().chain(ended_action_holders) {
         let Ok((mainhand, offhand, direction)) = holders.get(holder) else {
             continue;
         };
-        if !EquipmentSlot::is_instant_item_in_use(mainhand, offhand, &in_use) {
+        if !actions.is_using_timed_item(holder) {
             update_single_equipment(mainhand.map(Mainhand::get), *direction, &mut transforms);
             update_single_equipment(offhand.map(Offhand::get), *direction, &mut transforms);
         }

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use super::{ActiveMeleeAttack, MELEE_WEAPON_ROTATION, MeleeWeapon};
+use super::attack::ActiveMeleeAttack;
+use super::{MELEE_WEAPON_ROTATION, MeleeWeapon};
 use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -22,19 +23,23 @@ impl MeleeSwingKind {
     };
 }
 
-/// Determines path of melee weapon based on swing type.
+/// Determines path of melee weapon based on swing type, along the timed use's progress.
 // TODO: Consider using bevy curve functions to reduce math needed here
 pub(super) fn process_melee_attacks(
-    time: Res<Time>,
-    // Melee weapons are never projectiles; the filter lets this run beside projectile systems.
+    // Melee weapons are never projectiles or shields; the filter lets this run beside the systems
+    // that move those.
     mut attack_query: Query<
-        (&MeleeWeapon, &mut Transform, &mut ActiveMeleeAttack),
-        Without<Projectile>,
+        (
+            &MeleeWeapon,
+            &mut Transform,
+            &ActiveMeleeAttack,
+            &TimedActionProgress,
+        ),
+        (Without<Projectile>, Without<Shield>),
     >,
 ) {
-    for (melee_weapon, mut transform, mut active_attack) in &mut attack_query {
-        active_attack.duration.tick(time.delta());
-        let attack_progress = active_attack.duration.fraction();
+    for (melee_weapon, mut transform, active_attack, timed_progress) in &mut attack_query {
+        let attack_progress = timed_progress.fraction();
 
         match melee_weapon.swing_kind {
             MeleeSwingKind::Stab { reach } => {

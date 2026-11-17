@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -16,6 +17,23 @@ pub struct Items(Vec<Entity>);
 
 #[derive(Component)]
 pub struct ItemCapacity(pub usize);
+
+/// Reads the items characters carry.
+#[derive(SystemParam)]
+pub struct CarriedItems<'w, 's> {
+    holders: Query<'w, 's, &'static Items>,
+    items: Query<'w, 's, &'static Item>,
+}
+
+impl CarriedItems<'_, '_> {
+    /// The first item of `kind` that `holder` carries.
+    pub fn first_of_kind(&self, holder: Entity, kind: ItemKind) -> Option<Entity> {
+        let carried = self.holders.get(holder).ok()?;
+        carried
+            .iter()
+            .find(|&item| self.items.get(item).is_ok_and(|item| item.kind == kind))
+    }
+}
 
 pub(super) fn on_item_added_to_inventory(
     item_added: On<Add<ItemOf>>,

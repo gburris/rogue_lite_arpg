@@ -19,6 +19,7 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::Character;
+    pub use super::ability::{Abilities, Ability};
     #[cfg(feature = "dev")]
     pub(crate) use super::brain::TargetInfo;
     #[cfg(feature = "dev_native")]
@@ -37,24 +38,17 @@ pub mod prelude {
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
     pub use super::purse::Purse;
-    pub use super::state::{
-        Attacking, FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
-    };
+    pub use super::state::{FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision};
 }
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((player::plugin, enemy::plugin, npc::plugin));
 
-    app.add_plugins((ability::plugin, animation::plugin, brain::plugin));
+    app.add_plugins((animation::plugin, brain::plugin));
 
     app.add_systems(
         FixedUpdate,
         state::kinematics_to_velocity.in_set(MainSystems::InGame),
-    );
-
-    app.add_systems(
-        Update,
-        state::sync_attacking_from_equipment.in_set(SimulationSystems::Derive),
     );
 }
 

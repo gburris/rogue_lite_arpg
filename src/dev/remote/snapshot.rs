@@ -90,7 +90,6 @@ pub(super) struct EnemyData {
     target_info: &'static TargetInfo,
     has_target: Has<Targeting>,
     has_target_lock: Has<TargetLock>,
-    attacking: &'static Attacking,
 }
 
 #[derive(QueryData)]
@@ -107,7 +106,7 @@ pub(super) struct InventoryItemData {
     name: Option<&'static Name>,
     equippable: Option<&'static Equippable>,
     is_equipped: Has<Equipped>,
-    is_in_use: Has<EquipmentInUse>,
+    is_in_progress: Has<ActionInProgress>,
     is_consumable: Has<Consumable>,
 }
 
@@ -137,7 +136,7 @@ pub(super) fn take_snapshot(
     player: Option<Single<PlayerData, With<Player>>>,
     inventory_items: Query<InventoryItemData>,
     names: Query<&Name>,
-    enemies: Query<EnemyData, With<Enemy>>,
+    (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionStatus),
     npcs: Query<NpcData, With<Npc>>,
     projectiles: Query<&Transform, With<Projectile>>,
     ground_items: Query<GroundItemData, (With<Item>, Without<ItemOf>)>,
@@ -148,7 +147,10 @@ pub(super) fn take_snapshot(
 
     let map = map.map(|map| describe_map(map.into_inner()));
     let player = player.map(|player| describe_player(&player, &inventory_items, &names));
-    let enemies: Vec<Value> = enemies.iter().map(|enemy| describe_enemy(&enemy)).collect();
+    let enemies: Vec<Value> = enemies
+        .iter()
+        .map(|enemy| describe_enemy(&enemy, actions.is_attacking(enemy.entity)))
+        .collect();
     let npcs: Vec<Value> = npcs.iter().map(|npc| describe_npc(&npc)).collect();
     let projectiles: Vec<[f32; 2]> = projectiles.iter().map(position).collect();
     let ground_items: Vec<Value> = ground_items
@@ -242,13 +244,13 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
         "kind": kind,
         "slot": item.equippable.map(|equippable| debug_name(equippable.slot)),
         "equipped": item.is_equipped,
-        "in_use": item.is_in_use,
+        "in_use": item.is_in_progress,
         "consumable": item.is_consumable,
         "value": item.item.value,
     })
 }
 
-fn describe_enemy(enemy: &EnemyDataItem) -> Value {
+fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
     let motion = enemy.brain.and_then(Brain::motion);
     let motion_name = motion.map(|motion| match (motion, enemy.dash) {
         (Motion::Dash, Some(dash)) => dash.name(),
@@ -278,7 +280,7 @@ fn describe_enemy(enemy: &EnemyDataItem) -> Value {
         "in_vision_cone": enemy.target_info.in_vision_cone(),
         "sight_range": enemy.ray_caster.map(|ray_caster| ray_caster.max_distance),
         "target_distance": enemy.target_info.distance,
-        "attacking": **enemy.attacking,
+        "attacking": attacking,
     })
 }
 

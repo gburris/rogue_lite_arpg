@@ -18,7 +18,8 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::HudOverlay),
     );
 
-    app.add_observer(despawn_all::<Restart, PlayerOverlay>);
+    app.add_observer(despawn_all::<Restart, PlayerOverlay>)
+        .add_observer(on_player_action_took_effect);
 }
 
 #[derive(Component, Default, Clone)]
@@ -253,6 +254,19 @@ pub(super) struct ActionBox {
     slot: EquipmentSlot,
 }
 
+impl ActionBox {
+    fn key(&self) -> ActionKey {
+        ActionKey::Equipped(self.slot)
+    }
+}
+
+fn find_action_box(action_boxes: &Query<(Entity, &ActionBox)>, key: ActionKey) -> Option<Entity> {
+    action_boxes
+        .iter()
+        .find(|(_, action_box)| action_box.key() == key)
+        .map(|(box_entity, _)| box_entity)
+}
+
 #[derive(Component, Default, Clone)]
 struct CooldownIndicator;
 
@@ -352,19 +366,22 @@ fn update_action_bar(
     }
 }
 
-/// Adds a cooldown indicator to the action box for the used slot.
-pub(super) fn on_equipment_use_succeeded(
-    equipment_used: On<EquipmentUseSucceeded>,
+/// Adds a cooldown indicator to the action box of the slot whose use took effect.
+fn on_player_action_took_effect(
+    took_effect: On<ActionTookEffect>,
     mut commands: Commands,
+    time: Res<Time<Virtual>>,
+    players: Query<(), With<Player>>,
     action_box_query: Query<(Entity, &ActionBox)>,
-    equipment_query: Query<&Equippable, With<Equipped>>,
+    cooldowns: Query<&ActionCooldown>,
 ) {
-    if let Ok(equippable) = equipment_query.get(equipment_used.item)
-        && let Some((box_entity, _)) = action_box_query
-            .iter()
-            .find(|(_, action_box)| action_box.slot == equipment_used.slot)
+    if !players.contains(took_effect.holder) {
+        return;
+    }
+    if let Ok(cooldown) = cooldowns.get(took_effect.source)
+        && let Some(box_entity) = find_action_box(&action_box_query, took_effect.key)
     {
-        let cooldown = equippable.cooldown.remaining_secs();
+        let cooldown = cooldown.remaining_seconds(time.elapsed_secs());
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, COOLDOWN_LINE_COLOR)
             CooldownIndicator
@@ -373,16 +390,19 @@ pub(super) fn on_equipment_use_succeeded(
     }
 }
 
-pub(super) fn on_equipment_use_failed(
-    equipment_use_failed: On<EquipmentUseFailed>,
+pub(super) fn on_action_failed(
+    failed: On<ActionFailed>,
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    if let Some((box_entity, _)) = action_box_query
-        .iter()
-        .find(|(_, action_box)| action_box.slot == equipment_use_failed.slot)
-        && equipment_use_failed.reason != EquipmentUseFailure::OnCooldown
-    {
+    let is_flashed = match failed.reason {
+        ActionFailure::InProgress | ActionFailure::OnCooldown => false,
+        ActionFailure::NoSource
+        | ActionFailure::MissingRequiredItem
+        | ActionFailure::HolderInterrupted
+        | ActionFailure::OutOfMana => true,
+    };
+    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, failed.key) {
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
             ErrorFlash

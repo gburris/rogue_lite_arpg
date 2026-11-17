@@ -64,9 +64,12 @@ pub(super) fn on_attempt_heal(
 ) {
     if let Ok(mut health) = healed_query.get_mut(attempt_heal.entity) {
         let actual_amount = health.add_health(attempt_heal.amount);
-        commands.trigger(Healed {
-            entity: attempt_heal.entity,
-            amount: actual_amount,
-        });
+        // A heal at full health restores nothing, so it isn't reported.
+        if actual_amount > 0.0 {
+            commands.trigger(Healed {
+                entity: attempt_heal.entity,
+                amount: actual_amount,
+            });
+        }
     }
 }

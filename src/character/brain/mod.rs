@@ -124,15 +124,22 @@ impl Brain {
         }
 
         let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
-        let action_available = |action: Action| {
-            if !inputs.has_action_source(action) || !inputs.can_run(action) {
-                return false;
+        let action_available = |action: Action| match action {
+            Action::Idle => true,
+            Action::Use(_) => {
+                if !inputs.has_action_source(action) || !inputs.can_run(action) {
+                    return false;
+                }
+
+                let finishes =
+                    !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
+                if !finishes {
+                    warn_once!(
+                        "a committed behavior over {action:?} never runs: its use is sustained"
+                    );
+                }
+                finishes
             }
-            let finishes = !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
-            if !finishes {
-                warn_once!("a committed behavior over {action:?} never runs: its use is sustained");
-            }
-            finishes
         };
         behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
     }

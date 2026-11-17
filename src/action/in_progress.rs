@@ -1,4 +1,5 @@
 use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
@@ -88,6 +89,12 @@ pub struct ActionWindup {
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
 pub(super) struct ActionWindupProgress(Timer);
 
+impl ActionWindupProgress {
+    fn new(windup: ActionWindup) -> Self {
+        Self(Timer::from_seconds(windup.seconds, TimerMode::Once))
+    }
+}
+
 /// Lights the holder in this color while a use winds up, a stand-in until uses have animations.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct ActionGlow(pub Color);
@@ -148,44 +155,64 @@ pub struct ActionFinished {
     pub slot: ActionSlot,
 }
 
+/// What the pipeline reads and writes of an action source while a use of it is in progress.
+#[derive(QueryData)]
+#[query_data(mutable)]
+pub(super) struct ActionUseInProgress {
+    entity: Entity,
+    in_progress: &'static ActionInProgress,
+    style: &'static ActionUseStyle,
+    cooldown: &'static mut ActionCooldown,
+}
+
+impl ActionUseInProgressItem<'_, '_> {
+    /// Starts the cooldown and fires [`ActionTookEffect`]. An instant use ends here; any other
+    /// use's wind-up state goes.
+    fn take_effect(&mut self, commands: &mut Commands, now: f32) {
+        self.cooldown.start(now);
+        commands.trigger(ActionTookEffect {
+            entity: self.entity,
+            holder: self.in_progress.holder,
+            slot: self.in_progress.slot,
+        });
+        match self.style {
+            ActionUseStyle::Instant => end_use(commands, self.entity),
+            ActionUseStyle::Timed | ActionUseStyle::Sustained => {
+                commands
+                    .entity(self.entity)
+                    .remove::<(ActionWindupProgress, ActionGlowLight)>();
+            }
+        }
+    }
+}
+
 /// Spends a new use's mana cost, then starts its [`ActionWindup`] or has it take effect at once.
 pub(super) fn on_action_started(
     added: On<Add<ActionInProgress>>,
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     mut sources: Query<(
-        &ActionInProgress,
-        &ActionUseStyle,
-        &mut ActionCooldown,
+        ActionUseInProgress,
         Option<&ActionWindup>,
         Option<&ManaCost>,
     )>,
     mut holders: Query<&mut Mana>,
 ) {
-    let Ok((&in_progress, &style, mut cooldown, windup, mana_cost)) = sources.get_mut(added.entity)
-    else {
+    let Ok((mut use_in_progress, windup, mana_cost)) = sources.get_mut(added.entity) else {
         return;
     };
     if let Some(&mana_cost) = mana_cost
-        && let Ok(mut mana) = holders.get_mut(in_progress.holder)
+        && let Ok(mut mana) = holders.get_mut(use_in_progress.in_progress.holder)
     {
         mana.spend(mana_cost);
     }
     match windup {
         Some(windup) => {
-            let timer = Timer::from_seconds(windup.seconds, TimerMode::Once);
             commands
                 .entity(added.entity)
-                .insert(ActionWindupProgress(timer));
+                .insert(ActionWindupProgress::new(*windup));
         }
-        None => take_effect(
-            &mut commands,
-            added.entity,
-            in_progress,
-            style,
-            &mut cooldown,
-            time.elapsed_secs(),
-        ),
+        None => use_in_progress.take_effect(&mut commands, time.elapsed_secs()),
     }
 }
 
@@ -218,63 +245,31 @@ pub(super) fn on_stop_action(stop: On<StopAction>, mut commands: Commands) {
 pub(super) fn advance_actions(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut sources: Query<(
-        Entity,
-        &ActionInProgress,
-        &ActionUseStyle,
-        &mut ActionCooldown,
-        Option<&mut ActionWindupProgress>,
-    )>,
+    mut sources: Query<(ActionUseInProgress, Option<&mut ActionWindupProgress>)>,
     holders: Query<InterruptionState>,
 ) {
     let now = time.elapsed_secs();
-    for (entity, &in_progress, &style, mut cooldown, windup_progress) in &mut sources {
-        let holder_interrupted = holders
-            .get(in_progress.holder)
-            .ok()
-            .is_none_or(|interruption| interruption.is_interrupted());
-        if holder_interrupted {
+    for (mut use_in_progress, windup_progress) in &mut sources {
+        if is_holder_gone_or_interrupted(&holders, use_in_progress.in_progress.holder) {
             if windup_progress.is_some() {
-                cooldown.start_interrupted_lockout(now);
+                use_in_progress.cooldown.start_interrupted_lockout(now);
             }
-            commands.trigger(StopAction { entity });
+            commands.trigger(StopAction {
+                entity: use_in_progress.entity,
+            });
         } else if let Some(mut windup_progress) = windup_progress
             && windup_progress.tick(time.delta()).is_finished()
         {
-            take_effect(
-                &mut commands,
-                entity,
-                in_progress,
-                style,
-                &mut cooldown,
-                now,
-            );
+            use_in_progress.take_effect(&mut commands, now);
         }
     }
 }
 
-fn take_effect(
-    commands: &mut Commands,
-    entity: Entity,
-    in_progress: ActionInProgress,
-    style: ActionUseStyle,
-    cooldown: &mut ActionCooldown,
-    now: f32,
-) {
-    cooldown.start(now);
-    commands.trigger(ActionTookEffect {
-        entity,
-        holder: in_progress.holder,
-        slot: in_progress.slot,
-    });
-    match style {
-        ActionUseStyle::Instant => end_use(commands, entity),
-        ActionUseStyle::Timed | ActionUseStyle::Sustained => {
-            commands
-                .entity(entity)
-                .remove::<(ActionWindupProgress, ActionGlowLight)>();
-        }
-    }
+fn is_holder_gone_or_interrupted(holders: &Query<InterruptionState>, holder: Entity) -> bool {
+    holders
+        .get(holder)
+        .ok()
+        .is_none_or(|interruption| interruption.is_interrupted())
 }
 
 fn end_use(commands: &mut Commands, entity: Entity) {

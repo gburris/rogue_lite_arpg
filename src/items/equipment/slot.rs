@@ -2,6 +2,8 @@ use core::fmt;
 
 use bevy::prelude::*;
 
+use super::equippable::Equipped;
+
 /// Goes on the equipment marking where it should be equipped
 ///
 /// Note: We pass this by value a lot, don't add data to it without consideration for passing this
@@ -49,6 +51,7 @@ impl fmt::Display for EquipmentSlot {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Mainhand)]
+#[require(Equipped)]
 pub struct MainhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]
@@ -63,6 +66,7 @@ impl Mainhand {
 
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Offhand)]
+#[require(Equipped)]
 pub struct OffhandOf(pub Entity);
 
 #[derive(Component, Clone, Debug)]

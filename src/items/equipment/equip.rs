@@ -7,7 +7,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_equip).add_observer(on_unequip);
 }
 
-#[derive(EntityEvent)]
+/// Request to equip `item` on `holder` in the item's [`Equippable`] slot, unequipping whatever is
+/// there.
+#[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct Equip {
     #[event_target]
     pub item: Entity,
@@ -18,32 +20,28 @@ fn on_equip(
     equipped: On<Equip>,
     mut commands: Commands,
     mut item_query: Query<(&Equippable, &mut Visibility, Has<ItemOf>)>,
-    mut holder_query: Query<(Option<&Mainhand>, Option<&Offhand>), With<Character>>,
+    holder_query: Query<(Option<&Mainhand>, Option<&Offhand>), With<Character>>,
 ) {
     let (equippable, mut visibility, in_inventory) = item_query
         .get_mut(equipped.item)
         .expect("Added Equipped to non-equippable item");
 
     let (mainhand, offhand) = holder_query
-        .get_mut(equipped.holder)
+        .get(equipped.holder)
         .expect("Added Equipment to holder that is not a character");
-
-    commands
-        .entity(equipped.item)
-        .insert((Equipped, ChildOf(equipped.holder)));
-
-    // Without this condition items get "re-added" to item relationship and order gets rearranged
-    if !in_inventory {
-        commands.entity(equipped.item).insert(ItemOf {
-            holder: equipped.holder,
-        });
-    }
 
     if let Some(current) = equippable.slot.equipped(mainhand, offhand) {
         commands.trigger(Unequip { item: current });
     }
 
     let mut item_commands = commands.entity(equipped.item);
+    item_commands.insert(ChildOf(equipped.holder));
+    // Without this condition items get "re-added" to item relationship and order gets rearranged
+    if !in_inventory {
+        item_commands.insert(ItemOf {
+            holder: equipped.holder,
+        });
+    }
     equippable
         .slot
         .place_in_slot(&mut item_commands, equipped.holder);
@@ -53,7 +51,7 @@ fn on_equip(
 }
 
 /// Request to unequip an item. The holder is resolved via `ItemOf`.
-#[derive(EntityEvent)]
+#[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct Unequip {
     #[event_target]
     pub item: Entity,

@@ -42,10 +42,8 @@ fn on_rally_took_effect(
     sprite_layouts: Res<SpriteSheetLayouts>,
     rallies: Query<(&Effects, &ActionReach), With<Rally>>,
     allies: Allies,
-) {
-    let Ok((effects, &ActionReach(reach))) = rallies.get(took_effect.source) else {
-        return;
-    };
+) -> Result {
+    let (effects, &ActionReach(reach)) = rallies.get(took_effect.source)?;
     let holder = took_effect.holder;
     for ally in allies.within(holder, reach) {
         commands.trigger(ApplyEffects::new(effects, ally.entity));
@@ -54,6 +52,7 @@ fn on_rally_took_effect(
         @rally_shout_vfx(&sprites, &sprite_layouts, reach)
         ChildOf(holder)
     });
+    Ok(())
 }
 
 /// A one-shot shockwave ring racing out along the ground from the holder's feet to `reach`.

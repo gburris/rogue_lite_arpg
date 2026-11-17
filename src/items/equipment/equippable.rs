@@ -12,10 +12,13 @@ pub struct Equippable {
 }
 
 impl Equippable {
+    /// Equips into `slot`, resting in `poses` while not in use.
     pub fn new(slot: EquipmentSlot, poses: &'static DirectionalPoses) -> Self {
         Self { slot, poses }
     }
 }
 
-#[derive(Component, Clone, Debug)]
+/// Present on an item while it sits in one of its holder's equipment slots. Required by the slot
+/// relationships, and removed with them on unequip.
+#[derive(Component, Clone, Debug, Default)]
 pub struct Equipped;

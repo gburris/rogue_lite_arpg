@@ -77,16 +77,14 @@ fn on_bite_took_effect(
     mut commands: Commands,
     bites: Query<(&Bite, &ActionReach)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
-) {
-    let Ok((bite, &ActionReach(reach))) = bites.get(took_effect.source) else {
-        return;
-    };
+) -> Result {
+    let (bite, &ActionReach(reach)) = bites.get(took_effect.source)?;
     let holder = took_effect.holder;
     let Ok((vision, stat_multipliers, side)) = biting_characters.get(holder) else {
-        return;
+        return Ok(());
     };
     let Some(direction) = vision.aim_direction.try_normalize() else {
-        return;
+        return Ok(());
     };
     let mouth_offset = Vec2::Y * bite.mouth_height + direction * (reach - bite.hitbox_radius);
     commands.spawn((
@@ -98,17 +96,17 @@ fn on_bite_took_effect(
             bitten: HashSet::default(),
         },
         Collider::circle(bite.hitbox_radius),
-        CollisionLayers::new(GameCollisionLayer::HitBox, side.target_hurtbox()),
+        side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),
         ChildOf(holder),
     ));
+    Ok(())
 }
 
 /// Damages each opponent a bite hitbox touches, once per bite.
 pub(super) fn damage_bite_hits(
     mut commands: Commands,
     mut hitboxes: Query<(&mut BiteHitbox, &CollidingEntities)>,
-    biters: Query<&Health>,
 ) {
     for (mut hitbox, colliding_entities) in &mut hitboxes {
         for &bitten in colliding_entities.iter() {
@@ -123,12 +121,7 @@ pub(super) fn damage_bite_hits(
                 direction: Some(hitbox.direction),
                 ..default()
             });
-
-            // Skip the heal at full health so the overlay does not pop a zero.
-            let is_hurt = biters
-                .get(hitbox.biter)
-                .is_ok_and(|health| health.hp < health.max_hp);
-            if hitbox.life_steal > 0.0 && is_hurt {
+            if hitbox.life_steal > 0.0 {
                 commands.trigger(AttemptHeal {
                     entity: hitbox.biter,
                     amount: hitbox.damage * hitbox.life_steal,

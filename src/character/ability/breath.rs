@@ -26,16 +26,14 @@ fn on_breath_took_effect(
     mut commands: Commands,
     breaths: Query<&Projectiles, With<Breath>>,
     breathers: Query<(&Transform, &CombatSide, &Vision)>,
-) {
-    let Ok(templates) = breaths.get(took_effect.source) else {
-        return;
-    };
+) -> Result {
+    let templates = breaths.get(took_effect.source)?;
     let holder = took_effect.holder;
     let Ok((transform, side, vision)) = breathers.get(holder) else {
-        return;
+        return Ok(());
     };
     let Some(aim_direction) = vision.aim_direction.try_normalize() else {
-        return;
+        return Ok(());
     };
     for template in templates.iter() {
         commands.trigger(FireProjectile {
@@ -46,4 +44,5 @@ fn on_breath_took_effect(
             aim_direction,
         });
     }
+    Ok(())
 }

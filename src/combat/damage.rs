@@ -29,6 +29,11 @@ impl CombatSide {
         self.opposite().hurtbox_layer()
     }
 
+    /// Collision layers for a hitbox that hits this side's opponents.
+    pub fn hitbox_layers(self) -> CollisionLayers {
+        CollisionLayers::new(GameCollisionLayer::HitBox, self.target_hurtbox())
+    }
+
     pub fn opposite(self) -> Self {
         match self {
             Self::Ally => Self::Enemy,

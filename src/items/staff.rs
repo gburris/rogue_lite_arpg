@@ -13,10 +13,9 @@ use crate::prelude::*;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        (
-            tick_casting_timer.in_set(InGameSystems::DespawnEntities),
-            fire_projectile_on_casting_end.in_set(SimulationSystems::Act),
-        ),
+        (fire_staff_projectiles, end_staff_casts)
+            .chain()
+            .in_set(SimulationSystems::Act),
     );
 }
 
@@ -136,40 +135,24 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     right: EquipmentPose::above(4.0, -8.0, -50.0),
 };
 
-#[derive(Component)]
-struct Casting {
-    fire_time: Timer,
-    return_time: Timer,
-}
+/// Counts down a staff's swing toward its target, after which it fires.
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+struct StaffSwingProgress(Timer);
 
-impl Casting {
-    pub fn new(fire_time: f32, return_time: f32) -> Self {
-        let mut casting = Self {
-            fire_time: Timer::from_seconds(fire_time, TimerMode::Once),
-            return_time: Timer::from_seconds(return_time, TimerMode::Once),
-        };
+/// Counts down a staff's swing back after it fires, after which the cast ends.
+#[derive(Component, Clone, Debug, Deref, DerefMut)]
+struct StaffReturnProgress(Timer);
 
-        casting.return_time.pause();
-
-        casting
-    }
-}
-
-/// Begins the cast; projectiles fire later in `fire_projectile_on_casting_end`.
+/// Begins the cast; projectiles fire later in `fire_staff_projectiles`.
 fn on_staff_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     staff_query: Query<(&Staff, &Transform), With<Projectiles>>,
     holder_query: Query<&FacingDirection>,
-) {
-    let Ok((staff, staff_transform)) = staff_query.get(took_effect.source) else {
-        warn!("Unable to cast staff, no projectiles");
-        return;
-    };
-
+) -> Result {
+    let (staff, staff_transform) = staff_query.get(took_effect.source)?;
     let Ok(facing_direction) = holder_query.get(took_effect.holder) else {
-        warn!("Tried to fire staff with holder missing facing direction");
-        return;
+        return Ok(());
     };
 
     let staff_rotation = staff_transform.rotation.to_euler(EulerRot::ZYX).0;
@@ -180,7 +163,7 @@ fn on_staff_took_effect(
     };
 
     commands.entity(took_effect.source).insert((
-        Casting::new(staff.fire_time, staff.return_time),
+        StaffSwingProgress(Timer::from_seconds(staff.fire_time, TimerMode::Once)),
         TweenAnim::new(
             // Swing
             Tween::new(
@@ -212,21 +195,17 @@ fn on_staff_took_effect(
         Transform::from_translation(tip)
         ChildOf(staff_entity)
     });
+    Ok(())
 }
 
-fn tick_casting_timer(casting_query: Query<&mut Casting>, time: Res<Time>) {
-    for mut casting in casting_query {
-        casting.return_time.tick(time.delta());
-        casting.fire_time.tick(time.delta());
-    }
-}
-
-fn fire_projectile_on_casting_end(
+/// Fires each staff's projectiles once its swing finishes, then swings it back.
+fn fire_staff_projectiles(
     mut commands: Commands,
-    staff_query: Query<(
+    time: Res<Time>,
+    mut staff_query: Query<(
         Entity,
         &Staff,
-        &mut Casting,
+        &mut StaffSwingProgress,
         &Projectiles,
         &ItemOf,
         &Transform,
@@ -234,50 +213,59 @@ fn fire_projectile_on_casting_end(
     holder_query: Query<(&Transform, &Vision, &CombatSide)>,
     spatial_query: SpatialQuery,
 ) {
-    for (staff_entity, staff, mut casting, projectiles, item_of, staff_transform) in staff_query {
-        if !casting.fire_time.is_finished() {
+    for (staff_entity, staff, mut swing_progress, projectiles, item_of, staff_transform) in
+        &mut staff_query
+    {
+        if !swing_progress.tick(time.delta()).just_finished() {
             continue;
         }
+        let return_progress = Timer::from_seconds(staff.return_time, TimerMode::Once);
+        commands
+            .entity(staff_entity)
+            .remove::<StaffSwingProgress>()
+            .insert(StaffReturnProgress(return_progress));
 
         let Ok((holder_transform, holder_vision, side)) = holder_query.get(item_of.holder) else {
-            warn!("Tried to fire staff with holder missing aim position or transform");
             continue;
         };
 
-        // Time to fire, then we return
-        if casting.return_time.is_paused() {
-            casting.return_time.unpause();
+        let rotated_source_offset =
+            (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
+        let holder_relative_source_position =
+            staff_transform.translation.truncate() + rotated_source_offset;
 
-            let rotated_source_offset =
-                (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-            let holder_relative_source_position =
-                staff_transform.translation.truncate() + rotated_source_offset;
+        let target_angle: Vec2 = holder_vision.aim_direction * holder_vision.aim_distance
+            - holder_relative_source_position;
 
-            let target_angle: Vec2 = holder_vision.aim_direction * holder_vision.aim_distance
-                - holder_relative_source_position;
+        // Staff is child of holder so position is relative, need to add holder transform for
+        // global position
+        let holder_position = holder_transform.translation.truncate();
+        let world_starting_position = clear_of_walls(
+            &spatial_query,
+            holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
+            holder_position + holder_relative_source_position,
+        );
 
-            // Staff is child of holder so position is relative, need to add holder transform for
-            // global position
-            let holder_position = holder_transform.translation.truncate();
-            let world_starting_position = clear_of_walls(
-                &spatial_query,
-                holder_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET,
-                holder_position + holder_relative_source_position,
-            );
-
-            for projectile_entity in projectiles.iter() {
-                commands.trigger(FireProjectile {
-                    item: projectile_entity,
-                    side: *side,
-                    holder: Some(item_of.holder),
-                    position: world_starting_position,
-                    aim_direction: target_angle,
-                });
-            }
+        for projectile_entity in projectiles.iter() {
+            commands.trigger(FireProjectile {
+                item: projectile_entity,
+                side: *side,
+                holder: Some(item_of.holder),
+                position: world_starting_position,
+                aim_direction: target_angle,
+            });
         }
+    }
+}
 
-        // Return complete, cast attack is finished; the stop observer owns the removal.
-        if casting.return_time.is_finished() {
+/// Ends each staff's cast once its swing back finishes; the stop observer owns the removal.
+fn end_staff_casts(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut staff_query: Query<(Entity, &mut StaffReturnProgress)>,
+) {
+    for (staff_entity, mut return_progress) in &mut staff_query {
+        if return_progress.tick(time.delta()).just_finished() {
             commands.trigger(StopAction {
                 source: staff_entity,
             });
@@ -304,6 +292,6 @@ fn clear_of_walls(spatial_query: &SpatialQuery, feet: Vec2, cast_position: Vec2)
 fn on_stop_staff(stop: On<StopAction>, mut commands: Commands) {
     commands
         .entity(stop.source)
-        .remove::<(Casting, TweenAnim)>()
+        .remove::<(StaffSwingProgress, StaffReturnProgress, TweenAnim)>()
         .despawn_children();
 }

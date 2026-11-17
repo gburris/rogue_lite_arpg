@@ -23,14 +23,13 @@ fn on_heal_took_effect(
     mut commands: Commands,
     heals: Query<&RequiredItem, With<Heal>>,
     carried_items: CarriedItems,
-) {
-    let Ok(&RequiredItem(kind)) = heals.get(took_effect.source) else {
-        return;
-    };
+) -> Result {
+    let &RequiredItem(kind) = heals.get(took_effect.source)?;
     if let Some(potion) = carried_items.first_of_kind(took_effect.holder, kind) {
         commands.trigger(Consume {
             entity: took_effect.holder,
             item: potion,
         });
     }
+    Ok(())
 }

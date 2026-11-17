@@ -7,21 +7,9 @@ use crate::prelude::*;
 
 pub(super) fn damage_melee_hits(
     mut commands: Commands,
-    mut melee_query: Query<(
-        Entity,
-        &MeleeWeapon,
-        &mut ActiveMeleeAttack,
-        &CollidingEntities,
-        &ItemOf,
-    )>,
-    holders: Query<&StatMultipliers>,
+    mut melee_query: Query<(Entity, &mut ActiveMeleeAttack, &CollidingEntities, &ItemOf)>,
 ) {
-    for (weapon_entity, melee_weapon, mut active_melee_attack, colliding_entities, item_of) in
-        &mut melee_query
-    {
-        let damage_multiplier = holders
-            .get(item_of.holder)
-            .map_or(1.0, |multipliers| multipliers.damage);
+    for (weapon_entity, mut active_melee_attack, colliding_entities, item_of) in &mut melee_query {
         for &colliding_entity in colliding_entities.iter() {
             // We only hit a given entity once per attack
             if !active_melee_attack
@@ -30,7 +18,7 @@ pub(super) fn damage_melee_hits(
             {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
-                    damage: melee_weapon.damage.scaled(damage_multiplier),
+                    damage: active_melee_attack.damage,
                     source_item: Some(weapon_entity),
                     attacker: Some(item_of.holder),
                     direction: Some(Vec2::from_angle(active_melee_attack.initial_angle)),
@@ -49,46 +37,48 @@ pub(super) fn damage_melee_hits(
 pub struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming.
     pub(super) initial_angle: f32,
-    /// Comes from "`attack_speed`" defined on `MeleeWeapon`.
+    /// Comes from "`attack_time`" defined on `MeleeWeapon`.
     pub(super) duration: Timer,
+    damage: Damage,
     entities_damaged: HashSet<Entity>,
 }
 
 impl ActiveMeleeAttack {
-    pub fn new(initial_angle: f32, speed: f32) -> Self {
+    /// A swing along `initial_angle` lasting `seconds` that deals `damage` to each target once.
+    pub fn new(initial_angle: f32, seconds: f32, damage: Damage) -> Self {
         Self {
             initial_angle,
-            duration: Timer::from_seconds(speed, TimerMode::Once),
+            duration: Timer::from_seconds(seconds, TimerMode::Once),
+            damage,
             entities_damaged: HashSet::default(),
         }
     }
 }
 
-/// Spawns the transient swing hitbox removed by `on_stop_melee`.
+/// Spawns the transient swing hitbox removed by `on_stop_melee`, dealing damage scaled by the
+/// holder's stats at the moment of the swing.
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
     weapon_query: Query<&MeleeWeapon>,
-    holder_query: Query<(&Vision, &CombatSide)>,
-) {
-    let Ok(melee_weapon) = weapon_query.get(took_effect.source) else {
-        warn!("Tried to melee attack with invalid weapon");
-        return;
+    holder_query: Query<(&Vision, &CombatSide, &StatMultipliers)>,
+) -> Result {
+    let melee_weapon = weapon_query.get(took_effect.source)?;
+    let Ok((vision, side, stat_multipliers)) = holder_query.get(took_effect.holder) else {
+        return Ok(());
     };
-
-    let Ok((vision, side)) = holder_query.get(took_effect.holder) else {
-        warn!("Holder missing vision");
-        return;
-    };
-
-    let attack_angle = vision.aim_direction.to_angle();
-
+    let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
     // Hitbox and layers only exist for the swing; the stop observer removes them.
     commands.entity(took_effect.source).insert((
-        ActiveMeleeAttack::new(attack_angle, melee_weapon.attack_time),
+        ActiveMeleeAttack::new(
+            vision.aim_direction.to_angle(),
+            melee_weapon.attack_time,
+            damage,
+        ),
         melee_weapon.hitbox.clone(),
-        MeleeWeapon::collision_layers(*side),
+        side.hitbox_layers(),
     ));
+    Ok(())
 }
 
 /// Ends each swing whose timer has finished.

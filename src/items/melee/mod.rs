@@ -8,7 +8,6 @@ pub mod prelude {
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use bevy_enhanced_input::prelude::*;
 
 pub use self::attack::ActiveMeleeAttack;
 pub use self::weapons::{axe, freeze_axe, sword};
@@ -22,8 +21,6 @@ pub const MELEE_WEAPON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
 pub const MELEE_WEAPON_REACH: f32 = 68.0;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_input_context::<MeleeWeapon>();
-
     app.add_systems(
         Update,
         (swing::process_melee_attacks, attack::end_melee_attacks)
@@ -37,9 +34,8 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-// Represent a melee weapon
+/// A weapon that swings a hitbox along its holder's aim when used.
 #[derive(Component, Clone, Debug)]
-#[require(ContextPriority::<MeleeWeapon>::new(1))]
 struct MeleeWeapon {
     // Time it takes (seconds) to complete the attack, smaller = faster
     attack_time: f32,
@@ -47,11 +43,4 @@ struct MeleeWeapon {
     hitbox: Collider,
     swing_kind: swing::MeleeSwingKind,
     hold_distance: f32,
-}
-
-impl MeleeWeapon {
-    /// Collision layers that hit the holder's opponents.
-    pub fn collision_layers(side: CombatSide) -> CollisionLayers {
-        CollisionLayers::new(GameCollisionLayer::HitBox, side.target_hurtbox())
-    }
 }

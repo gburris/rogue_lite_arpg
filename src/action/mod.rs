@@ -13,7 +13,7 @@ pub mod prelude {
     };
     pub use super::in_progress::{
         ActionCooldown, ActionFinished, ActionGlow, ActionInProgress, ActionTookEffect,
-        ActionUseStyle, ActionWindup, StopAction,
+        ActionUseStyle, ActionWindup, StopAction, TimedActionProgress,
     };
 }
 

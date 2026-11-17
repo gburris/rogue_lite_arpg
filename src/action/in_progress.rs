@@ -70,14 +70,6 @@ pub enum ActionUseStyle {
 }
 
 impl ActionUseStyle {
-    /// How long a timed use plays out; `None` for the other styles.
-    pub fn timed_seconds(self) -> Option<f32> {
-        match self {
-            Self::Timed { seconds } => Some(seconds),
-            Self::Instant | Self::Sustained => None,
-        }
-    }
-
     /// Whether a use in this style ends without being stopped.
     pub fn ends_on_its_own(self) -> bool {
         match self {
@@ -104,9 +96,10 @@ impl ActionWindupProgress {
     }
 }
 
-/// Counts down a timed use after it takes effect; see [`ActionUseStyle::Timed`].
-#[derive(Component, Clone, Debug, Deref, DerefMut)]
-pub(super) struct TimedActionProgress(Timer);
+/// Counts down a timed use after it takes effect; see [`ActionUseStyle::Timed`]. Effects that play
+/// out over the use, such as a swing, read how far along it is.
+#[derive(Component, Clone, Debug, Deref)]
+pub struct TimedActionProgress(Timer);
 
 /// Lights the holder in this color while a use winds up, a stand-in until uses have animations.
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -287,7 +280,7 @@ pub(super) fn advance_actions(
                 use_in_progress.take_effect(&mut commands, now);
             }
         } else if let Some(mut timed_progress) = timed_progress
-            && timed_progress.tick(time.delta()).is_finished()
+            && timed_progress.0.tick(time.delta()).is_finished()
         {
             commands.trigger(StopAction {
                 source: use_in_progress.entity,

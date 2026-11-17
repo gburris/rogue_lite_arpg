@@ -9,7 +9,6 @@ pub mod prelude {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::attack::ActiveMeleeAttack;
 pub use self::weapons::{axe, freeze_axe, sword};
 use crate::prelude::*;
 
@@ -23,7 +22,7 @@ pub const MELEE_WEAPON_REACH: f32 = 68.0;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        swing::process_melee_attacks.in_set(SimulationSystems::Upkeep),
+        swing::process_melee_attacks.in_set(SimulationSystems::Act),
     );
 }
 

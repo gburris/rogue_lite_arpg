@@ -4,22 +4,11 @@ use bevy::prelude::*;
 use super::MeleeWeapon;
 use crate::prelude::*;
 
-#[derive(Component)]
-pub struct ActiveMeleeAttack {
+/// Present on a melee weapon while it swings, for as long as its [`ActionUseStyle::Timed`] use.
+#[derive(Component, Clone, Copy, Debug)]
+pub(super) struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming.
     pub(super) initial_angle: f32,
-    /// Comes from the weapon's [`ActionUseStyle::Timed`] seconds.
-    pub(super) duration: Timer,
-}
-
-impl ActiveMeleeAttack {
-    /// A swing along `initial_angle` lasting `seconds`.
-    pub fn new(initial_angle: f32, seconds: f32) -> Self {
-        Self {
-            initial_angle,
-            duration: Timer::from_seconds(seconds, TimerMode::Once),
-        }
-    }
 }
 
 /// Spawns the transient swing hitbox removed by `on_melee_finished`, dealing damage scaled by the
@@ -27,13 +16,10 @@ impl ActiveMeleeAttack {
 pub(super) fn on_melee_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    weapon_query: Query<(&MeleeWeapon, &ActionUseStyle)>,
+    weapon_query: Query<&MeleeWeapon>,
     holder_query: Query<(&Vision, &CombatSide, &StatMultipliers)>,
 ) -> Result {
-    let (melee_weapon, style) = weapon_query.get(took_effect.source)?;
-    let seconds = style
-        .timed_seconds()
-        .ok_or("a melee weapon's use must be timed")?;
+    let melee_weapon = weapon_query.get(took_effect.source)?;
     let Ok((vision, side, stat_multipliers)) = holder_query.get(took_effect.holder) else {
         return Ok(());
     };
@@ -41,7 +27,9 @@ pub(super) fn on_melee_took_effect(
     let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
     // Hitbox and layers only exist for the swing; the finish observer removes them.
     commands.entity(took_effect.source).insert((
-        ActiveMeleeAttack::new(angle, seconds),
+        ActiveMeleeAttack {
+            initial_angle: angle,
+        },
         HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)),
         melee_weapon.hitbox.clone(),
         side.hitbox_layers(),

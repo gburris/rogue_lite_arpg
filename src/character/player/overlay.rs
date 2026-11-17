@@ -397,7 +397,7 @@ pub(super) fn on_action_failed(
 ) {
     let is_flashed = match failed.reason {
         ActionFailure::InProgress | ActionFailure::OnCooldown => false,
-        ActionFailure::EmptySlot
+        ActionFailure::NoSource
         | ActionFailure::MissingRequiredItem
         | ActionFailure::HolderInterrupted
         | ActionFailure::OutOfMana => true,

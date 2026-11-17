@@ -13,9 +13,8 @@ pub use self::heal::heal;
 pub use self::rally::speed_and_damage_rally;
 use crate::prelude::*;
 
-/// An innate move a character can use, carried out by a capability component
-/// ([`Heal`](self::heal::Heal), [`Breath`](self::breath::Breath), [`Bite`] or
-/// [`Rally`](self::rally::Rally)) on one of its [`Abilities`].
+/// An innate move a character can use, carried out by a capability component of the same name,
+/// such as [`Bite`], on one of its [`Abilities`].
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[require(ActionSource)]
 pub enum Ability {

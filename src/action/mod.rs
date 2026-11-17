@@ -18,9 +18,8 @@ pub mod prelude {
 }
 
 /// Something a character uses through [`ActionCommands`]: one of its abilities or an equipped item.
-/// Optional components beside it shape each use: [`ActionWindup`], [`ActionGlow`], [`ActionReach`],
-/// [`ManaCost`], [`ManaDrainRate`] and [`RequiredItem`]. Its own [`ActionTookEffect`] observer
-/// carries out the effect.
+/// Optional components beside it, such as [`ActionWindup`] or [`ManaCost`], shape each use. Its own
+/// [`ActionTookEffect`] observer carries out the effect.
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(ActionCooldown, ActionUseStyle)]
 pub struct ActionSource;

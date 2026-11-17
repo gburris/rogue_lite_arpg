@@ -37,8 +37,8 @@ pub struct RequiredItem(pub ItemKind);
 /// Why a character can't use an action source now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionFailure {
-    /// The character has no item equipped in the slot, or lacks the ability.
-    EmptySlot,
+    /// The character has no item equipped under the key, or lacks the ability.
+    NoSource,
     /// The character doesn't carry the action source's [`RequiredItem`].
     MissingRequiredItem,
     /// The character is interrupted; see [`InterruptionState`].
@@ -57,7 +57,7 @@ impl ActionFailure {
     pub fn is_temporary(self) -> bool {
         match self {
             Self::HolderInterrupted | Self::InProgress | Self::OnCooldown | Self::OutOfMana => true,
-            Self::EmptySlot | Self::MissingRequiredItem => false,
+            Self::NoSource | Self::MissingRequiredItem => false,
         }
     }
 }
@@ -203,7 +203,7 @@ impl ActionRead<'_, '_> {
 
     /// The action source `holder` would use for `key` now, or why it can't.
     pub fn can_use(&self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
-        let state = self.state(holder, key).ok_or(ActionFailure::EmptySlot)?;
+        let state = self.state(holder, key).ok_or(ActionFailure::NoSource)?;
         if let Some(&RequiredItem(kind)) = state.required_item
             && self.carried_items.first_of_kind(holder, kind).is_none()
         {
@@ -212,7 +212,7 @@ impl ActionRead<'_, '_> {
         let holder = self
             .holders
             .get(holder)
-            .map_err(|_| ActionFailure::EmptySlot)?;
+            .map_err(|_| ActionFailure::NoSource)?;
         if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }

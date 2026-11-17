@@ -165,14 +165,14 @@ pub struct ActionFinished {
 /// What the pipeline reads and writes of an action source while a use of it is in progress.
 #[derive(QueryData)]
 #[query_data(mutable)]
-pub(super) struct ActionUseInProgress {
+pub(super) struct ActionSourceInUse {
     entity: Entity,
     in_progress: &'static ActionInProgress,
     style: &'static ActionUseStyle,
     cooldown: &'static mut ActionCooldown,
 }
 
-impl ActionUseInProgressItem<'_, '_> {
+impl ActionSourceInUseItem<'_, '_> {
     /// Starts the cooldown and fires [`ActionTookEffect`]. An instant use ends here; any other
     /// use's wind-up state goes, and a timed use starts counting down.
     fn take_effect(&mut self, commands: &mut Commands, now: f32) {
@@ -205,18 +205,14 @@ pub(super) fn on_action_started(
     added: On<Add<ActionInProgress>>,
     mut commands: Commands,
     time: Res<Time<Virtual>>,
-    mut sources: Query<(
-        ActionUseInProgress,
-        Option<&ActionWindup>,
-        Option<&ManaCost>,
-    )>,
+    mut sources: Query<(ActionSourceInUse, Option<&ActionWindup>, Option<&ManaCost>)>,
     mut holders: Query<&mut Mana>,
 ) {
-    let Ok((mut use_in_progress, windup, mana_cost)) = sources.get_mut(added.entity) else {
+    let Ok((mut source_in_use, windup, mana_cost)) = sources.get_mut(added.entity) else {
         return;
     };
     if let Some(&mana_cost) = mana_cost
-        && let Ok(mut mana) = holders.get_mut(use_in_progress.in_progress.holder)
+        && let Ok(mut mana) = holders.get_mut(source_in_use.in_progress.holder)
     {
         mana.spend(mana_cost);
     }
@@ -226,7 +222,7 @@ pub(super) fn on_action_started(
                 .entity(added.entity)
                 .insert(ActionWindupProgress::new(*windup));
         }
-        None => use_in_progress.take_effect(&mut commands, time.elapsed_secs()),
+        None => source_in_use.take_effect(&mut commands, time.elapsed_secs()),
     }
 }
 
@@ -260,30 +256,30 @@ pub(super) fn advance_actions(
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     mut sources: Query<(
-        ActionUseInProgress,
+        ActionSourceInUse,
         Option<&mut ActionWindupProgress>,
         Option<&mut TimedActionProgress>,
     )>,
     holders: Query<InterruptionState>,
 ) {
     let now = time.elapsed_secs();
-    for (mut use_in_progress, windup_progress, timed_progress) in &mut sources {
-        if is_holder_gone_or_interrupted(&holders, use_in_progress.in_progress.holder) {
+    for (mut source_in_use, windup_progress, timed_progress) in &mut sources {
+        if is_holder_gone_or_interrupted(&holders, source_in_use.in_progress.holder) {
             if windup_progress.is_some() {
-                use_in_progress.cooldown.start_interrupted_lockout(now);
+                source_in_use.cooldown.start_interrupted_lockout(now);
             }
             commands.trigger(StopAction {
-                source: use_in_progress.entity,
+                source: source_in_use.entity,
             });
         } else if let Some(mut windup_progress) = windup_progress {
             if windup_progress.tick(time.delta()).is_finished() {
-                use_in_progress.take_effect(&mut commands, now);
+                source_in_use.take_effect(&mut commands, now);
             }
         } else if let Some(mut timed_progress) = timed_progress
             && timed_progress.0.tick(time.delta()).is_finished()
         {
             commands.trigger(StopAction {
-                source: use_in_progress.entity,
+                source: source_in_use.entity,
             });
         }
     }

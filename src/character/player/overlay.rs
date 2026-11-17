@@ -260,6 +260,13 @@ impl ActionBox {
     }
 }
 
+fn find_action_box(action_boxes: &Query<(Entity, &ActionBox)>, slot: ActionSlot) -> Option<Entity> {
+    action_boxes
+        .iter()
+        .find(|(_, action_box)| action_box.slot() == slot)
+        .map(|(box_entity, _)| box_entity)
+}
+
 #[derive(Component, Default, Clone)]
 struct CooldownIndicator;
 
@@ -372,9 +379,7 @@ fn on_player_action_took_effect(
         return;
     }
     if let Ok(cooldown) = cooldowns.get(took_effect.entity)
-        && let Some((box_entity, _)) = action_box_query
-            .iter()
-            .find(|(_, action_box)| action_box.slot() == took_effect.slot)
+        && let Some(box_entity) = find_action_box(&action_box_query, took_effect.slot)
     {
         let cooldown = cooldown.remaining_seconds(time.elapsed_secs());
         commands.spawn_scene(bsn! {
@@ -397,11 +402,7 @@ pub(super) fn on_action_failed(
         | ActionFailure::HolderInterrupted
         | ActionFailure::OutOfMana => true,
     };
-    if is_flashed
-        && let Some((box_entity, _)) = action_box_query
-            .iter()
-            .find(|(_, action_box)| action_box.slot() == use_failed.slot)
-    {
+    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, use_failed.slot) {
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
             ErrorFlash

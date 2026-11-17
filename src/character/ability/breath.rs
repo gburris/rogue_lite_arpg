@@ -15,6 +15,7 @@ pub fn breath(reach: f32) -> impl Scene {
     bsn! {
         Breath
         ~{ActionReach(reach)}
+        Attack
         on(on_breath_took_effect)
     }
 }

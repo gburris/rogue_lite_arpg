@@ -16,7 +16,6 @@ use super::engine::{
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::motion::MotionFinished;
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
-use crate::prelude::*;
 
 /// Longest a committed behavior may run, a safety net against a missing finish.
 const COMMIT_TIMEOUT: f32 = 3.0;
@@ -141,15 +140,8 @@ pub(super) fn on_finish_action(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    match finished.action {
-        Action::Use(ActionSlot::Equipment(_))
-            if finished.outcome == ActionOutcome::Completed
-                && inputs.action_ends_on_its_own(finished.action) =>
-        {
-            brain.record_attack_finished();
-        }
-        // Only a completed item use that ends on its own is an attack.
-        Action::Use(ActionSlot::Equipment(_) | ActionSlot::Ability(_)) | Action::Idle => {}
+    if finished.outcome == ActionOutcome::Completed && inputs.action_is_attack(finished.action) {
+        brain.record_attack_finished();
     }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();

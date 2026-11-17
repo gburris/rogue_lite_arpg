@@ -66,6 +66,7 @@ pub fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
         ~{ActionReach(reach)}
+        Attack
         on(on_bite_took_effect)
     }
 }

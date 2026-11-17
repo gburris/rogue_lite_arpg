@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub mod prelude {
     pub use super::ActionSource;
     pub use super::action_read::{
-        ActionCommands, ActionFailed, ActionFailure, ActionReach, ActionRead, ActionSlot,
+        ActionCommands, ActionFailed, ActionFailure, ActionReach, ActionRead, ActionSlot, Attack,
         RequiredItem,
     };
     pub use super::in_progress::{

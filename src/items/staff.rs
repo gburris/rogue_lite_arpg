@@ -114,6 +114,7 @@ fn staff(image: Handle<Image>, cooldown: f32) -> impl Scene {
         ~ActionCooldown::new(cooldown)
         ~{ActionReach(STAFF_REACH)}
         ~{ActionUseStyle::Timed}
+        Attack
         Sprite { image }
         on(on_staff_took_effect)
         on(on_stop_staff)

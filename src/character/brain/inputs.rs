@@ -133,6 +133,14 @@ impl DecisionInputs<'_, '_, '_> {
         }
     }
 
+    /// Whether a use of `action` is an attack; see [`Attack`].
+    pub fn action_is_attack(&self, action: Action) -> bool {
+        match action {
+            Action::Use(slot) => self.queries.actions.is_attack(self.components.entity, slot),
+            Action::Idle => false,
+        }
+    }
+
     /// Whether the character could start `action` now, or what stands in the way.
     fn action_readiness(&self, action: Action) -> ActionReadiness {
         match action {

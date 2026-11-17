@@ -69,6 +69,7 @@ fn melee_weapon(image: Handle<Image>, value: u32) -> impl Scene {
         ~ActionCooldown::new(0.4)
         ~{ActionReach(MELEE_WEAPON_REACH)}
         ~{ActionUseStyle::Timed}
+        Attack
         ~Item::new(value, ItemKind::Melee)
         Sprite { image }
         on(on_stop_melee)

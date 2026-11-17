@@ -48,6 +48,10 @@ impl ActionSlot {
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct ActionReach(pub f32);
 
+/// Marks an action source whose use is an attack, like a swing, a cast or a bite.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct Attack;
+
 /// A kind of item the holder must carry to use this action source, such as a heal's potion.
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct RequiredItem(pub ItemKind);
@@ -109,6 +113,7 @@ struct ActionSourceState {
     cooldown: &'static ActionCooldown,
     style: &'static ActionUseStyle,
     reach: Option<&'static ActionReach>,
+    is_attack: Has<Attack>,
     mana_cost: Option<&'static ManaCost>,
     required_item: Option<&'static RequiredItem>,
     in_progress: Has<ActionInProgress>,
@@ -166,6 +171,12 @@ impl ActionRead<'_, '_> {
     pub fn ends_on_its_own(&self, holder: Entity, slot: ActionSlot) -> bool {
         self.state(holder, slot)
             .is_some_and(|state| state.style.ends_on_its_own())
+    }
+
+    /// Whether a use of `holder`'s action source in `slot` is an attack; see [`Attack`].
+    pub fn is_attack(&self, holder: Entity, slot: ActionSlot) -> bool {
+        self.state(holder, slot)
+            .is_some_and(|state| state.is_attack)
     }
 
     /// Whether `holder` is using its action source in `slot` now.

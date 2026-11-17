@@ -6,7 +6,7 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{Motion, RunningMotion, SteerInput, SteeredCharacter, Steering};
+use super::{Motion, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
 use crate::character::brain::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
@@ -14,15 +14,19 @@ const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 /// Steers every running motion no component owns, and halts a character that runs none.
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
+    targets: SteeringTargets,
     mut characters: Query<(SteeredCharacter, Option<&RunningMotion>, &mut Steering)>,
 ) {
     for (character, running, mut steering) in &mut characters {
-        *steering = match running.map(|running| running.motion) {
+        let Some(running) = running else {
+            *steering = Steering::HALT;
+            continue;
+        };
+        *steering = match running.motion {
             // Steered by their components' systems.
-            Some(Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop) => continue,
-            None => Steering::HALT,
-            Some(motion) => character
-                .build_steer_input(motion, &time)
+            Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => continue,
+            motion => character
+                .build_steer_input(running, &targets, &time)
                 .map_or(Steering::HALT, |input| {
                     Steering::scaled(steer_direct_motion(motion, &input), 1.0)
                 }),
@@ -41,7 +45,7 @@ fn steer_direct_motion(motion: Motion, input: &SteerInput) -> Option<Vec2> {
 }
 
 fn steer_to_hold_distance_range(input: &SteerInput, distance_range: Interval) -> Option<Vec2> {
-    let distance = input.target_info.map_or(0.0, |info| info.distance);
+    let distance = input.target.map_or(0.0, |target| target.distance);
     let Some(direction) = input.direction_to_target() else {
         // Sitting on the target leaves no bearing, so keep the current heading
         // to peel off it.

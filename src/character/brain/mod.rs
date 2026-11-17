@@ -27,6 +27,7 @@ use self::motion::Steering;
 pub use self::motion::{Dash, HomeArea, Motion, Orbit, Swoop, TurnRate, Wander, WanderProgress};
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
+use self::perception::TargetingData;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;

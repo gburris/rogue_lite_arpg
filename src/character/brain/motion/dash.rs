@@ -7,8 +7,11 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, MotionFinished, MotionStep, SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{CapabilityProfile, Interval, Motion, TargetInfo};
+use super::{
+    BlockedTimer, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTarget, SteeringTargets,
+};
+use crate::character::brain::{CapabilityProfile, Interval, Motion};
 
 /// Speed below which a target counts as holding still rather than orbiting.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -103,7 +106,7 @@ impl Dash {
     }
 }
 
-fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
+fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Vec2 {
     if target.distance <= close_range
         && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
     {
@@ -128,16 +131,18 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
+    targets: SteeringTargets,
     mut dashers: Query<(
         Entity,
         SteeredCharacter,
+        &RunningMotion,
         &Dash,
         &mut DashProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, dash, mut progress, mut steering) in &mut dashers {
-        let step = match character.build_steer_input(Motion::Dash, &time) {
+    for (entity, character, running, dash, mut progress, mut steering) in &mut dashers {
+        let step = match character.build_steer_input(running, &targets, &time) {
             Some(input) => progress.step(dash, &input),
             None => MotionStep::Finished,
         };
@@ -157,7 +162,7 @@ enum DashAimRule {
 }
 
 impl DashAimRule {
-    fn choose_direction(self, target: &TargetInfo, heading: Vec2) -> Vec2 {
+    fn choose_direction(self, target: &SteeringTarget, heading: Vec2) -> Vec2 {
         let direction = match self {
             Self::Away { spread } => (-target.direction)
                 .normalize_or_zero()
@@ -185,11 +190,7 @@ pub(super) struct DashProgress {
 
 impl DashProgress {
     fn aim_run(&mut self, dash: &Dash, input: &SteerInput) -> Option<Vec2> {
-        // A target with no finite distance gives nothing to aim at, so this waits rather than
-        // aiming blind.
-        let target = input
-            .target_info
-            .filter(|target| target.has_finite_distance())?;
+        let target = input.target.as_ref()?;
         let direction = dash.aim_rule.choose_direction(target, input.heading);
         self.direction = Some(direction);
         self.remaining = dash.run_distance.pick_random_value().max(0.0);

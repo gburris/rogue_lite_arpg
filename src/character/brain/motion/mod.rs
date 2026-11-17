@@ -18,11 +18,13 @@ pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished};
+pub(super) use self::running_motion::{MotionCommands, MotionFinished, TargetRef};
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
-use self::step::{BlockedTimer, MotionStep, SteerInput, SteeredCharacter};
+use self::step::{
+    BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
+};
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};

@@ -5,8 +5,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionStep, SteerInput, SteeredCharacter,
-    Steering,
+    BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionStep, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTargets,
 };
 use crate::character::brain::{CapabilityProfile, Motion};
 
@@ -55,16 +55,18 @@ impl Swoop {
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
+    targets: SteeringTargets,
     mut swoopers: Query<(
         Entity,
         SteeredCharacter,
+        &RunningMotion,
         &Swoop,
         &mut SwoopProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, swoop, mut progress, mut steering) in &mut swoopers {
-        let step = match character.build_steer_input(Motion::Swoop, &time) {
+    for (entity, character, running, swoop, mut progress, mut steering) in &mut swoopers {
+        let step = match character.build_steer_input(running, &targets, &time) {
             Some(input) => progress.step(swoop, &input),
             None => MotionStep::Finished,
         };
@@ -91,7 +93,7 @@ impl SwoopProgress {
     fn step(&mut self, swoop: &Swoop, input: &SteerInput) -> MotionStep {
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
-        let Some(info) = input.target_info else {
+        let Some(info) = input.target else {
             return steer(None);
         };
         let cleared = self
@@ -102,9 +104,6 @@ impl SwoopProgress {
             && input.tick_blocked_timer(&mut self.blocked_timer, SWOOP_BLOCKED_SECONDS);
         if cleared || blocked {
             return MotionStep::Finished;
-        }
-        if !info.has_finite_distance() {
-            return steer(None);
         }
         let flight_distance = input.distance_this_frame(speed_multiplier);
         let heading = input.heading;

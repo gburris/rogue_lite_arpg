@@ -2,10 +2,10 @@
 //! motion steps.
 
 use bevy::ecs::query::QueryData;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::{HomeArea, Motion, Steering};
-use crate::character::brain::{TargetInfo, Targeting};
+use super::{HomeArea, RunningMotion, Steering, TargetRef};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
@@ -66,29 +66,32 @@ pub(super) struct SteeredCharacter {
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
-    target_info: Option<&'static TargetInfo>,
-    has_target: Has<Targeting>,
     home_area: Option<&'static HomeArea>,
     blocked: BlockedState,
 }
 
 impl SteeredCharacterItem<'_, '_> {
-    /// This frame's input for steering `motion`, or `None` while it needs a
-    /// target the character lacks.
+    /// This frame's input for steering the `running` motion, or `None` while it needs a target
+    /// that is missing.
     pub(super) fn build_steer_input(
         &self,
-        motion: Motion,
+        running: &RunningMotion,
+        targets: &SteeringTargets,
         time: &Time<Virtual>,
     ) -> Option<SteerInput<'_>> {
-        if motion.needs_target() && (!self.has_target || self.target_info.is_none()) {
+        let position = self.transform.translation.xy();
+        let target = running
+            .target
+            .and_then(|target| targets.locate(position, target));
+        if running.motion.needs_target() && target.is_none() {
             return None;
         }
         Some(SteerInput {
-            position: self.transform.translation.xy(),
+            position,
             heading: self.kinematics.direction,
             now: time.elapsed_secs(),
             delta_secs: time.delta_secs(),
-            target_info: self.target_info,
+            target,
             home_area: self.home_area,
             kinematics: self.kinematics,
             stat_speed: self.stat_multipliers.speed,
@@ -97,11 +100,64 @@ impl SteeredCharacterItem<'_, '_> {
     }
 }
 
+/// Where a motion's target is this frame, seen from the character steering toward it.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct SteeringTarget {
+    pub position: Vec2,
+    pub distance: f32,
+    pub direction: Vec2,
+    pub velocity: Vec2,
+}
+
+impl SteeringTarget {
+    /// The direction to the target; `None` while the two overlap, leaving no direction to aim
+    /// along.
+    fn nonzero_direction(&self) -> Option<Vec2> {
+        (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
+    }
+}
+
+/// Finds where the target a running motion names is.
+#[derive(SystemParam)]
+pub(super) struct SteeringTargets<'w, 's> {
+    bodies: Query<
+        'w,
+        's,
+        (
+            &'static Transform,
+            Option<(&'static Kinematics, &'static StatMultipliers)>,
+        ),
+    >,
+}
+
+impl SteeringTargets<'_, '_> {
+    /// Where `target` is relative to `observer_position`, and how it moves; `None` once a target
+    /// entity is gone.
+    fn locate(&self, observer_position: Vec2, target: TargetRef) -> Option<SteeringTarget> {
+        let (position, velocity) = match target {
+            TargetRef::Entity(entity) => {
+                let (transform, movement) = self.bodies.get(entity).ok()?;
+                let velocity = movement.map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
+                    kinematics.velocity(stat_multipliers.speed)
+                });
+                (transform.translation.xy(), velocity)
+            }
+            TargetRef::Point(point) => (point, Vec2::ZERO),
+        };
+        Some(SteeringTarget {
+            position,
+            distance: position.distance(observer_position),
+            direction: (position - observer_position).normalize_or_zero(),
+            velocity,
+        })
+    }
+}
+
 pub(super) struct SteerInput<'a> {
     pub position: Vec2,
     pub heading: Vec2,
     pub now: f32,
-    pub target_info: Option<&'a TargetInfo>,
+    pub target: Option<SteeringTarget>,
     pub home_area: Option<&'a HomeArea>,
     delta_secs: f32,
     kinematics: &'a Kinematics,
@@ -111,7 +167,9 @@ pub(super) struct SteerInput<'a> {
 
 impl SteerInput<'_> {
     pub(super) fn direction_to_target(&self) -> Option<Vec2> {
-        self.target_info.and_then(TargetInfo::nonzero_direction)
+        self.target
+            .as_ref()
+            .and_then(SteeringTarget::nonzero_direction)
     }
 
     pub(super) fn direction_from_target(&self) -> Option<Vec2> {

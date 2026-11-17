@@ -5,8 +5,8 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{Interval, Motion};
+use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
+use crate::character::brain::Interval;
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
 /// Seconds a walk pushes against a wall or a crowd before it ends early.
@@ -86,24 +86,25 @@ impl WanderProgress {
     }
 }
 
-/// Ambles inside the home area while the character runs [`Motion::Wander`].
+/// Ambles inside the home area while the character runs [`Motion::Wander`](super::Motion::Wander).
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
+    targets: SteeringTargets,
     mut wanderers: Query<(
         SteeredCharacter,
+        &RunningMotion,
         &Wander,
         &mut WanderProgress,
         &mut Steering,
     )>,
 ) {
-    for (character, wander, mut progress, mut steering) in &mut wanderers {
-        *steering =
-            character
-                .build_steer_input(Motion::Wander, &time)
-                .map_or(Steering::HALT, |input| {
-                    let direction = progress.pick_steering_direction(wander, &input);
-                    Steering::scaled(direction, wander.speed_scale)
-                });
+    for (character, running, wander, mut progress, mut steering) in &mut wanderers {
+        *steering = character
+            .build_steer_input(running, &targets, &time)
+            .map_or(Steering::HALT, |input| {
+                let direction = progress.pick_steering_direction(wander, &input);
+                Steering::scaled(direction, wander.speed_scale)
+            });
     }
 }
 

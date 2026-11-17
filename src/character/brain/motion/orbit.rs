@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering};
+use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
 use crate::character::brain::{Interval, Motion};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
@@ -102,7 +102,7 @@ impl OrbitProgress {
         input: &SteerInput,
         distance_range: Interval,
     ) -> Option<Vec2> {
-        let info = input.target_info?;
+        let info = input.target?;
         let bearing = input.direction_to_target()?;
         let now = input.now;
         let direction = match self.direction {
@@ -148,6 +148,7 @@ impl OrbitProgress {
 /// Circles the target while the character runs [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
+    targets: SteeringTargets,
     mut orbiters: Query<(
         SteeredCharacter,
         &RunningMotion,
@@ -157,11 +158,11 @@ pub(super) fn apply_orbit(
     )>,
 ) {
     for (character, running, orbit, mut progress, mut steering) in &mut orbiters {
-        let motion @ Motion::Orbit(distance_range) = running.motion else {
+        let Motion::Orbit(distance_range) = running.motion else {
             continue;
         };
         *steering = character
-            .build_steer_input(motion, &time)
+            .build_steer_input(running, &targets, &time)
             .map_or(Steering::HALT, |input| {
                 let direction = progress.pick_steering_direction(orbit, &input, distance_range);
                 Steering::scaled(direction, 1.0)

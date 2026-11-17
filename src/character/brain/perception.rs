@@ -3,9 +3,11 @@
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
+use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
 use super::BrainSystems;
+use super::motion::TargetRef;
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.
@@ -103,12 +105,6 @@ impl TargetInfo {
         self.has_finite_distance() && self.distance <= reach
     }
 
-    /// The direction to the observed entity; `None` while the two overlap, leaving no
-    /// direction to aim along.
-    pub(super) fn nonzero_direction(&self) -> Option<Vec2> {
-        (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
-    }
-
     /// Whether the observed entity is inside the vision cone, ignoring walls.
     #[cfg(feature = "dev_native")]
     pub(crate) fn in_vision_cone(&self) -> bool {
@@ -145,6 +141,31 @@ pub(in crate::character) struct WatchedBy(Vec<Entity>);
 /// Tracks the target live without sight until removed. Damage aggro schedules its removal.
 #[derive(Component)]
 pub(crate) struct TargetLock;
+
+/// Whom a character targets and whether it still tracks them live.
+#[derive(QueryData)]
+pub(super) struct TargetingData {
+    target_info: Option<&'static TargetInfo>,
+    targeting: Option<&'static Targeting>,
+    has_lock: Has<TargetLock>,
+}
+
+impl TargetingDataItem<'_, '_> {
+    /// What a motion steers by: the targeted entity while it is in sight or held by a
+    /// [`TargetLock`], otherwise the spot it was last seen; `None` without a target.
+    pub(super) fn motion_target(&self) -> Option<TargetRef> {
+        let targeting = self.targeting?;
+        let target_info = self.target_info?;
+        if !target_info.has_finite_distance() {
+            return None;
+        }
+        Some(if target_info.line_of_sight || self.has_lock {
+            TargetRef::Entity(targeting.0)
+        } else {
+            TargetRef::Point(target_info.position)
+        })
+    }
+}
 
 // ---------------------
 // VISION + PERCEPTION

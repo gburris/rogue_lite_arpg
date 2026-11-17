@@ -4,12 +4,20 @@ use bevy::prelude::*;
 use super::{DashProgress, Motion, OrbitProgress, SwoopProgress, WanderProgress};
 use crate::prelude::*;
 
+/// What a motion acts on: a character or object, or a place.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(in crate::character::brain) enum TargetRef {
+    Entity(Entity),
+    Point(Vec2),
+}
+
 /// The motion a character runs, started through [`MotionCommands`]. Motion systems steer by it. A
 /// finite motion also carries its run's progress component, whose removal ends the run and fires
 /// [`MotionFinished`]; the motion stays here until the next request.
 #[derive(Component, Clone, Copy, Debug)]
 pub(in crate::character::brain) struct RunningMotion {
     pub motion: Motion,
+    pub target: Option<TargetRef>,
 }
 
 /// A finite motion's run ended, however it ended: it played out, lost its target, or its
@@ -79,17 +87,22 @@ impl<'w, 's> MotionCommands<'w, 's> {
         &self.status
     }
 
-    /// Makes `motion` the one `character` runs. A finite motion starts a fresh run, and any other
-    /// motion's run ends. A continuous motion of the kind already running only takes the new
-    /// settings, keeping its progress.
-    pub(in crate::character::brain) fn start(&mut self, character: Entity, motion: Motion) {
+    /// Makes `motion` the one `character` runs, steering by `target`. A finite motion starts a
+    /// fresh run, and any other motion's run ends. A continuous motion of the kind already running
+    /// only takes the new settings, keeping its progress.
+    pub(in crate::character::brain) fn start(
+        &mut self,
+        character: Entity,
+        motion: Motion,
+        target: Option<TargetRef>,
+    ) {
         let keeps_progress = !motion.is_finite()
             && self
                 .status
                 .running_motion(character)
                 .is_some_and(|running| running.is_same_kind(motion));
         let mut entity = self.commands.entity(character);
-        entity.try_insert(RunningMotion { motion });
+        entity.try_insert(RunningMotion { motion, target });
         if keeps_progress {
             return;
         }
@@ -122,6 +135,19 @@ impl<'w, 's> MotionCommands<'w, 's> {
             | Motion::Idle => {
                 entity.try_remove::<(DashProgress, SwoopProgress, OrbitProgress, WanderProgress)>();
             }
+        }
+    }
+
+    /// Points the motion `character` runs at `target`, keeping its run.
+    pub(in crate::character::brain) fn retarget(
+        &mut self,
+        character: Entity,
+        target: Option<TargetRef>,
+    ) {
+        if let Some(motion) = self.status.running_motion(character) {
+            self.commands
+                .entity(character)
+                .try_insert(RunningMotion { motion, target });
         }
     }
 

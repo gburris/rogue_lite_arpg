@@ -2,13 +2,12 @@
 
 use std::f32::consts::TAU;
 
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{
-    BlockedTimer, CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter, Steering,
-    report_motion_finished,
-};
+use super::{BlockedTimer, MotionFinished, MotionStep, SteerInput, SteeredCharacter, Steering};
 use crate::character::brain::{CapabilityProfile, Interval, Motion, TargetInfo};
 
 /// Speed below which a target counts as holding still rather than orbiting.
@@ -24,15 +23,13 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 
 /// A committed straight run along a direction fixed at its start, cut short when blocked or
 /// interrupted.
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,
     capability_profile: CapabilityProfile,
     aim_rule: DashAimRule,
     debug_name: &'static str,
-    progress: DashProgress,
-    current_behavior_run_id: CurrentBehaviorRunId,
 }
 
 impl Dash {
@@ -49,8 +46,6 @@ impl Dash {
             capability_profile,
             aim_rule,
             debug_name,
-            progress: DashProgress::default(),
-            current_behavior_run_id: CurrentBehaviorRunId::default(),
         }
     }
 
@@ -129,82 +124,28 @@ fn hop_direction(target: &TargetInfo, close_range: f32, heading: Vec2) -> Vec2 {
     (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
-/// Advances each running dash and reports [`MotionFinished`](super::MotionFinished) at
-/// the end of its distance or once its character is interrupted (see
-/// [`InterruptionState`](crate::prelude::InterruptionState)).
+/// Advances each running dash and ends it at the end of its distance.
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
-    mut dashers: Query<(Entity, SteeredCharacter, &mut Dash, &mut Steering)>,
+    mut dashers: Query<(
+        Entity,
+        SteeredCharacter,
+        &Dash,
+        &mut DashProgress,
+        &mut Steering,
+    )>,
 ) {
-    for (entity, character, mut dash, mut steering) in &mut dashers {
-        if dash
-            .current_behavior_run_id
-            .follow_brain_run(character.brain, Motion::Dash)
-        {
-            dash.progress.reset();
-        }
-        let Some(behavior_run_id) = dash.current_behavior_run_id.get() else {
+    for (entity, character, dash, mut progress, mut steering) in &mut dashers {
+        let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
+            *steering = Steering::HALT;
             continue;
         };
-        let step = if character.is_interrupted() {
-            dash.progress.reset();
-            MotionStep::Finished {
-                decaying_speed_boost: None,
-            }
-        } else {
-            let Some(input) = character.build_steer_input(Motion::Dash, &time) else {
-                *steering = Steering::HALT;
-                continue;
-            };
-            dash.step(&input)
-        };
-        match step {
+        match progress.step(dash, &input) {
             MotionStep::Steer(next) => *steering = next,
-            MotionStep::Finished {
-                decaying_speed_boost,
-            } => {
-                report_motion_finished(
-                    &mut commands,
-                    entity,
-                    Motion::Dash,
-                    behavior_run_id,
-                    decaying_speed_boost,
-                );
+            MotionStep::Finished => {
+                commands.entity(entity).try_remove::<DashProgress>();
             }
-        }
-    }
-}
-
-impl Dash {
-    fn step(&mut self, input: &SteerInput) -> MotionStep {
-        if !self.progress.started {
-            // A target with no finite distance gives nothing to aim at, so this
-            // waits rather than aiming blind.
-            let Some(target) = input
-                .target_info
-                .filter(|target| target.has_finite_distance())
-            else {
-                return MotionStep::Steer(Steering::boosted(None, self.speed_multiplier));
-            };
-            let direction = self.aim_rule.choose_direction(target, input.heading);
-            self.progress
-                .start(direction, self.run_distance.pick_random_value());
-        }
-        if input.tick_blocked_timer(&mut self.progress.blocked_timer, DASH_BLOCKED_SECONDS) {
-            self.progress.reset();
-            return MotionStep::Finished {
-                decaying_speed_boost: None,
-            };
-        }
-        let distance = input.distance_this_frame(self.speed_multiplier);
-        match self.progress.step(distance) {
-            Some(direction) => {
-                MotionStep::Steer(Steering::boosted(Some(direction), self.speed_multiplier))
-            }
-            None => MotionStep::Finished {
-                decaying_speed_boost: None,
-            },
         }
     }
 }
@@ -232,37 +173,69 @@ impl DashAimRule {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-struct DashProgress {
-    direction: Vec2,
+/// One run of a character's [`Dash`], present from its start until it ends. Its removal, however
+/// the run ended, reports [`MotionFinished`].
+#[derive(Component, Clone, Copy, Debug)]
+#[component(on_remove = report_dash_finished)]
+pub(super) struct DashProgress {
+    behavior_run_id: u32,
+    direction: Option<Vec2>,
     remaining: f32,
-    started: bool,
     blocked_timer: BlockedTimer,
 }
 
 impl DashProgress {
-    fn start(&mut self, direction: Vec2, run: f32) {
-        self.direction = direction;
-        self.remaining = run.max(0.0);
-        self.started = true;
-        self.blocked_timer.reset();
-    }
-
-    fn reset(&mut self) {
-        self.started = false;
-        self.remaining = 0.0;
-        self.blocked_timer.reset();
-    }
-
-    fn step(&mut self, distance: f32) -> Option<Vec2> {
-        if !self.started {
-            return None;
+    pub(super) fn new(behavior_run_id: u32) -> Self {
+        Self {
+            behavior_run_id,
+            direction: None,
+            remaining: 0.0,
+            blocked_timer: BlockedTimer::default(),
         }
+    }
+
+    pub(super) fn behavior_run_id(&self) -> u32 {
+        self.behavior_run_id
+    }
+
+    fn aim_run(&mut self, dash: &Dash, input: &SteerInput) -> Option<Vec2> {
+        // A target with no finite distance gives nothing to aim at, so this waits rather than
+        // aiming blind.
+        let target = input
+            .target_info
+            .filter(|target| target.has_finite_distance())?;
+        let direction = dash.aim_rule.choose_direction(target, input.heading);
+        self.direction = Some(direction);
+        self.remaining = dash.run_distance.pick_random_value().max(0.0);
+        Some(direction)
+    }
+
+    fn step(&mut self, dash: &Dash, input: &SteerInput) -> MotionStep {
+        let Some(direction) = self.direction.or_else(|| self.aim_run(dash, input)) else {
+            return MotionStep::Steer(Steering::boosted(None, dash.speed_multiplier));
+        };
+        if input.tick_blocked_timer(&mut self.blocked_timer, DASH_BLOCKED_SECONDS) {
+            return MotionStep::Finished;
+        }
+        let distance = input.distance_this_frame(dash.speed_multiplier);
         if distance >= self.remaining {
-            self.reset();
-            return None;
+            return MotionStep::Finished;
         }
         self.remaining -= distance;
-        Some(self.direction)
+        MotionStep::Steer(Steering::boosted(Some(direction), dash.speed_multiplier))
     }
+}
+
+fn report_dash_finished(mut world: DeferredWorld, context: HookContext) {
+    let Some(&DashProgress {
+        behavior_run_id, ..
+    }) = world.entity(context.entity).get::<DashProgress>()
+    else {
+        return;
+    };
+    world.commands().trigger(MotionFinished {
+        entity: context.entity,
+        motion: Motion::Dash,
+        behavior_run_id,
+    });
 }

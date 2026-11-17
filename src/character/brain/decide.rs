@@ -21,8 +21,7 @@ use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
 const COMMIT_TIMEOUT: f32 = 3.0;
 
 /// A behavior that won its slots, with its motion and action copied from the
-/// definition and stamped with a run id so a finite motion's
-/// `CurrentBehaviorRunId` can tell a fresh
+/// definition and stamped with a run id so a finite motion's progress can tell a fresh
 /// start from the run it just finished. Appliers report through it, so the
 /// committed/continuously scored finish policy lives here.
 #[derive(Clone, Copy, Debug)]

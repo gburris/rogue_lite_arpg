@@ -12,24 +12,23 @@ mod wander;
 use bevy::prelude::*;
 
 pub use self::dash::Dash;
+use self::dash::DashProgress;
 pub use self::home_area::HomeArea;
 pub use self::orbit::Orbit;
 use self::steering::DecayingSpeedBoost;
 pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
 pub(super) use self::step::MotionFinished;
-use self::step::{
-    BlockedTimer, CurrentBehaviorRunId, MotionStep, SteerInput, SteeredCharacter,
-    report_motion_finished,
-};
+use self::step::{BlockedTimer, MotionStep, SteerInput, SteeredCharacter};
 pub use self::swoop::Swoop;
+use self::swoop::SwoopProgress;
 pub use self::wander::Wander;
 use super::BrainSystems;
 use super::engine::Interval;
 
 /// How a character moves: a continuous motion that runs until replaced, or a
-/// finite committed move that steers alone until its system reports it
-/// finished. Add a variant only for a new steering contract.
+/// finite committed move that steers alone until it ends. Add a variant only for a new steering
+/// contract.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Motion {
     /// Disengaged: alternates standing and ambling, paced by `Wander`.
@@ -90,8 +89,7 @@ impl Motion {
         self.index() == other.index()
     }
 
-    /// Whether this motion ends on its own and reports it, rather than
-    /// running until replaced.
+    /// Whether this motion ends on its own, rather than running until replaced.
     pub(super) const fn is_finite(self) -> bool {
         match self {
             Self::Dash | Self::Swoop => true,
@@ -163,6 +161,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
+            step::start_finite_motion_runs,
+            step::end_interrupted_motions,
             dash::apply_dash,
             swoop::apply_swoop,
             orbit::apply_orbit,

@@ -128,5 +128,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(dash::on_dash_started)
         .add_observer(swoop::on_swoop_started)
         .add_observer(orbit::on_orbit_started)
-        .add_observer(wander::on_wander_started);
+        .add_observer(wander::on_wander_started)
+        .add_observer(home_area::on_return_to_home_started);
 }

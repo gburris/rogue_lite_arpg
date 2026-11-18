@@ -47,10 +47,6 @@ impl BlockedTimer {
         true
     }
 
-    pub(super) fn reset(&mut self) {
-        self.seconds = 0.0;
-    }
-
     /// Allows `seconds` more of being blocked before the limit is reached.
     pub(super) fn delay_by(&mut self, seconds: f32) {
         self.seconds = -seconds;

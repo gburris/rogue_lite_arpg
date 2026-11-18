@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, CurrentMotion, Motion, RunningMotion};
+use super::{BlockedTimer, Motion, MotionOf, RunningMotion};
 use crate::character::state::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
@@ -14,7 +14,6 @@ pub struct HomeArea {
     origin: Vec2,
     radius: f32,
     arrival_radius: f32,
-    return_blocked_timer: BlockedTimer,
 }
 
 impl HomeArea {
@@ -31,7 +30,6 @@ impl HomeArea {
             origin,
             radius,
             arrival_radius,
-            return_blocked_timer: BlockedTimer::default(),
         }
     }
 
@@ -70,27 +68,40 @@ impl HomeArea {
     }
 }
 
+/// A return home in progress, on its running motion: how long it has been blocked.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub(super) struct ReturnToHomeProgress {
+    blocked_timer: BlockedTimer,
+}
+
+/// Gives a newly started return home its [`ReturnToHomeProgress`].
+pub(super) fn on_return_to_home_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_return_to_home = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::ReturnToHome);
+    if is_return_to_home {
+        commands
+            .entity(added.entity)
+            .insert(ReturnToHomeProgress::default());
+    }
+}
+
 /// Moves the home of each character whose return home is blocked to where it stands.
 pub(super) fn move_homes_of_blocked_characters(
     time: Res<Time<Virtual>>,
-    running_motions: Query<&RunningMotion>,
-    mut characters: Query<(
-        Option<&CurrentMotion>,
-        &Transform,
-        BlockedState,
-        &mut HomeArea,
-    )>,
+    mut running_returns: Query<(&MotionOf, &mut ReturnToHomeProgress)>,
+    mut characters: Query<(&Transform, BlockedState, &mut HomeArea)>,
 ) {
-    for (current_motion, transform, blocked, mut home_area) in &mut characters {
-        let motion = current_motion
-            .and_then(|current_motion| running_motions.get(current_motion.get()).ok())
-            .map(|running| running.motion);
-        if motion != Some(Motion::ReturnToHome) {
-            home_area.return_blocked_timer.reset();
+    for (motion_of, mut progress) in &mut running_returns {
+        let Ok((transform, blocked, mut home_area)) = characters.get_mut(motion_of.character)
+        else {
             continue;
-        }
-
-        if home_area.return_blocked_timer.tick_and_check_limit(
+        };
+        if progress.blocked_timer.tick_and_check_limit(
             blocked.is_blocked(),
             time.delta_secs(),
             RETURN_BLOCKED_SECONDS,

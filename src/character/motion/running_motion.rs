@@ -30,9 +30,10 @@ impl CurrentMotion {
 
 /// A character's running motion, on its own entity linked to the character by [`MotionOf`] and to
 /// the motion source that tunes it by [`TunedBy`]: the motion and the entity it steers by.
-/// [`MotionCommands`] spawns it with the motion's progress and [`Steering`], and a finite motion
-/// despawns it when it ends. Despawning it, however the motion ended, halts the character and, for
-/// a finite motion, starts the source's [`Cooldown`] and fires [`MotionFinished`].
+/// [`MotionCommands`] spawns it with the motion's progress and [`Steering`], and a
+/// [`FiniteMotion`] despawns it when it ends. Despawning it, however the motion ended, halts the
+/// character and, for a finite motion, starts the source's [`Cooldown`] and fires
+/// [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
 #[component(on_remove = end_running_motion)]
@@ -41,10 +42,18 @@ pub(in crate::character) struct RunningMotion {
     pub target: Option<Entity>,
 }
 
+/// Marks a running motion that ends on its own; see [`Motion::is_finite`].
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub(super) struct FiniteMotion;
+
 fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
-    let Ok((&MotionOf { character }, &running, tuned_by)) = world
-        .entity(context.entity)
-        .get_components::<(&MotionOf, &RunningMotion, Option<&TunedBy>)>()
+    let Ok((&MotionOf { character }, &running, tuned_by, is_finite)) =
+        world.entity(context.entity).get_components::<(
+            &MotionOf,
+            &RunningMotion,
+            Option<&TunedBy>,
+            Has<FiniteMotion>,
+        )>()
     else {
         return;
     };
@@ -54,8 +63,7 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
         kinematics.stop_moving();
     }
 
-    let motion = running.motion;
-    if !motion.is_finite() {
+    if !is_finite {
         return;
     }
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
@@ -66,7 +74,7 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
     }
     world.commands().trigger(MotionFinished {
         entity: character,
-        motion,
+        motion: running.motion,
     });
 }
 
@@ -214,6 +222,9 @@ impl<'w, 's> MotionCommands<'w, 's> {
         if let Some(source) = self.status.source_for_motion(character, motion) {
             running_motion.insert(TunedBy { source });
         }
+        if motion.is_finite() {
+            running_motion.insert(FiniteMotion);
+        }
         match motion {
             Motion::Dash => {
                 running_motion.insert(DashProgress::default());
@@ -255,13 +266,10 @@ impl<'w, 's> MotionCommands<'w, 's> {
 /// Ends each finite motion whose character is interrupted; see [`InterruptionState`].
 pub(super) fn end_interrupted_motions(
     mut commands: Commands,
-    running_motions: Query<(Entity, &MotionOf, &RunningMotion)>,
+    running_motions: Query<(Entity, &MotionOf), With<FiniteMotion>>,
     characters: Query<InterruptionState>,
 ) {
-    for (entity, motion_of, running) in &running_motions {
-        if !running.motion.is_finite() {
-            continue;
-        }
+    for (entity, motion_of) in &running_motions {
         let is_interrupted = characters
             .get(motion_of.character)
             .is_ok_and(|interruption| interruption.is_interrupted());

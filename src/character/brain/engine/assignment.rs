@@ -1,9 +1,8 @@
 //! Fills the motion and action slots: skips what may not run, scores the rest, and
 //! takes winners from the highest score down.
 
-use super::behavior::{BrainDefinition, MAX_BEHAVIORS};
+use super::behavior::{BrainDefinition, BrainVocabulary, MAX_BEHAVIORS};
 use super::scoring::score_behavior;
-use crate::character::brain::ConsiderationInput;
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
@@ -38,9 +37,9 @@ impl SkipReason {
 /// `read` answers each consideration's input and `available` whether the behavior at an index
 /// may start now. Behavior ids, taken and returned, are indices into
 /// `definition.behaviors`.
-pub(in crate::character::brain) fn assign_behaviors_to_slots(
-    definition: &BrainDefinition,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+pub(in crate::character::brain) fn assign_behaviors_to_slots<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
     available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],
     mut start: impl FnMut(usize) -> bool,
@@ -82,8 +81,8 @@ pub(in crate::character::brain) fn assign_behaviors_to_slots(
     }
 }
 
-pub(super) fn find_skip_reason(
-    definition: &BrainDefinition,
+pub(super) fn find_skip_reason<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
     index: usize,
     available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],

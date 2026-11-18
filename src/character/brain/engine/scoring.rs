@@ -1,19 +1,18 @@
 //! How a consideration turns one raw input into a `0.0..=1.0` score.
 
-use super::behavior::Behavior;
-use crate::character::brain::ConsiderationInput;
+use super::behavior::{Behavior, BrainVocabulary};
 use crate::interval::Interval;
 
 /// One normalized input to a behavior's score.
 #[derive(Clone, Copy, Debug)]
-pub struct Consideration {
+pub struct Consideration<V: BrainVocabulary> {
     pub(in crate::character::brain) name: &'static str,
-    pub(in crate::character::brain) input: ConsiderationInput,
+    pub(in crate::character::brain) input: V::Input,
     pub(in crate::character::brain) score_mapping: ScoreMapping,
     pub(in crate::character::brain) inverted: bool,
 }
 
-impl Consideration {
+impl<V: BrainVocabulary> Consideration<V> {
     /// The opposite fact under a new name. A missing input still vetoes.
     pub const fn inverted(self, name: &'static str) -> Self {
         Self {
@@ -80,9 +79,9 @@ impl Curve {
 
 /// Whether one of `behavior`'s considerations reads an input that is now absent, such as a
 /// target distance with no target.
-pub(in crate::character::brain) fn has_absent_input(
-    behavior: &Behavior,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+pub(in crate::character::brain) fn has_absent_input<V: BrainVocabulary>(
+    behavior: &Behavior<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
 ) -> bool {
     behavior
         .considerations
@@ -92,9 +91,9 @@ pub(in crate::character::brain) fn has_absent_input(
 
 /// Final bounded score for one behavior, reading each consideration's input
 /// through `read`. `is_current` switches threshold considerations to their exit side.
-pub(super) fn score_behavior(
-    behavior: &Behavior,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+pub(super) fn score_behavior<V: BrainVocabulary>(
+    behavior: &Behavior<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
     is_current: bool,
 ) -> Option<f32> {
     combine_consideration_scores(
@@ -133,8 +132,8 @@ pub(super) fn combine_consideration_scores(
 
 /// Scores one consideration from its `raw` input; `None` when the score
 /// mapping rejects a non-finite raw value.
-pub(super) fn score_consideration(
-    consideration: &Consideration,
+pub(super) fn score_consideration<V: BrainVocabulary>(
+    consideration: &Consideration<V>,
     raw: Option<f32>,
     is_current: bool,
 ) -> Option<f32> {

@@ -9,12 +9,10 @@ use rand::RngExt;
 
 #[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
-use super::engine::{
-    Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
-    has_absent_input,
-};
+use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::started_motion::StartedMotion;
+use super::vocabulary::{Behavior, BehaviorScoreExplanation};
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
 
 /// Longest a committed behavior may run, in case its finish event never arrives.

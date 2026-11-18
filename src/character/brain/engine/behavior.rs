@@ -1,31 +1,48 @@
 //! Behaviors and static brain definitions, and the check that a definition can run.
 
+use std::fmt::Debug;
+
 use super::Consideration;
-use crate::character::brain::{Action, Motion};
 
 /// Most behaviors one brain definition may list, so scoring needs no allocation.
 pub(super) const MAX_BEHAVIORS: usize = 16;
 
+/// The game's types for what behaviors hold: their motions, actions and consideration inputs. The
+/// engine only copies and compares them, and asks which of them report a finish.
+pub trait BrainVocabulary: Clone + Copy + Debug + 'static {
+    type Motion: Clone + Copy + Debug + 'static;
+    type Action: Clone + Copy + Debug + 'static;
+    type Input: Clone + Copy + Debug + 'static;
+
+    /// Whether `motion` ends on its own and reports it, so its finish can end a committed
+    /// behavior.
+    fn motion_reports_finish(motion: Self::Motion) -> bool;
+
+    /// Whether `action` ends on its own and reports it, so its finish can end a committed
+    /// behavior.
+    fn action_reports_finish(action: Self::Action) -> bool;
+}
+
 /// One candidate a brain can choose: a motion, an action, or both, and how
 /// firmly it holds them.
 #[derive(Clone, Copy, Debug)]
-pub struct Behavior {
-    pub motion: Option<Motion>,
-    pub action: Option<Action>,
+pub struct Behavior<V: BrainVocabulary> {
+    pub motion: Option<V::Motion>,
+    pub action: Option<V::Action>,
     pub(in crate::character::brain) commit: CommitPolicy,
     pub(in crate::character::brain) weight: f32,
-    pub(in crate::character::brain) considerations: &'static [Consideration],
+    pub(in crate::character::brain) considerations: &'static [Consideration<V>],
     pub(in crate::character::brain) start_chance: Option<StartChance>,
 }
 
-impl Behavior {
+impl<V: BrainVocabulary> Behavior<V> {
     /// Builds a behavior; [`validate_brain`] checks its shape and weight.
     pub const fn new(
-        motion: Option<Motion>,
-        action: Option<Action>,
+        motion: Option<V::Motion>,
+        action: Option<V::Action>,
         commit: CommitPolicy,
         weight: f32,
-        considerations: &'static [Consideration],
+        considerations: &'static [Consideration<V>],
     ) -> Self {
         Self {
             motion,
@@ -91,13 +108,15 @@ impl CommitPolicy {
 
 /// A complete static brain: the list of behaviors it scores.
 #[derive(Debug)]
-pub struct BrainDefinition {
-    pub behaviors: &'static [Behavior],
+pub struct BrainDefinition<V: BrainVocabulary> {
+    pub behaviors: &'static [Behavior<V>],
 }
 
 /// Rejects brains that compile but cannot behave. Intervals and thresholds
 /// are checked by their constructors at compile time.
-pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Result<(), String> {
+pub(in crate::character::brain) fn validate_brain<V: BrainVocabulary>(
+    brain: &BrainDefinition<V>,
+) -> Result<(), String> {
     if brain.behaviors.is_empty() {
         return Err("behavior list is empty".to_string());
     }
@@ -114,22 +133,15 @@ pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Re
             ));
         }
         let committed = behavior.commit.is_committed();
-        if committed && behavior.action == Some(Action::Idle) {
-            return Err(format!(
-                "behavior {index} commits to idling, which never reports a finish"
-            ));
-        }
         if committed && behavior.commit.interrupt_tier() == 0 {
             return Err(format!(
                 "behavior {index} is committed in tier 0, which is for continuously scored \
                  behaviors"
             ));
         }
-        // Every other action is finite, so any action is a finite part.
-        let finite_motion = behavior
-            .motion
-            .is_some_and(|motion| motion.kind().is_finite());
-        let finite_parts = usize::from(finite_motion) + usize::from(behavior.action.is_some());
+        let finite_motion = behavior.motion.is_some_and(V::motion_reports_finish);
+        let finite_action = behavior.action.is_some_and(V::action_reports_finish);
+        let finite_parts = usize::from(finite_motion) + usize::from(finite_action);
         if committed && finite_parts != 1 {
             return Err(format!(
                 "behavior {index} is committed with {finite_parts} finite parts; one finish must \

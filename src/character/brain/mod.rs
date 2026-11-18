@@ -7,6 +7,7 @@ mod engine;
 mod inputs;
 mod perception;
 mod started_motion;
+mod vocabulary;
 
 use bevy::prelude::*;
 use rand::RngExt;
@@ -15,9 +16,8 @@ pub use self::action::Action;
 use self::action::{ActionOutcome, BehaviorActionFinished, StartedActions};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
-pub use self::engine::BrainDefinition;
 use self::engine::validate_brain;
-pub(super) use self::engine::{Behavior, CommitPolicy, Consideration, Curve};
+pub(super) use self::engine::{CommitPolicy, Curve};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
 use self::perception::TargetLocationHint;
@@ -28,6 +28,8 @@ pub(super) use self::perception::Watching;
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
+pub use self::vocabulary::BrainDefinition;
+pub(super) use self::vocabulary::{Behavior, Consideration};
 use super::motion::{
     AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionKind, MotionStatus,
 };

@@ -1,7 +1,7 @@
 use super::action::Action;
-use super::engine::{Behavior, CommitPolicy, Consideration, Curve, ScoreMapping};
+use super::engine::{CommitPolicy, Curve, ScoreMapping};
 use super::inputs::ConsiderationInput;
-use super::{Motion, MotionKind};
+use super::{Behavior, Consideration, Motion, MotionKind};
 use crate::interval::Interval;
 use crate::prelude::*;
 

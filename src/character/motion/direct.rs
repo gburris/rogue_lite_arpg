@@ -3,7 +3,9 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{Motion, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
+use super::{
+    Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
+};
 use crate::interval::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
@@ -12,18 +14,22 @@ const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
-    mut characters: Query<(SteeredCharacter, &RunningMotion, &mut Steering)>,
+    characters: Query<SteeredCharacter>,
+    mut running_motions: Query<(&MotionOf, &RunningMotion, &mut Steering)>,
 ) {
-    for (character, running, mut steering) in &mut characters {
-        *steering = match running.motion {
+    for (motion_of, running, mut steering) in &mut running_motions {
+        let motion = match running.motion {
             // Steered by their own systems.
             Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => continue,
-            motion => character
-                .build_steer_input(running, &targets, &time)
-                .map_or(Steering::HALT, |input| {
-                    Steering::scaled(steer_direct_motion(motion, &input), 1.0)
-                }),
+            motion => motion,
         };
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        *steering = input.map_or(Steering::HALT, |input| {
+            Steering::scaled(steer_direct_motion(motion, &input), 1.0)
+        });
     }
 }
 

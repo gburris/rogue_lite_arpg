@@ -10,42 +10,69 @@ use super::{
 };
 use crate::prelude::*;
 
-/// The motion a character runs, the entity it steers by and the motion source that tunes it, set
-/// through [`MotionCommands`]. A finite motion also has a progress component; removing it ends the
-/// motion and fires [`MotionFinished`]. A finite motion that ends removes this component with its
-/// progress. Steering drives only characters with this component, and removing it halts the
-/// character.
+/// Links a running motion to the character it moves; see [`RunningMotion`].
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = CurrentMotion)]
+pub struct MotionOf {
+    pub character: Entity,
+}
+
+/// The running motion of this character, if it runs one; see [`RunningMotion`].
+#[derive(Component, Debug)]
+#[relationship_target(relationship = MotionOf, linked_spawn)]
+pub struct CurrentMotion(Entity);
+
+impl CurrentMotion {
+    pub fn get(&self) -> Entity {
+        self.0
+    }
+}
+
+/// A character's running motion, on its own entity linked to the character by [`MotionOf`]: the
+/// motion, the entity it steers by and the motion source that tunes it. [`MotionCommands`] spawns
+/// it with the motion's progress and [`Steering`], and a finite motion despawns it when it ends.
+/// Despawning it, however the motion ended, halts the character and, for a finite motion, starts
+/// the source's [`MotionCooldown`] and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
-#[component(on_remove = halt_character)]
+#[component(on_remove = end_running_motion)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
     pub target: Option<Entity>,
     pub source: Option<Entity>,
 }
 
-fn halt_character(mut world: DeferredWorld, context: HookContext) {
-    if let Some(mut kinematics) = world.get_mut::<Kinematics>(context.entity) {
-        kinematics.stop_moving();
-    }
-}
-
-/// Starts the [`MotionCooldown`] of the source of `character`'s running motion, if it has one.
-pub(super) fn start_motion_source_cooldown(world: &mut DeferredWorld, character: Entity) {
-    let now = world.resource::<Time<Virtual>>().elapsed_secs();
-    let Some(source) = world
-        .get::<RunningMotion>(character)
-        .and_then(|running| running.source)
+fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
+    let entity = world.entity(context.entity);
+    let (Some(&MotionOf { character }), Some(&running)) =
+        (entity.get::<MotionOf>(), entity.get::<RunningMotion>())
     else {
         return;
     };
-    if let Some(mut cooldown) = world.get_mut::<MotionCooldown>(source) {
+
+    if let Some(mut kinematics) = world.get_mut::<Kinematics>(character) {
+        kinematics.stop_moving();
+    }
+
+    let kind = running.motion.kind();
+    if !kind.is_finite() {
+        return;
+    }
+    let now = world.resource::<Time<Virtual>>().elapsed_secs();
+    if let Some(mut cooldown) = running
+        .source
+        .and_then(|source| world.get_mut::<MotionCooldown>(source))
+    {
         cooldown.start(now);
     }
+    world.commands().trigger(MotionFinished {
+        entity: character,
+        motion: kind,
+    });
 }
 
 /// A finite motion ended: it completed, lost its target, was interrupted (see
-/// [`InterruptionState`]), or was replaced.
+/// [`InterruptionState`]), was replaced or was stopped.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(in crate::character) struct MotionFinished {
     pub entity: Entity,
@@ -55,11 +82,8 @@ pub(in crate::character) struct MotionFinished {
 /// What [`MotionStatus`] reads of a character: its running motion and motion sources.
 #[derive(QueryData)]
 struct CharacterMotionData {
-    running: Option<&'static RunningMotion>,
+    current_motion: Option<&'static CurrentMotion>,
     sources: Option<&'static MotionSources>,
-    has_dash_progress: Has<DashProgress>,
-    has_swoop_progress: Has<SwoopProgress>,
-    interruption: InterruptionState,
 }
 
 /// What [`MotionStatus`] reads of one motion source.
@@ -76,43 +100,35 @@ struct MotionSourceData {
 pub(in crate::character) struct MotionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     characters: Query<'w, 's, CharacterMotionData>,
+    interruptions: Query<'w, 's, InterruptionState>,
+    running_motions: Query<'w, 's, &'static RunningMotion>,
     sources: Query<'w, 's, MotionSourceData>,
 }
 
 impl MotionStatus<'_, '_> {
     /// The motion `character` runs and its target; `None` while it runs none.
     pub(in crate::character) fn running_motion(&self, character: Entity) -> Option<RunningMotion> {
-        let character_data = self.characters.get(character).ok()?;
-        character_data.running.copied()
+        self.current_motion(character).map(|(_, running)| running)
     }
 
     /// Whether a finite motion of `kind` is in progress on `character`. Always false for a
     /// continuous motion.
     pub(in crate::character) fn is_in_progress(&self, character: Entity, kind: MotionKind) -> bool {
-        let Ok(character_data) = self.characters.get(character) else {
-            return false;
-        };
-        match kind {
-            MotionKind::Dash => character_data.has_dash_progress,
-            MotionKind::Swoop => character_data.has_swoop_progress,
-            MotionKind::Wander
-            | MotionKind::Chase
-            | MotionKind::ReturnToHome
-            | MotionKind::Flee
-            | MotionKind::KeepDistance
-            | MotionKind::Idle
-            | MotionKind::Orbit => false,
-        }
+        kind.is_finite()
+            && self
+                .running_motion(character)
+                .is_some_and(|running| running.motion.kind() == kind)
     }
 
     /// Whether `character` can start a motion of `kind` now: it has a source for it if the kind
     /// needs one (see [`MotionKind::needs_source`]), the source's [`MotionCooldown`] is ready, and
     /// for a finite motion the character is not interrupted (see [`InterruptionState`]).
     pub(in crate::character) fn is_ready(&self, character: Entity, kind: MotionKind) -> bool {
-        let Ok(character_data) = self.characters.get(character) else {
-            return false;
-        };
-        if kind.is_finite() && character_data.interruption.is_interrupted() {
+        let is_interrupted = self
+            .interruptions
+            .get(character)
+            .is_ok_and(|interruption| interruption.is_interrupted());
+        if kind.is_finite() && is_interrupted {
             return false;
         }
         let Some(source) = self.source_data(character, kind) else {
@@ -129,6 +145,14 @@ impl MotionStatus<'_, '_> {
     pub(in crate::character) fn reach(&self, character: Entity, kind: MotionKind) -> Option<f32> {
         let source = self.source_data(character, kind)?;
         source.reach.map(|&MotionReach(reach)| reach)
+    }
+
+    /// The entity of `character`'s running motion and its [`RunningMotion`].
+    fn current_motion(&self, character: Entity) -> Option<(Entity, RunningMotion)> {
+        let character_data = self.characters.get(character).ok()?;
+        let entity = character_data.current_motion?.get();
+        let running = self.running_motions.get(entity).ok()?;
+        Some((entity, *running))
     }
 
     /// `character`'s motion source of `kind`, if it has one.
@@ -165,9 +189,9 @@ impl<'w, 's> MotionCommands<'w, 's> {
         &self.status
     }
 
-    /// Sets `motion` as `character`'s running motion, steering by `target`, and ends any other
-    /// motion's progress. A finite motion starts with fresh progress. A continuous motion of the
-    /// kind already running keeps its progress.
+    /// Runs `motion` on `character`, steering by `target`. A continuous motion of the kind already
+    /// running keeps its progress and takes the new settings; anything else replaces the running
+    /// motion with a fresh one.
     pub(in crate::character) fn start(
         &mut self,
         character: Entity,
@@ -175,39 +199,38 @@ impl<'w, 's> MotionCommands<'w, 's> {
         target: Option<Entity>,
     ) {
         let kind = motion.kind();
-        let keeps_progress = !kind.is_finite()
-            && self
-                .status
-                .running_motion(character)
-                .is_some_and(|running| running.motion.kind() == kind);
-        let source = self.status.source_for_kind(character, kind);
-
-        let mut entity = self.commands.entity(character);
-        if !keeps_progress {
-            // Before the new running motion, so a replaced finite motion's hooks read its own.
-            entity.try_remove::<(DashProgress, SwoopProgress, OrbitProgress, WanderProgress)>();
-        }
-        entity.try_insert(RunningMotion {
+        let running = RunningMotion {
             motion,
             target,
-            source,
-        });
-        if keeps_progress {
+            source: self.status.source_for_kind(character, kind),
+        };
+        let current_motion = self.status.current_motion(character);
+        if let Some((entity, current)) = current_motion
+            && !kind.is_finite()
+            && current.motion.kind() == kind
+        {
+            self.commands.entity(entity).try_insert(running);
             return;
         }
 
+        if let Some((entity, _)) = current_motion {
+            self.commands.entity(entity).try_despawn();
+        }
+        let mut running_motion =
+            self.commands
+                .spawn((Name::new("Running motion"), MotionOf { character }, running));
         match kind {
             MotionKind::Dash => {
-                entity.try_insert(DashProgress::default());
+                running_motion.insert(DashProgress::default());
             }
             MotionKind::Swoop => {
-                entity.try_insert(SwoopProgress::default());
+                running_motion.insert(SwoopProgress::default());
             }
             MotionKind::Orbit => {
-                entity.try_insert(OrbitProgress::default());
+                running_motion.insert(OrbitProgress::default());
             }
             MotionKind::Wander => {
-                entity.try_insert(WanderProgress::default());
+                running_motion.insert(WanderProgress::default());
             }
             MotionKind::Chase
             | MotionKind::ReturnToHome
@@ -219,35 +242,33 @@ impl<'w, 's> MotionCommands<'w, 's> {
 
     /// Changes the target of `character`'s running motion, keeping its progress.
     pub(in crate::character) fn retarget(&mut self, character: Entity, target: Option<Entity>) {
-        if let Some(running) = self.status.running_motion(character) {
+        if let Some((entity, running)) = self.status.current_motion(character) {
             self.commands
-                .entity(character)
+                .entity(entity)
                 .try_insert(RunningMotion { target, ..running });
         }
     }
 
-    /// Removes `character`'s running motion and its progress.
+    /// Ends `character`'s running motion.
     pub(in crate::character) fn stop(&mut self, character: Entity) {
-        self.commands.entity(character).try_remove::<(
-            RunningMotion,
-            DashProgress,
-            SwoopProgress,
-            OrbitProgress,
-            WanderProgress,
-        )>();
+        if let Some((entity, _)) = self.status.current_motion(character) {
+            self.commands.entity(entity).try_despawn();
+        }
     }
 }
 
-/// Ends the finite motion of each interrupted character; see [`InterruptionState`].
+/// Ends each finite motion whose character is interrupted; see [`InterruptionState`].
 pub(super) fn end_interrupted_motions(
     mut commands: Commands,
-    characters: Query<(Entity, InterruptionState), Or<(With<DashProgress>, With<SwoopProgress>)>>,
+    running_motions: Query<(Entity, &MotionOf, &RunningMotion)>,
+    characters: Query<InterruptionState>,
 ) {
-    for (entity, interruption) in &characters {
-        if interruption.is_interrupted() {
-            commands
-                .entity(entity)
-                .try_remove::<(RunningMotion, DashProgress, SwoopProgress)>();
+    for (entity, motion_of, running) in &running_motions {
+        let is_interrupted = characters
+            .get(motion_of.character)
+            .is_ok_and(|interruption| interruption.is_interrupted());
+        if running.motion.kind().is_finite() && is_interrupted {
+            commands.entity(entity).try_despawn();
         }
     }
 }

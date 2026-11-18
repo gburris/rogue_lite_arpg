@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionKind, RunningMotion, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets,
+    BlockedTimer, Motion, MotionKind, MotionOf, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTargets,
 };
 use crate::interval::Interval;
 
@@ -151,27 +151,25 @@ impl OrbitProgress {
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
     orbits: Query<&Orbit>,
-    mut orbiters: Query<(
-        SteeredCharacter,
-        &RunningMotion,
-        &mut OrbitProgress,
-        &mut Steering,
-    )>,
+    mut running_orbits: Query<(&MotionOf, &RunningMotion, &mut OrbitProgress, &mut Steering)>,
 ) {
-    for (character, running, mut progress, mut steering) in &mut orbiters {
+    for (motion_of, running, mut progress, mut steering) in &mut running_orbits {
         let Motion::Orbit(distance_range) = running.motion else {
             continue;
         };
-        let Some(orbit) = running.source.and_then(|source| orbits.get(source).ok()) else {
-            *steering = Steering::HALT;
-            continue;
-        };
-        *steering = character
-            .build_steer_input(running, &targets, &time)
-            .map_or(Steering::HALT, |input| {
+        let orbit = running.source.and_then(|source| orbits.get(source).ok());
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        *steering = match (orbit, input) {
+            (Some(orbit), Some(input)) => {
                 let direction = progress.pick_steering_direction(orbit, &input, distance_range);
                 Steering::scaled(direction, 1.0)
-            });
+            }
+            _ => Steering::HALT,
+        };
     }
 }

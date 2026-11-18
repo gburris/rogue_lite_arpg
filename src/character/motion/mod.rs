@@ -17,8 +17,9 @@ pub use self::home_area::HomeArea;
 pub use self::motion_source::{MotionCooldown, MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
+pub use self::running_motion::CurrentMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
-use self::running_motion::{RunningMotion, start_motion_source_cooldown};
+use self::running_motion::{MotionOf, RunningMotion};
 pub(super) use self::steer_input::AssumedVelocity;
 use self::steer_input::{
     BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,

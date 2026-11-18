@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, MotionKind, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    BlockedTimer, MotionKind, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
     SteeringTargets,
 };
 use crate::interval::Interval;
@@ -92,25 +92,28 @@ impl WanderProgress {
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
     wanders: Query<&Wander>,
-    mut wanderers: Query<(
-        SteeredCharacter,
+    mut running_wanders: Query<(
+        &MotionOf,
         &RunningMotion,
         &mut WanderProgress,
         &mut Steering,
     )>,
 ) {
-    for (character, running, mut progress, mut steering) in &mut wanderers {
-        let Some(wander) = running.source.and_then(|source| wanders.get(source).ok()) else {
-            *steering = Steering::HALT;
-            continue;
-        };
-        *steering = character
-            .build_steer_input(running, &targets, &time)
-            .map_or(Steering::HALT, |input| {
+    for (motion_of, running, mut progress, mut steering) in &mut running_wanders {
+        let wander = running.source.and_then(|source| wanders.get(source).ok());
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        *steering = match (wander, input) {
+            (Some(wander), Some(input)) => {
                 let direction = progress.pick_steering_direction(wander, &input);
                 Steering::scaled(direction, wander.speed_scale)
-            });
+            }
+            _ => Steering::HALT,
+        };
     }
 }
 

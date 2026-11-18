@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, Motion, RunningMotion};
+use super::{BlockedTimer, CurrentMotion, Motion, RunningMotion};
 use crate::character::state::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
@@ -73,15 +73,19 @@ impl HomeArea {
 /// Moves the home of each character whose return home is blocked to where it stands.
 pub(super) fn move_homes_of_blocked_characters(
     time: Res<Time<Virtual>>,
+    running_motions: Query<&RunningMotion>,
     mut characters: Query<(
-        Option<&RunningMotion>,
+        Option<&CurrentMotion>,
         &Transform,
         BlockedState,
         &mut HomeArea,
     )>,
 ) {
-    for (running, transform, blocked, mut home_area) in &mut characters {
-        if running.map(|running| running.motion) != Some(Motion::ReturnToHome) {
+    for (current_motion, transform, blocked, mut home_area) in &mut characters {
+        let motion = current_motion
+            .and_then(|current_motion| running_motions.get(current_motion.get()).ok())
+            .map(|running| running.motion);
+        if motion != Some(Motion::ReturnToHome) {
             home_area.return_blocked_timer.reset();
             continue;
         }

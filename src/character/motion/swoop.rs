@@ -3,8 +3,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionKind, MotionStep, RunningMotion,
-    SteerInput, SteeredCharacter, Steering, SteeringTargets, start_motion_source_cooldown,
+    BlockedTimer, DecayingSpeedBoost, MotionKind, MotionOf, MotionStep, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTargets,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -40,18 +40,22 @@ pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
     targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
     swoops: Query<&Swoop>,
-    mut swoopers: Query<(
+    mut running_swoops: Query<(
         Entity,
-        SteeredCharacter,
+        &MotionOf,
         &RunningMotion,
         &mut SwoopProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, running, mut progress, mut steering) in &mut swoopers {
+    for (entity, motion_of, running, mut progress, mut steering) in &mut running_swoops {
         let swoop = running.source.and_then(|source| swoops.get(source).ok());
-        let input = character.build_steer_input(running, &targets, &time);
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
         let step = match (swoop, input) {
             (Some(swoop), Some(input)) => progress.step(swoop, &input),
             _ => MotionStep::Finished,
@@ -60,19 +64,16 @@ pub(super) fn apply_swoop(
         match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
-                commands
-                    .entity(entity)
-                    .try_remove::<(SwoopProgress, RunningMotion)>();
+                commands.entity(entity).try_despawn();
             }
         }
     }
 }
 
-/// A [`Swoop`] in progress. Removing it, however the swoop ended, starts its source's
-/// [`MotionCooldown`](super::MotionCooldown), gives a swoop in flight a [`DecayingSpeedBoost`] and
-/// fires [`MotionFinished`].
+/// A [`Swoop`] in progress, on its running motion. Removing it once the swoop has taken flight,
+/// however it ended, gives the character a [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Copy, Debug, Default)]
-#[component(on_remove = end_swoop)]
+#[component(on_remove = leave_swoop_speed_boost)]
 pub(super) struct SwoopProgress {
     path: Option<SwoopPath>,
     blocked_timer: BlockedTimer,
@@ -114,32 +115,26 @@ impl SwoopProgress {
     }
 }
 
-fn end_swoop(mut world: DeferredWorld, context: HookContext) {
-    let entity = context.entity;
-    let Some(&SwoopProgress { path, .. }) = world.entity(entity).get::<SwoopProgress>() else {
+fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
+    let entity = world.entity(context.entity);
+    let (Some(SwoopProgress { path: Some(_), .. }), Some(&MotionOf { character }), Some(running)) = (
+        entity.get::<SwoopProgress>(),
+        entity.get::<MotionOf>(),
+        entity.get::<RunningMotion>(),
+    ) else {
+        return;
+    };
+    let Some(&Swoop { extra_speed, .. }) = running.source.and_then(|source| world.get(source))
+    else {
         return;
     };
 
-    start_motion_source_cooldown(&mut world, entity);
-    let extra_speed = world
-        .get::<RunningMotion>(entity)
-        .and_then(|running| running.source)
-        .and_then(|source| world.get::<Swoop>(source))
-        .map(|swoop| swoop.extra_speed);
-    if path.is_some()
-        && let Some(extra_speed) = extra_speed
-    {
-        let decaying_speed_boost =
-            DecayingSpeedBoost::new(extra_speed, SWOOP_RECOVERY_TIME, EaseFunction::SmoothStep);
-        world
-            .commands()
-            .entity(entity)
-            .try_insert(decaying_speed_boost);
-    }
-    world.commands().trigger(MotionFinished {
-        entity,
-        motion: MotionKind::Swoop,
-    });
+    let decaying_speed_boost =
+        DecayingSpeedBoost::new(extra_speed, SWOOP_RECOVERY_TIME, EaseFunction::SmoothStep);
+    world
+        .commands()
+        .entity(character)
+        .try_insert(decaying_speed_boost);
 }
 
 #[derive(Clone, Copy, Debug)]

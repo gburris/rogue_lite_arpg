@@ -1,13 +1,11 @@
 use std::f32::consts::TAU;
 
-use bevy::ecs::lifecycle::HookContext;
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, MotionFinished, MotionKind, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, start_motion_source_cooldown,
+    BlockedTimer, MotionKind, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTarget, SteeringTargets,
 };
 use crate::interval::Interval;
 
@@ -107,18 +105,22 @@ pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
     targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
     dashes: Query<&Dash>,
-    mut dashers: Query<(
+    mut running_dashes: Query<(
         Entity,
-        SteeredCharacter,
+        &MotionOf,
         &RunningMotion,
         &mut DashProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, running, mut progress, mut steering) in &mut dashers {
+    for (entity, motion_of, running, mut progress, mut steering) in &mut running_dashes {
         let dash = running.source.and_then(|source| dashes.get(source).ok());
-        let input = character.build_steer_input(running, &targets, &time);
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
         let step = match (dash, input) {
             (Some(dash), Some(input)) => progress.step(dash, &input),
             _ => MotionStep::Finished,
@@ -127,9 +129,7 @@ pub(super) fn apply_dash(
         match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
-                commands
-                    .entity(entity)
-                    .try_remove::<(DashProgress, RunningMotion)>();
+                commands.entity(entity).try_despawn();
             }
         }
     }
@@ -158,10 +158,8 @@ impl DashAimRule {
     }
 }
 
-/// A [`Dash`] in progress. Removing it, however the dash ended, starts its source's
-/// [`MotionCooldown`](super::MotionCooldown) and fires [`MotionFinished`].
+/// A [`Dash`] in progress, on its running motion.
 #[derive(Component, Clone, Copy, Debug, Default)]
-#[component(on_remove = end_dash)]
 pub(super) struct DashProgress {
     direction: Option<Vec2>,
     remaining_distance: f32,
@@ -197,12 +195,4 @@ impl DashProgress {
         self.remaining_distance -= distance;
         MotionStep::Steer(Steering::boosted(Some(direction), dash.speed_multiplier))
     }
-}
-
-fn end_dash(mut world: DeferredWorld, context: HookContext) {
-    start_motion_source_cooldown(&mut world, context.entity);
-    world.commands().trigger(MotionFinished {
-        entity: context.entity,
-        motion: MotionKind::Dash,
-    });
 }

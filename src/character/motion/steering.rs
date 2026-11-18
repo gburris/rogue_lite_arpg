@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::RunningMotion;
+use super::MotionOf;
 use crate::character::state::Kinematics;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
@@ -44,7 +44,7 @@ pub(super) fn decay_speed_boosts(
     }
 }
 
-/// This frame's steering request, written by the system of the running motion.
+/// This frame's steering request, on a running motion, written by that motion's system.
 #[derive(Component, Clone, Copy, Debug)]
 pub(in crate::character) struct Steering {
     direction: Option<Vec2>,
@@ -94,22 +94,24 @@ impl SteeringEffort {
     }
 }
 
-/// Turns the [`Steering`] of each character running a motion into [`Kinematics`], limiting its
-/// turn rate.
+/// Turns the [`Steering`] of each running motion into its character's [`Kinematics`], limiting
+/// the turn rate.
 pub(super) fn apply_steering(
     time: Res<Time<Virtual>>,
-    mut characters: Query<
-        (
-            &Steering,
-            &mut Kinematics,
-            Option<&TurnRate>,
-            Option<&DecayingSpeedBoost>,
-        ),
-        With<RunningMotion>,
-    >,
+    running_motions: Query<(&MotionOf, &Steering)>,
+    mut characters: Query<(
+        &mut Kinematics,
+        Option<&TurnRate>,
+        Option<&DecayingSpeedBoost>,
+    )>,
 ) {
     let delta_secs = time.delta_secs();
-    for (steering, mut kinematics, turn_rate, decaying_speed_boost) in &mut characters {
+    for (motion_of, steering) in &running_motions {
+        let Ok((mut kinematics, turn_rate, decaying_speed_boost)) =
+            characters.get_mut(motion_of.character)
+        else {
+            continue;
+        };
         let boost_multiplier = decaying_speed_boost.map(DecayingSpeedBoost::speed_multiplier);
         let Some(desired) = steering.direction else {
             if !kinematics.is_idle() {

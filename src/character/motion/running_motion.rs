@@ -5,8 +5,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    DashProgress, Motion, MotionCooldown, MotionKind, MotionReach, MotionSources, OrbitProgress,
-    Steering, SwoopProgress, WanderProgress,
+    DashProgress, Motion, MotionKind, MotionReach, MotionSources, OrbitProgress, Steering,
+    SwoopProgress, WanderProgress,
 };
 use crate::prelude::*;
 
@@ -32,7 +32,7 @@ impl CurrentMotion {
 /// motion, the entity it steers by and the motion source that tunes it. [`MotionCommands`] spawns
 /// it with the motion's progress and [`Steering`], and a finite motion despawns it when it ends.
 /// Despawning it, however the motion ended, halts the character and, for a finite motion, starts
-/// the source's [`MotionCooldown`] and fires [`MotionFinished`].
+/// the source's [`Cooldown`] and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
 #[component(on_remove = end_running_motion)]
@@ -61,7 +61,7 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
     if let Some(mut cooldown) = running
         .source
-        .and_then(|source| world.get_mut::<MotionCooldown>(source))
+        .and_then(|source| world.get_mut::<Cooldown>(source))
     {
         cooldown.start(now);
     }
@@ -91,7 +91,7 @@ struct CharacterMotionData {
 struct MotionSourceData {
     entity: Entity,
     kind: &'static MotionKind,
-    cooldown: Option<&'static MotionCooldown>,
+    cooldown: Option<&'static Cooldown>,
     reach: Option<&'static MotionReach>,
 }
 
@@ -121,7 +121,7 @@ impl MotionStatus<'_, '_> {
     }
 
     /// Whether `character` can start a motion of `kind` now: it has a source for it if the kind
-    /// needs one (see [`MotionKind::needs_source`]), the source's [`MotionCooldown`] is ready, and
+    /// needs one (see [`MotionKind::needs_source`]), the source's [`Cooldown`] is ready, and
     /// for a finite motion the character is not interrupted (see [`InterruptionState`]).
     pub(in crate::character) fn is_ready(&self, character: Entity, kind: MotionKind) -> bool {
         let is_interrupted = self

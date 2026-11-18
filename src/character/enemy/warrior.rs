@@ -225,7 +225,7 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         Abilities [
             @heal()
-            ~ActionCooldown::new(HEAL_COOLDOWN)
+            ~Cooldown::new(HEAL_COOLDOWN)
             ActionWindup { seconds: HEAL_WINDUP_SECONDS }
             ActionGlow(HEAL_GLOW_COLOR)
         ]

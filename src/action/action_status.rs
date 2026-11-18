@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::ActionSource;
 use super::in_progress::{ActionInProgress, StopAction};
-use super::source::{ActionCooldown, ActionKey, ActionReach, ActionUseStyle, Attack, RequiredItem};
+use super::source::{ActionKey, ActionReach, ActionUseStyle, Attack, RequiredItem};
 use crate::prelude::*;
 
 /// Why a character can't use an action source now.
@@ -18,7 +18,7 @@ pub enum ActionFailure {
     HolderInterrupted,
     /// A use of the action source is already under way.
     InProgress,
-    /// The action source's [`ActionCooldown`] hasn't run out.
+    /// The action source's [`Cooldown`] hasn't run out.
     OnCooldown,
     /// The character can't pay the action source's [`ManaCost`].
     OutOfMana,
@@ -49,7 +49,7 @@ pub struct ActionFailed {
 struct ActionSourceData {
     entity: Entity,
     ability: Option<&'static Ability>,
-    cooldown: &'static ActionCooldown,
+    cooldown: &'static Cooldown,
     style: &'static ActionUseStyle,
     reach: Option<&'static ActionReach>,
     is_attack: Has<Attack>,

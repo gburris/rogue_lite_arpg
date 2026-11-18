@@ -14,7 +14,7 @@ use bevy::prelude::*;
 pub use self::dash::Dash;
 use self::dash::DashProgress;
 pub use self::home_area::HomeArea;
-pub use self::motion_source::{MotionCooldown, MotionKind, MotionReach, MotionSources};
+pub use self::motion_source::{MotionKind, MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 pub use self::running_motion::CurrentMotion;

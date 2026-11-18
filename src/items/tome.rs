@@ -23,7 +23,7 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
         Name::new("Tome Of Healing")
         ~Item::new(355, ItemKind::Tome)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(TOME_COOLDOWN)
+        ~Cooldown::new(TOME_COOLDOWN)
         ManaCost(TOME_MANA_COST)
         ~{HealingTome {
             min_healing: 25.0,

@@ -13,7 +13,7 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    Motion, MotionCooldown, MotionKind, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
+    Motion, MotionKind, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -252,7 +252,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
             --
             Swoop
             ~{MotionReach(CAST_MAX_RANGE)}
-            ~MotionCooldown::new(SWOOP_COOLDOWN)
+            ~Cooldown::new(SWOOP_COOLDOWN)
         ]
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
@@ -263,10 +263,10 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
                     .with_life_steal(1.0)
                     .with_mouth_height(BAT_HURTBOX_OFFSET)
             )
-            ~ActionCooldown::new(BITE_COOLDOWN)
+            ~Cooldown::new(BITE_COOLDOWN)
             --
             @breath(CAST_MAX_RANGE)
-            ~ActionCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
+            ~Cooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

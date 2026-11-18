@@ -373,7 +373,7 @@ fn on_player_action_took_effect(
     time: Res<Time<Virtual>>,
     players: Query<(), With<Player>>,
     action_box_query: Query<(Entity, &ActionBox)>,
-    cooldowns: Query<&ActionCooldown>,
+    cooldowns: Query<&Cooldown>,
 ) {
     if !players.contains(took_effect.holder) {
         return;

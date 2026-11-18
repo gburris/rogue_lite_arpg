@@ -30,30 +30,6 @@ pub struct Attack;
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct RequiredItem(pub ItemKind);
 
-/// Seconds an action source waits after a use interrupted during its wind-up before it can be used
-/// again.
-const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
-
-/// How long an action source waits after a use takes effect before it can be used again.
-#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
-pub struct ActionCooldown(Cooldown);
-
-impl ActionCooldown {
-    /// Waits `seconds` after each use takes effect.
-    pub fn new(seconds: f32) -> Self {
-        Self(Cooldown::new(seconds))
-    }
-
-    /// See [`Cooldown::with_jitter`].
-    pub fn with_jitter(self, jitter: f32) -> Self {
-        Self(self.0.with_jitter(jitter))
-    }
-
-    pub(super) fn start_interrupted_lockout(&mut self, now: f32) {
-        self.lock_out(now, INTERRUPTED_LOCKOUT_SECONDS);
-    }
-}
-
 /// How a use ends once it takes effect.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
 pub enum ActionUseStyle {

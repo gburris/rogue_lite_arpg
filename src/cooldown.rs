@@ -1,7 +1,9 @@
+use bevy::prelude::*;
 use rand::RngExt;
 
-/// A wait after each use before the next use can start, measured in virtual time.
-#[derive(Clone, Copy, Debug, Default)]
+/// A wait after each use of an action or motion source before the next use can start, measured in
+/// virtual time. The source's owner decides when a use starts the wait.
+#[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Cooldown {
     seconds: f32,
     jitter: f32,

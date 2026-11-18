@@ -122,7 +122,7 @@ fn staff(image: Handle<Image>, seconds_between_casts: f32, swing_seconds: f32) -
             swing_seconds: swing_seconds,
         }
         ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
-        ~ActionCooldown::new(cooldown)
+        ~Cooldown::new(cooldown)
         ActionWindup { seconds: swing_seconds }
         ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         ~{ActionReach(STAFF_REACH)}

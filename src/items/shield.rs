@@ -43,7 +43,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
         @atlas_sprite(image, sprite_layouts.shield.clone())
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(SHIELD_COOLDOWN)
+        ~Cooldown::new(SHIELD_COOLDOWN)
         ~{ActionUseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),

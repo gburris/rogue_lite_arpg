@@ -3,8 +3,12 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::source::{ActionCooldown, ActionGlow, ActionUseStyle, ActionWindup};
+use super::source::{ActionGlow, ActionUseStyle, ActionWindup};
 use crate::prelude::*;
+
+/// Seconds an action source waits after a use interrupted during its wind-up before it can be used
+/// again.
+const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
 
 /// Counts down a use's [`ActionWindup`].
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
@@ -99,7 +103,7 @@ pub(super) struct ActionSourceInUse {
     entity: Entity,
     in_progress: &'static ActionInProgress,
     style: &'static ActionUseStyle,
-    cooldown: &'static mut ActionCooldown,
+    cooldown: &'static mut Cooldown,
 }
 
 impl ActionSourceInUseItem<'_, '_> {
@@ -197,7 +201,9 @@ pub(super) fn advance_actions(
     for (mut source_in_use, windup_progress, timed_progress) in &mut sources {
         if is_holder_gone_or_interrupted(&holders, source_in_use.in_progress.holder) {
             if windup_progress.is_some() {
-                source_in_use.cooldown.start_interrupted_lockout(now);
+                source_in_use
+                    .cooldown
+                    .lock_out(now, INTERRUPTED_LOCKOUT_SECONDS);
             }
             commands.trigger(StopAction {
                 source: source_in_use.entity,

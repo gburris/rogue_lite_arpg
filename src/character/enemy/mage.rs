@@ -13,9 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{
-    Dash, Motion, MotionCooldown, MotionKind, MotionReach, MotionSources, Orbit,
-};
+use crate::character::motion::{Dash, Motion, MotionKind, MotionReach, MotionSources, Orbit};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -313,7 +311,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
             ~{MotionReach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
-            ~MotionCooldown::new(1.2)
+            ~Cooldown::new(1.2)
         ]
     }
 }
@@ -342,7 +340,7 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ]
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
-            ~ActionCooldown::new(RALLY_COOLDOWN)
+            ~Cooldown::new(RALLY_COOLDOWN)
             ActionWindup { seconds: RALLY_WINDUP_SECONDS }
             ActionGlow(RALLY_GLOW_COLOR)
         ]

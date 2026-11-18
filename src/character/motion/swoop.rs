@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     BlockedTimer, DecayingSpeedBoost, MotionKind, MotionOf, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTargets,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -57,7 +57,15 @@ pub(super) fn apply_swoop(
             .as_ref()
             .and_then(|character| character.build_steer_input(running, &targets, &time));
         let step = match (swoop, input) {
-            (Some(&swoop), Some(input)) => progress.step(swoop, &input),
+            (
+                Some(&swoop),
+                Some(
+                    input @ SteerInput {
+                        target: Some(target),
+                        ..
+                    },
+                ),
+            ) => progress.step(swoop, &input, &target),
             _ => MotionStep::Finished,
         };
 
@@ -80,12 +88,9 @@ pub(super) struct SwoopProgress {
 }
 
 impl SwoopProgress {
-    fn step(&mut self, swoop: Swoop, input: &SteerInput) -> MotionStep {
+    fn step(&mut self, swoop: Swoop, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
-        let Some(target) = input.target else {
-            return steer(None);
-        };
 
         let cleared = self
             .path

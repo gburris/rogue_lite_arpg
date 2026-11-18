@@ -122,7 +122,15 @@ pub(super) fn apply_dash(
             .as_ref()
             .and_then(|character| character.build_steer_input(running, &targets, &time));
         let step = match (dash, input) {
-            (Some(dash), Some(input)) => progress.step(dash, &input),
+            (
+                Some(dash),
+                Some(
+                    input @ SteerInput {
+                        target: Some(target),
+                        ..
+                    },
+                ),
+            ) => progress.step(dash, &input, &target),
             _ => MotionStep::Finished,
         };
 
@@ -167,20 +175,22 @@ pub(super) struct DashProgress {
 }
 
 impl DashProgress {
-    fn choose_direction_and_distance(&mut self, dash: &Dash, input: &SteerInput) -> Option<Vec2> {
-        let target = input.target.as_ref()?;
-        let direction = dash.aim_rule.choose_direction(target, input.heading);
+    fn choose_direction_and_distance(
+        &mut self,
+        dash: &Dash,
+        target: &SteeringTarget,
+        heading: Vec2,
+    ) -> Vec2 {
+        let direction = dash.aim_rule.choose_direction(target, heading);
         self.direction = Some(direction);
         self.remaining_distance = dash.run_distance.pick_random_value().max(0.0);
-        Some(direction)
+        direction
     }
 
-    fn step(&mut self, dash: &Dash, input: &SteerInput) -> MotionStep {
-        let Some(direction) = self
-            .direction
-            .or_else(|| self.choose_direction_and_distance(dash, input))
-        else {
-            return MotionStep::Steer(Steering::boosted(None, dash.speed_multiplier));
+    fn step(&mut self, dash: &Dash, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
+        let direction = match self.direction {
+            Some(direction) => direction,
+            None => self.choose_direction_and_distance(dash, target, input.heading),
         };
 
         if input.tick_blocked_timer(&mut self.blocked_timer, DASH_BLOCKED_SECONDS) {

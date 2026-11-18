@@ -57,7 +57,7 @@ pub(super) fn apply_swoop(
             .as_ref()
             .and_then(|character| character.build_steer_input(running, &targets, &time));
         let step = match (swoop, input) {
-            (Some(swoop), Some(input)) => progress.step(swoop, &input),
+            (Some(&swoop), Some(input)) => progress.step(swoop, &input),
             _ => MotionStep::Finished,
         };
 
@@ -80,7 +80,7 @@ pub(super) struct SwoopProgress {
 }
 
 impl SwoopProgress {
-    fn step(&mut self, swoop: &Swoop, input: &SteerInput) -> MotionStep {
+    fn step(&mut self, swoop: Swoop, input: &SteerInput) -> MotionStep {
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
         let Some(target) = input.target else {
@@ -117,13 +117,16 @@ impl SwoopProgress {
 
 fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
     let entity = world.entity(context.entity);
-    let (Some(SwoopProgress { path: Some(_), .. }), Some(&MotionOf { character }), Some(running)) = (
+    let (Some(progress), Some(&MotionOf { character }), Some(running)) = (
         entity.get::<SwoopProgress>(),
         entity.get::<MotionOf>(),
         entity.get::<RunningMotion>(),
     ) else {
         return;
     };
+    if progress.path.is_none() {
+        return;
+    }
     let Some(&Swoop { extra_speed, .. }) = running.source.and_then(|source| world.get(source))
     else {
         return;

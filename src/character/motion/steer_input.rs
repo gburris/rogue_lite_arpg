@@ -9,7 +9,7 @@ use crate::prelude::*;
 /// The result of advancing a finite motion by one frame.
 pub(super) enum MotionStep {
     Steer(Steering),
-    /// The motion ended this frame; its system removes the progress component.
+    /// The motion ended this frame; its system despawns the running motion.
     Finished,
 }
 

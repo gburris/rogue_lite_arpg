@@ -363,8 +363,8 @@ cargo xtask playthrough --remote-port 15710
 cargo xtask ai-metrics [options]
 ```
 
-Fights each enemy kind against each player script in a test room (empty by default). Measures how the enemies
-moved and fought, and compares the result with an earlier run.
+Fights each enemy kind against each player script in a test room, empty by default. Measures how
+the enemies moved and fought, and compares the result with an earlier run.
 
 | Option | Default | Description |
 | --- | --- | --- |

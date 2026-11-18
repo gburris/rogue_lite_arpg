@@ -147,7 +147,6 @@ impl MotionStatus<'_, '_> {
         source.reach.map(|&MotionReach(reach)| reach)
     }
 
-    /// The entity of `character`'s running motion and its [`RunningMotion`].
     fn current_motion(&self, character: Entity) -> Option<(Entity, RunningMotion)> {
         let character_data = self.characters.get(character).ok()?;
         let entity = character_data.current_motion?.get();
@@ -155,7 +154,6 @@ impl MotionStatus<'_, '_> {
         Some((entity, *running))
     }
 
-    /// `character`'s motion source of `kind`, if it has one.
     fn source_for_kind(&self, character: Entity, kind: MotionKind) -> Option<Entity> {
         self.source_data(character, kind)
             .map(|source| source.entity)

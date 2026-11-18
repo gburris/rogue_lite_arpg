@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::{
     DashProgress, Motion, MotionReach, MotionSources, OrbitProgress, Steering, SwoopProgress,
-    WanderProgress,
+    TunedBy, WanderProgress,
 };
 use crate::prelude::*;
 
@@ -28,27 +28,27 @@ impl CurrentMotion {
     }
 }
 
-/// A character's running motion, on its own entity linked to the character by [`MotionOf`]: the
-/// motion, the entity it steers by and the motion source that tunes it. [`MotionCommands`] spawns
-/// it with the motion's progress and [`Steering`], and a finite motion despawns it when it ends.
-/// Despawning it, however the motion ended, halts the character and, for a finite motion, starts
-/// the source's [`Cooldown`] and fires [`MotionFinished`].
+/// A character's running motion, on its own entity linked to the character by [`MotionOf`] and to
+/// the motion source that tunes it by [`TunedBy`]: the motion and the entity it steers by.
+/// [`MotionCommands`] spawns it with the motion's progress and [`Steering`], and a finite motion
+/// despawns it when it ends. Despawning it, however the motion ended, halts the character and, for
+/// a finite motion, starts the source's [`Cooldown`] and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
 #[component(on_remove = end_running_motion)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
     pub target: Option<Entity>,
-    pub source: Option<Entity>,
 }
 
 fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
-    let Ok((&MotionOf { character }, &running)) = world
+    let Ok((&MotionOf { character }, &running, tuned_by)) = world
         .entity(context.entity)
-        .get_components::<(&MotionOf, &RunningMotion)>()
+        .get_components::<(&MotionOf, &RunningMotion, Option<&TunedBy>)>()
     else {
         return;
     };
+    let tuned_by = tuned_by.copied();
 
     if let Some(mut kinematics) = world.get_mut::<Kinematics>(character) {
         kinematics.stop_moving();
@@ -59,9 +59,8 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
         return;
     }
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
-    if let Some(mut cooldown) = running
-        .source
-        .and_then(|source| world.get_mut::<Cooldown>(source))
+    if let Some(mut cooldown) =
+        tuned_by.and_then(|tuned_by| world.get_mut::<Cooldown>(tuned_by.source))
     {
         cooldown.start(now);
     }
@@ -196,11 +195,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
         motion: Motion,
         target: Option<Entity>,
     ) {
-        let running = RunningMotion {
-            motion,
-            target,
-            source: self.status.source_for_motion(character, motion),
-        };
+        let running = RunningMotion { motion, target };
         let current_motion = self.status.current_motion(character);
         if let Some((entity, current)) = current_motion
             && !motion.is_finite()
@@ -216,6 +211,9 @@ impl<'w, 's> MotionCommands<'w, 's> {
         let mut running_motion =
             self.commands
                 .spawn((Name::new("Running motion"), MotionOf { character }, running));
+        if let Some(source) = self.status.source_for_motion(character, motion) {
+            running_motion.insert(TunedBy { source });
+        }
         match motion {
             Motion::Dash => {
                 running_motion.insert(DashProgress::default());

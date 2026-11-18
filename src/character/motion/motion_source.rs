@@ -14,6 +14,19 @@ pub struct MotionSourceOf {
 #[relationship_target(relationship = MotionSourceOf, linked_spawn)]
 pub struct MotionSources(Vec<Entity>);
 
+/// Links a running motion to the motion source whose tuning it reads; see
+/// [`Motion::needs_source`](super::Motion::needs_source).
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = TunedMotion)]
+pub(super) struct TunedBy {
+    pub source: Entity,
+}
+
+/// The running motion this motion source tunes, if one runs; see [`TunedBy`].
+#[derive(Component, Debug)]
+#[relationship_target(relationship = TunedBy)]
+pub(super) struct TunedMotion(Entity);
+
 /// The farthest target distance at which an AI character starts a motion of this source.
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct MotionReach(pub f32);

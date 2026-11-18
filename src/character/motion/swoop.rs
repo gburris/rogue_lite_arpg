@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::{
     BlockedTimer, DecayingSpeedBoost, Motion, MotionOf, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -46,12 +46,13 @@ pub(super) fn apply_swoop(
         Entity,
         &MotionOf,
         &RunningMotion,
+        &TunedBy,
         &mut SwoopProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, motion_of, running, mut progress, mut steering) in &mut running_swoops {
-        let swoop = running.source.and_then(|source| swoops.get(source).ok());
+    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_swoops {
+        let swoop = swoops.get(tuned_by.source).ok();
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()
@@ -121,17 +122,16 @@ impl SwoopProgress {
 }
 
 fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
-    let Ok((progress, &MotionOf { character }, running)) = world
+    let Ok((progress, &MotionOf { character }, &TunedBy { source })) = world
         .entity(context.entity)
-        .get_components::<(&SwoopProgress, &MotionOf, &RunningMotion)>()
+        .get_components::<(&SwoopProgress, &MotionOf, &TunedBy)>()
     else {
         return;
     };
     if progress.path.is_none() {
         return;
     }
-    let Some(&Swoop { extra_speed, .. }) = running.source.and_then(|source| world.get(source))
-    else {
+    let Some(&Swoop { extra_speed, .. }) = world.get(source) else {
         return;
     };
 

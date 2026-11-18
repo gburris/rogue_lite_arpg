@@ -5,7 +5,7 @@ use rand::RngExt;
 
 use super::{
     BlockedTimer, Motion, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTarget, SteeringTargets,
+    Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
 use crate::interval::Interval;
 
@@ -111,12 +111,13 @@ pub(super) fn apply_dash(
         Entity,
         &MotionOf,
         &RunningMotion,
+        &TunedBy,
         &mut DashProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, motion_of, running, mut progress, mut steering) in &mut running_dashes {
-        let dash = running.source.and_then(|source| dashes.get(source).ok());
+    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_dashes {
+        let dash = dashes.get(tuned_by.source).ok();
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()

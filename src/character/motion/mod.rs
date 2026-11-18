@@ -15,6 +15,7 @@ pub use self::dash::Dash;
 use self::dash::DashProgress;
 pub use self::direct::KeepDistance;
 pub use self::home_area::HomeArea;
+use self::motion_source::TunedBy;
 pub use self::motion_source::{MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;

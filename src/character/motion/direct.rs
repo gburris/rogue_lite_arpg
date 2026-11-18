@@ -5,6 +5,7 @@ use rand::RngExt;
 
 use super::{
     Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
+    TunedBy,
 };
 use crate::interval::Interval;
 
@@ -31,17 +32,15 @@ pub(super) fn apply_direct_steering(
     targets: SteeringTargets,
     characters: Query<SteeredCharacter>,
     keep_distances: Query<&KeepDistance>,
-    mut running_motions: Query<(&MotionOf, &RunningMotion, &mut Steering)>,
+    mut running_motions: Query<(&MotionOf, &RunningMotion, Option<&TunedBy>, &mut Steering)>,
 ) {
-    for (motion_of, running, mut steering) in &mut running_motions {
+    for (motion_of, running, tuned_by, mut steering) in &mut running_motions {
         let motion = match running.motion {
             // Steered by their own systems.
             Motion::Wander | Motion::Orbit | Motion::Dash | Motion::Swoop => continue,
             motion => motion,
         };
-        let keep_distance = running
-            .source
-            .and_then(|source| keep_distances.get(source).ok());
+        let keep_distance = tuned_by.and_then(|tuned_by| keep_distances.get(tuned_by.source).ok());
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()

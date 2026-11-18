@@ -2,6 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use super::equipment::prelude::{DirectionalPoses, EquipmentPose};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Rotation that turns the upward-facing weapon sprites to point along the swing direction.
@@ -36,7 +37,9 @@ pub fn sword(sprites: &SpriteAssets) -> impl Scene {
         @melee_weapon(sprites.sword.clone(), 120, SWORD_SWING_SECONDS)
         Name::new("Sword")
         ~{MeleeWeapon {
-            damage: Damage::Range { min: 1.0, max: 6.0 },
+            damage: Damage::Range {
+                amount: Interval::new(1.0, 6.0),
+            },
             hitbox: Collider::rectangle(10.0, 40.0),
             swing_kind: MeleeSwingKind::STAB,
             hold_distance: 15.0,
@@ -74,8 +77,7 @@ pub fn freeze_axe(sprites: &SpriteAssets) -> impl Scene {
 fn axe_swing() -> MeleeWeapon {
     MeleeWeapon {
         damage: Damage::Range {
-            min: 2.0,
-            max: 12.0,
+            amount: Interval::new(2.0, 12.0),
         },
         hitbox: Collider::rectangle(10.0, 40.0),
         swing_kind: MeleeSwingKind::SLASH,

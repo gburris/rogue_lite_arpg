@@ -22,6 +22,15 @@ impl Interval {
         self.min
     }
 
+    /// Both bounds multiplied by `factor`, which must be positive to keep `min < max`.
+    pub fn scaled(self, factor: f32) -> Self {
+        assert!(
+            factor > 0.0,
+            "scaling an interval by {factor} would leave it empty or reversed"
+        );
+        Self::new(self.min * factor, self.max * factor)
+    }
+
     /// A uniformly random value from `min` up to, not including, `max`.
     pub fn pick_random_value(self) -> f32 {
         rand::rng().random_range(self.min..self.max)

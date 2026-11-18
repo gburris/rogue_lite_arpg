@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::damage::{AttemptDamage, Damage, Knockback};
 use super::hitbox::HurtBox;
 use super::status_effects::prelude::Burning;
+use crate::interval::Interval;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -38,8 +39,7 @@ impl Default for Projectile {
     fn default() -> Self {
         Self {
             damage: Damage::Range {
-                min: 5.0,
-                max: 10.0,
+                amount: Interval::new(5.0, 10.0),
             },
             speed: 600.0,
             angle_offset: 0.0,
@@ -106,8 +106,7 @@ pub fn icebolt(
         @atlas_sprite(sprites.ice_bolt.clone(), sprite_layouts.ice_bolt.clone())
         Projectile {
             damage: Damage::Range {
-                min: 10.0,
-                max: 20.0,
+                amount: Interval::new(10.0, 20.0),
             },
             speed: 350.0,
             spawn_offset: 26.0,

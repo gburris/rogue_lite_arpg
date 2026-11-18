@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
+    BlockedTimer, Motion, MotionKind, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets,
 };
 use crate::interval::Interval;
 
@@ -47,6 +48,7 @@ impl OrbitDirection {
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKind::Orbit)]
 pub struct Orbit {
     reroll_interval: Interval,
     switch_chance: f32,
@@ -149,16 +151,20 @@ impl OrbitProgress {
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
+    orbits: Query<&Orbit>,
     mut orbiters: Query<(
         SteeredCharacter,
         &RunningMotion,
-        &Orbit,
         &mut OrbitProgress,
         &mut Steering,
     )>,
 ) {
-    for (character, running, orbit, mut progress, mut steering) in &mut orbiters {
+    for (character, running, mut progress, mut steering) in &mut orbiters {
         let Motion::Orbit(distance_range) = running.motion else {
+            continue;
+        };
+        let Some(orbit) = running.source.and_then(|source| orbits.get(source).ok()) else {
+            *steering = Steering::HALT;
             continue;
         };
         *steering = character

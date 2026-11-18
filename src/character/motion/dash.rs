@@ -7,10 +7,9 @@ use rand::RngExt;
 
 use super::{
     BlockedTimer, MotionFinished, MotionKind, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, start_motion_source_cooldown,
 };
 use crate::interval::Interval;
-use crate::prelude::*;
 
 /// Speed below which a target counts as stationary.
 const TARGET_MOVING_SPEED: f32 = 20.0;
@@ -26,11 +25,10 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 /// A committed straight-line move in a direction chosen when it starts. It ends early when blocked
 /// or interrupted.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKind::Dash)]
 pub struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,
-    reach: Option<f32>,
-    cooldown: Cooldown,
     aim_rule: DashAimRule,
     debug_name: &'static str,
 }
@@ -45,8 +43,6 @@ impl Dash {
         Self {
             run_distance,
             speed_multiplier,
-            reach: None,
-            cooldown: Cooldown::default(),
             aim_rule,
             debug_name,
         }
@@ -72,34 +68,17 @@ impl Dash {
         )
     }
 
-    pub fn slide(
-        run_distance: Interval,
-        speed_multiplier: f32,
-        danger_range: f32,
-        cooldown: f32,
-    ) -> Self {
-        Self {
-            reach: Some(danger_range),
-            cooldown: Cooldown::new(cooldown),
-            ..Self::new(
-                run_distance,
-                speed_multiplier,
-                DashAimRule::Away { spread: 0.0 },
-                "Slide",
-            )
-        }
+    pub fn slide(run_distance: Interval, speed_multiplier: f32) -> Self {
+        Self::new(
+            run_distance,
+            speed_multiplier,
+            DashAimRule::Away { spread: 0.0 },
+            "Slide",
+        )
     }
 
     pub fn name(&self) -> &'static str {
         self.debug_name
-    }
-
-    pub(super) fn reach(&self) -> Option<f32> {
-        self.reach
-    }
-
-    pub(super) fn cooldown(&self) -> &Cooldown {
-        &self.cooldown
     }
 }
 
@@ -128,19 +107,21 @@ pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
     targets: SteeringTargets,
+    dashes: Query<&Dash>,
     mut dashers: Query<(
         Entity,
         SteeredCharacter,
         &RunningMotion,
-        &Dash,
         &mut DashProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, running, dash, mut progress, mut steering) in &mut dashers {
-        let step = match character.build_steer_input(running, &targets, &time) {
-            Some(input) => progress.step(dash, &input),
-            None => MotionStep::Finished,
+    for (entity, character, running, mut progress, mut steering) in &mut dashers {
+        let dash = running.source.and_then(|source| dashes.get(source).ok());
+        let input = character.build_steer_input(running, &targets, &time);
+        let step = match (dash, input) {
+            (Some(dash), Some(input)) => progress.step(dash, &input),
+            _ => MotionStep::Finished,
         };
 
         match step {
@@ -177,8 +158,8 @@ impl DashAimRule {
     }
 }
 
-/// A [`Dash`] in progress. Removing it, however the dash ended, starts the dash's cooldown and
-/// fires [`MotionFinished`].
+/// A [`Dash`] in progress. Removing it, however the dash ended, starts its source's
+/// [`MotionCooldown`](super::MotionCooldown) and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = end_dash)]
 pub(super) struct DashProgress {
@@ -219,10 +200,7 @@ impl DashProgress {
 }
 
 fn end_dash(mut world: DeferredWorld, context: HookContext) {
-    let now = world.resource::<Time<Virtual>>().elapsed_secs();
-    if let Some(mut dash) = world.get_mut::<Dash>(context.entity) {
-        dash.cooldown.start(now);
-    }
+    start_motion_source_cooldown(&mut world, context.entity);
     world.commands().trigger(MotionFinished {
         entity: context.entity,
         motion: MotionKind::Dash,

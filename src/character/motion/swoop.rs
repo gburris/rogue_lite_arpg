@@ -4,9 +4,8 @@ use bevy::prelude::*;
 
 use super::{
     BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionKind, MotionStep, RunningMotion,
-    SteerInput, SteeredCharacter, Steering, SteeringTargets,
+    SteerInput, SteeredCharacter, Steering, SteeringTargets, start_motion_source_cooldown,
 };
-use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -21,30 +20,18 @@ const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 /// A committed curved move through the target and back out. It ends early when blocked or
 /// interrupted, and leaves a [`DecayingSpeedBoost`] when it ends.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKind::Swoop)]
 pub struct Swoop {
-    reach: f32,
-    cooldown: Cooldown,
     extra_speed: f32,
     exit_turn: f32,
 }
 
-impl Swoop {
-    /// Swoops at targets within `reach`, waiting `cooldown` seconds after a swoop ends.
-    pub fn new(reach: f32, cooldown: f32) -> Self {
+impl Default for Swoop {
+    fn default() -> Self {
         Self {
-            reach,
-            cooldown: Cooldown::new(cooldown),
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,
         }
-    }
-
-    pub(super) fn reach(&self) -> f32 {
-        self.reach
-    }
-
-    pub(super) fn cooldown(&self) -> &Cooldown {
-        &self.cooldown
     }
 }
 
@@ -53,19 +40,21 @@ pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
     targets: SteeringTargets,
+    swoops: Query<&Swoop>,
     mut swoopers: Query<(
         Entity,
         SteeredCharacter,
         &RunningMotion,
-        &Swoop,
         &mut SwoopProgress,
         &mut Steering,
     )>,
 ) {
-    for (entity, character, running, swoop, mut progress, mut steering) in &mut swoopers {
-        let step = match character.build_steer_input(running, &targets, &time) {
-            Some(input) => progress.step(swoop, &input),
-            None => MotionStep::Finished,
+    for (entity, character, running, mut progress, mut steering) in &mut swoopers {
+        let swoop = running.source.and_then(|source| swoops.get(source).ok());
+        let input = character.build_steer_input(running, &targets, &time);
+        let step = match (swoop, input) {
+            (Some(swoop), Some(input)) => progress.step(swoop, &input),
+            _ => MotionStep::Finished,
         };
 
         match step {
@@ -79,8 +68,9 @@ pub(super) fn apply_swoop(
     }
 }
 
-/// A [`Swoop`] in progress. Removing it, however the swoop ended, starts the swoop's cooldown,
-/// gives a swoop in flight a [`DecayingSpeedBoost`] and fires [`MotionFinished`].
+/// A [`Swoop`] in progress. Removing it, however the swoop ended, starts its source's
+/// [`MotionCooldown`](super::MotionCooldown), gives a swoop in flight a [`DecayingSpeedBoost`] and
+/// fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[component(on_remove = end_swoop)]
 pub(super) struct SwoopProgress {
@@ -130,11 +120,12 @@ fn end_swoop(mut world: DeferredWorld, context: HookContext) {
         return;
     };
 
-    let now = world.resource::<Time<Virtual>>().elapsed_secs();
-    let extra_speed = world.get_mut::<Swoop>(entity).map(|mut swoop| {
-        swoop.cooldown.start(now);
-        swoop.extra_speed
-    });
+    start_motion_source_cooldown(&mut world, entity);
+    let extra_speed = world
+        .get::<RunningMotion>(entity)
+        .and_then(|running| running.source)
+        .and_then(|source| world.get::<Swoop>(source))
+        .map(|swoop| swoop.extra_speed);
     if path.is_some()
         && let Some(extra_speed) = extra_speed
     {

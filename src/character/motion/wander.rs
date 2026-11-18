@@ -3,7 +3,10 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets};
+use super::{
+    BlockedTimer, MotionKind, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets,
+};
 use crate::interval::Interval;
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
@@ -12,6 +15,7 @@ const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
 /// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKind::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,
@@ -88,15 +92,19 @@ impl WanderProgress {
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
+    wanders: Query<&Wander>,
     mut wanderers: Query<(
         SteeredCharacter,
         &RunningMotion,
-        &Wander,
         &mut WanderProgress,
         &mut Steering,
     )>,
 ) {
-    for (character, running, wander, mut progress, mut steering) in &mut wanderers {
+    for (character, running, mut progress, mut steering) in &mut wanderers {
+        let Some(wander) = running.source.and_then(|source| wanders.get(source).ok()) else {
+            *steering = Steering::HALT;
+            continue;
+        };
         *steering = character
             .build_steer_input(running, &targets, &time)
             .map_or(Steering::HALT, |input| {

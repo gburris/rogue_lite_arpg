@@ -13,7 +13,9 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, MotionKind, Orbit};
+use crate::character::motion::{
+    Dash, Motion, MotionCooldown, MotionKind, MotionReach, MotionSources, Orbit,
+};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -286,7 +288,6 @@ fn mage_body(
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         ~Mana::new(100.0, mana_regen)
-        enemy_wander()
         template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)
@@ -302,16 +303,18 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             sprites,
             sprite_layouts,
         )
-        ~Orbit::new()
         ~Kinematics::new(100.0)
         Experience(12.0)
-        // The cooldown is the player's window to close in again.
-        ~Dash::slide(
-            Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32),
-            2.2,
-            ICE_SLIDE_REACH,
-            1.2,
-        )
+        MotionSources [
+            enemy_wander()
+            --
+            ~Orbit::new()
+            --
+            ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
+            ~{MotionReach(ICE_SLIDE_REACH)}
+            // The cooldown is the player's window to close in again.
+            ~MotionCooldown::new(1.2)
+        ]
     }
 }
 
@@ -325,13 +328,18 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         )
         ~Kinematics::new(150.0)
         Experience(15.0)
-        // A still target inside the close range gets a step-in hop instead.
-        ~Dash::hop(
-            Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
-            2.2,
-            CAST_MIN_RANGE - 10.0,
-        )
-        ~Orbit::new()
+        MotionSources [
+            enemy_wander()
+            --
+            // A still target inside the close range gets a step-in hop instead.
+            ~Dash::hop(
+                Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
+                2.2,
+                CAST_MIN_RANGE - 10.0,
+            )
+            --
+            ~Orbit::new()
+        ]
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
             ~ActionCooldown::new(RALLY_COOLDOWN)

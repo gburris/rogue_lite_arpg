@@ -161,21 +161,24 @@ fn update_enemy_ai_labels(
             &Brain,
             &TargetInfo,
             Has<Targeting>,
-            Option<&Dash>,
+            Option<&MotionSources>,
             Option<&WanderProgress>,
             Option<&ScoreTrace>,
         ),
         With<Enemy>,
     >,
+    dashes: Query<&Dash>,
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
     actions: ActionStatus,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((brain, target_info, has_target, dash, wander, score_trace)) =
+        let Ok((brain, target_info, has_target, motion_sources, wander, score_trace)) =
             enemies.get(parent.parent())
         else {
             continue;
         };
+        let dash = motion_sources
+            .and_then(|sources| sources.iter().find_map(|source| dashes.get(source).ok()));
         let attacking = actions.is_attacking(parent.parent());
         let mode = short_activity(brain, dash, wander);
         if has_target {

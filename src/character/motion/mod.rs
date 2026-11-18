@@ -1,6 +1,7 @@
 mod dash;
 mod direct;
 mod home_area;
+mod motion_source;
 mod orbit;
 mod running_motion;
 mod steer_input;
@@ -13,10 +14,11 @@ use bevy::prelude::*;
 pub use self::dash::Dash;
 use self::dash::DashProgress;
 pub use self::home_area::HomeArea;
+pub use self::motion_source::{MotionCooldown, MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
-use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
+use self::running_motion::{RunningMotion, start_motion_source_cooldown};
 pub(super) use self::steer_input::AssumedVelocity;
 use self::steer_input::{
     BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
@@ -68,8 +70,9 @@ impl Motion {
     }
 }
 
-/// A [`Motion`] without its settings, for comparing motions and keying what each kind has.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// A [`Motion`] without its settings, for comparing motions and keying what each kind has. On a
+/// motion source (see [`MotionSources`]), it names the motion the source tunes.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MotionKind {
     Wander,
     Chase,
@@ -94,6 +97,17 @@ impl MotionKind {
             | Self::KeepDistance
             | Self::Idle
             | Self::Orbit => false,
+        }
+    }
+
+    /// Whether a character needs a motion source of this kind to start it, because the motion
+    /// reads its tuning from the source.
+    pub(super) fn needs_source(self) -> bool {
+        match self {
+            Self::Wander | Self::Orbit | Self::Dash | Self::Swoop => true,
+            Self::Chase | Self::ReturnToHome | Self::Flee | Self::KeepDistance | Self::Idle => {
+                false
+            }
         }
     }
 

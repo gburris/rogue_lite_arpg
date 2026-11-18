@@ -12,7 +12,9 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Motion, MotionKind, Orbit, Swoop, TurnRate};
+use crate::character::motion::{
+    Motion, MotionCooldown, MotionKind, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
+};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -243,9 +245,15 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         )
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
-        ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
-        enemy_wander()
-        ~Swoop::new(CAST_MAX_RANGE, SWOOP_COOLDOWN)
+        MotionSources [
+            ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+            --
+            enemy_wander()
+            --
+            Swoop
+            ~{MotionReach(CAST_MAX_RANGE)}
+            ~MotionCooldown::new(SWOOP_COOLDOWN)
+        ]
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [

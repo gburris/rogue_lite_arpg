@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, MotionKind};
+use crate::character::motion::{Dash, Motion, MotionKind, MotionSources};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -223,14 +223,17 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()
             ~ActionCooldown::new(HEAL_COOLDOWN)
             ActionWindup { seconds: HEAL_WINDUP_SECONDS }
             ActionGlow(HEAL_GLOW_COLOR)
         ]
-        enemy_wander()
+        MotionSources [
+            enemy_wander()
+            --
+            ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
+        ]
         template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)

@@ -84,7 +84,7 @@ pub(super) struct EnemyData {
     health: &'static Health,
     mana: Option<&'static Mana>,
     brain: Option<&'static Brain>,
-    dash: Option<&'static Dash>,
+    motion_sources: Option<&'static MotionSources>,
     vision: &'static Vision,
     ray_caster: Option<&'static RayCaster>,
     target_info: &'static TargetInfo,
@@ -136,7 +136,7 @@ pub(super) fn take_snapshot(
     player: Option<Single<PlayerData, With<Player>>>,
     inventory_items: Query<InventoryItemData>,
     names: Query<&Name>,
-    (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionStatus),
+    (enemies, actions, dashes): (Query<EnemyData, With<Enemy>>, ActionStatus, Query<&Dash>),
     npcs: Query<NpcData, With<Npc>>,
     projectiles: Query<&Transform, With<Projectile>>,
     ground_items: Query<GroundItemData, (With<Item>, Without<ItemOf>)>,
@@ -149,7 +149,12 @@ pub(super) fn take_snapshot(
     let player = player.map(|player| describe_player(&player, &inventory_items, &names));
     let enemies: Vec<Value> = enemies
         .iter()
-        .map(|enemy| describe_enemy(&enemy, actions.is_attacking(enemy.entity)))
+        .map(|enemy| {
+            let dash = enemy
+                .motion_sources
+                .and_then(|sources| sources.iter().find_map(|source| dashes.get(source).ok()));
+            describe_enemy(&enemy, dash, actions.is_attacking(enemy.entity))
+        })
         .collect();
     let npcs: Vec<Value> = npcs.iter().map(|npc| describe_npc(&npc)).collect();
     let projectiles: Vec<[f32; 2]> = projectiles.iter().map(position).collect();
@@ -250,9 +255,9 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
     })
 }
 
-fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
+fn describe_enemy(enemy: &EnemyDataItem, dash: Option<&Dash>, attacking: bool) -> Value {
     let motion = enemy.brain.and_then(Brain::motion);
-    let motion_name = motion.map(|motion| match (motion, enemy.dash) {
+    let motion_name = motion.map(|motion| match (motion, dash) {
         (Motion::Dash, Some(dash)) => dash.name(),
         _ => motion.kind().name(),
     });

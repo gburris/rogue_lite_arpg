@@ -262,10 +262,13 @@ pub(super) fn end_interrupted_motions(
     characters: Query<InterruptionState>,
 ) {
     for (entity, motion_of, running) in &running_motions {
+        if !running.motion.kind().is_finite() {
+            continue;
+        }
         let is_interrupted = characters
             .get(motion_of.character)
             .is_ok_and(|interruption| interruption.is_interrupted());
-        if running.motion.kind().is_finite() && is_interrupted {
+        if is_interrupted {
             commands.entity(entity).try_despawn();
         }
     }

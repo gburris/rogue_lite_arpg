@@ -89,7 +89,7 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
 
 /// Ends the behavior a finished motion was started for and, if that behavior was still running,
 /// decides again immediately.
-pub(super) fn on_release_finished_motion(
+pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
@@ -124,8 +124,8 @@ pub(super) fn on_release_finished_motion(
     );
 }
 
-/// Applies an [`BehaviorActionFinished`], current or stale.
-pub(super) fn on_finish_action(
+/// Applies a [`BehaviorActionFinished`], current or stale.
+pub(super) fn on_behavior_action_finished(
     finished: On<BehaviorActionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,

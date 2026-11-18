@@ -212,7 +212,7 @@ fn update_enemy_ai_labels(
 /// Appends one line per behavior from the last decision's score trace.
 fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrace) {
     let format_value = |value: Option<f32>| {
-        // A missing or reachless capability reads as the largest fraction.
+        // A missing or reachless source reads as the largest fraction.
         value.map_or_else(
             || "none".to_string(),
             |value| {

@@ -51,7 +51,7 @@ pub enum ConsiderationInput {
     MovementBlocked,
 }
 
-/// The components one decision reads, including every capability a character may carry.
+/// The components of the deciding character that its inputs read.
 #[derive(QueryData)]
 pub(super) struct DecisionInputComponents {
     entity: Entity,
@@ -233,8 +233,8 @@ impl DecisionInputs<'_, '_, '_> {
     }
 }
 
-/// `distance` over `reach`; at most `1.0` is in reach. `f32::MAX` for a capability that is
-/// missing or has no positive reach.
+/// `distance` over `reach`; at most `1.0` is in reach. `f32::MAX` for a source that is missing or
+/// has no positive reach.
 fn reach_fraction(distance: f32, reach: Option<f32>) -> f32 {
     reach
         .filter(|&reach| reach > 0.0)

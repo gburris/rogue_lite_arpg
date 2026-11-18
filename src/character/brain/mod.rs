@@ -318,8 +318,8 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_plugins((perception::plugin, action::plugin))
-        .add_observer(decide::on_release_finished_motion)
-        .add_observer(decide::on_finish_action)
+        .add_observer(decide::on_motion_finished)
+        .add_observer(decide::on_behavior_action_finished)
         .add_systems(
             Update,
             (

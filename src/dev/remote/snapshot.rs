@@ -296,7 +296,7 @@ fn describe_npc(npc: &NpcDataItem) -> Value {
         "entity": entity_id(npc.entity),
         "name": npc.name.map(Name::as_str),
         "position": position(npc.transform),
-        "motion": motion.map(|motion| motion.name()),
+        "motion": motion.map(Motion::name),
     })
 }
 

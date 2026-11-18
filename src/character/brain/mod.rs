@@ -29,7 +29,7 @@ pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
 use super::motion::{
-    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus,
+    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionKind, MotionStatus,
 };
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -99,17 +99,14 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    /// Whether any behavior with a motion of `motion`'s kind is in a start roll retry delay.
-    fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
+    /// Whether any behavior with a motion of `kind` is in a start roll retry delay.
+    fn is_start_roll_waiting(&self, kind: MotionKind, now: f32) -> bool {
         self.definition
             .behaviors
             .iter()
             .zip(&self.start_roll_ready_at)
             .any(|(behavior, &ready_at)| {
-                now < ready_at
-                    && behavior
-                        .motion
-                        .is_some_and(|held| held.is_same_kind(motion))
+                now < ready_at && behavior.motion.is_some_and(|held| held.kind() == kind)
             })
     }
 
@@ -123,7 +120,7 @@ impl Brain {
             return false;
         }
 
-        let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
+        let motion_available = |motion: Motion| inputs.is_motion_ready(motion.kind());
         let action_available = |action: Action| match action {
             Action::Idle => true,
             Action::Use(_) => {

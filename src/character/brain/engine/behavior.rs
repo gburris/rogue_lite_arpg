@@ -126,7 +126,9 @@ pub(in crate::character::brain) fn validate_brain(brain: &BrainDefinition) -> Re
             ));
         }
         // Every other action is finite, so any action is a finite part.
-        let finite_motion = behavior.motion.is_some_and(Motion::is_finite);
+        let finite_motion = behavior
+            .motion
+            .is_some_and(|motion| motion.kind().is_finite());
         let finite_parts = usize::from(finite_motion) + usize::from(behavior.action.is_some());
         if committed && finite_parts != 1 {
             return Err(format!(

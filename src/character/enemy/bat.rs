@@ -12,7 +12,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Motion, Orbit, Swoop, TurnRate};
+use crate::character::motion::{Motion, MotionKind, Orbit, Swoop, TurnRate};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -30,12 +30,12 @@ const SWOOP_COOLDOWN: f32 = 2.0;
 /// can start.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
-    ConsiderationInput::MotionReady(Motion::Swoop),
+    ConsiderationInput::MotionReady(MotionKind::Swoop),
 )
 .inverted("swoop cooling down");
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
-    ConsiderationInput::MotionReachFraction(Motion::Swoop),
+    ConsiderationInput::MotionReachFraction(MotionKind::Swoop),
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",

@@ -1,7 +1,7 @@
-use super::Motion;
 use super::action::Action;
 use super::engine::{Behavior, CommitPolicy, Consideration, Curve, ScoreMapping};
 use super::inputs::ConsiderationInput;
+use super::{Motion, MotionKind};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -30,12 +30,16 @@ pub const fn consideration(
     }
 }
 
-/// Whether a motion of `motion`'s kind has been running for more than `seconds`; see
+/// Whether a motion of `kind` has been running for more than `seconds`; see
 /// [`ConsiderationInput::SecondsInMotion`].
-pub const fn motion_running_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
+pub const fn motion_running_for(
+    name: &'static str,
+    kind: MotionKind,
+    seconds: f32,
+) -> Consideration {
     Consideration {
         name,
-        input: ConsiderationInput::SecondsInMotion(motion),
+        input: ConsiderationInput::SecondsInMotion(kind),
         score_mapping: ScoreMapping::Threshold {
             enter: seconds,
             exit: seconds,

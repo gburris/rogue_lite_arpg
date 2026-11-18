@@ -228,7 +228,7 @@ fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrac
             label,
             "
 {}",
-            behavior.motion.map_or("-", Motion::name)
+            behavior.motion.map_or("-", |motion| motion.kind().name())
         );
         if let Some(action) = behavior.action {
             let _ = write!(label, " + {action:?}");
@@ -277,7 +277,7 @@ fn short_activity(
 ) -> &'static str {
     match brain.motion() {
         None => "Stopped",
-        Some(Motion::Dash) => dash.map_or(Motion::Dash.name(), Dash::name),
+        Some(Motion::Dash) => dash.map_or(MotionKind::Dash.name(), Dash::name),
         Some(Motion::Wander) => {
             if wander.is_some_and(WanderProgress::is_walking) {
                 "Wander"
@@ -285,6 +285,6 @@ fn short_activity(
                 "Rest"
             }
         }
-        Some(motion) => motion.name(),
+        Some(motion) => motion.kind().name(),
     }
 }

@@ -3,7 +3,7 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, DecayingSpeedBoost, Motion, MotionFinished, MotionStep, RunningMotion,
+    BlockedTimer, DecayingSpeedBoost, MotionFinished, MotionKind, MotionStep, RunningMotion,
     SteerInput, SteeredCharacter, Steering, SteeringTargets,
 };
 use crate::prelude::*;
@@ -147,7 +147,7 @@ fn end_swoop(mut world: DeferredWorld, context: HookContext) {
     }
     world.commands().trigger(MotionFinished {
         entity,
-        motion: Motion::Swoop,
+        motion: MotionKind::Swoop,
     });
 }
 

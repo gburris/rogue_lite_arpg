@@ -5,8 +5,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    Dash, DashProgress, Motion, Orbit, OrbitProgress, Steering, Swoop, SwoopProgress, Wander,
-    WanderProgress,
+    Dash, DashProgress, Motion, MotionKind, Orbit, OrbitProgress, Steering, Swoop, SwoopProgress,
+    Wander, WanderProgress,
 };
 use crate::prelude::*;
 
@@ -33,7 +33,7 @@ fn halt_character(mut world: DeferredWorld, context: HookContext) {
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(in crate::character) struct MotionFinished {
     pub entity: Entity,
-    pub motion: Motion,
+    pub motion: MotionKind,
 }
 
 /// What [`MotionStatus`] reads of a character: its running motion and motion capabilities.
@@ -63,71 +63,72 @@ impl MotionStatus<'_, '_> {
         character_data.running.copied()
     }
 
-    /// Whether the finite `motion` is in progress on `character`. Always false for a continuous
-    /// motion.
-    pub(in crate::character) fn is_in_progress(&self, character: Entity, motion: Motion) -> bool {
+    /// Whether a finite motion of `kind` is in progress on `character`. Always false for a
+    /// continuous motion.
+    pub(in crate::character) fn is_in_progress(&self, character: Entity, kind: MotionKind) -> bool {
         let Ok(character_data) = self.characters.get(character) else {
             return false;
         };
-        match motion {
-            Motion::Dash => character_data.has_dash_progress,
-            Motion::Swoop => character_data.has_swoop_progress,
-            Motion::Wander
-            | Motion::Chase
-            | Motion::ReturnToHome
-            | Motion::Flee
-            | Motion::KeepDistance(_)
-            | Motion::Idle
-            | Motion::Orbit(_) => false,
+        match kind {
+            MotionKind::Dash => character_data.has_dash_progress,
+            MotionKind::Swoop => character_data.has_swoop_progress,
+            MotionKind::Wander
+            | MotionKind::Chase
+            | MotionKind::ReturnToHome
+            | MotionKind::Flee
+            | MotionKind::KeepDistance
+            | MotionKind::Idle
+            | MotionKind::Orbit => false,
         }
     }
 
-    /// Whether `character` can start `motion` now: it has the capability and, for a finite motion,
-    /// the cooldown is ready and the character is not interrupted (see [`InterruptionState`]).
-    pub(in crate::character) fn is_ready(&self, character: Entity, motion: Motion) -> bool {
+    /// Whether `character` can start a motion of `kind` now: it has the capability and, for a
+    /// finite motion, the cooldown is ready and the character is not interrupted (see
+    /// [`InterruptionState`]).
+    pub(in crate::character) fn is_ready(&self, character: Entity, kind: MotionKind) -> bool {
         let Ok(character_data) = self.characters.get(character) else {
             return false;
         };
 
         let now = self.time.elapsed_secs();
         let is_interrupted = character_data.interruption.is_interrupted();
-        match motion {
-            Motion::Dash => {
+        match kind {
+            MotionKind::Dash => {
                 !is_interrupted
                     && character_data
                         .dash
                         .is_some_and(|dash| dash.cooldown().is_ready(now))
             }
-            Motion::Swoop => {
+            MotionKind::Swoop => {
                 !is_interrupted
                     && character_data
                         .swoop
                         .is_some_and(|swoop| swoop.cooldown().is_ready(now))
             }
-            Motion::Orbit(_) => character_data.has_orbit,
-            Motion::Wander => character_data.has_wander,
-            Motion::Chase
-            | Motion::ReturnToHome
-            | Motion::Flee
-            | Motion::KeepDistance(_)
-            | Motion::Idle => true,
+            MotionKind::Orbit => character_data.has_orbit,
+            MotionKind::Wander => character_data.has_wander,
+            MotionKind::Chase
+            | MotionKind::ReturnToHome
+            | MotionKind::Flee
+            | MotionKind::KeepDistance
+            | MotionKind::Idle => true,
         }
     }
 
-    /// The farthest target distance at which `motion` counts as in reach for `character`; `None`
-    /// without the capability or a reach.
-    pub(in crate::character) fn reach(&self, character: Entity, motion: Motion) -> Option<f32> {
+    /// The farthest target distance at which a motion of `kind` counts as in reach for
+    /// `character`; `None` without the capability or a reach.
+    pub(in crate::character) fn reach(&self, character: Entity, kind: MotionKind) -> Option<f32> {
         let character_data = self.characters.get(character).ok()?;
-        match motion {
-            Motion::Dash => character_data.dash.and_then(Dash::reach),
-            Motion::Swoop => character_data.swoop.map(Swoop::reach),
-            Motion::Wander
-            | Motion::Chase
-            | Motion::ReturnToHome
-            | Motion::Flee
-            | Motion::KeepDistance(_)
-            | Motion::Idle
-            | Motion::Orbit(_) => None,
+        match kind {
+            MotionKind::Dash => character_data.dash.and_then(Dash::reach),
+            MotionKind::Swoop => character_data.swoop.map(Swoop::reach),
+            MotionKind::Wander
+            | MotionKind::Chase
+            | MotionKind::ReturnToHome
+            | MotionKind::Flee
+            | MotionKind::KeepDistance
+            | MotionKind::Idle
+            | MotionKind::Orbit => None,
         }
     }
 }
@@ -154,11 +155,11 @@ impl<'w, 's> MotionCommands<'w, 's> {
         motion: Motion,
         target: Option<Entity>,
     ) {
-        let keeps_progress = !motion.is_finite()
+        let keeps_progress = !motion.kind().is_finite()
             && self
                 .status
                 .running_motion(character)
-                .is_some_and(|running| running.motion.is_same_kind(motion));
+                .is_some_and(|running| running.motion.kind() == motion.kind());
 
         let mut entity = self.commands.entity(character);
         entity.try_insert(RunningMotion { motion, target });

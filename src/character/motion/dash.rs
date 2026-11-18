@@ -6,8 +6,8 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionFinished, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTarget, SteeringTargets,
+    BlockedTimer, MotionFinished, MotionKind, MotionStep, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -225,6 +225,6 @@ fn end_dash(mut world: DeferredWorld, context: HookContext) {
     }
     world.commands().trigger(MotionFinished {
         entity: context.entity,
-        motion: Motion::Dash,
+        motion: MotionKind::Dash,
     });
 }

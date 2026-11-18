@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetLocationHint};
+use super::{Brain, MotionCommands, MotionKind, RunningBehavior, TargetLocationHint};
 
 /// The running behavior the brain last started a motion for, so each behavior starts its motion
 /// once and a finished motion can name its behavior.
@@ -10,14 +10,14 @@ pub(super) struct StartedMotion {
 }
 
 impl StartedMotion {
-    /// The run id of the behavior a finished `motion` belongs to; `None` if the brain has since
-    /// started a different kind of motion.
-    pub(super) fn behavior_run_id_of(&self, motion: Motion) -> Option<u32> {
+    /// The run id of the behavior a finished motion of `kind` belongs to; `None` if the brain has
+    /// since started a different kind of motion.
+    pub(super) fn behavior_run_id_of(&self, kind: MotionKind) -> Option<u32> {
         self.behavior
             .filter(|behavior| {
                 behavior
                     .motion
-                    .is_some_and(|started| started.is_same_kind(motion))
+                    .is_some_and(|started| started.kind() == kind)
             })
             .map(|behavior| behavior.behavior_run_id)
     }
@@ -52,7 +52,7 @@ pub(super) fn apply_motion_requests(
 
         if started_motion.behavior_run_id() != Some(behavior.behavior_run_id) {
             started_motion.behavior = Some(behavior);
-            if !motions.status().is_in_progress(entity, motion) {
+            if !motions.status().is_in_progress(entity, motion.kind()) {
                 // `retarget` reads the running motion from before this start, so skip it.
                 motions.start(entity, motion, target);
                 continue;

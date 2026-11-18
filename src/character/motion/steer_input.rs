@@ -80,7 +80,7 @@ impl SteeredCharacterItem<'_, '_> {
         let target = running
             .target
             .and_then(|target| targets.locate(position, target));
-        if running.motion.needs_target() && target.is_none() {
+        if running.motion.kind().needs_target() && target.is_none() {
             return None;
         }
 

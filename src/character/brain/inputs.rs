@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, HomeArea, Motion, MotionStatus};
+use super::{Brain, HomeArea, MotionKind, MotionStatus};
 use crate::character::Allies;
 use crate::character::state::BlockedState;
 use crate::prelude::*;
@@ -27,19 +27,18 @@ pub enum ConsiderationInput {
     TargetDistance,
     MissingHealth,
     ManaFraction,
-    /// Whether this motion's kind is the one running; its payload is ignored.
-    MotionRunning(Motion),
-    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and no
-    /// behavior with it is in a start roll retry delay; the payload is ignored.
-    MotionReady(Motion),
-    /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
-    /// the payload is ignored.
-    SecondsInMotion(Motion),
+    /// Whether a motion of this kind is running.
+    MotionRunning(MotionKind),
+    /// Whether the character can start a motion of this kind (see [`MotionStatus::is_ready`]) and
+    /// no behavior with one is in a start roll retry delay.
+    MotionReady(MotionKind),
+    /// Seconds the running motion has held its slot when it is of this kind, else zero.
+    SecondsInMotion(MotionKind),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
-    /// Target distance over this motion's reach; at most `1.0` is in reach.
-    MotionReachFraction(Motion),
+    /// Target distance over the reach of this kind of motion; at most `1.0` is in reach.
+    MotionReachFraction(MotionKind),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     /// The closest ally's distance over this action's reach; absent with no ally alive.
@@ -90,10 +89,8 @@ impl DecisionInputs<'_, '_, '_> {
     }
 
     /// See [`MotionStatus::is_ready`].
-    pub fn is_motion_ready(&self, motion: Motion) -> bool {
-        self.queries
-            .motions
-            .is_ready(self.components.entity, motion)
+    pub fn is_motion_ready(&self, kind: MotionKind) -> bool {
+        self.queries.motions.is_ready(self.components.entity, kind)
     }
 
     /// Whether the character has an action source for `action`; never for `Idle`, which has none.
@@ -177,24 +174,22 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::ManaFraction => {
                 Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
-            ConsiderationInput::MotionRunning(motion) => Some(f32::from(
-                brain
-                    .motion()
-                    .is_some_and(|running| running.is_same_kind(motion)),
+            ConsiderationInput::MotionRunning(kind) => Some(f32::from(
+                brain.motion().is_some_and(|running| running.kind() == kind),
             )),
-            ConsiderationInput::MotionReady(motion) => Some(f32::from(
-                self.is_motion_ready(motion) && !brain.is_start_roll_waiting(motion, self.now),
+            ConsiderationInput::MotionReady(kind) => Some(f32::from(
+                self.is_motion_ready(kind) && !brain.is_start_roll_waiting(kind, self.now),
             )),
-            ConsiderationInput::SecondsInMotion(motion) => Some(
+            ConsiderationInput::SecondsInMotion(kind) => Some(
                 brain
                     .current_motion_behavior()
-                    .filter(|(_, held)| held.is_same_kind(motion))
+                    .filter(|(_, held)| held.kind() == kind)
                     .map_or(0.0, |(running, _)| self.now - running.started_at),
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
-            ConsiderationInput::MotionReachFraction(motion) => {
-                let reach = self.queries.motions.reach(self.components.entity, motion);
+            ConsiderationInput::MotionReachFraction(kind) => {
+                let reach = self.queries.motions.reach(self.components.entity, kind);
                 self.target_reach_fraction(reach)
             }
             ConsiderationInput::ActionReachFraction(action) => {

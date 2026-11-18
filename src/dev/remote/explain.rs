@@ -67,7 +67,7 @@ fn explain_brain(entity: Entity, brain: &Brain, score_trace: &ScoreTrace) -> Val
         }
 
         behaviors.push(json!({
-            "motion": behavior.motion.map(Motion::name),
+            "motion": behavior.motion.map(|motion| motion.kind().name()),
             "action": behavior.action.map(debug_name),
             "skipped": explanation.skipped.map(|reason| reason.label()),
             "score": explanation.score,
@@ -80,7 +80,7 @@ fn explain_brain(entity: Entity, brain: &Brain, score_trace: &ScoreTrace) -> Val
         "entity": entity_id(entity),
         "tracing_started": false,
         "decided_at": score_trace.decided_at,
-        "motion": brain.motion().map(Motion::name),
+        "motion": brain.motion().map(|motion| motion.kind().name()),
         "action": brain.action().map(debug_name),
         "behaviors": behaviors,
     })

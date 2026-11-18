@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, Orbit};
+use crate::character::motion::{Dash, Motion, MotionKind, Orbit};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -38,7 +38,7 @@ const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
 const IN_DASH_REACH: Consideration = within_reach(
     "in dash reach",
-    ConsiderationInput::MotionReachFraction(Motion::Dash),
+    ConsiderationInput::MotionReachFraction(MotionKind::Dash),
 );
 
 /// Fire mage firing-position quality: zero at the inner cast edge, full 60

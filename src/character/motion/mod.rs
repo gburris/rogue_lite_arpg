@@ -52,53 +52,48 @@ pub enum Motion {
 }
 
 impl Motion {
-    /// Every motion in [`Self::index`] order. Payloads are placeholders.
-    pub(super) const ALL: &'static [Self] = &[
-        Self::Wander,
-        Self::Chase,
-        Self::ReturnToHome,
-        Self::Flee,
-        Self::KeepDistance(Interval::new(0.0, 1.0)),
-        Self::Idle,
-        Self::Orbit(Interval::new(0.0, 1.0)),
-        Self::Dash,
-        Self::Swoop,
-    ];
-
-    /// Number of distinct motions, for per-motion arrays.
-    pub(super) const COUNT: usize = Self::ALL.len();
-
-    /// Position of this motion in per-motion arrays.
-    pub(super) const fn index(self) -> usize {
+    /// Which motion this is, without its settings.
+    pub const fn kind(self) -> MotionKind {
         match self {
-            Self::Wander => 0,
-            Self::Chase => 1,
-            Self::ReturnToHome => 2,
-            Self::Flee => 3,
-            Self::KeepDistance(_) => 4,
-            Self::Idle => 5,
-            Self::Orbit(_) => 6,
-            Self::Dash => 7,
-            Self::Swoop => 8,
+            Self::Wander => MotionKind::Wander,
+            Self::Chase => MotionKind::Chase,
+            Self::ReturnToHome => MotionKind::ReturnToHome,
+            Self::Flee => MotionKind::Flee,
+            Self::KeepDistance(_) => MotionKind::KeepDistance,
+            Self::Idle => MotionKind::Idle,
+            Self::Orbit(_) => MotionKind::Orbit,
+            Self::Dash => MotionKind::Dash,
+            Self::Swoop => MotionKind::Swoop,
         }
     }
+}
 
-    /// Whether both are the same variant, whatever their payloads.
-    pub(super) fn is_same_kind(self, other: Self) -> bool {
-        self.index() == other.index()
-    }
+/// A [`Motion`] without its settings, for comparing motions and keying what each kind has.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MotionKind {
+    Wander,
+    Chase,
+    ReturnToHome,
+    Flee,
+    KeepDistance,
+    Idle,
+    Orbit,
+    Dash,
+    Swoop,
+}
 
+impl MotionKind {
     /// Whether this motion ends on its own, rather than running until replaced.
-    pub(super) const fn is_finite(self) -> bool {
+    pub const fn is_finite(self) -> bool {
         match self {
             Self::Dash | Self::Swoop => true,
             Self::Wander
             | Self::Chase
             | Self::ReturnToHome
             | Self::Flee
-            | Self::KeepDistance(_)
+            | Self::KeepDistance
             | Self::Idle
-            | Self::Orbit(_) => false,
+            | Self::Orbit => false,
         }
     }
 
@@ -107,8 +102,8 @@ impl Motion {
         match self {
             // Flee steers away from the target, so it needs one.
             Self::Chase
-            | Self::KeepDistance(_)
-            | Self::Orbit(_)
+            | Self::KeepDistance
+            | Self::Orbit
             | Self::Flee
             | Self::Dash
             | Self::Swoop => true,
@@ -123,38 +118,14 @@ impl Motion {
             Self::Chase => "Chase",
             Self::ReturnToHome => "ReturnToHome",
             Self::Flee => "Flee",
-            Self::KeepDistance(_) => "KeepDistance",
+            Self::KeepDistance => "KeepDistance",
             Self::Idle => "Idle",
-            Self::Orbit(_) => "Orbit",
+            Self::Orbit => "Orbit",
             Self::Dash => "Dash",
             Self::Swoop => "Swoop",
         }
     }
 }
-
-// `ALL` lists every motion in `index` order.
-const _: () = {
-    // A new variant fails to compile here: add it to this match and to `ALL`.
-    match Motion::Wander {
-        Motion::Wander
-        | Motion::Chase
-        | Motion::ReturnToHome
-        | Motion::Flee
-        | Motion::KeepDistance(_)
-        | Motion::Idle
-        | Motion::Orbit(_)
-        | Motion::Dash
-        | Motion::Swoop => {}
-    }
-    let mut position = 0;
-    while position < Motion::COUNT {
-        assert!(
-            Motion::ALL[position].index() == position,
-            "Motion::ALL is out of index order"
-        );
-        position += 1;
-    }
-};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(

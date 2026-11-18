@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, MotionKind, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
+    BlockedTimer, Motion, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
     Steering, SteeringTarget, SteeringTargets,
 };
 use crate::interval::Interval;
@@ -23,7 +23,7 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 /// A committed straight-line move in a direction chosen when it starts. It ends early when blocked
 /// or interrupted.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(MotionKind::Dash)]
+#[require(Motion::Dash)]
 pub struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,

@@ -259,7 +259,7 @@ fn describe_enemy(enemy: &EnemyDataItem, dash: Option<&Dash>, attacking: bool) -
     let motion = enemy.brain.and_then(Brain::motion);
     let motion_name = motion.map(|motion| match (motion, dash) {
         (Motion::Dash, Some(dash)) => dash.name(),
-        _ => motion.kind().name(),
+        _ => motion.name(),
     });
     let action = enemy.brain.and_then(Brain::action);
     let intended_velocity = enemy.kinematics.velocity(enemy.stat_multipliers.speed);
@@ -296,7 +296,7 @@ fn describe_npc(npc: &NpcDataItem) -> Value {
         "entity": entity_id(npc.entity),
         "name": npc.name.map(Name::as_str),
         "position": position(npc.transform),
-        "motion": motion.map(|motion| motion.kind().name()),
+        "motion": motion.map(|motion| motion.name()),
     })
 }
 

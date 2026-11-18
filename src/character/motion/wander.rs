@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, MotionKind, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
     SteeringTargets,
 };
 use crate::interval::Interval;
@@ -15,7 +15,7 @@ const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
 /// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(MotionKind::Wander)]
+#[require(Motion::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,
@@ -88,7 +88,7 @@ impl WanderProgress {
     }
 }
 
-/// Steers each character running [`Motion::Wander`](super::Motion::Wander).
+/// Steers each character running [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,

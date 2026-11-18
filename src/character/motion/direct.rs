@@ -10,36 +10,61 @@ use crate::interval::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
+/// Holds the target within a distance range, backing away when too close and closing in when too
+/// far.
+#[derive(Component, Clone, Copy, Debug)]
+#[require(Motion::KeepDistance)]
+pub struct KeepDistance {
+    distance_range: Interval,
+}
+
+impl KeepDistance {
+    /// Holds the target within `distance_range`.
+    pub fn new(distance_range: Interval) -> Self {
+        Self { distance_range }
+    }
+}
+
 /// Steers each running motion without a system of its own.
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
     characters: Query<SteeredCharacter>,
+    keep_distances: Query<&KeepDistance>,
     mut running_motions: Query<(&MotionOf, &RunningMotion, &mut Steering)>,
 ) {
     for (motion_of, running, mut steering) in &mut running_motions {
         let motion = match running.motion {
             // Steered by their own systems.
-            Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => continue,
+            Motion::Wander | Motion::Orbit | Motion::Dash | Motion::Swoop => continue,
             motion => motion,
         };
+        let keep_distance = running
+            .source
+            .and_then(|source| keep_distances.get(source).ok());
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()
             .and_then(|character| character.build_steer_input(running, &targets, &time));
         *steering = input.map_or(Steering::HALT, |input| {
-            Steering::scaled(steer_direct_motion(motion, &input), 1.0)
+            Steering::scaled(steer_direct_motion(motion, keep_distance, &input), 1.0)
         });
     }
 }
 
-fn steer_direct_motion(motion: Motion, input: &SteerInput) -> Option<Vec2> {
+fn steer_direct_motion(
+    motion: Motion,
+    keep_distance: Option<&KeepDistance>,
+    input: &SteerInput,
+) -> Option<Vec2> {
     match motion {
         Motion::Chase => input.direction_to_target(),
         Motion::Flee => input.direction_from_target(),
         Motion::ReturnToHome => input.direction_to_home(),
-        Motion::KeepDistance(distance_range) => steer_to_hold_distance_range(input, distance_range),
-        Motion::Idle | Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => None,
+        Motion::KeepDistance => keep_distance.and_then(|keep_distance| {
+            steer_to_hold_distance_range(input, keep_distance.distance_range)
+        }),
+        Motion::Idle | Motion::Wander | Motion::Orbit | Motion::Dash | Motion::Swoop => None,
     }
 }
 

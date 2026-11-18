@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionKind, MotionOf, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTargets,
+    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets,
 };
 use crate::interval::Interval;
 
@@ -48,8 +48,9 @@ impl OrbitDirection {
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(MotionKind::Orbit)]
+#[require(Motion::Orbit)]
 pub struct Orbit {
+    distance_range: Interval,
     reroll_interval: Interval,
     switch_chance: f32,
     radial_gain: f32,
@@ -57,8 +58,10 @@ pub struct Orbit {
 }
 
 impl Orbit {
-    pub fn new() -> Self {
+    /// Circles within `distance_range` of the target.
+    pub fn new(distance_range: Interval) -> Self {
         Self {
+            distance_range,
             reroll_interval: ORBIT_REROLL_INTERVAL,
             switch_chance: ORBIT_SWITCH_CHANCE,
             radial_gain: ORBIT_RADIAL_GAIN,
@@ -71,12 +74,6 @@ impl Orbit {
             max_distance_offset,
             ..self
         }
-    }
-}
-
-impl Default for Orbit {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -97,12 +94,7 @@ impl OrbitProgress {
         }
     }
 
-    fn pick_steering_direction(
-        &mut self,
-        orbit: &Orbit,
-        input: &SteerInput,
-        distance_range: Interval,
-    ) -> Option<Vec2> {
+    fn pick_steering_direction(&mut self, orbit: &Orbit, input: &SteerInput) -> Option<Vec2> {
         let target = input.target?;
         let bearing = input.direction_to_target()?;
         let now = input.now;
@@ -141,7 +133,9 @@ impl OrbitProgress {
         };
         // Positive error means too far out, so the correction points at the target.
         let radial = bearing
-            * distance_range.center_error(target.distance - self.distance_offset)
+            * orbit
+                .distance_range
+                .center_error(target.distance - self.distance_offset)
             * orbit.radial_gain;
         Some((tangent + radial).normalize_or_zero())
     }
@@ -156,9 +150,6 @@ pub(super) fn apply_orbit(
     mut running_orbits: Query<(&MotionOf, &RunningMotion, &mut OrbitProgress, &mut Steering)>,
 ) {
     for (motion_of, running, mut progress, mut steering) in &mut running_orbits {
-        let Motion::Orbit(distance_range) = running.motion else {
-            continue;
-        };
         let orbit = running.source.and_then(|source| orbits.get(source).ok());
         let character = characters.get(motion_of.character).ok();
         let input = character
@@ -166,7 +157,7 @@ pub(super) fn apply_orbit(
             .and_then(|character| character.build_steer_input(running, &targets, &time));
         *steering = match (orbit, input) {
             (Some(orbit), Some(input)) => {
-                let direction = progress.pick_steering_direction(orbit, &input, distance_range);
+                let direction = progress.pick_steering_direction(orbit, &input);
                 Steering::scaled(direction, 1.0)
             }
             _ => Steering::HALT,

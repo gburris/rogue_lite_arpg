@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, MotionKind, MotionSources};
+use crate::character::motion::{Dash, Motion, MotionSources};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -40,15 +40,9 @@ const NEEDS_POTION: Consideration = consideration(
     Interval::new(0.42, 0.82),
     Curve::Linear,
 );
-const STOOD_STILL_IN_REACH: Consideration = motion_running_for(
-    "stood still in reach",
-    MotionKind::Idle,
-    WARRIOR_SWING_DELAY,
-);
-const FLEEING: Consideration = flag(
-    "fleeing",
-    ConsiderationInput::MotionRunning(MotionKind::Flee),
-);
+const STOOD_STILL_IN_REACH: Consideration =
+    motion_running_for("stood still in reach", Motion::Idle, WARRIOR_SWING_DELAY);
+const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
 const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL));

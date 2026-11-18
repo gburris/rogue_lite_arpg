@@ -5,8 +5,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    DashProgress, Motion, MotionKind, MotionReach, MotionSources, OrbitProgress, Steering,
-    SwoopProgress, WanderProgress,
+    DashProgress, Motion, MotionReach, MotionSources, OrbitProgress, Steering, SwoopProgress,
+    WanderProgress,
 };
 use crate::prelude::*;
 
@@ -54,8 +54,8 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
         kinematics.stop_moving();
     }
 
-    let kind = running.motion.kind();
-    if !kind.is_finite() {
+    let motion = running.motion;
+    if !motion.is_finite() {
         return;
     }
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
@@ -67,7 +67,7 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
     }
     world.commands().trigger(MotionFinished {
         entity: character,
-        motion: kind,
+        motion,
     });
 }
 
@@ -76,7 +76,7 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(in crate::character) struct MotionFinished {
     pub entity: Entity,
-    pub motion: MotionKind,
+    pub motion: Motion,
 }
 
 /// What [`MotionStatus`] reads of a character: its running motion and motion sources.
@@ -90,7 +90,7 @@ struct CharacterMotionData {
 #[derive(QueryData)]
 struct MotionSourceData {
     entity: Entity,
-    kind: &'static MotionKind,
+    motion: &'static Motion,
     cooldown: Option<&'static Cooldown>,
     reach: Option<&'static MotionReach>,
 }
@@ -111,28 +111,28 @@ impl MotionStatus<'_, '_> {
         self.current_motion(character).map(|(_, running)| running)
     }
 
-    /// Whether a finite motion of `kind` is in progress on `character`. Always false for a
+    /// Whether a finite `motion` is in progress on `character`. Always false for a
     /// continuous motion.
-    pub(in crate::character) fn is_in_progress(&self, character: Entity, kind: MotionKind) -> bool {
-        kind.is_finite()
+    pub(in crate::character) fn is_in_progress(&self, character: Entity, motion: Motion) -> bool {
+        motion.is_finite()
             && self
                 .running_motion(character)
-                .is_some_and(|running| running.motion.kind() == kind)
+                .is_some_and(|running| running.motion == motion)
     }
 
-    /// Whether `character` can start a motion of `kind` now: it has a source for it if the kind
-    /// needs one (see [`MotionKind::needs_source`]), the source's [`Cooldown`] is ready, and
+    /// Whether `character` can start `motion` now: it has a source for it if it
+    /// needs one (see [`Motion::needs_source`]), the source's [`Cooldown`] is ready, and
     /// for a finite motion the character is not interrupted (see [`InterruptionState`]).
-    pub(in crate::character) fn is_ready(&self, character: Entity, kind: MotionKind) -> bool {
+    pub(in crate::character) fn is_ready(&self, character: Entity, motion: Motion) -> bool {
         let is_interrupted = self
             .interruptions
             .get(character)
             .is_ok_and(|interruption| interruption.is_interrupted());
-        if kind.is_finite() && is_interrupted {
+        if motion.is_finite() && is_interrupted {
             return false;
         }
-        let Some(source) = self.source_data(character, kind) else {
-            return !kind.needs_source();
+        let Some(source) = self.source_data(character, motion) else {
+            return !motion.needs_source();
         };
         let now = self.time.elapsed_secs();
         source
@@ -140,10 +140,10 @@ impl MotionStatus<'_, '_> {
             .is_none_or(|cooldown| cooldown.is_ready(now))
     }
 
-    /// The farthest target distance at which a motion of `kind` counts as in reach for
+    /// The farthest target distance at which `motion` counts as in reach for
     /// `character`; `None` without a source or a [`MotionReach`].
-    pub(in crate::character) fn reach(&self, character: Entity, kind: MotionKind) -> Option<f32> {
-        let source = self.source_data(character, kind)?;
+    pub(in crate::character) fn reach(&self, character: Entity, motion: Motion) -> Option<f32> {
+        let source = self.source_data(character, motion)?;
         source.reach.map(|&MotionReach(reach)| reach)
     }
 
@@ -154,22 +154,22 @@ impl MotionStatus<'_, '_> {
         Some((entity, *running))
     }
 
-    fn source_for_kind(&self, character: Entity, kind: MotionKind) -> Option<Entity> {
-        self.source_data(character, kind)
+    fn source_for_motion(&self, character: Entity, motion: Motion) -> Option<Entity> {
+        self.source_data(character, motion)
             .map(|source| source.entity)
     }
 
     fn source_data(
         &self,
         character: Entity,
-        kind: MotionKind,
+        motion: Motion,
     ) -> Option<MotionSourceDataItem<'_, '_>> {
         let character_data = self.characters.get(character).ok()?;
         character_data.sources?.iter().find_map(|source| {
             self.sources
                 .get(source)
                 .ok()
-                .filter(|source_data| *source_data.kind == kind)
+                .filter(|source_data| *source_data.motion == motion)
         })
     }
 }
@@ -187,8 +187,8 @@ impl<'w, 's> MotionCommands<'w, 's> {
         &self.status
     }
 
-    /// Runs `motion` on `character`, steering by `target`. A continuous motion of the kind already
-    /// running keeps its progress and takes the new settings; anything else replaces the running
+    /// Runs `motion` on `character`, steering by `target`. A continuous motion that is already
+    /// running keeps its progress and takes the new target; anything else replaces the running
     /// motion with a fresh one.
     pub(in crate::character) fn start(
         &mut self,
@@ -196,16 +196,15 @@ impl<'w, 's> MotionCommands<'w, 's> {
         motion: Motion,
         target: Option<Entity>,
     ) {
-        let kind = motion.kind();
         let running = RunningMotion {
             motion,
             target,
-            source: self.status.source_for_kind(character, kind),
+            source: self.status.source_for_motion(character, motion),
         };
         let current_motion = self.status.current_motion(character);
         if let Some((entity, current)) = current_motion
-            && !kind.is_finite()
-            && current.motion.kind() == kind
+            && !motion.is_finite()
+            && current.motion == motion
         {
             self.commands.entity(entity).try_insert(running);
             return;
@@ -217,24 +216,24 @@ impl<'w, 's> MotionCommands<'w, 's> {
         let mut running_motion =
             self.commands
                 .spawn((Name::new("Running motion"), MotionOf { character }, running));
-        match kind {
-            MotionKind::Dash => {
+        match motion {
+            Motion::Dash => {
                 running_motion.insert(DashProgress::default());
             }
-            MotionKind::Swoop => {
+            Motion::Swoop => {
                 running_motion.insert(SwoopProgress::default());
             }
-            MotionKind::Orbit => {
+            Motion::Orbit => {
                 running_motion.insert(OrbitProgress::default());
             }
-            MotionKind::Wander => {
+            Motion::Wander => {
                 running_motion.insert(WanderProgress::default());
             }
-            MotionKind::Chase
-            | MotionKind::ReturnToHome
-            | MotionKind::Flee
-            | MotionKind::KeepDistance
-            | MotionKind::Idle => {}
+            Motion::Chase
+            | Motion::ReturnToHome
+            | Motion::Flee
+            | Motion::KeepDistance
+            | Motion::Idle => {}
         }
     }
 
@@ -262,7 +261,7 @@ pub(super) fn end_interrupted_motions(
     characters: Query<InterruptionState>,
 ) {
     for (entity, motion_of, running) in &running_motions {
-        if !running.motion.kind().is_finite() {
+        if !running.motion.is_finite() {
             continue;
         }
         let is_interrupted = characters

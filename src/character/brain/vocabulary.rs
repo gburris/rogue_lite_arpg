@@ -11,7 +11,7 @@ impl BrainVocabulary for CharacterVocabulary {
     type Input = ConsiderationInput;
 
     fn motion_reports_finish(motion: Motion) -> bool {
-        motion.kind().is_finite()
+        motion.is_finite()
     }
 
     /// Idling never reports a finish. A sustained use doesn't either, which decisions check when a

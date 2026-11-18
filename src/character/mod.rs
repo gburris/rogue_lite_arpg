@@ -29,9 +29,7 @@ pub mod prelude {
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
-    pub use super::motion::{
-        CurrentMotion, Dash, Motion, MotionKind, MotionSources, Wander, WanderProgress,
-    };
+    pub use super::motion::{CurrentMotion, Dash, Motion, MotionSources, Wander, WanderProgress};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
         Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,

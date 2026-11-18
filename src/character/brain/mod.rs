@@ -31,7 +31,7 @@ use self::started_motion::StartedMotion;
 pub use self::vocabulary::BrainDefinition;
 pub(super) use self::vocabulary::{Behavior, Consideration};
 use super::motion::{
-    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionKind, MotionStatus,
+    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus,
 };
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -102,13 +102,13 @@ impl Brain {
     }
 
     /// Whether any behavior with a motion of `kind` is in a start roll retry delay.
-    fn is_start_roll_waiting(&self, kind: MotionKind, now: f32) -> bool {
+    fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
         self.definition
             .behaviors
             .iter()
             .zip(&self.start_roll_ready_at)
             .any(|(behavior, &ready_at)| {
-                now < ready_at && behavior.motion.is_some_and(|held| held.kind() == kind)
+                now < ready_at && behavior.motion.is_some_and(|held| held == motion)
             })
     }
 
@@ -122,7 +122,7 @@ impl Brain {
             return false;
         }
 
-        let motion_available = |motion: Motion| inputs.is_motion_ready(motion.kind());
+        let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
         let action_available = |action: Action| match action {
             Action::Idle => true,
             Action::Use(_) => {

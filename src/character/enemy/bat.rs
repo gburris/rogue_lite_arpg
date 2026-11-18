@@ -13,7 +13,7 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    Motion, MotionKind, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
+    KeepDistance, Motion, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -32,12 +32,12 @@ const SWOOP_COOLDOWN: f32 = 2.0;
 /// can start.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
-    ConsiderationInput::MotionReady(MotionKind::Swoop),
+    ConsiderationInput::MotionReady(Motion::Swoop),
 )
 .inverted("swoop cooling down");
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
-    ConsiderationInput::MotionReachFraction(MotionKind::Swoop),
+    ConsiderationInput::MotionReachFraction(Motion::Swoop),
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
@@ -83,7 +83,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -91,7 +91,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(CAST_CORE_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -104,7 +104,7 @@ const CORNERED: Consideration =
 /// Slides along whatever pins a bat backing away, circling the target until the bat is back
 /// past the inner cast edge.
 const BAT_SLIP_AWAY: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     6.5,
@@ -246,7 +246,9 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
         MotionSources [
-            ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+            ~Orbit::new(CAST_DISTANCE_RANGE).with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+            --
+            ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
             --
             enemy_wander()
             --

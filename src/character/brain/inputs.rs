@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, HomeArea, MotionKind, MotionStatus};
+use super::{Brain, HomeArea, Motion, MotionStatus};
 use crate::character::Allies;
 use crate::character::state::BlockedState;
 use crate::prelude::*;
@@ -27,18 +27,18 @@ pub enum ConsiderationInput {
     TargetDistance,
     MissingHealth,
     ManaFraction,
-    /// Whether a motion of this kind is running.
-    MotionRunning(MotionKind),
-    /// Whether the character can start a motion of this kind (see [`MotionStatus::is_ready`]) and
+    /// Whether this motion is running.
+    MotionRunning(Motion),
+    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and
     /// no behavior with one is in a start roll retry delay.
-    MotionReady(MotionKind),
-    /// Seconds the running motion has held its slot when it is of this kind, else zero.
-    SecondsInMotion(MotionKind),
+    MotionReady(Motion),
+    /// Seconds the running motion has held its slot when it is this motion, else zero.
+    SecondsInMotion(Motion),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
-    /// Target distance over the reach of this kind of motion; at most `1.0` is in reach.
-    MotionReachFraction(MotionKind),
+    /// Target distance over the reach of this motion; at most `1.0` is in reach.
+    MotionReachFraction(Motion),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     /// The closest ally's distance over this action's reach; absent with no ally alive.
@@ -89,8 +89,10 @@ impl DecisionInputs<'_, '_, '_> {
     }
 
     /// See [`MotionStatus::is_ready`].
-    pub fn is_motion_ready(&self, kind: MotionKind) -> bool {
-        self.queries.motions.is_ready(self.components.entity, kind)
+    pub fn is_motion_ready(&self, motion: Motion) -> bool {
+        self.queries
+            .motions
+            .is_ready(self.components.entity, motion)
     }
 
     /// Whether the character has an action source for `action`; never for `Idle`, which has none.
@@ -174,22 +176,22 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::ManaFraction => {
                 Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
-            ConsiderationInput::MotionRunning(kind) => Some(f32::from(
-                brain.motion().is_some_and(|running| running.kind() == kind),
+            ConsiderationInput::MotionRunning(motion) => Some(f32::from(
+                brain.motion().is_some_and(|running| running == motion),
             )),
-            ConsiderationInput::MotionReady(kind) => Some(f32::from(
-                self.is_motion_ready(kind) && !brain.is_start_roll_waiting(kind, self.now),
+            ConsiderationInput::MotionReady(motion) => Some(f32::from(
+                self.is_motion_ready(motion) && !brain.is_start_roll_waiting(motion, self.now),
             )),
-            ConsiderationInput::SecondsInMotion(kind) => Some(
+            ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
                     .current_motion_behavior()
-                    .filter(|(_, held)| held.kind() == kind)
+                    .filter(|(_, held)| *held == motion)
                     .map_or(0.0, |(running, _)| self.now - running.started_at),
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
-            ConsiderationInput::MotionReachFraction(kind) => {
-                let reach = self.queries.motions.reach(self.components.entity, kind);
+            ConsiderationInput::MotionReachFraction(motion) => {
+                let reach = self.queries.motions.reach(self.components.entity, motion);
                 self.target_reach_fraction(reach)
             }
             ConsiderationInput::ActionReachFraction(action) => {

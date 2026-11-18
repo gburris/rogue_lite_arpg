@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, MotionKind, MotionReach, MotionSources, Orbit};
+use crate::character::motion::{Dash, KeepDistance, Motion, MotionReach, MotionSources, Orbit};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -38,7 +38,7 @@ const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
 const IN_DASH_REACH: Consideration = within_reach(
     "in dash reach",
-    ConsiderationInput::MotionReachFraction(MotionKind::Dash),
+    ConsiderationInput::MotionReachFraction(Motion::Dash),
 );
 
 /// Fire mage firing-position quality: zero at the inner cast edge, full 60
@@ -83,7 +83,7 @@ const CAST_WEIGHT: f32 = 8.0;
 
 /// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -99,7 +99,7 @@ const FIRE_RALLY: Behavior = Behavior::new(
 );
 /// Circles on its firing lane between casts, so it never stands around waiting on the staff.
 const ICE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -108,7 +108,7 @@ const ICE_ORBIT: Behavior = Behavior::new(
 /// Breaks contact while mana is low; the threshold's exit holds it until the
 /// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -116,7 +116,7 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 );
 /// Ice bolts are expensive, so the break enters earlier and lasts longer.
 const ICE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -306,7 +306,9 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         MotionSources [
             enemy_wander()
             --
-            ~Orbit::new()
+            ~Orbit::new(CAST_DISTANCE_RANGE)
+            --
+            ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
             ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
             ~{MotionReach(ICE_SLIDE_REACH)}
@@ -336,7 +338,9 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
                 CAST_MIN_RANGE - 10.0,
             )
             --
-            ~Orbit::new()
+            ~Orbit::new(CAST_DISTANCE_RANGE)
+            --
+            ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
         ]
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)

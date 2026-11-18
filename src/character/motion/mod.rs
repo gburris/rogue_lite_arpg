@@ -12,13 +12,11 @@ mod wander;
 use bevy::prelude::*;
 
 pub use self::dash::Dash;
-use self::dash::DashProgress;
 pub use self::direct::KeepDistance;
 pub use self::home_area::HomeArea;
 use self::motion_source::TunedBy;
 pub use self::motion_source::{MotionReach, MotionSources};
 pub use self::orbit::Orbit;
-use self::orbit::OrbitProgress;
 pub use self::running_motion::CurrentMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
 use self::running_motion::{MotionOf, RunningMotion};
@@ -29,7 +27,6 @@ use self::steer_input::{
 pub use self::steering::TurnRate;
 use self::steering::{DecayingSpeedBoost, Steering};
 pub use self::swoop::Swoop;
-use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};
 use crate::prelude::*;
 
@@ -128,4 +125,8 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .in_set(SimulationSystems::Steer),
     );
+    app.add_observer(dash::on_dash_started)
+        .add_observer(swoop::on_swoop_started)
+        .add_observer(orbit::on_orbit_started)
+        .add_observer(wander::on_wander_started);
 }

@@ -100,6 +100,22 @@ fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Ve
     (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
 }
 
+/// Gives a newly started dash its [`DashProgress`].
+pub(super) fn on_dash_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_dash = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Dash);
+    if is_dash {
+        commands
+            .entity(added.entity)
+            .insert(DashProgress::default());
+    }
+}
+
 /// Advances each dash in progress. Ends it after its distance or when its target is lost.
 pub(super) fn apply_dash(
     time: Res<Time<Virtual>>,

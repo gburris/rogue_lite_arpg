@@ -141,6 +141,22 @@ impl OrbitProgress {
     }
 }
 
+/// Gives a newly started orbit its [`OrbitProgress`].
+pub(super) fn on_orbit_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_orbit = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Orbit);
+    if is_orbit {
+        commands
+            .entity(added.entity)
+            .insert(OrbitProgress::default());
+    }
+}
+
 /// Circles the target while the character runs [`Motion::Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,

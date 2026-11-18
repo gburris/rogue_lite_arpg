@@ -35,6 +35,22 @@ impl Default for Swoop {
     }
 }
 
+/// Gives a newly started swoop its [`SwoopProgress`].
+pub(super) fn on_swoop_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_swoop = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Swoop);
+    if is_swoop {
+        commands
+            .entity(added.entity)
+            .insert(SwoopProgress::default());
+    }
+}
+
 /// Advances each swoop in progress. Ends it once past the target or when the target is lost.
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,

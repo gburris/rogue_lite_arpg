@@ -4,10 +4,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::{
-    DashProgress, Motion, MotionReach, MotionSources, OrbitProgress, Steering, SwoopProgress,
-    TunedBy, WanderProgress,
-};
+use super::{Motion, MotionReach, MotionSources, Steering, TunedBy};
 use crate::prelude::*;
 
 /// Links a running motion to the character it moves; see [`RunningMotion`].
@@ -30,9 +27,9 @@ impl CurrentMotion {
 
 /// A character's running motion, on its own entity linked to the character by [`MotionOf`] and to
 /// the motion source that tunes it by [`TunedBy`]: the motion and the entity it steers by.
-/// [`MotionCommands`] spawns it with the motion's progress and [`Steering`], and a
-/// [`FiniteMotion`] despawns it when it ends. Despawning it, however the motion ended, halts the
-/// character and, for a finite motion, starts the source's [`Cooldown`] and fires
+/// [`MotionCommands`] spawns it with [`Steering`], each motion's own observer adds that motion's
+/// progress, and a [`FiniteMotion`] despawns it when it ends. Despawning it, however the motion
+/// ended, halts the character and, for a finite motion, starts the source's [`Cooldown`] and fires
 /// [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
@@ -224,25 +221,6 @@ impl<'w, 's> MotionCommands<'w, 's> {
         }
         if motion.is_finite() {
             running_motion.insert(FiniteMotion);
-        }
-        match motion {
-            Motion::Dash => {
-                running_motion.insert(DashProgress::default());
-            }
-            Motion::Swoop => {
-                running_motion.insert(SwoopProgress::default());
-            }
-            Motion::Orbit => {
-                running_motion.insert(OrbitProgress::default());
-            }
-            Motion::Wander => {
-                running_motion.insert(WanderProgress::default());
-            }
-            Motion::Chase
-            | Motion::ReturnToHome
-            | Motion::Flee
-            | Motion::KeepDistance
-            | Motion::Idle => {}
         }
     }
 

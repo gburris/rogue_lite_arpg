@@ -88,6 +88,22 @@ impl WanderProgress {
     }
 }
 
+/// Gives a newly started wander its [`WanderProgress`].
+pub(super) fn on_wander_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_wander = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Wander);
+    if is_wander {
+        commands
+            .entity(added.entity)
+            .insert(WanderProgress::default());
+    }
+}
+
 /// Steers each character running [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,

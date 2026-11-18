@@ -146,7 +146,9 @@ pub(super) fn apply_dash(
         match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
-                commands.entity(entity).try_remove::<DashProgress>();
+                commands
+                    .entity(entity)
+                    .try_remove::<(DashProgress, RunningMotion)>();
             }
         }
     }

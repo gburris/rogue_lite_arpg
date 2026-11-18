@@ -9,7 +9,7 @@ use crate::prelude::*;
 
 /// The motion a character runs and the entity it steers by, set through [`MotionCommands`]. A
 /// finite motion also has a progress component; removing it ends the motion and fires
-/// [`MotionFinished`]. This component stays until the next request.
+/// [`MotionFinished`]. A finite motion that ends removes this component with its progress.
 #[derive(Component, Clone, Copy, Debug)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
@@ -217,7 +217,7 @@ pub(super) fn end_interrupted_motions(
         if interruption.is_interrupted() {
             commands
                 .entity(entity)
-                .try_remove::<(DashProgress, SwoopProgress)>();
+                .try_remove::<(RunningMotion, DashProgress, SwoopProgress)>();
         }
     }
 }

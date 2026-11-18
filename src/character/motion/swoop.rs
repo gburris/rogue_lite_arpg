@@ -71,7 +71,9 @@ pub(super) fn apply_swoop(
         match step {
             MotionStep::Steer(next) => *steering = next,
             MotionStep::Finished => {
-                commands.entity(entity).try_remove::<SwoopProgress>();
+                commands
+                    .entity(entity)
+                    .try_remove::<(SwoopProgress, RunningMotion)>();
             }
         }
     }

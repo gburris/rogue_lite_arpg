@@ -121,12 +121,10 @@ impl SwoopProgress {
 }
 
 fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
-    let entity = world.entity(context.entity);
-    let (Some(progress), Some(&MotionOf { character }), Some(running)) = (
-        entity.get::<SwoopProgress>(),
-        entity.get::<MotionOf>(),
-        entity.get::<RunningMotion>(),
-    ) else {
+    let Ok((progress, &MotionOf { character }, running)) = world
+        .entity(context.entity)
+        .get_components::<(&SwoopProgress, &MotionOf, &RunningMotion)>()
+    else {
         return;
     };
     if progress.path.is_none() {

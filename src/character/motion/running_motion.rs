@@ -43,9 +43,9 @@ pub(in crate::character) struct RunningMotion {
 }
 
 fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
-    let entity = world.entity(context.entity);
-    let (Some(&MotionOf { character }), Some(&running)) =
-        (entity.get::<MotionOf>(), entity.get::<RunningMotion>())
+    let Ok((&MotionOf { character }, &running)) = world
+        .entity(context.entity)
+        .get_components::<(&MotionOf, &RunningMotion)>()
     else {
         return;
     };

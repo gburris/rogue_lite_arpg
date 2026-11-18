@@ -8,17 +8,13 @@ use crate::interval::Interval;
 
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
-/// Steers each running motion without a system of its own, and halts characters without one.
+/// Steers each running motion without a system of its own.
 pub(super) fn apply_direct_steering(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
-    mut characters: Query<(SteeredCharacter, Option<&RunningMotion>, &mut Steering)>,
+    mut characters: Query<(SteeredCharacter, &RunningMotion, &mut Steering)>,
 ) {
     for (character, running, mut steering) in &mut characters {
-        let Some(running) = running else {
-            *steering = Steering::HALT;
-            continue;
-        };
         *steering = match running.motion {
             // Steered by their own systems.
             Motion::Wander | Motion::Orbit(_) | Motion::Dash | Motion::Swoop => continue,

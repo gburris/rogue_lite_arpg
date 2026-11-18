@@ -28,7 +28,7 @@ pub(super) use self::perception::Watching;
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 use self::started_motion::StartedMotion;
-use super::motion::{HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus, Steering};
+use super::motion::{HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -40,7 +40,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// [`DECISION_PERIOD`] with a random per-brain offset. Its requests start and stop the game's
 /// motions and actions, which report back with [`MotionFinished`] or [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedActions, StartedMotion, Steering, Kinematics)]
+#[require(StartedActions, StartedMotion)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,

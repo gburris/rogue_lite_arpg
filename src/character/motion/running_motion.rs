@@ -1,19 +1,31 @@
+use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    Dash, DashProgress, Motion, Orbit, OrbitProgress, Swoop, SwoopProgress, Wander, WanderProgress,
+    Dash, DashProgress, Motion, Orbit, OrbitProgress, Steering, Swoop, SwoopProgress, Wander,
+    WanderProgress,
 };
 use crate::prelude::*;
 
 /// The motion a character runs and the entity it steers by, set through [`MotionCommands`]. A
 /// finite motion also has a progress component; removing it ends the motion and fires
 /// [`MotionFinished`]. A finite motion that ends removes this component with its progress.
+/// Steering drives only characters with this component, and removing it halts the character.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(Steering)]
+#[component(on_remove = halt_character)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
     pub target: Option<Entity>,
+}
+
+fn halt_character(mut world: DeferredWorld, context: HookContext) {
+    if let Some(mut kinematics) = world.get_mut::<Kinematics>(context.entity) {
+        kinematics.stop_moving();
+    }
 }
 
 /// A finite motion ended: it completed, lost its target, was interrupted (see

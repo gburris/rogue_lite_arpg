@@ -20,9 +20,8 @@ pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStat
 use self::steer_input::{
     BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
 };
-use self::steering::DecayingSpeedBoost;
-pub(super) use self::steering::Steering;
 pub use self::steering::TurnRate;
+use self::steering::{DecayingSpeedBoost, Steering};
 pub use self::swoop::Swoop;
 use self::swoop::SwoopProgress;
 pub use self::wander::{Wander, WanderProgress};
@@ -167,6 +166,7 @@ pub(super) fn plugin(app: &mut App) {
             wander::apply_wander,
             home_area::move_homes_of_blocked_characters,
             direct::apply_direct_steering,
+            steering::decay_speed_boosts,
             steering::apply_steering,
         )
             .chain()

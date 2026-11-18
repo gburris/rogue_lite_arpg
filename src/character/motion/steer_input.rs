@@ -114,6 +114,10 @@ impl SteeringTarget {
     }
 }
 
+/// The velocity steering assumes for a target without [`Kinematics`], such as a location hint.
+#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
+pub(in crate::character) struct AssumedVelocity(pub Vec2);
+
 /// Locates the targets of running motions.
 #[derive(SystemParam)]
 pub(super) struct SteeringTargets<'w, 's> {
@@ -123,6 +127,7 @@ pub(super) struct SteeringTargets<'w, 's> {
         (
             &'static Transform,
             Option<(&'static Kinematics, &'static StatMultipliers)>,
+            Option<&'static AssumedVelocity>,
         ),
     >,
 }
@@ -130,11 +135,15 @@ pub(super) struct SteeringTargets<'w, 's> {
 impl SteeringTargets<'_, '_> {
     /// `target` relative to `observer_position`; `None` if the target no longer exists.
     fn locate(&self, observer_position: Vec2, target: Entity) -> Option<SteeringTarget> {
-        let (transform, movement) = self.targets.get(target).ok()?;
+        let (transform, movement, assumed_velocity) = self.targets.get(target).ok()?;
         let position = transform.translation.xy();
-        let velocity = movement.map_or(Vec2::ZERO, |(kinematics, stat_multipliers)| {
-            kinematics.velocity(stat_multipliers.speed)
-        });
+        let velocity = match (movement, assumed_velocity) {
+            (Some((kinematics, stat_multipliers)), _) => {
+                kinematics.velocity(stat_multipliers.speed)
+            }
+            (None, Some(&AssumedVelocity(velocity))) => velocity,
+            (None, None) => Vec2::ZERO,
+        };
 
         Some(SteeringTarget {
             position,

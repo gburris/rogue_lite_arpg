@@ -3,10 +3,9 @@
 use std::f32::consts::FRAC_PI_4;
 
 use avian2d::prelude::{RayCaster, RayHits};
-use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
-use super::BrainSystems;
+use super::{AssumedVelocity, BrainSystems};
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.
@@ -139,11 +138,12 @@ pub(in crate::character) struct Watching(pub Entity);
 #[relationship_target(relationship = Watching)]
 pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
-/// Where a character believes its target is, as an entity a motion can steer toward. A targeting
-/// character has one, kept at the target's last known position (see [`TargetInfo`]), from when
-/// targeting starts until it ends.
+/// Where a character believes its target is, as an entity its motions steer by. A targeting
+/// character has one from when targeting starts until it ends, kept where [`TargetInfo`] tracks
+/// the target and moving at the target's tracked velocity.
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = TargetLocationHint)]
+#[require(AssumedVelocity)]
 pub(crate) struct LocationHint {
     pub character: Entity,
 }
@@ -153,38 +153,16 @@ pub(crate) struct LocationHint {
 #[relationship_target(relationship = LocationHint, linked_spawn)]
 pub(crate) struct TargetLocationHint(Entity);
 
+impl TargetLocationHint {
+    pub(super) fn location_hint(&self) -> Entity {
+        self.0
+    }
+}
+
 /// Tracks the target's position without line of sight until removed. Damage aggro schedules its
 /// removal.
 #[derive(Component)]
 pub(crate) struct TargetLock;
-
-/// What a character targets, whether it sees the target or holds a [`TargetLock`], and its
-/// [`LocationHint`].
-#[derive(QueryData)]
-pub(super) struct TargetingData {
-    target_info: Option<&'static TargetInfo>,
-    targeting: Option<&'static Targeting>,
-    location_hint: Option<&'static TargetLocationHint>,
-    has_lock: Has<TargetLock>,
-}
-
-impl TargetingDataItem<'_, '_> {
-    /// The entity a motion steers by: the target while it is visible or locked, otherwise the
-    /// target's [`LocationHint`]; `None` without a target.
-    pub(super) fn motion_target(&self) -> Option<Entity> {
-        let targeting = self.targeting?;
-        let target_info = self.target_info?;
-        if !target_info.has_finite_distance() {
-            return None;
-        }
-
-        if target_info.line_of_sight || self.has_lock {
-            Some(targeting.0)
-        } else {
-            self.location_hint.map(|location_hint| location_hint.0)
-        }
-    }
-}
 
 // ---------------------
 // VISION + PERCEPTION
@@ -288,14 +266,16 @@ fn is_target_in_sight(
     );
 }
 
-/// Moves each [`LocationHint`] to its character's last known target position.
+/// Moves each [`LocationHint`] to where its character tracks the target, at the tracked
+/// velocity.
 fn move_location_hints(
     characters: Query<(&TargetInfo, &TargetLocationHint)>,
-    mut location_hints: Query<&mut Transform, With<LocationHint>>,
+    mut location_hints: Query<(&mut Transform, &mut AssumedVelocity), With<LocationHint>>,
 ) {
     for (target_info, location_hint) in &characters {
-        if let Ok(mut transform) = location_hints.get_mut(location_hint.0) {
+        if let Ok((mut transform, mut velocity)) = location_hints.get_mut(location_hint.0) {
             transform.translation = target_info.position.extend(transform.translation.z);
+            **velocity = target_info.velocity;
         }
     }
 }
@@ -355,9 +335,11 @@ fn on_targeting_added_spawn_location_hint(
     mut commands: Commands,
     target_infos: Query<&TargetInfo>,
 ) {
-    let position = target_infos
+    let (position, velocity) = target_infos
         .get(added.entity)
-        .map_or(Vec2::ZERO, |target_info| target_info.position);
+        .map_or((Vec2::ZERO, Vec2::ZERO), |target_info| {
+            (target_info.position, target_info.velocity)
+        });
 
     commands.spawn((
         Name::new("Location hint"),
@@ -365,6 +347,7 @@ fn on_targeting_added_spawn_location_hint(
             character: added.entity,
         },
         Transform::from_translation(position.extend(0.0)),
+        AssumedVelocity(velocity),
     ));
 }
 

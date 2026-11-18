@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetingData};
+use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetLocationHint};
 
 /// The running behavior the brain last started a motion for, so each behavior starts its motion
 /// once and a finished motion can name its behavior.
@@ -27,14 +27,20 @@ impl StartedMotion {
     }
 }
 
-/// Starts the motion of the brain's motion behavior once per running behavior, keeps its target
-/// current, and stops it when the motion slot is empty. A finite motion already in progress is
-/// adopted, so its finish ends the new behavior.
+/// Starts the motion of the brain's motion behavior once per running behavior, steering by the
+/// target's [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot
+/// is empty. A new target brings a new hint, which retargets the running motion. A finite motion
+/// already in progress is adopted, so its finish ends the new behavior.
 pub(super) fn apply_motion_requests(
     mut motions: MotionCommands,
-    mut brains: Query<(Entity, &Brain, TargetingData, &mut StartedMotion)>,
+    mut brains: Query<(
+        Entity,
+        &Brain,
+        Option<&TargetLocationHint>,
+        &mut StartedMotion,
+    )>,
 ) {
-    for (entity, brain, targeting, mut started_motion) in &mut brains {
+    for (entity, brain, location_hint, mut started_motion) in &mut brains {
         let Some((behavior, motion)) = brain.current_motion_behavior() else {
             if started_motion.behavior.take().is_some() {
                 motions.stop(entity);
@@ -42,11 +48,7 @@ pub(super) fn apply_motion_requests(
             continue;
         };
 
-        let target = if motion.needs_target() {
-            targeting.motion_target()
-        } else {
-            None
-        };
+        let target = location_hint.map(TargetLocationHint::location_hint);
 
         if started_motion.behavior_run_id() != Some(behavior.behavior_run_id) {
             started_motion.behavior = Some(behavior);

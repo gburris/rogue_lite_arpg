@@ -17,6 +17,7 @@ pub use self::orbit::Orbit;
 use self::orbit::OrbitProgress;
 use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
+pub(super) use self::steer_input::AssumedVelocity;
 use self::steer_input::{
     BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
 };

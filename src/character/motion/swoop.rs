@@ -256,6 +256,8 @@ impl SwoopPath {
 /// The quadratic Bézier curve from `start` to `end` pulled toward `control`, raised to the cubic
 /// segment that traces it exactly.
 fn build_quadratic_bezier(start: Vec2, control: Vec2, end: Vec2) -> CubicSegment<Vec2> {
+    // A quadratic leaves each end at twice the offset to `control`, a cubic at three times the
+    // offset to its inner point, so inner points 2/3 of the way to `control` trace the same curve.
     CubicSegment::new_bezier([
         start,
         start + (control - start) * (2.0 / 3.0),

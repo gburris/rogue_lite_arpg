@@ -24,7 +24,7 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 /// [`step_in`] build one with its [`MotionKey`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(FiniteMotion)]
-pub struct Dash {
+pub(super) struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,
     bearing_offset: f32,

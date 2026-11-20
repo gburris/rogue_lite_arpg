@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 /// Names a motion source, so a brain can pick which of a character's motions to run. The source's
-/// tuning component decides how the motion steers and requires its key, except a
-/// [`Dash`](super::dash::Dash), which serves several keys; see [`kite`](super::kite).
+/// tuning component decides how the motion steers and requires its key; a
+/// [`Dash`](super::dash::Dash) serves several keys.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MotionKey {
     Idle,

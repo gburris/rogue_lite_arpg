@@ -2,16 +2,16 @@ use bevy::prelude::*;
 
 use super::{Brain, Motion, MotionCommands, RunningBehavior, TargetLocationHint};
 
-/// The running behavior the brain last started a motion for, so each behavior starts its motion
-/// once and a finished motion can name its behavior.
+/// The running behavior the brain last issued a motion for, by starting or adopting it, so each
+/// behavior issues its motion once and a finished motion can name its behavior.
 #[derive(Component, Clone, Copy, Debug, Default)]
-pub(super) struct StartedMotion {
+pub(super) struct IssuedMotion {
     behavior: Option<RunningBehavior>,
 }
 
-impl StartedMotion {
+impl IssuedMotion {
     /// The run id of the behavior a finished `motion` belongs to; `None` if the brain has
-    /// since started a different motion.
+    /// since issued a different motion.
     pub(super) fn behavior_run_id_of(&self, motion: Motion) -> Option<u32> {
         self.behavior
             .filter(|behavior| behavior.motion.is_some_and(|started| started == motion))
@@ -20,6 +20,10 @@ impl StartedMotion {
 
     fn behavior_run_id(&self) -> Option<u32> {
         self.behavior.map(|behavior| behavior.behavior_run_id)
+    }
+
+    fn record_issued_motion(&mut self, running: RunningBehavior) {
+        self.behavior = Some(running);
     }
 }
 
@@ -33,12 +37,12 @@ pub(super) fn apply_motion_requests(
         Entity,
         &Brain,
         Option<&TargetLocationHint>,
-        &mut StartedMotion,
+        &mut IssuedMotion,
     )>,
 ) {
-    for (entity, brain, location_hint, mut started_motion) in &mut brains {
+    for (entity, brain, location_hint, mut issued_motion) in &mut brains {
         let Some((behavior, motion)) = brain.current_motion_behavior() else {
-            if started_motion.behavior.take().is_some() {
+            if issued_motion.behavior.take().is_some() {
                 motions.stop(entity);
             }
             continue;
@@ -46,8 +50,8 @@ pub(super) fn apply_motion_requests(
 
         let target = location_hint.map(TargetLocationHint::location_hint);
 
-        if started_motion.behavior_run_id() != Some(behavior.behavior_run_id) {
-            started_motion.behavior = Some(behavior);
+        if issued_motion.behavior_run_id() != Some(behavior.behavior_run_id) {
+            issued_motion.record_issued_motion(behavior);
             if !motions.status().is_in_progress(entity, motion) {
                 // `retarget` reads the running motion from before this start, so skip it.
                 motions.start(entity, motion, target);

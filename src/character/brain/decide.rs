@@ -11,7 +11,7 @@ use rand::RngExt;
 use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::started_motion::StartedMotion;
+use super::issued_motion::IssuedMotion;
 use super::vocabulary::{Behavior, BehaviorScoreExplanation};
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
 
@@ -94,7 +94,7 @@ pub(super) fn on_motion_finished(
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
-    started_motions: Query<&StartedMotion>,
+    issued_motions: Query<&IssuedMotion>,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
@@ -105,10 +105,10 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let Some(behavior_run_id) = started_motions
+    let Some(behavior_run_id) = issued_motions
         .get(finished.entity)
         .ok()
-        .and_then(|started_motion| started_motion.behavior_run_id_of(finished.motion))
+        .and_then(|issued_motion| issued_motion.behavior_run_id_of(finished.motion))
     else {
         return;
     };

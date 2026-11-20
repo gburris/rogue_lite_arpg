@@ -5,21 +5,22 @@ mod decide;
 mod diagnostics;
 mod engine;
 mod inputs;
+mod issued_motion;
 mod perception;
-mod started_motion;
 mod vocabulary;
 
 use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::Action;
-use self::action::{ActionOutcome, BehaviorActionFinished, StartedActions};
+use self::action::{ActionOutcome, BehaviorActionFinished, IssuedActions};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
 pub(super) use self::engine::{CommitPolicy, Curve};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
+use self::issued_motion::IssuedMotion;
 use self::perception::TargetLocationHint;
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
@@ -27,7 +28,6 @@ pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
-use self::started_motion::StartedMotion;
 pub use self::vocabulary::BrainDefinition;
 pub(super) use self::vocabulary::{Behavior, Consideration};
 use super::motion::{
@@ -44,7 +44,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// [`DECISION_PERIOD`] with a random per-brain offset. Its requests start and stop the game's
 /// motions and actions, which report back with [`MotionFinished`] or [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
-#[require(StartedActions, StartedMotion)]
+#[require(IssuedActions, IssuedMotion)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
@@ -324,7 +324,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             (
                 decide::decide_behavior.in_set(BrainSystems::Decision),
-                started_motion::apply_motion_requests.in_set(BrainSystems::Execute),
+                issued_motion::apply_motion_requests.in_set(BrainSystems::Execute),
             ),
         );
 }

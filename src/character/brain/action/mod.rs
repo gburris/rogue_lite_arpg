@@ -1,8 +1,8 @@
-mod started_actions;
+mod issued_actions;
 
 use bevy::prelude::*;
 
-pub(super) use self::started_actions::StartedActions;
+pub(super) use self::issued_actions::IssuedActions;
 use super::BrainSystems;
 use crate::prelude::*;
 
@@ -30,9 +30,9 @@ impl Action {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        started_actions::apply_action_requests.in_set(BrainSystems::Execute),
+        issued_actions::apply_action_requests.in_set(BrainSystems::Execute),
     )
-    .add_observer(started_actions::on_action_finished);
+    .add_observer(issued_actions::on_action_finished);
 }
 
 /// A use ended. It ends the behavior stamped `behavior_run_id` only while that behavior still

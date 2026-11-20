@@ -5,21 +5,21 @@ use super::{Action, ActionOutcome, BehaviorActionFinished};
 use crate::character::brain::{Brain, RunningBehavior};
 use crate::prelude::*;
 
-/// The behavior run id of the last use started by each key, so a committed action starts once
-/// and its finish names its behavior.
+/// The behavior run id that last issued each key, by starting or adopting its use, so a committed
+/// action is issued once and its finish names its behavior.
 #[derive(Component, Clone, Debug, Default)]
-pub(in crate::character::brain) struct StartedActions(HashMap<ActionKey, u32>);
+pub(in crate::character::brain) struct IssuedActions(HashMap<ActionKey, u32>);
 
-impl StartedActions {
+impl IssuedActions {
     fn behavior_run_id(&self, key: ActionKey) -> Option<u32> {
         self.0.get(&key).copied()
     }
 
-    fn was_started_by(&self, key: ActionKey, running: RunningBehavior) -> bool {
+    fn was_issued_by(&self, key: ActionKey, running: RunningBehavior) -> bool {
         running.committed && self.behavior_run_id(key) == Some(running.behavior_run_id)
     }
 
-    fn record_start(&mut self, key: ActionKey, running: RunningBehavior) {
+    fn record_issued_action(&mut self, key: ActionKey, running: RunningBehavior) {
         self.0.insert(key, running.behavior_run_id);
     }
 }
@@ -32,9 +32,9 @@ impl StartedActions {
 pub(super) fn apply_action_requests(
     mut commands: Commands,
     mut actions: ActionCommands,
-    mut brains: Query<(Entity, &Brain, &mut StartedActions)>,
+    mut brains: Query<(Entity, &Brain, &mut IssuedActions)>,
 ) {
-    for (entity, brain, mut started_actions) in &mut brains {
+    for (entity, brain, mut issued_actions) in &mut brains {
         for key in ActionKey::all() {
             if brain.running_behavior_with(Action::Use(key)).is_none() {
                 actions.stop_sustained_use(entity, key);
@@ -44,17 +44,17 @@ pub(super) fn apply_action_requests(
             let Some(key) = running.action.and_then(Action::key) else {
                 continue;
             };
-            if started_actions.was_started_by(key, running) {
+            if issued_actions.was_issued_by(key, running) {
                 continue;
             }
             if actions.status().is_using(entity, key) {
                 if running.committed {
-                    started_actions.record_start(key, running);
+                    issued_actions.record_issued_action(key, running);
                 }
                 continue;
             }
             if actions.try_use(entity, key).is_ok() {
-                started_actions.record_start(key, running);
+                issued_actions.record_issued_action(key, running);
             } else {
                 running.report_not_started(&mut commands, entity);
             }
@@ -66,12 +66,12 @@ pub(super) fn apply_action_requests(
 pub(super) fn on_action_finished(
     finished: On<ActionFinished>,
     mut commands: Commands,
-    started_actions: Query<&StartedActions>,
+    issued_actions: Query<&IssuedActions>,
 ) {
-    let Some(behavior_run_id) = started_actions
+    let Some(behavior_run_id) = issued_actions
         .get(finished.holder)
         .ok()
-        .and_then(|started_actions| started_actions.behavior_run_id(finished.key))
+        .and_then(|issued_actions| issued_actions.behavior_run_id(finished.key))
     else {
         return;
     };

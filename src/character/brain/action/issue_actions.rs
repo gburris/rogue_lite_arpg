@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Action, ActionOutcome, BehaviorActionFinished};
+use super::Action;
 use crate::character::brain::Brain;
 use crate::prelude::*;
 
@@ -10,7 +10,6 @@ use crate::prelude::*;
 /// use's finish ends the behavior; a continuously scored one starts again whenever it isn't in
 /// progress.
 pub(super) fn issue_running_actions(
-    mut commands: Commands,
     mut actions: ActionCommands,
     mut brains: Query<(Entity, &mut Brain)>,
 ) {
@@ -34,25 +33,8 @@ pub(super) fn issue_running_actions(
             if actions.status().is_using(entity, key) {
                 continue;
             }
-            if actions.try_use(entity, key).is_err() {
-                running.report_not_started(&mut commands, entity);
-            }
+            // Discarded: a refusal reaches the brain as `ActionFailed`.
+            let _ = actions.try_use(entity, key);
         }
     }
-}
-
-/// Reports [`BehaviorActionFinished`] for a use that finished on a character with a brain.
-pub(super) fn on_action_finished(
-    finished: On<ActionFinished>,
-    mut commands: Commands,
-    brains: Query<(), With<Brain>>,
-) {
-    if !brains.contains(finished.holder) {
-        return;
-    }
-    commands.trigger(BehaviorActionFinished {
-        entity: finished.holder,
-        action: Action::Use(finished.key),
-        outcome: ActionOutcome::Completed,
-    });
 }

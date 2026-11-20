@@ -33,24 +33,5 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(BrainSystems::Execute)
             // Both Execute systems note what they issued on the `Brain`; they share one flush.
             .after_ignore_deferred(super::issue_motion::issue_running_motion),
-    )
-    .add_observer(issue_actions::on_action_finished);
-}
-
-/// A use by a character with a brain ended or could not start. See
-/// [`Brain::finish_committed_behavior`](super::Brain::finish_committed_behavior) for what it ends.
-#[derive(EntityEvent, Clone, Copy, Debug)]
-pub(super) struct BehaviorActionFinished {
-    pub entity: Entity,
-    pub action: Action,
-    pub outcome: ActionOutcome,
-}
-
-/// How an action reported in [`BehaviorActionFinished`] ended.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum ActionOutcome {
-    Completed,
-    /// A committed use its applier could not start. A continuously scored use waits for
-    /// its chance instead and never reports this.
-    NotStarted,
+    );
 }

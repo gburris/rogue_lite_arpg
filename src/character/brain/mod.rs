@@ -13,7 +13,6 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::Action;
-use self::action::{ActionOutcome, BehaviorActionFinished};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -42,7 +41,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
 /// every [`DECISION_PERIOD`] with a random per-brain offset; the Execute systems note what they
 /// issued. Its requests start and stop the game's motions and actions, which report back with
-/// [`MotionFinished`] or [`BehaviorActionFinished`].
+/// [`MotionFinished`], [`ActionFinished`] or [`ActionFailed`].
 #[derive(Component, Debug)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
@@ -335,7 +334,8 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((perception::plugin, action::plugin))
         .add_observer(decide::on_motion_finished)
-        .add_observer(decide::on_behavior_action_finished)
+        .add_observer(decide::on_action_finished)
+        .add_observer(decide::on_action_failed)
         .add_systems(
             Update,
             (

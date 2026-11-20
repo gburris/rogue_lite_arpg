@@ -12,7 +12,8 @@ use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::vocabulary::{Behavior, BehaviorScoreExplanation};
-use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
+use super::{Action, Brain, Motion, MotionFinished};
+use crate::prelude::*;
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
@@ -40,19 +41,6 @@ impl RunningBehavior {
     /// Whether this behavior issued `action`.
     pub(super) fn has_issued_action(self, action: Action) -> bool {
         self.action_issued && self.action == Some(action)
-    }
-
-    /// Ends a committed use the game could not start; a continuously scored use waits.
-    pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
-        if self.committed
-            && let Some(action) = self.action
-        {
-            commands.trigger(BehaviorActionFinished {
-                entity,
-                action,
-                outcome: ActionOutcome::NotStarted,
-            });
-        }
     }
 
     /// Whether a committed behavior lost an input it was chosen on or timed out. The game ends
@@ -125,15 +113,16 @@ pub(super) fn on_motion_finished(
     );
 }
 
-/// Applies a [`BehaviorActionFinished`], current or stale.
-pub(super) fn on_behavior_action_finished(
-    finished: On<BehaviorActionFinished>,
+/// Applies an [`ActionFinished`]; see [`finish_and_redecide`]. A finished attack is also noted for
+/// the next decision.
+pub(super) fn on_action_finished(
+    finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.holder) else {
         return;
     };
     let inputs = DecisionInputs {
@@ -141,12 +130,42 @@ pub(super) fn on_behavior_action_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    if finished.outcome == ActionOutcome::Completed && inputs.action_is_attack(finished.action) {
+    let action = Action::Use(finished.key);
+    if inputs.action_is_attack(action) {
         brain.record_attack_finished();
     }
-    let action = finished.action;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
+    finish_and_redecide(
+        &mut brain,
+        |running| running.has_issued_action(action),
+        &inputs,
+        score_trace.as_deref_mut(),
+        #[cfg(feature = "dev_tools")]
+        &mut decision_stats,
+    );
+}
+
+/// Applies an [`ActionFailed`], so a committed use the game refused ends at once instead of at its
+/// timeout; see [`finish_and_redecide`]. A continuously scored use is retried instead.
+pub(super) fn on_action_failed(
+    failed: On<ActionFailed>,
+    time: Res<Time<Virtual>>,
+    queries: DecisionQueries,
+    mut brains: DecidingBrains,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
+) {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.holder) else {
+        return;
+    };
+    let inputs = DecisionInputs {
+        components: &components,
+        queries: &queries,
+        now: time.elapsed_secs(),
+    };
+    let action = Action::Use(failed.key);
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_action_failed").entered();
     finish_and_redecide(
         &mut brain,
         |running| running.has_issued_action(action),

@@ -127,6 +127,21 @@ RecipeFile(
                 "##www##",
             ],
         ),
+        // A wall segment for the walled AI test room, hiding one side of the spawn ring.
+        "AiTestWall": (
+            floor: Ground,
+            glyphs: [
+                "##",
+                "##",
+                "##",
+                "##",
+                "##",
+                "##",
+                "##",
+                "##",
+                "##",
+            ],
+        ),
     },
     hub: (
         name: "HubTown",
@@ -236,6 +251,16 @@ RecipeFile(
             structures: [],
             presets: [],
             // The exit sits in a far corner, so fights in the middle don't wander into it.
+            spawns: [(what: PlayerStart, at: Center), (what: Exit, at: MapMin((1, 1)))],
+        ),
+        (
+            // The open AI test room with a wall to the right of the player, so enemies lose and
+            // regain sight (`cargo xtask ai-metrics --room AiTestRoomWall`).
+            name: "AiTestRoomWall",
+            size: 40,
+            floor: Ground,
+            structures: [(kind: Structure("AiTestWall"), at: CenterOffset((4, 0)))],
+            presets: [],
             spawns: [(what: PlayerStart, at: Center), (what: Exit, at: MapMin((1, 1)))],
         ),
         (

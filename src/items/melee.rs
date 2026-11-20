@@ -133,7 +133,7 @@ impl MeleeSwingKind {
 #[derive(Component, Clone, Copy, Debug)]
 struct ActiveMeleeAttack {
     /// Comes from the direction the entity holding the weapon is aiming.
-    initial_angle: f32,
+    aim: Rot2,
 }
 
 /// Spawns the swing's hitbox on the weapon for the duration of the use. Its damage is scaled by the
@@ -149,14 +149,12 @@ fn on_melee_took_effect(
         return Ok(());
     };
 
-    let angle = vision.aim_direction.to_angle();
+    let aim = Dir2::new(vision.aim_direction).map_or(Rot2::IDENTITY, Dir2::rotation_from_x);
     let damage = melee_weapon.damage.scaled(stat_multipliers.damage);
     let weapon = took_effect.source;
-    commands.entity(weapon).insert(ActiveMeleeAttack {
-        initial_angle: angle,
-    });
+    commands.entity(weapon).insert(ActiveMeleeAttack { aim });
     commands.spawn((
-        HitBox::new(took_effect.holder, damage, Vec2::from_angle(angle)).with_source_item(weapon),
+        HitBox::new(took_effect.holder, damage, aim * Vec2::X).with_source_item(weapon),
         melee_weapon.hitbox.clone(),
         side.hitbox_layers(),
         Transform::default(),
@@ -174,7 +172,6 @@ fn on_melee_finished(finished: On<ActionFinished>, mut commands: Commands) {
 }
 
 /// Moves each swinging melee weapon along its swing path, following the timed use's progress.
-// TODO: Consider using bevy curve functions to reduce math needed here
 fn process_melee_attacks(
     // Melee weapons are never projectiles or shields; the filter lets this run beside the systems
     // that move those.
@@ -190,28 +187,23 @@ fn process_melee_attacks(
 ) {
     for (melee_weapon, mut transform, active_attack, timed_progress) in &mut attack_query {
         let attack_progress = timed_progress.fraction();
+        let hold_distance = melee_weapon.hold_distance;
 
-        match melee_weapon.swing_kind {
-            MeleeSwingKind::Stab { reach } => {
-                let distance = reach * attack_progress;
-
-                let forward = Vec2::from_angle(active_attack.initial_angle);
-                let new_stab_position = forward * (melee_weapon.hold_distance + distance);
-
-                transform.translation = new_stab_position.extend(0.0);
-                transform.rotation =
-                    Quat::from_rotation_z(active_attack.initial_angle - MELEE_WEAPON_ROTATION);
-            }
+        let (sweep, distance) = match melee_weapon.swing_kind {
+            MeleeSwingKind::Stab { reach } => (
+                Rot2::IDENTITY,
+                hold_distance.lerp(hold_distance + reach, attack_progress),
+            ),
             MeleeSwingKind::Slash { arc_distance } => {
-                let start_angle = active_attack.initial_angle - (arc_distance / 2.0);
-
-                let current_angle = start_angle + (arc_distance * attack_progress);
-
-                let new_axe_position = Vec2::from_angle(current_angle) * melee_weapon.hold_distance;
-
-                transform.translation = new_axe_position.extend(0.0);
-                transform.rotation = Quat::from_rotation_z(current_angle - MELEE_WEAPON_ROTATION);
+                let half_arc = arc_distance / 2.0;
+                let sweep_angle = (-half_arc).lerp(half_arc, attack_progress);
+                (Rot2::radians(sweep_angle), hold_distance)
             }
-        }
+        };
+
+        let swing_rotation = active_attack.aim * sweep;
+        transform.translation = (swing_rotation * Vec2::X * distance).extend(0.0);
+        transform.rotation =
+            Quat::from_rotation_z(swing_rotation.as_radians() - MELEE_WEAPON_ROTATION);
     }
 }

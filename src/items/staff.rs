@@ -210,10 +210,9 @@ fn on_staff_took_effect(
         return Ok(());
     };
 
-    let rotated_source_offset =
-        (staff_transform.rotation * staff.source_offset.extend(0.0)).truncate();
-    let holder_relative_source_position =
-        staff_transform.translation.truncate() + rotated_source_offset;
+    let holder_relative_source_position = staff_transform
+        .transform_point(staff.source_offset.extend(0.0))
+        .xy();
 
     let target_angle: Vec2 =
         holder_vision.aim_direction * holder_vision.aim_distance - holder_relative_source_position;

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use crate::interval::fraction_of_max;
 use crate::prelude::*;
 
 #[derive(Component, Clone, Copy)]
@@ -25,11 +26,7 @@ impl Mana {
 
     /// Current mana as a `0.0..=1.0` fraction, or `None` when the values can't form one.
     pub fn fraction(&self) -> Option<f32> {
-        if self.current.is_finite() && self.max.is_finite() && self.max > 0.0 {
-            Some((self.current / self.max).clamp(0.0, 1.0))
-        } else {
-            None
-        }
+        fraction_of_max(self.current, self.max)
     }
 
     /// Subtracts `cost`, flooring at zero.

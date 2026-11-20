@@ -1,7 +1,4 @@
-use std::f32::consts::TAU;
-
 use bevy::prelude::*;
-use rand::RngExt;
 
 use super::{
     Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
@@ -76,7 +73,7 @@ fn steer_to_hold_distance_range(input: &SteerInput, distance_range: Interval) ->
                 input
                     .heading
                     .try_normalize()
-                    .unwrap_or_else(|| Vec2::from_angle(rand::rng().random_range(0.0..TAU))),
+                    .unwrap_or_else(|| Dir2::from_rng(&mut rand::rng()).as_vec2()),
             );
         }
         return None;

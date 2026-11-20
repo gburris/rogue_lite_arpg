@@ -4,8 +4,6 @@
 //! - F10 toggles [`Invincible`] on the player.
 //! - F11 defeats every enemy.
 
-use std::f32::consts::TAU;
-
 use bevy::prelude::*;
 
 use crate::prelude::*;
@@ -50,9 +48,9 @@ fn spawn_enemies_at_reticle(
 fn enemy_ring(center: Vec2, kind: EnemyKind) -> Vec<EnemySpawn> {
     (0..ENEMIES_PER_SPAWN)
         .map(|index| {
-            let angle = index as f32 / ENEMIES_PER_SPAWN as f32 * TAU;
+            let turn = Rot2::turn_fraction(index as f32 / ENEMIES_PER_SPAWN as f32);
             EnemySpawn {
-                position: center + Vec2::from_angle(angle) * SPAWN_RING_RADIUS,
+                position: center + turn * Vec2::X * SPAWN_RING_RADIUS,
                 kind,
             }
         })

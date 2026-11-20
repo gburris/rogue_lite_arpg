@@ -1,6 +1,7 @@
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
+use rand::RngExt;
 
 use super::{HomeArea, RunningMotion, Steering};
 use crate::character::state::{BlockedState, Kinematics};
@@ -106,7 +107,54 @@ pub(super) struct SteeringTarget {
 impl SteeringTarget {
     /// The direction to the target; `None` while the characters overlap.
     fn nonzero_direction(&self) -> Option<Vec2> {
-        (self.direction.length_squared() > f32::EPSILON).then_some(self.direction)
+        (self.direction != Vec2::ZERO).then_some(self.direction)
+    }
+}
+
+/// Which way a character circles a point.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum CircleDirection {
+    Clockwise,
+    CounterClockwise,
+}
+
+impl CircleDirection {
+    /// The way `heading` already turns around the point that `bearing` points to; random when the
+    /// heading has no sideways part.
+    pub(super) fn from_heading(bearing: Vec2, heading: Vec2) -> Self {
+        let heading_side = bearing.perp().dot(heading);
+        if heading_side > f32::EPSILON {
+            Self::Clockwise
+        } else if heading_side < -f32::EPSILON {
+            Self::CounterClockwise
+        } else if rand::rng().random_bool(0.5) {
+            Self::Clockwise
+        } else {
+            Self::CounterClockwise
+        }
+    }
+
+    pub(super) fn reversed(self) -> Self {
+        match self {
+            Self::Clockwise => Self::CounterClockwise,
+            Self::CounterClockwise => Self::Clockwise,
+        }
+    }
+
+    /// The unit direction that circles, this way, the point that the unit `bearing` points to.
+    pub(super) fn find_tangent(self, bearing: Vec2) -> Vec2 {
+        match self {
+            Self::Clockwise => bearing.perp(),
+            Self::CounterClockwise => -bearing.perp(),
+        }
+    }
+
+    /// `angle` signed to turn this way: negative for clockwise.
+    pub(super) fn sign_angle(self, angle: f32) -> f32 {
+        match self {
+            Self::Clockwise => -angle,
+            Self::CounterClockwise => angle,
+        }
     }
 }
 
@@ -133,6 +181,7 @@ impl SteeringTargets<'_, '_> {
     fn locate(&self, observer_position: Vec2, target: Entity) -> Option<SteeringTarget> {
         let (transform, movement, assumed_velocity) = self.targets.get(target).ok()?;
         let position = transform.translation.xy();
+        let offset = position - observer_position;
         let velocity = match (movement, assumed_velocity) {
             (Some((kinematics, stat_multipliers)), _) => {
                 kinematics.velocity(stat_multipliers.speed)
@@ -143,8 +192,8 @@ impl SteeringTargets<'_, '_> {
 
         Some(SteeringTarget {
             position,
-            distance: position.distance(observer_position),
-            direction: (position - observer_position).normalize_or_zero(),
+            distance: offset.length(),
+            direction: offset.normalize_or_zero(),
             velocity,
         })
     }

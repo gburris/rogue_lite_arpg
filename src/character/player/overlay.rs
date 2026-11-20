@@ -10,9 +10,9 @@ pub(super) fn plugin(app: &mut App) {
             update_action_bar,
             update_cooldowns,
             update_mana_bar,
-            update_lost_mana_bar,
+            shrink_lost_bar::<ManaLostBar>,
             update_health_bar,
-            update_lost_health_bar,
+            shrink_lost_bar::<HealthLostBar>,
         )
             .chain()
             .in_set(InGameSystems::HudOverlay),
@@ -169,25 +169,16 @@ fn update_mana_bar(
     mana_lost.previous_mana = player_mana.current;
 }
 
-fn update_lost_mana_bar(mut mana_lost_node: Single<&mut Node, With<ManaLostBar>>, time: Res<Time>) {
-    let Val::Px(current_pixel) = mana_lost_node.width else {
-        panic!("Non-pixel value for mana bar");
-    };
-
-    let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
-    mana_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
-}
-
-fn update_lost_health_bar(
-    mut health_lost_node: Single<&mut Node, With<HealthLostBar>>,
+fn shrink_lost_bar<LostBar: Component>(
+    mut lost_bar_node: Single<&mut Node, With<LostBar>>,
     time: Res<Time>,
 ) {
-    let Val::Px(current_pixel) = health_lost_node.width else {
-        panic!("Non-pixel value for health bar");
+    let Val::Px(current_pixels) = lost_bar_node.width else {
+        panic!("Non-pixel value for amount lost bar");
     };
 
     let amount_to_remove = LOST_AMOUNT_SHRINK_RATE * time.delta_secs();
-    health_lost_node.width = px((current_pixel - amount_to_remove).max(0.0));
+    lost_bar_node.width = px((current_pixels - amount_to_remove).max(0.0));
 }
 
 // Gets length in px of yellow bar representing amount of mana or health lost

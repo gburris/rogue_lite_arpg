@@ -40,18 +40,18 @@ pub(super) fn on_enemy_defeated(
         if let Some(items) = items {
             for item_entity in items.iter() {
                 // Enemies drop their items based on drop rate
-                if let Ok(item_result) = item_query.get(item_entity) {
-                    let roll = rng.random_range(0.0..1.0);
-                    if roll > (1.0 - item_result.drop_rate) {
-                        commands.trigger(DropItem { item: item_entity });
-                    }
+                if let Ok(item_result) = item_query.get(item_entity)
+                    && rng.random::<f32>() < item_result.drop_rate
+                {
+                    commands.trigger(DropItem { item: item_entity });
                 }
             }
         }
 
         if let Some(purse) = purse {
             // Enemies drop their gold based on player luck
-            if rng.random_range(0.0..1.0) < (0.1 + (player_attributes.luck as f32 / 100.0)) {
+            let gold_drop_chance = 0.1 + player_attributes.luck as f32 / 100.0;
+            if rng.random::<f32>() < gold_drop_chance {
                 commands.trigger(DropGold {
                     location: transform.translation.truncate(),
                     amount: purse.amount,

@@ -1,12 +1,13 @@
 use bevy::prelude::*;
-use rand::RngExt;
+
+use crate::interval::Spread;
 
 /// A wait after each use of an action or motion source before the next use can start, measured in
 /// virtual time. The source's owner decides when a use starts the wait.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Cooldown {
     seconds: f32,
-    jitter: f32,
+    jitter: Spread,
     ready_at: f32,
 }
 
@@ -22,7 +23,10 @@ impl Cooldown {
     /// Varies each wait by up to `jitter` seconds either way, so cooldowns started together do not
     /// stay in sync.
     pub fn with_jitter(self, jitter: f32) -> Self {
-        Self { jitter, ..self }
+        Self {
+            jitter: Spread::new(jitter),
+            ..self
+        }
     }
 
     /// Seconds left at virtual time `now` before the next use can start.
@@ -37,12 +41,7 @@ impl Cooldown {
 
     /// Starts a wait at virtual time `now`.
     pub fn start(&mut self, now: f32) {
-        let offset = if self.jitter > 0.0 {
-            rand::rng().random_range(-self.jitter..=self.jitter)
-        } else {
-            0.0
-        };
-
+        let offset = self.jitter.pick_random_value();
         self.ready_at = now + (self.seconds + offset).max(0.0);
     }
 

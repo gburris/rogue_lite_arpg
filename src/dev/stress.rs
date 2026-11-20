@@ -10,7 +10,6 @@
 //!   `runs/stress_summary.txt` and the log.
 
 use std::collections::BTreeMap;
-use std::f32::consts::TAU;
 use std::fmt::Write as _;
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
@@ -236,7 +235,7 @@ impl PlayerScript {
     fn direction(self, seconds: f32) -> Option<Vec2> {
         match self {
             Self::Still => None,
-            Self::Circle => Some(Vec2::from_angle(seconds / CIRCLE_LAP_SECONDS * TAU)),
+            Self::Circle => Some(Rot2::turn_fraction(seconds / CIRCLE_LAP_SECONDS) * Vec2::X),
             Self::Strafe => {
                 let leg = (seconds / STRAFE_LEG_SECONDS) as u32;
                 Some(if leg % 2 == 0 { Vec2::X } else { Vec2::NEG_X })

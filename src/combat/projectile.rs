@@ -147,7 +147,7 @@ fn damage_on_projectile_hit(
                         .get(projectile_entity)
                         .ok()
                         .and_then(|attacker| attacker.attacker),
-                    direction: Some(velocity.normalize()),
+                    direction: velocity.try_normalize(),
                     ..default()
                 });
             }
@@ -213,8 +213,8 @@ fn on_fire_projectiles(
     };
     for template in projectiles.iter() {
         let projectile = templates.get(template)?;
-        // Rotate the aim direction by the projectile's angle offset
-        let projectile_direction = aim_direction.rotate(Vec2::from_angle(projectile.angle_offset));
+        let projectile_direction = Rot2::radians(projectile.angle_offset) * aim_direction;
+        let projectile_angle = projectile_direction.to_angle();
         let position = fire.position + (projectile_direction * projectile.spawn_offset);
 
         let mut template_commands = commands.entity(template);
@@ -227,10 +227,10 @@ fn on_fire_projectiles(
                 body: projectile_entity,
             },
             Position(position),
-            Rotation::radians(projectile_direction.to_angle()),
+            Rotation::radians(projectile_angle),
             Transform {
                 translation: position.extend(ZLayer::InAir.z()),
-                rotation: Quat::from_rotation_z(projectile_direction.to_angle()),
+                rotation: Quat::from_rotation_z(projectile_angle),
                 ..default()
             },
             LinearVelocity(projectile_direction * projectile.speed),

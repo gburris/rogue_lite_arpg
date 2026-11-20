@@ -1,15 +1,14 @@
-use std::f32::consts::TAU;
-
 use bevy::prelude::*;
-use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets, TunedBy,
+    BlockedTimer, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTargets, TunedBy,
 };
-use crate::interval::Interval;
+use crate::interval::{Interval, Spread};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
+/// How far, in radians, a walk back toward home may stray from the straight line.
+const WANDER_HOME_SPREAD: Spread = Spread::new(0.6);
 /// Seconds a walk may stay blocked before it ends early.
 const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
@@ -88,20 +87,8 @@ impl WanderProgress {
     }
 }
 
-/// Gives a newly started wander its [`WanderProgress`].
-pub(super) fn on_wander_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_wander = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::Wander);
-    if is_wander {
-        commands
-            .entity(added.entity)
-            .insert(WanderProgress::default());
-    }
+impl MotionProgress for WanderProgress {
+    const MOTION: Motion = Motion::Wander;
 }
 
 /// Steers each character running [`Motion::Wander`].
@@ -135,7 +122,7 @@ pub(super) fn apply_wander(
 }
 
 fn pick_direction(input: &SteerInput) -> Vec2 {
-    let candidate = Vec2::from_angle(rand::rng().random_range(0.0..TAU));
+    let candidate = Dir2::from_rng(&mut rand::rng()).as_vec2();
     let Some(home_area) = input.home_area else {
         return candidate;
     };
@@ -148,5 +135,5 @@ fn pick_direction(input: &SteerInput) -> Vec2 {
     let Some(direction_home) = home_area.direction_home(input.position) else {
         return candidate;
     };
-    direction_home.rotate(Vec2::from_angle(rand::rng().random_range(-0.6..0.6)))
+    Rot2::radians(WANDER_HOME_SPREAD.pick_random_value()) * direction_home
 }

@@ -65,7 +65,7 @@ fn on_player_interaction_input(
                 .get(interact_entity)
                 .ok()
                 .map(|(child_of, transform)| {
-                    let distance = (player_position - transform.translation.truncate()).length();
+                    let distance = player_position.distance(transform.translation.xy());
                     (interact_entity, child_of.parent(), distance)
                 })
         })

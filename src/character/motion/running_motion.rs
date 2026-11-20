@@ -27,16 +27,35 @@ impl CurrentMotion {
 
 /// A character's running motion, on its own entity linked to the character by [`MotionOf`] and to
 /// the motion source that tunes it by [`TunedBy`]: the motion and the entity it steers by.
-/// [`MotionCommands`] spawns it with [`Steering`], each motion's own observer adds that motion's
-/// progress, and a [`FiniteMotion`] despawns it when it ends. Despawning it, however the motion
-/// ended, halts the character and, for a finite motion, starts the source's [`Cooldown`] and fires
-/// [`MotionFinished`].
+/// [`MotionCommands`] spawns it with [`Steering`], [`on_motion_started`] adds that motion's
+/// [`MotionProgress`], and a [`FiniteMotion`] despawns it when it ends. Despawning it, however the
+/// motion ended, halts the character and, for a finite motion, starts the source's [`Cooldown`] and
+/// fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
 #[component(on_remove = end_running_motion)]
 pub(in crate::character) struct RunningMotion {
     pub motion: Motion,
     pub target: Option<Entity>,
+}
+
+/// A motion's state while it runs, which [`on_motion_started`] adds to its running motion.
+pub(super) trait MotionProgress: Component + Default {
+    const MOTION: Motion;
+}
+
+/// Gives each newly started running motion of `Progress::MOTION` a fresh `Progress`.
+pub(super) fn on_motion_started<Progress: MotionProgress>(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_progress_motion = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Progress::MOTION);
+    if is_progress_motion {
+        commands.entity(added.entity).insert(Progress::default());
+    }
 }
 
 /// Marks a running motion that ends on its own; see [`Motion::is_finite`].

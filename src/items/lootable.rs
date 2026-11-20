@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_firefly::prelude::{Falloff, LightCore, PointLight2d};
-use rand::{RngExt, rng};
+use rand::rng;
 
 use crate::prelude::*;
 
@@ -21,6 +21,10 @@ pub(super) fn plugin(app: &mut App) {
 
 /// Seconds a dropped item lies on the ground before it disappears.
 const LOOT_LIFESPAN_SECONDS: f32 = 30.0;
+/// The square around its holder that a dropped item lands in.
+const ITEM_DROP_AREA: Rectangle = Rectangle {
+    half_size: Vec2::splat(50.0),
+};
 
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(
@@ -74,7 +78,7 @@ fn on_drop_item(
 
     // TODO: Make sure we don't drop items out of bounds
     let mut rng = rng();
-    let offset = Vec2::new(rng.random_range(-50.0..50.0), rng.random_range(-50.0..50.0));
+    let offset = ITEM_DROP_AREA.sample_interior(&mut rng);
     let final_position =
         (parent_transform.translation.truncate() + offset).extend(ZLayer::OnGround.z());
 

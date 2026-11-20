@@ -62,3 +62,35 @@ impl Interval {
         normalized.is_finite().then_some(normalized)
     }
 }
+
+/// `value` as a fraction of `max`, clamped to `0.0..=1.0`; `None` unless both are finite and `max`
+/// is positive.
+pub fn fraction_of_max(value: f32, max: f32) -> Option<f32> {
+    (value.is_finite() && max.is_finite() && max > 0.0).then(|| (value / max).clamp(0.0, 1.0))
+}
+
+/// A range centered on zero, `-half_width..=half_width`: an angle to scatter a direction by, or
+/// seconds to jitter a wait by. Unlike an [`Interval`], it may have zero width.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Spread {
+    half_width: f32,
+}
+
+impl Spread {
+    /// Builds a spread; panics on a negative or infinite half-width, at compile time in a const.
+    pub const fn new(half_width: f32) -> Self {
+        assert!(
+            half_width.is_finite() && half_width >= 0.0,
+            "a spread samples from -half_width..=half_width, which is reversed or unbounded"
+        );
+        Self { half_width }
+    }
+
+    /// A uniformly random value from `-half_width` to `half_width`; zero for a zero-width spread.
+    pub fn pick_random_value(self) -> f32 {
+        if self.half_width == 0.0 {
+            return 0.0;
+        }
+        rand::rng().random_range(-self.half_width..=self.half_width)
+    }
+}

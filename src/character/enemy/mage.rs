@@ -38,6 +38,9 @@ const ICE_MAGE_MANA_REGEN: f32 = 10.0;
 
 /// How far a fire mage's sidestep or step in carries it.
 const FIRE_DASH_DISTANCE: Interval = Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32);
+const FIRE_DASH_SPEED_MULTIPLIER: f32 = 2.2;
+/// Speed at or below which a target counts as standing still.
+const TARGET_STILL_SPEED: f32 = 20.0;
 
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
@@ -137,7 +140,7 @@ const FIRE_SIDESTEP: Behavior = Behavior::new(
     8.5,
     &[ATTACK_FINISHED, HAS_TARGET],
 );
-/// A step toward a close target that stands still, instead of a sidestep.
+/// A step toward a close target that stands still.
 const FIRE_STEP_IN: Behavior = Behavior::new(
     Some(Motion::Run(MotionKey::StepIn)),
     None,
@@ -147,7 +150,7 @@ const FIRE_STEP_IN: Behavior = Behavior::new(
         ATTACK_FINISHED,
         HAS_TARGET,
         target_within_distance("target close", CAST_MIN_RANGE - 10.0),
-        target_speed_at_most("target still", 20.0),
+        target_speed_at_most("target still", TARGET_STILL_SPEED),
     ],
 );
 /// A straight escape when the player crosses the danger ring. Its higher tier
@@ -225,9 +228,9 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     ICE_CAST,
 ];
 
-/// Holds the cast distance range on a moving orbit, sidesteps to a fresh tangent after each
-/// volley, backs off only long enough to refill a drained mana pool, and rallies nearby allies
-/// between volleys.
+/// Holds the cast distance range on a moving orbit, sidesteps to a fresh tangent (or steps in on a
+/// still, close target) after each volley, backs off only long enough to refill a drained mana
+/// pool, and rallies nearby allies between volleys.
 pub(super) static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,
 };
@@ -370,10 +373,10 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
             Chase
             --
             ~MotionKey::Sidestep
-            ~Dash::sidestep(FIRE_DASH_DISTANCE, 2.2)
+            ~Dash::sidestep(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --
             ~MotionKey::StepIn
-            ~Dash::step_in(FIRE_DASH_DISTANCE, 2.2)
+            ~Dash::step_in(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --
             ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)

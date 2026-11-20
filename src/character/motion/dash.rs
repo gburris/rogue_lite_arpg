@@ -77,7 +77,7 @@ impl Dash {
             return Dir2::from_rng(&mut rand::rng()).as_vec2();
         };
         let turn = CircleDirection::from_heading(bearing, heading).reversed();
-        let aim = turn.turn_off_bearing(bearing, self.bearing_offset);
+        let aim = turn.find_direction_off_bearing(bearing, self.bearing_offset);
         Rot2::radians(self.spread.pick_random_value()) * aim
     }
 }

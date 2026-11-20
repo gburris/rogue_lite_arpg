@@ -144,7 +144,7 @@ impl CircleDirection {
 
     /// The unit direction `angle` radians off the unit `bearing`, turned toward this way's tangent
     /// (see [`Self::find_tangent`]).
-    pub(super) fn turn_off_bearing(self, bearing: Vec2, angle: f32) -> Vec2 {
+    pub(super) fn find_direction_off_bearing(self, bearing: Vec2, angle: f32) -> Vec2 {
         let signed_angle = match self {
             Self::Clockwise => angle,
             Self::CounterClockwise => -angle,

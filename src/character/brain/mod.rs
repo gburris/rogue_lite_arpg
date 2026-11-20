@@ -5,7 +5,7 @@ mod decide;
 mod diagnostics;
 mod engine;
 mod inputs;
-mod issued_motion;
+mod issue_motion;
 mod perception;
 mod vocabulary;
 
@@ -13,14 +13,13 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 pub use self::action::Action;
-use self::action::{ActionOutcome, BehaviorActionFinished, IssuedActions};
+use self::action::{ActionOutcome, BehaviorActionFinished};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
 pub(super) use self::engine::{CommitPolicy, Curve};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
-use self::issued_motion::IssuedMotion;
 use self::perception::TargetLocationHint;
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
@@ -40,16 +39,15 @@ use crate::prelude::*;
 const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running in its motion and
-/// action slots, and its start roll retry delays. Only [`decide`] writes it, every
-/// [`DECISION_PERIOD`] with a random per-brain offset. Its requests start and stop the game's
-/// motions and actions, which report back with [`MotionFinished`] or [`BehaviorActionFinished`].
+/// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
+/// every [`DECISION_PERIOD`] with a random per-brain offset; the Execute systems note what they
+/// issued. Its requests start and stop the game's motions and actions, which report back with
+/// [`MotionFinished`] or [`BehaviorActionFinished`].
 #[derive(Component, Debug)]
-#[require(IssuedActions, IssuedMotion)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
-    next_running_behavior_id: u32,
     start_roll_ready_at: Vec<f32>,
     attack_finish_pending: bool,
     next_decision_at: f32,
@@ -61,7 +59,6 @@ impl Brain {
         Self {
             definition,
             running_behaviors: Vec::with_capacity(2),
-            next_running_behavior_id: 0,
             start_roll_ready_at: vec![0.0; definition.behaviors.len()],
             attack_finish_pending: false,
             next_decision_at: 0.0,
@@ -232,15 +229,15 @@ impl Brain {
         }
     }
 
-    /// Creates a running behavior for behavior `index` with the next running behavior id.
-    fn start_running_behavior(&mut self, index: usize, now: f32) -> RunningBehavior {
-        self.next_running_behavior_id = self.next_running_behavior_id.wrapping_add(1);
+    /// Creates a running behavior for behavior `index` with nothing issued yet.
+    fn start_running_behavior(&self, index: usize, now: f32) -> RunningBehavior {
         let behavior = self.definition.behaviors[index];
         RunningBehavior {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
-            running_behavior_id: self.next_running_behavior_id,
+            motion_issued: false,
+            action_issued: false,
             committed: behavior.commit.is_committed(),
             started_at: now,
         }
@@ -263,11 +260,32 @@ impl Brain {
             .retain(|other| other.behavior != running.behavior);
     }
 
-    /// Ends the committed behavior stamped `running_behavior_id`; `false` for a stale finish.
-    fn finish_committed_behavior(&mut self, running_behavior_id: u32) -> bool {
-        let Some(position) = self.running_behaviors.iter().position(|running| {
-            running.committed && running.running_behavior_id == running_behavior_id
-        }) else {
+    fn record_issued_motion(&mut self, behavior: usize) {
+        self.running_behavior_mut(behavior).motion_issued = true;
+    }
+
+    fn record_issued_action(&mut self, behavior: usize) {
+        self.running_behavior_mut(behavior).action_issued = true;
+    }
+
+    fn running_behavior_mut(&mut self, behavior: usize) -> &mut RunningBehavior {
+        self.running_behaviors
+            .iter_mut()
+            .find(|running| running.behavior == behavior)
+            .expect("issued behavior is not running")
+    }
+
+    /// Ends the committed behavior that issued what finished. Only a finish of something a behavior
+    /// issued ends it, so a stale finish clears nothing and returns `false`.
+    fn finish_committed_behavior(
+        &mut self,
+        issued_what_finished: impl Fn(RunningBehavior) -> bool,
+    ) -> bool {
+        let Some(position) = self
+            .running_behaviors
+            .iter()
+            .position(|&running| running.committed && issued_what_finished(running))
+        else {
             return false;
         };
         self.running_behaviors.remove(position);
@@ -322,7 +340,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             (
                 decide::decide_behavior.in_set(BrainSystems::Decision),
-                issued_motion::issue_running_motion.in_set(BrainSystems::Execute),
+                issue_motion::issue_running_motion.in_set(BrainSystems::Execute),
             ),
         );
 }

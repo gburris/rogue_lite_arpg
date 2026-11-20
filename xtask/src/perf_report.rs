@@ -172,11 +172,11 @@ impl ZoneNames {
     }
 }
 
-/// The brain's action or motion request applier, or any `apply_*` system in a `motion` module.
+/// The brain's motion or action issue system, or any `apply_*` system in a `motion` module.
 fn is_brain_applier(zone_name: &str) -> bool {
-    const REQUEST_APPLIERS: [&str; 2] = [
-        "baba_yaga::character::brain::action::issued_actions::issue_running_actions",
-        "baba_yaga::character::brain::issued_motion::issue_running_motion",
+    const BRAIN_ISSUE_SYSTEMS: [&str; 2] = [
+        "baba_yaga::character::brain::action::issue_actions::issue_running_actions",
+        "baba_yaga::character::brain::issue_motion::issue_running_motion",
     ];
     const MOTION_MODULES: &str = "baba_yaga::character::motion::";
 
@@ -186,7 +186,7 @@ fn is_brain_applier(zone_name: &str) -> bool {
     else {
         return false;
     };
-    if REQUEST_APPLIERS.contains(&path) {
+    if BRAIN_ISSUE_SYSTEMS.contains(&path) {
         return true;
     }
 

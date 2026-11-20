@@ -1,8 +1,7 @@
-mod issued_actions;
+mod issue_actions;
 
 use bevy::prelude::*;
 
-pub(super) use self::issued_actions::IssuedActions;
 use super::BrainSystems;
 use crate::prelude::*;
 
@@ -30,18 +29,20 @@ impl Action {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        issued_actions::issue_running_actions.in_set(BrainSystems::Execute),
+        issue_actions::issue_running_actions
+            .in_set(BrainSystems::Execute)
+            // Both Execute systems note what they issued on the `Brain`; they share one flush.
+            .after_ignore_deferred(super::issue_motion::issue_running_motion),
     )
-    .add_observer(issued_actions::on_action_finished);
+    .add_observer(issue_actions::on_action_finished);
 }
 
-/// A use ended. It ends the behavior stamped `running_behavior_id` only while that behavior still
-/// runs, so a stale finish clears nothing.
+/// A use by a character with a brain ended or could not start. See
+/// [`Brain::finish_committed_behavior`](super::Brain::finish_committed_behavior) for what it ends.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(super) struct BehaviorActionFinished {
     pub entity: Entity,
     pub action: Action,
-    pub running_behavior_id: u32,
     pub outcome: ActionOutcome,
 }
 

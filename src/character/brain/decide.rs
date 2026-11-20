@@ -11,27 +11,37 @@ use rand::RngExt;
 use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::issued_motion::IssuedMotion;
 use super::vocabulary::{Behavior, BehaviorScoreExplanation};
 use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion, MotionFinished};
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won its slots, with its motion and action copied from the definition. Its run
-/// id makes it start its motion and action once and lets their finish events name it. The finish
-/// rules for committed and continuously scored behaviors live here.
+/// A behavior that won its slots, with its motion and action copied from the definition. It issues
+/// its motion, and its action if committed, once. The finish rules for committed and continuously
+/// scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<Motion>,
     pub(super) action: Option<Action>,
-    pub(super) running_behavior_id: u32,
+    pub(super) motion_issued: bool,
+    pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
+    /// Whether this behavior issued `motion`.
+    pub(super) fn has_issued_motion(self, motion: Motion) -> bool {
+        self.motion_issued && self.motion == Some(motion)
+    }
+
+    /// Whether this behavior issued `action`.
+    pub(super) fn has_issued_action(self, action: Action) -> bool {
+        self.action_issued && self.action == Some(action)
+    }
+
     /// Ends a committed use the game could not start; a continuously scored use waits.
     pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
         if self.committed
@@ -40,7 +50,6 @@ impl RunningBehavior {
             commands.trigger(BehaviorActionFinished {
                 entity,
                 action,
-                running_behavior_id: self.running_behavior_id,
                 outcome: ActionOutcome::NotStarted,
             });
         }
@@ -87,14 +96,12 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Ends the behavior a finished motion was started for and, if that behavior was still running,
-/// decides again immediately.
+/// Applies a [`MotionFinished`]; see [`finish_and_redecide`].
 pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
-    issued_motions: Query<&IssuedMotion>,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
     let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
@@ -105,18 +112,12 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let Some(running_behavior_id) = issued_motions
-        .get(finished.entity)
-        .ok()
-        .and_then(|issued_motion| issued_motion.running_behavior_id_of(finished.motion))
-    else {
-        return;
-    };
+    let motion = finished.motion;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        running_behavior_id,
+        |running| running.has_issued_motion(motion),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -143,11 +144,12 @@ pub(super) fn on_behavior_action_finished(
     if finished.outcome == ActionOutcome::Completed && inputs.action_is_attack(finished.action) {
         brain.record_attack_finished();
     }
+    let action = finished.action;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
     finish_and_redecide(
         &mut brain,
-        finished.running_behavior_id,
+        |running| running.has_issued_action(action),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -155,16 +157,16 @@ pub(super) fn on_behavior_action_finished(
     );
 }
 
-/// Ends the committed behavior stamped `running_behavior_id` and, unless the finish was stale,
-/// decides again at once.
+/// Ends the committed behavior that issued what finished (see
+/// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
 fn finish_and_redecide(
     brain: &mut Brain,
-    running_behavior_id: u32,
+    issued_what_finished: impl Fn(RunningBehavior) -> bool,
     inputs: &DecisionInputs,
     score_trace: Option<&mut ScoreTrace>,
     #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
 ) {
-    if brain.finish_committed_behavior(running_behavior_id) {
+    if brain.finish_committed_behavior(issued_what_finished) {
         redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();

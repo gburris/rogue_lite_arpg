@@ -92,7 +92,7 @@ impl SteeredCharacterItem<'_, '_> {
     }
 }
 
-/// A motion's target this frame, relative to the steering character.
+/// An entity a motion steers by this frame, relative to the steering character.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SteeringTarget {
     pub position: Vec2,
@@ -101,7 +101,7 @@ pub(super) struct SteeringTarget {
 }
 
 impl SteeringTarget {
-    /// The direction to the target; `None` while the characters overlap.
+    /// The direction to the entity; `None` while the character stands on it.
     pub(super) fn nonzero_direction(&self) -> Option<Vec2> {
         (self.direction != Vec2::ZERO).then_some(self.direction)
     }

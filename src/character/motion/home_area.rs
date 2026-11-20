@@ -8,8 +8,7 @@ const RETURN_BLOCKED_SECONDS: f32 = 1.0;
 
 /// A character's home, on its own entity placed at the home's center and linked to the character
 /// by [`HomeOf`]: how far the character may wander from the center, and how close to it counts as
-/// arrived. Motions steer by the entity. If the character is blocked on the way back, the entity
-/// moves to where the character stands.
+/// arrived. Motions steer by the entity.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct HomeArea {
     radius: f32,

@@ -15,11 +15,11 @@ pub trait BrainVocabulary: Clone + Copy + Debug + 'static {
     type Input: Clone + Copy + Debug + 'static;
 
     /// Whether `motion` can end on its own and report it, so its finish can end a committed
-    /// behavior. The game checks each character when a behavior would start.
+    /// behavior.
     fn motion_reports_finish(motion: Self::Motion) -> bool;
 
     /// Whether `action` can end on its own and report it, so its finish can end a committed
-    /// behavior. The game checks each character when a behavior would start.
+    /// behavior.
     fn action_reports_finish(action: Self::Action) -> bool;
 }
 

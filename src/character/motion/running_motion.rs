@@ -62,17 +62,21 @@ pub(super) fn on_motion_started<Progress: MotionProgress>(
 }
 
 fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
-    let Ok((&MotionOf { character }, &running, &TunedBy { source })) = world
+    let Ok((&MotionOf { character }, &running, tuned_by)) = world
         .entity(context.entity)
-        .get_components::<(&MotionOf, &RunningMotion, &TunedBy)>()
+        .get_components::<(&MotionOf, &RunningMotion, Option<&TunedBy>)>()
     else {
         return;
     };
+    let tuned_by = tuned_by.copied();
 
     if let Some(mut kinematics) = world.get_mut::<Kinematics>(character) {
         kinematics.stop_moving();
     }
 
+    let Some(TunedBy { source }) = tuned_by else {
+        return;
+    };
     let is_finite = world
         .get_entity(source)
         .is_ok_and(|source| source.contains::<FiniteMotion>());
@@ -208,9 +212,10 @@ impl<'w, 's> MotionCommands<'w, 's> {
         &self.status
     }
 
-    /// Runs the motion of `character`'s `key` source, steering by `target`; does nothing without
-    /// that source. A continuous motion that is already running keeps its progress and takes the
-    /// new target; anything else replaces the running motion with a fresh one.
+    /// Runs the motion of `character`'s `key` source, steering by `target`; without that source it
+    /// only stops the running motion. A continuous motion that is already running keeps its
+    /// progress and takes the new target; anything else replaces the running motion with a fresh
+    /// one.
     pub(in crate::character) fn start(
         &mut self,
         character: Entity,
@@ -218,6 +223,7 @@ impl<'w, 's> MotionCommands<'w, 's> {
         target: Option<Entity>,
     ) {
         let Some(source) = self.status.source_data(character, key) else {
+            self.stop(character);
             return;
         };
         let (source, is_finite) = (source.entity, source.is_finite);

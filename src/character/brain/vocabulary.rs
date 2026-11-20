@@ -1,5 +1,34 @@
 use super::engine::{self, BrainVocabulary};
-use super::{Action, ConsiderationInput, Motion};
+use super::{Action, ConsiderationInput, MotionKey};
+
+/// What a brain holds in its motion slot: run one of the character's motion sources, or
+/// deliberately stand still.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Motion {
+    /// Run the motion of the character's source with this key.
+    Run(MotionKey),
+    /// Chose to stand still, unlike an empty motion slot where nothing scored.
+    /// Always available; it stops any running motion.
+    Idle,
+}
+
+impl Motion {
+    /// The key of the motion source this motion runs; `None` for `Idle`.
+    pub fn key(self) -> Option<MotionKey> {
+        match self {
+            Self::Run(key) => Some(key),
+            Self::Idle => None,
+        }
+    }
+
+    /// One-word label for debug displays.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Run(key) => key.name(),
+            Self::Idle => "Idle",
+        }
+    }
+}
 
 /// The motions, actions and inputs of character brains, for the scoring engine.
 #[derive(Clone, Copy, Debug)]

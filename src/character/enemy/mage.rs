@@ -39,8 +39,8 @@ const ICE_MAGE_MANA_REGEN: f32 = 10.0;
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
-const IN_DASH_REACH: Consideration = within_reach(
-    "in dash reach",
+const IN_SLIDE_REACH: Consideration = within_reach(
+    "in slide reach",
     ConsiderationInput::MotionReachFraction(MotionKey::Slide),
 );
 
@@ -141,7 +141,7 @@ const ICE_SLIDE: Behavior = Behavior::new(
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 2 },
     12.0,
-    &[IN_DASH_REACH],
+    &[IN_SLIDE_REACH],
 );
 
 /// Stands still through the wind-up to cast.

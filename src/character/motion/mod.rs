@@ -19,7 +19,7 @@ pub use self::motion_source::{MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 pub use self::running_motion::CurrentMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
-use self::running_motion::{MotionOf, RunningMotion};
+use self::running_motion::{MotionOf, MotionProgress, RunningMotion};
 pub(super) use self::steer_input::AssumedVelocity;
 use self::steer_input::{
     BlockedTimer, CircleDirection, MotionStep, SteerInput, SteeredCharacter, SteeringTarget,
@@ -126,9 +126,9 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .in_set(SimulationSystems::Steer),
     );
-    app.add_observer(dash::on_dash_started)
-        .add_observer(swoop::on_swoop_started)
-        .add_observer(orbit::on_orbit_started)
-        .add_observer(wander::on_wander_started)
-        .add_observer(home_area::on_return_to_home_started);
+    app.add_observer(running_motion::on_motion_started::<dash::DashProgress>)
+        .add_observer(running_motion::on_motion_started::<swoop::SwoopProgress>)
+        .add_observer(running_motion::on_motion_started::<orbit::OrbitProgress>)
+        .add_observer(running_motion::on_motion_started::<WanderProgress>)
+        .add_observer(running_motion::on_motion_started::<home_area::ReturnToHomeProgress>);
 }

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets, TunedBy,
+    BlockedTimer, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -87,20 +87,8 @@ impl WanderProgress {
     }
 }
 
-/// Gives a newly started wander its [`WanderProgress`].
-pub(super) fn on_wander_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_wander = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::Wander);
-    if is_wander {
-        commands
-            .entity(added.entity)
-            .insert(WanderProgress::default());
-    }
+impl MotionProgress for WanderProgress {
+    const MOTION: Motion = Motion::Wander;
 }
 
 /// Steers each character running [`Motion::Wander`].

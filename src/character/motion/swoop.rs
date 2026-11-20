@@ -3,8 +3,9 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, DecayingSpeedBoost, Motion, MotionOf, MotionStep, RunningMotion,
-    SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, DecayingSpeedBoost, Motion, MotionOf, MotionProgress,
+    MotionStep, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget,
+    SteeringTargets, TunedBy,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -35,20 +36,8 @@ impl Default for Swoop {
     }
 }
 
-/// Gives a newly started swoop its [`SwoopProgress`].
-pub(super) fn on_swoop_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_swoop = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::Swoop);
-    if is_swoop {
-        commands
-            .entity(added.entity)
-            .insert(SwoopProgress::default());
-    }
+impl MotionProgress for SwoopProgress {
+    const MOTION: Motion = Motion::Swoop;
 }
 
 /// Advances each swoop in progress. Ends it once past the target or when the target is lost.

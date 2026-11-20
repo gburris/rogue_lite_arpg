@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, Motion, MotionOf, RunningMotion};
+use super::{BlockedTimer, Motion, MotionOf, MotionProgress};
 use crate::character::state::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
@@ -74,20 +74,8 @@ pub(super) struct ReturnToHomeProgress {
     blocked_timer: BlockedTimer,
 }
 
-/// Gives a newly started return home its [`ReturnToHomeProgress`].
-pub(super) fn on_return_to_home_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_return_to_home = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::ReturnToHome);
-    if is_return_to_home {
-        commands
-            .entity(added.entity)
-            .insert(ReturnToHomeProgress::default());
-    }
+impl MotionProgress for ReturnToHomeProgress {
+    const MOTION: Motion = Motion::ReturnToHome;
 }
 
 /// Moves the home of each character whose return home is blocked to where it stands.

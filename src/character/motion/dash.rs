@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, Motion, MotionOf, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, Motion, MotionOf, MotionProgress, MotionStep, RunningMotion,
+    SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -93,20 +93,8 @@ fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Op
     (tangent - target.direction * HOP_OUTWARD_BIAS).try_normalize()
 }
 
-/// Gives a newly started dash its [`DashProgress`].
-pub(super) fn on_dash_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_dash = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::Dash);
-    if is_dash {
-        commands
-            .entity(added.entity)
-            .insert(DashProgress::default());
-    }
+impl MotionProgress for DashProgress {
+    const MOTION: Motion = Motion::Dash;
 }
 
 /// Advances each dash in progress. Ends it after its distance or when its target is lost.

@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, CircleDirection, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -104,20 +104,8 @@ impl OrbitProgress {
     }
 }
 
-/// Gives a newly started orbit its [`OrbitProgress`].
-pub(super) fn on_orbit_started(
-    added: On<Add<RunningMotion>>,
-    mut commands: Commands,
-    running_motions: Query<&RunningMotion>,
-) {
-    let is_orbit = running_motions
-        .get(added.entity)
-        .is_ok_and(|running| running.motion == Motion::Orbit);
-    if is_orbit {
-        commands
-            .entity(added.entity)
-            .insert(OrbitProgress::default());
-    }
+impl MotionProgress for OrbitProgress {
+    const MOTION: Motion = Motion::Orbit;
 }
 
 /// Circles the target while the character runs [`Motion::Orbit`].

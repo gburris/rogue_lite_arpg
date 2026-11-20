@@ -11,7 +11,7 @@ mod wander;
 
 use bevy::prelude::*;
 
-pub use self::dash::Dash;
+pub use self::dash::{kite, sidestep, slide, step_in};
 use self::direct::DirectMotion;
 pub use self::direct::{Chase, Flee, Idle, KeepDistance};
 pub use self::home_area::{Home, HomeArea, ReturnToHome};

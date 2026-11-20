@@ -252,22 +252,16 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
         MotionSources [
-            ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE).with_distance_offset_spread(BAT_ORBIT_MAX_DISTANCE_OFFSET)
             --
-            ~MotionKey::KeepDistance
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
             --
-            ~MotionKey::Wander
             enemy_wander()
             --
-            ~MotionKey::ReturnToHome
             ReturnToHome
             --
-            ~MotionKey::Chase
             Chase
             --
-            ~MotionKey::Swoop
             Swoop
             ~{MotionReach(CAST_MAX_RANGE)}
             ~Cooldown::new(SWOOP_COOLDOWN)

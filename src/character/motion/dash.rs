@@ -3,7 +3,7 @@ use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, FiniteMotion, MotionOf, MotionProgress, MotionStep,
+    BlockedTimer, CircleDirection, FiniteMotion, MotionKey, MotionOf, MotionProgress, MotionStep,
     RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
     TunedBy,
 };
@@ -20,7 +20,8 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 
 /// A committed straight-line move in a direction chosen when it starts: `bearing_offset` radians
 /// off the bearing to the target, turned against the way the character circles it, scattered by
-/// `spread`. It ends early when blocked or interrupted.
+/// `spread`. It ends early when blocked or interrupted. [`kite`], [`slide`], [`sidestep`] and
+/// [`step_in`] build one with its [`MotionKey`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(FiniteMotion)]
 pub struct Dash {
@@ -45,32 +46,6 @@ impl Dash {
         }
     }
 
-    /// Runs away from the target at normal speed, scattered widely.
-    pub fn kite(run_distance: Interval) -> Self {
-        Self::new(run_distance, 1.0, PI, KITE_SPREAD)
-    }
-
-    /// Runs straight away from the target.
-    pub fn slide(run_distance: Interval, speed_multiplier: f32) -> Self {
-        Self::new(run_distance, speed_multiplier, PI, Spread::default())
-    }
-
-    /// Steps across the target's bearing, reversing the way the character circles it.
-    pub fn sidestep(run_distance: Interval, speed_multiplier: f32) -> Self {
-        let bearing_offset = FRAC_PI_2 + SIDESTEP_OUTWARD_LEAN;
-        Self::new(
-            run_distance,
-            speed_multiplier,
-            bearing_offset,
-            Spread::default(),
-        )
-    }
-
-    /// Steps toward the target, scattered slightly.
-    pub fn step_in(run_distance: Interval, speed_multiplier: f32) -> Self {
-        Self::new(run_distance, speed_multiplier, 0.0, STEP_IN_SPREAD)
-    }
-
     fn choose_direction(&self, target: &SteeringTarget, heading: Vec2) -> Vec2 {
         let Some(bearing) = target.direction.try_normalize() else {
             // Overlapping characters have no direction between them, so pick a random one.
@@ -79,6 +54,48 @@ impl Dash {
         let turn = CircleDirection::from_heading(bearing, heading).reversed();
         let aim = turn.find_direction_off_bearing(bearing, self.bearing_offset);
         Rot2::radians(self.spread.pick_random_value()) * aim
+    }
+}
+
+/// A kite: runs away from the target at normal speed, scattered widely.
+pub fn kite(run_distance: Interval) -> impl Scene {
+    let dash = Dash::new(run_distance, 1.0, PI, KITE_SPREAD);
+    bsn! {
+        ~MotionKey::Kite
+        ~{dash}
+    }
+}
+
+/// A slide: runs straight away from the target.
+pub fn slide(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
+    let dash = Dash::new(run_distance, speed_multiplier, PI, Spread::default());
+    bsn! {
+        ~MotionKey::Slide
+        ~{dash}
+    }
+}
+
+/// A sidestep: steps across the target's bearing, reversing the way the character circles it.
+pub fn sidestep(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
+    let bearing_offset = FRAC_PI_2 + SIDESTEP_OUTWARD_LEAN;
+    let dash = Dash::new(
+        run_distance,
+        speed_multiplier,
+        bearing_offset,
+        Spread::default(),
+    );
+    bsn! {
+        ~MotionKey::Sidestep
+        ~{dash}
+    }
+}
+
+/// A step in: steps toward the target, scattered slightly.
+pub fn step_in(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
+    let dash = Dash::new(run_distance, speed_multiplier, 0.0, STEP_IN_SPREAD);
+    bsn! {
+        ~MotionKey::StepIn
+        ~{dash}
     }
 }
 

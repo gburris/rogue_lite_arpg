@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Chase, Dash, Flee, Idle, MotionKey, MotionSources, ReturnToHome};
+use crate::character::motion::{Chase, Flee, Idle, MotionKey, MotionSources, ReturnToHome, kite};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -227,23 +227,17 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
             ActionGlow(HEAL_GLOW_COLOR)
         ]
         MotionSources [
-            ~MotionKey::Idle
             Idle
             --
-            ~MotionKey::Wander
             enemy_wander()
             --
-            ~MotionKey::ReturnToHome
             ReturnToHome
             --
-            ~MotionKey::Chase
             Chase
             --
-            ~MotionKey::Flee
             Flee
             --
-            ~MotionKey::Kite
-            ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
+            @kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         ]
         template(move |_| Ok(sprite.clone()))
         Items [

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, CircleDirection, MotionOf, MotionProgress, RunningMotion, SteerInput,
+    BlockedTimer, CircleDirection, MotionKey, MotionOf, MotionProgress, RunningMotion, SteerInput,
     SteeredCharacter, Steering, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
@@ -18,6 +18,7 @@ const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKey::Orbit)]
 pub struct Orbit {
     distance_range: Interval,
     reroll_interval: Interval,

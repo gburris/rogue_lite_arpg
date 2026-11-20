@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets, TunedBy,
+    BlockedTimer, MotionKey, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -14,6 +14,7 @@ const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
 /// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKey::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 use super::{
-    MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets, TunedBy,
+    MotionKey, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
+    TunedBy,
 };
 use crate::interval::Interval;
 
@@ -16,6 +17,7 @@ pub(super) trait DirectMotion: Component {
 
 /// Stands still.
 #[derive(Component, Clone, Copy, Debug, Default)]
+#[require(MotionKey::Idle)]
 pub struct Idle;
 
 impl DirectMotion for Idle {
@@ -26,6 +28,7 @@ impl DirectMotion for Idle {
 
 /// Moves straight at the target.
 #[derive(Component, Clone, Copy, Debug, Default)]
+#[require(MotionKey::Chase)]
 pub struct Chase;
 
 impl DirectMotion for Chase {
@@ -36,6 +39,7 @@ impl DirectMotion for Chase {
 
 /// Moves directly away from the target.
 #[derive(Component, Clone, Copy, Debug, Default)]
+#[require(MotionKey::Flee)]
 pub struct Flee;
 
 impl DirectMotion for Flee {
@@ -47,6 +51,7 @@ impl DirectMotion for Flee {
 /// Holds the target within a distance range, backing away when too close and closing in when too
 /// far.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(MotionKey::KeepDistance)]
 pub struct KeepDistance {
     distance_range: Interval,
 }

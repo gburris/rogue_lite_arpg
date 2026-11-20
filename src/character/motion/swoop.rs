@@ -3,9 +3,9 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, DecayingSpeedBoost, FiniteMotion, MotionOf, MotionProgress,
-    MotionStep, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget,
-    SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, DecayingSpeedBoost, FiniteMotion, MotionKey, MotionOf,
+    MotionProgress, MotionStep, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTarget, SteeringTargets, TunedBy,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -21,7 +21,7 @@ const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 /// A committed curved move through the target and back out. It ends early when blocked or
 /// interrupted, and leaves a [`DecayingSpeedBoost`] when it ends.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(FiniteMotion)]
+#[require(FiniteMotion, MotionKey::Swoop)]
 pub struct Swoop {
     extra_speed: f32,
     exit_turn: f32,

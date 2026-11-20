@@ -14,7 +14,8 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    Chase, Dash, Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome,
+    Chase, Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome,
+    sidestep, slide, step_in,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -327,26 +328,19 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ~Kinematics::new(100.0)
         Experience(12.0)
         MotionSources [
-            ~MotionKey::Idle
             Idle
             --
-            ~MotionKey::Wander
             enemy_wander()
             --
-            ~MotionKey::ReturnToHome
             ReturnToHome
             --
-            ~MotionKey::Chase
             Chase
             --
-            ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
-            ~MotionKey::KeepDistance
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
-            ~MotionKey::Slide
-            ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
+            @slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
             ~{MotionReach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
             ~Cooldown::new(1.2)
@@ -365,28 +359,20 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Kinematics::new(150.0)
         Experience(15.0)
         MotionSources [
-            ~MotionKey::Idle
             Idle
             --
-            ~MotionKey::Wander
             enemy_wander()
             --
-            ~MotionKey::ReturnToHome
             ReturnToHome
             --
-            ~MotionKey::Chase
             Chase
             --
-            ~MotionKey::Sidestep
-            ~Dash::sidestep(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
+            @sidestep(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --
-            ~MotionKey::StepIn
-            ~Dash::step_in(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
+            @step_in(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --
-            ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
-            ~MotionKey::KeepDistance
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
         ]
         Abilities [

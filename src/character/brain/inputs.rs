@@ -25,6 +25,8 @@ pub enum ConsiderationInput {
     HasTarget,
     LineOfSight,
     TargetDistance,
+    /// The target's intended speed.
+    TargetSpeed,
     MissingHealth,
     ManaFraction,
     /// Whether this motion is running.
@@ -171,6 +173,7 @@ impl DecisionInputs<'_, '_, '_> {
                 self.target().map(|target| f32::from(target.line_of_sight))
             }
             ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
+            ConsiderationInput::TargetSpeed => self.target().map(|target| target.velocity.length()),
             ConsiderationInput::MissingHealth => Some(
                 1.0 - self
                     .components

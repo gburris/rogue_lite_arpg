@@ -28,9 +28,7 @@ pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 pub(super) use self::vocabulary::{Behavior, Consideration};
 pub use self::vocabulary::{BrainDefinition, Motion};
-use super::motion::{
-    AssumedVelocity, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus,
-};
+use super::motion::{HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 

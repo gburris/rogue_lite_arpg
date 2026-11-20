@@ -103,6 +103,20 @@ pub const fn target_within_distance(name: &'static str, distance: f32) -> Consid
     distance_threshold(name, distance, distance)
 }
 
+/// Target moving at most `speed`, with no hysteresis.
+pub const fn target_speed_at_most(name: &'static str, speed: f32) -> Consideration {
+    assert!(speed.is_finite(), "threshold needs a finite speed");
+    Consideration {
+        name,
+        input: ConsiderationInput::TargetSpeed,
+        score_mapping: ScoreMapping::Threshold {
+            enter: speed,
+            exit: speed,
+        },
+        inverted: false,
+    }
+}
+
 /// A 0-or-1 input scored as itself.
 pub const fn flag(name: &'static str, input: ConsiderationInput) -> Consideration {
     consideration(name, input, Interval::new(0.0, 1.0), Curve::Linear)

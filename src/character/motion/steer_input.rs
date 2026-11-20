@@ -95,7 +95,6 @@ pub(super) struct SteeringTarget {
     pub position: Vec2,
     pub distance: f32,
     pub direction: Vec2,
-    pub velocity: Vec2,
 }
 
 impl SteeringTarget {
@@ -143,6 +142,16 @@ impl CircleDirection {
         }
     }
 
+    /// The unit direction `angle` radians off the unit `bearing`, turned toward this way's tangent
+    /// (see [`Self::find_tangent`]).
+    pub(super) fn turn_off_bearing(self, bearing: Vec2, angle: f32) -> Vec2 {
+        let signed_angle = match self {
+            Self::Clockwise => angle,
+            Self::CounterClockwise => -angle,
+        };
+        Rot2::radians(signed_angle) * bearing
+    }
+
     /// `angle` signed to turn this way: negative for clockwise.
     pub(super) fn sign_angle(self, angle: f32) -> f32 {
         match self {
@@ -152,43 +161,21 @@ impl CircleDirection {
     }
 }
 
-/// The velocity steering assumes for a target without [`Kinematics`], such as a location hint.
-#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
-pub(in crate::character) struct AssumedVelocity(pub Vec2);
-
 /// Locates the targets of running motions.
 #[derive(SystemParam)]
 pub(super) struct SteeringTargets<'w, 's> {
-    targets: Query<
-        'w,
-        's,
-        (
-            &'static Transform,
-            Option<(&'static Kinematics, &'static StatMultipliers)>,
-            Option<&'static AssumedVelocity>,
-        ),
-    >,
+    targets: Query<'w, 's, &'static Transform>,
 }
 
 impl SteeringTargets<'_, '_> {
     /// `target` relative to `observer_position`; `None` if the target no longer exists.
     fn locate(&self, observer_position: Vec2, target: Entity) -> Option<SteeringTarget> {
-        let (transform, movement, assumed_velocity) = self.targets.get(target).ok()?;
-        let position = transform.translation.xy();
+        let position = self.targets.get(target).ok()?.translation.xy();
         let offset = position - observer_position;
-        let velocity = match (movement, assumed_velocity) {
-            (Some((kinematics, stat_multipliers)), _) => {
-                kinematics.velocity(stat_multipliers.speed)
-            }
-            (None, Some(&AssumedVelocity(velocity))) => velocity,
-            (None, None) => Vec2::ZERO,
-        };
-
         Some(SteeringTarget {
             position,
             distance: offset.length(),
             direction: offset.normalize_or_zero(),
-            velocity,
         })
     }
 }

@@ -13,7 +13,8 @@ pub enum MotionKey {
     Orbit,
     Kite,
     Slide,
-    Hop,
+    Sidestep,
+    StepIn,
     Swoop,
 }
 
@@ -29,7 +30,8 @@ impl MotionKey {
             Self::Orbit => "Orbit",
             Self::Kite => "Kite",
             Self::Slide => "Slide",
-            Self::Hop => "Hop",
+            Self::Sidestep => "Sidestep",
+            Self::StepIn => "StepIn",
             Self::Swoop => "Swoop",
         }
     }

@@ -5,7 +5,7 @@ use std::f32::consts::FRAC_PI_4;
 use avian2d::prelude::{RayCaster, RayHits};
 use bevy::prelude::*;
 
-use super::{AssumedVelocity, BrainSystems};
+use super::BrainSystems;
 use crate::prelude::*;
 
 /// Seconds a character keeps a target it can no longer see.
@@ -141,10 +141,9 @@ pub(in crate::character) struct WatchedBy(Vec<Entity>);
 
 /// Where a character believes its target is, as an entity its motions steer by. A targeting
 /// character has one from when targeting starts until it ends, kept where [`TargetInfo`] tracks
-/// the target and moving at the target's tracked velocity.
+/// the target.
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = TargetLocationHint)]
-#[require(AssumedVelocity)]
 pub(crate) struct LocationHint {
     pub character: Entity,
 }
@@ -267,16 +266,14 @@ fn is_target_in_sight(
     );
 }
 
-/// Moves each [`LocationHint`] to where its character tracks the target, at the tracked
-/// velocity.
+/// Moves each [`LocationHint`] to where its character tracks the target.
 fn move_location_hints(
     characters: Query<(&TargetInfo, &TargetLocationHint)>,
-    mut location_hints: Query<(&mut Transform, &mut AssumedVelocity), With<LocationHint>>,
+    mut location_hints: Query<&mut Transform, With<LocationHint>>,
 ) {
     for (target_info, location_hint) in &characters {
-        if let Ok((mut transform, mut velocity)) = location_hints.get_mut(location_hint.0) {
+        if let Ok(mut transform) = location_hints.get_mut(location_hint.0) {
             transform.translation = target_info.position.extend(transform.translation.z);
-            **velocity = target_info.velocity;
         }
     }
 }
@@ -336,11 +333,9 @@ fn on_targeting_added_spawn_location_hint(
     mut commands: Commands,
     target_infos: Query<&TargetInfo>,
 ) {
-    let (position, velocity) = target_infos
+    let position = target_infos
         .get(added.entity)
-        .map_or((Vec2::ZERO, Vec2::ZERO), |target_info| {
-            (target_info.position, target_info.velocity)
-        });
+        .map_or(Vec2::ZERO, |target_info| target_info.position);
 
     commands.spawn((
         Name::new("Location hint"),
@@ -348,7 +343,6 @@ fn on_targeting_added_spawn_location_hint(
             character: added.entity,
         },
         Transform::from_translation(position.extend(0.0)),
-        AssumedVelocity(velocity),
     ));
 }
 

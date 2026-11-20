@@ -8,7 +8,7 @@ use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
     CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
     MAINHAND, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, mana_at_or_below,
-    within_reach,
+    target_speed_at_most, target_within_distance, within_reach,
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
@@ -35,6 +35,9 @@ const FIRE_MAGE_MANA_REGEN: f32 = 4.0;
 /// Mana a second an ice mage regenerates: less than a steady stream of ice bolts costs, so a long
 /// fight drains it into a break to refill.
 const ICE_MAGE_MANA_REGEN: f32 = 10.0;
+
+/// How far a fire mage's sidestep or step in carries it.
+const FIRE_DASH_DISTANCE: Interval = Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32);
 
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
@@ -84,7 +87,7 @@ const ALLY_CLOSE: Consideration = consideration(
 /// scores `CAST_WEIGHT * quality^(1/3)`.
 const CAST_WEIGHT: f32 = 8.0;
 
-/// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
+/// Sidesteps for a firing lane; each post-volley sidestep flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
     Some(Motion::Run(MotionKey::Orbit)),
     None,
@@ -126,13 +129,26 @@ const ICE_RECOVER: Behavior = Behavior::new(
     &[HAS_TARGET, mana_at_or_below("ice mana low", 0.4, 0.75)],
 );
 
-/// A tangent hop after each volley.
-const FIRE_HOP: Behavior = Behavior::new(
-    Some(Motion::Run(MotionKey::Hop)),
+/// A sidestep across the target's bearing after each volley.
+const FIRE_SIDESTEP: Behavior = Behavior::new(
+    Some(Motion::Run(MotionKey::Sidestep)),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     8.5,
     &[ATTACK_FINISHED, HAS_TARGET],
+);
+/// A step toward a close target that stands still, instead of a sidestep.
+const FIRE_STEP_IN: Behavior = Behavior::new(
+    Some(Motion::Run(MotionKey::StepIn)),
+    None,
+    CommitPolicy::UntilFinished { interrupt_tier: 1 },
+    8.75,
+    &[
+        ATTACK_FINISHED,
+        HAS_TARGET,
+        target_within_distance("target close", CAST_MIN_RANGE - 10.0),
+        target_speed_at_most("target still", 20.0),
+    ],
 );
 /// A straight escape when the player crosses the danger ring. Its higher tier
 /// pre-empts a cast, though a bolt already in flight still fires.
@@ -161,11 +177,12 @@ const ICE_CAST: Behavior = Behavior::new(
     &[LINE_OF_SIGHT, IN_MAINHAND_REACH, ICE_CAST_QUALITY],
 );
 
-// Motion priority: recover (9, or 11.25 once running), hop (8.5), cast (8 at
-// full quality), seek (7), return (6), orbit (5.5), chase (4), wander (1).
-// - Recover beats the hop on the tick it starts, so a volley that drains mana starts the break
-//   instead of a hop.
-// - The hop beats a running orbit (6.875).
+// Motion priority: recover (9, or 11.25 once running), step in (8.75), sidestep (8.5), cast (8
+// at full quality), seek (7), return (6), orbit (5.5), chase (4), wander (1).
+// - Recover beats both dashes on the tick they start, so a volley that drains mana starts the break
+//   instead of a dash.
+// - A step in beats the sidestep that starts on the same volley.
+// - Both dashes beat a running orbit (6.875).
 // - The cast beats a running orbit from about 238 units away, and a newly started one from about
 //   220. A mage crowded closer orbits outward until it is about 238 away, then casts again.
 //
@@ -184,7 +201,8 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
     FIRE_ORBIT,
-    FIRE_HOP,
+    FIRE_SIDESTEP,
+    FIRE_STEP_IN,
     FIRE_CAST,
     FIRE_RALLY,
 ];
@@ -207,7 +225,7 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     ICE_CAST,
 ];
 
-/// Holds the cast distance range on a moving orbit, hops to a fresh tangent after each
+/// Holds the cast distance range on a moving orbit, sidesteps to a fresh tangent after each
 /// volley, backs off only long enough to refill a drained mana pool, and rallies nearby allies
 /// between volleys.
 pub(super) static FIRE_MAGE: BrainDefinition = BrainDefinition {
@@ -351,13 +369,11 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
             ~MotionKey::Chase
             Chase
             --
-            // A still target inside the close range gets a step-in hop instead.
-            ~MotionKey::Hop
-            ~Dash::hop(
-                Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
-                2.2,
-                CAST_MIN_RANGE - 10.0,
-            )
+            ~MotionKey::Sidestep
+            ~Dash::sidestep(FIRE_DASH_DISTANCE, 2.2)
+            --
+            ~MotionKey::StepIn
+            ~Dash::step_in(FIRE_DASH_DISTANCE, 2.2)
             --
             ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)

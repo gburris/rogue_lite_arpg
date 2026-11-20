@@ -89,6 +89,9 @@ pub(super) fn find_skip_reason<V: BrainVocabulary>(
 ) -> Option<SkipReason> {
     let behavior = &definition.behaviors[index];
     let tier = behavior.commit.interrupt_tier();
+    if tier > 0 && running_behavior_ids.contains(&index) {
+        return Some(SkipReason::RunningCommitted);
+    }
     let slot_committed = running_behavior_ids.iter().any(|&running_behavior_id| {
         let running_behavior = &definition.behaviors[running_behavior_id];
         let running_tier = running_behavior.commit.interrupt_tier();

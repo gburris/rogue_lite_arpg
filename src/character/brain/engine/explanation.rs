@@ -38,14 +38,7 @@ pub(in crate::character::brain) fn explain_behavior<V: BrainVocabulary>(
     let behavior = &definition.behaviors[index];
     let is_current = running_behavior_ids.contains(&index);
     let momentum = momentum_multiplier(is_current);
-    let skipped =
-        find_skip_reason(definition, index, available, running_behavior_ids).map(|reason| {
-            // The committed holder sits out too, but it is the one running.
-            match reason {
-                SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
-                other => other,
-            }
-        });
+    let skipped = find_skip_reason(definition, index, available, running_behavior_ids);
     if skipped.is_some() {
         return BehaviorScoreExplanation {
             skipped,

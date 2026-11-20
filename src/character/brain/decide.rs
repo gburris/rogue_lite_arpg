@@ -12,7 +12,7 @@ use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::vocabulary::{Behavior, BehaviorScoreExplanation};
-use super::{Action, Brain, Motion, MotionFinished};
+use super::{Action, Brain, MotionFinished, MotionKey};
 use crate::prelude::*;
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
@@ -24,7 +24,7 @@ const COMMIT_TIMEOUT: f32 = 3.0;
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
-    pub(super) motion: Option<Motion>,
+    pub(super) motion: Option<MotionKey>,
     pub(super) action: Option<Action>,
     pub(super) action_issued: bool,
     pub(super) committed: bool,
@@ -96,7 +96,7 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let motion = Motion::Run(finished.key);
+    let motion = finished.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(

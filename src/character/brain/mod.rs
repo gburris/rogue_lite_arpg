@@ -26,8 +26,8 @@ pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
+pub use self::vocabulary::BrainDefinition;
 pub(super) use self::vocabulary::{Behavior, Consideration};
-pub use self::vocabulary::{BrainDefinition, Motion};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -67,7 +67,7 @@ impl Brain {
     }
 
     /// The held motion; `None` while the slot is empty.
-    pub fn motion(&self) -> Option<Motion> {
+    pub fn motion(&self) -> Option<MotionKey> {
         self.current_motion_behavior().map(|(_, motion)| motion)
     }
 
@@ -82,7 +82,7 @@ impl Brain {
         self.definition.behaviors[running.behavior]
     }
 
-    fn current_motion_behavior(&self) -> Option<(RunningBehavior, Motion)> {
+    fn current_motion_behavior(&self) -> Option<(RunningBehavior, MotionKey)> {
         self.running_behaviors
             .iter()
             .find_map(|&running| running.motion.map(|motion| (running, motion)))
@@ -96,7 +96,7 @@ impl Brain {
     }
 
     /// Whether any behavior with `motion` is in a start roll retry delay.
-    fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
+    fn is_start_roll_waiting(&self, motion: MotionKey, now: f32) -> bool {
         self.definition
             .behaviors
             .iter()
@@ -117,10 +117,7 @@ impl Brain {
             return false;
         }
 
-        let motion_available = |motion: Motion| match motion {
-            Motion::Idle => true,
-            Motion::Run(key) => inputs.is_motion_ready(key),
-        };
+        let motion_available = |key: MotionKey| inputs.is_motion_ready(key);
         let action_available = |action: Action| match action {
             Action::Idle => true,
             Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
@@ -132,9 +129,7 @@ impl Brain {
         }
 
         let Behavior { motion, action, .. } = *behavior;
-        let finite_motion = motion
-            .and_then(Motion::key)
-            .is_some_and(|key| inputs.motion_ends_on_its_own(key));
+        let finite_motion = motion.is_some_and(|key| inputs.motion_ends_on_its_own(key));
         let finite_action = action.is_some_and(|action| inputs.action_ends_on_its_own(action));
         if behavior.commit.is_committed() {
             let finite_parts = usize::from(finite_motion) + usize::from(finite_action);

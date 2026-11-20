@@ -13,7 +13,7 @@ use bevy::prelude::*;
 
 pub use self::dash::Dash;
 use self::direct::DirectMotion;
-pub use self::direct::{Chase, Flee, KeepDistance};
+pub use self::direct::{Chase, Flee, Idle, KeepDistance};
 pub use self::home_area::{Home, HomeArea, ReturnToHome};
 use self::motion_source::{FiniteMotion, TunedBy};
 pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
@@ -41,6 +41,7 @@ pub(super) fn plugin(app: &mut App) {
             orbit::apply_orbit,
             wander::apply_wander,
             home_area::move_homes_of_blocked_characters,
+            direct::apply_direct_steering::<Idle>,
             direct::apply_direct_steering::<Chase>,
             direct::apply_direct_steering::<Flee>,
             direct::apply_direct_steering::<KeepDistance>,

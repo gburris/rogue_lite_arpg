@@ -250,7 +250,7 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
 }
 
 fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
-    let motion_name = enemy.brain.and_then(Brain::motion).map(Motion::name);
+    let motion_name = enemy.brain.and_then(Brain::motion).map(MotionKey::name);
     let action = enemy.brain.and_then(Brain::action);
     let intended_velocity = enemy.kinematics.velocity(enemy.stat_multipliers.speed);
 
@@ -286,7 +286,7 @@ fn describe_npc(npc: &NpcDataItem) -> Value {
         "entity": entity_id(npc.entity),
         "name": npc.name.map(Name::as_str),
         "position": position(npc.transform),
-        "motion": motion.map(Motion::name),
+        "motion": motion.map(MotionKey::name),
     })
 }
 

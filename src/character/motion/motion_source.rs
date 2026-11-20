@@ -5,6 +5,7 @@ use bevy::prelude::*;
 /// of tuning can sit under several keys.
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MotionKey {
+    Idle,
     Wander,
     ReturnToHome,
     Chase,
@@ -22,6 +23,7 @@ impl MotionKey {
     /// One-word label for debug displays.
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Idle => "Idle",
             Self::Wander => "Wander",
             Self::ReturnToHome => "ReturnToHome",
             Self::Chase => "Chase",

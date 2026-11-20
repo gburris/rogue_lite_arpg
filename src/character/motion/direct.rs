@@ -14,6 +14,16 @@ pub(super) trait DirectMotion: Component {
     fn pick_steering_direction(&self, input: &SteerInput) -> Option<Vec2>;
 }
 
+/// Stands still.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct Idle;
+
+impl DirectMotion for Idle {
+    fn pick_steering_direction(&self, _input: &SteerInput) -> Option<Vec2> {
+        None
+    }
+}
+
 /// Moves straight at the target.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Chase;

@@ -11,7 +11,6 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Motion,
 };
 use crate::character::motion::{
     Chase, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome, Swoop,
@@ -85,7 +84,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Run(MotionKey::Orbit)),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -93,7 +92,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
-    Some(Motion::Run(MotionKey::KeepDistance)),
+    Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -106,7 +105,7 @@ const CORNERED: Consideration =
 /// Slides along whatever pins a bat backing away, circling the target until the bat is back
 /// past the inner cast edge.
 const BAT_SLIP_AWAY: Behavior = Behavior::new(
-    Some(Motion::Run(MotionKey::Orbit)),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     6.5,
@@ -114,7 +113,7 @@ const BAT_SLIP_AWAY: Behavior = Behavior::new(
 );
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
-    Some(Motion::Run(MotionKey::Swoop)),
+    Some(MotionKey::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
@@ -146,7 +145,7 @@ const BAT_BREATH: Behavior = Behavior::new(
 );
 const SWOOPING: Consideration = flag(
     "swooping",
-    ConsiderationInput::MotionRunning(Motion::Run(MotionKey::Swoop)),
+    ConsiderationInput::MotionRunning(MotionKey::Swoop),
 );
 
 /// Arms a bite near contact reach, only while swooping.

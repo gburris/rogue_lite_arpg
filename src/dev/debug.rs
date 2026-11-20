@@ -275,7 +275,7 @@ fn cleanup_enemy_ai_labels(
 fn short_activity(brain: &Brain, wander: Option<&WanderProgress>) -> &'static str {
     match brain.motion() {
         None => "Stopped",
-        Some(Motion::Run(MotionKey::Wander)) => {
+        Some(MotionKey::Wander) => {
             if wander.is_some_and(WanderProgress::is_walking) {
                 "Wander"
             } else {

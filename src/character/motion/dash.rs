@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, Motion, MotionOf, MotionProgress, MotionStep, RunningMotion,
-    SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, FiniteMotion, MotionOf, MotionProgress, MotionStep,
+    RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
+    TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -20,26 +21,19 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 /// A committed straight-line move in a direction chosen when it starts. It ends early when blocked
 /// or interrupted.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Dash)]
+#[require(FiniteMotion)]
 pub struct Dash {
     run_distance: Interval,
     speed_multiplier: f32,
     aim_rule: DashAimRule,
-    debug_name: &'static str,
 }
 
 impl Dash {
-    fn new(
-        run_distance: Interval,
-        speed_multiplier: f32,
-        aim_rule: DashAimRule,
-        debug_name: &'static str,
-    ) -> Self {
+    fn new(run_distance: Interval, speed_multiplier: f32, aim_rule: DashAimRule) -> Self {
         Self {
             run_distance,
             speed_multiplier,
             aim_rule,
-            debug_name,
         }
     }
 
@@ -50,7 +44,6 @@ impl Dash {
             DashAimRule::Away {
                 spread: KITE_SPREAD,
             },
-            "Kite",
         )
     }
 
@@ -59,7 +52,6 @@ impl Dash {
             run_distance,
             speed_multiplier,
             DashAimRule::HopTangent { close_range },
-            "Hop",
         )
     }
 
@@ -70,12 +62,7 @@ impl Dash {
             DashAimRule::Away {
                 spread: Spread::default(),
             },
-            "Slide",
         )
-    }
-
-    pub fn name(&self) -> &'static str {
-        self.debug_name
     }
 }
 
@@ -94,7 +81,7 @@ fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Op
 }
 
 impl MotionProgress for DashProgress {
-    const MOTION: Motion = Motion::Dash;
+    type Tuning = Dash;
 }
 
 /// Advances each dash in progress. Ends it after its distance or when its target is lost.
@@ -118,7 +105,7 @@ pub(super) fn apply_dash(
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
+            .map(|character| character.build_steer_input(running.target, &targets, &time));
         let step = match (dash, input) {
             (
                 Some(dash),

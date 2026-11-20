@@ -100,7 +100,7 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let motion = finished.motion;
+    let motion = Motion::Run(finished.key);
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(

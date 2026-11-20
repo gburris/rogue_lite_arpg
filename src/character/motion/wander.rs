@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTargets, TunedBy,
+    BlockedTimer, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
 
@@ -14,7 +14,6 @@ const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
 /// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,
@@ -88,10 +87,10 @@ impl WanderProgress {
 }
 
 impl MotionProgress for WanderProgress {
-    const MOTION: Motion = Motion::Wander;
+    type Tuning = Wander;
 }
 
-/// Steers each character running [`Motion::Wander`].
+/// Steers each running motion tuned by a [`Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
@@ -110,7 +109,7 @@ pub(super) fn apply_wander(
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
+            .map(|character| character.build_steer_input(running.target, &targets, &time));
         *steering = match (wander, input) {
             (Some(wander), Some(input)) => {
                 let direction = progress.pick_steering_direction(wander, &input);

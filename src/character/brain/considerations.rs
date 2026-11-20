@@ -1,7 +1,7 @@
 use super::action::Action;
 use super::engine::{CommitPolicy, Curve, ScoreMapping};
 use super::inputs::ConsiderationInput;
-use super::{Behavior, Consideration, Motion};
+use super::{Behavior, Consideration, Motion, MotionKey};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -156,21 +156,21 @@ pub const INSIDE_OUTER_CAST_EDGE: Consideration = distance_threshold(
 );
 
 pub const WANDER: Behavior = Behavior::new(
-    Some(Motion::Wander),
+    Some(Motion::Run(MotionKey::Wander)),
     None,
     CommitPolicy::ContinuouslyScored,
     1.0,
     &[NO_TARGET],
 );
 pub const RETURN_TO_HOME: Behavior = Behavior::new(
-    Some(Motion::ReturnToHome),
+    Some(Motion::Run(MotionKey::ReturnToHome)),
     None,
     CommitPolicy::ContinuouslyScored,
     6.0,
     &[NO_TARGET, HOME_AREA_PULL],
 );
 pub const CHASE_CAST_RANGE: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(Motion::Run(MotionKey::Chase)),
     None,
     CommitPolicy::ContinuouslyScored,
     4.0,
@@ -179,7 +179,7 @@ pub const CHASE_CAST_RANGE: Behavior = Behavior::new(
 
 /// Walks to where a target that slipped out of sight was last seen.
 pub const SEEK_LOST_TARGET: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(Motion::Run(MotionKey::Chase)),
     None,
     CommitPolicy::ContinuouslyScored,
     7.0,

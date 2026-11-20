@@ -19,6 +19,7 @@ use self::engine::validate_brain;
 pub(super) use self::engine::{CommitPolicy, Curve};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
+pub use self::issue_motion::Motion;
 use self::perception::TargetLocationHint;
 #[cfg(feature = "dev_tools")]
 pub(crate) use self::perception::TargetLock;
@@ -29,7 +30,7 @@ pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 pub use self::vocabulary::BrainDefinition;
 pub(super) use self::vocabulary::{Behavior, Consideration};
 use super::motion::{
-    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus,
+    AssumedVelocity, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus,
 };
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -97,7 +98,7 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    /// Whether any behavior with a motion of `kind` is in a start roll retry delay.
+    /// Whether any behavior with `motion` is in a start roll retry delay.
     fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
         self.definition
             .behaviors
@@ -110,33 +111,52 @@ impl Brain {
 
     /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
     /// is ready (see [`MotionStatus::is_ready`]), and its action can run (see
-    /// [`DecisionInputs::can_run`]). A committed behavior also needs an action that ends on its
-    /// own, since nothing else would end it.
+    /// [`DecisionInputs::can_run`]). A committed behavior also needs exactly one part that ends on
+    /// its own, since nothing else would end it, and a continuously scored one needs a motion that
+    /// runs until replaced.
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
         let behavior = &self.definition.behaviors[index];
         if inputs.now < self.start_roll_ready_at[index] {
             return false;
         }
 
-        let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
+        let motion_available = |motion: Motion| match motion {
+            Motion::Idle => true,
+            Motion::Run(key) => inputs.is_motion_ready(key),
+        };
         let action_available = |action: Action| match action {
             Action::Idle => true,
-            Action::Use(_) => {
-                if !inputs.has_action_source(action) || !inputs.can_run(action) {
-                    return false;
-                }
-
-                let finishes =
-                    !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
-                if !finishes {
-                    warn_once!(
-                        "a committed behavior over {action:?} never runs: its use is sustained"
-                    );
-                }
-                finishes
-            }
+            Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
         };
-        behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
+        if !(behavior.motion.is_none_or(motion_available)
+            && behavior.action.is_none_or(action_available))
+        {
+            return false;
+        }
+
+        let Behavior { motion, action, .. } = *behavior;
+        let finite_motion = motion
+            .and_then(Motion::key)
+            .is_some_and(|key| inputs.motion_ends_on_its_own(key));
+        let finite_action = action.is_some_and(|action| inputs.action_ends_on_its_own(action));
+        if behavior.commit.is_committed() {
+            let finite_parts = usize::from(finite_motion) + usize::from(finite_action);
+            if finite_parts != 1 {
+                warn_once!(
+                    "a committed behavior over {motion:?} and {action:?} never runs: it has \
+                     {finite_parts} finite parts"
+                );
+            }
+            finite_parts == 1
+        } else {
+            if finite_motion {
+                warn_once!(
+                    "a continuously scored behavior over {motion:?} never runs: its motion is \
+                     finite"
+                );
+            }
+            !finite_motion
+        }
     }
 
     /// An attack finished since the last decision.

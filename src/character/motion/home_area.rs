@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, Motion, MotionOf, MotionProgress};
+use super::{BlockedTimer, DirectMotion, MotionOf, MotionProgress, SteerInput};
 use crate::character::state::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
@@ -68,6 +68,16 @@ impl HomeArea {
     }
 }
 
+/// Walks straight back to the character's [`HomeArea`] and stops on arrival.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct ReturnToHome;
+
+impl DirectMotion for ReturnToHome {
+    fn pick_steering_direction(&self, input: &SteerInput) -> Option<Vec2> {
+        input.direction_to_home()
+    }
+}
+
 /// A return home in progress, on its running motion: how long it has been blocked.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct ReturnToHomeProgress {
@@ -75,7 +85,7 @@ pub(super) struct ReturnToHomeProgress {
 }
 
 impl MotionProgress for ReturnToHomeProgress {
-    const MOTION: Motion = Motion::ReturnToHome;
+    type Tuning = ReturnToHome;
 }
 
 /// Moves the home of each character whose return home is blocked to where it stands.

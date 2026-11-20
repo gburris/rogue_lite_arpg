@@ -10,8 +10,14 @@ impl BrainVocabulary for CharacterVocabulary {
     type Action = Action;
     type Input = ConsiderationInput;
 
+    /// Standing still never reports a finish. Whether a running motion does depends on the
+    /// character's source, which decisions check when a behavior would start; see
+    /// [`MotionStatus::ends_on_its_own`](crate::character::motion::MotionStatus::ends_on_its_own).
     fn motion_reports_finish(motion: Motion) -> bool {
-        motion.is_finite()
+        match motion {
+            Motion::Idle => false,
+            Motion::Run(_) => true,
+        }
     }
 
     /// Idling never reports a finish. A sustained use doesn't either, which decisions check when a

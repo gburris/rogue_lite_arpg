@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, HomeArea, Motion, MotionStatus};
+use super::{Brain, HomeArea, Motion, MotionKey, MotionStatus};
 use crate::character::Allies;
 use crate::character::state::BlockedState;
 use crate::prelude::*;
@@ -29,16 +29,16 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion is running.
     MotionRunning(Motion),
-    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and
-    /// no behavior with one is in a start roll retry delay.
-    MotionReady(Motion),
+    /// Whether the character can start the motion of this source (see [`MotionStatus::is_ready`])
+    /// and no behavior with it is in a start roll retry delay.
+    MotionReady(MotionKey),
     /// Seconds the running motion has held its slot when it is this motion, else zero.
     SecondsInMotion(Motion),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
-    /// Target distance over the reach of this motion; at most `1.0` is in reach.
-    MotionReachFraction(Motion),
+    /// Target distance over the reach of this motion source; at most `1.0` is in reach.
+    MotionReachFraction(MotionKey),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     /// The closest ally's distance over this action's reach; absent with no ally alive.
@@ -89,10 +89,15 @@ impl DecisionInputs<'_, '_, '_> {
     }
 
     /// See [`MotionStatus::is_ready`].
-    pub fn is_motion_ready(&self, motion: Motion) -> bool {
+    pub fn is_motion_ready(&self, key: MotionKey) -> bool {
+        self.queries.motions.is_ready(self.components.entity, key)
+    }
+
+    /// See [`MotionStatus::ends_on_its_own`].
+    pub fn motion_ends_on_its_own(&self, key: MotionKey) -> bool {
         self.queries
             .motions
-            .is_ready(self.components.entity, motion)
+            .ends_on_its_own(self.components.entity, key)
     }
 
     /// Whether the character has an action source for `action`; never for `Idle`, which has none.
@@ -179,8 +184,9 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
                 brain.motion().is_some_and(|running| running == motion),
             )),
-            ConsiderationInput::MotionReady(motion) => Some(f32::from(
-                self.is_motion_ready(motion) && !brain.is_start_roll_waiting(motion, self.now),
+            ConsiderationInput::MotionReady(key) => Some(f32::from(
+                self.is_motion_ready(key)
+                    && !brain.is_start_roll_waiting(Motion::Run(key), self.now),
             )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
@@ -190,8 +196,8 @@ impl DecisionInputs<'_, '_, '_> {
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
-            ConsiderationInput::MotionReachFraction(motion) => {
-                let reach = self.queries.motions.reach(self.components.entity, motion);
+            ConsiderationInput::MotionReachFraction(key) => {
+                let reach = self.queries.motions.reach(self.components.entity, key);
                 self.target_reach_fraction(reach)
             }
             ConsiderationInput::ActionReachFraction(action) => {
@@ -221,7 +227,7 @@ impl DecisionInputs<'_, '_, '_> {
         let home_area = self.components.home_area?;
         let position = self.components.transform.translation.xy();
         let overshoot_fraction = home_area.overshoot_fraction(position)?;
-        if running_motion == Some(Motion::ReturnToHome) {
+        if running_motion == Some(Motion::Run(MotionKey::ReturnToHome)) {
             Some(f32::from(!home_area.has_arrived(position)))
         } else {
             Some(overshoot_fraction)

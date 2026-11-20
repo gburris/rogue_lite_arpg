@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, CircleDirection, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput,
+    BlockedTimer, CircleDirection, MotionOf, MotionProgress, RunningMotion, SteerInput,
     SteeredCharacter, Steering, SteeringTargets, TunedBy,
 };
 use crate::interval::{Interval, Spread};
@@ -18,7 +18,6 @@ const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Orbit)]
 pub struct Orbit {
     distance_range: Interval,
     reroll_interval: Interval,
@@ -105,10 +104,10 @@ impl OrbitProgress {
 }
 
 impl MotionProgress for OrbitProgress {
-    const MOTION: Motion = Motion::Orbit;
+    type Tuning = Orbit;
 }
 
-/// Circles the target while the character runs [`Motion::Orbit`].
+/// Circles the target for each running motion tuned by an [`Orbit`].
 pub(super) fn apply_orbit(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
@@ -127,7 +126,7 @@ pub(super) fn apply_orbit(
         let character = characters.get(motion_of.character).ok();
         let input = character
             .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
+            .map(|character| character.build_steer_input(running.target, &targets, &time));
         *steering = match (orbit, input) {
             (Some(orbit), Some(input)) => {
                 let direction = progress.pick_steering_direction(orbit, &input);

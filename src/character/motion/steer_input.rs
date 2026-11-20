@@ -3,7 +3,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{HomeArea, RunningMotion, Steering};
+use super::{HomeArea, Steering};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
@@ -65,23 +65,17 @@ pub(super) struct SteeredCharacter {
 }
 
 impl SteeredCharacterItem<'_, '_> {
-    /// This frame's input for steering `running`; `None` if it needs a target and the target is
-    /// missing.
+    /// This frame's input for steering by `target`.
     pub(super) fn build_steer_input(
         &self,
-        running: &RunningMotion,
+        target: Option<Entity>,
         targets: &SteeringTargets,
         time: &Time<Virtual>,
-    ) -> Option<SteerInput<'_>> {
+    ) -> SteerInput<'_> {
         let position = self.transform.translation.xy();
-        let target = running
-            .target
-            .and_then(|target| targets.locate(position, target));
-        if running.motion.needs_target() && target.is_none() {
-            return None;
-        }
+        let target = target.and_then(|target| targets.locate(position, target));
 
-        Some(SteerInput {
+        SteerInput {
             position,
             heading: self.kinematics.direction,
             now: time.elapsed_secs(),
@@ -91,7 +85,7 @@ impl SteeredCharacterItem<'_, '_> {
             kinematics: self.kinematics,
             stat_speed: self.stat_multipliers.speed,
             is_blocked: self.blocked.is_blocked(),
-        })
+        }
     }
 }
 

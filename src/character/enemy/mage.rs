@@ -12,8 +12,11 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    Motion,
 };
-use crate::character::motion::{Dash, KeepDistance, Motion, MotionReach, MotionSources, Orbit};
+use crate::character::motion::{
+    Chase, Dash, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome,
+};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -38,7 +41,7 @@ const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
 const IN_DASH_REACH: Consideration = within_reach(
     "in dash reach",
-    ConsiderationInput::MotionReachFraction(Motion::Dash),
+    ConsiderationInput::MotionReachFraction(MotionKey::Slide),
 );
 
 /// Fire mage firing-position quality: zero at the inner cast edge, full 60
@@ -83,7 +86,7 @@ const CAST_WEIGHT: f32 = 8.0;
 
 /// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(Motion::Run(MotionKey::Orbit)),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -99,7 +102,7 @@ const FIRE_RALLY: Behavior = Behavior::new(
 );
 /// Circles on its firing lane between casts, so it never stands around waiting on the staff.
 const ICE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(Motion::Run(MotionKey::Orbit)),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -108,7 +111,7 @@ const ICE_ORBIT: Behavior = Behavior::new(
 /// Breaks contact while mana is low; the threshold's exit holds it until the
 /// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance),
+    Some(Motion::Run(MotionKey::KeepDistance)),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -116,7 +119,7 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 );
 /// Ice bolts are expensive, so the break enters earlier and lasts longer.
 const ICE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance),
+    Some(Motion::Run(MotionKey::KeepDistance)),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -125,7 +128,7 @@ const ICE_RECOVER: Behavior = Behavior::new(
 
 /// A tangent hop after each volley.
 const FIRE_HOP: Behavior = Behavior::new(
-    Some(Motion::Dash),
+    Some(Motion::Run(MotionKey::Hop)),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     8.5,
@@ -134,7 +137,7 @@ const FIRE_HOP: Behavior = Behavior::new(
 /// A straight escape when the player crosses the danger ring. Its higher tier
 /// pre-empts a cast, though a bolt already in flight still fires.
 const ICE_SLIDE: Behavior = Behavior::new(
-    Some(Motion::Dash),
+    Some(Motion::Run(MotionKey::Slide)),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 2 },
     12.0,
@@ -304,12 +307,22 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ~Kinematics::new(100.0)
         Experience(12.0)
         MotionSources [
+            ~MotionKey::Wander
             enemy_wander()
             --
+            ~MotionKey::ReturnToHome
+            ReturnToHome
+            --
+            ~MotionKey::Chase
+            Chase
+            --
+            ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
+            ~MotionKey::KeepDistance
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
+            ~MotionKey::Slide
             ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
             ~{MotionReach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
@@ -329,17 +342,27 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Kinematics::new(150.0)
         Experience(15.0)
         MotionSources [
+            ~MotionKey::Wander
             enemy_wander()
             --
+            ~MotionKey::ReturnToHome
+            ReturnToHome
+            --
+            ~MotionKey::Chase
+            Chase
+            --
             // A still target inside the close range gets a step-in hop instead.
+            ~MotionKey::Hop
             ~Dash::hop(
                 Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
                 2.2,
                 CAST_MIN_RANGE - 10.0,
             )
             --
+            ~MotionKey::Orbit
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
+            ~MotionKey::KeepDistance
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
         ]
         Abilities [

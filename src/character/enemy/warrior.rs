@@ -12,8 +12,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    Motion,
 };
-use crate::character::motion::{Dash, Motion, MotionSources};
+use crate::character::motion::{Chase, Dash, Flee, MotionKey, MotionSources, ReturnToHome};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -42,7 +43,10 @@ const NEEDS_POTION: Consideration = consideration(
 );
 const STOOD_STILL_IN_REACH: Consideration =
     motion_running_for("stood still in reach", Motion::Idle, WARRIOR_SWING_DELAY);
-const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
+const FLEEING: Consideration = flag(
+    "fleeing",
+    ConsiderationInput::MotionRunning(Motion::Run(MotionKey::Flee)),
+);
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
 const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL));
@@ -68,14 +72,14 @@ const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
 
 /// Breaks away to drink. A warrior with no potion left stays and fights.
 const FLEE: Behavior = Behavior::new(
-    Some(Motion::Flee),
+    Some(Motion::Run(MotionKey::Flee)),
     None,
     CommitPolicy::ContinuouslyScored,
     7.0,
     &[HAS_TARGET, BADLY_HURT, HAS_POTION],
 );
 const CHASE_MELEE: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(Motion::Run(MotionKey::Chase)),
     None,
     CommitPolicy::ContinuouslyScored,
     4.0,
@@ -103,7 +107,7 @@ const WARRIOR_SWING: Behavior = Behavior::new(
 
 /// Runs out the break rolled after a swing.
 const WARRIOR_KITE: Behavior = Behavior::new(
-    Some(Motion::Dash),
+    Some(Motion::Run(MotionKey::Kite)),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
@@ -224,8 +228,19 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
             ActionGlow(HEAL_GLOW_COLOR)
         ]
         MotionSources [
+            ~MotionKey::Wander
             enemy_wander()
             --
+            ~MotionKey::ReturnToHome
+            ReturnToHome
+            --
+            ~MotionKey::Chase
+            Chase
+            --
+            ~MotionKey::Flee
+            Flee
+            --
+            ~MotionKey::Kite
             ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         ]
         template(move |_| Ok(sprite.clone()))

@@ -26,18 +26,15 @@ pub(super) fn update_magnet_locations(
 
     for (child_of, magnet_transform, colliding_entities) in &magnet_query {
         if colliding_entities.contains(&player_entity) {
+            let magnet_to_player =
+                player_transform.translation().xy() - magnet_transform.translation().xy();
             // Touching the player leaves no direction to pull along.
-            let Some(direction) = (player_transform.translation().truncate()
-                - magnet_transform.translation().truncate())
-            .try_normalize() else {
+            let Some(direction) = magnet_to_player.try_normalize() else {
                 continue;
             };
 
-            // divide distance by 32 (tile size) so it isn't too large when used in cubic function
-            let distance = player_transform
-                .translation()
-                .distance(magnet_transform.translation())
-                / 32.0;
+            // Measured in tiles so the distance isn't too large when cubed.
+            let distance = magnet_to_player.length() / TILE_SIZE as f32;
 
             // https://en.wikipedia.org/wiki/Force_between_magnets#Magnetic_dipole_moment
             // Force gets stronger as magnet gets closer to ensure it closes in on target

@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use rand::RngExt;
 
+use crate::interval::Interval;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -56,6 +56,8 @@ pub struct DropGold {
 }
 
 const MAX_COINS_TO_SPAWN: i32 = 5;
+/// How far from the drop point a dropped coin lands.
+const GOLD_SCATTER_DISTANCE: Interval = Interval::new(20.0, 70.0);
 
 fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<SpriteAssets>) {
     let mut rng = rand::rng();
@@ -77,10 +79,7 @@ fn on_drop_gold(gold_drop: On<DropGold>, mut commands: Commands, sprites: Res<Sp
             value = remaining_gold;
         }
 
-        // Random position within radius
-        let angle = rng.random_range(0.0..std::f32::consts::TAU);
-        let distance = rng.random_range(20.0..70.0);
-        let offset = Vec2::from_angle(angle) * distance;
+        let offset = Dir2::from_rng(&mut rng) * GOLD_SCATTER_DISTANCE.pick_random_value();
 
         commands.spawn_scene(gold(gold_image, value, gold_drop.location + offset));
 

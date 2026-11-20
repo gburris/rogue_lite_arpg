@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::interval::fraction_of_max;
+
 #[derive(EntityEvent)]
 pub struct AttemptHeal {
     pub entity: Entity,
@@ -34,11 +36,7 @@ impl Health {
     /// Current health as a `0.0..=1.0` fraction, or `None` when the health
     /// values cannot describe a valid fraction.
     pub fn fraction(&self) -> Option<f32> {
-        if self.hp.is_finite() && self.max_hp.is_finite() && self.max_hp > 0.0 {
-            Some((self.hp / self.max_hp).clamp(0.0, 1.0))
-        } else {
-            None
-        }
+        fraction_of_max(self.hp, self.max_hp)
     }
 
     fn add_health(&mut self, amount: f32) -> f32 {

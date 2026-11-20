@@ -165,12 +165,27 @@ pub enum FacingDirection {
 
 impl FacingDirection {
     pub fn turned_toward(self, vec: Vec2) -> Self {
-        match vec.normalize() {
-            v if v.y > 0.5 => Self::Up,
-            v if v.y < -0.5 => Self::Down,
-            v if v.x > 0.5 => Self::Right,
-            v if v.x < -0.5 => Self::Left,
+        match vec.try_normalize() {
+            Some(v) if v.y > 0.5 => Self::Up,
+            Some(v) if v.y < -0.5 => Self::Down,
+            Some(v) if v.x > 0.5 => Self::Right,
+            Some(v) if v.x < -0.5 => Self::Left,
             _ => self,
+        }
+    }
+
+    /// The direction whose quarter of the circle `direction` falls in; [`Self::Down`] for zero.
+    pub fn from_nearest_axis(direction: Vec2) -> Self {
+        if direction.x.abs() > direction.y.abs() {
+            if direction.x > 0.0 {
+                Self::Right
+            } else {
+                Self::Left
+            }
+        } else if direction.y > 0.0 {
+            Self::Up
+        } else {
+            Self::Down
         }
     }
 

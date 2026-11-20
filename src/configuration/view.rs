@@ -213,24 +213,25 @@ fn follow_player_with_camera(
     time: Res<Time>,
     scale: Res<IntegerScale>,
 ) {
-    let z = camera.translation.z;
-    let aim: Vec3 = player_aim.translation.with_z(z);
-    let player_position = player_transform.translation.with_z(z);
-    let target = player_position.lerp(aim + player_position, TARGET_BIAS);
-
-    // apply a distance constraint to the camera, this keeps it close to the player
-    // restore z from camera
-    let offset =
-        (target - player_position).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_position;
-
+    let target = find_camera_target(
+        player_transform.translation.xy(),
+        player_aim.translation.xy(),
+    )
+    .extend(camera.translation.z);
     camera
         .translation
-        .smooth_nudge(&offset, DECAY_RATE, time.delta_secs());
+        .smooth_nudge(&target, DECAY_RATE, time.delta_secs());
     // Snap to whole screen pixels so the tilemap never sits at a fractional
     // offset, which shimmers 1px lines while moving.
     let step = 1.0 / scale.steps as f32;
     camera.translation.x = (camera.translation.x / step).round() * step;
     camera.translation.y = (camera.translation.y / step).round() * step;
+}
+
+/// Where the camera heads: [`TARGET_BIAS`] of the way from the player along `aim`, kept within
+/// [`CAMERA_DISTANCE_CONSTRAINT`] of the player.
+fn find_camera_target(player_position: Vec2, aim: Vec2) -> Vec2 {
+    player_position + (aim * TARGET_BIAS).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT)
 }
 
 /// Draws the camera target, its distance limit and the player's pull radius.
@@ -241,15 +242,14 @@ pub fn draw_camera_debug_gizmos(
     mut gizmos: Gizmos,
 ) {
     let player_position = player.translation.xy();
-    let target = player_position.lerp(player_aim.translation.xy() + player_position, TARGET_BIAS);
+    let aim = player_aim.translation.xy();
+    let unconstrained_target = player_position + aim * TARGET_BIAS;
+    let target = find_camera_target(player_position, aim);
 
-    // apply a distance constraint to the camera, this keeps it close to the player
-    // restore z from camera
-    let offset =
-        (target - player_position).clamp_length_max(CAMERA_DISTANCE_CONSTRAINT) + player_position;
-
-    gizmos.circle_2d(target, 5.0, RED).resolution(64);
-    gizmos.circle_2d(offset.xy(), 10.0, BLUE).resolution(64);
+    gizmos
+        .circle_2d(unconstrained_target, 5.0, RED)
+        .resolution(64);
+    gizmos.circle_2d(target, 10.0, BLUE).resolution(64);
     gizmos
         .circle_2d(player_position, CAMERA_DISTANCE_CONSTRAINT, PURPLE_700)
         .resolution(64);

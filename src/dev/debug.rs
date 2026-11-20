@@ -89,8 +89,8 @@ fn debug_vision(mut gizmos: Gizmos, query: Query<(&Transform, &Vision)>) {
 
         gizmos.arrow_2d(origin, origin + forward * 64.0, GREEN);
 
-        let left = forward.rotate(Vec2::from_angle(45f32.to_radians()));
-        let right = forward.rotate(Vec2::from_angle(-45f32.to_radians()));
+        let left = Rot2::degrees(45.0) * forward;
+        let right = Rot2::degrees(-45.0) * forward;
 
         gizmos.line_2d(origin, origin + left * 64.0, YELLOW);
         gizmos.line_2d(origin, origin + right * 64.0, YELLOW);

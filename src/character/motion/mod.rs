@@ -22,7 +22,8 @@ pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStat
 use self::running_motion::{MotionOf, RunningMotion};
 pub(super) use self::steer_input::AssumedVelocity;
 use self::steer_input::{
-    BlockedTimer, MotionStep, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
+    BlockedTimer, CircleDirection, MotionStep, SteerInput, SteeredCharacter, SteeringTarget,
+    SteeringTargets,
 };
 pub use self::steering::TurnRate;
 use self::steering::{DecayingSpeedBoost, Steering};

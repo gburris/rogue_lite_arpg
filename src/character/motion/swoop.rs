@@ -3,8 +3,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, DecayingSpeedBoost, Motion, MotionOf, MotionStep, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, DecayingSpeedBoost, Motion, MotionOf, MotionStep, RunningMotion,
+    SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -132,8 +132,7 @@ impl SwoopProgress {
         path.advance(flight_distance);
         path.track(target.position, flight_distance * SWOOP_TRACK_RATIO);
 
-        let to_lead = path.lead(SWOOP_LOOKAHEAD) - input.position;
-        steer((to_lead.length_squared() > f32::EPSILON).then(|| to_lead.normalize_or_zero()))
+        steer((path.lead(SWOOP_LOOKAHEAD) - input.position).try_normalize())
     }
 }
 
@@ -162,8 +161,7 @@ fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
 #[derive(Clone, Copy, Debug)]
 struct SwoopPath {
     start: Vec2,
-    control: Vec2,
-    end: Vec2,
+    curve: CubicSegment<Vec2>,
     tracked_target_position: Vec2,
     initial_target_position: Vec2,
     exit_bearing: Vec2,
@@ -176,13 +174,14 @@ struct SwoopPath {
 impl SwoopPath {
     fn new(start: Vec2, target: Vec2, exit_radius: f32, heading: Vec2, exit_turn: f32) -> Self {
         let entry_bearing = (start - target).normalize_or_zero();
-        let heading_side = entry_bearing.perp().dot(heading);
-        let side = if heading_side > 0.0 { -1.0 } else { 1.0 };
-        let exit_bearing = entry_bearing.rotate(Vec2::from_angle(side * exit_turn));
+        let circle_direction = CircleDirection::from_heading(-entry_bearing, heading);
+        // The path keeps turning the way the character circles, which swings the exit bearing
+        // around the target the other way.
+        let exit_turn = circle_direction.reversed().sign_angle(exit_turn);
+        let exit_bearing = Rot2::radians(exit_turn) * entry_bearing;
         let mut path = Self {
             start,
-            control: Vec2::ZERO,
-            end: Vec2::ZERO,
+            curve: CubicSegment::default(),
             tracked_target_position: target,
             initial_target_position: target,
             exit_bearing,
@@ -196,9 +195,10 @@ impl SwoopPath {
     }
 
     fn rebuild(&mut self) {
-        self.end = self.tracked_target_position + self.exit_bearing * self.exit_radius;
+        let end = self.tracked_target_position + self.exit_bearing * self.exit_radius;
         // Puts the curve's midpoint exactly on the target.
-        self.control = self.tracked_target_position * 2.0 - (self.start + self.end) * 0.5;
+        let control = self.tracked_target_position * 2.0 - (self.start + end) * 0.5;
+        self.curve = build_quadratic_bezier(self.start, control, end);
         self.length = self.estimate_length();
     }
 
@@ -215,36 +215,33 @@ impl SwoopPath {
     }
 
     fn point(&self, t: f32) -> Vec2 {
-        let t = t.clamp(0.0, 1.0);
-        let inverse = 1.0 - t;
-        self.start * (inverse * inverse) + self.control * (2.0 * inverse * t) + self.end * (t * t)
+        self.curve.position(t.clamp(0.0, 1.0))
     }
 
     fn estimate_length(&self) -> f32 {
-        (1..=SWOOP_ARC_SAMPLES)
-            .map(|step| {
-                let t0 = (step - 1) as f32 / SWOOP_ARC_SAMPLES as f32;
-                let t1 = step as f32 / SWOOP_ARC_SAMPLES as f32;
-                self.point(t0).distance(self.point(t1))
-            })
-            .sum()
-    }
-
-    fn advance(&mut self, distance: f32) {
-        if self.length > f32::EPSILON {
-            self.progress = (self.progress + distance / self.length).clamp(0.0, 1.0);
-        } else {
-            self.progress = 1.0;
+        let mut length = 0.0;
+        let mut previous = self.curve.position(0.0);
+        for sample in self.curve.iter_positions(SWOOP_ARC_SAMPLES).skip(1) {
+            length += previous.distance(sample);
+            previous = sample;
         }
+        length
     }
 
-    fn lead(&self, distance: f32) -> Vec2 {
-        let lead = if self.length > f32::EPSILON {
+    fn progress_after(&self, distance: f32) -> f32 {
+        if self.length > f32::EPSILON {
             self.progress + distance / self.length
         } else {
             1.0
-        };
-        self.point(lead)
+        }
+    }
+
+    fn advance(&mut self, distance: f32) {
+        self.progress = self.progress_after(distance).clamp(0.0, 1.0);
+    }
+
+    fn lead(&self, distance: f32) -> Vec2 {
+        self.point(self.progress_after(distance))
     }
 
     fn cleared(&self, position: Vec2, target_distance: f32) -> bool {
@@ -254,4 +251,15 @@ impl SwoopPath {
         let passed = (position - self.tracked_target_position).dot(self.entry_bearing) < 0.0;
         passed && target_distance >= self.exit_radius
     }
+}
+
+/// The quadratic Bézier curve from `start` to `end` pulled toward `control`, raised to the cubic
+/// segment that traces it exactly.
+fn build_quadratic_bezier(start: Vec2, control: Vec2, end: Vec2) -> CubicSegment<Vec2> {
+    CubicSegment::new_bezier([
+        start,
+        start + (control - start) * (2.0 / 3.0),
+        end + (control - end) * (2.0 / 3.0),
+        end,
+    ])
 }

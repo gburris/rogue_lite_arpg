@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTargets, TunedBy,
 };
-use crate::interval::Interval;
+use crate::interval::{Interval, Spread};
 
 const ORBIT_REROLL_INTERVAL: Interval = Interval::new(1.5, 2.5);
 const ORBIT_SWITCH_CHANCE: f32 = 0.5;
@@ -14,36 +14,6 @@ const ORBIT_RADIAL_GAIN: f32 = 0.5;
 const ORBIT_BLOCKED_SECONDS: f32 = 0.25;
 /// Extra seconds a reversed orbit may stay blocked, so a slow-turning character can get clear.
 const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
-
-/// Which way an [`Orbit`] circles its target.
-#[derive(Clone, Copy, Debug)]
-enum OrbitDirection {
-    Clockwise,
-    CounterClockwise,
-}
-
-impl OrbitDirection {
-    fn from_heading(bearing: Vec2, heading: Vec2) -> Self {
-        let heading_side = bearing.perp().dot(heading);
-        if heading_side > f32::EPSILON {
-            Self::Clockwise
-        } else if heading_side < -f32::EPSILON {
-            Self::CounterClockwise
-        } else if rand::rng().random_bool(0.5) {
-            // No sideways heading, so pick a side at random.
-            Self::Clockwise
-        } else {
-            Self::CounterClockwise
-        }
-    }
-
-    fn reversed(self) -> Self {
-        match self {
-            Self::Clockwise => Self::CounterClockwise,
-            Self::CounterClockwise => Self::Clockwise,
-        }
-    }
-}
 
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
@@ -54,7 +24,7 @@ pub struct Orbit {
     reroll_interval: Interval,
     switch_chance: f32,
     radial_gain: f32,
-    max_distance_offset: f32,
+    distance_offset_spread: Spread,
 }
 
 impl Orbit {
@@ -65,13 +35,13 @@ impl Orbit {
             reroll_interval: ORBIT_REROLL_INTERVAL,
             switch_chance: ORBIT_SWITCH_CHANCE,
             radial_gain: ORBIT_RADIAL_GAIN,
-            max_distance_offset: 0.0,
+            distance_offset_spread: Spread::default(),
         }
     }
 
-    pub fn with_max_distance_offset(self, max_distance_offset: f32) -> Self {
+    pub fn with_distance_offset_spread(self, half_width: f32) -> Self {
         Self {
-            max_distance_offset,
+            distance_offset_spread: Spread::new(half_width),
             ..self
         }
     }
@@ -82,16 +52,13 @@ impl Orbit {
 pub(super) struct OrbitProgress {
     distance_offset: f32,
     reroll_at: f32,
-    direction: Option<OrbitDirection>,
+    direction: Option<CircleDirection>,
     blocked_timer: BlockedTimer,
 }
 
 impl OrbitProgress {
     fn roll_distance_offset(&mut self, orbit: &Orbit) {
-        if orbit.max_distance_offset > 0.0 {
-            self.distance_offset =
-                rand::rng().random_range(-orbit.max_distance_offset..orbit.max_distance_offset);
-        }
+        self.distance_offset = orbit.distance_offset_spread.pick_random_value();
     }
 
     fn pick_steering_direction(&mut self, orbit: &Orbit, input: &SteerInput) -> Option<Vec2> {
@@ -100,7 +67,7 @@ impl OrbitProgress {
         let now = input.now;
         let direction = match self.direction {
             None => {
-                let direction = OrbitDirection::from_heading(bearing, input.heading);
+                let direction = CircleDirection::from_heading(bearing, input.heading);
                 self.roll_distance_offset(orbit);
                 self.reroll_at = now + orbit.reroll_interval.min();
                 direction
@@ -126,11 +93,7 @@ impl OrbitProgress {
         };
         self.direction = Some(direction);
 
-        // `bearing.perp()` circles the target clockwise.
-        let tangent = match direction {
-            OrbitDirection::Clockwise => bearing.perp(),
-            OrbitDirection::CounterClockwise => -bearing.perp(),
-        };
+        let tangent = direction.find_tangent(bearing);
         // Positive error means too far out, so the correction points at the target.
         let radial = bearing
             * orbit

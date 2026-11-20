@@ -1,20 +1,17 @@
-use std::f32::consts::TAU;
-
 use bevy::prelude::*;
-use rand::RngExt;
 
 use super::{
-    BlockedTimer, Motion, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTarget, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, Motion, MotionOf, MotionStep, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
-use crate::interval::Interval;
+use crate::interval::{Interval, Spread};
 
 /// Speed below which a target counts as stationary.
 const TARGET_MOVING_SPEED: f32 = 20.0;
 
-const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
+const KITE_SPREAD: Spread = Spread::new(std::f32::consts::FRAC_PI_4);
 
-const HOP_STEP_IN_SPREAD: f32 = 0.35;
+const HOP_STEP_IN_SPREAD: Spread = Spread::new(0.35);
 const HOP_OUTWARD_BIAS: f32 = 0.15;
 
 /// Seconds a dash may stay blocked before it ends early.
@@ -70,7 +67,9 @@ impl Dash {
         Self::new(
             run_distance,
             speed_multiplier,
-            DashAimRule::Away { spread: 0.0 },
+            DashAimRule::Away {
+                spread: Spread::default(),
+            },
             "Slide",
         )
     }
@@ -80,24 +79,18 @@ impl Dash {
     }
 }
 
-fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Vec2 {
+fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Option<Vec2> {
     if target.distance <= close_range
         && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
     {
-        let spread = rand::rng().random_range(-HOP_STEP_IN_SPREAD..=HOP_STEP_IN_SPREAD);
-        return target.direction.rotate(Vec2::from_angle(spread));
+        let step_in = Rot2::radians(HOP_STEP_IN_SPREAD.pick_random_value()) * target.direction;
+        return step_in.try_normalize();
     }
     // Move to the side opposite the current heading, so a following orbit reverses direction.
-    let heading_side = target.direction.perp().dot(heading);
-    let tangent_sign = if heading_side.abs() > f32::EPSILON {
-        -heading_side.signum()
-    } else if rand::rng().random_bool(0.5) {
-        1.0
-    } else {
-        -1.0
-    };
-    let tangent = target.direction.perp() * tangent_sign;
-    (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
+    let tangent = CircleDirection::from_heading(target.direction, heading)
+        .reversed()
+        .find_tangent(target.direction);
+    (tangent - target.direction * HOP_OUTWARD_BIAS).try_normalize()
 }
 
 /// Gives a newly started dash its [`DashProgress`].
@@ -162,7 +155,7 @@ pub(super) fn apply_dash(
 
 #[derive(Clone, Copy, Debug)]
 enum DashAimRule {
-    Away { spread: f32 },
+    Away { spread: Spread },
     HopTangent { close_range: f32 },
 }
 
@@ -170,16 +163,12 @@ impl DashAimRule {
     fn choose_direction(self, target: &SteeringTarget, heading: Vec2) -> Vec2 {
         let direction = match self {
             Self::Away { spread } => (-target.direction)
-                .normalize_or_zero()
-                .rotate(Vec2::from_angle(rand::rng().random_range(-spread..=spread))),
+                .try_normalize()
+                .map(|away| Rot2::radians(spread.pick_random_value()) * away),
             Self::HopTangent { close_range } => hop_direction(target, close_range, heading),
         };
         // Overlapping characters have no direction between them, so pick a random one.
-        if direction.length_squared() > f32::EPSILON {
-            direction
-        } else {
-            Vec2::from_angle(rand::rng().random_range(0.0..TAU))
-        }
+        direction.unwrap_or_else(|| Dir2::from_rng(&mut rand::rng()).as_vec2())
     }
 }
 

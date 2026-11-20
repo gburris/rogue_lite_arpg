@@ -246,7 +246,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
         MotionSources [
-            ~Orbit::new(CAST_DISTANCE_RANGE).with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+            ~Orbit::new(CAST_DISTANCE_RANGE).with_distance_offset_spread(BAT_ORBIT_MAX_DISTANCE_OFFSET)
             --
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
             --

@@ -1,5 +1,3 @@
-use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
-
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
@@ -71,32 +69,26 @@ fn orient_raised_shields(
         let Ok(vision) = holder_query.get(item_of.holder) else {
             continue;
         };
-        // Measured from straight down, wrapped into -PI..PI.
-        let block_angle =
-            (vision.aim_direction.to_angle() + FRAC_PI_2 + PI).rem_euclid(2.0 * PI) - PI;
-
-        let atlas_index = if block_angle > -FRAC_PI_4 && block_angle < FRAC_PI_4 {
-            0
-        } else if (-3.0 * FRAC_PI_4..=-FRAC_PI_4).contains(&block_angle) {
-            2
-        } else if (block_angle <= -3.0 * FRAC_PI_4) || (block_angle >= 3.0 * FRAC_PI_4) {
-            3
-        } else {
-            1
+        let block_direction = vision.aim_direction.try_normalize().unwrap_or(Vec2::X);
+        let facing = FacingDirection::from_nearest_axis(block_direction);
+        let atlas_index = match facing {
+            FacingDirection::Down => 0,
+            FacingDirection::Right => 1,
+            FacingDirection::Left => 2,
+            FacingDirection::Up => 3,
         };
-        let z = if atlas_index == 0 {
-            ZLayer::AboveSprite.z()
-        } else {
-            ZLayer::BehindSprite.z()
+        let z_layer = match facing {
+            FacingDirection::Down => ZLayer::AboveSprite,
+            FacingDirection::Up | FacingDirection::Left | FacingDirection::Right => {
+                ZLayer::BehindSprite
+            }
         };
 
         if let Some(atlas) = &mut shield_sprite.texture_atlas {
             atlas.index = atlas_index;
         }
-        *transform = Transform::from_xyz(
-            RAISED_SHIELD_DISTANCE * block_angle.sin(),
-            -RAISED_SHIELD_DISTANCE * block_angle.cos(),
-            z,
+        *transform = Transform::from_translation(
+            (block_direction * RAISED_SHIELD_DISTANCE).extend(z_layer.z()),
         );
     }
 }

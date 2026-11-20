@@ -90,8 +90,9 @@ impl TargetInfo {
         target_position: Vec2,
         target_velocity: Vec2,
     ) {
-        self.direction = (target_position - observer_position).normalize_or_zero();
-        self.distance = target_position.distance(observer_position);
+        let offset = target_position - observer_position;
+        self.direction = offset.normalize_or_zero();
+        self.distance = offset.length();
         self.position = target_position;
         self.velocity = target_velocity;
     }

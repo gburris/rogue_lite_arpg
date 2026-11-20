@@ -1,12 +1,14 @@
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
-use rand::RngExt;
 
+use crate::interval::Spread;
 use crate::prelude::*;
 
 const RED_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
 const GREEN_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
 const HEALTH_TEXT_OFFSET: f32 = 10.0;
+/// How far, in degrees, health change text may tilt from straight above the entity.
+const HEALTH_TEXT_TILT_DEGREES: Spread = Spread::new(30.0);
 
 // Characters don't have a collider on their root entity, so we use their hurtbox to determine
 // height
@@ -25,17 +27,12 @@ fn entity_height(
 
 /// Text is placed relative to `origin`, which is the center of the entity the text is for.
 fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Scene {
-    // Create a quaternion for the random rotation
-    let random_rotation = Quat::from_axis_angle(Vec3::Z, random_angle(30.0));
-
-    // Get rotation assuming sprite is facing "UP" (y axis)
-    let rotated_vector = (random_rotation * Vec3::Y).truncate();
+    let tilt = Rot2::degrees(HEALTH_TEXT_TILT_DEGREES.pick_random_value());
 
     // Text height is relative to center of entity, so we get half of entity height and add a buffer
     let text_height = (entity_height / 2.0) + HEALTH_TEXT_OFFSET;
 
-    // Scale the direction vector by the desired text height to place the text above the entity
-    let text_position = (rotated_vector.normalize() * text_height).extend(ZLayer::AboveSprite.z());
+    let text_position = (tilt * Vec2::Y * text_height).extend(ZLayer::AboveSprite.z());
 
     let rounded_amount = (amount * 10.0).round() / 10.0; // Round to 1 decimal place
     let formatted_amount = if rounded_amount.fract() == 0.0 {
@@ -50,12 +47,6 @@ fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Colo
         Lifespan::new(0.4)
         Transform::from_translation({origin + text_position})
     }
-}
-
-// Generate a random angle between -angle_range and angle_range degrees (convert to radians)
-fn random_angle(angle_range: f32) -> f32 {
-    let mut rng = rand::rng();
-    rng.random_range(-angle_range..angle_range).to_radians()
 }
 
 pub(super) fn on_damage_overlay_amount(

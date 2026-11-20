@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, HomeArea, Motion, MotionKey, MotionStatus};
+use super::{Brain, Home, HomeArea, Motion, MotionKey, MotionStatus};
 use crate::character::Allies;
 use crate::character::state::BlockedState;
 use crate::prelude::*;
@@ -62,7 +62,7 @@ pub(super) struct DecisionInputComponents {
     target_info: Option<&'static TargetInfo>,
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
-    home_area: Option<&'static HomeArea>,
+    home: Option<&'static Home>,
     blocked: BlockedState,
 }
 
@@ -72,6 +72,7 @@ pub(super) struct DecisionQueries<'w, 's> {
     actions: ActionStatus<'w, 's>,
     motions: MotionStatus<'w, 's>,
     allies: Allies<'w, 's>,
+    home_areas: Query<'w, 's, (&'static Transform, &'static HomeArea)>,
 }
 
 /// One decision's view of the world: references only, read on demand.
@@ -227,11 +228,17 @@ impl DecisionInputs<'_, '_, '_> {
     /// home it reads full until arrival, so crossing back inside the range
     /// mid-return cannot hand the character straight back to wandering.
     fn home_area_pull(&self, running_motion: Option<Motion>) -> Option<f32> {
-        let home_area = self.components.home_area?;
-        let position = self.components.transform.translation.xy();
-        let overshoot_fraction = home_area.overshoot_fraction(position)?;
+        let home = self.components.home?;
+        let (home_transform, home_area) = self.queries.home_areas.get(home.get()).ok()?;
+        let distance = self
+            .components
+            .transform
+            .translation
+            .xy()
+            .distance(home_transform.translation.xy());
+        let overshoot_fraction = home_area.overshoot_fraction(distance)?;
         if running_motion == Some(Motion::Run(MotionKey::ReturnToHome)) {
-            Some(f32::from(!home_area.has_arrived(position)))
+            Some(f32::from(!home_area.has_arrived(distance)))
         } else {
             Some(overshoot_fraction)
         }

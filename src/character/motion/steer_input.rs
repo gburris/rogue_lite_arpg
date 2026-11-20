@@ -3,7 +3,7 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{HomeArea, Steering};
+use super::{Home, HomeArea, Steering};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
@@ -60,7 +60,7 @@ pub(super) struct SteeredCharacter {
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
-    home_area: Option<&'static HomeArea>,
+    home: Option<&'static Home>,
     blocked: BlockedState,
 }
 
@@ -74,6 +74,9 @@ impl SteeredCharacterItem<'_, '_> {
     ) -> SteerInput<'_> {
         let position = self.transform.translation.xy();
         let target = target.and_then(|target| targets.locate(position, target));
+        let home = self
+            .home
+            .and_then(|home| targets.locate_home(position, home.get()));
 
         SteerInput {
             position,
@@ -81,7 +84,7 @@ impl SteeredCharacterItem<'_, '_> {
             now: time.elapsed_secs(),
             delta_secs: time.delta_secs(),
             target,
-            home_area: self.home_area,
+            home,
             kinematics: self.kinematics,
             stat_speed: self.stat_multipliers.speed,
             is_blocked: self.blocked.is_blocked(),
@@ -99,7 +102,7 @@ pub(super) struct SteeringTarget {
 
 impl SteeringTarget {
     /// The direction to the target; `None` while the characters overlap.
-    fn nonzero_direction(&self) -> Option<Vec2> {
+    pub(super) fn nonzero_direction(&self) -> Option<Vec2> {
         (self.direction != Vec2::ZERO).then_some(self.direction)
     }
 }
@@ -161,10 +164,18 @@ impl CircleDirection {
     }
 }
 
-/// Locates the targets of running motions.
+/// A character's [`HomeArea`] this frame, relative to the character.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct SteeringHome {
+    pub center: SteeringTarget,
+    pub area: HomeArea,
+}
+
+/// Locates the targets and homes of running motions.
 #[derive(SystemParam)]
 pub(super) struct SteeringTargets<'w, 's> {
     targets: Query<'w, 's, &'static Transform>,
+    home_areas: Query<'w, 's, &'static HomeArea>,
 }
 
 impl SteeringTargets<'_, '_> {
@@ -178,6 +189,15 @@ impl SteeringTargets<'_, '_> {
             direction: offset.normalize_or_zero(),
         })
     }
+
+    /// The `home` entity's [`HomeArea`] relative to `observer_position`; `None` if it no longer
+    /// exists.
+    fn locate_home(&self, observer_position: Vec2, home: Entity) -> Option<SteeringHome> {
+        Some(SteeringHome {
+            center: self.locate(observer_position, home)?,
+            area: *self.home_areas.get(home).ok()?,
+        })
+    }
 }
 
 pub(super) struct SteerInput<'a> {
@@ -185,7 +205,7 @@ pub(super) struct SteerInput<'a> {
     pub heading: Vec2,
     pub now: f32,
     pub target: Option<SteeringTarget>,
-    pub home_area: Option<&'a HomeArea>,
+    pub home: Option<SteeringHome>,
     delta_secs: f32,
     kinematics: &'a Kinematics,
     stat_speed: f32,
@@ -204,11 +224,11 @@ impl SteerInput<'_> {
     }
 
     pub(super) fn direction_to_home(&self) -> Option<Vec2> {
-        let home_area = self.home_area?;
-        if home_area.has_arrived(self.position) {
+        let home = self.home?;
+        if home.area.has_arrived(home.center.distance) {
             return None;
         }
-        home_area.direction_home(self.position)
+        home.center.nonzero_direction()
     }
 
     /// Advances `blocked_timer` by this frame; see [`BlockedTimer::tick_and_check_limit`] and

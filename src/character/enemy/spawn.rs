@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
 use crate::character::brain::{Brain, Watching};
-use crate::character::motion::{HomeArea, Wander};
+use crate::character::motion::{Home, HomeArea, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -105,7 +105,11 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
         template(move |_| Ok(kind))
         template(move |_| Ok(Brain::new(brain)))
         Transform::from_translation({position.extend(ZLayer::OnGround.z())})
-        ~HomeArea::new(position, 8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0)
+        Home [
+            Name::new("Home")
+            ~HomeArea::new(8.0 * TILE_SIZE as f32, TILE_SIZE as f32 / 2.0)
+            Transform::from_translation({position.extend(0.0)})
+        ]
         Watching(player)
         on(defeat::on_enemy_defeated)
     }

@@ -6,18 +6,18 @@ use crate::character::state::BlockedState;
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
 const RETURN_BLOCKED_SECONDS: f32 = 1.0;
 
-/// A character's home: its center, how far it may wander from it, and how close to the center
-/// counts as arrived. If the character is blocked on the way back, its home moves to where it
-/// stands.
-#[derive(Component, Clone)]
+/// A character's home, on its own entity placed at the home's center and linked to the character
+/// by [`HomeOf`]: how far the character may wander from the center, and how close to it counts as
+/// arrived. Motions steer by the entity. If the character is blocked on the way back, the entity
+/// moves to where the character stands.
+#[derive(Component, Clone, Copy, Debug)]
 pub struct HomeArea {
-    origin: Vec2,
     radius: f32,
     arrival_radius: f32,
 }
 
 impl HomeArea {
-    pub fn new(origin: Vec2, radius: f32, arrival_radius: f32) -> Self {
+    pub fn new(radius: f32, arrival_radius: f32) -> Self {
         debug_assert!(
             radius.is_finite() && radius > 0.0,
             "home area radius must be finite and positive"
@@ -27,44 +27,52 @@ impl HomeArea {
             "home area arrival radius must be positive and inside the wander radius"
         );
         Self {
-            origin,
             radius,
             arrival_radius,
         }
     }
 
-    pub(in crate::character) fn radius(&self) -> f32 {
+    pub(in crate::character) fn radius(self) -> f32 {
         self.radius
     }
 
-    pub(in crate::character) fn distance_from(&self, position: Vec2) -> f32 {
-        self.origin.distance(position)
+    /// Whether `distance` from the center is within the arrival radius.
+    pub(in crate::character) fn has_arrived(self, distance: f32) -> bool {
+        distance <= self.arrival_radius
     }
 
-    /// Whether `position` is within the arrival radius.
-    pub(in crate::character) fn has_arrived(&self, position: Vec2) -> bool {
-        self.distance_from(position) <= self.arrival_radius
-    }
-
-    /// The unit direction from `position` to the origin; `None` at the origin itself.
-    pub(in crate::character) fn direction_home(&self, position: Vec2) -> Option<Vec2> {
-        (self.origin - position).try_normalize()
-    }
-
-    /// Distance beyond the configured radius; negative while inside it.
-    pub(in crate::character) fn overshoot(&self, position: Vec2) -> f32 {
-        self.distance_from(position) - self.radius
+    /// How far `distance` from the center reaches beyond the radius; negative while inside it.
+    pub(in crate::character) fn overshoot(self, distance: f32) -> f32 {
+        distance - self.radius
     }
 
     /// [`Self::overshoot`] as a fraction of the radius; `None` unless the radius is finite and
     /// positive.
-    pub(in crate::character) fn overshoot_fraction(&self, position: Vec2) -> Option<f32> {
+    pub(in crate::character) fn overshoot_fraction(self, distance: f32) -> Option<f32> {
         let radius = self.radius();
         if radius.is_finite() && radius > 0.0 {
-            Some(self.overshoot(position) / radius)
+            Some(self.overshoot(distance) / radius)
         } else {
             None
         }
+    }
+}
+
+/// Links a [`HomeArea`] to the character whose home it is.
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = Home)]
+pub struct HomeOf {
+    pub character: Entity,
+}
+
+/// The [`HomeArea`] of this character.
+#[derive(Component, Debug)]
+#[relationship_target(relationship = HomeOf, linked_spawn)]
+pub struct Home(Entity);
+
+impl Home {
+    pub fn get(&self) -> Entity {
+        self.0
     }
 }
 
@@ -92,19 +100,23 @@ impl MotionProgress for ReturnToHomeProgress {
 pub(super) fn move_homes_of_blocked_characters(
     time: Res<Time<Virtual>>,
     mut running_returns: Query<(&MotionOf, &mut ReturnToHomeProgress)>,
-    mut characters: Query<(&Transform, BlockedState, &mut HomeArea)>,
+    characters: Query<(&Transform, BlockedState, &Home), Without<HomeArea>>,
+    mut homes: Query<&mut Transform, With<HomeArea>>,
 ) {
     for (motion_of, mut progress) in &mut running_returns {
-        let Ok((transform, blocked, mut home_area)) = characters.get_mut(motion_of.character)
-        else {
+        let Ok((transform, blocked, home)) = characters.get(motion_of.character) else {
             continue;
         };
-        if progress.blocked_timer.tick_and_check_limit(
+        let is_blocked_too_long = progress.blocked_timer.tick_and_check_limit(
             blocked.is_blocked(),
             time.delta_secs(),
             RETURN_BLOCKED_SECONDS,
-        ) {
-            home_area.origin = transform.translation.xy();
+        );
+        if is_blocked_too_long && let Ok(mut home_transform) = homes.get_mut(home.get()) {
+            home_transform.translation = transform
+                .translation
+                .xy()
+                .extend(home_transform.translation.z);
         }
     }
 }

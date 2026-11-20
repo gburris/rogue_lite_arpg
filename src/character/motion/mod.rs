@@ -14,7 +14,7 @@ use bevy::prelude::*;
 pub use self::dash::Dash;
 use self::direct::DirectMotion;
 pub use self::direct::{Chase, Flee, KeepDistance};
-pub use self::home_area::{HomeArea, ReturnToHome};
+pub use self::home_area::{Home, HomeArea, ReturnToHome};
 use self::motion_source::{FiniteMotion, TunedBy};
 pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
 pub use self::orbit::Orbit;

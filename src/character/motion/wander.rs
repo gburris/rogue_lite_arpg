@@ -122,16 +122,17 @@ pub(super) fn apply_wander(
 
 fn pick_direction(input: &SteerInput) -> Vec2 {
     let candidate = Dir2::from_rng(&mut rand::rng()).as_vec2();
-    let Some(home_area) = input.home_area else {
+    let Some(home) = input.home else {
         return candidate;
     };
-    if home_area
-        .overshoot_fraction(input.position)
+    if home
+        .area
+        .overshoot_fraction(home.center.distance)
         .is_none_or(|fraction| fraction < -0.25)
     {
         return candidate;
     }
-    let Some(direction_home) = home_area.direction_home(input.position) else {
+    let Some(direction_home) = home.center.nonzero_direction() else {
         return candidate;
     };
     Rot2::radians(WANDER_HOME_SPREAD.pick_random_value()) * direction_home

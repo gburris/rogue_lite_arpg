@@ -252,7 +252,6 @@ impl Brain {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
-            motion_issued: false,
             action_issued: false,
             committed: behavior.commit.is_committed(),
             started_at: now,
@@ -274,10 +273,6 @@ impl Brain {
     fn drop_committed_behavior(&mut self, running: RunningBehavior) {
         self.running_behaviors
             .retain(|other| other.behavior != running.behavior);
-    }
-
-    fn record_issued_motion(&mut self, behavior: usize) {
-        self.running_behavior_mut(behavior).motion_issued = true;
     }
 
     fn record_issued_action(&mut self, behavior: usize) {

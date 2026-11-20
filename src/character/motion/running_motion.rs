@@ -34,7 +34,7 @@ impl CurrentMotion {
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Steering)]
 #[component(on_remove = end_running_motion)]
-pub(in crate::character) struct RunningMotion {
+pub(super) struct RunningMotion {
     pub key: MotionKey,
     pub target: Option<Entity>,
 }
@@ -129,20 +129,6 @@ pub(in crate::character) struct MotionStatus<'w, 's> {
 }
 
 impl MotionStatus<'_, '_> {
-    /// The motion `character` runs and its target; `None` while it runs none.
-    pub(in crate::character) fn running_motion(&self, character: Entity) -> Option<RunningMotion> {
-        self.current_motion(character).map(|(_, running)| running)
-    }
-
-    /// Whether `character` runs the finite motion of its `key` source. Always false for a
-    /// continuous motion.
-    pub(in crate::character) fn is_in_progress(&self, character: Entity, key: MotionKey) -> bool {
-        self.ends_on_its_own(character, key)
-            && self
-                .running_motion(character)
-                .is_some_and(|running| running.key == key)
-    }
-
     /// Whether `character` has a `key` source whose motion ends on its own; see
     /// [`FiniteMotion`].
     pub(in crate::character) fn ends_on_its_own(&self, character: Entity, key: MotionKey) -> bool {
@@ -206,16 +192,11 @@ pub(in crate::character) struct MotionCommands<'w, 's> {
     status: MotionStatus<'w, 's>,
 }
 
-impl<'w, 's> MotionCommands<'w, 's> {
-    /// The status these commands check against.
-    pub(in crate::character) fn status(&self) -> &MotionStatus<'w, 's> {
-        &self.status
-    }
-
+impl MotionCommands<'_, '_> {
     /// Runs the motion of `character`'s `key` source, steering by `target`; without that source it
-    /// only stops the running motion. A continuous motion that is already running keeps its
-    /// progress and takes the new target; anything else replaces the running motion with a fresh
-    /// one.
+    /// only stops the running motion. A motion of `key` that is already running keeps its progress
+    /// and takes the new target, so calling this every frame starts the motion once; any other
+    /// running motion is replaced with a fresh one.
     pub(in crate::character) fn start(
         &mut self,
         character: Entity,
@@ -226,18 +207,16 @@ impl<'w, 's> MotionCommands<'w, 's> {
             self.stop(character);
             return;
         };
-        let (source, is_finite) = (source.entity, source.is_finite);
+        let source = source.entity;
         let running = RunningMotion { key, target };
         let current_motion = self.status.current_motion(character);
-        if let Some((entity, current)) = current_motion
-            && !is_finite
-            && current.key == key
-        {
-            self.commands.entity(entity).try_insert(running);
-            return;
-        }
-
-        if let Some((entity, _)) = current_motion {
+        if let Some((entity, current)) = current_motion {
+            if current.key == key {
+                if current.target != target {
+                    self.commands.entity(entity).try_insert(running);
+                }
+                return;
+            }
             self.commands.entity(entity).try_despawn();
         }
         // `TunedBy` goes in the same spawn, so `on_motion_started` can read it.
@@ -247,15 +226,6 @@ impl<'w, 's> MotionCommands<'w, 's> {
             running,
             TunedBy { source },
         ));
-    }
-
-    /// Changes the target of `character`'s running motion, keeping its progress.
-    pub(in crate::character) fn retarget(&mut self, character: Entity, target: Option<Entity>) {
-        if let Some((entity, running)) = self.status.current_motion(character) {
-            self.commands
-                .entity(entity)
-                .try_insert(RunningMotion { target, ..running });
-        }
     }
 
     /// Ends `character`'s running motion.

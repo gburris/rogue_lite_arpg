@@ -18,26 +18,20 @@ use crate::prelude::*;
 /// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won its slots, with its motion and action copied from the definition. It issues
-/// its motion, and its action if committed, once. The finish rules for committed and continuously
-/// scored behaviors live here.
+/// A behavior that won its slots, with its motion and action copied from the definition. It holds
+/// its motion while it runs, and issues its action, if committed, once. The finish rules for
+/// committed and continuously scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<Motion>,
     pub(super) action: Option<Action>,
-    pub(super) motion_issued: bool,
     pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
-    /// Whether this behavior issued `motion`.
-    pub(super) fn has_issued_motion(self, motion: Motion) -> bool {
-        self.motion_issued && self.motion == Some(motion)
-    }
-
     /// Whether this behavior issued `action`.
     pub(super) fn has_issued_action(self, action: Action) -> bool {
         self.action_issued && self.action == Some(action)
@@ -105,7 +99,7 @@ pub(super) fn on_motion_finished(
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        |running| running.has_issued_motion(motion),
+        |running| running.motion == Some(motion),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]

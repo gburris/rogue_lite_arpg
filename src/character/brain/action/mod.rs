@@ -31,7 +31,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         issue_actions::issue_running_actions
             .in_set(BrainSystems::Execute)
-            // Both Execute systems note what they issued on the `Brain`; they share one flush.
+            // Issuing actions writes the `Brain` that issuing motions reads; they share one flush.
             .after_ignore_deferred(super::issue_motion::issue_running_motion),
     );
 }

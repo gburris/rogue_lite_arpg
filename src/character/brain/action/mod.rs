@@ -30,7 +30,7 @@ impl Action {
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        issued_actions::apply_action_requests.in_set(BrainSystems::Execute),
+        issued_actions::issue_running_actions.in_set(BrainSystems::Execute),
     )
     .add_observer(issued_actions::on_action_finished);
 }

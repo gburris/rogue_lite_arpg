@@ -29,7 +29,7 @@ impl IssuedActions {
 /// can start. A committed action starts once, or adopts a use of it already in progress so that
 /// use's finish ends the behavior; a continuously scored one starts again whenever it isn't in
 /// progress.
-pub(super) fn apply_action_requests(
+pub(super) fn issue_running_actions(
     mut commands: Commands,
     mut actions: ActionCommands,
     mut brains: Query<(Entity, &Brain, &mut IssuedActions)>,

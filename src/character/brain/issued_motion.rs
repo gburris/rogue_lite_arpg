@@ -31,7 +31,7 @@ impl IssuedMotion {
 /// target's [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot
 /// is empty. A new target brings a new hint, which retargets the running motion. A finite motion
 /// already in progress is adopted, so its finish ends the new behavior.
-pub(super) fn apply_motion_requests(
+pub(super) fn issue_running_motion(
     mut motions: MotionCommands,
     mut brains: Query<(
         Entity,

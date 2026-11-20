@@ -322,7 +322,7 @@ pub(super) fn plugin(app: &mut App) {
             Update,
             (
                 decide::decide_behavior.in_set(BrainSystems::Decision),
-                issued_motion::apply_motion_requests.in_set(BrainSystems::Execute),
+                issued_motion::issue_running_motion.in_set(BrainSystems::Execute),
             ),
         );
 }

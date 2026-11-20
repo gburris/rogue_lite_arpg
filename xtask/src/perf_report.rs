@@ -172,11 +172,13 @@ impl ZoneNames {
     }
 }
 
-/// The equipment use applier, or any `apply_*` system in a `brain::motion` module.
+/// The brain's motion or action issue system, or any `apply_*` system in a `motion` module.
 fn is_brain_applier(zone_name: &str) -> bool {
-    const EQUIPMENT_APPLIER: &str =
-        "baba_yaga::character::brain::action::equipment_use::apply_equipment_use_requests";
-    const MOTION_MODULES: &str = "baba_yaga::character::brain::motion::";
+    const BRAIN_ISSUE_SYSTEMS: [&str; 2] = [
+        "baba_yaga::character::brain::action::issue_actions::issue_running_actions",
+        "baba_yaga::character::brain::issue_motion::issue_running_motion",
+    ];
+    const MOTION_MODULES: &str = "baba_yaga::character::motion::";
 
     let Some(path) = zone_name
         .strip_prefix("system{name=\"")
@@ -184,7 +186,7 @@ fn is_brain_applier(zone_name: &str) -> bool {
     else {
         return false;
     };
-    if path == EQUIPMENT_APPLIER {
+    if BRAIN_ISSUE_SYSTEMS.contains(&path) {
         return true;
     }
 

@@ -1,24 +1,30 @@
-//! Ambling inside the home area.
-
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{BlockedTimer, SteerInput, SteeredCharacter, Steering};
-use crate::character::brain::{Interval, Motion};
+use super::{
+    BlockedTimer, Motion, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets, TunedBy,
+};
+use crate::interval::Interval;
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
-/// Seconds a walk pushes against a wall or a crowd before it ends early.
+/// Seconds a walk may stay blocked before it ends early.
 const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
-/// Alternates standing and walking one rolled heading while wandering. A blocked walk ends
-/// early.
+/// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
+#[require(Motion::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,
     speed_scale: f32,
+}
+
+/// A [`Wander`] in progress: its current phase and walk direction.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct WanderProgress {
     direction: Vec2,
     phase: Option<WanderPhase>,
     blocked_timer: BlockedTimer,
@@ -44,35 +50,31 @@ impl Wander {
             pause,
             walk,
             speed_scale: WANDER_SPEED_SCALE,
-            direction: Vec2::ZERO,
-            phase: None,
-            blocked_timer: BlockedTimer::default(),
         }
     }
+}
 
+impl WanderProgress {
+    /// Whether the character is walking rather than pausing.
     pub fn is_walking(&self) -> bool {
         matches!(self.phase, Some(WanderPhase::Walking { .. }))
     }
 
-    fn leave_wander(&mut self) {
-        self.phase = None;
-        self.blocked_timer.reset();
-    }
-
-    fn pick_steering_direction(&mut self, input: &SteerInput) -> Option<Vec2> {
+    fn pick_steering_direction(&mut self, wander: &Wander, input: &SteerInput) -> Option<Vec2> {
         let walk_blocked = self.is_walking()
             && input.tick_blocked_timer(&mut self.blocked_timer, WANDER_BLOCKED_SECONDS);
+
         let phase = match self.phase {
             Some(phase) if input.now < phase.until() && !walk_blocked => phase,
             previous => {
                 let phase = if matches!(previous, Some(WanderPhase::Pausing { .. })) {
                     self.direction = pick_direction(input);
                     WanderPhase::Walking {
-                        until: input.now + self.walk.pick_random_value(),
+                        until: input.now + wander.walk.pick_random_value(),
                     }
                 } else {
                     WanderPhase::Pausing {
-                        until: input.now + self.pause.pick_random_value(),
+                        until: input.now + wander.pause.pick_random_value(),
                     }
                 };
                 self.phase = Some(phase);
@@ -86,23 +88,49 @@ impl Wander {
     }
 }
 
-/// Ambles inside the home area while the brain holds [`Motion::Wander`].
+/// Gives a newly started wander its [`WanderProgress`].
+pub(super) fn on_wander_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_wander = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Wander);
+    if is_wander {
+        commands
+            .entity(added.entity)
+            .insert(WanderProgress::default());
+    }
+}
+
+/// Steers each character running [`Motion::Wander`].
 pub(super) fn apply_wander(
     time: Res<Time<Virtual>>,
-    mut wanderers: Query<(SteeredCharacter, &mut Wander, &mut Steering)>,
+    targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
+    wanders: Query<&Wander>,
+    mut running_wanders: Query<(
+        &MotionOf,
+        &RunningMotion,
+        &TunedBy,
+        &mut WanderProgress,
+        &mut Steering,
+    )>,
 ) {
-    for (character, mut wander, mut steering) in &mut wanderers {
-        if character.brain.motion() != Some(Motion::Wander) {
-            wander.leave_wander();
-            continue;
-        }
-        *steering =
-            character
-                .build_steer_input(Motion::Wander, &time)
-                .map_or(Steering::HALT, |input| {
-                    let direction = wander.pick_steering_direction(&input);
-                    Steering::scaled(direction, wander.speed_scale)
-                });
+    for (motion_of, running, tuned_by, mut progress, mut steering) in &mut running_wanders {
+        let wander = wanders.get(tuned_by.source).ok();
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        *steering = match (wander, input) {
+            (Some(wander), Some(input)) => {
+                let direction = progress.pick_steering_direction(wander, &input);
+                Steering::scaled(direction, wander.speed_scale)
+            }
+            _ => Steering::HALT,
+        };
     }
 }
 

@@ -1,11 +1,11 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use rand::RngExt;
 
 use super::health::Health;
 use super::hitbox::HurtBox;
 use super::invulnerable::IFrames;
 use super::status_effects::prelude::{ApplyEffects, Effects};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Which side of combat a character fights on, required by every character marker.
@@ -54,16 +54,15 @@ impl CombatSide {
 #[derive(Clone, Copy, Debug)]
 pub enum Damage {
     Single(f32),
-    Range { min: f32, max: f32 },
+    Range { amount: Interval },
 }
 
 impl Damage {
     /// This damage multiplied by `factor`, such as its attacker's [`StatMultipliers`] damage.
     pub fn scaled(self, factor: f32) -> Self {
         match self {
-            Self::Range { min, max } => Self::Range {
-                min: min * factor,
-                max: max * factor,
+            Self::Range { amount } => Self::Range {
+                amount: amount.scaled(factor),
             },
             Self::Single(amount) => Self::Single(amount * factor),
         }
@@ -72,7 +71,7 @@ impl Damage {
     /// Picks the amount of damage dealt, rolling within a range.
     fn roll(self) -> f32 {
         match self {
-            Self::Range { min, max } => rand::rng().random_range(min..max),
+            Self::Range { amount } => amount.pick_random_value(),
             Self::Single(amount) => amount,
         }
     }

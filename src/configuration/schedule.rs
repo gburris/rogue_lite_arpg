@@ -50,6 +50,7 @@ pub(super) fn plugin(app: &mut App) {
             SimulationSystems::Upkeep,
             SimulationSystems::Perceive,
             SimulationSystems::Act,
+            SimulationSystems::Steer,
             SimulationSystems::Derive,
         )
             .chain()
@@ -63,7 +64,6 @@ pub(super) fn plugin(app: &mut App) {
             .in_set(InGameSystems::Vfx),
     );
 
-    // Setup Pausing!
     app.init_state::<PauseState>()
         .add_systems(OnEnter(PauseState::Paused), pause_game)
         .add_systems(OnEnter(PauseState::Running), resume_game);
@@ -107,8 +107,11 @@ pub enum SimulationSystems {
     Upkeep,
     /// Updates who sees and aims at what.
     Perceive,
-    /// Decides and acts on this frame's perception: AI decisions, motion and equipment use.
+    /// Decides and acts on this frame's perception: AI decisions and the motions and uses they
+    /// request.
     Act,
+    /// Steers characters along their running motions.
+    Steer,
     /// State derived from simulation results, such as attack flags and swing poses.
     Derive,
 }

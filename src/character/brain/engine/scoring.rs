@@ -1,74 +1,18 @@
 //! How a consideration turns one raw input into a `0.0..=1.0` score.
 
-use rand::RngExt;
-
-use super::behavior::Behavior;
-use crate::character::brain::ConsiderationInput;
-
-/// An ordered `min < max` interval: a distance range, a consideration's input
-/// range, or a span of seconds to roll from.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Interval {
-    min: f32,
-    max: f32,
-}
-
-impl Interval {
-    /// Builds an interval, rejecting bad bounds at compile time.
-    pub const fn new(min: f32, max: f32) -> Self {
-        assert!(
-            min.is_finite() && max.is_finite() && min < max,
-            "interval needs finite min < max"
-        );
-        Self { min, max }
-    }
-
-    pub(in crate::character::brain) const fn min(self) -> f32 {
-        self.min
-    }
-
-    /// A uniformly random value from `min` up to, not including, `max`.
-    pub(in crate::character::brain) fn pick_random_value(self) -> f32 {
-        rand::rng().random_range(self.min..self.max)
-    }
-
-    /// Signed distance outside the interval; zero inside it.
-    pub(in crate::character::brain) fn error(self, value: f32) -> f32 {
-        if value < self.min {
-            value - self.min
-        } else if value > self.max {
-            value - self.max
-        } else {
-            0.0
-        }
-    }
-
-    /// Offset from the center as a fraction of the half-width, clamped to `-1.0..=1.0`.
-    pub(in crate::character::brain) fn center_error(self, value: f32) -> f32 {
-        let half_width = (self.max - self.min) * 0.5;
-        ((value - self.min.midpoint(self.max)) / half_width).clamp(-1.0, 1.0)
-    }
-
-    /// Maps `raw` onto `0.0..=1.0` across the interval, clamping outside it.
-    pub(in crate::character::brain) fn normalize_clamped(self, raw: f32) -> Option<f32> {
-        if !raw.is_finite() {
-            return None;
-        }
-        let normalized = ((raw - self.min) / (self.max - self.min)).clamp(0.0, 1.0);
-        normalized.is_finite().then_some(normalized)
-    }
-}
+use super::behavior::{Behavior, BrainVocabulary};
+use crate::interval::Interval;
 
 /// One normalized input to a behavior's score.
 #[derive(Clone, Copy, Debug)]
-pub struct Consideration {
+pub struct Consideration<V: BrainVocabulary> {
     pub(in crate::character::brain) name: &'static str,
-    pub(in crate::character::brain) input: ConsiderationInput,
+    pub(in crate::character::brain) input: V::Input,
     pub(in crate::character::brain) score_mapping: ScoreMapping,
     pub(in crate::character::brain) inverted: bool,
 }
 
-impl Consideration {
+impl<V: BrainVocabulary> Consideration<V> {
     /// The opposite fact under a new name. A missing input still vetoes.
     pub const fn inverted(self, name: &'static str) -> Self {
         Self {
@@ -135,9 +79,9 @@ impl Curve {
 
 /// Whether one of `behavior`'s considerations reads an input that is now absent, such as a
 /// target distance with no target.
-pub(in crate::character::brain) fn has_absent_input(
-    behavior: &Behavior,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+pub(in crate::character::brain) fn has_absent_input<V: BrainVocabulary>(
+    behavior: &Behavior<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
 ) -> bool {
     behavior
         .considerations
@@ -147,9 +91,9 @@ pub(in crate::character::brain) fn has_absent_input(
 
 /// Final bounded score for one behavior, reading each consideration's input
 /// through `read`. `is_current` switches threshold considerations to their exit side.
-pub(super) fn score_behavior(
-    behavior: &Behavior,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
+pub(super) fn score_behavior<V: BrainVocabulary>(
+    behavior: &Behavior<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
     is_current: bool,
 ) -> Option<f32> {
     combine_consideration_scores(
@@ -188,8 +132,8 @@ pub(super) fn combine_consideration_scores(
 
 /// Scores one consideration from its `raw` input; `None` when the score
 /// mapping rejects a non-finite raw value.
-pub(super) fn score_consideration(
-    consideration: &Consideration,
+pub(super) fn score_consideration<V: BrainVocabulary>(
+    consideration: &Consideration<V>,
     raw: Option<f32>,
     is_current: bool,
 ) -> Option<f32> {

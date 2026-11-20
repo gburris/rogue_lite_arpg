@@ -363,12 +363,13 @@ cargo xtask playthrough --remote-port 15710
 cargo xtask ai-metrics [options]
 ```
 
-Fights each enemy kind against each player script in an empty room. Measures how the enemies
-moved and fought, and compares the result with an earlier run.
+Fights each enemy kind against each player script in a test room, empty by default. Measures how
+the enemies moved and fought, and compares the result with an earlier run.
 
 | Option | Default | Description |
 | --- | --- | --- |
 | `--kinds <kind,...>` | `Warrior,IceMage,FireMage,Bat` | Enemy kinds |
+| `--room <recipe>` | `AiTestRoom` | Map for each scenario. `AiTestRoomWall` adds a wall beside the player, so enemies lose and regain sight. Save its runs to their own `--output-directory`, so they aren't compared with open-room runs |
 | `--scripts <script,...>` | `still,strafe,fight` | What the player does: stands, strafes, or attacks the nearest enemy |
 | `--enemies <n>` | `3` | Enemies for each scenario |
 | `--seconds <n>` | `20` | Game seconds for each scenario |
@@ -386,6 +387,7 @@ table and a `<commit>` folder with a `.jsonl` recording of each run.
 ```sh
 cargo xtask ai-metrics
 cargo xtask ai-metrics --kinds FireMage --scripts still --repeats 5
+cargo xtask ai-metrics --room AiTestRoomWall --output-directory runs/ai_metrics_wall
 cargo xtask ai-metrics --speed 2 --baseline runs/ai_metrics/765c134.tsv
 ```
 

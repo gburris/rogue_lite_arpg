@@ -9,50 +9,42 @@ use rand::RngExt;
 
 #[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
-use super::engine::{
-    Behavior, BehaviorScoreExplanation, assign_behaviors_to_slots, explain_behavior,
-    has_absent_input,
-};
+use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::motion::MotionFinished;
-use super::{Action, ActionOutcome, BehaviorActionFinished, Brain, Motion};
+use super::vocabulary::{Behavior, BehaviorScoreExplanation};
+use super::{Action, Brain, Motion, MotionFinished};
+use crate::prelude::*;
 
-/// Longest a committed behavior may run, a safety net against a missing finish.
+/// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won its slots, with its motion and action copied from the
-/// definition and stamped with a run id so a finite motion's
-/// `CurrentBehaviorRunId` can tell a fresh
-/// start from the run it just finished. Appliers report through it, so the
-/// committed/continuously scored finish policy lives here.
+/// A behavior that won its slots, with its motion and action copied from the definition. It issues
+/// its motion, and its action if committed, once. The finish rules for committed and continuously
+/// scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<Motion>,
     pub(super) action: Option<Action>,
-    pub(super) behavior_run_id: u32,
+    pub(super) motion_issued: bool,
+    pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
-    /// Ends a committed use the live world refused; a continuously scored use waits.
-    pub(super) fn report_not_started(self, commands: &mut Commands, entity: Entity) {
-        if self.committed
-            && let Some(action) = self.action
-        {
-            commands.trigger(BehaviorActionFinished {
-                entity,
-                action,
-                behavior_run_id: self.behavior_run_id,
-                outcome: ActionOutcome::NotStarted,
-            });
-        }
+    /// Whether this behavior issued `motion`.
+    pub(super) fn has_issued_motion(self, motion: Motion) -> bool {
+        self.motion_issued && self.motion == Some(motion)
     }
 
-    /// Whether a committed behavior lost an input it was chosen on or the target its motion steers
-    /// by, was stunned during its motion, or timed out. The game ends an interrupted use itself, so
-    /// a stun during an action needs no drop.
+    /// Whether this behavior issued `action`.
+    pub(super) fn has_issued_action(self, action: Action) -> bool {
+        self.action_issued && self.action == Some(action)
+    }
+
+    /// Whether a committed behavior lost an input it was chosen on or timed out. The game ends
+    /// interrupted uses and finite motions itself.
     pub(super) fn should_drop_committed_behavior(
         &self,
         behavior: &Behavior,
@@ -60,10 +52,7 @@ impl RunningBehavior {
         inputs: &DecisionInputs,
     ) -> bool {
         self.committed
-            && (has_absent_input(behavior, read)
-                || (self.motion.is_some_and(Motion::needs_target) && inputs.target().is_none())
-                || (self.motion.is_some() && inputs.is_stunned())
-                || inputs.now - self.started_at > COMMIT_TIMEOUT)
+            && (has_absent_input(behavior, read) || inputs.now - self.started_at > COMMIT_TIMEOUT)
     }
 }
 
@@ -95,8 +84,8 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Starts a finished motion's cooldown and, if its run is still current, decides again at once.
-pub(super) fn on_release_finished_motion(
+/// Applies a [`MotionFinished`]; see [`finish_and_redecide`].
+pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
@@ -111,12 +100,12 @@ pub(super) fn on_release_finished_motion(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    brain.start_motion_cooldown(finished.motion, &inputs);
+    let motion = finished.motion;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        finished.behavior_run_id,
+        |running| running.has_issued_motion(motion),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -124,15 +113,16 @@ pub(super) fn on_release_finished_motion(
     );
 }
 
-/// Applies an [`BehaviorActionFinished`], current or stale.
-pub(super) fn on_finish_action(
-    finished: On<BehaviorActionFinished>,
+/// Applies an [`ActionFinished`]; see [`finish_and_redecide`]. A finished attack is also noted for
+/// the next decision.
+pub(super) fn on_action_finished(
+    finished: On<ActionFinished>,
     time: Res<Time<Virtual>>,
     queries: DecisionQueries,
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.holder) else {
         return;
     };
     let inputs = DecisionInputs {
@@ -140,14 +130,15 @@ pub(super) fn on_finish_action(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    if finished.outcome == ActionOutcome::Completed && inputs.action_is_attack(finished.action) {
+    let action = Action::Use(finished.key);
+    if inputs.action_is_attack(action) {
         brain.record_attack_finished();
     }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
     finish_and_redecide(
         &mut brain,
-        finished.behavior_run_id,
+        |running| running.has_issued_action(action),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -155,16 +146,46 @@ pub(super) fn on_finish_action(
     );
 }
 
-/// Ends the committed behavior stamped `behavior_run_id` and, unless the finish was stale,
-/// decides again at once.
+/// Applies an [`ActionFailed`], so a committed use the game refused ends at once instead of at its
+/// timeout; see [`finish_and_redecide`]. A continuously scored use is retried instead.
+pub(super) fn on_action_failed(
+    failed: On<ActionFailed>,
+    time: Res<Time<Virtual>>,
+    queries: DecisionQueries,
+    mut brains: DecidingBrains,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
+) {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.holder) else {
+        return;
+    };
+    let inputs = DecisionInputs {
+        components: &components,
+        queries: &queries,
+        now: time.elapsed_secs(),
+    };
+    let action = Action::Use(failed.key);
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_action_failed").entered();
+    finish_and_redecide(
+        &mut brain,
+        |running| running.has_issued_action(action),
+        &inputs,
+        score_trace.as_deref_mut(),
+        #[cfg(feature = "dev_tools")]
+        &mut decision_stats,
+    );
+}
+
+/// Ends the committed behavior that issued what finished (see
+/// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
 fn finish_and_redecide(
     brain: &mut Brain,
-    behavior_run_id: u32,
+    issued_what_finished: impl Fn(RunningBehavior) -> bool,
     inputs: &DecisionInputs,
     score_trace: Option<&mut ScoreTrace>,
     #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
 ) {
-    if brain.finish_committed_behavior(behavior_run_id) {
+    if brain.finish_committed_behavior(issued_what_finished) {
         redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();
@@ -200,14 +221,14 @@ pub(super) fn decide_behavior(
     }
 }
 
-/// Drops stale committed behaviors, then fills the slots. A winning finite motion rolls its
-/// start chance; a miss waits out its cooldown and the next best behavior takes the slot.
+/// Drops stale committed behaviors, then fills the slots. A winner with a start chance must pass
+/// its roll; see [`Behavior::with_start_chance`].
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {
     brain.drop_stale_committed_behaviors(inputs);
     let definition = brain.definition();
     let running_behavior_ids = brain.running_behavior_ids();
     let read = |input: ConsiderationInput| inputs.read_consideration_input(input, brain);
-    let available = |behavior: &Behavior| brain.is_available(behavior, inputs);
+    let available = |index: usize| brain.is_available(index, inputs);
     if let Some(score_trace) = score_trace {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::explain").entered();
@@ -219,7 +240,7 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
                 explain_behavior(definition, index, &read, &available, &running_behavior_ids)
             }));
     }
-    let mut missed_starts = Vec::new();
+    let mut missed_start_ids = Vec::new();
     let winning_behavior_ids = {
         #[cfg(feature = "tracy")]
         let _span = info_span!("decide::assign").entered();
@@ -228,28 +249,21 @@ fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<
             &read,
             &available,
             &running_behavior_ids,
-            |index| passes_start_roll(inputs, definition.behaviors[index], &mut missed_starts),
+            |index| passes_start_roll(definition.behaviors[index], index, &mut missed_start_ids),
         )
     };
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::commit").entered();
-    brain.commit_decision(&winning_behavior_ids, &missed_starts, inputs);
+    brain.commit_decision(&winning_behavior_ids, &missed_start_ids, inputs);
 }
 
-fn passes_start_roll(
-    inputs: &DecisionInputs,
-    behavior: Behavior,
-    missed_starts: &mut Vec<Motion>,
-) -> bool {
-    let Some(motion) = behavior.motion.filter(|motion| motion.is_finite()) else {
+fn passes_start_roll(behavior: Behavior, index: usize, missed_start_ids: &mut Vec<usize>) -> bool {
+    let Some(start_chance) = behavior.start_chance else {
         return true;
     };
-    let Some(capability_profile) = inputs.motion_profile(motion) else {
-        return false;
-    };
-    if capability_profile.chance >= 1.0 || rand::rng().random::<f32>() < capability_profile.chance {
+    if start_chance.chance >= 1.0 || rand::rng().random::<f32>() < start_chance.chance {
         return true;
     }
-    missed_starts.push(motion);
+    missed_start_ids.push(index);
     false
 }

@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use super::damage::{AttemptDamage, Damage, Knockback};
 use super::hitbox::HurtBox;
 use super::status_effects::prelude::Burning;
+use crate::interval::Interval;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -38,8 +39,7 @@ impl Default for Projectile {
     fn default() -> Self {
         Self {
             damage: Damage::Range {
-                min: 5.0,
-                max: 10.0,
+                amount: Interval::new(5.0, 10.0),
             },
             speed: 600.0,
             angle_offset: 0.0,
@@ -106,8 +106,7 @@ pub fn icebolt(
         @atlas_sprite(sprites.ice_bolt.clone(), sprite_layouts.ice_bolt.clone())
         Projectile {
             damage: Damage::Range {
-                min: 10.0,
-                max: 20.0,
+                amount: Interval::new(10.0, 20.0),
             },
             speed: 350.0,
             spawn_offset: 26.0,
@@ -138,7 +137,7 @@ fn damage_on_projectile_hit(
     for (projectile, velocity, colliding_entities, projectile_entity) in &projectile_query {
         // ignore further collisions after ANY collision with the projectile
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
-            // If the thing we collide with has a HurtBox, lets try to damage it!
+            // Damage the touched entity if it has a hurtbox.
             if hurt_box_query.contains(colliding_entity) {
                 commands.trigger(AttemptDamage {
                     entity: colliding_entity,
@@ -253,28 +252,36 @@ fn on_fire_projectiles(
 }
 
 /// Sends projectiles back at its holder's enemies on contact instead of being destroyed by them.
-/// It reflects only while it has a collider.
+/// On an item it only marks the item as reflecting; a part of each use (see [`PartOfActionUse`])
+/// gets its own copy, which does the reflecting.
 #[derive(Component, Default, Clone)]
 #[require(CollidingEntities, Sensor)]
 pub struct ProjectileReflection {
     reflected: HashSet<Entity>,
 }
 
-/// Reverses each projectile touching a reflector, at most once per projectile, and hands it to
+/// Reverses each projectile touching a reflector, at most once per projectile, and assigns it to
 /// the reflector's holder.
 pub(super) fn reflect_projectiles(
     mut commands: Commands,
-    mut reflector_query: Query<
-        (&mut ProjectileReflection, &CollidingEntities, &ChildOf),
-        With<Collider>,
-    >,
+    mut reflector_query: Query<(
+        &mut ProjectileReflection,
+        &CollidingEntities,
+        &PartOfActionUse,
+    )>,
+    uses_in_progress: Query<&ActionInProgress>,
     mut projectile_query: Query<
         (&mut LinearVelocity, &mut Transform, Option<&mut Lifespan>),
         With<Projectile>,
     >,
     holder_query: Query<&CombatSide>,
 ) {
-    for (mut reflection, colliding_entities, child_of) in &mut reflector_query {
+    for (mut reflection, colliding_entities, part_of_action_use) in &mut reflector_query {
+        let Ok(in_progress) = uses_in_progress.get(part_of_action_use.source) else {
+            continue;
+        };
+        let holder = in_progress.holder();
+
         reflection
             .reflected
             .retain(|&projectile| projectile_query.contains(projectile));
@@ -285,18 +292,17 @@ pub(super) fn reflect_projectiles(
             if let Ok((mut linear_velocity, mut transform, lifespan)) =
                 projectile_query.get_mut(colliding_entity)
             {
-                // The blocker takes over: the reflected projectile now hurts the blocker's enemies.
-                let Ok(side) = holder_query.get(child_of.parent()) else {
+                // The reflected projectile now damages the blocker's enemies.
+                let Ok(side) = holder_query.get(holder) else {
                     continue;
                 };
 
-                // Reverse direction of projectile! Reflect!
                 linear_velocity.0 = -linear_velocity.0;
 
-                // Rotate projectile sprite to face new velocity direction
+                // Rotate the sprite to face the new velocity.
                 transform.rotation = Quat::from_rotation_z(linear_velocity.0.to_angle());
 
-                // A full range again, so it can fly all the way back to whoever fired it.
+                // Reset its range so it can travel back to the shooter.
                 if let Some(mut lifespan) = lifespan {
                     lifespan.reset();
                 }
@@ -304,7 +310,7 @@ pub(super) fn reflect_projectiles(
                 commands.entity(colliding_entity).insert((
                     side.projectile_layers(),
                     ProjectileAttacker {
-                        attacker: Some(child_of.parent()),
+                        attacker: Some(holder),
                     },
                 ));
 

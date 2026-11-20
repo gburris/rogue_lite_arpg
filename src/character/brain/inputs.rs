@@ -1,21 +1,19 @@
-use avian2d::prelude::LinearVelocity;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::Brain;
 use super::action::Action;
-use super::capability::{CapabilityProfile, MotionCapabilities};
-use super::motion::{HomeArea, Motion};
 use super::perception::{TargetInfo, Targeting};
+use super::{Brain, HomeArea, Motion, MotionStatus};
 use crate::character::Allies;
+use crate::character::state::BlockedState;
 use crate::prelude::*;
 
 /// Whether an action could start now; see [`DecisionInputs::action_readiness`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActionReadiness {
     Ready,
-    /// Only waiting stands in the way, such as a cooldown, mana or an interruption.
+    /// Only waiting prevents it, such as for a cooldown, mana or an interruption to end.
     Waiting,
     /// The character lacks what the action needs, such as the item, the ability or a potion.
     Missing,
@@ -29,18 +27,17 @@ pub enum ConsiderationInput {
     TargetDistance,
     MissingHealth,
     ManaFraction,
-    /// Whether this motion's kind is the one running; its payload is ignored.
+    /// Whether this motion is running.
     MotionRunning(Motion),
-    /// Whether the character owns this motion and its cooldown has run out; the payload is
-    /// ignored.
+    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and
+    /// no behavior with one is in a start roll retry delay.
     MotionReady(Motion),
-    /// Seconds the running motion has held its slot when it is this motion's kind, else zero;
-    /// the payload is ignored.
+    /// Seconds the running motion has held its slot when it is this motion, else zero.
     SecondsInMotion(Motion),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
-    /// Target distance over this motion's reach; at most `1.0` is in reach.
+    /// Target distance over the reach of this motion; at most `1.0` is in reach.
     MotionReachFraction(Motion),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
@@ -50,12 +47,11 @@ pub enum ConsiderationInput {
     /// Whether the character owns this action and has what it needs, whatever only waiting would
     /// fix.
     ActionUsable(Action),
-    /// Whether the character is pressed against a wall or a crowd; see
-    /// [`Kinematics::is_blocked_at`].
+    /// Whether the character is blocked; see [`BlockedState`].
     MovementBlocked,
 }
 
-/// The components one decision reads, including every capability a character may carry.
+/// The components of the deciding character that its inputs read.
 #[derive(QueryData)]
 pub(super) struct DecisionInputComponents {
     entity: Entity,
@@ -65,16 +61,14 @@ pub(super) struct DecisionInputComponents {
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
     home_area: Option<&'static HomeArea>,
-    stat_multipliers: &'static StatMultipliers,
-    kinematics: &'static Kinematics,
-    linear_velocity: Option<&'static LinearVelocity>,
-    motion_capabilities: MotionCapabilities,
+    blocked: BlockedState,
 }
 
-/// The queries behind action profiles, allies and the can-run checks.
+/// The queries behind action and motion readiness, reach and allies.
 #[derive(SystemParam)]
 pub(super) struct DecisionQueries<'w, 's> {
     actions: ActionStatus<'w, 's>,
+    motions: MotionStatus<'w, 's>,
     allies: Allies<'w, 's>,
 }
 
@@ -94,27 +88,27 @@ impl DecisionInputs<'_, '_, '_> {
             .filter(|info| self.components.has_target && info.has_finite_distance())
     }
 
-    pub fn is_stunned(&self) -> bool {
-        self.components.stat_multipliers.is_stunned()
+    /// See [`MotionStatus::is_ready`].
+    pub fn is_motion_ready(&self, motion: Motion) -> bool {
+        self.queries
+            .motions
+            .is_ready(self.components.entity, motion)
     }
 
-    /// The profile of the capability that carries out `motion`; see [`MotionCapabilities`].
-    pub fn motion_profile(&self, motion: Motion) -> Option<CapabilityProfile> {
-        self.components
-            .motion_capabilities
-            .capability_profile(motion)
-    }
-
-    /// The profile of the action source that carries out `action`: its reach. `Idle` needs none.
-    pub fn action_profile(&self, action: Action) -> Option<CapabilityProfile> {
-        let actions = &self.queries.actions;
-        let entity = self.components.entity;
-        let key = action.key()?;
-        actions.source_for_key(entity, key)?;
-        Some(CapabilityProfile {
-            reach: actions.reach(entity, key),
-            ..CapabilityProfile::default()
+    /// Whether the character has an action source for `action`; never for `Idle`, which has none.
+    pub fn has_action_source(&self, action: Action) -> bool {
+        action.key().is_some_and(|key| {
+            self.queries
+                .actions
+                .source_for_key(self.components.entity, key)
+                .is_some()
         })
+    }
+
+    /// How far the action source for `action` reaches; `None` without a source or a reach.
+    fn action_reach(&self, action: Action) -> Option<f32> {
+        let key = action.key()?;
+        self.queries.actions.reach(self.components.entity, key)
     }
 
     /// Whether `action` ends on its own, so a committed behavior over it can finish; see
@@ -134,7 +128,7 @@ impl DecisionInputs<'_, '_, '_> {
             .is_some_and(|key| self.queries.actions.is_attack(entity, key))
     }
 
-    /// Whether the character could start `action` now, or what stands in the way.
+    /// Whether the character can start `action` now, or why not.
     fn action_readiness(&self, action: Action) -> ActionReadiness {
         let Some(key) = action.key() else {
             return ActionReadiness::Ready;
@@ -183,54 +177,41 @@ impl DecisionInputs<'_, '_, '_> {
                 Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
-                brain
-                    .motion()
-                    .is_some_and(|running| running.is_same_kind(motion)),
+                brain.motion().is_some_and(|running| running == motion),
             )),
             ConsiderationInput::MotionReady(motion) => Some(f32::from(
-                self.motion_profile(motion).is_some() && brain.is_cooldown_ready(motion, self.now),
+                self.is_motion_ready(motion) && !brain.is_start_roll_waiting(motion, self.now),
             )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
                     .current_motion_behavior()
-                    .filter(|running| running.motion.is_some_and(|held| held.is_same_kind(motion)))
-                    .map_or(0.0, |running| self.now - running.started_at),
+                    .filter(|(_, held)| *held == motion)
+                    .map_or(0.0, |(running, _)| self.now - running.started_at),
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
             ConsiderationInput::MotionReachFraction(motion) => {
-                self.target_reach_fraction(self.motion_profile(motion))
+                let reach = self.queries.motions.reach(self.components.entity, motion);
+                self.target_reach_fraction(reach)
             }
             ConsiderationInput::ActionReachFraction(action) => {
-                self.target_reach_fraction(self.action_profile(action))
+                self.target_reach_fraction(self.action_reach(action))
             }
             ConsiderationInput::AllyReachFraction(action) => {
                 let closest = self.queries.allies.closest(self.components.entity)?;
-                Some(reach_fraction(
-                    closest.distance,
-                    self.action_profile(action),
-                ))
+                Some(reach_fraction(closest.distance, self.action_reach(action)))
             }
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
             }
             ConsiderationInput::ActionUsable(action) => Some(f32::from(
-                self.action_profile(action).is_some()
+                self.has_action_source(action)
                     && self.action_readiness(action) != ActionReadiness::Missing,
             )),
-            ConsiderationInput::MovementBlocked => Some(f32::from(self.is_movement_blocked())),
+            ConsiderationInput::MovementBlocked => {
+                Some(f32::from(self.components.blocked.is_blocked()))
+            }
         }
-    }
-
-    /// Whether the character is pressed against a wall or a crowd; see
-    /// [`Kinematics::is_blocked_at`].
-    fn is_movement_blocked(&self) -> bool {
-        let components = self.components;
-        components.linear_velocity.is_some_and(|linear_velocity| {
-            components
-                .kinematics
-                .is_blocked_at(linear_velocity.0, components.stat_multipliers.speed)
-        })
     }
 
     /// How far past its home area range the character is. Once already heading
@@ -247,18 +228,17 @@ impl DecisionInputs<'_, '_, '_> {
         }
     }
 
-    /// Target distance over the capability's reach; see [`reach_fraction`].
-    fn target_reach_fraction(&self, profile: Option<CapabilityProfile>) -> Option<f32> {
+    /// Target distance over `reach`; see [`reach_fraction`].
+    fn target_reach_fraction(&self, reach: Option<f32>) -> Option<f32> {
         let target = self.target()?;
-        Some(reach_fraction(target.distance, profile))
+        Some(reach_fraction(target.distance, reach))
     }
 }
 
-/// `distance` over the capability's reach; at most `1.0` is in reach. `f32::MAX` for a
-/// capability that is missing or has no positive reach.
-fn reach_fraction(distance: f32, profile: Option<CapabilityProfile>) -> f32 {
-    profile
-        .and_then(|profile| profile.reach)
+/// `distance` over `reach`; at most `1.0` is in reach. `f32::MAX` for a source that is missing or
+/// has no positive reach.
+fn reach_fraction(distance: f32, reach: Option<f32>) -> f32 {
+    reach
         .filter(|&reach| reach > 0.0)
         .map_or(f32::MAX, |reach| distance / reach)
 }

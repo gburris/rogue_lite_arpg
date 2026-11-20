@@ -1,8 +1,10 @@
 use bevy::prelude::*;
 
 use super::{Npc, NpcKind, VILLAGER, interaction};
-use crate::character::brain::{Brain, BrainDefinition, HomeArea, Interval, Wander};
+use crate::character::brain::{Brain, BrainDefinition};
+use crate::character::motion::{HomeArea, Wander};
 use crate::character::physical_collider;
+use crate::interval::Interval;
 use crate::prelude::*;
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
@@ -102,8 +104,10 @@ fn base_npc(
         Npc
         template(move |_| Ok(name.clone()))
         template(move |_| Ok(Brain::new(brain)))
-        // Villagers stand briefly between strolls.
-        ~Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5))
+        MotionSources [
+            // Villagers stand briefly between strolls.
+            ~Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5))
+        ]
         ~HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0)
         ~Kinematics::new(100.0)
         ~Health::new(1000.0)

@@ -161,21 +161,27 @@ fn update_enemy_ai_labels(
             &Brain,
             &TargetInfo,
             Has<Targeting>,
-            Option<&Dash>,
-            Option<&Wander>,
+            Option<&MotionSources>,
+            Option<&CurrentMotion>,
             Option<&ScoreTrace>,
         ),
         With<Enemy>,
     >,
+    dashes: Query<&Dash>,
+    wander_progress: Query<&WanderProgress>,
     mut labels: Query<(&ChildOf, &mut Text2d), With<EnemyAiLabel>>,
     actions: ActionStatus,
 ) {
     for (parent, mut text) in &mut labels {
-        let Ok((brain, target_info, has_target, dash, wander, score_trace)) =
+        let Ok((brain, target_info, has_target, motion_sources, current_motion, score_trace)) =
             enemies.get(parent.parent())
         else {
             continue;
         };
+        let wander = current_motion
+            .and_then(|current_motion| wander_progress.get(current_motion.get()).ok());
+        let dash = motion_sources
+            .and_then(|sources| sources.iter().find_map(|source| dashes.get(source).ok()));
         let attacking = actions.is_attacking(parent.parent());
         let mode = short_activity(brain, dash, wander);
         if has_target {
@@ -206,7 +212,7 @@ fn update_enemy_ai_labels(
 /// Appends one line per behavior from the last decision's score trace.
 fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrace) {
     let format_value = |value: Option<f32>| {
-        // A missing or reachless capability reads as the largest fraction.
+        // A missing or reachless source reads as the largest fraction.
         value.map_or_else(
             || "none".to_string(),
             |value| {
@@ -228,7 +234,7 @@ fn append_score_trace(label: &mut String, brain: &Brain, score_trace: &ScoreTrac
             label,
             "
 {}",
-            behavior.motion.map_or("-", Motion::name)
+            behavior.motion.map_or("-", |motion| motion.name())
         );
         if let Some(action) = behavior.action {
             let _ = write!(label, " + {action:?}");
@@ -270,12 +276,16 @@ fn cleanup_enemy_ai_labels(
 
 /// One-word name for what the enemy is doing: its current motion, with a
 /// dash's own policy name and an enemy's wander or rest beat.
-fn short_activity(brain: &Brain, dash: Option<&Dash>, wander: Option<&Wander>) -> &'static str {
+fn short_activity(
+    brain: &Brain,
+    dash: Option<&Dash>,
+    wander: Option<&WanderProgress>,
+) -> &'static str {
     match brain.motion() {
         None => "Stopped",
         Some(Motion::Dash) => dash.map_or(Motion::Dash.name(), Dash::name),
         Some(Motion::Wander) => {
-            if wander.is_some_and(Wander::is_walking) {
+            if wander.is_some_and(WanderProgress::is_walking) {
                 "Wander"
             } else {
                 "Rest"

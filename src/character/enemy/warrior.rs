@@ -12,8 +12,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Dash, Interval, Motion,
 };
+use crate::character::motion::{Dash, Motion, MotionSources};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 const HEAL: Action = Action::Use(ActionKey::Ability(Ability::Heal));
@@ -24,7 +25,7 @@ const WARRIOR_SWING_DELAY: f32 = 0.25;
 /// Distance from the target at which a wounded warrior may drink its potion.
 const HEAL_SAFE_DISTANCE: f32 = 200.0;
 
-/// Empty above half health, full just past it: warriors break at ~50% hp.
+/// Zero above half health, one just below it.
 const BADLY_HURT: Consideration = consideration(
     "badly hurt",
     ConsiderationInput::MissingHealth,
@@ -107,7 +108,8 @@ const WARRIOR_KITE: Behavior = Behavior::new(
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
     &[ATTACK_FINISHED, HAS_TARGET],
-);
+)
+.with_start_chance(0.6, 0.0);
 
 /// Doing nothing on the action slot: the bar a heal must clear to fire.
 const WARRIOR_BASELINE_IDLE: Behavior = Behavior::new(
@@ -215,15 +217,17 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
         Experience(20.0)
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
-        // 60% of swings end in a 3-5 tile run inside a 90° cone away from the target.
-        ~Dash::kite(0.6, Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         Abilities [
             @heal()
-            ~ActionCooldown::new(HEAL_COOLDOWN)
+            ~Cooldown::new(HEAL_COOLDOWN)
             ActionWindup { seconds: HEAL_WINDUP_SECONDS }
             ActionGlow(HEAL_GLOW_COLOR)
         ]
-        enemy_wander()
+        MotionSources [
+            enemy_wander()
+            --
+            ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
+        ]
         template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)

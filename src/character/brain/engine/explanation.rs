@@ -2,16 +2,15 @@
 //! slot assignment.
 
 use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
-use super::behavior::{Behavior, BrainDefinition};
+use super::behavior::{BrainDefinition, BrainVocabulary};
 use super::scoring::{combine_consideration_scores, score_consideration};
-use crate::character::brain::ConsiderationInput;
 
 /// One consideration's part in a score. `raw` is `None` when the input is
 /// absent; `score` is `None` when the score mapping rejects the raw value.
 #[derive(Clone, Copy, Debug)]
-pub struct ConsiderationScoreExplanation {
+pub struct ConsiderationScoreExplanation<V: BrainVocabulary> {
     pub name: &'static str,
-    pub input: ConsiderationInput,
+    pub input: V::Input,
     pub raw: Option<f32>,
     pub score: Option<f32>,
 }
@@ -19,34 +18,27 @@ pub struct ConsiderationScoreExplanation {
 /// How one behavior scored, for the debug trace: why it sat out, or its final
 /// score with `momentum` applied (`None` when invalid).
 #[derive(Clone, Debug)]
-pub struct BehaviorScoreExplanation {
+pub struct BehaviorScoreExplanation<V: BrainVocabulary> {
     pub skipped: Option<SkipReason>,
     pub score: Option<f32>,
     pub momentum: f32,
-    pub considerations: Vec<ConsiderationScoreExplanation>,
+    pub considerations: Vec<ConsiderationScoreExplanation<V>>,
 }
 
 /// Explains behavior `index` exactly as
 /// [`assign_behaviors_to_slots`](super::assignment::assign_behaviors_to_slots) scores it from the
 /// same inputs, reading each consideration's input once.
-pub(in crate::character::brain) fn explain_behavior(
-    definition: &BrainDefinition,
+pub(in crate::character::brain) fn explain_behavior<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
     index: usize,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
-    available: &impl Fn(&Behavior) -> bool,
+    read: &impl Fn(V::Input) -> Option<f32>,
+    available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],
-) -> BehaviorScoreExplanation {
+) -> BehaviorScoreExplanation<V> {
     let behavior = &definition.behaviors[index];
     let is_current = running_behavior_ids.contains(&index);
     let momentum = momentum_multiplier(is_current);
-    let skipped =
-        find_skip_reason(definition, behavior, available, running_behavior_ids).map(|reason| {
-            // The committed holder sits out too, but it is the one running.
-            match reason {
-                SkipReason::SlotCommitted if is_current => SkipReason::RunningCommitted,
-                other => other,
-            }
-        });
+    let skipped = find_skip_reason(definition, index, available, running_behavior_ids);
     if skipped.is_some() {
         return BehaviorScoreExplanation {
             skipped,

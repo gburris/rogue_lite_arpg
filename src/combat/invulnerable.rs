@@ -2,6 +2,9 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+/// Seconds an entity with [`IFrames`] ignores damage after a hit.
+const INVULNERABLE_SECONDS: f32 = 0.5;
+
 /// Component to mark whether an entity has iframes when hit.
 #[derive(Component)]
 pub struct IFrames {
@@ -15,7 +18,7 @@ impl Default for IFrames {
     fn default() -> Self {
         Self {
             invulnerable: false,
-            invulnerable_timer: Timer::new(Duration::from_millis(800), TimerMode::Once),
+            invulnerable_timer: Timer::from_seconds(INVULNERABLE_SECONDS, TimerMode::Once),
             flash_timer: Some(Timer::new(Duration::from_millis(100), TimerMode::Repeating)),
         }
     }

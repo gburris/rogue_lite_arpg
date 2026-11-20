@@ -1,9 +1,8 @@
 //! Fills the motion and action slots: skips what may not run, scores the rest, and
 //! takes winners from the highest score down.
 
-use super::behavior::{Behavior, BrainDefinition, MAX_BEHAVIORS};
+use super::behavior::{BrainDefinition, BrainVocabulary, MAX_BEHAVIORS};
 use super::scoring::score_behavior;
-use crate::character::brain::ConsiderationInput;
 
 /// Score multiplier a behavior keeps over challengers while it holds a slot, so
 /// a near-tie does not flip the character back and forth between ticks.
@@ -16,7 +15,8 @@ pub enum SkipReason {
     SlotCommitted,
     /// This is the committed behavior holding its slots, so it is not re-scored.
     RunningCommitted,
-    /// It may not start now: a missing capability, a cooldown, or the world.
+    /// It cannot start now: a missing capability, a cooldown, a start roll retry delay, or the
+    /// world state.
     Unavailable,
 }
 
@@ -34,19 +34,19 @@ impl SkipReason {
 /// Scores every behavior not skipped (see [`SkipReason`]), then takes them
 /// from the highest score down while their slots are free; ties go to the
 /// earlier behavior. A `false` from `start` drops a winner for the next best.
-/// `read` answers each consideration's input and `available` whether a behavior
+/// `read` answers each consideration's input and `available` whether the behavior at an index
 /// may start now. Behavior ids, taken and returned, are indices into
 /// `definition.behaviors`.
-pub(in crate::character::brain) fn assign_behaviors_to_slots(
-    definition: &BrainDefinition,
-    read: &impl Fn(ConsiderationInput) -> Option<f32>,
-    available: &impl Fn(&Behavior) -> bool,
+pub(in crate::character::brain) fn assign_behaviors_to_slots<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
+    read: &impl Fn(V::Input) -> Option<f32>,
+    available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],
     mut start: impl FnMut(usize) -> bool,
 ) -> Vec<usize> {
     let mut scores = [0.0_f32; MAX_BEHAVIORS];
     for (index, behavior) in definition.behaviors.iter().enumerate() {
-        if find_skip_reason(definition, behavior, available, running_behavior_ids).is_some() {
+        if find_skip_reason(definition, index, available, running_behavior_ids).is_some() {
             continue;
         }
         let is_current = running_behavior_ids.contains(&index);
@@ -81,13 +81,17 @@ pub(in crate::character::brain) fn assign_behaviors_to_slots(
     }
 }
 
-pub(super) fn find_skip_reason(
-    definition: &BrainDefinition,
-    behavior: &Behavior,
-    available: &impl Fn(&Behavior) -> bool,
+pub(super) fn find_skip_reason<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
+    index: usize,
+    available: &impl Fn(usize) -> bool,
     running_behavior_ids: &[usize],
 ) -> Option<SkipReason> {
+    let behavior = &definition.behaviors[index];
     let tier = behavior.commit.interrupt_tier();
+    if tier > 0 && running_behavior_ids.contains(&index) {
+        return Some(SkipReason::RunningCommitted);
+    }
     let slot_committed = running_behavior_ids.iter().any(|&running_behavior_id| {
         let running_behavior = &definition.behaviors[running_behavior_id];
         let running_tier = running_behavior.commit.interrupt_tier();
@@ -96,7 +100,7 @@ pub(super) fn find_skip_reason(
     if slot_committed {
         return Some(SkipReason::SlotCommitted);
     }
-    (!available(behavior)).then_some(SkipReason::Unavailable)
+    (!available(index)).then_some(SkipReason::Unavailable)
 }
 
 pub(super) fn momentum_multiplier(is_current: bool) -> f32 {

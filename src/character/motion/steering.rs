@@ -1,18 +1,14 @@
-//! Per-frame steering: the [`Steering`] request each motion system writes, and
-//! [`apply_steering`], which turns it into [`Kinematics`].
-
-use std::time::Duration;
-
 use bevy::prelude::*;
 
+use super::MotionOf;
 use crate::character::state::Kinematics;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct TurnRate(pub f32);
 
-/// Extra speed left over from a finite motion's burst, easing off over
-/// `duration`. Multiplies scaled steering until it decays.
+/// Extra speed left after a finite motion ends, decreasing to zero over `duration`. Multiplies
+/// scaled steering until then.
 #[derive(Component, Clone, Debug)]
 pub(super) struct DecayingSpeedBoost {
     extra_speed: f32,
@@ -29,21 +25,28 @@ impl DecayingSpeedBoost {
         }
     }
 
-    /// Advances the boost by `delta` and returns its speed multiplier, or
-    /// `None` once it has decayed.
-    fn tick_and_compute_speed_multiplier(&mut self, delta: Duration) -> Option<f32> {
-        self.timer.tick(delta);
-        if self.timer.is_finished() {
-            return None;
-        }
-        Some(1.0 + self.extra_speed * self.easing.sample_clamped(self.timer.fraction_remaining()))
+    fn speed_multiplier(&self) -> f32 {
+        1.0 + self.extra_speed * self.easing.sample_clamped(self.timer.fraction_remaining())
     }
 }
 
-/// This frame's steering request, written by the system that owns the held
-/// motion.
+/// Advances each [`DecayingSpeedBoost`], removing it once it has decayed.
+pub(super) fn decay_speed_boosts(
+    time: Res<Time<Virtual>>,
+    mut commands: Commands,
+    mut characters: Query<(Entity, &mut DecayingSpeedBoost)>,
+) {
+    for (entity, mut boost) in &mut characters {
+        boost.timer.tick(time.delta());
+        if boost.timer.is_finished() {
+            commands.entity(entity).try_remove::<DecayingSpeedBoost>();
+        }
+    }
+}
+
+/// This frame's steering request, on a running motion, written by that motion's system.
 #[derive(Component, Clone, Copy, Debug)]
-pub(in crate::character::brain) struct Steering {
+pub(in crate::character) struct Steering {
     direction: Option<Vec2>,
     effort: SteeringEffort,
 }
@@ -66,8 +69,8 @@ impl Steering {
         }
     }
 
-    /// Moves at a fixed `speed_multiplier` (at least `1.0`) times max speed. A finite
-    /// motion measures its own distance at that speed, so leftover boosts stay out.
+    /// Moves at a fixed `speed_multiplier` (at least `1.0`) times max speed, ignoring any
+    /// [`DecayingSpeedBoost`], since a finite motion measures its distance at this speed.
     pub(super) const fn boosted(direction: Option<Vec2>, speed_multiplier: f32) -> Self {
         Self {
             direction,
@@ -91,27 +94,25 @@ impl SteeringEffort {
     }
 }
 
-/// Turns each brain character's [`Steering`] into [`Kinematics`], capping how
-/// fast it turns and dropping a [`DecayingSpeedBoost`] once it decays.
+/// Turns the [`Steering`] of each running motion into its character's [`Kinematics`], limiting
+/// the turn rate.
 pub(super) fn apply_steering(
     time: Res<Time<Virtual>>,
-    mut commands: Commands,
+    running_motions: Query<(&MotionOf, &Steering)>,
     mut characters: Query<(
-        Entity,
-        &Steering,
         &mut Kinematics,
         Option<&TurnRate>,
-        Option<&mut DecayingSpeedBoost>,
+        Option<&DecayingSpeedBoost>,
     )>,
 ) {
     let delta_secs = time.delta_secs();
-    for (entity, steering, mut kinematics, turn_rate, mut decaying_speed_boost) in &mut characters {
-        let boost_multiplier = decaying_speed_boost
-            .as_mut()
-            .and_then(|boost| boost.tick_and_compute_speed_multiplier(time.delta()));
-        if decaying_speed_boost.is_some() && boost_multiplier.is_none() {
-            commands.entity(entity).try_remove::<DecayingSpeedBoost>();
-        }
+    for (motion_of, steering) in &running_motions {
+        let Ok((mut kinematics, turn_rate, decaying_speed_boost)) =
+            characters.get_mut(motion_of.character)
+        else {
+            continue;
+        };
+        let boost_multiplier = decaying_speed_boost.map(DecayingSpeedBoost::speed_multiplier);
         let Some(desired) = steering.direction else {
             if !kinematics.is_idle() {
                 kinematics.stop_moving();

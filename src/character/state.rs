@@ -40,7 +40,7 @@ impl KnockedBack {
 }
 
 /// Whether a character is interrupted: knocked back, stunned or defeated. An interrupted character
-/// can't start using an item or ability and loses any use in progress.
+/// can't start using an item or ability, and loses any use or finite motion in progress.
 #[derive(QueryData)]
 pub struct InterruptionState {
     health: &'static Health,
@@ -55,9 +55,29 @@ impl InterruptionStateItem<'_, '_> {
     }
 }
 
+/// Whether a character is blocked: its physics velocity is well below the velocity its
+/// [`Kinematics`] intend. Never true while it stands still or is stunned.
+#[derive(QueryData)]
+pub struct BlockedState {
+    kinematics: &'static Kinematics,
+    stat_multipliers: &'static StatMultipliers,
+    linear_velocity: &'static LinearVelocity,
+}
+
+impl BlockedStateItem<'_, '_> {
+    /// See [`BlockedState`].
+    pub fn is_blocked(&self) -> bool {
+        let intended_velocity = self.kinematics.velocity(self.stat_multipliers.speed);
+        let intended_speed_squared = intended_velocity.length_squared();
+        intended_speed_squared > 1.0
+            && self.linear_velocity.dot(intended_velocity)
+                < BLOCKED_SPEED_FRACTION * intended_speed_squared
+    }
+}
+
 /// A character's intended movement: a heading and a multiple of `max_speed`, with no
 /// acceleration. Player input and AI steering write it; [`kinematics_to_velocity`] scales it by
-/// the character's [`StatMultipliers`] speed and hands it to physics.
+/// the character's [`StatMultipliers`] speed and passes it to physics.
 #[derive(Component, Clone)]
 #[require(FacingDirection, StatMultipliers)]
 pub struct Kinematics {
@@ -92,17 +112,6 @@ impl Kinematics {
     /// would mark `Changed<Kinematics>` and defeat downstream filters.
     pub fn is_idle(&self) -> bool {
         self.speed_multiplier == 0.0
-    }
-
-    /// Whether `physics_velocity` falls well short of the velocity intended at `stat_speed`: the
-    /// character is pressed against a wall or a crowd. Never true while it stands still or is
-    /// stunned.
-    pub fn is_blocked_at(&self, physics_velocity: Vec2, stat_speed: f32) -> bool {
-        let intended_velocity = self.velocity(stat_speed);
-        let intended_speed_squared = intended_velocity.length_squared();
-        intended_speed_squared > 1.0
-            && physics_velocity.dot(intended_velocity)
-                < BLOCKED_SPEED_FRACTION * intended_speed_squared
     }
 
     /// Velocity at `stat_speed` times this movement, so a stunned character reports zero. An

@@ -43,7 +43,7 @@ fn shield(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) -> impl Sce
         @atlas_sprite(image, sprite_layouts.shield.clone())
         ~Item::new(355, ItemKind::Shield)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(SHIELD_COOLDOWN)
+        ~Cooldown::new(SHIELD_COOLDOWN)
         ~{ActionUseStyle::Sustained}
         ~{Shield {
             hitbox: Collider::rectangle(25.0, 25.0),
@@ -101,17 +101,26 @@ fn orient_raised_shields(
     }
 }
 
-/// Raises the shield and begins blocking.
+/// Raises the shield and spawns its blocker for the duration of the use.
 fn on_shield_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    shield_query: Query<&Shield>,
+    shield_query: Query<(&Shield, Has<ProjectileReflection>)>,
 ) -> Result {
-    let shield = shield_query.get(took_effect.source)?;
-    commands.entity(took_effect.source).insert((
+    let shield_entity = took_effect.source;
+    let (shield, reflects_projectiles) = shield_query.get(shield_entity)?;
+    let mut blocker = commands.spawn((
         shield.hitbox.clone(),
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
+        Transform::default(),
+        ChildOf(shield_entity),
+        PartOfActionUse {
+            source: shield_entity,
+        },
     ));
+    if reflects_projectiles {
+        blocker.insert(ProjectileReflection::default());
+    }
     Ok(())
 }
 
@@ -119,15 +128,11 @@ fn on_shield_took_effect(
 /// the use ends.
 fn on_shield_finished(
     finished: On<ActionFinished>,
-    mut commands: Commands,
     mut shield_query: Query<&mut Sprite, With<Shield>>,
 ) {
     let Ok(mut shield_sprite) = shield_query.get_mut(finished.source) else {
         return;
     };
-    commands
-        .entity(finished.source)
-        .try_remove::<(Collider, CollisionLayers)>();
     if let Some(atlas) = &mut shield_sprite.texture_atlas {
         atlas.index = 0;
     }

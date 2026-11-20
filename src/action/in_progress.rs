@@ -3,8 +3,12 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::source::{ActionCooldown, ActionGlow, ActionUseStyle, ActionWindup};
+use super::source::{ActionGlow, ActionUseStyle, ActionWindup};
 use crate::prelude::*;
+
+/// Seconds an action source waits after a use interrupted during its wind-up before it can be used
+/// again.
+const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
 
 /// Counts down a use's [`ActionWindup`].
 #[derive(Component, Clone, Debug, Deref, DerefMut)]
@@ -28,9 +32,10 @@ pub(super) struct ActionGlowLight(Entity);
 
 /// Present on an [`ActionSource`] while a use of it is under way, from the start of its wind-up
 /// until the use ends as its [`ActionUseStyle`] says. An interrupted holder's use ends; see
-/// [`InterruptionState`]. Its removal, however the use ended, fires [`ActionFinished`].
+/// [`InterruptionState`]. Its removal, however the use ended, despawns the use's parts (see
+/// [`PartOfActionUse`]) and fires [`ActionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
-#[component(on_remove = report_action_finished)]
+#[component(on_remove = end_action_use)]
 pub struct ActionInProgress {
     holder: Entity,
     key: ActionKey,
@@ -51,6 +56,19 @@ impl ActionInProgress {
         self.key
     }
 }
+
+/// Marks an entity, such as a hitbox, as part of the use of the action `source` in progress. It is
+/// despawned when that use ends; see [`ActionInProgress`].
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = ActionUseParts)]
+pub struct PartOfActionUse {
+    pub source: Entity,
+}
+
+/// The parts of the use of this action source in progress; see [`PartOfActionUse`].
+#[derive(Component, Clone, Debug)]
+#[relationship_target(relationship = PartOfActionUse)]
+pub struct ActionUseParts(Vec<Entity>);
 
 /// A use of the action `source` took effect. The source's own observer carries out the effect.
 #[derive(EntityEvent, Clone, Copy, Debug)]
@@ -85,7 +103,7 @@ pub(super) struct ActionSourceInUse {
     entity: Entity,
     in_progress: &'static ActionInProgress,
     style: &'static ActionUseStyle,
-    cooldown: &'static mut ActionCooldown,
+    cooldown: &'static mut Cooldown,
 }
 
 impl ActionSourceInUseItem<'_, '_> {
@@ -183,7 +201,9 @@ pub(super) fn advance_actions(
     for (mut source_in_use, windup_progress, timed_progress) in &mut sources {
         if is_holder_gone_or_interrupted(&holders, source_in_use.in_progress.holder) {
             if windup_progress.is_some() {
-                source_in_use.cooldown.start_interrupted_lockout(now);
+                source_in_use
+                    .cooldown
+                    .lock_out(now, INTERRUPTED_LOCKOUT_SECONDS);
             }
             commands.trigger(StopAction {
                 source: source_in_use.entity,
@@ -218,12 +238,20 @@ fn end_use(commands: &mut Commands, entity: Entity) {
     )>();
 }
 
-fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
-    let Some(&ActionInProgress { holder, key }) =
-        world.entity(context.entity).get::<ActionInProgress>()
-    else {
+fn end_action_use(mut world: DeferredWorld, context: HookContext) {
+    let source = world.entity(context.entity);
+    let Some(&ActionInProgress { holder, key }) = source.get::<ActionInProgress>() else {
         return;
     };
+
+    let parts: Vec<Entity> = source
+        .get::<ActionUseParts>()
+        .map(|parts| parts.iter().collect())
+        .unwrap_or_default();
+    for part in parts {
+        world.commands().entity(part).try_despawn();
+    }
+
     world.commands().trigger(ActionFinished {
         source: context.entity,
         holder,

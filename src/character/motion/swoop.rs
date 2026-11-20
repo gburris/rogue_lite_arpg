@@ -1,13 +1,11 @@
-//! The bat's swoop through the target and back out.
-
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CurrentBehaviorRunId, DecayingSpeedBoost, MotionStep, SteerInput,
-    SteeredCharacter, Steering, report_motion_finished,
+    BlockedTimer, DecayingSpeedBoost, Motion, MotionOf, MotionStep, RunningMotion, SteerInput,
+    SteeredCharacter, Steering, SteeringTarget, SteeringTargets, TunedBy,
 };
-use crate::character::brain::{CapabilityProfile, Motion};
-use crate::prelude::*;
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
 const SWOOP_EXIT_TURN: f32 = 2.0 * std::f32::consts::FRAC_PI_3;
@@ -16,162 +14,149 @@ const SWOOP_TRACK_LIMIT: f32 = 0.25;
 const SWOOP_TRACK_RATIO: f32 = 0.5;
 const SWOOP_ARC_SAMPLES: usize = 12;
 const SWOOP_RECOVERY_TIME: f32 = 0.4;
-/// Seconds a swoop pushes against a wall or a crowd before it breaks off.
+/// Seconds a swoop may stay blocked before it ends early.
 const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 
-/// A committed curved swoop through the target, broken off when blocked; on ending it hands
-/// steering a decaying [`DecayingSpeedBoost`].
-#[derive(Component, Clone, Debug)]
+/// A committed curved move through the target and back out. It ends early when blocked or
+/// interrupted, and leaves a [`DecayingSpeedBoost`] when it ends.
+#[derive(Component, Clone, Copy, Debug)]
+#[require(Motion::Swoop)]
 pub struct Swoop {
-    capability_profile: CapabilityProfile,
     extra_speed: f32,
     exit_turn: f32,
-    path: Option<SwoopPath>,
-    blocked_timer: BlockedTimer,
-    current_behavior_run_id: CurrentBehaviorRunId,
 }
 
-impl Swoop {
-    /// Swoops at targets within `reach`, rolling `chance` each time it wins and
-    /// waiting `cooldown` seconds after a swoop ends.
-    pub fn new(chance: f32, reach: f32, cooldown: f32) -> Self {
+impl Default for Swoop {
+    fn default() -> Self {
         Self {
-            capability_profile: CapabilityProfile {
-                reach: Some(reach),
-                chance,
-                cooldown,
-            },
             extra_speed: SWOOP_EXTRA_SPEED,
             exit_turn: SWOOP_EXIT_TURN,
-            path: None,
-            blocked_timer: BlockedTimer::default(),
-            current_behavior_run_id: CurrentBehaviorRunId::default(),
         }
-    }
-
-    fn end_path(&mut self) -> Option<DecayingSpeedBoost> {
-        self.blocked_timer.reset();
-        // Cleared or cut short, a swoop in flight hands its boost to steering to ease off.
-        self.path.take().map(|_| {
-            DecayingSpeedBoost::new(
-                self.extra_speed,
-                SWOOP_RECOVERY_TIME,
-                EaseFunction::SmoothStep,
-            )
-        })
-    }
-
-    /// What a decision reads of this capability.
-    pub(in crate::character::brain) fn capability_profile(&self) -> CapabilityProfile {
-        self.capability_profile
     }
 }
 
-/// Applies swoop each tick and reports [`MotionFinished`](super::MotionFinished)
-/// once far enough away from target
+/// Gives a newly started swoop its [`SwoopProgress`].
+pub(super) fn on_swoop_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_swoop = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Swoop);
+    if is_swoop {
+        commands
+            .entity(added.entity)
+            .insert(SwoopProgress::default());
+    }
+}
+
+/// Advances each swoop in progress. Ends it once past the target or when the target is lost.
 pub(super) fn apply_swoop(
     time: Res<Time<Virtual>>,
     mut commands: Commands,
-    mut swoopers: Query<(Entity, SteeredCharacter, &mut Swoop, &mut Steering)>,
+    targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
+    swoops: Query<&Swoop>,
+    mut running_swoops: Query<(
+        Entity,
+        &MotionOf,
+        &RunningMotion,
+        &TunedBy,
+        &mut SwoopProgress,
+        &mut Steering,
+    )>,
 ) {
-    for (entity, character, mut swoop, mut steering) in &mut swoopers {
-        if swoop
-            .current_behavior_run_id
-            .follow_brain_run(character.brain, Motion::Swoop)
-            && let Some(decaying_speed_boost) = swoop.end_path()
-        {
-            commands.entity(entity).try_insert(decaying_speed_boost);
-        }
-        let Some(behavior_run_id) = swoop.current_behavior_run_id.get() else {
-            continue;
+    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_swoops {
+        let swoop = swoops.get(tuned_by.source).ok();
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        let step = match (swoop, input) {
+            (
+                Some(&swoop),
+                Some(
+                    input @ SteerInput {
+                        target: Some(target),
+                        ..
+                    },
+                ),
+            ) => progress.step(swoop, &input, &target),
+            _ => MotionStep::Finished,
         };
-        let Some(input) = character.build_steer_input(Motion::Swoop, &time) else {
-            *steering = Steering::HALT;
-            continue;
-        };
-        match swoop.step(&input) {
+
+        match step {
             MotionStep::Steer(next) => *steering = next,
-            MotionStep::Finished {
-                decaying_speed_boost,
-            } => {
-                report_motion_finished(
-                    &mut commands,
-                    entity,
-                    Motion::Swoop,
-                    behavior_run_id,
-                    decaying_speed_boost,
-                );
+            MotionStep::Finished => {
+                commands.entity(entity).try_despawn();
             }
         }
     }
 }
 
-/// Ends a swoop the moment the swooper is shoved, so a well-timed hit turns it away.
-pub(super) fn on_swooper_knocked_back(
-    knocked_back: On<Insert<KnockedBack>>,
-    mut commands: Commands,
-    mut swoops: Query<&mut Swoop>,
-) {
-    let Ok(mut swoop) = swoops.get_mut(knocked_back.entity) else {
-        return;
-    };
-    let Some(behavior_run_id) = swoop.current_behavior_run_id.get() else {
-        return;
-    };
-    if swoop.path.is_none() {
-        return;
-    }
-
-    let decaying_speed_boost = swoop.end_path();
-    report_motion_finished(
-        &mut commands,
-        knocked_back.entity,
-        Motion::Swoop,
-        behavior_run_id,
-        decaying_speed_boost,
-    );
+/// A [`Swoop`] in progress, on its running motion. Removing it once the swoop has taken flight,
+/// however it ended, gives the character a [`DecayingSpeedBoost`].
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[component(on_remove = leave_swoop_speed_boost)]
+pub(super) struct SwoopProgress {
+    path: Option<SwoopPath>,
+    blocked_timer: BlockedTimer,
 }
 
-impl Swoop {
-    fn step(&mut self, input: &SteerInput) -> MotionStep {
-        let speed_multiplier = 1.0 + self.extra_speed;
+impl SwoopProgress {
+    fn step(&mut self, swoop: Swoop, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
+        let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
-        let Some(info) = input.target_info else {
-            return steer(None);
-        };
+
         let cleared = self
             .path
             .as_ref()
-            .is_some_and(|path| path.cleared(input.position, info.distance));
+            .is_some_and(|path| path.cleared(input.position, target.distance));
         let blocked = self.path.is_some()
             && input.tick_blocked_timer(&mut self.blocked_timer, SWOOP_BLOCKED_SECONDS);
         if cleared || blocked {
-            let decaying_speed_boost = self.end_path();
-            return MotionStep::Finished {
-                decaying_speed_boost,
-            };
+            return MotionStep::Finished;
         }
-        if !info.has_finite_distance() {
-            return steer(None);
-        }
+
         let flight_distance = input.distance_this_frame(speed_multiplier);
-        let heading = input.heading;
-        let live_target = info.position;
-        let exit_turn = self.exit_turn;
         let path = self.path.get_or_insert_with(|| {
             SwoopPath::new(
                 input.position,
-                live_target,
-                info.distance,
-                heading,
-                exit_turn,
+                target.position,
+                target.distance,
+                input.heading,
+                swoop.exit_turn,
             )
         });
         path.advance(flight_distance);
-        path.track(live_target, flight_distance * SWOOP_TRACK_RATIO);
+        path.track(target.position, flight_distance * SWOOP_TRACK_RATIO);
+
         let to_lead = path.lead(SWOOP_LOOKAHEAD) - input.position;
         steer((to_lead.length_squared() > f32::EPSILON).then(|| to_lead.normalize_or_zero()))
     }
+}
+
+fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
+    let Ok((progress, &MotionOf { character }, &TunedBy { source })) = world
+        .entity(context.entity)
+        .get_components::<(&SwoopProgress, &MotionOf, &TunedBy)>()
+    else {
+        return;
+    };
+    if progress.path.is_none() {
+        return;
+    }
+    let Some(&Swoop { extra_speed, .. }) = world.get(source) else {
+        return;
+    };
+
+    let decaying_speed_boost =
+        DecayingSpeedBoost::new(extra_speed, SWOOP_RECOVERY_TIME, EaseFunction::SmoothStep);
+    world
+        .commands()
+        .entity(character)
+        .try_insert(decaying_speed_boost);
 }
 
 #[derive(Clone, Copy, Debug)]

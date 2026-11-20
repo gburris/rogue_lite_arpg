@@ -1,0 +1,225 @@
+use std::f32::consts::TAU;
+
+use bevy::prelude::*;
+use rand::RngExt;
+
+use super::{
+    BlockedTimer, Motion, MotionOf, MotionStep, RunningMotion, SteerInput, SteeredCharacter,
+    Steering, SteeringTarget, SteeringTargets, TunedBy,
+};
+use crate::interval::Interval;
+
+/// Speed below which a target counts as stationary.
+const TARGET_MOVING_SPEED: f32 = 20.0;
+
+const KITE_SPREAD: f32 = std::f32::consts::FRAC_PI_4;
+
+const HOP_STEP_IN_SPREAD: f32 = 0.35;
+const HOP_OUTWARD_BIAS: f32 = 0.15;
+
+/// Seconds a dash may stay blocked before it ends early.
+const DASH_BLOCKED_SECONDS: f32 = 0.15;
+
+/// A committed straight-line move in a direction chosen when it starts. It ends early when blocked
+/// or interrupted.
+#[derive(Component, Clone, Copy, Debug)]
+#[require(Motion::Dash)]
+pub struct Dash {
+    run_distance: Interval,
+    speed_multiplier: f32,
+    aim_rule: DashAimRule,
+    debug_name: &'static str,
+}
+
+impl Dash {
+    fn new(
+        run_distance: Interval,
+        speed_multiplier: f32,
+        aim_rule: DashAimRule,
+        debug_name: &'static str,
+    ) -> Self {
+        Self {
+            run_distance,
+            speed_multiplier,
+            aim_rule,
+            debug_name,
+        }
+    }
+
+    pub fn kite(run_distance: Interval) -> Self {
+        Self::new(
+            run_distance,
+            1.0,
+            DashAimRule::Away {
+                spread: KITE_SPREAD,
+            },
+            "Kite",
+        )
+    }
+
+    pub fn hop(run_distance: Interval, speed_multiplier: f32, close_range: f32) -> Self {
+        Self::new(
+            run_distance,
+            speed_multiplier,
+            DashAimRule::HopTangent { close_range },
+            "Hop",
+        )
+    }
+
+    pub fn slide(run_distance: Interval, speed_multiplier: f32) -> Self {
+        Self::new(
+            run_distance,
+            speed_multiplier,
+            DashAimRule::Away { spread: 0.0 },
+            "Slide",
+        )
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.debug_name
+    }
+}
+
+fn hop_direction(target: &SteeringTarget, close_range: f32, heading: Vec2) -> Vec2 {
+    if target.distance <= close_range
+        && target.velocity.length_squared() <= TARGET_MOVING_SPEED * TARGET_MOVING_SPEED
+    {
+        let spread = rand::rng().random_range(-HOP_STEP_IN_SPREAD..=HOP_STEP_IN_SPREAD);
+        return target.direction.rotate(Vec2::from_angle(spread));
+    }
+    // Move to the side opposite the current heading, so a following orbit reverses direction.
+    let heading_side = target.direction.perp().dot(heading);
+    let tangent_sign = if heading_side.abs() > f32::EPSILON {
+        -heading_side.signum()
+    } else if rand::rng().random_bool(0.5) {
+        1.0
+    } else {
+        -1.0
+    };
+    let tangent = target.direction.perp() * tangent_sign;
+    (tangent - target.direction * HOP_OUTWARD_BIAS).normalize_or_zero()
+}
+
+/// Gives a newly started dash its [`DashProgress`].
+pub(super) fn on_dash_started(
+    added: On<Add<RunningMotion>>,
+    mut commands: Commands,
+    running_motions: Query<&RunningMotion>,
+) {
+    let is_dash = running_motions
+        .get(added.entity)
+        .is_ok_and(|running| running.motion == Motion::Dash);
+    if is_dash {
+        commands
+            .entity(added.entity)
+            .insert(DashProgress::default());
+    }
+}
+
+/// Advances each dash in progress. Ends it after its distance or when its target is lost.
+pub(super) fn apply_dash(
+    time: Res<Time<Virtual>>,
+    mut commands: Commands,
+    targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
+    dashes: Query<&Dash>,
+    mut running_dashes: Query<(
+        Entity,
+        &MotionOf,
+        &RunningMotion,
+        &TunedBy,
+        &mut DashProgress,
+        &mut Steering,
+    )>,
+) {
+    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_dashes {
+        let dash = dashes.get(tuned_by.source).ok();
+        let character = characters.get(motion_of.character).ok();
+        let input = character
+            .as_ref()
+            .and_then(|character| character.build_steer_input(running, &targets, &time));
+        let step = match (dash, input) {
+            (
+                Some(dash),
+                Some(
+                    input @ SteerInput {
+                        target: Some(target),
+                        ..
+                    },
+                ),
+            ) => progress.step(dash, &input, &target),
+            _ => MotionStep::Finished,
+        };
+
+        match step {
+            MotionStep::Steer(next) => *steering = next,
+            MotionStep::Finished => {
+                commands.entity(entity).try_despawn();
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum DashAimRule {
+    Away { spread: f32 },
+    HopTangent { close_range: f32 },
+}
+
+impl DashAimRule {
+    fn choose_direction(self, target: &SteeringTarget, heading: Vec2) -> Vec2 {
+        let direction = match self {
+            Self::Away { spread } => (-target.direction)
+                .normalize_or_zero()
+                .rotate(Vec2::from_angle(rand::rng().random_range(-spread..=spread))),
+            Self::HopTangent { close_range } => hop_direction(target, close_range, heading),
+        };
+        // Overlapping characters have no direction between them, so pick a random one.
+        if direction.length_squared() > f32::EPSILON {
+            direction
+        } else {
+            Vec2::from_angle(rand::rng().random_range(0.0..TAU))
+        }
+    }
+}
+
+/// A [`Dash`] in progress, on its running motion.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub(super) struct DashProgress {
+    direction: Option<Vec2>,
+    remaining_distance: f32,
+    blocked_timer: BlockedTimer,
+}
+
+impl DashProgress {
+    fn choose_direction_and_distance(
+        &mut self,
+        dash: &Dash,
+        target: &SteeringTarget,
+        heading: Vec2,
+    ) -> Vec2 {
+        let direction = dash.aim_rule.choose_direction(target, heading);
+        self.direction = Some(direction);
+        self.remaining_distance = dash.run_distance.pick_random_value().max(0.0);
+        direction
+    }
+
+    fn step(&mut self, dash: &Dash, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
+        let direction = match self.direction {
+            Some(direction) => direction,
+            None => self.choose_direction_and_distance(dash, target, input.heading),
+        };
+
+        if input.tick_blocked_timer(&mut self.blocked_timer, DASH_BLOCKED_SECONDS) {
+            return MotionStep::Finished;
+        }
+
+        let distance = input.distance_this_frame(dash.speed_multiplier);
+        if distance >= self.remaining_distance {
+            return MotionStep::Finished;
+        }
+
+        self.remaining_distance -= distance;
+        MotionStep::Steer(Steering::boosted(Some(direction), dash.speed_multiplier))
+    }
+}

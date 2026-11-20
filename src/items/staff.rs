@@ -2,8 +2,6 @@ use std::f32::consts::{FRAC_PI_4, FRAC_PI_8};
 use std::time::Duration;
 
 use avian2d::prelude::SpatialQuery;
-use bevy::ecs::lifecycle::HookContext;
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use bevy_tweening::lens::TransformRotateZLens;
 use bevy_tweening::{Tween, TweenAnim};
@@ -30,12 +28,17 @@ const FLAME_STAFF_SWING_SECONDS: f32 = 0.1;
 const ICE_STAFF_SWING_SECONDS: f32 = 0.15;
 /// Mana each flame staff cast costs.
 const FLAME_STAFF_MANA_COST: f32 = 6.0;
+/// Mana each single-bolt cast of a fire mage's staff costs.
+const MAGE_FLAME_STAFF_MANA_COST: f32 = 10.0;
+/// Mana each fan cast of a fire mage's staff costs: twice a single bolt, since it casts half as
+/// often.
+const MAGE_FAN_STAFF_MANA_COST: f32 = 2.0 * MAGE_FLAME_STAFF_MANA_COST;
 /// Mana each ice staff cast costs.
 const ICE_STAFF_MANA_COST: f32 = 15.0;
 
 pub fn fire_staff(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scene {
     bsn! {
-        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, FLAME_STAFF_COOLDOWN, FLAME_STAFF_MANA_COST)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball(sprites, sprite_layouts, -FRAC_PI_8)
@@ -54,7 +57,7 @@ pub fn mage_fire_staff_single_bolt(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, MAGE_FLAME_STAFF_COOLDOWN, MAGE_FLAME_STAFF_MANA_COST)
         Name::new("Staff of Flames")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, 0.0, speed)
@@ -69,7 +72,7 @@ pub fn mage_fire_staff_fan(
 ) -> impl Scene {
     let speed = FIREBALL_SPEED * MAGE_BOLT_SPEED_FACTOR;
     bsn! {
-        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN)
+        @flame_staff_core(sprites, MAGE_FAN_STAFF_COOLDOWN, MAGE_FAN_STAFF_MANA_COST)
         Name::new("Staff of Wildfire")
         Projectiles [
             @fireball_with_speed(sprites, sprite_layouts, -FRAC_PI_8, speed)
@@ -81,12 +84,17 @@ pub fn mage_fire_staff_fan(
     }
 }
 
-/// Shared item data, sprite and cast for every flame staff, casting every `seconds_between_casts`.
-fn flame_staff_core(sprites: &SpriteAssets, seconds_between_casts: f32) -> impl Scene {
+/// Shared item data, sprite and cast for every flame staff, casting every `seconds_between_casts`
+/// for `mana_cost` mana.
+fn flame_staff_core(
+    sprites: &SpriteAssets,
+    seconds_between_casts: f32,
+    mana_cost: f32,
+) -> impl Scene {
     bsn! {
         @staff(sprites.fire_staff.clone(), seconds_between_casts, FLAME_STAFF_SWING_SECONDS)
         ~Item::new(1340, ItemKind::Staff)
-        ManaCost(FLAME_STAFF_MANA_COST)
+        ManaCost(mana_cost)
     }
 }
 
@@ -114,7 +122,7 @@ fn staff(image: Handle<Image>, seconds_between_casts: f32, swing_seconds: f32) -
             swing_seconds: swing_seconds,
         }
         ~Equippable::new(EquipmentSlot::Mainhand, &STAFF_EQUIPMENT_POSES)
-        ~ActionCooldown::new(cooldown)
+        ~Cooldown::new(cooldown)
         ActionWindup { seconds: swing_seconds }
         ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         ~{ActionReach(STAFF_REACH)}
@@ -139,11 +147,6 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
     left: EquipmentPose::behind(-4.0, -7.0, 50.0),
     right: EquipmentPose::above(4.0, -8.0, -50.0),
 };
-
-/// The spark at the tip of a casting staff. Removing it despawns the spark.
-#[derive(Component, Clone, Copy, Debug)]
-#[component(on_remove = despawn_staff_spark)]
-struct StaffSpark(Entity);
 
 /// Swings the staff toward its holder's facing and back, with a spark at its tip.
 fn on_staff_cast_started(
@@ -182,17 +185,15 @@ fn on_staff_cast_started(
 
     let tip = staff.source_offset.extend(ZLayer::AboveSprite.z());
     let staff_entity = added.entity;
-    let spark = commands
-        .spawn_scene(bsn! {
-            @point_light(Color::WHITE, 10.0, 3.0, 1.0)
-            Transform::from_translation(tip)
-            ChildOf(staff_entity)
-        })
-        .id();
-    commands.entity(staff_entity).insert((
-        TweenAnim::new(swing_toward.then(swing_back)).with_destroy_on_completed(true),
-        StaffSpark(spark),
-    ));
+    commands.spawn_scene(bsn! {
+        @point_light(Color::WHITE, 10.0, 3.0, 1.0)
+        Transform::from_translation(tip)
+        ChildOf(staff_entity)
+        ~{PartOfActionUse { source: staff_entity }}
+    });
+    commands
+        .entity(staff_entity)
+        .insert(TweenAnim::new(swing_toward.then(swing_back)).with_destroy_on_completed(true));
     Ok(())
 }
 
@@ -236,14 +237,5 @@ fn on_staff_took_effect(
 }
 
 fn on_staff_finished(finished: On<ActionFinished>, mut commands: Commands) {
-    commands
-        .entity(finished.source)
-        .try_remove::<(TweenAnim, StaffSpark)>();
-}
-
-fn despawn_staff_spark(mut world: DeferredWorld, context: HookContext) {
-    let Some(&StaffSpark(spark)) = world.entity(context.entity).get::<StaffSpark>() else {
-        return;
-    };
-    world.commands().entity(spark).try_despawn();
+    commands.entity(finished.source).try_remove::<TweenAnim>();
 }

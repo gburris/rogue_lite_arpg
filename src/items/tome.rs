@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use rand::RngExt;
 
 use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
 use super::{Item, ItemKind};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Seconds a tome waits after a heal before it can heal again.
@@ -13,8 +13,7 @@ const TOME_MANA_COST: f32 = 40.0;
 
 #[derive(Component, Clone)]
 struct HealingTome {
-    min_healing: f32,
-    max_healing: f32,
+    healing: Interval,
 }
 
 pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
@@ -23,11 +22,10 @@ pub fn tome_of_healing(sprites: &SpriteAssets) -> impl Scene {
         Name::new("Tome Of Healing")
         ~Item::new(355, ItemKind::Tome)
         ~Equippable::new(EquipmentSlot::Offhand, &DEFAULT_EQUIPMENT_POSES)
-        ~ActionCooldown::new(TOME_COOLDOWN)
+        ~Cooldown::new(TOME_COOLDOWN)
         ManaCost(TOME_MANA_COST)
         ~{HealingTome {
-            min_healing: 25.0,
-            max_healing: 50.0,
+            healing: Interval::new(25.0, 50.0),
         }}
         Sprite { image }
         on(on_healing_tome_took_effect)
@@ -42,7 +40,7 @@ fn on_healing_tome_took_effect(
     sprite_layouts: Res<SpriteSheetLayouts>,
 ) -> Result {
     let tome = tome_query.get(took_effect.source)?;
-    let health_to_add = rand::rng().random_range(tome.min_healing..tome.max_healing);
+    let health_to_add = tome.healing.pick_random_value();
     commands.trigger(AttemptHeal {
         entity: took_effect.holder,
         amount: health_to_add,

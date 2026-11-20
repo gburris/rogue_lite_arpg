@@ -7,12 +7,15 @@ use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
     CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
-    distance_threshold, flag, reach_fraction_threshold, within_reach,
+    distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Interval, Motion, Orbit, Swoop, TurnRate,
 };
+use crate::character::motion::{
+    KeepDistance, Motion, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
+};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 const BREATH: Action = Action::Use(ActionKey::Ability(Ability::Breath));
@@ -22,8 +25,11 @@ const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
 const CAST_CORE_DISTANCE_RANGE: Interval =
     Interval::new(CAST_MIN_RANGE + 20.0, CAST_MAX_RANGE - 20.0);
 
-/// Zero while a swoop runs or could start this decision: its cooldown starts only once one ends
-/// or misses its start roll.
+/// Seconds before a bat can swoop again after a swoop ends or misses its start roll.
+const SWOOP_COOLDOWN: f32 = 2.0;
+
+/// One during the swoop's cooldown or start roll retry delay; zero while a swoop is in progress or
+/// can start.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
     ConsiderationInput::MotionReady(Motion::Swoop),
@@ -77,7 +83,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -85,11 +91,24 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(CAST_CORE_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
     &[INSIDE_INNER_CAST_EDGE],
+);
+/// Blocked while moving; see [`flag_kept_while_current`].
+const CORNERED: Consideration =
+    flag_kept_while_current("cornered", ConsiderationInput::MovementBlocked);
+
+/// Slides along whatever pins a bat backing away, circling the target until the bat is back
+/// past the inner cast edge.
+const BAT_SLIP_AWAY: Behavior = Behavior::new(
+    Some(Motion::Orbit),
+    None,
+    CommitPolicy::ContinuouslyScored,
+    6.5,
+    &[CORNERED, INSIDE_INNER_CAST_EDGE],
 );
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
@@ -98,7 +117,8 @@ const BAT_SWOOP: Behavior = Behavior::new(
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
     &[IN_SWOOP_REACH],
-);
+)
+.with_start_chance(0.35, SWOOP_COOLDOWN);
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
 const BAT_BASELINE_IDLE: Behavior = Behavior::new(
@@ -131,8 +151,11 @@ const BAT_BITE: Behavior = Behavior::new(
     &[LINE_OF_SIGHT, NEAR_BITE_REACH],
 );
 
-// Motion priority: swoop (10), seek (7), return (6), orbit (5.5), keep (5), chase (4),
-// wander (1).
+// Motion priority: swoop (10), seek (7), slip away (6.5), return (6), orbit (5.5), keep (5),
+// chase (4), wander (1).
+// - Slipping away beats a running keep (6.25), so a bat pinned against a wall circles out instead
+//   of pushing into it. It holds the slot past the orbit's entry edge, where the orbit continues
+//   the same circling.
 // - A swoop beats an orbit that is already running (5.5 x 1.25 = 6.875).
 // - Keep and orbit never score together: keep holds the slot out to 10 units past the inner cast
 //   edge, where the orbit takes over, and the orbit holds it down to 5 units inside that edge.
@@ -150,6 +173,7 @@ static BAT_BEHAVIORS: &[Behavior] = &[
     CHASE_CAST_RANGE,
     BAT_ORBIT,
     BAT_KEEP,
+    BAT_SLIP_AWAY,
     BAT_SWOOP,
     BAT_BREATH,
     BAT_BITE,
@@ -221,9 +245,17 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         )
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
-        ~Orbit::new().with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
-        enemy_wander()
-        ~Swoop::new(0.35, CAST_MAX_RANGE, 2.0)
+        MotionSources [
+            ~Orbit::new(CAST_DISTANCE_RANGE).with_max_distance_offset(BAT_ORBIT_MAX_DISTANCE_OFFSET)
+            --
+            ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
+            --
+            enemy_wander()
+            --
+            Swoop
+            ~{MotionReach(CAST_MAX_RANGE)}
+            ~Cooldown::new(SWOOP_COOLDOWN)
+        ]
         template(move |_| Ok(sprite.clone()))
         ~AnimationSheet::bat()
         Abilities [
@@ -233,10 +265,10 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
                     .with_life_steal(1.0)
                     .with_mouth_height(BAT_HURTBOX_OFFSET)
             )
-            ~ActionCooldown::new(BITE_COOLDOWN)
+            ~Cooldown::new(BITE_COOLDOWN)
             --
             @breath(CAST_MAX_RANGE)
-            ~ActionCooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
+            ~Cooldown::new(BAT_BREATH_PERIOD).with_jitter(BAT_BREATH_JITTER)
             Projectiles [
                 @fireball(sprites, sprite_layouts, 0.0)
             ]

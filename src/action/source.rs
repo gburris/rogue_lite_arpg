@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use rand::RngExt;
 
 use crate::prelude::*;
 
@@ -31,56 +30,6 @@ pub struct Attack;
 #[derive(Component, Clone, Copy, Debug, Deref)]
 pub struct RequiredItem(pub ItemKind);
 
-/// Seconds an action source waits after a use interrupted during its wind-up before it can be used
-/// again.
-const INTERRUPTED_LOCKOUT_SECONDS: f32 = 1.5;
-
-/// How long an action source waits after a use takes effect before it can be used again.
-#[derive(Component, Clone, Copy, Debug, Default)]
-pub struct ActionCooldown {
-    seconds: f32,
-    jitter: f32,
-    ready_at: f32,
-}
-
-impl ActionCooldown {
-    /// Waits `seconds` after each use takes effect.
-    pub fn new(seconds: f32) -> Self {
-        Self {
-            seconds,
-            ..default()
-        }
-    }
-
-    /// Varies each wait by up to `jitter` seconds either way, so characters that start using the
-    /// same thing together drift out of step.
-    pub fn with_jitter(self, jitter: f32) -> Self {
-        Self { jitter, ..self }
-    }
-
-    /// Seconds left at virtual time `now` before the next use can start.
-    pub fn remaining_seconds(&self, now: f32) -> f32 {
-        (self.ready_at - now).max(0.0)
-    }
-
-    pub(super) fn is_ready(&self, now: f32) -> bool {
-        now >= self.ready_at
-    }
-
-    pub(super) fn start(&mut self, now: f32) {
-        let offset = if self.jitter > 0.0 {
-            rand::rng().random_range(-self.jitter..=self.jitter)
-        } else {
-            0.0
-        };
-        self.ready_at = now + (self.seconds + offset).max(0.0);
-    }
-
-    pub(super) fn start_interrupted_lockout(&mut self, now: f32) {
-        self.ready_at = self.ready_at.max(now + INTERRUPTED_LOCKOUT_SECONDS);
-    }
-}
-
 /// How a use ends once it takes effect.
 #[derive(Component, Clone, Copy, Debug, Default, PartialEq)]
 pub enum ActionUseStyle {
@@ -111,6 +60,6 @@ pub struct ActionWindup {
     pub seconds: f32,
 }
 
-/// Lights the holder in this color while a use winds up, a stand-in until uses have animations.
+/// Lights the holder in this color while a use winds up.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct ActionGlow(pub Color);

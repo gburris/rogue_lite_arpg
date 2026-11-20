@@ -1,10 +1,8 @@
-//! Considerations and behaviors every brain shares; each enemy's own live in
-//! its file in `character/enemy`.
-
 use super::action::Action;
-use super::engine::{Behavior, CommitPolicy, Consideration, Curve, Interval, ScoreMapping};
+use super::engine::{CommitPolicy, Curve, ScoreMapping};
 use super::inputs::ConsiderationInput;
-use super::motion::Motion;
+use super::{Behavior, Consideration, Motion};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Preferred minimum distance a ranged or flying brain keeps from its target.
@@ -32,7 +30,7 @@ pub const fn consideration(
     }
 }
 
-/// Whether a motion of `motion`'s kind has been running for more than `seconds`; see
+/// Whether `motion` has been running for more than `seconds`; see
 /// [`ConsiderationInput::SecondsInMotion`].
 pub const fn motion_running_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
     Consideration {
@@ -108,6 +106,23 @@ pub const fn target_within_distance(name: &'static str, distance: f32) -> Consid
 /// A 0-or-1 input scored as itself.
 pub const fn flag(name: &'static str, input: ConsiderationInput) -> Consideration {
     consideration(name, input, Interval::new(0.0, 1.0), Curve::Linear)
+}
+
+/// A 0-or-1 input that must be 1 to start its behavior, and passes while the behavior holds its
+/// slot.
+pub const fn flag_kept_while_current(
+    name: &'static str,
+    input: ConsiderationInput,
+) -> Consideration {
+    Consideration {
+        name,
+        input,
+        score_mapping: ScoreMapping::Threshold {
+            enter: 1.0,
+            exit: -1.0,
+        },
+        inverted: false,
+    }
 }
 
 pub const HAS_TARGET: Consideration = flag("has target", ConsiderationInput::HasTarget);

@@ -12,8 +12,9 @@ use crate::character::brain::considerations::{
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    Dash, Interval, Motion, Orbit,
 };
+use crate::character::motion::{Dash, KeepDistance, Motion, MotionReach, MotionSources, Orbit};
+use crate::interval::Interval;
 use crate::prelude::*;
 
 /// Distance a caster opens before it stops casting to regenerate mana.
@@ -25,11 +26,12 @@ const _: () = assert!(
     "staffs must reach the cast range's outer edge"
 );
 
-/// Mana a second a fire mage regenerates.
-const FIRE_MAGE_MANA_REGEN: f32 = 10.0;
-/// Mana a second an ice mage regenerates: nearly what a steady stream of ice bolts costs, so its
-/// breaks to refill come rarely.
-const ICE_MAGE_MANA_REGEN: f32 = 13.0;
+/// Mana a second a fire mage regenerates: a little less than steady casting costs, so a long fight
+/// drains it into a break to refill, later than an ice mage's.
+const FIRE_MAGE_MANA_REGEN: f32 = 4.0;
+/// Mana a second an ice mage regenerates: less than a steady stream of ice bolts costs, so a long
+/// fight drains it into a break to refill.
+const ICE_MAGE_MANA_REGEN: f32 = 10.0;
 
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
@@ -81,7 +83,7 @@ const CAST_WEIGHT: f32 = 8.0;
 
 /// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -97,7 +99,7 @@ const FIRE_RALLY: Behavior = Behavior::new(
 );
 /// Circles on its firing lane between casts, so it never stands around waiting on the staff.
 const ICE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit(CAST_DISTANCE_RANGE)),
+    Some(Motion::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -106,7 +108,7 @@ const ICE_ORBIT: Behavior = Behavior::new(
 /// Breaks contact while mana is low; the threshold's exit holds it until the
 /// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -114,7 +116,7 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 );
 /// Ice bolts are expensive, so the break enters earlier and lasts longer.
 const ICE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance(RECOVERY_DISTANCE_RANGE)),
+    Some(Motion::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -284,7 +286,6 @@ fn mage_body(
         ground_sight_ray()
         YSort::from_offset(CHARACTER_FEET_POS_OFFSET)
         ~Mana::new(100.0, mana_regen)
-        enemy_wander()
         template(move |_| Ok(sprite.clone()))
         Items [
             @health_potion(sprites)
@@ -300,16 +301,20 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             sprites,
             sprite_layouts,
         )
-        ~Orbit::new()
         ~Kinematics::new(100.0)
         Experience(12.0)
-        // The cooldown is the player's window to close in again.
-        ~Dash::slide(
-            Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32),
-            2.2,
-            ICE_SLIDE_REACH,
-            1.2,
-        )
+        MotionSources [
+            enemy_wander()
+            --
+            ~Orbit::new(CAST_DISTANCE_RANGE)
+            --
+            ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
+            --
+            ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
+            ~{MotionReach(ICE_SLIDE_REACH)}
+            // The cooldown is the player's window to close in again.
+            ~Cooldown::new(1.2)
+        ]
     }
 }
 
@@ -323,16 +328,23 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         )
         ~Kinematics::new(150.0)
         Experience(15.0)
-        // A still target inside the close range gets a step-in hop instead.
-        ~Dash::hop(
-            Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
-            2.2,
-            CAST_MIN_RANGE - 10.0,
-        )
-        ~Orbit::new()
+        MotionSources [
+            enemy_wander()
+            --
+            // A still target inside the close range gets a step-in hop instead.
+            ~Dash::hop(
+                Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
+                2.2,
+                CAST_MIN_RANGE - 10.0,
+            )
+            --
+            ~Orbit::new(CAST_DISTANCE_RANGE)
+            --
+            ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
+        ]
         Abilities [
             @speed_and_damage_rally(RALLY_REACH, RALLY_RAISE, RALLY_SECONDS)
-            ~ActionCooldown::new(RALLY_COOLDOWN)
+            ~Cooldown::new(RALLY_COOLDOWN)
             ActionWindup { seconds: RALLY_WINDUP_SECONDS }
             ActionGlow(RALLY_GLOW_COLOR)
         ]

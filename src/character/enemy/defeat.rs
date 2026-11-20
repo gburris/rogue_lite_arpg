@@ -61,7 +61,7 @@ pub(super) fn on_enemy_defeated(
             }
         }
 
-        // Defeat interrupts the enemy, which ends its action uses; its motion has to be stopped.
+        // Interruption ends action uses and finite motions only; see `InterruptionState`.
         motions.stop(defeated.entity);
         commands
             .entity(defeated.entity)

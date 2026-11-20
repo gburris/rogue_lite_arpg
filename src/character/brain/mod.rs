@@ -49,7 +49,7 @@ const DECISION_PERIOD: f32 = 0.1;
 pub struct Brain {
     definition: &'static BrainDefinition,
     running_behaviors: Vec<RunningBehavior>,
-    next_behavior_run_id: u32,
+    next_running_behavior_id: u32,
     start_roll_ready_at: Vec<f32>,
     attack_finish_pending: bool,
     next_decision_at: f32,
@@ -61,7 +61,7 @@ impl Brain {
         Self {
             definition,
             running_behaviors: Vec::with_capacity(2),
-            next_behavior_run_id: 0,
+            next_running_behavior_id: 0,
             start_roll_ready_at: vec![0.0; definition.behaviors.len()],
             attack_finish_pending: false,
             next_decision_at: 0.0,
@@ -232,15 +232,15 @@ impl Brain {
         }
     }
 
-    /// Creates a running behavior for behavior `index` with the next run id.
+    /// Creates a running behavior for behavior `index` with the next running behavior id.
     fn start_running_behavior(&mut self, index: usize, now: f32) -> RunningBehavior {
-        self.next_behavior_run_id = self.next_behavior_run_id.wrapping_add(1);
+        self.next_running_behavior_id = self.next_running_behavior_id.wrapping_add(1);
         let behavior = self.definition.behaviors[index];
         RunningBehavior {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
-            behavior_run_id: self.next_behavior_run_id,
+            running_behavior_id: self.next_running_behavior_id,
             committed: behavior.commit.is_committed(),
             started_at: now,
         }
@@ -263,13 +263,11 @@ impl Brain {
             .retain(|other| other.behavior != running.behavior);
     }
 
-    /// Ends the committed behavior stamped `behavior_run_id`; `false` for a stale finish.
-    fn finish_committed_behavior(&mut self, behavior_run_id: u32) -> bool {
-        let Some(position) = self
-            .running_behaviors
-            .iter()
-            .position(|running| running.committed && running.behavior_run_id == behavior_run_id)
-        else {
+    /// Ends the committed behavior stamped `running_behavior_id`; `false` for a stale finish.
+    fn finish_committed_behavior(&mut self, running_behavior_id: u32) -> bool {
+        let Some(position) = self.running_behaviors.iter().position(|running| {
+            running.committed && running.running_behavior_id == running_behavior_id
+        }) else {
             return false;
         };
         self.running_behaviors.remove(position);

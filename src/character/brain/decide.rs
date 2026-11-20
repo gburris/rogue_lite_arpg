@@ -26,7 +26,7 @@ pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<Motion>,
     pub(super) action: Option<Action>,
-    pub(super) behavior_run_id: u32,
+    pub(super) running_behavior_id: u32,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
@@ -40,7 +40,7 @@ impl RunningBehavior {
             commands.trigger(BehaviorActionFinished {
                 entity,
                 action,
-                behavior_run_id: self.behavior_run_id,
+                running_behavior_id: self.running_behavior_id,
                 outcome: ActionOutcome::NotStarted,
             });
         }
@@ -105,10 +105,10 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let Some(behavior_run_id) = issued_motions
+    let Some(running_behavior_id) = issued_motions
         .get(finished.entity)
         .ok()
-        .and_then(|issued_motion| issued_motion.behavior_run_id_of(finished.motion))
+        .and_then(|issued_motion| issued_motion.running_behavior_id_of(finished.motion))
     else {
         return;
     };
@@ -116,7 +116,7 @@ pub(super) fn on_motion_finished(
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        behavior_run_id,
+        running_behavior_id,
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -147,7 +147,7 @@ pub(super) fn on_behavior_action_finished(
     let _span = info_span!("decide::after_action").entered();
     finish_and_redecide(
         &mut brain,
-        finished.behavior_run_id,
+        finished.running_behavior_id,
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -155,16 +155,16 @@ pub(super) fn on_behavior_action_finished(
     );
 }
 
-/// Ends the committed behavior stamped `behavior_run_id` and, unless the finish was stale,
+/// Ends the committed behavior stamped `running_behavior_id` and, unless the finish was stale,
 /// decides again at once.
 fn finish_and_redecide(
     brain: &mut Brain,
-    behavior_run_id: u32,
+    running_behavior_id: u32,
     inputs: &DecisionInputs,
     score_trace: Option<&mut ScoreTrace>,
     #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
 ) {
-    if brain.finish_committed_behavior(behavior_run_id) {
+    if brain.finish_committed_behavior(running_behavior_id) {
         redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();

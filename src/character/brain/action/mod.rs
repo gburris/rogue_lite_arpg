@@ -35,13 +35,13 @@ pub(super) fn plugin(app: &mut App) {
     .add_observer(issued_actions::on_action_finished);
 }
 
-/// A use ended. It ends the behavior stamped `behavior_run_id` only while that behavior still
+/// A use ended. It ends the behavior stamped `running_behavior_id` only while that behavior still
 /// runs, so a stale finish clears nothing.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(super) struct BehaviorActionFinished {
     pub entity: Entity,
     pub action: Action,
-    pub behavior_run_id: u32,
+    pub running_behavior_id: u32,
     pub outcome: ActionOutcome,
 }
 

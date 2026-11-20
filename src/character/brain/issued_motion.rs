@@ -10,16 +10,16 @@ pub(super) struct IssuedMotion {
 }
 
 impl IssuedMotion {
-    /// The run id of the behavior a finished `motion` belongs to; `None` if the brain has
+    /// The id of the running behavior a finished `motion` belongs to; `None` if the brain has
     /// since issued a different motion.
-    pub(super) fn behavior_run_id_of(&self, motion: Motion) -> Option<u32> {
+    pub(super) fn running_behavior_id_of(&self, motion: Motion) -> Option<u32> {
         self.behavior
             .filter(|behavior| behavior.motion.is_some_and(|started| started == motion))
-            .map(|behavior| behavior.behavior_run_id)
+            .map(|behavior| behavior.running_behavior_id)
     }
 
-    fn behavior_run_id(&self) -> Option<u32> {
-        self.behavior.map(|behavior| behavior.behavior_run_id)
+    fn running_behavior_id(&self) -> Option<u32> {
+        self.behavior.map(|behavior| behavior.running_behavior_id)
     }
 
     fn record_issued_motion(&mut self, running: RunningBehavior) {
@@ -50,7 +50,7 @@ pub(super) fn apply_motion_requests(
 
         let target = location_hint.map(TargetLocationHint::location_hint);
 
-        if issued_motion.behavior_run_id() != Some(behavior.behavior_run_id) {
+        if issued_motion.running_behavior_id() != Some(behavior.running_behavior_id) {
             issued_motion.record_issued_motion(behavior);
             if !motions.status().is_in_progress(entity, motion) {
                 // `retarget` reads the running motion from before this start, so skip it.

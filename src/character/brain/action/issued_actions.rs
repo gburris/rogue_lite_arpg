@@ -5,22 +5,22 @@ use super::{Action, ActionOutcome, BehaviorActionFinished};
 use crate::character::brain::{Brain, RunningBehavior};
 use crate::prelude::*;
 
-/// The behavior run id that last issued each key, by starting or adopting its use, so a committed
-/// action is issued once and its finish names its behavior.
+/// The id of the running behavior that last issued each key, by starting or adopting its use, so
+/// a committed action is issued once and its finish names its behavior.
 #[derive(Component, Clone, Debug, Default)]
 pub(in crate::character::brain) struct IssuedActions(HashMap<ActionKey, u32>);
 
 impl IssuedActions {
-    fn behavior_run_id(&self, key: ActionKey) -> Option<u32> {
+    fn running_behavior_id(&self, key: ActionKey) -> Option<u32> {
         self.0.get(&key).copied()
     }
 
     fn was_issued_by(&self, key: ActionKey, running: RunningBehavior) -> bool {
-        running.committed && self.behavior_run_id(key) == Some(running.behavior_run_id)
+        running.committed && self.running_behavior_id(key) == Some(running.running_behavior_id)
     }
 
     fn record_issued_action(&mut self, key: ActionKey, running: RunningBehavior) {
-        self.0.insert(key, running.behavior_run_id);
+        self.0.insert(key, running.running_behavior_id);
     }
 }
 
@@ -68,17 +68,17 @@ pub(super) fn on_action_finished(
     mut commands: Commands,
     issued_actions: Query<&IssuedActions>,
 ) {
-    let Some(behavior_run_id) = issued_actions
+    let Some(running_behavior_id) = issued_actions
         .get(finished.holder)
         .ok()
-        .and_then(|issued_actions| issued_actions.behavior_run_id(finished.key))
+        .and_then(|issued_actions| issued_actions.running_behavior_id(finished.key))
     else {
         return;
     };
     commands.trigger(BehaviorActionFinished {
         entity: finished.holder,
         action: Action::Use(finished.key),
-        behavior_run_id,
+        running_behavior_id,
         outcome: ActionOutcome::Completed,
     });
 }

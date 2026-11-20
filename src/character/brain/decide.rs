@@ -78,7 +78,9 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Applies a [`MotionFinished`]; see [`finish_and_redecide`].
+/// Applies a [`MotionFinished`]; see [`finish_and_redecide`]. It runs in the flush that despawns
+/// the finished motion, so the behavior that held it is gone before the next
+/// [`issue_running_motion`](super::issue_motion::issue_running_motion) would start it again.
 pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -170,16 +172,16 @@ pub(super) fn on_action_failed(
     );
 }
 
-/// Ends the committed behavior that issued what finished (see
+/// Ends the committed behavior that ran what finished (see
 /// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
 fn finish_and_redecide(
     brain: &mut Brain,
-    issued_what_finished: impl Fn(RunningBehavior) -> bool,
+    ran_what_finished: impl Fn(RunningBehavior) -> bool,
     inputs: &DecisionInputs,
     score_trace: Option<&mut ScoreTrace>,
     #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
 ) {
-    if brain.finish_committed_behavior(issued_what_finished) {
+    if brain.finish_committed_behavior(ran_what_finished) {
         redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();

@@ -37,8 +37,8 @@ const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running in its motion and
 /// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
-/// every [`DECISION_PERIOD`] with a random per-brain offset; the Execute systems note what they
-/// issued. Its requests start and stop the game's motions and actions, which report back with
+/// every [`DECISION_PERIOD`] with a random per-brain offset; issuing actions notes which actions
+/// it issued. Its requests start and stop the game's motions and actions, which report back with
 /// [`MotionFinished`], [`ActionFinished`] or [`ActionFailed`].
 #[derive(Component, Debug)]
 #[component(on_add = schedule_first_decision)]
@@ -286,16 +286,16 @@ impl Brain {
             .expect("issued behavior is not running")
     }
 
-    /// Ends the committed behavior that issued what finished. Only a finish of something a behavior
-    /// issued ends it, so a stale finish clears nothing and returns `false`.
+    /// Ends the committed behavior whose held motion or issued action finished. A stale finish
+    /// matches no behavior, so it clears nothing and returns `false`.
     fn finish_committed_behavior(
         &mut self,
-        issued_what_finished: impl Fn(RunningBehavior) -> bool,
+        ran_what_finished: impl Fn(RunningBehavior) -> bool,
     ) -> bool {
         let Some(position) = self
             .running_behaviors
             .iter()
-            .position(|&running| running.committed && issued_what_finished(running))
+            .position(|&running| running.committed && ran_what_finished(running))
         else {
             return false;
         };

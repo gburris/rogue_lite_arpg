@@ -1,14 +1,12 @@
 use bevy::prelude::*;
 
-mod equipment_transform;
+mod equipment_pose;
 mod slot;
 
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::equipment_transform::{
-        DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose,
-    };
+    pub use super::equipment_pose::{DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose};
     pub use super::slot::{Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip};
 }
 
@@ -19,6 +17,6 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         // Always run this system InGame and InMenu so weapon transforms update as inventory is
         // interacted with
-        equipment_transform::update_equipment_transforms.in_set(MainSystems::Shared),
+        equipment_pose::update_equipment_transforms.in_set(MainSystems::Shared),
     );
 }

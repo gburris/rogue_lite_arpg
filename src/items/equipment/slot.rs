@@ -2,7 +2,7 @@ use core::fmt;
 
 use bevy::prelude::*;
 
-use super::equipment_transform::DirectionalPoses;
+use super::equipment_pose::DirectionalPoses;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

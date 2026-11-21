@@ -1,8 +1,9 @@
+mod action_bar;
 mod input;
 mod interact;
-mod overlay;
 mod progression;
 mod spawn;
+mod status_bars;
 
 pub mod prelude {
     pub use super::Player;
@@ -24,11 +25,12 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
+        action_bar::plugin,
         input::plugin,
         interact::plugin,
-        overlay::plugin,
         progression::plugin,
         spawn::plugin,
+        status_bars::plugin,
     ));
 
     // Player spawn
@@ -36,7 +38,7 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(AppState::SpawnPlayer),
         (
             spawn::spawn_player,
-            overlay::spawn_player_overlay,
+            status_bars::spawn_player_overlay,
             spawn::transition_to_create_hub,
         )
             .chain(),

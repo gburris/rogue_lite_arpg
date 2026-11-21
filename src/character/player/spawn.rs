@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::input::{player_actions, player_aim};
 use super::interact::PlayerInteractionRadius;
-use super::{Player, overlay};
+use super::{Player, action_bar};
 use crate::character::physical_collider;
 use crate::prelude::*;
 
@@ -46,7 +46,7 @@ pub(super) fn spawn_player(
             attributes
             template(move |_| Ok(sprite.clone()))
             on(on_player_defeated)
-            on(overlay::on_action_failed)
+            on(action_bar::on_action_failed)
             Items [
                 @ice_staff(&sprites, &sprite_layouts)
                 --

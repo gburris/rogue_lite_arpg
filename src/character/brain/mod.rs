@@ -1,4 +1,4 @@
-pub(super) mod considerations;
+mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
@@ -9,8 +9,15 @@ mod perception;
 use bevy::prelude::*;
 use rand::RngExt;
 
+pub(super) use self::considerations::{
+    ACTION_BASELINE_IDLE, ATTACK_FINISHED, Behavior, CAST_DISTANCE_RANGE, CAST_HYSTERESIS,
+    CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE, Consideration, HAS_TARGET, IN_MAINHAND_REACH,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, NO_TARGET, RETURN_TO_HOME, SEEK_LOST_TARGET,
+    WANDER, consideration, distance_threshold, flag, flag_kept_while_current, mana_at_or_below,
+    motion_running_for, reach_fraction_threshold, target_speed_at_most, target_within_distance,
+    within_reach,
+};
 pub use self::considerations::{Action, BrainDefinition};
-pub(super) use self::considerations::{Behavior, Consideration};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;

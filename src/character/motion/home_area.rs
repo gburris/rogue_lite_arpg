@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::{
     BlockedTimer, MotionKey, MotionProgress, MotionStep, RunningMotionOf, SteerInput, Steering,
 };
-use crate::character::state::BlockedState;
+use crate::character::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
 const RETURN_BLOCKED_SECONDS: f32 = 1.0;

@@ -6,7 +6,7 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    FiniteMotion, MotionKey, MotionReach, MotionSourceOf, MotionSources, MotionStep, SteerInput,
+    FiniteMotion, MotionKey, MotionReach, MotionSourceOf, MotionSources, SteerInput,
     SteeredCharacter, Steering, SteeringTargets,
 };
 use crate::prelude::*;
@@ -56,6 +56,13 @@ pub(super) trait MotionProgress: Component<Mutability = Mutable> + Default {
 
     /// Advances the motion by one frame of `input`.
     fn step(&mut self, tuning: &Self::Tuning, input: &SteerInput) -> MotionStep;
+}
+
+/// The result of advancing a motion by one frame.
+pub(super) enum MotionStep {
+    Steer(Steering),
+    /// The motion ended this frame.
+    Finished,
 }
 
 /// Gives each newly started running motion with a `Progress::Tuning` a fresh `Progress`.

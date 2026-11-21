@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
-use super::brain::{Behavior, Brain, BrainDefinition};
+use super::brain::{
+    ACTION_BASELINE_IDLE, Behavior, Brain, BrainDefinition, RETURN_TO_HOME, WANDER,
+};
 use super::motion::{Home, HomeArea, ReturnToHome, Wander};
 use super::{Character, physical_collider};
 use crate::interval::Interval;

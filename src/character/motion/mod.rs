@@ -19,10 +19,9 @@ pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
 pub use self::orbit::Orbit;
 pub use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
-use self::running_motion::{MotionProgress, RunningMotionOf, SteeringMotionOf};
+use self::running_motion::{MotionProgress, MotionStep, RunningMotionOf, SteeringMotionOf};
 use self::steer_input::{
-    BlockedTimer, CircleDirection, MotionStep, SteerInput, SteeredCharacter, SteeringTarget,
-    SteeringTargets,
+    BlockedTimer, CircleDirection, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,
 };
 pub use self::steering::TurnRate;
 use self::steering::{DecayingSpeedBoost, Steering};

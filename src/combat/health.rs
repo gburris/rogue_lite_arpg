@@ -1,8 +1,9 @@
 use std::time::Duration;
 
+use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 
-use crate::interval::fraction_of_max;
+use crate::interval::{Spread, fraction_of_max};
 use crate::prelude::*;
 
 #[derive(EntityEvent)]
@@ -215,4 +216,95 @@ pub(super) fn drain_mana_for_actions_in_progress(
             commands.trigger(StopAction { source });
         }
     }
+}
+
+const DAMAGE_TEXT_COLOR: Color = Color::srgb(1.0, 0.0, 0.0);
+const HEALING_TEXT_COLOR: Color = Color::srgb(0.0, 0.8, 0.0);
+const HEALTH_TEXT_OFFSET: f32 = 10.0;
+/// Height assumed for an entity whose hurtbox can't be found.
+const FALLBACK_ENTITY_HEIGHT: f32 = 32.0;
+/// How far, in degrees, health change text may tilt from straight above the entity.
+const HEALTH_TEXT_TILT_DEGREES: Spread = Spread::new(30.0);
+
+// Characters don't have a collider on their root entity, so we use their hurtbox to determine
+// height
+fn entity_height(
+    entity: Entity,
+    children_query: &Query<&Children>,
+    hurt_box_query: &Query<&ColliderAabb, With<HurtBox>>,
+) -> f32 {
+    children_query
+        .get(entity)
+        .ok()
+        .and_then(|children| hurt_box_query.iter_many(children).find_map(Result::ok))
+        .map_or(FALLBACK_ENTITY_HEIGHT, |aabb| aabb.max.y - aabb.min.y)
+}
+
+/// Text is placed relative to `origin`, which is the center of the entity the text is for.
+fn health_change_text(origin: Vec3, entity_height: f32, amount: f32, color: Color) -> impl Scene {
+    let tilt = Rot2::degrees(HEALTH_TEXT_TILT_DEGREES.pick_random_value());
+
+    // Text height is relative to center of entity, so we get half of entity height and add a buffer
+    let text_height = (entity_height / 2.0) + HEALTH_TEXT_OFFSET;
+
+    let text_position = (tilt * Vec2::Y * text_height).extend(ZLayer::AboveSprite.z());
+
+    let rounded_amount = (amount * 10.0).round() / 10.0; // Round to 1 decimal place
+    let formatted_amount = if rounded_amount.fract() == 0.0 {
+        format!("{rounded_amount:.0}") // Display as a whole number
+    } else {
+        format!("{rounded_amount:.1}") // Display with one decimal place
+    };
+
+    bsn! {
+        Text2d(formatted_amount)
+        TextColor(color)
+        Lifespan::new(0.4)
+        Transform::from_translation({origin + text_position})
+    }
+}
+
+pub(super) fn on_damage_dealt_show_amount(
+    damage_dealt: On<DamageDealt>,
+    mut commands: Commands,
+    damaged_query: Query<(&Health, &Transform)>,
+    children_query: Query<&Children>,
+    hurt_box_query: Query<&ColliderAabb, With<HurtBox>>,
+) {
+    let entity = damage_dealt.entity;
+    let entity_height = entity_height(entity, &children_query, &hurt_box_query);
+
+    match damaged_query.get(entity) {
+        // Defeated characters have their children despawned, so text for the killing blow
+        // is spawned in world space rather than following the entity
+        Ok((health, transform)) if health.is_dead() => {
+            commands.spawn_scene(health_change_text(
+                transform.translation,
+                entity_height,
+                damage_dealt.damage,
+                DAMAGE_TEXT_COLOR,
+            ));
+        }
+        _ => {
+            let text = health_change_text(
+                Vec3::ZERO,
+                entity_height,
+                damage_dealt.damage,
+                DAMAGE_TEXT_COLOR,
+            );
+            commands.spawn_scene(bsn! { @{text} ChildOf(entity) });
+        }
+    }
+}
+
+pub(super) fn on_healed_show_amount(
+    healed: On<Healed>,
+    mut commands: Commands,
+    children_query: Query<&Children>,
+    hurt_box_query: Query<&ColliderAabb, With<HurtBox>>,
+) {
+    let entity_height = entity_height(healed.entity, &children_query, &hurt_box_query);
+
+    let text = health_change_text(Vec3::ZERO, entity_height, healed.amount, HEALING_TEXT_COLOR);
+    commands.spawn_scene(bsn! { @{text} ChildOf({healed.entity}) });
 }

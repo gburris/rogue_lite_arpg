@@ -4,11 +4,9 @@ use rand::{RngExt, rng};
 use serde::Deserialize;
 
 use super::{Enemy, bat, mage, warrior};
-use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
-use crate::character::brain::{Brain, BrainDefinition, Watching};
+use crate::character::brain::{Brain, BrainDefinition, CAST_HYSTERESIS, CAST_MAX_RANGE, Watching};
 use crate::character::motion::{Chase, Home, HomeArea, MotionCommands, ReturnToHome, Wander};
 use crate::character::physical_collider;
-use crate::character::player::PlayerAttributes;
 use crate::interval::Interval;
 use crate::prelude::*;
 

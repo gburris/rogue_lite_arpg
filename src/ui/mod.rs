@@ -1,4 +1,3 @@
-mod damage_overlay;
 mod primitives;
 mod screens;
 
@@ -32,8 +31,4 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (primitives::style_buttons, primitives::pulse_text).in_set(MainSystems::Shared),
     );
-
-    // Heal and damage overlays
-    app.add_observer(damage_overlay::on_damage_overlay_amount)
-        .add_observer(damage_overlay::on_healing_overlay_amount);
 }

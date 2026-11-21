@@ -1,22 +1,21 @@
 mod input;
 mod interact;
-mod level;
 mod overlay;
+mod progression;
 mod spawn;
 
 pub mod prelude {
+    pub use super::Player;
     pub use super::input::PlayerAim;
     #[cfg(feature = "dev_native")]
     pub(crate) use super::input::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
-    pub use super::spawn::GameProgress;
-    pub use super::{Attribute, Player, PlayerAttributes};
+    pub use super::progression::{Attribute, GameProgress, PlayerAttributes};
 }
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::spawn::{Attribute, PlayerAttributes};
 use crate::character::Character;
 use crate::prelude::*;
 
@@ -27,8 +26,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         input::plugin,
         interact::plugin,
-        level::plugin,
         overlay::plugin,
+        progression::plugin,
         spawn::plugin,
     ));
 

@@ -5,13 +5,11 @@ use super::{
     Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::heal;
-use crate::character::brain::considerations::{
-    ATTACK_FINISHED, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
+use crate::character::brain::{
+    ATTACK_FINISHED, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
+    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
     SEEK_LOST_TARGET, WANDER, consideration, flag, motion_running_for, reach_fraction_threshold,
     target_within_distance,
-};
-use crate::character::brain::{
-    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{Flee, Idle, MotionKey, MotionSources, kite};
 use crate::interval::Interval;

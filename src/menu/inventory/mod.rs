@@ -4,7 +4,7 @@ use self::display_case::{UpdateDisplayCase, display_case};
 use crate::prelude::*;
 
 mod display_case;
-mod item_display;
+mod display_slot;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Inventory), spawn_inventory_menu);

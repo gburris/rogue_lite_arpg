@@ -155,3 +155,15 @@ fn update_magnet_locations(
         }
     }
 }
+
+/// The gold a character carries: the player's savings, or what an enemy drops when defeated.
+#[derive(Component, Clone, Copy, Default)]
+pub struct Purse {
+    pub amount: u32,
+}
+
+impl Purse {
+    pub fn add(&mut self, amount: u32) {
+        self.amount += amount;
+    }
+}

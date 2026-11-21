@@ -4,7 +4,7 @@ mod equipment;
 mod inventory;
 mod lootable;
 mod melee;
-mod shield;
+mod offhand;
 mod staff;
 
 pub mod prelude {
@@ -16,7 +16,7 @@ pub mod prelude {
     };
     pub use super::lootable::DropItem;
     pub use super::melee::{axe, freeze_axe, sword};
-    pub use super::shield::{Shield, knight_shield, magic_shield, tome_of_healing};
+    pub use super::offhand::{Shield, knight_shield, magic_shield, tome_of_healing};
     pub use super::staff::{
         STAFF_REACH, fire_staff, ice_staff, mage_fire_staff_fan, mage_fire_staff_single_bolt,
     };
@@ -28,7 +28,7 @@ pub(super) fn plugin(app: &mut App) {
         equipment::plugin,
         lootable::plugin,
         melee::plugin,
-        shield::plugin,
+        offhand::plugin,
     ));
 
     app.add_observer(inventory::on_item_added_to_inventory)

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::RunningMotionOf;
-use crate::character::state::Kinematics;
+use crate::prelude::*;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
 #[derive(Component, Clone, Copy, Debug, Default)]

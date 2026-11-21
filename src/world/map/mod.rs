@@ -1,7 +1,7 @@
 //! Map pipeline: recipe -> blueprint -> spawned world.
 //!
 //! ```text
-//! map_recipes.ron ──load (recipe.rs)──▶ RecipeCatalog { recipes, structures }
+//! map_recipes.ron ──load (recipe_catalog.rs)──▶ RecipeCatalog { recipes, structures }
 //!                               │ MapRequest (Hub | Weighted | Named)
 //!                               ▼
 //! build_from_recipe(recipe, seed) ──▶ MapBlueprint { tiles, placements, recipe, seed }
@@ -38,10 +38,11 @@ mod blueprint;
 mod build;
 mod placement;
 mod recipe;
+mod recipe_catalog;
 mod spawn;
 mod structures;
+mod tile_appearance;
 mod tiles;
-mod tiling;
 
 use ::bevy::prelude::*;
 

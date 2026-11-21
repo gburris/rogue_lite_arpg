@@ -53,8 +53,10 @@ pub(super) fn plugin(app: &mut App) {
         ),
     )
     .add_observer(health::on_attempt_heal)
+    .add_observer(health::on_healed_show_amount)
     .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
     .add_observer(damage::on_damage_dealt_knockback)
+    .add_observer(health::on_damage_dealt_show_amount)
     .add_observer(hitbox::on_damage_dealt_life_steal);
 }

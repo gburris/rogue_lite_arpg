@@ -1,11 +1,36 @@
 use bevy::prelude::*;
-
-use super::{Npc, NpcKind, VILLAGER, interaction};
-use crate::character::brain::{Brain, BrainDefinition};
+use crate::character::Character;
+use crate::prelude::*;
+use serde::Deserialize;
+use crate::character::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
+use crate::character::brain::{Behavior, BrainDefinition};
+use crate::character::brain::Brain;
 use crate::character::motion::{Home, HomeArea, ReturnToHome, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
-use crate::prelude::*;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(on_spawn_npcs);
+}
+
+#[derive(Component, Default, Clone)]
+#[require(Character, CombatSide = CombatSide::Ally, DespawnOnExit::<AppState>(AppState::Playing))]
+pub struct Npc;
+
+/// Recipes name these directly, e.g. `(what: Npc(Shopkeeper), ...)` in `map_recipes.ron`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
+pub enum NpcKind {
+    Helper,
+    Shopkeeper,
+    StatTrainer,
+}
+
+static VILLAGER_BEHAVIORS: &[Behavior] = &[WANDER, ACTION_BASELINE_IDLE, RETURN_TO_HOME];
+
+/// Wanders around its home area and never requests equipment.
+pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
+    behaviors: VILLAGER_BEHAVIORS,
+};
 
 const WANDER_RADIUS: f32 = 2.5 * TILE_SIZE as f32;
 
@@ -18,7 +43,7 @@ pub struct NpcSpawn {
     pub kind: NpcKind,
 }
 
-pub(super) fn on_spawn_npcs(
+fn on_spawn_npcs(
     npc_spawn_trigger: On<SpawnNpcs>,
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
@@ -57,7 +82,7 @@ fn spawn_npc(
             bsn! {
                 @{base}
                 @villager_sprite(sprites.game_guide_sprite_sheet.clone(), sprite_layouts)
-                on(interaction::on_game_guide_start)
+                on(on_game_guide_start)
             },
             ice_staff(sprites, sprite_layouts),
         ),
@@ -66,7 +91,7 @@ fn spawn_npc(
             bsn! {
                 @{base}
                 @villager_sprite(sprites.shop_keeper_sprite_sheet.clone(), sprite_layouts)
-                on(interaction::on_shop_keeper_store_open)
+                on(on_shop_keeper_store_open)
             },
             axe(sprites),
         ),
@@ -75,7 +100,7 @@ fn spawn_npc(
             bsn! {
                 @{base}
                 @villager_sprite(sprites.stat_trainer_sprite_sheet.clone(), sprite_layouts)
-                on(interaction::on_stat_trainer_store_open)
+                on(on_stat_trainer_store_open)
             },
             sword(sprites),
         ),
@@ -143,4 +168,22 @@ fn villager_sprite(image: Handle<Image>, sprite_layouts: &SpriteSheetLayouts) ->
     bsn! {
         template(move |_| Ok(sprite.clone()))
     }
+}
+
+fn on_shop_keeper_store_open(
+    _: On<PlayerInteraction>,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    next_menu_state.set(Menu::Inventory);
+}
+
+fn on_stat_trainer_store_open(
+    _: On<PlayerInteraction>,
+    mut next_menu_state: ResMut<NextState<Menu>>,
+) {
+    next_menu_state.set(Menu::StatsShop);
+}
+
+fn on_game_guide_start(_: On<PlayerInteraction>) {
+    info!("The Helper has nothing to say yet");
 }

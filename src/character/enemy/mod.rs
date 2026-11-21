@@ -1,14 +1,12 @@
 use bevy::prelude::*;
 
 mod bat;
-mod defeat;
-mod kind;
 mod mage;
 mod spawn;
 mod warrior;
 
-use self::defeat::Experience;
-pub use self::kind::EnemyKind;
+use self::spawn::Experience;
+pub use self::spawn::EnemyKind;
 pub use self::spawn::{EnemySpawn, SpawnEnemies};
 use self::spawn::{
     enemy_children, enemy_motion_sources, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,

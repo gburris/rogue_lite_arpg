@@ -1,21 +1,18 @@
 mod ability;
-mod allies;
 mod animation;
 mod brain;
-mod collider;
 mod enemy;
 mod motion;
 mod npc;
 mod player;
-mod purse;
 mod state;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub(in crate::character) use self::allies::Allies;
+pub(in crate::character) use self::state::Allies;
 use self::animation::{AnimationSheet, CharacterAnimationState};
-pub(in crate::character) use self::collider::physical_collider;
+pub(in crate::character) use self::state::physical_collider;
 use crate::prelude::*;
 
 pub mod prelude {
@@ -39,7 +36,7 @@ pub mod prelude {
     pub(crate) use super::player::prelude::{
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
-    pub use super::purse::Purse;
+    pub use super::state::Purse;
     pub use super::state::{FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision};
 }
 

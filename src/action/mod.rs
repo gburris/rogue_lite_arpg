@@ -1,6 +1,5 @@
 mod action_status;
 mod in_progress;
-mod source;
 
 use bevy::prelude::*;
 
@@ -13,7 +12,7 @@ pub mod prelude {
         ActionFinished, ActionInProgress, ActionTookEffect, PartOfActionUse, StopAction,
         TimedActionProgress,
     };
-    pub use super::source::{
+    pub use super::action_status::{
         ActionGlow, ActionKey, ActionReach, ActionUseStyle, ActionWindup, Attack, RequiredItem,
     };
 }

@@ -1,18 +1,15 @@
-mod action;
 pub(super) mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod engine;
 mod inputs;
-mod issue_motion;
 mod perception;
-mod vocabulary;
 
 use bevy::prelude::*;
 use rand::RngExt;
 
-pub use self::action::Action;
+pub use self::considerations::Action;
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -26,8 +23,8 @@ pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
-pub use self::vocabulary::BrainDefinition;
-pub(super) use self::vocabulary::{Behavior, Consideration};
+pub use self::considerations::BrainDefinition;
+pub(super) use self::considerations::{Behavior, Consideration};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -314,7 +311,7 @@ pub(super) fn plugin(app: &mut App) {
         ),
     );
 
-    app.add_plugins((perception::plugin, action::plugin))
+    app.add_plugins(perception::plugin)
         .add_observer(decide::on_motion_finished)
         .add_observer(decide::on_action_finished)
         .add_observer(decide::on_action_failed)
@@ -324,7 +321,11 @@ pub(super) fn plugin(app: &mut App) {
                 (decide::check_new_brains, decide::decide_behavior)
                     .chain()
                     .in_set(BrainSystems::Decision),
-                issue_motion::issue_running_motion.in_set(BrainSystems::Execute),
+                // Issuing actions writes the `Brain` that issuing motions reads; they share one
+                // flush.
+                (decide::issue_running_motion, decide::issue_running_actions)
+                    .chain_ignore_deferred()
+                    .in_set(BrainSystems::Execute),
             ),
         );
 }

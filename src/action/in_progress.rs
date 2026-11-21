@@ -3,7 +3,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::source::{ActionGlow, ActionUseStyle, ActionWindup};
+use super::action_status::{ActionGlow, ActionUseStyle, ActionWindup};
 use crate::prelude::*;
 
 /// Seconds an action source waits after a use interrupted during its wind-up before it can be used

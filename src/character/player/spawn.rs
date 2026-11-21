@@ -1,12 +1,12 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-
-use super::aim::player_aim;
+use super::input::player_aim;
 use super::input::player_actions;
 use super::interact::PlayerInteractionRadius;
-use super::{Player, death, overlay};
+use super::{Player, overlay};
 use crate::character::physical_collider;
 use crate::prelude::*;
+use avian2d::prelude::RigidBody;
 
 pub(super) fn spawn_player(
     mut commands: Commands,
@@ -37,7 +37,7 @@ pub(super) fn spawn_player(
             ~Mana::new(100.0, 10.0)
             attributes
             template(move |_| Ok(sprite.clone()))
-            on(death::on_player_defeated)
+            on(on_player_defeated)
             on(overlay::on_action_failed)
             Items [
                 @ice_staff(&sprites, &sprite_layouts)
@@ -86,4 +86,79 @@ pub(super) fn spawn_player(
 
 pub(super) fn transition_to_create_hub(mut next_map: NextMap) -> Result {
     next_map.set(MapRequest::Hub)
+}
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        finish_death_animation
+            .in_set(VfxSystems::Animate)
+            .run_if(in_state(PlayingState::Death)),
+    );
+
+    app.insert_resource(GameProgress::default());
+
+    app.add_observer(on_restart);
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct GameOverTimer(Timer);
+
+fn on_player_defeated(
+    _: On<Defeated>,
+    player: Single<Entity, With<Player>>,
+    mut commands: Commands,
+    mut next_playing_state: ResMut<NextState<PlayingState>>,
+) {
+    commands
+        .entity(*player)
+        .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
+        // The colliders go with the children, and a dynamic body without them has no inertia.
+        .remove::<(Health, RigidBody)>()
+        .despawn_related::<Children>();
+    next_playing_state.set(PlayingState::Death);
+}
+
+fn finish_death_animation(
+    time: Res<Time>,
+    player_death_timer_single: Single<&mut GameOverTimer, With<Player>>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+) {
+    let mut death_timer = player_death_timer_single.into_inner();
+    death_timer.tick(time.delta());
+    if death_timer.is_finished() {
+        next_app_state.set(AppState::GameOver);
+    }
+}
+
+#[derive(Resource)]
+pub struct GameProgress {
+    pub death_counter: u32,
+    pub total_career_level: u32,
+    pub progress_points: u32,
+    pub base_attributes: PlayerAttributes, //Base attributes are upgraded at the NPC each run
+}
+
+impl Default for GameProgress {
+    fn default() -> Self {
+        Self {
+            death_counter: 0,
+            total_career_level: 0,
+            progress_points: 5,
+            base_attributes: PlayerAttributes::default(),
+        }
+    }
+}
+
+/// Triggers when restart is clicked after death in a run.
+fn on_restart(
+    restart: On<Restart>,
+    mut game_progress: ResMut<GameProgress>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+) {
+    game_progress.death_counter += 1;
+    game_progress.total_career_level += restart.player_level;
+    game_progress.progress_points += restart.player_level;
+
+    next_app_state.set(AppState::SpawnPlayer);
 }

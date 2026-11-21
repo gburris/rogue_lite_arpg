@@ -2,7 +2,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::action::Action;
+use super::Action;
 use super::perception::{TargetInfo, Targeting};
 use super::{Brain, Home, HomeArea, MotionKey, MotionStatus};
 use crate::character::Allies;

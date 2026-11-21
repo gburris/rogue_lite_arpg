@@ -1,7 +1,8 @@
-use bevy::prelude::*;
-use crate::prelude::*;
 use avian2d::prelude::*;
+use bevy::prelude::*;
+
 use crate::character::Allies;
+use crate::prelude::*;
 
 /// An innate move a character can use, carried out by a capability component of the same name,
 /// such as [`Bite`], on one of its [`Abilities`].

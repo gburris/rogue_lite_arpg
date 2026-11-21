@@ -1,18 +1,16 @@
-use avian2d::prelude::{RayCaster, SpatialQueryFilter};
+use avian2d::prelude::{RayCaster, RigidBody, SpatialQueryFilter};
 use bevy::prelude::*;
+use rand::{RngExt, rng};
+use serde::Deserialize;
+
 use super::{Enemy, bat, mage, warrior};
 use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
-use crate::character::brain::{Brain, Watching};
-use crate::character::motion::{Chase, Home, HomeArea, ReturnToHome, Wander};
+use crate::character::brain::{Brain, BrainDefinition, Watching};
+use crate::character::motion::{Chase, Home, HomeArea, MotionCommands, ReturnToHome, Wander};
 use crate::character::physical_collider;
+use crate::character::player::PlayerAttributes;
 use crate::interval::Interval;
 use crate::prelude::*;
-use serde::Deserialize;
-use crate::character::brain::BrainDefinition;
-use avian2d::prelude::RigidBody;
-use rand::{RngExt, rng};
-use crate::character::motion::MotionCommands;
-use crate::character::player::PlayerAttributes;
 
 #[derive(Event, Debug)]
 pub struct SpawnEnemies(pub Vec<EnemySpawn>);

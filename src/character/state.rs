@@ -1,10 +1,11 @@
 use std::time::Duration;
-use avian2d::prelude::LinearVelocity;
+
+use avian2d::prelude::{LinearVelocity, *};
 use bevy::ecs::query::QueryData;
-use bevy::prelude::*;
-use crate::prelude::*;
 use bevy::ecs::system::SystemParam;
-use avian2d::prelude::*;
+use bevy::prelude::*;
+
+use crate::prelude::*;
 
 /// Fraction of its intended speed below which a character counts as blocked.
 const BLOCKED_SPEED_FRACTION: f32 = 0.3;

@@ -1,9 +1,10 @@
+use bevy::color::palettes::css::WHITE;
 use bevy::prelude::*;
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};
 use bevy_enhanced_input::prelude::*;
+
 use super::interact::PlayerInteractionInput;
 use crate::prelude::*;
-use bevy::color::palettes::css::WHITE;
-use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_input_context::<Player>();

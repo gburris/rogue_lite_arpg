@@ -1,12 +1,11 @@
-use avian2d::prelude::*;
+use avian2d::prelude::{RigidBody, *};
 use bevy::prelude::*;
-use super::input::player_aim;
-use super::input::player_actions;
+
+use super::input::{player_actions, player_aim};
 use super::interact::PlayerInteractionRadius;
 use super::{Player, overlay};
 use crate::character::physical_collider;
 use crate::prelude::*;
-use avian2d::prelude::RigidBody;
 
 pub(super) fn spawn_player(
     mut commands: Commands,

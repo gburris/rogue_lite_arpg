@@ -5,11 +5,10 @@ mod mage;
 mod spawn;
 mod warrior;
 
-use self::spawn::Experience;
-pub use self::spawn::EnemyKind;
-pub use self::spawn::{EnemySpawn, SpawnEnemies};
+pub use self::spawn::{EnemyKind, EnemySpawn, SpawnEnemies};
 use self::spawn::{
-    enemy_children, enemy_motion_sources, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, sight_ray,
+    spawn_enemy_with_equipment,
 };
 use crate::character::Character;
 use crate::character::brain::VisionCone;

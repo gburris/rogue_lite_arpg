@@ -11,7 +11,7 @@ use bevy_enhanced_input::prelude::{
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::json::{entity_id, parse_params};
+use super::methods::{entity_id, parse_params};
 use crate::prelude::*;
 
 /// Frames a tapped key stays down, so actions that read held keys see it.

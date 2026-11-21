@@ -1,13 +1,12 @@
 use bevy::prelude::*;
-use crate::character::Character;
-use crate::prelude::*;
 use serde::Deserialize;
+
 use crate::character::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
-use crate::character::brain::{Behavior, BrainDefinition};
-use crate::character::brain::Brain;
+use crate::character::brain::{Behavior, Brain, BrainDefinition};
 use crate::character::motion::{Home, HomeArea, ReturnToHome, Wander};
-use crate::character::physical_collider;
+use crate::character::{Character, physical_collider};
 use crate::interval::Interval;
+use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_spawn_npcs);

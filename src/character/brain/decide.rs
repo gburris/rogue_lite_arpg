@@ -6,11 +6,12 @@ use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
+
+use super::considerations::{Behavior, BehaviorScoreExplanation};
 #[cfg(feature = "dev_tools")]
 use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::considerations::{Behavior, BehaviorScoreExplanation};
 use super::{Action, Brain, MotionCommands, MotionFinished, MotionKey, TargetLocationHint};
 use crate::prelude::*;
 

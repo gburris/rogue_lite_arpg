@@ -4,7 +4,7 @@ use bevy::render::view::screenshot::{Screenshot, save_to_disk};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::json::{debug_name, parse_params};
+use super::methods::{debug_name, parse_params};
 use crate::prelude::*;
 
 #[expect(

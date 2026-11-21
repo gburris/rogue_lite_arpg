@@ -9,7 +9,8 @@ mod perception;
 use bevy::prelude::*;
 use rand::RngExt;
 
-pub use self::considerations::Action;
+pub use self::considerations::{Action, BrainDefinition};
+pub(super) use self::considerations::{Behavior, Consideration};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -23,8 +24,6 @@ pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
-pub use self::considerations::BrainDefinition;
-pub(super) use self::considerations::{Behavior, Consideration};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;

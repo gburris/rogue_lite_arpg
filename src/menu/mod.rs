@@ -1,6 +1,5 @@
 mod inventory;
 mod pause;
-mod player_stats;
 mod stats_shop;
 
 pub mod prelude {
@@ -15,12 +14,7 @@ use self::pause::MenuBackground;
 pub(crate) use self::pause::{PauseControl, pause_actions};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((
-        inventory::plugin,
-        pause::plugin,
-        player_stats::plugin,
-        stats_shop::plugin,
-    ));
+    app.add_plugins((inventory::plugin, pause::plugin, stats_shop::plugin));
 
     app.init_state::<Menu>();
 

@@ -1,9 +1,8 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use super::health::Health;
+use super::health::{Health, IFrames};
 use super::hitbox::HurtBox;
-use super::invulnerable::IFrames;
 use super::status_effects::prelude::{ApplyEffects, Effects};
 use crate::interval::Interval;
 use crate::prelude::*;

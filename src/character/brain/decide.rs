@@ -217,6 +217,42 @@ pub(super) fn decide_behavior(
     }
 }
 
+/// Checks in debug builds that each new brain's character can run every behavior the brain lists:
+/// it has a source for each motion, and each behavior suits its commit policy (see
+/// [`Behavior::suits_commit_policy`]). The policy goes unchecked while a behavior's action source
+/// is missing, since items come and go.
+pub(super) fn check_new_brains(
+    time: Res<Time<Virtual>>,
+    queries: DecisionQueries,
+    brains: Query<(Entity, &Brain, DecisionInputComponents), Added<Brain>>,
+) {
+    for (character, brain, components) in &brains {
+        let inputs = DecisionInputs {
+            components: &components,
+            queries: &queries,
+            now: time.elapsed_secs(),
+        };
+        for (index, behavior) in brain.definition().behaviors.iter().enumerate() {
+            if let Some(key) = behavior.motion {
+                debug_assert!(
+                    inputs.has_motion_source(key),
+                    "brain behavior {index} of {character:?} would never run: the character has                      no {key:?} motion source"
+                );
+            }
+            let has_action_source = behavior
+                .action
+                .is_none_or(|action| action == Action::Idle || inputs.has_action_source(action));
+            debug_assert!(
+                !has_action_source || behavior.suits_commit_policy(&inputs),
+                "brain behavior {index} of {character:?} would never run: {:?} needs other                  sources for {:?} and {:?}",
+                behavior.commit,
+                behavior.motion,
+                behavior.action,
+            );
+        }
+    }
+}
+
 /// Drops stale committed behaviors, then fills the slots. A winner with a start chance must pass
 /// its roll; see [`Behavior::with_start_chance`].
 fn redecide_now(brain: &mut Brain, inputs: &DecisionInputs, score_trace: Option<&mut ScoreTrace>) {

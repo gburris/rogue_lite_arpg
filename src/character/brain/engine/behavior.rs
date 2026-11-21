@@ -8,15 +8,12 @@ use super::Consideration;
 pub(super) const MAX_BEHAVIORS: usize = 16;
 
 /// The game's types for what behaviors hold: their motions, actions and consideration inputs. The
-/// engine only copies and compares them, and asks which of them report a finish.
+/// engine only copies and compares them, and asks which actions report a finish. Any motion may
+/// report one.
 pub trait BrainVocabulary: Clone + Copy + Debug + 'static {
     type Motion: Clone + Copy + Debug + 'static;
     type Action: Clone + Copy + Debug + 'static;
     type Input: Clone + Copy + Debug + 'static;
-
-    /// Whether `motion` can end on its own and report it, so its finish can end a committed
-    /// behavior.
-    fn motion_reports_finish(motion: Self::Motion) -> bool;
 
     /// Whether `action` can end on its own and report it, so its finish can end a committed
     /// behavior.
@@ -139,8 +136,8 @@ pub(in crate::character::brain) fn validate_brain<V: BrainVocabulary>(
                  behaviors"
             ));
         }
-        let can_finish = behavior.motion.is_some_and(V::motion_reports_finish)
-            || behavior.action.is_some_and(V::action_reports_finish);
+        let can_finish =
+            behavior.motion.is_some() || behavior.action.is_some_and(V::action_reports_finish);
         if committed && !can_finish {
             return Err(format!(
                 "behavior {index} is committed with no part that can finish; a finish must end it"

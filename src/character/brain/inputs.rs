@@ -91,6 +91,11 @@ impl DecisionInputs<'_, '_, '_> {
             .filter(|info| self.components.has_target && info.has_finite_distance())
     }
 
+    /// See [`MotionStatus::has_source`].
+    pub fn has_motion_source(&self, key: MotionKey) -> bool {
+        self.queries.motions.has_source(self.components.entity, key)
+    }
+
     /// See [`MotionStatus::is_ready`].
     pub fn is_motion_ready(&self, key: MotionKey) -> bool {
         self.queries.motions.is_ready(self.components.entity, key)

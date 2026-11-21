@@ -107,10 +107,9 @@ impl Brain {
     }
 
     /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
-    /// is ready (see [`MotionStatus::is_ready`]), and its action can run (see
-    /// [`DecisionInputs::can_run`]). A committed behavior also needs exactly one part that ends on
-    /// its own, since nothing else would end it, and a continuously scored one needs a motion that
-    /// runs until replaced.
+    /// is ready (see [`MotionStatus::is_ready`]), its action can run (see
+    /// [`DecisionInputs::can_run`]), and it suits its commit policy (see
+    /// [`Behavior::suits_commit_policy`]).
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
         let behavior = &self.definition.behaviors[index];
         if inputs.now < self.start_roll_ready_at[index] {
@@ -122,33 +121,9 @@ impl Brain {
             Action::Idle => true,
             Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
         };
-        if !(behavior.motion.is_none_or(motion_available)
-            && behavior.action.is_none_or(action_available))
-        {
-            return false;
-        }
-
-        let Behavior { motion, action, .. } = *behavior;
-        let finite_motion = motion.is_some_and(|key| inputs.motion_ends_on_its_own(key));
-        let finite_action = action.is_some_and(|action| inputs.action_ends_on_its_own(action));
-        if behavior.commit.is_committed() {
-            let finite_parts = usize::from(finite_motion) + usize::from(finite_action);
-            if finite_parts != 1 {
-                warn_once!(
-                    "a committed behavior over {motion:?} and {action:?} never runs: it has \
-                     {finite_parts} finite parts"
-                );
-            }
-            finite_parts == 1
-        } else {
-            if finite_motion {
-                warn_once!(
-                    "a continuously scored behavior over {motion:?} never runs: its motion is \
-                     finite"
-                );
-            }
-            !finite_motion
-        }
+        behavior.motion.is_none_or(motion_available)
+            && behavior.action.is_none_or(action_available)
+            && behavior.suits_commit_policy(inputs)
     }
 
     /// An attack finished since the last decision.
@@ -346,7 +321,9 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                decide::decide_behavior.in_set(BrainSystems::Decision),
+                (decide::check_new_brains, decide::decide_behavior)
+                    .chain()
+                    .in_set(BrainSystems::Decision),
                 issue_motion::issue_running_motion.in_set(BrainSystems::Execute),
             ),
         );

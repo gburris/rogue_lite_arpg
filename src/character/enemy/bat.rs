@@ -4,13 +4,11 @@ use bevy::prelude::*;
 use super::{Experience, enemy_motion_sources, sight_ray};
 use crate::character::ability::{Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
-use crate::character::brain::considerations::{
-    CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE,
+use crate::character::brain::{
+    Action, Behavior, BrainDefinition, CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE,
+    CAST_MIN_RANGE, CHASE_CAST_RANGE, CommitPolicy, Consideration, ConsiderationInput, Curve,
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
     distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
-};
-use crate::character::brain::{
-    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
     KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, Swoop, TurnRate,

@@ -4,14 +4,12 @@ use super::{
     Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::speed_and_damage_rally;
-use crate::character::brain::considerations::{
-    ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
-    CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
-    MAINHAND, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, mana_at_or_below,
-    target_speed_at_most, target_within_distance, within_reach,
-};
 use crate::character::brain::{
-    Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
+    ACTION_BASELINE_IDLE, ATTACK_FINISHED, Action, Behavior, BrainDefinition, CAST_DISTANCE_RANGE,
+    CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE, CommitPolicy, Consideration,
+    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE,
+    LINE_OF_SIGHT, MAINHAND, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
+    mana_at_or_below, target_speed_at_most, target_within_distance, within_reach,
 };
 use crate::character::motion::{
     Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, sidestep, slide, step_in,

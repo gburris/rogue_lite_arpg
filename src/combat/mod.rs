@@ -3,10 +3,6 @@ mod damage;
 mod diagnostics;
 mod health;
 mod hitbox;
-#[cfg(feature = "dev_tools")]
-mod invincible;
-mod invulnerable;
-pub(crate) mod mana;
 mod projectile;
 mod status_effects;
 
@@ -15,13 +11,11 @@ use bevy::prelude::*;
 use crate::prelude::*;
 
 pub mod prelude {
-    pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
-    pub use super::health::{AttemptHeal, Healed, Health};
-    pub use super::hitbox::{HitBox, HurtBox, LifeSteal, hurtbox, hurtbox_at};
     #[cfg(feature = "dev_tools")]
-    pub use super::invincible::Invincible;
-    pub use super::invulnerable::IFrames;
-    pub use super::mana::{Mana, ManaCost, ManaDrainRate};
+    pub use super::damage::Invincible;
+    pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
+    pub use super::health::{AttemptHeal, Healed, Health, IFrames, Mana, ManaCost, ManaDrainRate};
+    pub use super::hitbox::{HitBox, HurtBox, LifeSteal, hurtbox, hurtbox_at};
     pub use super::projectile::{
         FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileAttacker, ProjectileReflection,
         Projectiles, fireball, fireball_with_speed, icebolt, pull_back_from_walls,
@@ -41,8 +35,8 @@ pub(super) fn plugin(app: &mut App) {
         (
             (
                 (
-                    mana::regenerate_mana,
-                    mana::drain_mana_for_actions_in_progress,
+                    health::regenerate_mana,
+                    health::drain_mana_for_actions_in_progress,
                 )
                     .chain(),
                 projectile::reflect_projectiles,
@@ -51,7 +45,7 @@ pub(super) fn plugin(app: &mut App) {
             // A flash ending resets the color to opaque white, so the flicker runs after it.
             (
                 damage::tick_and_remove_damage_flash,
-                invulnerable::tick_invulnerability,
+                health::tick_invulnerability,
             )
                 .chain()
                 .in_set(VfxSystems::Tint),
@@ -59,8 +53,10 @@ pub(super) fn plugin(app: &mut App) {
         ),
     )
     .add_observer(health::on_attempt_heal)
+    .add_observer(health::on_healed_show_amount)
     .add_observer(damage::on_attempt_damage)
     .add_observer(damage::on_damage_dealt_flash)
     .add_observer(damage::on_damage_dealt_knockback)
+    .add_observer(health::on_damage_dealt_show_amount)
     .add_observer(hitbox::on_damage_dealt_life_steal);
 }

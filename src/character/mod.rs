@@ -1,21 +1,18 @@
 mod ability;
-mod allies;
 mod animation;
 mod brain;
-mod collider;
 mod enemy;
+mod kinematics;
 mod motion;
 mod npc;
 mod player;
-mod purse;
-mod state;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub(in crate::character) use self::allies::Allies;
+pub(in crate::character) use self::ability::Allies;
 use self::animation::{AnimationSheet, CharacterAnimationState};
-pub(in crate::character) use self::collider::physical_collider;
+pub(in crate::character) use self::kinematics::{BlockedState, physical_collider};
 use crate::prelude::*;
 
 pub mod prelude {
@@ -29,6 +26,9 @@ pub mod prelude {
     #[cfg(feature = "dev_tools")]
     pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
+    pub use super::kinematics::{
+        FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
+    };
     pub use super::motion::{MotionKey, MotionSources, RunningMotion, Wander, WanderProgress};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
@@ -39,8 +39,6 @@ pub mod prelude {
     pub(crate) use super::player::prelude::{
         PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
     };
-    pub use super::purse::Purse;
-    pub use super::state::{FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision};
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -50,7 +48,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        state::kinematics_to_velocity.in_set(MainSystems::InGame),
+        kinematics::kinematics_to_velocity.in_set(MainSystems::InGame),
     );
 }
 

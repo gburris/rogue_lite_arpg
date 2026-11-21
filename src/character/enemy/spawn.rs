@@ -1,10 +1,11 @@
-use avian2d::prelude::{RayCaster, SpatialQueryFilter};
+use avian2d::prelude::{RayCaster, RigidBody, SpatialQueryFilter};
 use bevy::prelude::*;
+use rand::{RngExt, rng};
+use serde::Deserialize;
 
-use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
-use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
-use crate::character::brain::{Brain, Watching};
-use crate::character::motion::{Chase, Home, HomeArea, ReturnToHome, Wander};
+use super::{Enemy, bat, mage, warrior};
+use crate::character::brain::{Brain, BrainDefinition, CAST_HYSTERESIS, CAST_MAX_RANGE, Watching};
+use crate::character::motion::{Chase, Home, HomeArea, MotionCommands, ReturnToHome, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -17,6 +18,35 @@ pub struct EnemySpawn {
     pub position: Vec2,
     pub kind: EnemyKind,
 }
+
+/// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
+pub enum EnemyKind {
+    Warrior,
+    IceMage,
+    FireMage,
+    /// Flying enemy: circles its target and breathes fire without a weapon.
+    Bat,
+}
+
+impl EnemyKind {
+    /// Every enemy kind, used for random spawns and exhaustive iteration.
+    pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
+
+    pub fn brain(self) -> &'static BrainDefinition {
+        match self {
+            Self::Warrior => &warrior::WARRIOR,
+            Self::IceMage => &mage::ICE_MAGE,
+            Self::FireMage => &mage::FIRE_MAGE,
+            Self::Bat => &bat::BAT,
+        }
+    }
+}
+
+/// Experience paid out when the player defeats this enemy. Scales with
+/// threat: the tanky warrior pays most, the fragile flying bat least.
+#[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut)]
+pub struct Experience(pub f32);
 
 pub(super) fn on_spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,
@@ -119,7 +149,7 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
             Transform::from_translation({position.extend(0.0)})
         ]
         Watching(player)
-        on(defeat::on_enemy_defeated)
+        on(on_enemy_defeated)
     }
 }
 
@@ -155,5 +185,64 @@ pub(super) fn enemy_children(shadows: &Shadows) -> impl Scene {
             --
             @hurtbox(Vec2::new(26.0, 42.0), GameCollisionLayer::EnemyHurtBox)
         ]
+    }
+}
+
+fn on_enemy_defeated(
+    defeated: On<Defeated>,
+    mut commands: Commands,
+    mut defeated_enemy_query: Query<
+        (
+            Option<&Experience>,
+            &Transform,
+            Option<&Items>,
+            Option<&Purse>,
+        ),
+        With<Enemy>,
+    >,
+    player_query: Single<(&PlayerAttributes, &mut Player)>,
+    item_query: Query<&Item>,
+    mut motions: MotionCommands,
+) {
+    let mut rng = rng();
+
+    if let Ok((experience_to_gain, transform, items, purse)) =
+        defeated_enemy_query.get_mut(defeated.entity)
+    {
+        let (player_attributes, mut player) = player_query.into_inner();
+
+        if let Some(experience_to_gain) = experience_to_gain {
+            player.experience += **experience_to_gain;
+        }
+
+        if let Some(items) = items {
+            for item_entity in items.iter() {
+                // Enemies drop their items based on drop rate
+                if let Ok(item_result) = item_query.get(item_entity)
+                    && rng.random::<f32>() < item_result.drop_rate
+                {
+                    commands.trigger(DropItem { item: item_entity });
+                }
+            }
+        }
+
+        if let Some(purse) = purse {
+            // Enemies drop their gold based on player luck
+            let gold_drop_chance = 0.1 + player_attributes.luck as f32 / 100.0;
+            if rng.random::<f32>() < gold_drop_chance {
+                commands.trigger(DropGold {
+                    location: transform.translation.truncate(),
+                    amount: purse.amount,
+                });
+            }
+        }
+
+        // Interruption ends action uses and finite motions only; see `InterruptionState`.
+        motions.stop(defeated.entity);
+        commands
+            .entity(defeated.entity)
+            .insert(Lifespan::new(2.0))
+            .remove::<(RigidBody, Brain)>()
+            .despawn_related::<Children>();
     }
 }

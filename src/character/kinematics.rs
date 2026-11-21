@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use avian2d::prelude::LinearVelocity;
+use avian2d::prelude::*;
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
 
@@ -214,5 +214,21 @@ impl Default for Vision {
             // A holder that never aims still fires a sane distance away from itself.
             aim_distance: 100.0,
         }
+    }
+}
+
+/// Circle collider at the character's feet that collides with the ground and obstacles.
+pub fn physical_collider() -> impl Scene {
+    bsn! {
+        Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
+        ~Collider::circle(10.0)
+        ~CollisionLayers::new(
+            [GameCollisionLayer::Grounded],
+            [
+                GameCollisionLayer::Grounded,
+                GameCollisionLayer::HighObstacle,
+                GameCollisionLayer::LowObstacle,
+            ],
+        )
     }
 }

@@ -175,8 +175,8 @@ impl ZoneNames {
 /// The brain's motion or action issue system, or any `apply_*` system in a `motion` module.
 fn is_brain_applier(zone_name: &str) -> bool {
     const BRAIN_ISSUE_SYSTEMS: [&str; 2] = [
-        "baba_yaga::character::brain::action::issue_actions::issue_running_actions",
-        "baba_yaga::character::brain::issue_motion::issue_running_motion",
+        "baba_yaga::character::brain::decide::issue_running_actions",
+        "baba_yaga::character::brain::decide::issue_running_motion",
     ];
     const MOTION_MODULES: &str = "baba_yaga::character::motion::";
 

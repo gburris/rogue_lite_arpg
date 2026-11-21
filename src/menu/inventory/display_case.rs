@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::ScrollArea;
 
-use super::item_display::{
+use super::display_slot::{
     DisplaySlotContext, DisplaySlotOf, EQUIP_SLOT_WIDTH, VALUE_WIDTH, display_slot,
 };
 use crate::prelude::*;

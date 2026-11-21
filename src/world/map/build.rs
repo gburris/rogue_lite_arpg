@@ -7,10 +7,10 @@ use rand_chacha::ChaCha8Rng;
 
 use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
 use super::placement::{PlaceContext, place};
-use super::recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name};
+use super::recipe::{MapRecipe, StructureKind, resolved_name};
+use super::recipe_catalog::{RecipeCatalog, load_recipes};
 use super::structures::{Structure, apply_structure, build_empty_square, build_pond, build_rubble};
 use crate::prelude::*;
-use crate::world::MapRng;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, load_recipes);
@@ -111,7 +111,7 @@ fn reload_recipe_catalog(
         return;
     }
     *observed = Some(modified);
-    match super::recipe::load_recipe_catalog() {
+    match super::recipe_catalog::load_recipe_catalog() {
         Ok(catalog) => {
             commands.insert_resource(catalog);
             commands.insert_resource(RebuildCurrentMap);

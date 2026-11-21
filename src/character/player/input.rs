@@ -1,9 +1,9 @@
+use bevy::color::palettes::css::WHITE;
 use bevy::prelude::*;
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow, WindowFocused};
 use bevy_enhanced_input::prelude::*;
 
-use super::aim::AimInput;
 use super::interact::PlayerInteractionInput;
-use super::movement::PlayerMovement;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -27,6 +27,18 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(PlayingState::Death),
         set_controls(ContextActivity::<Player>::INACTIVE),
     );
+
+    app.add_observer(on_player_aim);
+
+    app.add_systems(OnEnter(AppState::Playing), grab_cursor)
+        .add_systems(OnExit(PauseState::Paused), grab_cursor)
+        .add_systems(
+            Update,
+            grab_cursor_when_focused.in_set(InGameSystems::PlayerInput),
+        );
+
+    app.add_observer(on_player_stopped)
+        .add_observer(on_player_movement);
 }
 
 const MOUSE_SENSITIVITY: f32 = 0.5;
@@ -123,4 +135,91 @@ fn on_use_offhand_input(use_offhand: On<Start<UseOffhand>>, mut actions: ActionC
 
 fn on_use_offhand_complete(use_offhand: On<Complete<UseOffhand>>, mut actions: ActionCommands) {
     actions.stop_sustained_use(use_offhand.context, OFFHAND);
+}
+
+#[derive(Component, Default, Clone)]
+pub struct PlayerAim;
+
+/// The reticle the player aims with, a white ring offset from the player.
+pub(super) fn player_aim() -> impl Scene {
+    let mut reticle = GizmoAsset::default();
+    reticle.circle_2d(Vec2::ZERO, 6., WHITE);
+
+    bsn! {
+        PlayerAim
+        Gizmo {
+            handle: asset_value(reticle),
+            line_config: GizmoLineConfig { width: 4.0 },
+        }
+    }
+}
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct AimInput;
+
+const AIM_DISTANCE: f32 = 120.0;
+
+fn on_player_aim(
+    aim_input: On<Fire<AimInput>>,
+    mut player_vision: Single<&mut Vision, With<Player>>,
+    mut player_aim: Single<&mut Transform, With<PlayerAim>>,
+    player_transform: Single<&Transform, (With<Player>, Without<PlayerAim>)>,
+    window: Single<&Window, With<PrimaryWindow>>,
+) {
+    if window.focused {
+        // Convert player-relative aim to screen-relative world position
+        let world_aim_position = player_transform.translation.xy() + player_aim.translation.xy();
+
+        // Apply screen-relative input
+        let new_world_aim_position = world_aim_position + aim_input.value;
+
+        let offset = new_world_aim_position - player_transform.translation.xy();
+        place_player_aim(offset, &mut player_vision, &mut player_aim);
+    }
+}
+
+/// Moves the reticle to `offset` from the player, at most [`AIM_DISTANCE`] away, and points the
+/// player's vision at it.
+pub(crate) fn place_player_aim(offset: Vec2, vision: &mut Vision, aim_transform: &mut Transform) {
+    let offset = offset.clamp_length_max(AIM_DISTANCE);
+
+    aim_transform.translation = offset.extend(0.0);
+    vision.aim_distance = offset.length();
+    vision.aim_direction = offset.normalize_or_zero();
+}
+
+fn grab_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+    cursor.visible = false;
+    cursor.grab_mode = CursorGrabMode::Locked;
+}
+
+fn grab_cursor_when_focused(
+    mut window_focused_events: MessageReader<WindowFocused>,
+    mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>,
+) {
+    for window_focus in window_focused_events.read() {
+        if window_focus.focused {
+            cursor.visible = false;
+            cursor.grab_mode = CursorGrabMode::Locked;
+        }
+    }
+}
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+pub(crate) struct PlayerMovement;
+
+fn on_player_movement(
+    movement: On<Fire<PlayerMovement>>,
+    mut player_kinematics: Single<&mut Kinematics, With<Player>>,
+) {
+    player_kinematics.move_in_direction(movement.value, 1.0);
+}
+
+fn on_player_stopped(
+    _: On<Complete<PlayerMovement>>,
+    mut player_kinematics: Single<&mut Kinematics, (With<Player>, Without<Enemy>, Without<Npc>)>,
+) {
+    player_kinematics.stop_moving();
 }

@@ -2,11 +2,9 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, Home, HomeArea, MotionKey, MotionStatus};
-use crate::character::Allies;
-use crate::character::state::BlockedState;
+use super::{Action, Brain, Home, HomeArea, MotionKey, MotionStatus};
+use crate::character::{Allies, BlockedState};
 use crate::prelude::*;
 
 /// Whether an action could start now; see [`DecisionInputs::action_readiness`].

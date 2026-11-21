@@ -10,7 +10,7 @@ use rand_chacha::ChaCha8Rng;
 pub mod prelude {
     pub(crate) use super::MapRng;
     pub use super::chest::SpawnChests;
-    pub use super::gold::DropGold;
+    pub use super::gold::{DropGold, Purse};
     #[cfg(feature = "dev_native")]
     pub(crate) use super::map::prelude::MapBlueprint;
     #[cfg(feature = "dev_tools")]

@@ -5,8 +5,8 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::blueprint::{MapBlueprint, PlacementKind};
+use super::tile_appearance::tile_appearance;
 use super::tiles::{TileGrid, TileKind, TileRect};
-use super::tiling::tile_appearance;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
@@ -72,7 +72,7 @@ fn spawn_tiles(
             };
 
             let tile_position = TilePos { x, y };
-            // Seeded tint comes from tiling; nothing else varies per tile.
+            // Seeded tint comes from the tile's appearance; nothing else varies per tile.
             let color = appearance
                 .brightness
                 .map_or_else(TileColor::default, |brightness| {

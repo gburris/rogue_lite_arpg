@@ -1,18 +1,23 @@
-mod action;
-pub(super) mod considerations;
+mod considerations;
 mod decide;
 #[cfg(feature = "dev_tools")]
 mod diagnostics;
 mod engine;
 mod inputs;
-mod issue_motion;
 mod perception;
-mod vocabulary;
 
 use bevy::prelude::*;
 use rand::RngExt;
 
-pub use self::action::Action;
+pub(super) use self::considerations::{
+    ACTION_BASELINE_IDLE, ATTACK_FINISHED, Behavior, CAST_DISTANCE_RANGE, CAST_HYSTERESIS,
+    CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE, Consideration, HAS_TARGET, IN_MAINHAND_REACH,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, NO_TARGET, RETURN_TO_HOME, SEEK_LOST_TARGET,
+    WANDER, consideration, distance_threshold, flag, flag_kept_while_current, mana_at_or_below,
+    motion_running_for, reach_fraction_threshold, target_speed_at_most, target_within_distance,
+    within_reach,
+};
+pub use self::considerations::{Action, BrainDefinition};
 pub use self::decide::ScoreTrace;
 use self::decide::{RunningBehavior, schedule_first_decision};
 use self::engine::validate_brain;
@@ -26,8 +31,6 @@ pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
-pub use self::vocabulary::BrainDefinition;
-pub(super) use self::vocabulary::{Behavior, Consideration};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
@@ -314,7 +317,7 @@ pub(super) fn plugin(app: &mut App) {
         ),
     );
 
-    app.add_plugins((perception::plugin, action::plugin))
+    app.add_plugins(perception::plugin)
         .add_observer(decide::on_motion_finished)
         .add_observer(decide::on_action_finished)
         .add_observer(decide::on_action_failed)
@@ -324,7 +327,11 @@ pub(super) fn plugin(app: &mut App) {
                 (decide::check_new_brains, decide::decide_behavior)
                     .chain()
                     .in_set(BrainSystems::Decision),
-                issue_motion::issue_running_motion.in_set(BrainSystems::Execute),
+                // Issuing actions writes the `Brain` that issuing motions reads; they share one
+                // flush.
+                (decide::issue_running_motion, decide::issue_running_actions)
+                    .chain_ignore_deferred()
+                    .in_set(BrainSystems::Execute),
             ),
         );
 }

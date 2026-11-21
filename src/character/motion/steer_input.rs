@@ -3,16 +3,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{Home, HomeArea, Steering, SteeringMotionOf};
-use crate::character::state::{BlockedState, Kinematics};
+use super::{Home, HomeArea, SteeringMotionOf};
+use crate::character::BlockedState;
 use crate::prelude::*;
-
-/// The result of advancing a motion by one frame.
-pub(super) enum MotionStep {
-    Steer(Steering),
-    /// The motion ended this frame.
-    Finished,
-}
 
 /// How much faster a [`BlockedTimer`] counts down while unblocked than it counts up while
 /// blocked.

@@ -4,7 +4,7 @@ use bevy::remote::{BrpError, BrpResult};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::json::{entity_id, invalid_params, parse_entity, parse_params};
+use super::methods::{entity_id, invalid_params, parse_entity, parse_params};
 use crate::prelude::*;
 
 #[derive(Deserialize)]

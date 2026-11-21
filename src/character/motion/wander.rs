@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use super::{
-    BlockedTimer, MotionKey, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTargets, TunedBy,
-};
+use super::{BlockedTimer, MotionKey, MotionProgress, MotionStep, SteerInput, Steering};
 use crate::interval::{Interval, Spread};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
@@ -89,35 +86,10 @@ impl WanderProgress {
 
 impl MotionProgress for WanderProgress {
     type Tuning = Wander;
-}
 
-/// Steers each running motion tuned by a [`Wander`].
-pub(super) fn apply_wander(
-    time: Res<Time<Virtual>>,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    wanders: Query<&Wander>,
-    mut running_wanders: Query<(
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut WanderProgress,
-        &mut Steering,
-    )>,
-) {
-    for (motion_of, running, tuned_by, mut progress, mut steering) in &mut running_wanders {
-        let wander = wanders.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .map(|character| character.build_steer_input(running.target, &targets, &time));
-        *steering = match (wander, input) {
-            (Some(wander), Some(input)) => {
-                let direction = progress.pick_steering_direction(wander, &input);
-                Steering::scaled(direction, wander.speed_scale)
-            }
-            _ => Steering::HALT,
-        };
+    fn step(&mut self, wander: &Wander, input: &SteerInput) -> MotionStep {
+        let direction = self.pick_steering_direction(wander, input);
+        MotionStep::Steer(Steering::scaled(direction, wander.speed_scale))
     }
 }
 

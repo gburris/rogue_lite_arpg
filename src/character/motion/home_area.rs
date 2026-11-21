@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use super::{BlockedTimer, DirectMotion, MotionKey, MotionOf, MotionProgress, SteerInput};
+use super::{
+    BlockedTimer, MotionKey, MotionProgress, MotionStep, RunningMotionOf, SteerInput, Steering,
+};
 use crate::character::state::BlockedState;
 
 /// Seconds a return home may stay blocked before the home moves to where the character stands.
@@ -16,6 +18,7 @@ pub struct HomeArea {
 }
 
 impl HomeArea {
+    /// A home the character may wander `radius` from, arriving within `arrival_radius` of it.
     pub fn new(radius: f32, arrival_radius: f32) -> Self {
         debug_assert!(
             radius.is_finite() && radius > 0.0,
@@ -64,7 +67,7 @@ pub struct HomeOf {
     pub character: Entity,
 }
 
-/// The [`HomeArea`] of this character.
+/// The home entity of this character; see [`HomeArea`].
 #[derive(Component, Debug)]
 #[relationship_target(relationship = HomeOf, linked_spawn)]
 pub struct Home(Entity);
@@ -80,12 +83,6 @@ impl Home {
 #[require(MotionKey::ReturnToHome)]
 pub struct ReturnToHome;
 
-impl DirectMotion for ReturnToHome {
-    fn pick_steering_direction(&self, input: &SteerInput) -> Option<Vec2> {
-        input.direction_to_home()
-    }
-}
-
 /// A return home in progress, on its running motion: how long it has been blocked.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct ReturnToHomeProgress {
@@ -94,17 +91,21 @@ pub(super) struct ReturnToHomeProgress {
 
 impl MotionProgress for ReturnToHomeProgress {
     type Tuning = ReturnToHome;
+
+    fn step(&mut self, _tuning: &ReturnToHome, input: &SteerInput) -> MotionStep {
+        MotionStep::Steer(Steering::scaled(input.direction_to_home(), 1.0))
+    }
 }
 
 /// Moves the home of each character whose return home is blocked to where it stands.
 pub(super) fn move_homes_of_blocked_characters(
     time: Res<Time<Virtual>>,
-    mut running_returns: Query<(&MotionOf, &mut ReturnToHomeProgress)>,
+    mut running_returns: Query<(&RunningMotionOf, &mut ReturnToHomeProgress)>,
     characters: Query<(&Transform, BlockedState, &Home), Without<HomeArea>>,
     mut homes: Query<&mut Transform, With<HomeArea>>,
 ) {
-    for (motion_of, mut progress) in &mut running_returns {
-        let Ok((transform, blocked, home)) = characters.get(motion_of.character) else {
+    for (running_motion_of, mut progress) in &mut running_returns {
+        let Ok((transform, blocked, home)) = characters.get(running_motion_of.character) else {
             continue;
         };
         let is_blocked_too_long = progress.blocked_timer.tick_and_check_limit(

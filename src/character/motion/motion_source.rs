@@ -52,23 +52,37 @@ pub struct MotionSourceOf {
 #[relationship_target(relationship = MotionSourceOf, linked_spawn)]
 pub struct MotionSources(Vec<Entity>);
 
+/// Checks in debug builds that no other source of the new motion source's character has its key,
+/// since motions are found by key.
+pub(super) fn on_motion_source_added(
+    added: On<Add<MotionSourceOf>>,
+    sources: Query<(&MotionSourceOf, &MotionKey)>,
+    characters: Query<&MotionSources>,
+) {
+    let Ok((&MotionSourceOf { character }, &key)) = sources.get(added.entity) else {
+        return;
+    };
+    let Ok(character_sources) = characters.get(character) else {
+        return;
+    };
+    // The new source may not be in `MotionSources` yet, so only the others are counted.
+    let other_same_key_count = character_sources
+        .iter()
+        .filter(|&source| source != added.entity)
+        .filter(|&source| sources.get(source).is_ok_and(|(_, &other)| other == key))
+        .count();
+    debug_assert!(
+        other_same_key_count == 0,
+        "character {character:?} has {other_same_key_count} more motion sources keyed {key:?}; \
+         only the first would ever run"
+    );
+}
+
 /// Marks a motion source whose motion ends on its own, rather than running until replaced. Its end
 /// starts the source's [`Cooldown`](crate::prelude::Cooldown) and reports
 /// [`MotionFinished`](super::MotionFinished).
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct FiniteMotion;
-
-/// Links a running motion to the motion source whose tuning it reads.
-#[derive(Component, Clone, Copy, Debug)]
-#[relationship(relationship_target = TunedMotion)]
-pub(super) struct TunedBy {
-    pub source: Entity,
-}
-
-/// The running motion this motion source tunes, if one runs; see [`TunedBy`].
-#[derive(Component, Debug)]
-#[relationship_target(relationship = TunedBy)]
-pub(super) struct TunedMotion(Entity);
 
 /// The farthest target distance at which an AI character starts a motion of this source.
 #[derive(Component, Clone, Copy, Debug, Deref)]

@@ -3,14 +3,14 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{Home, HomeArea, Steering};
+use super::{Home, HomeArea, Steering, SteeringMotionOf};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
-/// The result of advancing a finite motion by one frame.
+/// The result of advancing a motion by one frame.
 pub(super) enum MotionStep {
     Steer(Steering),
-    /// The motion ended this frame; its system despawns the running motion.
+    /// The motion ended this frame.
     Finished,
 }
 
@@ -65,15 +65,16 @@ pub(super) struct SteeredCharacter {
 }
 
 impl SteeredCharacterItem<'_, '_> {
-    /// This frame's input for steering by `target`.
+    /// This frame's input for a running motion that steers by `steering_motion_of`, if anything.
     pub(super) fn build_steer_input(
         &self,
-        target: Option<Entity>,
+        steering_motion_of: Option<&SteeringMotionOf>,
         targets: &SteeringTargets,
         time: &Time<Virtual>,
     ) -> SteerInput<'_> {
         let position = self.transform.translation.xy();
-        let target = target.and_then(|target| targets.locate(position, target));
+        let target = steering_motion_of
+            .and_then(|steering_motion_of| targets.locate(position, steering_motion_of.target));
         let home = self
             .home
             .and_then(|home| targets.locate_home(position, home.get()));

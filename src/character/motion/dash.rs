@@ -3,9 +3,8 @@ use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, FiniteMotion, MotionKey, MotionOf, MotionProgress, MotionStep,
-    RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget, SteeringTargets,
-    TunedBy,
+    BlockedTimer, CircleDirection, FiniteMotion, MotionKey, MotionProgress, MotionStep, SteerInput,
+    Steering, SteeringTarget,
 };
 use crate::interval::{Interval, Spread};
 
@@ -21,7 +20,7 @@ const DASH_BLOCKED_SECONDS: f32 = 0.15;
 /// A committed straight-line move in a direction chosen when it starts: `bearing_offset` radians
 /// off the bearing to the target, turned against the way the character circles it, scattered by
 /// `spread`. It ends early when blocked or interrupted. [`kite`], [`slide`], [`sidestep`] and
-/// [`step_in`] build one with its [`MotionKey`].
+/// [`step_in`] build its motion sources, each with its own [`MotionKey`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(FiniteMotion)]
 pub(super) struct Dash {
@@ -47,8 +46,8 @@ impl Dash {
     }
 
     fn choose_direction(&self, target: &SteeringTarget, heading: Vec2) -> Vec2 {
-        let Some(bearing) = target.direction.try_normalize() else {
-            // Overlapping characters have no direction between them, so pick a random one.
+        let Some(bearing) = target.nonzero_direction() else {
+            // On top of the target there is no bearing, so pick a random direction.
             return Dir2::from_rng(&mut rand::rng()).as_vec2();
         };
         let turn = CircleDirection::from_heading(bearing, heading).reversed();
@@ -57,7 +56,7 @@ impl Dash {
     }
 }
 
-/// A kite: runs away from the target at normal speed, scattered widely.
+/// Dashes away from the target at normal speed, scattered widely.
 pub fn kite(run_distance: Interval) -> impl Scene {
     let dash = Dash::new(run_distance, 1.0, PI, KITE_SPREAD);
     bsn! {
@@ -66,7 +65,7 @@ pub fn kite(run_distance: Interval) -> impl Scene {
     }
 }
 
-/// A slide: runs straight away from the target.
+/// Dashes straight away from the target.
 pub fn slide(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
     let dash = Dash::new(run_distance, speed_multiplier, PI, Spread::default());
     bsn! {
@@ -75,7 +74,7 @@ pub fn slide(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
     }
 }
 
-/// A sidestep: steps across the target's bearing, reversing the way the character circles it.
+/// Dashes across the bearing to the target, reversing the way the character circles it.
 pub fn sidestep(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
     let bearing_offset = FRAC_PI_2 + SIDESTEP_OUTWARD_LEAN;
     let dash = Dash::new(
@@ -90,60 +89,12 @@ pub fn sidestep(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
     }
 }
 
-/// A step in: steps toward the target, scattered slightly.
+/// Dashes toward the target, scattered slightly.
 pub fn step_in(run_distance: Interval, speed_multiplier: f32) -> impl Scene {
     let dash = Dash::new(run_distance, speed_multiplier, 0.0, STEP_IN_SPREAD);
     bsn! {
         ~MotionKey::StepIn
         ~{dash}
-    }
-}
-
-impl MotionProgress for DashProgress {
-    type Tuning = Dash;
-}
-
-/// Advances each dash in progress. Ends it after its distance or when its target is lost.
-pub(super) fn apply_dash(
-    time: Res<Time<Virtual>>,
-    mut commands: Commands,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    dashes: Query<&Dash>,
-    mut running_dashes: Query<(
-        Entity,
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut DashProgress,
-        &mut Steering,
-    )>,
-) {
-    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_dashes {
-        let dash = dashes.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .map(|character| character.build_steer_input(running.target, &targets, &time));
-        let step = match (dash, input) {
-            (
-                Some(dash),
-                Some(
-                    input @ SteerInput {
-                        target: Some(target),
-                        ..
-                    },
-                ),
-            ) => progress.step(dash, &input, &target),
-            _ => MotionStep::Finished,
-        };
-
-        match step {
-            MotionStep::Steer(next) => *steering = next,
-            MotionStep::Finished => {
-                commands.entity(entity).try_despawn();
-            }
-        }
     }
 }
 
@@ -167,11 +118,19 @@ impl DashProgress {
         self.remaining_distance = dash.run_distance.pick_random_value().max(0.0);
         direction
     }
+}
 
-    fn step(&mut self, dash: &Dash, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
+impl MotionProgress for DashProgress {
+    type Tuning = Dash;
+
+    /// Ends after the dash's distance, or when blocked or the target is lost.
+    fn step(&mut self, dash: &Dash, input: &SteerInput) -> MotionStep {
+        let Some(target) = input.target else {
+            return MotionStep::Finished;
+        };
         let direction = match self.direction {
             Some(direction) => direction,
-            None => self.choose_direction_and_distance(dash, target, input.heading),
+            None => self.choose_direction_and_distance(dash, &target, input.heading),
         };
 
         if input.tick_blocked_timer(&mut self.blocked_timer, DASH_BLOCKED_SECONDS) {

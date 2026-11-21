@@ -1,95 +1,140 @@
+use bevy::ecs::component::Mutable;
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::{FiniteMotion, MotionKey, MotionReach, MotionSources, Steering, TunedBy};
+use super::{
+    FiniteMotion, MotionKey, MotionReach, MotionSourceOf, MotionSources, MotionStep, SteerInput,
+    SteeredCharacter, Steering, SteeringTargets,
+};
 use crate::prelude::*;
 
-/// Links a running motion to the character it moves; see [`RunningMotion`].
+/// Makes this entity the running motion of `character`. [`MotionCommands`] spawns it as a copy of
+/// a motion source, so it carries the source's [`MotionKey`], tuning and [`FiniteMotion`], and
+/// links it to the entity it steers by, if any ([`SteeringMotionOf`]). [`on_motion_started`] adds
+/// that motion's [`MotionProgress`], and [`apply_motion`] despawns it once a finite motion ends.
+/// Despawning it, however the motion ended, halts the character and, for a [`FiniteMotion`],
+/// starts the [`Cooldown`] of the character's source with its key and fires [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
-#[relationship(relationship_target = CurrentMotion)]
-pub struct MotionOf {
+#[relationship(relationship_target = RunningMotion)]
+#[require(Steering)]
+#[component(on_remove = end_running_motion)]
+pub struct RunningMotionOf {
     pub character: Entity,
 }
 
-/// The running motion of this character, if it runs one; see [`RunningMotion`].
+/// The running motion of this character, if it runs one; see [`RunningMotionOf`].
 #[derive(Component, Debug)]
-#[relationship_target(relationship = MotionOf, linked_spawn)]
-pub struct CurrentMotion(Entity);
+#[relationship_target(relationship = RunningMotionOf, linked_spawn)]
+pub struct RunningMotion(Entity);
 
-impl CurrentMotion {
+impl RunningMotion {
     pub fn get(&self) -> Entity {
         self.0
     }
 }
 
-/// A character's running motion, on its own entity linked to the character by [`MotionOf`] and to
-/// the motion source that tunes it by [`TunedBy`]: the source's key and the entity it steers by.
-/// [`MotionCommands`] spawns it with [`Steering`], [`on_motion_started`] adds that motion's
-/// [`MotionProgress`], and a finite motion's system despawns it when it ends. Despawning it,
-/// however the motion ended, halts the character and, for a [`FiniteMotion`], starts the source's
-/// [`Cooldown`] and fires [`MotionFinished`].
+/// Makes this running motion steer by `target`, such as a `LocationHint`.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Steering)]
-#[component(on_remove = end_running_motion)]
-pub(super) struct RunningMotion {
-    pub key: MotionKey,
-    pub target: Option<Entity>,
+#[relationship(relationship_target = SteeringMotions)]
+pub(super) struct SteeringMotionOf {
+    pub target: Entity,
 }
 
-/// A motion's state while it runs, which [`on_motion_started`] adds to its running motion.
-pub(super) trait MotionProgress: Component + Default {
-    /// The tuning component of the motion sources whose running motions get this progress.
+/// The running motions that steer by this entity; see [`SteeringMotionOf`].
+#[derive(Component, Debug)]
+#[relationship_target(relationship = SteeringMotionOf)]
+pub(super) struct SteeringMotions(Vec<Entity>);
+
+/// A motion's state while it runs, which [`on_motion_started`] adds to its running motion and
+/// [`apply_motion`] advances.
+pub(super) trait MotionProgress: Component<Mutability = Mutable> + Default {
+    /// The tuning component of the running motions that get this progress.
     type Tuning: Component;
+
+    /// Advances the motion by one frame of `input`.
+    fn step(&mut self, tuning: &Self::Tuning, input: &SteerInput) -> MotionStep;
 }
 
-/// Gives each newly started running motion tuned by a `Progress::Tuning` source a fresh
-/// `Progress`.
+/// Gives each newly started running motion with a `Progress::Tuning` a fresh `Progress`.
 pub(super) fn on_motion_started<Progress: MotionProgress>(
-    added: On<Add<RunningMotion>>,
+    added: On<Add<RunningMotionOf>>,
     mut commands: Commands,
-    running_motions: Query<&TunedBy>,
     tunings: Query<(), With<Progress::Tuning>>,
 ) {
-    let is_progress_motion = running_motions
-        .get(added.entity)
-        .is_ok_and(|tuned_by| tunings.contains(tuned_by.source));
-    if is_progress_motion {
+    if tunings.contains(added.entity) {
         commands.entity(added.entity).insert(Progress::default());
     }
 }
 
+/// Advances each running motion that has a `Progress`, and despawns it once its step finishes or
+/// its character can't steer.
+pub(super) fn apply_motion<Progress: MotionProgress>(
+    time: Res<Time<Virtual>>,
+    mut commands: Commands,
+    targets: SteeringTargets,
+    characters: Query<SteeredCharacter>,
+    mut running_motions: Query<(
+        Entity,
+        &RunningMotionOf,
+        &Progress::Tuning,
+        Option<&SteeringMotionOf>,
+        &mut Progress,
+        &mut Steering,
+    )>,
+) {
+    for (entity, running_motion_of, tuning, steering_motion_of, mut progress, mut steering) in
+        &mut running_motions
+    {
+        let step = match characters.get(running_motion_of.character) {
+            Ok(character) => {
+                let input = character.build_steer_input(steering_motion_of, &targets, &time);
+                progress.step(tuning, &input)
+            }
+            Err(_) => MotionStep::Finished,
+        };
+        match step {
+            MotionStep::Steer(next) => *steering = next,
+            MotionStep::Finished => {
+                commands.entity(entity).try_despawn();
+            }
+        }
+    }
+}
+
 fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
-    let Ok((&MotionOf { character }, &running, tuned_by)) = world
-        .entity(context.entity)
-        .get_components::<(&MotionOf, &RunningMotion, Option<&TunedBy>)>()
+    let running_motion = world.entity(context.entity);
+    let Ok((&RunningMotionOf { character }, &key)) =
+        running_motion.get_components::<(&RunningMotionOf, &MotionKey)>()
     else {
         return;
     };
-    let tuned_by = tuned_by.copied();
+    let is_finite = running_motion.contains::<FiniteMotion>();
 
     if let Some(mut kinematics) = world.get_mut::<Kinematics>(character) {
         kinematics.stop_moving();
     }
-
-    let Some(TunedBy { source }) = tuned_by else {
-        return;
-    };
-    let is_finite = world
-        .get_entity(source)
-        .is_ok_and(|source| source.contains::<FiniteMotion>());
     if !is_finite {
         return;
     }
+
+    // Started before `MotionFinished`, so a brain deciding on that finish sees the cooldown.
+    let source = world.get::<MotionSources>(character).and_then(|sources| {
+        sources
+            .iter()
+            .find(|&source| world.get::<MotionKey>(source) == Some(&key))
+    });
     let now = world.resource::<Time<Virtual>>().elapsed_secs();
-    if let Some(mut cooldown) = world.get_mut::<Cooldown>(source) {
+    if let Some(source) = source
+        && let Some(mut cooldown) = world.get_mut::<Cooldown>(source)
+    {
         cooldown.start(now);
     }
     world.commands().trigger(MotionFinished {
         entity: character,
-        key: running.key,
+        key,
     });
 }
 
@@ -104,8 +149,16 @@ pub(in crate::character) struct MotionFinished {
 /// What [`MotionStatus`] reads of a character: its running motion and motion sources.
 #[derive(QueryData)]
 struct CharacterMotionData {
-    current_motion: Option<&'static CurrentMotion>,
+    running_motion: Option<&'static RunningMotion>,
     sources: Option<&'static MotionSources>,
+}
+
+/// What [`MotionStatus`] reads of a running motion.
+#[derive(QueryData)]
+struct RunningMotionData {
+    entity: Entity,
+    key: &'static MotionKey,
+    steering_motion_of: Option<&'static SteeringMotionOf>,
 }
 
 /// What [`MotionStatus`] reads of one motion source.
@@ -124,11 +177,16 @@ pub(in crate::character) struct MotionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     characters: Query<'w, 's, CharacterMotionData>,
     interruptions: Query<'w, 's, InterruptionState>,
-    running_motions: Query<'w, 's, &'static RunningMotion>,
+    running_motions: Query<'w, 's, RunningMotionData>,
     sources: Query<'w, 's, MotionSourceData>,
 }
 
 impl MotionStatus<'_, '_> {
+    /// Whether `character` has a motion source with `key`.
+    pub(in crate::character) fn has_source(&self, character: Entity, key: MotionKey) -> bool {
+        self.source_data(character, key).is_some()
+    }
+
     /// Whether `character` has a `key` source whose motion ends on its own; see
     /// [`FiniteMotion`].
     pub(in crate::character) fn ends_on_its_own(&self, character: Entity, key: MotionKey) -> bool {
@@ -163,11 +221,11 @@ impl MotionStatus<'_, '_> {
         source.reach.map(|&MotionReach(reach)| reach)
     }
 
-    fn current_motion(&self, character: Entity) -> Option<(Entity, RunningMotion)> {
+    fn running_motion(&self, character: Entity) -> Option<RunningMotionDataItem<'_, '_>> {
         let character_data = self.characters.get(character).ok()?;
-        let entity = character_data.current_motion?.get();
-        let running = self.running_motions.get(entity).ok()?;
-        Some((entity, *running))
+        self.running_motions
+            .get(character_data.running_motion?.get())
+            .ok()
     }
 
     fn source_data(
@@ -196,7 +254,7 @@ impl MotionCommands<'_, '_> {
     /// Runs the motion of `character`'s `key` source, steering by `target`; without that source it
     /// only stops the running motion. A motion of `key` that is already running keeps its progress
     /// and takes the new target, so calling this every frame starts the motion once; any other
-    /// running motion is replaced with a fresh one.
+    /// running motion is replaced with a fresh copy of the source.
     pub(in crate::character) fn start(
         &mut self,
         character: Entity,
@@ -208,30 +266,39 @@ impl MotionCommands<'_, '_> {
             return;
         };
         let source = source.entity;
-        let running = RunningMotion { key, target };
-        let current_motion = self.status.current_motion(character);
-        if let Some((entity, current)) = current_motion {
-            if current.key == key {
-                if current.target != target {
-                    self.commands.entity(entity).try_insert(running);
+
+        if let Some(running) = self.status.running_motion(character) {
+            if *running.key == key {
+                let running_target = running
+                    .steering_motion_of
+                    .map(|steering_motion_of| steering_motion_of.target);
+                if running_target != target {
+                    let mut motion = self.commands.entity(running.entity);
+                    match target {
+                        Some(target) => motion.try_insert(SteeringMotionOf { target }),
+                        None => motion.try_remove::<SteeringMotionOf>(),
+                    };
                 }
                 return;
             }
-            self.commands.entity(entity).try_despawn();
+            self.commands.entity(running.entity).try_despawn();
         }
-        // `TunedBy` goes in the same spawn, so `on_motion_started` can read it.
-        self.commands.spawn((
-            Name::new("Running motion"),
-            MotionOf { character },
-            running,
-            TunedBy { source },
-        ));
+
+        // Copies everything the source holds except what describes the source itself.
+        let mut source_commands = self.commands.entity(source);
+        let mut motion = source_commands.clone_and_spawn_with_opt_out(|builder| {
+            builder.deny::<(MotionSourceOf, Cooldown, MotionReach)>();
+        });
+        motion.insert((Name::new("Running motion"), RunningMotionOf { character }));
+        if let Some(target) = target {
+            motion.insert(SteeringMotionOf { target });
+        }
     }
 
     /// Ends `character`'s running motion.
     pub(in crate::character) fn stop(&mut self, character: Entity) {
-        if let Some((entity, _)) = self.status.current_motion(character) {
-            self.commands.entity(entity).try_despawn();
+        if let Some(current) = self.status.running_motion(character) {
+            self.commands.entity(current.entity).try_despawn();
         }
     }
 }
@@ -239,16 +306,12 @@ impl MotionCommands<'_, '_> {
 /// Ends each finite motion whose character is interrupted; see [`InterruptionState`].
 pub(super) fn end_interrupted_motions(
     mut commands: Commands,
-    running_motions: Query<(Entity, &MotionOf, &TunedBy)>,
-    finite_sources: Query<(), With<FiniteMotion>>,
+    running_motions: Query<(Entity, &RunningMotionOf), With<FiniteMotion>>,
     characters: Query<InterruptionState>,
 ) {
-    for (entity, motion_of, tuned_by) in &running_motions {
-        if !finite_sources.contains(tuned_by.source) {
-            continue;
-        }
+    for (entity, running_motion_of) in &running_motions {
         let is_interrupted = characters
-            .get(motion_of.character)
+            .get(running_motion_of.character)
             .is_ok_and(|interruption| interruption.is_interrupted());
         if is_interrupted {
             commands.entity(entity).try_despawn();

@@ -12,15 +12,14 @@ mod wander;
 use bevy::prelude::*;
 
 pub use self::dash::{kite, sidestep, slide, step_in};
-use self::direct::DirectMotion;
 pub use self::direct::{Chase, Flee, Idle, KeepDistance};
 pub use self::home_area::{Home, HomeArea, ReturnToHome};
-use self::motion_source::{FiniteMotion, TunedBy};
+use self::motion_source::{FiniteMotion, MotionSourceOf};
 pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
 pub use self::orbit::Orbit;
-pub use self::running_motion::CurrentMotion;
+pub use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
-use self::running_motion::{MotionOf, MotionProgress, RunningMotion};
+use self::running_motion::{MotionProgress, RunningMotionOf, SteeringMotionOf};
 use self::steer_input::{
     BlockedTimer, CircleDirection, MotionStep, SteerInput, SteeredCharacter, SteeringTarget,
     SteeringTargets,
@@ -36,23 +35,24 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (
             running_motion::end_interrupted_motions,
-            dash::apply_dash,
-            swoop::apply_swoop,
-            orbit::apply_orbit,
-            wander::apply_wander,
+            running_motion::apply_motion::<dash::DashProgress>,
+            running_motion::apply_motion::<swoop::SwoopProgress>,
+            running_motion::apply_motion::<orbit::OrbitProgress>,
+            running_motion::apply_motion::<WanderProgress>,
             home_area::move_homes_of_blocked_characters,
+            running_motion::apply_motion::<home_area::ReturnToHomeProgress>,
             direct::apply_direct_steering::<Idle>,
             direct::apply_direct_steering::<Chase>,
             direct::apply_direct_steering::<Flee>,
             direct::apply_direct_steering::<KeepDistance>,
-            direct::apply_direct_steering::<ReturnToHome>,
             steering::decay_speed_boosts,
             steering::apply_steering,
         )
             .chain()
             .in_set(SimulationSystems::Steer),
     );
-    app.add_observer(running_motion::on_motion_started::<dash::DashProgress>)
+    app.add_observer(motion_source::on_motion_source_added)
+        .add_observer(running_motion::on_motion_started::<dash::DashProgress>)
         .add_observer(running_motion::on_motion_started::<swoop::SwoopProgress>)
         .add_observer(running_motion::on_motion_started::<orbit::OrbitProgress>)
         .add_observer(running_motion::on_motion_started::<WanderProgress>)

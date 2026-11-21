@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 
 use super::{
-    MotionKey, MotionOf, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTargets,
-    TunedBy,
+    MotionKey, RunningMotionOf, SteerInput, SteeredCharacter, Steering, SteeringMotionOf,
+    SteeringTargets,
 };
 use crate::interval::Interval;
 
+/// How far outside its distance range a keep distance may drift before it moves.
 const KEEP_ARRIVAL_DEADBAND: f32 = 4.0;
 
 /// A continuous motion that steers straight from its tuning and this frame's input, with no
@@ -89,23 +90,24 @@ impl DirectMotion for KeepDistance {
     }
 }
 
-/// Steers each running motion tuned by a `Tuning` source.
+/// Steers each running motion with a `Tuning`, halting it while its character can't steer.
 pub(super) fn apply_direct_steering<Tuning: DirectMotion>(
     time: Res<Time<Virtual>>,
     targets: SteeringTargets,
     characters: Query<SteeredCharacter>,
-    tunings: Query<&Tuning>,
-    mut running_motions: Query<(&MotionOf, &RunningMotion, &TunedBy, &mut Steering)>,
+    mut running_motions: Query<(
+        &RunningMotionOf,
+        &Tuning,
+        Option<&SteeringMotionOf>,
+        &mut Steering,
+    )>,
 ) {
-    for (motion_of, running, tuned_by, mut steering) in &mut running_motions {
-        let Ok(tuning) = tunings.get(tuned_by.source) else {
+    for (running_motion_of, tuning, steering_motion_of, mut steering) in &mut running_motions {
+        let Ok(character) = characters.get(running_motion_of.character) else {
+            *steering = Steering::HALT;
             continue;
         };
-        *steering = characters
-            .get(motion_of.character)
-            .map_or(Steering::HALT, |character| {
-                let input = character.build_steer_input(running.target, &targets, &time);
-                Steering::scaled(tuning.pick_steering_direction(&input), 1.0)
-            });
+        let input = character.build_steer_input(steering_motion_of, &targets, &time);
+        *steering = Steering::scaled(tuning.pick_steering_direction(&input), 1.0);
     }
 }

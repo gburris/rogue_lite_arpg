@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, CircleDirection, MotionKey, MotionOf, MotionProgress, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, MotionKey, MotionProgress, MotionStep, SteerInput, Steering,
 };
 use crate::interval::{Interval, Spread};
 
@@ -106,34 +105,9 @@ impl OrbitProgress {
 
 impl MotionProgress for OrbitProgress {
     type Tuning = Orbit;
-}
 
-/// Circles the target for each running motion tuned by an [`Orbit`].
-pub(super) fn apply_orbit(
-    time: Res<Time<Virtual>>,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    orbits: Query<&Orbit>,
-    mut running_orbits: Query<(
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut OrbitProgress,
-        &mut Steering,
-    )>,
-) {
-    for (motion_of, running, tuned_by, mut progress, mut steering) in &mut running_orbits {
-        let orbit = orbits.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .map(|character| character.build_steer_input(running.target, &targets, &time));
-        *steering = match (orbit, input) {
-            (Some(orbit), Some(input)) => {
-                let direction = progress.pick_steering_direction(orbit, &input);
-                Steering::scaled(direction, 1.0)
-            }
-            _ => Steering::HALT,
-        };
+    fn step(&mut self, orbit: &Orbit, input: &SteerInput) -> MotionStep {
+        let direction = self.pick_steering_direction(orbit, input);
+        MotionStep::Steer(Steering::scaled(direction, 1.0))
     }
 }

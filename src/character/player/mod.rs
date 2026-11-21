@@ -7,11 +7,7 @@ mod spawn;
 pub mod prelude {
     pub use super::input::PlayerAim;
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::input::PlayerMovement;
-    #[cfg(feature = "dev_native")]
-    pub(crate) use super::input::place_player_aim;
-    #[cfg(feature = "dev_native")]
-    pub(crate) use super::input::{UseMainhand, UseOffhand};
+    pub(crate) use super::input::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
     pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
     pub use super::spawn::GameProgress;
     pub use super::{Attribute, Player, PlayerAttributes};
@@ -20,7 +16,7 @@ pub mod prelude {
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::level::{Attribute, PlayerAttributes};
+pub use self::spawn::{Attribute, PlayerAttributes};
 use crate::character::Character;
 use crate::prelude::*;
 

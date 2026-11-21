@@ -16,7 +16,7 @@ pub struct StatusOf(pub Entity);
 pub struct Statuses(Vec<Entity>);
 
 #[derive(Component, Clone)]
-pub(crate) struct StatusApplied;
+pub(super) struct StatusApplied;
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) enum StatusKind {

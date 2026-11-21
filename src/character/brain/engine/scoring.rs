@@ -1,5 +1,3 @@
-//! How a consideration turns one raw input into a `0.0..=1.0` score.
-
 use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
 use super::behavior::{Behavior, BrainDefinition, BrainVocabulary};
 use crate::interval::Interval;

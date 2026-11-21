@@ -5,6 +5,10 @@ use bevy::prelude::*;
 use super::equipment_transform::DirectionalPoses;
 use crate::prelude::*;
 
+pub(super) fn plugin(app: &mut App) {
+    app.add_observer(on_equip).add_observer(on_unequip);
+}
+
 /// An item that can be equipped in a slot and used from it.
 #[derive(Component, Clone, Debug)]
 #[require(ActionSource)]
@@ -98,10 +102,6 @@ impl Offhand {
     pub fn get(&self) -> Entity {
         self.0
     }
-}
-
-pub(super) fn plugin(app: &mut App) {
-    app.add_observer(on_equip).add_observer(on_unequip);
 }
 
 /// Request to equip `item` on `holder` in the item's [`Equippable`] slot, unequipping whatever is

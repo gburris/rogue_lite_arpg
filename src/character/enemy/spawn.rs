@@ -21,6 +21,35 @@ pub struct EnemySpawn {
     pub kind: EnemyKind,
 }
 
+/// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
+pub enum EnemyKind {
+    Warrior,
+    IceMage,
+    FireMage,
+    /// Flying enemy: circles its target and breathes fire without a weapon.
+    Bat,
+}
+
+impl EnemyKind {
+    /// Every enemy kind, used for random spawns and exhaustive iteration.
+    pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
+
+    pub fn brain(self) -> &'static BrainDefinition {
+        match self {
+            Self::Warrior => &warrior::WARRIOR,
+            Self::IceMage => &mage::ICE_MAGE,
+            Self::FireMage => &mage::FIRE_MAGE,
+            Self::Bat => &bat::BAT,
+        }
+    }
+}
+
+/// Experience paid out when the player defeats this enemy. Scales with
+/// threat: the tanky warrior pays most, the fragile flying bat least.
+#[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut)]
+pub struct Experience(pub f32);
+
 pub(super) fn on_spawn_enemies(
     spawn_enemies: On<SpawnEnemies>,
     mut commands: Commands,
@@ -160,35 +189,6 @@ pub(super) fn enemy_children(shadows: &Shadows) -> impl Scene {
         ]
     }
 }
-
-/// Recipes name these directly, e.g. `(what: Enemy(FireMage), ...)` in `map_recipes.ron`.
-#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
-pub enum EnemyKind {
-    Warrior,
-    IceMage,
-    FireMage,
-    /// Flying enemy: circles its target and breathes fire without a weapon.
-    Bat,
-}
-
-impl EnemyKind {
-    /// Every enemy kind, used for random spawns and exhaustive iteration.
-    pub const ALL: &[Self] = &[Self::Warrior, Self::IceMage, Self::FireMage, Self::Bat];
-
-    pub fn brain(self) -> &'static BrainDefinition {
-        match self {
-            Self::Warrior => &warrior::WARRIOR,
-            Self::IceMage => &mage::ICE_MAGE,
-            Self::FireMage => &mage::FIRE_MAGE,
-            Self::Bat => &bat::BAT,
-        }
-    }
-}
-
-/// Experience paid out when the player defeats this enemy. Scales with
-/// threat: the tanky warrior pays most, the fragile flying bat least.
-#[derive(Component, Default, Clone, Copy, Debug, Deref, DerefMut)]
-pub struct Experience(pub f32);
 
 fn on_enemy_defeated(
     defeated: On<Defeated>,

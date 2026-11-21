@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use serde::Deserialize;
 
-use crate::character::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
-use crate::character::brain::{Behavior, Brain, BrainDefinition};
-use crate::character::motion::{Home, HomeArea, ReturnToHome, Wander};
-use crate::character::{Character, physical_collider};
+use super::brain::considerations::{ACTION_BASELINE_IDLE, RETURN_TO_HOME, WANDER};
+use super::brain::{Behavior, Brain, BrainDefinition};
+use super::motion::{Home, HomeArea, ReturnToHome, Wander};
+use super::{Character, physical_collider};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -27,7 +27,7 @@ pub enum NpcKind {
 static VILLAGER_BEHAVIORS: &[Behavior] = &[WANDER, ACTION_BASELINE_IDLE, RETURN_TO_HOME];
 
 /// Wanders around its home area and never requests equipment.
-pub(in crate::character) static VILLAGER: BrainDefinition = BrainDefinition {
+pub(super) static VILLAGER: BrainDefinition = BrainDefinition {
     behaviors: VILLAGER_BEHAVIORS,
 };
 

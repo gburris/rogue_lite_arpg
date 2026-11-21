@@ -28,7 +28,7 @@ pub(super) struct GameMethods {
 }
 
 impl GameMethods {
-    pub(super) fn new() -> Self {
+    fn new() -> Self {
         Self {
             remote_plugin: RemotePlugin::default(),
             help: Vec::new(),
@@ -37,7 +37,7 @@ impl GameMethods {
 
     /// Registers `handler` as the method `name`. `params` lists the method's params the way
     /// a caller writes them, with `?` after the optional ones.
-    pub(super) fn method<M>(
+    fn method<M>(
         mut self,
         name: &'static str,
         params: &'static str,
@@ -56,59 +56,6 @@ impl GameMethods {
     pub(super) fn into_plugin_and_help(self) -> (RemotePlugin, GameMethodHelp) {
         (self.remote_plugin, GameMethodHelp(self.help))
     }
-}
-
-#[expect(
-    clippy::unnecessary_wraps,
-    reason = "remote method handlers return `BrpResult`"
-)]
-fn list_methods(In(_): In<Option<Value>>, help: Res<GameMethodHelp>) -> BrpResult {
-    let methods: Vec<Value> = help
-        .iter()
-        .map(|method| {
-            json!({
-                "method": method.name,
-                "params": method.params,
-                "summary": method.summary,
-            })
-        })
-        .collect();
-
-    Ok(json!(methods))
-}
-
-/// Reads a method's params; a call without params reads as `{}`, so all-optional params work.
-pub(super) fn parse_params<T: for<'de> Deserialize<'de>>(params: Option<Value>) -> BrpResult<T> {
-    parse(params.unwrap_or_else(|| json!({})))
-}
-
-/// The error for params that parse but name something the game doesn't have.
-pub(super) fn invalid_params(message: impl Into<String>) -> BrpError {
-    BrpError {
-        code: error_codes::INVALID_PARAMS,
-        message: message.into(),
-        data: None,
-    }
-}
-
-/// Reads an entity written by [`entity_id`].
-pub(super) fn parse_entity(id: u64) -> BrpResult<Entity> {
-    Entity::try_from_bits(id).ok_or_else(|| invalid_params(format!("{id} is not an entity")))
-}
-
-/// An entity as every `game/…` method writes and reads it.
-pub(super) fn entity_id(entity: Entity) -> u64 {
-    entity.to_bits()
-}
-
-/// A transform's world position as `[x, y]`.
-pub(super) fn position(transform: &Transform) -> [f32; 2] {
-    transform.translation.truncate().to_array()
-}
-
-/// A value's `Debug` text, which for a fieldless enum is its variant name.
-pub(super) fn debug_name(value: impl Debug) -> String {
-    format!("{value:?}")
 }
 
 /// Every `game/…` method, with its help.
@@ -280,4 +227,57 @@ fn add_setup_methods(methods: GameMethods) -> GameMethods {
              `drop`.",
             setup::use_item,
         )
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "remote method handlers return `BrpResult`"
+)]
+fn list_methods(In(_): In<Option<Value>>, help: Res<GameMethodHelp>) -> BrpResult {
+    let methods: Vec<Value> = help
+        .iter()
+        .map(|method| {
+            json!({
+                "method": method.name,
+                "params": method.params,
+                "summary": method.summary,
+            })
+        })
+        .collect();
+
+    Ok(json!(methods))
+}
+
+/// Reads a method's params; a call without params reads as `{}`, so all-optional params work.
+pub(super) fn parse_params<T: for<'de> Deserialize<'de>>(params: Option<Value>) -> BrpResult<T> {
+    parse(params.unwrap_or_else(|| json!({})))
+}
+
+/// The error for params that parse but name something the game doesn't have.
+pub(super) fn invalid_params(message: impl Into<String>) -> BrpError {
+    BrpError {
+        code: error_codes::INVALID_PARAMS,
+        message: message.into(),
+        data: None,
+    }
+}
+
+/// Reads an entity written by [`entity_id`].
+pub(super) fn parse_entity(id: u64) -> BrpResult<Entity> {
+    Entity::try_from_bits(id).ok_or_else(|| invalid_params(format!("{id} is not an entity")))
+}
+
+/// An entity as every `game/…` method writes and reads it.
+pub(super) fn entity_id(entity: Entity) -> u64 {
+    entity.to_bits()
+}
+
+/// A transform's world position as `[x, y]`.
+pub(super) fn position(transform: &Transform) -> [f32; 2] {
+    transform.translation.truncate().to_array()
+}
+
+/// A value's `Debug` text, which for a fieldless enum is its variant name.
+pub(super) fn debug_name(value: impl Debug) -> String {
+    format!("{value:?}")
 }

@@ -8,12 +8,12 @@ use crate::prelude::*;
 pub mod prelude {
     pub use super::ActionSource;
     pub use super::action_status::{
-        ActionCommands, ActionFailed, ActionFailure, ActionGlow, ActionKey, ActionReach,
-        ActionStatus, ActionUseStyle, ActionWindup, Attack, RequiredItem,
+        ActionCommands, ActionFailed, ActionFailure, ActionKey, ActionReach, ActionStatus,
+        ActionUseStyle, Attack, RequiredItem,
     };
     pub use super::in_progress::{
-        ActionFinished, ActionInProgress, ActionTookEffect, PartOfActionUse, StopAction,
-        TimedActionProgress,
+        ActionFinished, ActionGlow, ActionInProgress, ActionTookEffect, ActionWindup,
+        PartOfActionUse, StopAction, TimedActionProgress,
     };
 }
 

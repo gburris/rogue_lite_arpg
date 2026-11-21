@@ -1,7 +1,3 @@
-//! The decision pipeline: drop a stale committed behavior, score with inputs read on demand, and
-//! commit the winners as [`RunningBehavior`]s. This is the only code that changes which behaviors
-//! a [`Brain`] holds.
-
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;

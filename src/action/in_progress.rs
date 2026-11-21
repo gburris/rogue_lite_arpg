@@ -3,8 +3,19 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::action_status::{ActionGlow, ActionUseStyle, ActionWindup};
+use super::action_status::ActionUseStyle;
 use crate::prelude::*;
+
+/// How long each use winds up before it takes effect, a window for a hit to interrupt it. Without
+/// it, a use takes effect on the frame it starts.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct ActionWindup {
+    pub seconds: f32,
+}
+
+/// Lights the holder in this color while a use winds up.
+#[derive(Component, Clone, Copy, Debug, Default)]
+pub struct ActionGlow(pub Color);
 
 /// Seconds an action source waits after a use interrupted during its wind-up before it can be used
 /// again.

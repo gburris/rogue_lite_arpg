@@ -42,6 +42,7 @@ impl Behavior {
         usize::from(finite_motion) + usize::from(finite_action) == 1
     }
 }
+
 /// A consideration of a character brain.
 pub type Consideration = engine::Consideration<CharacterVocabulary>;
 /// A character brain's static definition.

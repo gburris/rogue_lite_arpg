@@ -2,7 +2,7 @@ use avian2d::prelude::Mass;
 use bevy::prelude::*;
 
 use super::{
-    Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::heal;
 use crate::character::brain::considerations::{
@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Chase, Flee, Idle, MotionKey, MotionSources, ReturnToHome, kite};
+use crate::character::motion::{Flee, Idle, MotionKey, MotionSources, kite};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -227,13 +227,9 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
             ActionGlow(HEAL_GLOW_COLOR)
         ]
         MotionSources [
+            {enemy_motion_sources()}
+            --
             Idle
-            --
-            enemy_wander()
-            --
-            ReturnToHome
-            --
-            Chase
             --
             Flee
             --

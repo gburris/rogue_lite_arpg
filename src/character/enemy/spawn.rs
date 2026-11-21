@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use super::{Enemy, EnemyKind, bat, defeat, mage, warrior};
 use crate::character::brain::considerations::{CAST_HYSTERESIS, CAST_MAX_RANGE};
 use crate::character::brain::{Brain, Watching};
-use crate::character::motion::{Home, HomeArea, Wander};
+use crate::character::motion::{Chase, Home, HomeArea, ReturnToHome, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -84,10 +84,18 @@ pub(super) fn spawn_enemy_with_equipment(
     enemy
 }
 
-/// Enemies stand a while between short walks while disengaged.
-pub(super) fn enemy_wander() -> Wander {
-    Wander::new(Interval::new(3.0, 5.0), Interval::new(1.0, 2.0))
+/// The motion sources every enemy has: a wander that stands a while between short walks, a
+/// return home and a chase. Each kind's file lists them first among its own.
+pub(super) fn enemy_motion_sources() -> impl SceneList {
+    bsn_list! {
+        ~Wander::new(Interval::new(3.0, 5.0), Interval::new(1.0, 2.0))
+        --
+        ReturnToHome
+        --
+        Chase
+    }
 }
+
 /// How far a ground enemy sees. Past the cast range, so a caster at its outer edge keeps its
 /// target in sight.
 const ENEMY_SIGHT_RANGE: f32 = 420.0;

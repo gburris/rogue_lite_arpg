@@ -1,7 +1,7 @@
 use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use super::{Experience, enemy_wander, sight_ray};
+use super::{Experience, enemy_motion_sources, sight_ray};
 use crate::character::ability::{Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
@@ -13,8 +13,7 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    Chase, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome, Swoop,
-    TurnRate,
+    KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -252,15 +251,11 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
         MotionSources [
+            {enemy_motion_sources()}
+            --
             ~Orbit::new(CAST_DISTANCE_RANGE).with_distance_offset_spread(BAT_ORBIT_MAX_DISTANCE_OFFSET)
             --
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
-            --
-            enemy_wander()
-            --
-            ReturnToHome
-            --
-            Chase
             --
             Swoop
             ~{MotionReach(CAST_MAX_RANGE)}

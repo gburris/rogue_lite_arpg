@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::{
-    Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::speed_and_damage_rally;
 use crate::character::brain::considerations::{
@@ -14,8 +14,7 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    Chase, Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, ReturnToHome,
-    sidestep, slide, step_in,
+    Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, sidestep, slide, step_in,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -328,13 +327,9 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ~Kinematics::new(100.0)
         Experience(12.0)
         MotionSources [
+            {enemy_motion_sources()}
+            --
             Idle
-            --
-            enemy_wander()
-            --
-            ReturnToHome
-            --
-            Chase
             --
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
@@ -359,13 +354,9 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Kinematics::new(150.0)
         Experience(15.0)
         MotionSources [
+            {enemy_motion_sources()}
+            --
             Idle
-            --
-            enemy_wander()
-            --
-            ReturnToHome
-            --
-            Chase
             --
             @sidestep(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --

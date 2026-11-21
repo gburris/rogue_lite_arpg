@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use avian2d::prelude::{LinearVelocity, *};
+use avian2d::prelude::*;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;

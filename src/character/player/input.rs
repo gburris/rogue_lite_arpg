@@ -156,7 +156,7 @@ pub(super) fn player_aim() -> impl Scene {
 
 #[derive(InputAction)]
 #[action_output(Vec2)]
-pub(super) struct AimInput;
+struct AimInput;
 
 const AIM_DISTANCE: f32 = 120.0;
 

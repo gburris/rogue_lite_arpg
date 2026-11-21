@@ -62,7 +62,7 @@ impl GameMethods {
     clippy::unnecessary_wraps,
     reason = "remote method handlers return `BrpResult`"
 )]
-pub(super) fn list_methods(In(_): In<Option<Value>>, help: Res<GameMethodHelp>) -> BrpResult {
+fn list_methods(In(_): In<Option<Value>>, help: Res<GameMethodHelp>) -> BrpResult {
     let methods: Vec<Value> = help
         .iter()
         .map(|method| {

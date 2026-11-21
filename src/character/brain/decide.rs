@@ -80,7 +80,7 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
 
 /// Applies a [`MotionFinished`]; see [`finish_and_redecide`]. It runs in the flush that despawns
 /// the finished motion, so the behavior that held it is gone before the next
-/// [`issue_running_motion`](issue_running_motion) would start it again.
+/// [`issue_running_motion`] would start it again.
 pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -311,7 +311,7 @@ fn passes_start_roll(behavior: Behavior, index: usize, missed_start_ids: &mut Ve
 /// Keeps each character's running motion on the motion its brain holds, steering by the target's
 /// [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot is
 /// empty; see [`MotionCommands::start`]. A finished motion is not started again; see
-/// [`on_motion_finished`](super::decide::on_motion_finished).
+/// [`on_motion_finished`].
 pub(super) fn issue_running_motion(
     mut motions: MotionCommands,
     brains: Query<(Entity, &Brain, Option<&TargetLocationHint>)>,

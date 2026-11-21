@@ -29,11 +29,11 @@ pub(super) enum StatusKind {
 
 #[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = StatusVisualEffects)]
-pub(super) struct StatusVfxOf(pub Entity);
+struct StatusVfxOf(pub Entity);
 
 #[derive(Component, Clone)]
 #[relationship_target(relationship = StatusVfxOf, linked_spawn)]
-pub(super) struct StatusVisualEffects(Vec<Entity>);
+struct StatusVisualEffects(Vec<Entity>);
 
 #[derive(Component, Clone)]
 #[require(Disabled, Lifespan)]
@@ -192,7 +192,7 @@ fn burn_vfx(
 }
 
 /// Ice under a frozen character's feet. Only the look: the effect list that freezes carries its
-/// speed [`StatModifier`](super::stat_modifier::StatModifier).
+/// speed [`StatModifier`].
 #[derive(Component, Clone, Default)]
 #[require(StatusKind::Freeze)]
 pub struct Frozen;
@@ -227,7 +227,7 @@ fn grounded_ice_vfx(sprites: &SpriteAssets, status: Entity) -> impl Scene {
 }
 
 /// Rallied by a war cry. Only the look: the effect list that rallies carries its
-/// [`StatModifier`](super::stat_modifier::StatModifier)s.
+/// [`StatModifier`]s.
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(StatusKind::Rally)]
 pub struct Rallied;

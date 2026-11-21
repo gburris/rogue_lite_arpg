@@ -109,7 +109,7 @@ pub(super) fn score_behavior<V: BrainVocabulary>(
 /// The first zero vetoes and stops there, leaving later scores unread, so a behavior lists its
 /// cheap considerations first. Each passing flag raises graded inputs to a higher root, so adding
 /// a flag shifts a behavior's crossovers. Brains are tuned against that root.
-pub(super) fn combine_consideration_scores(
+fn combine_consideration_scores(
     weight: f32,
     scores: impl IntoIterator<Item = Option<f32>>,
 ) -> Option<f32> {
@@ -133,7 +133,7 @@ pub(super) fn combine_consideration_scores(
 
 /// Scores one consideration from its `raw` input; `None` when the score
 /// mapping rejects a non-finite raw value.
-pub(super) fn score_consideration<V: BrainVocabulary>(
+fn score_consideration<V: BrainVocabulary>(
     consideration: &Consideration<V>,
     raw: Option<f32>,
     is_current: bool,

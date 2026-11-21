@@ -1,4 +1,4 @@
-use avian2d::prelude::{RigidBody, *};
+use avian2d::prelude::*;
 use bevy::prelude::*;
 
 use super::input::{player_actions, player_aim};

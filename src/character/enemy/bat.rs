@@ -1,7 +1,7 @@
 use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use super::{Experience, enemy_wander, sight_ray};
+use super::{Experience, enemy_motion_sources, sight_ray};
 use crate::character::ability::{Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::considerations::{
@@ -13,7 +13,7 @@ use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
 use crate::character::motion::{
-    KeepDistance, Motion, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
+    KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -32,12 +32,12 @@ const SWOOP_COOLDOWN: f32 = 2.0;
 /// can start.
 const SWOOP_COOLING_DOWN: Consideration = flag(
     "swoop ready",
-    ConsiderationInput::MotionReady(Motion::Swoop),
+    ConsiderationInput::MotionReady(MotionKey::Swoop),
 )
 .inverted("swoop cooling down");
 const IN_SWOOP_REACH: Consideration = within_reach(
     "in swoop reach",
-    ConsiderationInput::MotionReachFraction(Motion::Swoop),
+    ConsiderationInput::MotionReachFraction(MotionKey::Swoop),
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
@@ -83,7 +83,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -91,7 +91,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
-    Some(Motion::KeepDistance),
+    Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -104,7 +104,7 @@ const CORNERED: Consideration =
 /// Slides along whatever pins a bat backing away, circling the target until the bat is back
 /// past the inner cast edge.
 const BAT_SLIP_AWAY: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     6.5,
@@ -112,7 +112,7 @@ const BAT_SLIP_AWAY: Behavior = Behavior::new(
 );
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
-    Some(Motion::Swoop),
+    Some(MotionKey::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
@@ -142,13 +142,18 @@ const BAT_BREATH: Behavior = Behavior::new(
         SWOOP_COOLING_DOWN,
     ],
 );
-/// Arms a bite near contact reach, whether swooping or circling.
+const SWOOPING: Consideration = flag(
+    "swooping",
+    ConsiderationInput::MotionRunning(MotionKey::Swoop),
+);
+
+/// Arms a bite near contact reach, only while swooping.
 const BAT_BITE: Behavior = Behavior::new(
     None,
     Some(BITE),
     CommitPolicy::ContinuouslyScored,
     1.5,
-    &[LINE_OF_SIGHT, NEAR_BITE_REACH],
+    &[LINE_OF_SIGHT, NEAR_BITE_REACH, SWOOPING],
 );
 
 // Motion priority: swoop (10), seek (7), slip away (6.5), return (6), orbit (5.5), keep (5),
@@ -246,11 +251,11 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         YSort::from_offset(BAT_FEET_POS_OFFSET)
         TurnRate(BAT_TURN_RATE)
         MotionSources [
+            {enemy_motion_sources()}
+            --
             ~Orbit::new(CAST_DISTANCE_RANGE).with_distance_offset_spread(BAT_ORBIT_MAX_DISTANCE_OFFSET)
             --
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
-            --
-            enemy_wander()
             --
             Swoop
             ~{MotionReach(CAST_MAX_RANGE)}

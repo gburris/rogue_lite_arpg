@@ -2,39 +2,20 @@ use bevy::prelude::*;
 
 use super::{Brain, MotionCommands, TargetLocationHint};
 
-/// Issues the motion of the brain's motion behavior once, steering by the target's
-/// [`LocationHint`](super::perception::LocationHint), and stops the running motion when the
-/// motion slot is empty. A new target brings a new hint, which retargets the running motion. A
-/// finite motion already in progress is adopted, so its finish ends the new behavior.
+/// Keeps each character's running motion on the motion its brain holds, steering by the target's
+/// [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot is
+/// empty; see [`MotionCommands::start`]. A finished motion is not started again; see
+/// [`on_motion_finished`](super::decide::on_motion_finished).
 pub(super) fn issue_running_motion(
     mut motions: MotionCommands,
-    mut brains: Query<(Entity, &mut Brain, Option<&TargetLocationHint>)>,
+    brains: Query<(Entity, &Brain, Option<&TargetLocationHint>)>,
 ) {
-    for (entity, mut brain, location_hint) in &mut brains {
-        let Some((behavior, motion)) = brain.current_motion_behavior() else {
-            if motions.status().running_motion(entity).is_some() {
-                motions.stop(entity);
-            }
+    for (entity, brain, location_hint) in &brains {
+        let Some(key) = brain.motion() else {
+            motions.stop(entity);
             continue;
         };
-
         let target = location_hint.map(TargetLocationHint::location_hint);
-
-        if !behavior.motion_issued {
-            brain.record_issued_motion(behavior.behavior);
-            if !motions.status().is_in_progress(entity, motion) {
-                // `retarget` reads the running motion from before this start, so skip it.
-                motions.start(entity, motion, target);
-                continue;
-            }
-        }
-
-        let running_target = motions
-            .status()
-            .running_motion(entity)
-            .and_then(|running_motion| running_motion.target);
-        if running_target != target {
-            motions.retarget(entity, target);
-        }
+        motions.start(entity, key, target);
     }
 }

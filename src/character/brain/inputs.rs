@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::action::Action;
 use super::perception::{TargetInfo, Targeting};
-use super::{Brain, HomeArea, Motion, MotionStatus};
+use super::{Brain, Home, HomeArea, MotionKey, MotionStatus};
 use crate::character::Allies;
 use crate::character::state::BlockedState;
 use crate::prelude::*;
@@ -25,20 +25,22 @@ pub enum ConsiderationInput {
     HasTarget,
     LineOfSight,
     TargetDistance,
+    /// The target's intended speed.
+    TargetSpeed,
     MissingHealth,
     ManaFraction,
     /// Whether this motion is running.
-    MotionRunning(Motion),
-    /// Whether the character can start this motion (see [`MotionStatus::is_ready`]) and
-    /// no behavior with one is in a start roll retry delay.
-    MotionReady(Motion),
+    MotionRunning(MotionKey),
+    /// Whether the character can start the motion of this source (see [`MotionStatus::is_ready`])
+    /// and no behavior with it is in a start roll retry delay.
+    MotionReady(MotionKey),
     /// Seconds the running motion has held its slot when it is this motion, else zero.
-    SecondsInMotion(Motion),
+    SecondsInMotion(MotionKey),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
-    /// Target distance over the reach of this motion; at most `1.0` is in reach.
-    MotionReachFraction(Motion),
+    /// Target distance over the reach of this motion source; at most `1.0` is in reach.
+    MotionReachFraction(MotionKey),
     /// Target distance over this action's reach; at most `1.0` is in reach.
     ActionReachFraction(Action),
     /// The closest ally's distance over this action's reach; absent with no ally alive.
@@ -60,7 +62,7 @@ pub(super) struct DecisionInputComponents {
     target_info: Option<&'static TargetInfo>,
     health: Option<&'static Health>,
     mana: Option<&'static Mana>,
-    home_area: Option<&'static HomeArea>,
+    home: Option<&'static Home>,
     blocked: BlockedState,
 }
 
@@ -70,6 +72,7 @@ pub(super) struct DecisionQueries<'w, 's> {
     actions: ActionStatus<'w, 's>,
     motions: MotionStatus<'w, 's>,
     allies: Allies<'w, 's>,
+    home_areas: Query<'w, 's, (&'static Transform, &'static HomeArea)>,
 }
 
 /// One decision's view of the world: references only, read on demand.
@@ -88,11 +91,21 @@ impl DecisionInputs<'_, '_, '_> {
             .filter(|info| self.components.has_target && info.has_finite_distance())
     }
 
+    /// See [`MotionStatus::has_source`].
+    pub fn has_motion_source(&self, key: MotionKey) -> bool {
+        self.queries.motions.has_source(self.components.entity, key)
+    }
+
     /// See [`MotionStatus::is_ready`].
-    pub fn is_motion_ready(&self, motion: Motion) -> bool {
+    pub fn is_motion_ready(&self, key: MotionKey) -> bool {
+        self.queries.motions.is_ready(self.components.entity, key)
+    }
+
+    /// See [`MotionStatus::ends_on_its_own`].
+    pub fn motion_ends_on_its_own(&self, key: MotionKey) -> bool {
         self.queries
             .motions
-            .is_ready(self.components.entity, motion)
+            .ends_on_its_own(self.components.entity, key)
     }
 
     /// Whether the character has an action source for `action`; never for `Idle`, which has none.
@@ -166,6 +179,7 @@ impl DecisionInputs<'_, '_, '_> {
                 self.target().map(|target| f32::from(target.line_of_sight))
             }
             ConsiderationInput::TargetDistance => self.target().map(|target| target.distance),
+            ConsiderationInput::TargetSpeed => self.target().map(|target| target.velocity.length()),
             ConsiderationInput::MissingHealth => Some(
                 1.0 - self
                     .components
@@ -179,8 +193,8 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::MotionRunning(motion) => Some(f32::from(
                 brain.motion().is_some_and(|running| running == motion),
             )),
-            ConsiderationInput::MotionReady(motion) => Some(f32::from(
-                self.is_motion_ready(motion) && !brain.is_start_roll_waiting(motion, self.now),
+            ConsiderationInput::MotionReady(key) => Some(f32::from(
+                self.is_motion_ready(key) && !brain.is_start_roll_waiting(key, self.now),
             )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain
@@ -190,8 +204,8 @@ impl DecisionInputs<'_, '_, '_> {
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
             ConsiderationInput::AttackFinished => Some(f32::from(brain.attack_finish_pending())),
-            ConsiderationInput::MotionReachFraction(motion) => {
-                let reach = self.queries.motions.reach(self.components.entity, motion);
+            ConsiderationInput::MotionReachFraction(key) => {
+                let reach = self.queries.motions.reach(self.components.entity, key);
                 self.target_reach_fraction(reach)
             }
             ConsiderationInput::ActionReachFraction(action) => {
@@ -217,12 +231,18 @@ impl DecisionInputs<'_, '_, '_> {
     /// How far past its home area range the character is. Once already heading
     /// home it reads full until arrival, so crossing back inside the range
     /// mid-return cannot hand the character straight back to wandering.
-    fn home_area_pull(&self, running_motion: Option<Motion>) -> Option<f32> {
-        let home_area = self.components.home_area?;
-        let position = self.components.transform.translation.xy();
-        let overshoot_fraction = home_area.overshoot_fraction(position)?;
-        if running_motion == Some(Motion::ReturnToHome) {
-            Some(f32::from(!home_area.has_arrived(position)))
+    fn home_area_pull(&self, running_motion: Option<MotionKey>) -> Option<f32> {
+        let home = self.components.home?;
+        let (home_transform, home_area) = self.queries.home_areas.get(home.get()).ok()?;
+        let distance = self
+            .components
+            .transform
+            .translation
+            .xy()
+            .distance(home_transform.translation.xy());
+        let overshoot_fraction = home_area.overshoot_fraction(distance)?;
+        if running_motion == Some(MotionKey::ReturnToHome) {
+            Some(f32::from(!home_area.has_arrived(distance)))
         } else {
             Some(overshoot_fraction)
         }

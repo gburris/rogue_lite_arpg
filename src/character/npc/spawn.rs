@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{Npc, NpcKind, VILLAGER, interaction};
 use crate::character::brain::{Brain, BrainDefinition};
-use crate::character::motion::{HomeArea, Wander};
+use crate::character::motion::{Home, HomeArea, ReturnToHome, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -107,8 +107,14 @@ fn base_npc(
         MotionSources [
             // Villagers stand briefly between strolls.
             ~Wander::new(Interval::new(1.0, 4.0), Interval::new(1.0, 2.5))
+            --
+            ReturnToHome
         ]
-        ~HomeArea::new(spawn_position, WANDER_RADIUS, TILE_SIZE as f32 / 2.0)
+        Home [
+            Name::new("Home")
+            ~HomeArea::new(WANDER_RADIUS, TILE_SIZE as f32 / 2.0)
+            Transform::from_translation({spawn_position.extend(0.0)})
+        ]
         ~Kinematics::new(100.0)
         ~Health::new(1000.0)
         Transform::from_translation({spawn_position.extend(ZLayer::OnGround.z())})

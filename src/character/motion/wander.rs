@@ -1,9 +1,6 @@
 use bevy::prelude::*;
 
-use super::{
-    BlockedTimer, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput, SteeredCharacter,
-    Steering, SteeringTargets, TunedBy,
-};
+use super::{BlockedTimer, MotionKey, MotionProgress, MotionStep, SteerInput, Steering};
 use crate::interval::{Interval, Spread};
 
 const WANDER_SPEED_SCALE: f32 = 0.4;
@@ -14,7 +11,7 @@ const WANDER_BLOCKED_SECONDS: f32 = 0.3;
 
 /// Alternates pausing and walking in a random direction. A blocked walk ends early.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Wander)]
+#[require(MotionKey::Wander)]
 pub struct Wander {
     pause: Interval,
     walk: Interval,
@@ -88,51 +85,27 @@ impl WanderProgress {
 }
 
 impl MotionProgress for WanderProgress {
-    const MOTION: Motion = Motion::Wander;
-}
+    type Tuning = Wander;
 
-/// Steers each character running [`Motion::Wander`].
-pub(super) fn apply_wander(
-    time: Res<Time<Virtual>>,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    wanders: Query<&Wander>,
-    mut running_wanders: Query<(
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut WanderProgress,
-        &mut Steering,
-    )>,
-) {
-    for (motion_of, running, tuned_by, mut progress, mut steering) in &mut running_wanders {
-        let wander = wanders.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
-        *steering = match (wander, input) {
-            (Some(wander), Some(input)) => {
-                let direction = progress.pick_steering_direction(wander, &input);
-                Steering::scaled(direction, wander.speed_scale)
-            }
-            _ => Steering::HALT,
-        };
+    fn step(&mut self, wander: &Wander, input: &SteerInput) -> MotionStep {
+        let direction = self.pick_steering_direction(wander, input);
+        MotionStep::Steer(Steering::scaled(direction, wander.speed_scale))
     }
 }
 
 fn pick_direction(input: &SteerInput) -> Vec2 {
     let candidate = Dir2::from_rng(&mut rand::rng()).as_vec2();
-    let Some(home_area) = input.home_area else {
+    let Some(home) = input.home else {
         return candidate;
     };
-    if home_area
-        .overshoot_fraction(input.position)
+    if home
+        .area
+        .overshoot_fraction(home.center.distance)
         .is_none_or(|fraction| fraction < -0.25)
     {
         return candidate;
     }
-    let Some(direction_home) = home_area.direction_home(input.position) else {
+    let Some(direction_home) = home.center.nonzero_direction() else {
         return candidate;
     };
     Rot2::radians(WANDER_HOME_SPREAD.pick_random_value()) * direction_home

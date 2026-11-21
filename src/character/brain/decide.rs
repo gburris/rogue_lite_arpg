@@ -12,32 +12,26 @@ use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
 use super::vocabulary::{Behavior, BehaviorScoreExplanation};
-use super::{Action, Brain, Motion, MotionFinished};
+use super::{Action, Brain, MotionFinished, MotionKey};
 use crate::prelude::*;
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
-/// A behavior that won its slots, with its motion and action copied from the definition. It issues
-/// its motion, and its action if committed, once. The finish rules for committed and continuously
-/// scored behaviors live here.
+/// A behavior that won its slots, with its motion and action copied from the definition. It holds
+/// its motion while it runs, and issues its action, if committed, once. The finish rules for
+/// committed and continuously scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
-    pub(super) motion: Option<Motion>,
+    pub(super) motion: Option<MotionKey>,
     pub(super) action: Option<Action>,
-    pub(super) motion_issued: bool,
     pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
-    /// Whether this behavior issued `motion`.
-    pub(super) fn has_issued_motion(self, motion: Motion) -> bool {
-        self.motion_issued && self.motion == Some(motion)
-    }
-
     /// Whether this behavior issued `action`.
     pub(super) fn has_issued_action(self, action: Action) -> bool {
         self.action_issued && self.action == Some(action)
@@ -84,7 +78,9 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Applies a [`MotionFinished`]; see [`finish_and_redecide`].
+/// Applies a [`MotionFinished`]; see [`finish_and_redecide`]. It runs in the flush that despawns
+/// the finished motion, so the behavior that held it is gone before the next
+/// [`issue_running_motion`](super::issue_motion::issue_running_motion) would start it again.
 pub(super) fn on_motion_finished(
     finished: On<MotionFinished>,
     time: Res<Time<Virtual>>,
@@ -100,12 +96,12 @@ pub(super) fn on_motion_finished(
         queries: &queries,
         now: time.elapsed_secs(),
     };
-    let motion = finished.motion;
+    let motion = finished.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
     finish_and_redecide(
         &mut brain,
-        |running| running.has_issued_motion(motion),
+        |running| running.motion == Some(motion),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -176,16 +172,16 @@ pub(super) fn on_action_failed(
     );
 }
 
-/// Ends the committed behavior that issued what finished (see
+/// Ends the committed behavior that ran what finished (see
 /// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
 fn finish_and_redecide(
     brain: &mut Brain,
-    issued_what_finished: impl Fn(RunningBehavior) -> bool,
+    ran_what_finished: impl Fn(RunningBehavior) -> bool,
     inputs: &DecisionInputs,
     score_trace: Option<&mut ScoreTrace>,
     #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
 ) {
-    if brain.finish_committed_behavior(issued_what_finished) {
+    if brain.finish_committed_behavior(ran_what_finished) {
         redecide_now(brain, inputs, score_trace);
         #[cfg(feature = "dev_tools")]
         decision_stats.record_redecision();
@@ -218,6 +214,50 @@ pub(super) fn decide_behavior(
         );
         #[cfg(feature = "dev_tools")]
         decision_stats.record_paced_decision();
+    }
+}
+
+/// Checks in debug builds that each new brain's character can run every behavior the brain lists:
+/// it has a source for each motion, and each behavior suits its commit policy (see
+/// [`Behavior::suits_commit_policy`]). The policy goes unchecked while a behavior's action source
+/// is missing, since items come and go.
+pub(super) fn check_new_brains(
+    time: Res<Time<Virtual>>,
+    queries: DecisionQueries,
+    brains: Query<(Entity, &Brain, DecisionInputComponents), Added<Brain>>,
+) {
+    for (character, brain, components) in &brains {
+        let inputs = DecisionInputs {
+            components: &components,
+            queries: &queries,
+            now: time.elapsed_secs(),
+        };
+        for (index, behavior) in brain.definition().behaviors.iter().enumerate() {
+            if let Some(key) = behavior.motion {
+                debug_assert!(
+                    inputs.has_motion_source(key),
+                    "brain behavior {index} of {character:?} would never run: the character has \
+                     no {key:?} motion source"
+                );
+            }
+            let has_action_source = behavior
+                .action
+                .is_none_or(|action| action == Action::Idle || inputs.has_action_source(action));
+            debug_assert!(
+                !has_action_source || behavior.suits_commit_policy(&inputs),
+                "brain behavior {index} of {character:?} would never run: {:?} doesn't suit its \
+                 motion {:?} (ends on its own: {}) and action {:?} (ends on its own: {})",
+                behavior.commit,
+                behavior.motion,
+                behavior
+                    .motion
+                    .is_some_and(|key| inputs.motion_ends_on_its_own(key)),
+                behavior.action,
+                behavior
+                    .action
+                    .is_some_and(|action| inputs.action_ends_on_its_own(action)),
+            );
+        }
     }
 }
 

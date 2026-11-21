@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::MotionOf;
+use super::RunningMotionOf;
 use crate::character::state::Kinematics;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
@@ -98,7 +98,7 @@ impl SteeringEffort {
 /// the turn rate.
 pub(super) fn apply_steering(
     time: Res<Time<Virtual>>,
-    running_motions: Query<(&MotionOf, &Steering)>,
+    running_motions: Query<(&RunningMotionOf, &Steering)>,
     mut characters: Query<(
         &mut Kinematics,
         Option<&TurnRate>,
@@ -106,9 +106,9 @@ pub(super) fn apply_steering(
     )>,
 ) {
     let delta_secs = time.delta_secs();
-    for (motion_of, steering) in &running_motions {
+    for (running_motion_of, steering) in &running_motions {
         let Ok((mut kinematics, turn_rate, decaying_speed_boost)) =
-            characters.get_mut(motion_of.character)
+            characters.get_mut(running_motion_of.character)
         else {
             continue;
         };

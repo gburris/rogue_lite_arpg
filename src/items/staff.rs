@@ -16,7 +16,7 @@ pub const STAFF_REACH: f32 = 360.0;
 const MAGE_BOLT_SPEED_FACTOR: f32 = 0.7;
 /// Seconds between the player's flame staff casts.
 const FLAME_STAFF_COOLDOWN: f32 = 0.5;
-/// Seconds between a fire mage's single-bolt volleys, leaving time to hop and sidestep in between.
+/// Seconds between a fire mage's single-bolt volleys, leaving time to sidestep or step in between.
 const MAGE_FLAME_STAFF_COOLDOWN: f32 = 1.1;
 /// Seconds between a fire mage's three-bolt volleys: three times the bolts, fired half as often.
 const MAGE_FAN_STAFF_COOLDOWN: f32 = 2.2;

@@ -2,7 +2,7 @@ use avian2d::prelude::Mass;
 use bevy::prelude::*;
 
 use super::{
-    Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::heal;
 use crate::character::brain::considerations::{
@@ -13,7 +13,7 @@ use crate::character::brain::considerations::{
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, Motion, MotionSources};
+use crate::character::motion::{Flee, Idle, MotionKey, MotionSources, kite};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -41,8 +41,11 @@ const NEEDS_POTION: Consideration = consideration(
     Curve::Linear,
 );
 const STOOD_STILL_IN_REACH: Consideration =
-    motion_running_for("stood still in reach", Motion::Idle, WARRIOR_SWING_DELAY);
-const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionRunning(Motion::Flee));
+    motion_running_for("stood still in reach", MotionKey::Idle, WARRIOR_SWING_DELAY);
+const FLEEING: Consideration = flag(
+    "fleeing",
+    ConsiderationInput::MotionRunning(MotionKey::Flee),
+);
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
 const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL));
@@ -68,14 +71,14 @@ const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
 
 /// Breaks away to drink. A warrior with no potion left stays and fights.
 const FLEE: Behavior = Behavior::new(
-    Some(Motion::Flee),
+    Some(MotionKey::Flee),
     None,
     CommitPolicy::ContinuouslyScored,
     7.0,
     &[HAS_TARGET, BADLY_HURT, HAS_POTION],
 );
 const CHASE_MELEE: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
     4.0,
@@ -84,7 +87,7 @@ const CHASE_MELEE: Behavior = Behavior::new(
 
 /// Stands still in melee reach instead of orbiting.
 const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
-    Some(Motion::Idle),
+    Some(MotionKey::Idle),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -94,7 +97,7 @@ const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
 /// Swings once it has stood still in reach for [`WARRIOR_SWING_DELAY`], standing still
 /// throughout.
 const WARRIOR_SWING: Behavior = Behavior::new(
-    Some(Motion::Idle),
+    Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     6.5,
@@ -103,7 +106,7 @@ const WARRIOR_SWING: Behavior = Behavior::new(
 
 /// Runs out the break rolled after a swing.
 const WARRIOR_KITE: Behavior = Behavior::new(
-    Some(Motion::Dash),
+    Some(MotionKey::Kite),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     10.0,
@@ -224,9 +227,13 @@ fn warrior(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl 
             ActionGlow(HEAL_GLOW_COLOR)
         ]
         MotionSources [
-            enemy_wander()
+            {enemy_motion_sources()}
             --
-            ~Dash::kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
+            Idle
+            --
+            Flee
+            --
+            @kite(Interval::new(3.0 * TILE_SIZE as f32, 5.0 * TILE_SIZE as f32))
         ]
         template(move |_| Ok(sprite.clone()))
         Items [

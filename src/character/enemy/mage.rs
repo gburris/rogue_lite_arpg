@@ -1,19 +1,21 @@
 use bevy::prelude::*;
 
 use super::{
-    Experience, enemy_children, enemy_wander, ground_sight_ray, spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::ability::speed_and_damage_rally;
 use crate::character::brain::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, CAST_DISTANCE_RANGE, CAST_MAX_RANGE, CAST_MIN_RANGE,
     CHASE_CAST_RANGE, HAS_TARGET, IN_MAINHAND_REACH, INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT,
     MAINHAND, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, mana_at_or_below,
-    within_reach,
+    target_speed_at_most, target_within_distance, within_reach,
 };
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CommitPolicy, Consideration, ConsiderationInput, Curve,
 };
-use crate::character::motion::{Dash, KeepDistance, Motion, MotionReach, MotionSources, Orbit};
+use crate::character::motion::{
+    Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, sidestep, slide, step_in,
+};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -33,12 +35,18 @@ const FIRE_MAGE_MANA_REGEN: f32 = 4.0;
 /// fight drains it into a break to refill.
 const ICE_MAGE_MANA_REGEN: f32 = 10.0;
 
+/// How far a fire mage's sidestep or step in carries it.
+const FIRE_DASH_DISTANCE: Interval = Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32);
+const FIRE_DASH_SPEED_MULTIPLIER: f32 = 2.2;
+/// Speed at or below which a target counts as standing still.
+const TARGET_STILL_SPEED: f32 = 20.0;
+
 /// The ice mage's danger ring: its escape dash's reach.
 const ICE_SLIDE_REACH: f32 = CAST_MIN_RANGE - 30.0;
 
-const IN_DASH_REACH: Consideration = within_reach(
-    "in dash reach",
-    ConsiderationInput::MotionReachFraction(Motion::Dash),
+const IN_SLIDE_REACH: Consideration = within_reach(
+    "in slide reach",
+    ConsiderationInput::MotionReachFraction(MotionKey::Slide),
 );
 
 /// Fire mage firing-position quality: zero at the inner cast edge, full 60
@@ -81,9 +89,9 @@ const ALLY_CLOSE: Consideration = consideration(
 /// scores `CAST_WEIGHT * quality^(1/3)`.
 const CAST_WEIGHT: f32 = 8.0;
 
-/// Sidesteps for a firing lane; each post-volley hop flips the orbit direction.
+/// Sidesteps for a firing lane; each post-volley sidestep flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.5,
@@ -99,7 +107,7 @@ const FIRE_RALLY: Behavior = Behavior::new(
 );
 /// Circles on its firing lane between casts, so it never stands around waiting on the staff.
 const ICE_ORBIT: Behavior = Behavior::new(
-    Some(Motion::Orbit),
+    Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
     5.0,
@@ -108,7 +116,7 @@ const ICE_ORBIT: Behavior = Behavior::new(
 /// Breaks contact while mana is low; the threshold's exit holds it until the
 /// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance),
+    Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
@@ -116,34 +124,47 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 );
 /// Ice bolts are expensive, so the break enters earlier and lasts longer.
 const ICE_RECOVER: Behavior = Behavior::new(
-    Some(Motion::KeepDistance),
+    Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
     9.0,
     &[HAS_TARGET, mana_at_or_below("ice mana low", 0.4, 0.75)],
 );
 
-/// A tangent hop after each volley.
-const FIRE_HOP: Behavior = Behavior::new(
-    Some(Motion::Dash),
+/// A sidestep across the target's bearing after each volley.
+const FIRE_SIDESTEP: Behavior = Behavior::new(
+    Some(MotionKey::Sidestep),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     8.5,
     &[ATTACK_FINISHED, HAS_TARGET],
 );
+/// A step toward a close target that stands still.
+const FIRE_STEP_IN: Behavior = Behavior::new(
+    Some(MotionKey::StepIn),
+    None,
+    CommitPolicy::UntilFinished { interrupt_tier: 1 },
+    8.75,
+    &[
+        ATTACK_FINISHED,
+        HAS_TARGET,
+        target_within_distance("target close", CAST_MIN_RANGE - 10.0),
+        target_speed_at_most("target still", TARGET_STILL_SPEED),
+    ],
+);
 /// A straight escape when the player crosses the danger ring. Its higher tier
 /// pre-empts a cast, though a bolt already in flight still fires.
 const ICE_SLIDE: Behavior = Behavior::new(
-    Some(Motion::Dash),
+    Some(MotionKey::Slide),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 2 },
     12.0,
-    &[IN_DASH_REACH],
+    &[IN_SLIDE_REACH],
 );
 
 /// Stands still through the wind-up to cast.
 const FIRE_CAST: Behavior = Behavior::new(
-    Some(Motion::Idle),
+    Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     CAST_WEIGHT,
@@ -151,18 +172,19 @@ const FIRE_CAST: Behavior = Behavior::new(
 );
 /// Stops on the orbit to cast.
 const ICE_CAST: Behavior = Behavior::new(
-    Some(Motion::Idle),
+    Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
     CAST_WEIGHT,
     &[LINE_OF_SIGHT, IN_MAINHAND_REACH, ICE_CAST_QUALITY],
 );
 
-// Motion priority: recover (9, or 11.25 once running), hop (8.5), cast (8 at
-// full quality), seek (7), return (6), orbit (5.5), chase (4), wander (1).
-// - Recover beats the hop on the tick it starts, so a volley that drains mana starts the break
-//   instead of a hop.
-// - The hop beats a running orbit (6.875).
+// Motion priority: recover (9, or 11.25 once running), step in (8.75), sidestep (8.5), cast (8
+// at full quality), seek (7), return (6), orbit (5.5), chase (4), wander (1).
+// - Recover beats both dashes on the tick they start, so a volley that drains mana starts the break
+//   instead of a dash.
+// - A step in beats the sidestep that starts on the same volley.
+// - Both dashes beat a running orbit (6.875).
 // - The cast beats a running orbit from about 238 units away, and a newly started one from about
 //   220. A mage crowded closer orbits outward until it is about 238 away, then casts again.
 //
@@ -181,7 +203,8 @@ static FIRE_MAGE_BEHAVIORS: &[Behavior] = &[
     SEEK_LOST_TARGET,
     CHASE_CAST_RANGE,
     FIRE_ORBIT,
-    FIRE_HOP,
+    FIRE_SIDESTEP,
+    FIRE_STEP_IN,
     FIRE_CAST,
     FIRE_RALLY,
 ];
@@ -204,9 +227,9 @@ static ICE_MAGE_BEHAVIORS: &[Behavior] = &[
     ICE_CAST,
 ];
 
-/// Holds the cast distance range on a moving orbit, hops to a fresh tangent after each
-/// volley, backs off only long enough to refill a drained mana pool, and rallies nearby allies
-/// between volleys.
+/// Holds the cast distance range on a moving orbit, sidesteps to a fresh tangent (or steps in on a
+/// still, close target) after each volley, backs off only long enough to refill a drained mana
+/// pool, and rallies nearby allies between volleys.
 pub(super) static FIRE_MAGE: BrainDefinition = BrainDefinition {
     behaviors: FIRE_MAGE_BEHAVIORS,
 };
@@ -304,13 +327,15 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
         ~Kinematics::new(100.0)
         Experience(12.0)
         MotionSources [
-            enemy_wander()
+            {enemy_motion_sources()}
+            --
+            Idle
             --
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
-            ~Dash::slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
+            @slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
             ~{MotionReach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
             ~Cooldown::new(1.2)
@@ -329,14 +354,13 @@ fn fire_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> imp
         ~Kinematics::new(150.0)
         Experience(15.0)
         MotionSources [
-            enemy_wander()
+            {enemy_motion_sources()}
             --
-            // A still target inside the close range gets a step-in hop instead.
-            ~Dash::hop(
-                Interval::new(2.0 * TILE_SIZE as f32, 3.0 * TILE_SIZE as f32),
-                2.2,
-                CAST_MIN_RANGE - 10.0,
-            )
+            Idle
+            --
+            @sidestep(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
+            --
+            @step_in(FIRE_DASH_DISTANCE, FIRE_DASH_SPEED_MULTIPLIER)
             --
             ~Orbit::new(CAST_DISTANCE_RANGE)
             --

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use rand::{RngExt, rng};
 
 use super::Enemy;
+use crate::character::motion::MotionCommands;
 use crate::character::player::PlayerAttributes;
 use crate::prelude::*;
 
@@ -25,6 +26,7 @@ pub(super) fn on_enemy_defeated(
     >,
     player_query: Single<(&PlayerAttributes, &mut Player)>,
     item_query: Query<&Item>,
+    mut motions: MotionCommands,
 ) {
     let mut rng = rng();
 
@@ -59,6 +61,8 @@ pub(super) fn on_enemy_defeated(
             }
         }
 
+        // Interruption ends action uses and finite motions only; see `InterruptionState`.
+        motions.stop(defeated.entity);
         commands
             .entity(defeated.entity)
             .insert(Lifespan::new(2.0))

@@ -3,14 +3,14 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use rand::RngExt;
 
-use super::{HomeArea, RunningMotion, Steering};
+use super::{Home, HomeArea, Steering, SteeringMotionOf};
 use crate::character::state::{BlockedState, Kinematics};
 use crate::prelude::*;
 
-/// The result of advancing a finite motion by one frame.
+/// The result of advancing a motion by one frame.
 pub(super) enum MotionStep {
     Steer(Steering),
-    /// The motion ended this frame; its system despawns the running motion.
+    /// The motion ended this frame.
     Finished,
 }
 
@@ -60,53 +60,50 @@ pub(super) struct SteeredCharacter {
     transform: &'static Transform,
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
-    home_area: Option<&'static HomeArea>,
+    home: Option<&'static Home>,
     blocked: BlockedState,
 }
 
 impl SteeredCharacterItem<'_, '_> {
-    /// This frame's input for steering `running`; `None` if it needs a target and the target is
-    /// missing.
+    /// This frame's input for a running motion that steers by `steering_motion_of`, if anything.
     pub(super) fn build_steer_input(
         &self,
-        running: &RunningMotion,
+        steering_motion_of: Option<&SteeringMotionOf>,
         targets: &SteeringTargets,
         time: &Time<Virtual>,
-    ) -> Option<SteerInput<'_>> {
+    ) -> SteerInput<'_> {
         let position = self.transform.translation.xy();
-        let target = running
-            .target
-            .and_then(|target| targets.locate(position, target));
-        if running.motion.needs_target() && target.is_none() {
-            return None;
-        }
+        let target = steering_motion_of
+            .and_then(|steering_motion_of| targets.locate(position, steering_motion_of.target));
+        let home = self
+            .home
+            .and_then(|home| targets.locate_home(position, home.get()));
 
-        Some(SteerInput {
+        SteerInput {
             position,
             heading: self.kinematics.direction,
             now: time.elapsed_secs(),
             delta_secs: time.delta_secs(),
             target,
-            home_area: self.home_area,
+            home,
             kinematics: self.kinematics,
             stat_speed: self.stat_multipliers.speed,
             is_blocked: self.blocked.is_blocked(),
-        })
+        }
     }
 }
 
-/// A motion's target this frame, relative to the steering character.
+/// An entity a motion steers by this frame, relative to the steering character.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct SteeringTarget {
     pub position: Vec2,
     pub distance: f32,
     pub direction: Vec2,
-    pub velocity: Vec2,
 }
 
 impl SteeringTarget {
-    /// The direction to the target; `None` while the characters overlap.
-    fn nonzero_direction(&self) -> Option<Vec2> {
+    /// The direction to the entity; `None` while the character stands on it.
+    pub(super) fn nonzero_direction(&self) -> Option<Vec2> {
         (self.direction != Vec2::ZERO).then_some(self.direction)
     }
 }
@@ -149,6 +146,16 @@ impl CircleDirection {
         }
     }
 
+    /// The unit direction `angle` radians off the unit `bearing`, turned toward this way's tangent
+    /// (see [`Self::find_tangent`]).
+    pub(super) fn find_direction_off_bearing(self, bearing: Vec2, angle: f32) -> Vec2 {
+        let signed_angle = match self {
+            Self::Clockwise => angle,
+            Self::CounterClockwise => -angle,
+        };
+        Rot2::radians(signed_angle) * bearing
+    }
+
     /// `angle` signed to turn this way: negative for clockwise.
     pub(super) fn sign_angle(self, angle: f32) -> f32 {
         match self {
@@ -158,43 +165,38 @@ impl CircleDirection {
     }
 }
 
-/// The velocity steering assumes for a target without [`Kinematics`], such as a location hint.
-#[derive(Component, Clone, Copy, Debug, Default, Deref, DerefMut)]
-pub(in crate::character) struct AssumedVelocity(pub Vec2);
+/// A character's [`HomeArea`] this frame, relative to the character.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct SteeringHome {
+    pub center: SteeringTarget,
+    pub area: HomeArea,
+}
 
-/// Locates the targets of running motions.
+/// Locates the targets and homes of running motions.
 #[derive(SystemParam)]
 pub(super) struct SteeringTargets<'w, 's> {
-    targets: Query<
-        'w,
-        's,
-        (
-            &'static Transform,
-            Option<(&'static Kinematics, &'static StatMultipliers)>,
-            Option<&'static AssumedVelocity>,
-        ),
-    >,
+    targets: Query<'w, 's, &'static Transform>,
+    home_areas: Query<'w, 's, &'static HomeArea>,
 }
 
 impl SteeringTargets<'_, '_> {
     /// `target` relative to `observer_position`; `None` if the target no longer exists.
     fn locate(&self, observer_position: Vec2, target: Entity) -> Option<SteeringTarget> {
-        let (transform, movement, assumed_velocity) = self.targets.get(target).ok()?;
-        let position = transform.translation.xy();
+        let position = self.targets.get(target).ok()?.translation.xy();
         let offset = position - observer_position;
-        let velocity = match (movement, assumed_velocity) {
-            (Some((kinematics, stat_multipliers)), _) => {
-                kinematics.velocity(stat_multipliers.speed)
-            }
-            (None, Some(&AssumedVelocity(velocity))) => velocity,
-            (None, None) => Vec2::ZERO,
-        };
-
         Some(SteeringTarget {
             position,
             distance: offset.length(),
             direction: offset.normalize_or_zero(),
-            velocity,
+        })
+    }
+
+    /// The `home` entity's [`HomeArea`] relative to `observer_position`; `None` if it no longer
+    /// exists.
+    fn locate_home(&self, observer_position: Vec2, home: Entity) -> Option<SteeringHome> {
+        Some(SteeringHome {
+            center: self.locate(observer_position, home)?,
+            area: *self.home_areas.get(home).ok()?,
         })
     }
 }
@@ -204,7 +206,7 @@ pub(super) struct SteerInput<'a> {
     pub heading: Vec2,
     pub now: f32,
     pub target: Option<SteeringTarget>,
-    pub home_area: Option<&'a HomeArea>,
+    pub home: Option<SteeringHome>,
     delta_secs: f32,
     kinematics: &'a Kinematics,
     stat_speed: f32,
@@ -223,11 +225,11 @@ impl SteerInput<'_> {
     }
 
     pub(super) fn direction_to_home(&self) -> Option<Vec2> {
-        let home_area = self.home_area?;
-        if home_area.has_arrived(self.position) {
+        let home = self.home?;
+        if home.area.has_arrived(home.center.distance) {
             return None;
         }
-        home_area.direction_home(self.position)
+        home.center.nonzero_direction()
     }
 
     /// Advances `blocked_timer` by this frame; see [`BlockedTimer::tick_and_check_limit`] and

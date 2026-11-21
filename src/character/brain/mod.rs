@@ -28,9 +28,7 @@ pub(crate) use self::perception::lock_onto_target;
 pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
 pub use self::vocabulary::BrainDefinition;
 pub(super) use self::vocabulary::{Behavior, Consideration};
-use super::motion::{
-    AssumedVelocity, HomeArea, Motion, MotionCommands, MotionFinished, MotionStatus,
-};
+use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -39,8 +37,8 @@ const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running in its motion and
 /// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
-/// every [`DECISION_PERIOD`] with a random per-brain offset; the Execute systems note what they
-/// issued. Its requests start and stop the game's motions and actions, which report back with
+/// every [`DECISION_PERIOD`] with a random per-brain offset; issuing actions notes which actions
+/// it issued. Its requests start and stop the game's motions and actions, which report back with
 /// [`MotionFinished`], [`ActionFinished`] or [`ActionFailed`].
 #[derive(Component, Debug)]
 #[component(on_add = schedule_first_decision)]
@@ -69,7 +67,7 @@ impl Brain {
     }
 
     /// The held motion; `None` while the slot is empty.
-    pub fn motion(&self) -> Option<Motion> {
+    pub fn motion(&self) -> Option<MotionKey> {
         self.current_motion_behavior().map(|(_, motion)| motion)
     }
 
@@ -84,7 +82,7 @@ impl Brain {
         self.definition.behaviors[running.behavior]
     }
 
-    fn current_motion_behavior(&self) -> Option<(RunningBehavior, Motion)> {
+    fn current_motion_behavior(&self) -> Option<(RunningBehavior, MotionKey)> {
         self.running_behaviors
             .iter()
             .find_map(|&running| running.motion.map(|motion| (running, motion)))
@@ -97,8 +95,8 @@ impl Brain {
             .find(|running| running.action == Some(action))
     }
 
-    /// Whether any behavior with a motion of `kind` is in a start roll retry delay.
-    fn is_start_roll_waiting(&self, motion: Motion, now: f32) -> bool {
+    /// Whether any behavior with `motion` is in a start roll retry delay.
+    fn is_start_roll_waiting(&self, motion: MotionKey, now: f32) -> bool {
         self.definition
             .behaviors
             .iter()
@@ -109,34 +107,23 @@ impl Brain {
     }
 
     /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
-    /// is ready (see [`MotionStatus::is_ready`]), and its action can run (see
-    /// [`DecisionInputs::can_run`]). A committed behavior also needs an action that ends on its
-    /// own, since nothing else would end it.
+    /// is ready (see [`MotionStatus::is_ready`]), its action can run (see
+    /// [`DecisionInputs::can_run`]), and it suits its commit policy (see
+    /// [`Behavior::suits_commit_policy`]).
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
         let behavior = &self.definition.behaviors[index];
         if inputs.now < self.start_roll_ready_at[index] {
             return false;
         }
 
-        let motion_available = |motion: Motion| inputs.is_motion_ready(motion);
+        let motion_available = |key: MotionKey| inputs.is_motion_ready(key);
         let action_available = |action: Action| match action {
             Action::Idle => true,
-            Action::Use(_) => {
-                if !inputs.has_action_source(action) || !inputs.can_run(action) {
-                    return false;
-                }
-
-                let finishes =
-                    !behavior.commit.is_committed() || inputs.action_ends_on_its_own(action);
-                if !finishes {
-                    warn_once!(
-                        "a committed behavior over {action:?} never runs: its use is sustained"
-                    );
-                }
-                finishes
-            }
+            Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
         };
-        behavior.motion.is_none_or(motion_available) && behavior.action.is_none_or(action_available)
+        behavior.motion.is_none_or(motion_available)
+            && behavior.action.is_none_or(action_available)
+            && behavior.suits_commit_policy(inputs)
     }
 
     /// An attack finished since the last decision.
@@ -235,7 +222,6 @@ impl Brain {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
-            motion_issued: false,
             action_issued: false,
             committed: behavior.commit.is_committed(),
             started_at: now,
@@ -259,10 +245,6 @@ impl Brain {
             .retain(|other| other.behavior != running.behavior);
     }
 
-    fn record_issued_motion(&mut self, behavior: usize) {
-        self.running_behavior_mut(behavior).motion_issued = true;
-    }
-
     fn record_issued_action(&mut self, behavior: usize) {
         self.running_behavior_mut(behavior).action_issued = true;
     }
@@ -274,16 +256,16 @@ impl Brain {
             .expect("issued behavior is not running")
     }
 
-    /// Ends the committed behavior that issued what finished. Only a finish of something a behavior
-    /// issued ends it, so a stale finish clears nothing and returns `false`.
+    /// Ends the committed behavior whose held motion or issued action finished. A stale finish
+    /// matches no behavior, so it clears nothing and returns `false`.
     fn finish_committed_behavior(
         &mut self,
-        issued_what_finished: impl Fn(RunningBehavior) -> bool,
+        ran_what_finished: impl Fn(RunningBehavior) -> bool,
     ) -> bool {
         let Some(position) = self
             .running_behaviors
             .iter()
-            .position(|&running| running.committed && issued_what_finished(running))
+            .position(|&running| running.committed && ran_what_finished(running))
         else {
             return false;
         };
@@ -339,7 +321,9 @@ pub(super) fn plugin(app: &mut App) {
         .add_systems(
             Update,
             (
-                decide::decide_behavior.in_set(BrainSystems::Decision),
+                (decide::check_new_brains, decide::decide_behavior)
+                    .chain()
+                    .in_set(BrainSystems::Decision),
                 issue_motion::issue_running_motion.in_set(BrainSystems::Execute),
             ),
         );

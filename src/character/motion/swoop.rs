@@ -3,9 +3,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    BlockedTimer, CircleDirection, DecayingSpeedBoost, Motion, MotionOf, MotionProgress,
-    MotionStep, RunningMotion, SteerInput, SteeredCharacter, Steering, SteeringTarget,
-    SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, DecayingSpeedBoost, FiniteMotion, MotionKey, MotionProgress,
+    MotionStep, RunningMotionOf, SteerInput, Steering,
 };
 
 const SWOOP_EXTRA_SPEED: f32 = 1.0;
@@ -21,7 +20,7 @@ const SWOOP_BLOCKED_SECONDS: f32 = 0.2;
 /// A committed curved move through the target and back out. It ends early when blocked or
 /// interrupted, and leaves a [`DecayingSpeedBoost`] when it ends.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Swoop)]
+#[require(FiniteMotion, MotionKey::Swoop)]
 pub struct Swoop {
     extra_speed: f32,
     exit_turn: f32,
@@ -36,54 +35,6 @@ impl Default for Swoop {
     }
 }
 
-impl MotionProgress for SwoopProgress {
-    const MOTION: Motion = Motion::Swoop;
-}
-
-/// Advances each swoop in progress. Ends it once past the target or when the target is lost.
-pub(super) fn apply_swoop(
-    time: Res<Time<Virtual>>,
-    mut commands: Commands,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    swoops: Query<&Swoop>,
-    mut running_swoops: Query<(
-        Entity,
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut SwoopProgress,
-        &mut Steering,
-    )>,
-) {
-    for (entity, motion_of, running, tuned_by, mut progress, mut steering) in &mut running_swoops {
-        let swoop = swoops.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
-        let step = match (swoop, input) {
-            (
-                Some(&swoop),
-                Some(
-                    input @ SteerInput {
-                        target: Some(target),
-                        ..
-                    },
-                ),
-            ) => progress.step(swoop, &input, &target),
-            _ => MotionStep::Finished,
-        };
-
-        match step {
-            MotionStep::Steer(next) => *steering = next,
-            MotionStep::Finished => {
-                commands.entity(entity).try_despawn();
-            }
-        }
-    }
-}
-
 /// A [`Swoop`] in progress, on its running motion. Removing it once the swoop has taken flight,
 /// however it ended, gives the character a [`DecayingSpeedBoost`].
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -93,8 +44,14 @@ pub(super) struct SwoopProgress {
     blocked_timer: BlockedTimer,
 }
 
-impl SwoopProgress {
-    fn step(&mut self, swoop: Swoop, input: &SteerInput, target: &SteeringTarget) -> MotionStep {
+impl MotionProgress for SwoopProgress {
+    type Tuning = Swoop;
+
+    /// Ends once past the target, or when blocked or the target is lost.
+    fn step(&mut self, swoop: &Swoop, input: &SteerInput) -> MotionStep {
+        let Some(target) = input.target else {
+            return MotionStep::Finished;
+        };
         let speed_multiplier = 1.0 + swoop.extra_speed;
         let steer = |direction| MotionStep::Steer(Steering::boosted(direction, speed_multiplier));
 
@@ -126,18 +83,15 @@ impl SwoopProgress {
 }
 
 fn leave_swoop_speed_boost(mut world: DeferredWorld, context: HookContext) {
-    let Ok((progress, &MotionOf { character }, &TunedBy { source })) = world
+    let Ok((progress, &RunningMotionOf { character }, &Swoop { extra_speed, .. })) = world
         .entity(context.entity)
-        .get_components::<(&SwoopProgress, &MotionOf, &TunedBy)>()
+        .get_components::<(&SwoopProgress, &RunningMotionOf, &Swoop)>()
     else {
         return;
     };
     if progress.path.is_none() {
         return;
     }
-    let Some(&Swoop { extra_speed, .. }) = world.get(source) else {
-        return;
-    };
 
     let decaying_speed_boost =
         DecayingSpeedBoost::new(extra_speed, SWOOP_RECOVERY_TIME, EaseFunction::SmoothStep);

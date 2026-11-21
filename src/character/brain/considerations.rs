@@ -1,7 +1,7 @@
 use super::action::Action;
 use super::engine::{CommitPolicy, Curve, ScoreMapping};
 use super::inputs::ConsiderationInput;
-use super::{Behavior, Consideration, Motion};
+use super::{Behavior, Consideration, MotionKey};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -32,7 +32,11 @@ pub const fn consideration(
 
 /// Whether `motion` has been running for more than `seconds`; see
 /// [`ConsiderationInput::SecondsInMotion`].
-pub const fn motion_running_for(name: &'static str, motion: Motion, seconds: f32) -> Consideration {
+pub const fn motion_running_for(
+    name: &'static str,
+    motion: MotionKey,
+    seconds: f32,
+) -> Consideration {
     Consideration {
         name,
         input: ConsiderationInput::SecondsInMotion(motion),
@@ -103,6 +107,20 @@ pub const fn target_within_distance(name: &'static str, distance: f32) -> Consid
     distance_threshold(name, distance, distance)
 }
 
+/// Target moving at most `speed`, with no hysteresis.
+pub const fn target_speed_at_most(name: &'static str, speed: f32) -> Consideration {
+    assert!(speed.is_finite(), "threshold needs a finite speed");
+    Consideration {
+        name,
+        input: ConsiderationInput::TargetSpeed,
+        score_mapping: ScoreMapping::Threshold {
+            enter: speed,
+            exit: speed,
+        },
+        inverted: false,
+    }
+}
+
 /// A 0-or-1 input scored as itself.
 pub const fn flag(name: &'static str, input: ConsiderationInput) -> Consideration {
     consideration(name, input, Interval::new(0.0, 1.0), Curve::Linear)
@@ -156,21 +174,21 @@ pub const INSIDE_OUTER_CAST_EDGE: Consideration = distance_threshold(
 );
 
 pub const WANDER: Behavior = Behavior::new(
-    Some(Motion::Wander),
+    Some(MotionKey::Wander),
     None,
     CommitPolicy::ContinuouslyScored,
     1.0,
     &[NO_TARGET],
 );
 pub const RETURN_TO_HOME: Behavior = Behavior::new(
-    Some(Motion::ReturnToHome),
+    Some(MotionKey::ReturnToHome),
     None,
     CommitPolicy::ContinuouslyScored,
     6.0,
     &[NO_TARGET, HOME_AREA_PULL],
 );
 pub const CHASE_CAST_RANGE: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
     4.0,
@@ -179,7 +197,7 @@ pub const CHASE_CAST_RANGE: Behavior = Behavior::new(
 
 /// Walks to where a target that slipped out of sight was last seen.
 pub const SEEK_LOST_TARGET: Behavior = Behavior::new(
-    Some(Motion::Chase),
+    Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
     7.0,

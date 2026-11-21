@@ -11,7 +11,7 @@ use self::defeat::Experience;
 pub use self::kind::EnemyKind;
 pub use self::spawn::{EnemySpawn, SpawnEnemies};
 use self::spawn::{
-    enemy_children, enemy_wander, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,
+    enemy_children, enemy_motion_sources, ground_sight_ray, sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::Character;
 use crate::character::brain::VisionCone;

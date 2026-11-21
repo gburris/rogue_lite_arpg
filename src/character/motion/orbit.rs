@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use rand::RngExt;
 
 use super::{
-    BlockedTimer, CircleDirection, Motion, MotionOf, MotionProgress, RunningMotion, SteerInput,
-    SteeredCharacter, Steering, SteeringTargets, TunedBy,
+    BlockedTimer, CircleDirection, MotionKey, MotionProgress, MotionStep, SteerInput, Steering,
 };
 use crate::interval::{Interval, Spread};
 
@@ -18,7 +17,7 @@ const ORBIT_TURN_BACK_SECONDS: f32 = 0.5;
 /// Circles the target within a distance range. It rerolls its direction over time and reverses
 /// when blocked.
 #[derive(Component, Clone, Copy, Debug)]
-#[require(Motion::Orbit)]
+#[require(MotionKey::Orbit)]
 pub struct Orbit {
     distance_range: Interval,
     reroll_interval: Interval,
@@ -105,35 +104,10 @@ impl OrbitProgress {
 }
 
 impl MotionProgress for OrbitProgress {
-    const MOTION: Motion = Motion::Orbit;
-}
+    type Tuning = Orbit;
 
-/// Circles the target while the character runs [`Motion::Orbit`].
-pub(super) fn apply_orbit(
-    time: Res<Time<Virtual>>,
-    targets: SteeringTargets,
-    characters: Query<SteeredCharacter>,
-    orbits: Query<&Orbit>,
-    mut running_orbits: Query<(
-        &MotionOf,
-        &RunningMotion,
-        &TunedBy,
-        &mut OrbitProgress,
-        &mut Steering,
-    )>,
-) {
-    for (motion_of, running, tuned_by, mut progress, mut steering) in &mut running_orbits {
-        let orbit = orbits.get(tuned_by.source).ok();
-        let character = characters.get(motion_of.character).ok();
-        let input = character
-            .as_ref()
-            .and_then(|character| character.build_steer_input(running, &targets, &time));
-        *steering = match (orbit, input) {
-            (Some(orbit), Some(input)) => {
-                let direction = progress.pick_steering_direction(orbit, &input);
-                Steering::scaled(direction, 1.0)
-            }
-            _ => Steering::HALT,
-        };
+    fn step(&mut self, orbit: &Orbit, input: &SteerInput) -> MotionStep {
+        let direction = self.pick_steering_direction(orbit, input);
+        MotionStep::Steer(Steering::scaled(direction, 1.0))
     }
 }

@@ -236,7 +236,8 @@ pub(super) fn check_new_brains(
             if let Some(key) = behavior.motion {
                 debug_assert!(
                     inputs.has_motion_source(key),
-                    "brain behavior {index} of {character:?} would never run: the character has                      no {key:?} motion source"
+                    "brain behavior {index} of {character:?} would never run: the character has \
+                     no {key:?} motion source"
                 );
             }
             let has_action_source = behavior
@@ -244,10 +245,17 @@ pub(super) fn check_new_brains(
                 .is_none_or(|action| action == Action::Idle || inputs.has_action_source(action));
             debug_assert!(
                 !has_action_source || behavior.suits_commit_policy(&inputs),
-                "brain behavior {index} of {character:?} would never run: {:?} needs other                  sources for {:?} and {:?}",
+                "brain behavior {index} of {character:?} would never run: {:?} doesn't suit its \
+                 motion {:?} (ends on its own: {}) and action {:?} (ends on its own: {})",
                 behavior.commit,
                 behavior.motion,
+                behavior
+                    .motion
+                    .is_some_and(|key| inputs.motion_ends_on_its_own(key)),
                 behavior.action,
+                behavior
+                    .action
+                    .is_some_and(|action| inputs.action_ends_on_its_own(action)),
             );
         }
     }

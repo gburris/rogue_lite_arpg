@@ -38,6 +38,20 @@ struct Gold {
     pub value: u32,
 }
 
+const MAGNETIC_FORCE: f32 = 2_000_000.0;
+
+#[derive(Component, Default, Clone)]
+#[require(
+    CollidingEntities,
+    Sensor,
+    Collider::circle(200.0),
+    CollisionLayers::new(
+        GameCollisionLayer::Interaction,
+        [GameCollisionLayer::PlayerInteractionRadius]
+    )
+)]
+struct Magnet;
+
 fn collect_gold(
     mut commands: Commands,
     gold_query: Query<(Entity, &Gold, &CollidingEntities)>,
@@ -103,20 +117,6 @@ fn gold(gold_image: Handle<Image>, value: u32, location: Vec2) -> impl Scene {
         ]
     }
 }
-
-const MAGNETIC_FORCE: f32 = 2_000_000.0;
-
-#[derive(Component, Default, Clone)]
-#[require(
-    CollidingEntities,
-    Sensor,
-    Collider::circle(200.0),
-     CollisionLayers::new(
-        GameCollisionLayer::Interaction,
-        [GameCollisionLayer::PlayerInteractionRadius]
-    )
-)]
-struct Magnet;
 
 fn update_magnet_locations(
     magnet_query: Query<(&ChildOf, &GlobalTransform, &CollidingEntities), With<Magnet>>,

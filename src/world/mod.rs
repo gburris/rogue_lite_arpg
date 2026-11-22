@@ -9,16 +9,14 @@ use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
     pub use super::MapRng;
-    pub use super::chest::SpawnChests;
     pub use super::gold::{DropGold, Purse};
     #[cfg(feature = "dev_native")]
     pub use super::map::prelude::MapBlueprint;
     #[cfg(feature = "dev_tools")]
     pub use super::map::prelude::MapRecipe;
-    pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
+    pub use super::map::prelude::{MapRequest, NextMap, TILE_SIZE, TileToWorld};
     #[cfg(feature = "dev_native")]
     pub use super::portal::Portal;
-    pub use super::portal::portal;
 }
 
 pub(super) fn plugin(app: &mut App) {

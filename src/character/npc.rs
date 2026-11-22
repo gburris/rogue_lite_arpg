@@ -4,7 +4,7 @@ use serde::Deserialize;
 use super::brain::{
     ACTION_BASELINE_IDLE, Behavior, Brain, BrainDefinition, RETURN_TO_HOME, WANDER,
 };
-use super::motion::{Home, HomeArea, ReturnToHome, Wander};
+use super::motion::{Home, HomeArea, MotionSources, ReturnToHome, Wander};
 use super::{Character, physical_collider};
 use crate::interval::Interval;
 use crate::prelude::*;

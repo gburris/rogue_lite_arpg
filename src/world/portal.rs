@@ -22,7 +22,7 @@ pub(super) fn plugin(app: &mut App) {
 )]
 pub struct Portal;
 
-pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
+pub(super) fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
     let image = sprites.exit_door.clone();
     bsn! {
         Portal

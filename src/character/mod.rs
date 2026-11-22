@@ -29,7 +29,7 @@ pub mod prelude {
     pub use super::kinematics::{
         FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
     };
-    pub use super::motion::{MotionKey, MotionSources, RunningMotion, Wander, WanderProgress};
+    pub use super::motion::{MotionKey, RunningMotion, Wander, WanderProgress};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
     pub use super::player::prelude::{
         Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,

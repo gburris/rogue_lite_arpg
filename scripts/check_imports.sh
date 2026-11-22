@@ -17,7 +17,7 @@ if [ -n "$hits" ]; then
   status=1
 fi
 
-hits=$(grep -rn 'pub(crate)' src --include='*.rs' | grep -vE '^[^:]+:[0-9]+:\s*//')
+hits=$(grep -rnE 'pub\((in )?crate\)' src --include='*.rs' | grep -vE '^[^:]+:[0-9]+:\s*//')
 if [ -n "$hits" ]; then
   echo "error: use pub instead of pub(crate); the private top-level mods keep it in the crate:"
   echo "$hits"
@@ -28,10 +28,14 @@ fi
 features=$(awk '/^pub mod prelude \{/ { inside = 1; next } inside && /^\}/ { exit }
   inside && match($0, /super::[a-z_0-9]+/) { print substr($0, RSTART + 7, RLENGTH - 7) }' \
   src/main.rs | sort -u)
+if [ -z "$features" ]; then
+  echo "error: found no features in the crate prelude in src/main.rs"
+  exit 1
+fi
 
 for feature in $features; do
   hits=$(grep -rnE "crate::${feature}::" src --include='*.rs' \
-    --exclude-dir="$feature" --exclude="${feature}.rs" --exclude=main.rs \
+    | grep -vE "^src/(${feature}/|${feature}\.rs:|main\.rs:)" \
     | grep -vE '^[^:]+:[0-9]+:\s*//')
   if [ -n "$hits" ]; then
     echo "error: import ${feature} items through crate::prelude, not crate::${feature}::..."
@@ -76,37 +80,40 @@ if [ -n "$hits" ]; then
   status=1
 fi
 
-# Every line of code outside comments and prelude blocks, as `path:line`.
+# Every line of code outside prelude blocks, as `path:line`, without comments or string literals.
 usages=$(mktemp)
 trap 'rm -f "$usages"' EXIT
 find src -name '*.rs' | sort | while IFS= read -r file; do
   awk -v file="$file" '
     /^pub mod prelude \{/ { inside = 1; next }
     inside { if (/^\}/) inside = 0; next }
-    /^[ \t]*\/\// { next }
-    { print file ":" $0 }
+    {
+      gsub(/"([^"\\]|\\.)*"/, "\"\"")
+      sub(/\/\/.*$/, "")
+      if ($0 ~ /[^ \t]/) print file ":" $0
+    }
   ' "$file"
 done >"$usages"
 
 # Prints `feature name` for each item a prelude block exports. A feature's `mod.rs` prelude
-# exports for that feature; a crate prelude line exports for the module it names.
+# exports for that feature; a crate prelude line exports for the `super::` module it names.
 prelude_entries() {
   local file=$1 feature=$2
   awk '/^pub mod prelude \{/ { inside = 1; next } inside && /^\}/ { exit }
-    inside && !/^[ \t]*#/ { printf "%s ", $0 }' "$file" \
+    inside && !/^[ \t]*(#|\/\/)/ { printf "%s ", $0 }' "$file" \
     | tr ';' '\n' \
     | while IFS= read -r statement; do
       case "$statement" in *'*'* | '') continue ;; esac
-      path=$(echo "$statement" | sed -E 's/^[[:space:]]*pub(\([^)]*\))?[[:space:]]+use[[:space:]]+//')
+      path=$(echo "$statement" \
+        | sed -E 's/^[[:space:]]*pub(\([^)]*\))?[[:space:]]+use[[:space:]]+//')
       owner=$feature
       if [ -z "$owner" ]; then
+        case "$path" in super::*) ;; *) continue ;; esac
         owner=$(echo "$path" | sed -E 's/^super::([a-z_0-9]+).*/\1/')
       fi
-      case "$path" in
-        *'{'*) names=$(echo "$path" | sed -E 's/^[^{]*\{//; s/\}.*$//' | tr ',' '\n') ;;
-        *) names=${path##*::} ;;
-      esac
-      echo "$names" | sed -E 's/.* as //; s/[[:space:]]//g' | grep -v '^$' \
+      # Splits nested groups (`a::{X, Y}`) into entries and keeps each one's exported name.
+      echo "$path" | sed -E 's/^[^{]*\{//; s/\}[[:space:]]*$//' | tr '{},' '\n\n\n' \
+        | sed -E 's/.*[[:space:]]as[[:space:]]+//; s/.*:://; s/[[:space:]]//g' | grep -v '^$' \
         | sed "s/^/$owner /"
     done
 }

@@ -8,6 +8,8 @@ use super::blueprint::{MapBlueprint, PlacementKind};
 use super::tile_appearance::tile_appearance;
 use super::tiles::{TileGrid, TileKind, TileRect};
 use crate::prelude::*;
+use crate::world::chest::SpawnChests;
+use crate::world::portal::portal;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(TilemapPlugin);

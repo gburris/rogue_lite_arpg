@@ -66,7 +66,7 @@ impl CountRange {
 
 /// Selects a footprint origin in tile coordinates.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
-pub enum Anchor {
+pub(super) enum Anchor {
     /// Center the footprint on the map.
     Center,
     /// Center on the map, then offset the footprint origin by this many tiles.
@@ -179,7 +179,7 @@ fn overlaps(first_rect: TileRect, second_rect: TileRect) -> bool {
 
 /// Places footprints and returns their origins; random and edge rules may place fewer than
 /// requested. Successful placements update context; fixed placement does not advance the RNG.
-pub fn place(
+pub(super) fn place(
     rule: &PlaceRule,
     footprint: UVec2,
     tiles: &TileGrid,

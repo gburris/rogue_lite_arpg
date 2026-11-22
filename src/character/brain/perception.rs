@@ -144,14 +144,14 @@ pub(in crate::character) struct WatchedBy(Vec<Entity>);
 /// the target.
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = TargetLocationHint)]
-pub struct LocationHint {
+pub(super) struct LocationHint {
     pub character: Entity,
 }
 
 /// The [`LocationHint`] for this character's target.
 #[derive(Component, Debug)]
 #[relationship_target(relationship = LocationHint, linked_spawn)]
-pub struct TargetLocationHint(Entity);
+pub(super) struct TargetLocationHint(Entity);
 
 impl TargetLocationHint {
     pub(super) fn location_hint(&self) -> Entity {

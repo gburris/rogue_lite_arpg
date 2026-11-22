@@ -163,7 +163,7 @@ pub(super) fn on_toggle_inventory(
 }
 
 #[derive(Component, Default, Clone)]
-pub struct PauseControl;
+pub(super) struct PauseControl;
 
 /// The pause and inventory toggles, added to the player. They stay active in menus, so the key
 /// that opened a menu also closes it.

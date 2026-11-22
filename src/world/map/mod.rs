@@ -49,11 +49,11 @@ use ::bevy::prelude::*;
 /// Map exports other features use: map requests, placement anchors, and tile-to-world lookup.
 pub mod prelude {
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::blueprint::MapBlueprint;
+    pub use super::blueprint::MapBlueprint;
     pub use super::build::{MapRequest, NextMap};
     pub use super::placement::{Anchor, place};
     #[cfg(feature = "dev_tools")]
-    pub(crate) use super::recipe::MapRecipe;
+    pub use super::recipe::MapRecipe;
     pub use super::spawn::{TILE_SIZE, TileToWorld};
 }
 

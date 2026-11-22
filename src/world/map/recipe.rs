@@ -69,7 +69,7 @@ pub(super) struct RecipeEntry {
 
 /// Resolved map generation settings loaded from a recipe definition.
 #[derive(Clone, Debug)]
-pub(crate) struct MapRecipe {
+pub struct MapRecipe {
     pub(super) name: String,
     pub(super) weight: u32,
     pub(super) size_x_range: CountRange,

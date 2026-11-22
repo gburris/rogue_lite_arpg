@@ -3,15 +3,14 @@ mod pause;
 mod stats_shop;
 
 pub mod prelude {
-    pub use super::Menu;
-    pub(crate) use super::pause_actions;
+    pub use super::{Menu, pause_actions};
 }
 
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
 use self::pause::MenuBackground;
-pub(crate) use self::pause::{PauseControl, pause_actions};
+pub use self::pause::{PauseControl, pause_actions};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((inventory::plugin, pause::plugin, stats_shop::plugin));

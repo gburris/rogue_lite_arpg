@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Checks the import rules that rustfmt and clippy can't:
 # - no `super::super` (reach further up through `crate::`)
+# - no `pub(crate)`: in this binary crate it means the same as `pub`
 # - code outside a feature imports it through `crate::prelude`, never `crate::<feature>::...`
 # - a file reaches its own folder through `self::`/`super::`, never `crate::<its folder>::...`
 # - a child module is imported with `self::` (`pub use self::child::X`), so rustfmt's
@@ -12,6 +13,13 @@ status=0
 hits=$(grep -rn 'super::super' src --include='*.rs' | grep -vE '^[^:]+:[0-9]+:\s*//')
 if [ -n "$hits" ]; then
   echo "error: use a crate:: path instead of super::super:"
+  echo "$hits"
+  status=1
+fi
+
+hits=$(grep -rn 'pub(crate)' src --include='*.rs' | grep -vE '^[^:]+:[0-9]+:\s*//')
+if [ -n "$hits" ]; then
+  echo "error: use pub instead of pub(crate); the private top-level mods keep it in the crate:"
   echo "$hits"
   status=1
 fi

@@ -114,11 +114,11 @@ fn set_controls(
 
 #[derive(InputAction)]
 #[action_output(bool)]
-pub(crate) struct UseMainhand;
+pub struct UseMainhand;
 
 #[derive(InputAction)]
 #[action_output(bool)]
-pub(crate) struct UseOffhand;
+pub struct UseOffhand;
 
 const MAINHAND: ActionKey = ActionKey::Equipped(EquipmentSlot::Mainhand);
 const OFFHAND: ActionKey = ActionKey::Equipped(EquipmentSlot::Offhand);
@@ -181,7 +181,7 @@ fn on_player_aim(
 
 /// Moves the reticle to `offset` from the player, at most [`AIM_DISTANCE`] away, and points the
 /// player's vision at it.
-pub(crate) fn place_player_aim(offset: Vec2, vision: &mut Vision, aim_transform: &mut Transform) {
+pub fn place_player_aim(offset: Vec2, vision: &mut Vision, aim_transform: &mut Transform) {
     let offset = offset.clamp_length_max(AIM_DISTANCE);
 
     aim_transform.translation = offset.extend(0.0);
@@ -208,7 +208,7 @@ fn grab_cursor_when_focused(
 
 #[derive(InputAction)]
 #[action_output(Vec2)]
-pub(crate) struct PlayerMovement;
+pub struct PlayerMovement;
 
 fn on_player_movement(
     movement: On<Fire<PlayerMovement>>,

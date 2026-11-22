@@ -207,7 +207,7 @@ impl StressArena {
     }
 
     /// Sends the game's first map request, the hub, to the stress recipe.
-    pub(crate) fn redirect_hub(request: MapRequest) -> MapRequest {
+    pub fn redirect_hub(request: MapRequest) -> MapRequest {
         match request {
             MapRequest::Hub => MapRequest::Named {
                 recipe: RECIPE_NAME.to_owned(),
@@ -218,7 +218,7 @@ impl StressArena {
     }
 
     /// Returns the stress recipe with its enemy counts replaced, or `None` for any other recipe.
-    pub(crate) fn override_counts(self, recipe: &MapRecipe) -> Option<MapRecipe> {
+    pub fn override_counts(self, recipe: &MapRecipe) -> Option<MapRecipe> {
         if recipe.name() != RECIPE_NAME {
             return None;
         }

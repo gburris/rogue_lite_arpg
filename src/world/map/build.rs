@@ -176,7 +176,7 @@ fn push_point(
 /// A build stage. Each stage draws from its own `ChaCha8` stream of the map seed, so adding or
 /// changing spawns never shifts the terrain, and changing one spawn kind leaves the others.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Stage {
+pub enum Stage {
     Size,
     Structures,
     /// Spawns at fixed anchors, of any kind, in file order.
@@ -208,7 +208,7 @@ impl Stage {
 }
 
 /// Generates a map blueprint from a recipe and deterministic seed.
-pub(crate) fn build_from_recipe(
+pub fn build_from_recipe(
     recipe: &MapRecipe,
     seed: u64,
     structures: &BTreeMap<String, Structure>,

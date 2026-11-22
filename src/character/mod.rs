@@ -19,12 +19,12 @@ pub mod prelude {
     pub use super::Character;
     pub use super::ability::{Abilities, Ability};
     #[cfg(feature = "dev")]
-    pub(crate) use super::brain::TargetInfo;
+    pub use super::brain::TargetInfo;
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::brain::lock_onto_target;
+    pub use super::brain::lock_onto_target;
     pub use super::brain::{Brain, ScoreTrace};
     #[cfg(feature = "dev_tools")]
-    pub(crate) use super::brain::{TargetLock, Targeting, VisionCone};
+    pub use super::brain::{TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::kinematics::{
         FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,
@@ -36,9 +36,7 @@ pub mod prelude {
         PlayerInteraction, PlayerInteractionRadius,
     };
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::player::prelude::{
-        PlayerMovement, UseMainhand, UseOffhand, place_player_aim,
-    };
+    pub use super::player::prelude::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
 }
 
 pub(super) fn plugin(app: &mut App) {

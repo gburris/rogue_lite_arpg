@@ -163,11 +163,11 @@ pub(super) fn on_toggle_inventory(
 }
 
 #[derive(Component, Default, Clone)]
-pub(crate) struct PauseControl;
+pub struct PauseControl;
 
 /// The pause and inventory toggles, added to the player. They stay active in menus, so the key
 /// that opened a menu also closes it.
-pub(crate) fn pause_actions() -> impl Scene {
+pub fn pause_actions() -> impl Scene {
     // Escape un-grabs the cursor on the web, so it can't pause there.
     let escape = (!cfg!(target_family = "wasm")).then_some(bsn_list! {
         Binding(KeyCode::Escape)

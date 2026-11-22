@@ -26,11 +26,11 @@ pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
 use self::perception::TargetLocationHint;
 #[cfg(feature = "dev_tools")]
-pub(crate) use self::perception::TargetLock;
+pub use self::perception::TargetLock;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
-pub(crate) use self::perception::lock_onto_target;
-pub(crate) use self::perception::{TargetInfo, Targeting, VisionCone};
+pub use self::perception::lock_onto_target;
+pub use self::perception::{TargetInfo, Targeting, VisionCone};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;

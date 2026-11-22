@@ -59,7 +59,7 @@ pub struct Projectiles(Vec<Entity>);
 /// Travel speed of a standard fireball, in world units per second.
 pub const FIREBALL_SPEED: f32 = 450.0;
 /// Distance a standard fireball covers during its one-second default lifespan.
-pub const FIREBALL_RANGE: f32 = 450.0;
+const FIREBALL_RANGE: f32 = 450.0;
 
 pub fn fireball(
     sprites: &SpriteAssets,

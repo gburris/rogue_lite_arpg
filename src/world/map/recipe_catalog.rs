@@ -21,7 +21,7 @@ use crate::prelude::*;
 
 /// Loaded map recipes and the structures available to place in them.
 #[derive(Resource, Debug)]
-pub struct RecipeCatalog {
+pub(super) struct RecipeCatalog {
     pub(super) hub: MapRecipe,
     pub(super) recipes: BTreeMap<String, MapRecipe>,
     pub(super) structures: BTreeMap<String, Structure>,

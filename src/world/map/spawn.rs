@@ -275,7 +275,7 @@ fn spawn_placements(
 // ---------------------------------------------------------------------------
 
 /// Largest map width or height, in tiles, that recipe validation accepts.
-pub const MAX_MAP_TILES: u32 = 256;
+pub(super) const MAX_MAP_TILES: u32 = 256;
 /// Width and height of a square map tile, in world units.
 pub const TILE_SIZE: u32 = 32;
 

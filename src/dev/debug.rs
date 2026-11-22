@@ -34,7 +34,6 @@ pub(super) fn plugin(app: &mut App) {
                     .in_set(InGameSystems::PlayerInput)
                     .ambiguous_with_all(),
                 (
-                    draw_camera_debug_gizmos,
                     debug_vision,
                     spawn_enemy_ai_labels,
                     update_enemy_ai_labels,
@@ -61,8 +60,9 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+/// Present while debug rendering is toggled on.
 #[derive(Resource)]
-struct DebugRenderEnabled;
+pub struct DebugRenderEnabled;
 
 fn toggle_debug_render(
     mut commands: Commands,

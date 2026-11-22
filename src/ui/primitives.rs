@@ -159,7 +159,7 @@ fn gold_border() -> impl Scene {
 }
 
 /// A gold outline around its children.
-pub fn gold_frame() -> impl Scene {
+pub(super) fn gold_frame() -> impl Scene {
     bsn! {
         Node {
             border: px(2),
@@ -172,7 +172,7 @@ pub fn gold_frame() -> impl Scene {
 
 /// The layout the start and loading screens share: a pulsing title, a `centerpiece` in the
 /// middle, and a `tagline` along the bottom, between two gold stripes.
-pub fn splash_screen<S: States + Unpin>(
+pub(super) fn splash_screen<S: States + Unpin>(
     state: S,
     title: &str,
     centerpiece: impl Scene,
@@ -233,7 +233,7 @@ pub fn splash_screen<S: States + Unpin>(
 
 /// Text whose color pulses between dim and bright orange.
 #[derive(Component, Default, Clone)]
-pub struct PulsingText;
+pub(super) struct PulsingText;
 
 pub(super) fn pulse_text(
     // Real time, so the text keeps pulsing in menus while game time is paused.
@@ -308,7 +308,7 @@ pub fn menu_button(label: &str) -> impl Scene {
 }
 
 /// A gold-trimmed button for the start and game over screens.
-pub fn gold_button(label: &str, font_size: f32) -> impl Scene {
+pub(super) fn gold_button(label: &str, font_size: f32) -> impl Scene {
     bsn! {
         @button(label, font_size, GOLD_TEXT_COLOR, GOLD_BUTTON_COLORS)
         Node { border: px(2) }

@@ -23,6 +23,14 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.add_systems(FixedUpdate, ysort_transforms.in_set(MainSystems::InGame));
+
+    #[cfg(feature = "dev")]
+    app.add_systems(
+        Update,
+        draw_camera_debug_gizmos
+            .in_set(InGameSystems::HudOverlay)
+            .run_if(resource_exists::<DebugRenderEnabled>),
+    );
 }
 
 #[derive(Component, Clone)]
@@ -236,7 +244,7 @@ fn find_camera_target(player_position: Vec2, aim: Vec2) -> Vec2 {
 
 /// Draws the camera target, its distance limit and the player's pull radius.
 #[cfg(feature = "dev")]
-pub fn draw_camera_debug_gizmos(
+fn draw_camera_debug_gizmos(
     player: Single<&Transform, (With<Player>, Without<PlayerAim>, Without<Camera>)>,
     player_aim: Single<&Transform, With<PlayerAim>>,
     mut gizmos: Gizmos,

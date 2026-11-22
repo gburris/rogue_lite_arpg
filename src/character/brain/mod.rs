@@ -24,13 +24,17 @@ use self::engine::validate_brain;
 pub(super) use self::engine::{CommitPolicy, Curve};
 pub(super) use self::inputs::ConsiderationInput;
 use self::inputs::DecisionInputs;
+#[cfg(feature = "dev")]
+pub use self::perception::TargetInfo;
 use self::perception::TargetLocationHint;
 #[cfg(feature = "dev_tools")]
 pub use self::perception::TargetLock;
+#[cfg(feature = "dev_tools")]
+pub use self::perception::Targeting;
+pub use self::perception::VisionCone;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub use self::perception::lock_onto_target;
-pub use self::perception::{TargetInfo, Targeting, VisionCone};
 use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;

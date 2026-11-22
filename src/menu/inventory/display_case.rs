@@ -9,11 +9,11 @@ use crate::prelude::*;
 /// Div that wraps all display slots, but not top level component.
 #[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = DisplayedBy)]
-pub struct DisplayCaseOf(Entity);
+pub(super) struct DisplayCaseOf(Entity);
 
 #[derive(Component)]
 #[relationship_target(relationship = DisplayCaseOf)]
-pub struct DisplayedBy(Entity);
+pub(super) struct DisplayedBy(Entity);
 
 /// Trigger on entity with Inventory component (i.e. the player entity) to update their associated
 /// display case.

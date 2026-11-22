@@ -206,7 +206,7 @@ pub(super) fn on_attempt_damage(
 }
 
 #[derive(Component, Deref, DerefMut)]
-pub struct DamageFlash(Timer);
+pub(super) struct DamageFlash(Timer);
 
 impl Default for DamageFlash {
     fn default() -> Self {

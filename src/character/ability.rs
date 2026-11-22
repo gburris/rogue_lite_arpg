@@ -50,7 +50,7 @@ const BITE_HITBOX_SECONDS: f32 = 0.3;
 /// edge sits at the ability's [`ActionReach`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Ability::Bite)]
-pub struct Bite {
+pub(super) struct Bite {
     damage: f32,
     life_steal: f32,
     hitbox_radius: f32,
@@ -87,7 +87,7 @@ impl Bite {
 }
 
 /// A bite ability carrying `bite` that reaches `reach`.
-pub fn bite(reach: f32, bite: Bite) -> impl Scene {
+pub(super) fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
         ~{ActionReach(reach)}
@@ -134,11 +134,11 @@ fn on_bite_took_effect(
 /// holder's aim.
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(Ability::Breath)]
-pub struct Breath;
+struct Breath;
 
 /// A breath ability that fires its [`Projectiles`] templates at targets within `reach`. The reach
 /// only tells a brain when to breathe; a projectile may fly past it.
-pub fn breath(reach: f32) -> impl Scene {
+pub(super) fn breath(reach: f32) -> impl Scene {
     bsn! {
         Breath
         ~{ActionReach(reach)}
@@ -170,7 +170,7 @@ fn on_breath_took_effect(
 pub struct Heal;
 
 /// A heal ability that drinks the holder's first carried potion when it takes effect.
-pub fn heal() -> impl Scene {
+pub(super) fn heal() -> impl Scene {
     bsn! {
         Heal
         ~{RequiredItem(ItemKind::Potion)}
@@ -206,7 +206,7 @@ pub struct Rally;
 
 /// A [`Rally`] ability whose war cry raises the speed and damage of allies within `reach` by
 /// `raise` for `seconds`.
-pub fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
+pub(super) fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         Rally
         ~{ActionReach(reach)}

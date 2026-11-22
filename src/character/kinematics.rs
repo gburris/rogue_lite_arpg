@@ -58,7 +58,7 @@ impl InterruptionStateItem<'_, '_> {
 /// Whether a character is blocked: its physics velocity is well below the velocity its
 /// [`Kinematics`] intend. Never true while it stands still or is stunned.
 #[derive(QueryData)]
-pub struct BlockedState {
+pub(super) struct BlockedState {
     kinematics: &'static Kinematics,
     stat_multipliers: &'static StatMultipliers,
     linear_velocity: &'static LinearVelocity,
@@ -218,7 +218,7 @@ impl Default for Vision {
 }
 
 /// Circle collider at the character's feet that collides with the ground and obstacles.
-pub fn physical_collider() -> impl Scene {
+pub(super) fn physical_collider() -> impl Scene {
     bsn! {
         Transform::from_xyz(0.0, CHARACTER_FEET_POS_OFFSET, 0.0)
         ~Collider::circle(10.0)

@@ -12,7 +12,7 @@ use super::tiles::{TileGrid, TileRect};
 /// Recipes spell it as a bare number (`count: 1`) or an inclusive pair (`count: (10, 15)`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "CountRangeInput")]
-pub struct CountRange {
+pub(super) struct CountRange {
     pub min: u32,
     pub max: u32,
 }
@@ -21,7 +21,7 @@ pub struct CountRange {
 /// recipes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "(u32, u32)")]
-pub struct DecileRange {
+pub(super) struct DecileRange {
     pub min: u32,
     pub max: u32,
 }
@@ -82,7 +82,7 @@ pub(super) enum Anchor {
 
 /// Map edge whose interior row or column should hold the footprint.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
-pub enum Side {
+pub(super) enum Side {
     Left,
     Right,
     Top,
@@ -91,7 +91,7 @@ pub enum Side {
 
 /// Placement strategy shared by structures, features, and map entities.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PlaceRule {
+pub(super) enum PlaceRule {
     /// Place once at the given anchor; does not advance the RNG.
     Fixed(Anchor),
     /// Try to place an inclusive random count within the half-open x-decile interval.
@@ -115,7 +115,7 @@ pub enum PlaceRule {
 
 /// Tracks reserved footprints and named structure centers during map building.
 #[derive(Clone, Debug, Default)]
-pub struct PlaceContext {
+pub(super) struct PlaceContext {
     /// Dimensions of the map being populated.
     pub map_size: UVec2,
     /// Footprint rectangles reserved against overlap.

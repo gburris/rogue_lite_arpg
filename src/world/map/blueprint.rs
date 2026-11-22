@@ -176,7 +176,7 @@ impl fmt::Display for MapValidationError {
 impl std::error::Error for MapValidationError {}
 /// An error raised while generating or validating a map.
 #[derive(Debug)]
-pub enum MapError {
+pub(super) enum MapError {
     Generation(String),
     Validation(MapValidationError),
 }

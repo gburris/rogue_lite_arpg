@@ -11,10 +11,10 @@ pub mod prelude {
     pub use super::MapRng;
     pub use super::gold::{DropGold, Purse};
     #[cfg(feature = "dev_native")]
-    pub use super::map::prelude::MapBlueprint;
+    pub use super::map::MapBlueprint;
     #[cfg(feature = "dev_tools")]
-    pub use super::map::prelude::MapRecipe;
-    pub use super::map::prelude::{MapRequest, NextMap, TILE_SIZE, TileToWorld};
+    pub use super::map::MapRecipe;
+    pub use super::map::{MapRequest, NextMap, TILE_SIZE, TileToWorld};
     #[cfg(feature = "dev_native")]
     pub use super::portal::Portal;
 }

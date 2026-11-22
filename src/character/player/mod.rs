@@ -5,18 +5,14 @@ mod progression;
 mod spawn;
 mod status_bars;
 
-pub mod prelude {
-    pub use super::Player;
-    pub use super::input::PlayerAim;
-    #[cfg(feature = "dev_native")]
-    pub use super::input::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
-    pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
-    pub use super::progression::{Attribute, GameProgress, PlayerAttributes};
-}
-
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
+pub use self::input::PlayerAim;
+#[cfg(feature = "dev_native")]
+pub use self::input::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
+pub use self::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
+pub use self::progression::{Attribute, GameProgress, PlayerAttributes};
 use crate::character::Character;
 use crate::prelude::*;
 

@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use super::equipment::prelude::{DirectionalPoses, EquipmentPose};
+use super::equipment::{DirectionalPoses, EquipmentPose};
 use crate::interval::Interval;
 use crate::prelude::*;
 

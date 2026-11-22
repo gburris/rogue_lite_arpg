@@ -31,12 +31,12 @@ pub mod prelude {
     };
     pub use super::motion::{MotionKey, RunningMotion, Wander, WanderProgress};
     pub use super::npc::{Npc, NpcKind, NpcSpawn, SpawnNpcs};
-    pub use super::player::prelude::{
+    pub use super::player::{
         Attribute, GameProgress, InteractionZone, Player, PlayerAim, PlayerAttributes,
         PlayerInteraction, PlayerInteractionRadius,
     };
     #[cfg(feature = "dev_native")]
-    pub use super::player::prelude::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
+    pub use super::player::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
 }
 
 pub(super) fn plugin(app: &mut App) {

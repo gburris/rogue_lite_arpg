@@ -1,15 +1,12 @@
 mod stat_modifier;
 mod status;
 
-pub mod prelude {
-    pub use super::stat_modifier::{Stat, StatMultipliers, stat_modifier};
-    pub use super::status::{ApplyEffects, Burning, Effects, Frozen, Rallied};
-}
-
 use bevy::prelude::*;
 
+pub use self::stat_modifier::{Stat, StatMultipliers, stat_modifier};
 #[cfg(feature = "dev_tools")]
 pub(super) use self::status::StatusOf;
+pub use self::status::{ApplyEffects, Burning, Effects, Frozen, Rallied};
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {

@@ -20,7 +20,7 @@ pub mod prelude {
         FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileReflection, Projectiles, fireball,
         fireball_with_speed, icebolt, pull_back_from_walls,
     };
-    pub use super::status_effects::prelude::{
+    pub use super::status_effects::{
         ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,
     };
 }

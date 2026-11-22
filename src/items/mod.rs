@@ -8,7 +8,7 @@ mod offhand;
 mod staff;
 
 pub mod prelude {
-    pub use super::equipment::prelude::{
+    pub use super::equipment::{
         Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip,
     };
     pub use super::inventory::{

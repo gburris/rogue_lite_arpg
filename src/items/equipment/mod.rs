@@ -3,12 +3,9 @@ use bevy::prelude::*;
 mod equipment_pose;
 mod slot;
 
+pub use self::equipment_pose::{DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose};
+pub use self::slot::{Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip};
 use crate::prelude::*;
-
-pub mod prelude {
-    pub use super::equipment_pose::{DEFAULT_EQUIPMENT_POSES, DirectionalPoses, EquipmentPose};
-    pub use super::slot::{Equip, EquipmentSlot, Equippable, Equipped, Mainhand, Offhand, Unequip};
-}
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(slot::plugin);

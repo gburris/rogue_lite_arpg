@@ -2,12 +2,13 @@
 # Checks the import rules that rustfmt and clippy can't:
 # - no `super::super` (reach further up through `crate::`)
 # - no `pub(crate)` or `pub(in crate)`: in this binary crate they mean the same as `pub`
+# - only the crate and top-level features have a `prelude`; nested folders re-export flat
 # - code outside a feature imports it through `crate::prelude`, never `crate::<feature>::...`
 # - a file reaches its own folder through `self::`/`super::`, never `crate::<its folder>::...`
 # - a child module is imported with `self::` (`pub use self::child::X`), so rustfmt's
 #   `group_imports` doesn't sort it in with external crates
-# Warns about prelude entries nothing outside their folder names, since unused glob imports don't
-# warn.
+# Warns about prelude entries and nested re-exports nothing outside their folder names, since
+# unused glob imports and `pub use` don't warn.
 set -u
 status=0
 
@@ -21,6 +22,15 @@ fi
 hits=$(grep -rnE 'pub\((in )?crate\)' src --include='*.rs' | grep -vE '^[^:]+:[0-9]+:\s*//')
 if [ -n "$hits" ]; then
   echo "error: use pub instead of pub(crate); the private top-level mods keep it in the crate:"
+  echo "$hits"
+  status=1
+fi
+
+hits=$(grep -rn '^pub mod prelude' src --include='*.rs' \
+  | grep -vE '^src/([a-z_0-9]+/mod|main)\.rs:')
+if [ -n "$hits" ]; then
+  echo "error: only the crate and top-level features have a prelude; nested folders re-export"
+  echo "with pub use self::... in their mod.rs:"
   echo "$hits"
   status=1
 fi
@@ -145,13 +155,18 @@ find src -name '*.rs' | sort | while IFS= read -r file; do
   ' "$file"
 done >"$usages"
 
-# Prints `owner name` for each item a prelude block exports. A `mod.rs` prelude exports for its
-# folder (`combat`, `combat/status_effects`); a crate prelude line for the `super::` module it
-# names.
-prelude_entries() {
-  local file=$1 feature=$2
-  awk '/^pub mod prelude \{/ { inside = 1; next } inside && /^\}/ { exit }
-    inside && !/^[ \t]*(#|\/\/)/ { printf "%s ", $0 }' "$file" \
+# Prints `owner name` for each item a file exports: a feature's prelude block, or a nested folder's
+# `pub use self::...` re-exports. They export for their folder (`combat`, `combat/status_effects`);
+# a crate prelude line exports for the `super::` module it names.
+export_entries() {
+  local file=$1 feature=$2 kind=$3
+  if [ "$kind" = prelude ]; then
+    awk '/^pub mod prelude \{/ { inside = 1; next } inside && /^\}/ { exit }
+      inside && !/^[ \t]*(#|\/\/)/ { printf "%s ", $0 }' "$file"
+  else
+    awk 'collect { printf "%s ", $0; if (/;/) collect = 0; next }
+      /^pub(\([^)]*\))? use self::/ { printf "%s ", $0; if (!/;/) collect = 1 }' "$file"
+  fi \
     | tr ';' '\n' \
     | while IFS= read -r statement; do
       case "$statement" in *'*'* | '') continue ;; esac
@@ -170,18 +185,21 @@ prelude_entries() {
 }
 
 stale=$( {
-  prelude_entries src/main.rs ""
+  export_entries src/main.rs "" prelude
   find src -mindepth 2 -name mod.rs | sort | while IFS= read -r file; do
-    grep -q '^pub mod prelude {' "$file" || continue
     owner=${file#src/}
-    prelude_entries "$file" "${owner%/mod.rs}"
+    owner=${owner%/mod.rs}
+    case "$owner" in
+      */*) export_entries "$file" "$owner" reexports ;;
+      *) export_entries "$file" "$owner" prelude ;;
+    esac
   done
 } | sort -u | while read -r owner name; do
   grep -vE "^src/${owner}(/|\.rs:)" "$usages" | grep -qw -- "$name" \
     || echo "  ${owner}: ${name}"
 done)
 if [ -n "$stale" ]; then
-  echo "warning: prelude entries nothing outside their folder uses (drop them, or narrow the item):"
+  echo "warning: exports nothing outside their folder uses (drop them, or narrow the item):"
   echo "$stale"
 fi
 

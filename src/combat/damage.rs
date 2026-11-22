@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use super::health::{Health, IFrames};
 use super::hitbox::HurtBox;
-use super::status_effects::prelude::{ApplyEffects, Effects};
+use super::status_effects::{ApplyEffects, Effects};
 use crate::interval::Interval;
 use crate::prelude::*;
 

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::damage::{AttemptDamage, Damage, Knockback};
 use super::hitbox::HurtBox;
-use super::status_effects::prelude::Burning;
+use super::status_effects::Burning;
 use crate::interval::Interval;
 use crate::prelude::*;
 

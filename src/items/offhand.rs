@@ -2,7 +2,7 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
-use super::equipment::prelude::DEFAULT_EQUIPMENT_POSES;
+use super::equipment::DEFAULT_EQUIPMENT_POSES;
 use crate::interval::Interval;
 use crate::prelude::*;
 

@@ -14,11 +14,11 @@ pub mod prelude {
     #[cfg(feature = "dev_tools")]
     pub use super::damage::Invincible;
     pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
-    pub use super::health::{AttemptHeal, Healed, Health, IFrames, Mana, ManaCost, ManaDrainRate};
-    pub use super::hitbox::{HitBox, HurtBox, LifeSteal, hurtbox, hurtbox_at};
+    pub use super::health::{AttemptHeal, Health, IFrames, Mana, ManaCost, ManaDrainRate};
+    pub use super::hitbox::{HitBox, LifeSteal, hurtbox, hurtbox_at};
     pub use super::projectile::{
-        FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileAttacker, ProjectileReflection,
-        Projectiles, fireball, fireball_with_speed, icebolt, pull_back_from_walls,
+        FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileReflection, Projectiles, fireball,
+        fireball_with_speed, icebolt, pull_back_from_walls,
     };
     pub use super::status_effects::prelude::{
         ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,

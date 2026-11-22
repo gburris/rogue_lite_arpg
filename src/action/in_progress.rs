@@ -39,7 +39,7 @@ pub struct TimedActionProgress(Timer);
 /// The light a winding-up use of an [`ActionGlow`] source shines on its holder.
 #[derive(Component, Clone, Copy, Debug)]
 #[component(on_remove = despawn_action_glow_light)]
-pub(super) struct ActionGlowLight(Entity);
+struct ActionGlowLight(Entity);
 
 /// Present on an [`ActionSource`] while a use of it is under way, from the start of its wind-up
 /// until the use ends as its [`ActionUseStyle`] says. An interrupted holder's use ends; see

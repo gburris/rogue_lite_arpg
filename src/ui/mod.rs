@@ -7,10 +7,9 @@ use crate::prelude::*;
 
 pub mod prelude {
     pub use super::primitives::{
-        BACKGROUND_COLOR, BODY_FONT_SIZE, ButtonBorderColors, ButtonColors, CAPTION_FONT_SIZE,
-        DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT, MENU_BUTTON_COLORS,
-        MUTED_TEXT_COLOR, ROW_COLOR, SMALL_FONT_SIZE, button, menu_button, menu_footer,
-        menu_header, menu_screen, muted_text, panel, spacer, text, unpause_hint, width,
+        BACKGROUND_COLOR, BODY_FONT_SIZE, ButtonColors, CAPTION_FONT_SIZE, DARK_GRAY_ALPHA_COLOR,
+        ROW_COLOR, SMALL_FONT_SIZE, button, menu_button, menu_footer, menu_screen, muted_text,
+        panel, spacer, text, unpause_hint, width,
     };
 }
 

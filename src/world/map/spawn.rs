@@ -123,7 +123,7 @@ fn spawn_tiles(
 /// Collider marker for map geometry that is removed when gameplay ends.
 #[derive(Component, Default, Clone)]
 #[require(DespawnOnExit::<AppState>(AppState::Playing))]
-pub struct MapCollider;
+struct MapCollider;
 
 fn spawn_colliders(
     mut commands: Commands,

@@ -162,7 +162,7 @@ fn damage_on_projectile_hit(
 /// Character that fired a projectile, stamped when it is fired and transferred
 /// to the blocker on reflection.
 #[derive(Component, Clone, Copy)]
-pub struct ProjectileAttacker {
+struct ProjectileAttacker {
     pub attacker: Option<Entity>,
 }
 

@@ -36,7 +36,7 @@ pub(super) struct CooldownIndicator;
 
 #[derive(Component, Default, Clone)]
 #[require(Lifespan::new(0.1))]
-pub(super) struct ErrorFlash;
+struct ErrorFlash;
 
 const ACTION_BOX_SIZE: f32 = 50.0;
 const ACTION_BOX_BORDER: f32 = 2.0;

@@ -12,32 +12,32 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 #[derive(Component, Default, Clone)]
-pub struct StatShopMenu;
+struct StatShopMenu;
 
 /// Which way a stats shop button moves its attribute.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum StatChange {
+enum StatChange {
     #[default]
     Increase,
     Decrease,
 }
 
 #[derive(Component, Clone, Default)]
-pub struct StatShopButton {
+struct StatShopButton {
     pub attribute: Attribute,
     pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct ChangeStat {
+struct ChangeStat {
     pub attribute: Attribute,
     pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct UpdateStatsUi;
+struct UpdateStatsUi;
 
-pub fn spawn_stats_shop_menu(
+fn spawn_stats_shop_menu(
     mut commands: Commands,
     player_attributes: Single<&PlayerAttributes>,
     game_progress: ResMut<GameProgress>,
@@ -141,7 +141,7 @@ fn on_stat_button_activated(
     }
 }
 
-pub fn on_change_stat(
+fn on_change_stat(
     trigger: On<ChangeStat>,
     mut player_attributes: Query<&mut PlayerAttributes>,
     mut game_progress: ResMut<GameProgress>,
@@ -181,7 +181,7 @@ pub fn on_change_stat(
     }
 }
 
-pub fn on_update_stats_ui(
+fn on_update_stats_ui(
     _: On<UpdateStatsUi>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,

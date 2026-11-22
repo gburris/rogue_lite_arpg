@@ -90,7 +90,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scen
     }
 }
 
-pub fn on_slot_clicked(
+fn on_slot_clicked(
     pointer_click: On<PointerClick>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
@@ -128,7 +128,7 @@ pub fn on_slot_clicked(
     Ok(())
 }
 
-pub fn on_slot_hover(
+fn on_slot_hover(
     pointer_over: On<PointerOver>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
@@ -137,7 +137,7 @@ pub fn on_slot_hover(
     }
 }
 
-pub fn on_slot_done_hovering(
+fn on_slot_done_hovering(
     pointer_out: On<PointerOut>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {

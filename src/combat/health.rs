@@ -3,6 +3,7 @@ use std::time::Duration;
 use avian2d::prelude::ColliderAabb;
 use bevy::prelude::*;
 
+use super::hitbox::HurtBox;
 use crate::interval::{Spread, fraction_of_max};
 use crate::prelude::*;
 
@@ -13,7 +14,7 @@ pub struct AttemptHeal {
 }
 
 #[derive(EntityEvent)]
-pub struct Healed {
+pub(super) struct Healed {
     pub entity: Entity,
     pub amount: f32,
 }

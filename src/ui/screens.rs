@@ -7,7 +7,7 @@ use super::primitives::{
 use crate::prelude::*;
 
 #[derive(Component, Default, Clone)]
-pub struct LoadScreen;
+struct LoadScreen;
 
 pub(super) fn load_screen() -> impl Scene {
     bsn! {
@@ -64,7 +64,7 @@ fn begin_button() -> impl Scene {
 }
 
 #[derive(Component, Default, Clone)]
-pub struct GameOverScreen;
+struct GameOverScreen;
 
 pub(super) fn game_over_screen() -> impl Scene {
     bsn! {

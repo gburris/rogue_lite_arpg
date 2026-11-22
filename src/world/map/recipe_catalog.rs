@@ -101,7 +101,7 @@ pub(super) fn load_recipe_catalog() -> Result<RecipeCatalog> {
 }
 
 /// Resolves, validates and smoke-builds every recipe in a parsed recipe file.
-pub(super) fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
+fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
     let structures = file
         .structures
         .into_iter()
@@ -181,17 +181,17 @@ pub(super) fn catalog_from_file(file: RecipeFile) -> Result<RecipeCatalog> {
 use std::fs::File;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn fetch_recipe_data() -> Result<File> {
+fn fetch_recipe_data() -> Result<File> {
     File::open("assets/config/map_recipes.ron")
         .map_err(|error| format!("failed to open assets/config/map_recipes.ron: {error}").into())
 }
 
 #[cfg(target_arch = "wasm32")]
-pub(super) fn fetch_recipe_data() -> &'static [u8] {
+fn fetch_recipe_data() -> &'static [u8] {
     include_bytes!("../../../assets/config/map_recipes.ron")
 }
 
-pub(super) fn load_recipe_file() -> Result<RecipeFile> {
+fn load_recipe_file() -> Result<RecipeFile> {
     #[cfg(not(target_arch = "wasm32"))]
     let reader = BufReader::new(fetch_recipe_data()?);
     #[cfg(target_arch = "wasm32")]
@@ -201,14 +201,11 @@ pub(super) fn load_recipe_file() -> Result<RecipeFile> {
         .map_err(|error| format!("failed to parse assets/config/map_recipes.ron: {error}").into())
 }
 
-pub(super) fn recipe_options() -> Options {
+fn recipe_options() -> Options {
     Options::default().with_default_extension(Extensions::IMPLICIT_SOME)
 }
 
-pub(super) fn validate_recipe(
-    recipe: &MapRecipe,
-    structures: &BTreeMap<String, Structure>,
-) -> Result<()> {
+fn validate_recipe(recipe: &MapRecipe, structures: &BTreeMap<String, Structure>) -> Result<()> {
     for (name, range) in [
         ("size_x", recipe.size_x_range),
         ("size_y", recipe.size_y_range),
@@ -360,7 +357,7 @@ fn validate_location(
 }
 
 /// Returns whether any structure in the recipe carries a glyph placement matching `wanted`.
-pub(super) fn structures_place(
+fn structures_place(
     recipe: &MapRecipe,
     structures: &BTreeMap<String, Structure>,
     wanted: impl Fn(&PlacementKind) -> bool,

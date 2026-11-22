@@ -8,17 +8,15 @@ use rand::{Rng, RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 pub mod prelude {
-    pub(crate) use super::MapRng;
-    pub use super::chest::SpawnChests;
-    pub use super::gold::DropGold;
+    pub use super::MapRng;
+    pub use super::gold::{DropGold, Purse};
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::map::prelude::MapBlueprint;
+    pub use super::map::MapBlueprint;
     #[cfg(feature = "dev_tools")]
-    pub(crate) use super::map::prelude::MapRecipe;
-    pub use super::map::prelude::{Anchor, MapRequest, NextMap, TILE_SIZE, TileToWorld, place};
+    pub use super::map::MapRecipe;
+    pub use super::map::{MapRequest, NextMap, TILE_SIZE, TileToWorld};
     #[cfg(feature = "dev_native")]
-    pub(crate) use super::portal::Portal;
-    pub use super::portal::portal;
+    pub use super::portal::Portal;
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -34,7 +32,7 @@ pub(super) fn plugin(app: &mut App) {
 
 /// Seeded root generator for map layouts, also used for choices made before a map is built.
 #[derive(Resource, Deref, DerefMut)]
-pub(crate) struct MapRng(ChaCha8Rng);
+pub struct MapRng(ChaCha8Rng);
 
 impl MapRng {
     fn seeded(seed: u64) -> Self {
@@ -42,12 +40,12 @@ impl MapRng {
     }
 
     /// Draws the build seed for the next map.
-    pub(crate) fn next_map_seed(&mut self) -> u64 {
+    pub fn next_map_seed(&mut self) -> u64 {
         self.next_u64()
     }
 
     /// Deterministic coin flip on the map stream for spawn-time variants.
-    pub(crate) fn flip(&mut self) -> bool {
+    pub fn flip(&mut self) -> bool {
         self.random_bool(0.5)
     }
 }

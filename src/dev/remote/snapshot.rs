@@ -8,7 +8,7 @@ use bevy::remote::BrpResult;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::json::{debug_name, entity_id, parse_params, position};
+use super::methods::{debug_name, entity_id, parse_params, position};
 use crate::prelude::*;
 
 /// Most hits kept for snapshots to read; older ones are dropped first.

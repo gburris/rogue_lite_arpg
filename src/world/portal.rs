@@ -20,9 +20,9 @@ pub(super) fn plugin(app: &mut App) {
     YSort,
     DespawnOnExit::<AppState>(AppState::Playing)
 )]
-pub(crate) struct Portal;
+pub struct Portal;
 
-pub fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
+pub(super) fn portal(sprites: &SpriteAssets, position: Vec2) -> impl Scene {
     let image = sprites.exit_door.clone();
     bsn! {
         Portal

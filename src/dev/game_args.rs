@@ -9,7 +9,7 @@ use super::stress::StressArgs;
 /// exit before a window opens.
 #[derive(Resource, Parser, Clone, Copy, Debug)]
 #[command(about = "Baba Yaga development flags.")]
-pub(crate) struct GameArgs {
+pub struct GameArgs {
     #[command(flatten)]
     pub(super) stress: StressArgs,
 
@@ -18,7 +18,7 @@ pub(crate) struct GameArgs {
         long,
         help = "Write the Update and FixedUpdate schedule graphs to runs/schedules, then exit"
     )]
-    pub(crate) dump_schedules: bool,
+    pub dump_schedules: bool,
 
     #[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
     #[arg(

@@ -11,7 +11,7 @@ const OUTPUT_DIR: &str = "runs/schedules";
 
 /// Writes the schedule graphs for `--dump-schedules`. Render one with
 /// `dot -Tsvg runs/schedules/update.dot -o update.svg`.
-pub(crate) fn dump_schedules(app: &mut App) {
+pub fn dump_schedules(app: &mut App) {
     // Plugins add their final systems in `finish`, so the graph is only complete afterwards.
     app.finish();
     app.cleanup();

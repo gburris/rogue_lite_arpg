@@ -31,6 +31,8 @@ pub(super) use self::game_args::GameArgs;
 pub(super) use self::schedule_dump::dump_schedules;
 
 pub mod prelude {
+    #[cfg(feature = "dev")]
+    pub use super::debug::DebugRenderEnabled;
     pub use super::stress::StressArena;
 }
 

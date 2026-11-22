@@ -5,9 +5,11 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::blueprint::{MapBlueprint, PlacementKind};
+use super::tile_appearance::tile_appearance;
 use super::tiles::{TileGrid, TileKind, TileRect};
-use super::tiling::tile_appearance;
 use crate::prelude::*;
+use crate::world::chest::SpawnChests;
+use crate::world::portal::portal;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins(TilemapPlugin);
@@ -72,7 +74,7 @@ fn spawn_tiles(
             };
 
             let tile_position = TilePos { x, y };
-            // Seeded tint comes from tiling; nothing else varies per tile.
+            // Seeded tint comes from the tile's appearance; nothing else varies per tile.
             let color = appearance
                 .brightness
                 .map_or_else(TileColor::default, |brightness| {
@@ -123,7 +125,7 @@ fn spawn_tiles(
 /// Collider marker for map geometry that is removed when gameplay ends.
 #[derive(Component, Default, Clone)]
 #[require(DespawnOnExit::<AppState>(AppState::Playing))]
-pub struct MapCollider;
+struct MapCollider;
 
 fn spawn_colliders(
     mut commands: Commands,
@@ -273,7 +275,7 @@ fn spawn_placements(
 // ---------------------------------------------------------------------------
 
 /// Largest map width or height, in tiles, that recipe validation accepts.
-pub const MAX_MAP_TILES: u32 = 256;
+pub(super) const MAX_MAP_TILES: u32 = 256;
 /// Width and height of a square map tile, in world units.
 pub const TILE_SIZE: u32 = 32;
 

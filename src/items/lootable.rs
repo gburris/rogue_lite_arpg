@@ -39,7 +39,7 @@ const ITEM_DROP_AREA: Rectangle = Rectangle {
                 ..default()
     },
 )]
-pub struct Lootable {
+struct Lootable {
     elapsed: f32,
 }
 

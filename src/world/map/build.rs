@@ -7,10 +7,10 @@ use rand_chacha::ChaCha8Rng;
 
 use super::blueprint::{MapBlueprint, MapError, Placement, PlacementKind};
 use super::placement::{PlaceContext, place};
-use super::recipe::{MapRecipe, RecipeCatalog, StructureKind, load_recipes, resolved_name};
+use super::recipe::{MapRecipe, StructureKind, resolved_name};
+use super::recipe_catalog::{RecipeCatalog, load_recipes};
 use super::structures::{Structure, apply_structure, build_empty_square, build_pond, build_rubble};
 use crate::prelude::*;
-use crate::world::MapRng;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, load_recipes);
@@ -111,7 +111,7 @@ fn reload_recipe_catalog(
         return;
     }
     *observed = Some(modified);
-    match super::recipe::load_recipe_catalog() {
+    match super::recipe_catalog::load_recipe_catalog() {
         Ok(catalog) => {
             commands.insert_resource(catalog);
             commands.insert_resource(RebuildCurrentMap);
@@ -176,7 +176,7 @@ fn push_point(
 /// A build stage. Each stage draws from its own `ChaCha8` stream of the map seed, so adding or
 /// changing spawns never shifts the terrain, and changing one spawn kind leaves the others.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Stage {
+pub(super) enum Stage {
     Size,
     Structures,
     /// Spawns at fixed anchors, of any kind, in file order.
@@ -208,7 +208,7 @@ impl Stage {
 }
 
 /// Generates a map blueprint from a recipe and deterministic seed.
-pub(crate) fn build_from_recipe(
+pub(super) fn build_from_recipe(
     recipe: &MapRecipe,
     seed: u64,
     structures: &BTreeMap<String, Structure>,

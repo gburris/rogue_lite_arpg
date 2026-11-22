@@ -1,6 +1,5 @@
-//! How a consideration turns one raw input into a `0.0..=1.0` score.
-
-use super::behavior::{Behavior, BrainVocabulary};
+use super::assignment::{SkipReason, find_skip_reason, momentum_multiplier};
+use super::behavior::{Behavior, BrainDefinition, BrainVocabulary};
 use crate::interval::Interval;
 
 /// One normalized input to a behavior's score.
@@ -108,7 +107,7 @@ pub(super) fn score_behavior<V: BrainVocabulary>(
 /// The first zero vetoes and stops there, leaving later scores unread, so a behavior lists its
 /// cheap considerations first. Each passing flag raises graded inputs to a higher root, so adding
 /// a flag shifts a behavior's crossovers. Brains are tuned against that root.
-pub(super) fn combine_consideration_scores(
+fn combine_consideration_scores(
     weight: f32,
     scores: impl IntoIterator<Item = Option<f32>>,
 ) -> Option<f32> {
@@ -132,7 +131,7 @@ pub(super) fn combine_consideration_scores(
 
 /// Scores one consideration from its `raw` input; `None` when the score
 /// mapping rejects a non-finite raw value.
-pub(super) fn score_consideration<V: BrainVocabulary>(
+fn score_consideration<V: BrainVocabulary>(
     consideration: &Consideration<V>,
     raw: Option<f32>,
     is_current: bool,
@@ -149,4 +148,71 @@ pub(super) fn score_consideration<V: BrainVocabulary>(
     } else {
         score
     })
+}
+
+/// One consideration's part in a score. `raw` is `None` when the input is
+/// absent; `score` is `None` when the score mapping rejects the raw value.
+#[derive(Clone, Copy, Debug)]
+pub struct ConsiderationScoreExplanation<V: BrainVocabulary> {
+    pub name: &'static str,
+    pub input: V::Input,
+    pub raw: Option<f32>,
+    pub score: Option<f32>,
+}
+
+/// How one behavior scored, for the debug trace: why it sat out, or its final
+/// score with `momentum` applied (`None` when invalid).
+#[derive(Clone, Debug)]
+pub struct BehaviorScoreExplanation<V: BrainVocabulary> {
+    pub skipped: Option<SkipReason>,
+    pub score: Option<f32>,
+    pub momentum: f32,
+    pub considerations: Vec<ConsiderationScoreExplanation<V>>,
+}
+
+/// Explains behavior `index` exactly as
+/// [`assign_behaviors_to_slots`](super::assignment::assign_behaviors_to_slots) scores it from the
+/// same inputs, reading each consideration's input once.
+pub(in crate::character::brain) fn explain_behavior<V: BrainVocabulary>(
+    definition: &BrainDefinition<V>,
+    index: usize,
+    read: &impl Fn(V::Input) -> Option<f32>,
+    available: &impl Fn(usize) -> bool,
+    running_behavior_ids: &[usize],
+) -> BehaviorScoreExplanation<V> {
+    let behavior = &definition.behaviors[index];
+    let is_current = running_behavior_ids.contains(&index);
+    let momentum = momentum_multiplier(is_current);
+    let skipped = find_skip_reason(definition, index, available, running_behavior_ids);
+    if skipped.is_some() {
+        return BehaviorScoreExplanation {
+            skipped,
+            score: None,
+            momentum,
+            considerations: Vec::new(),
+        };
+    }
+    let considerations: Vec<_> = behavior
+        .considerations
+        .iter()
+        .map(|consideration| {
+            let raw = read(consideration.input);
+            ConsiderationScoreExplanation {
+                name: consideration.name,
+                input: consideration.input,
+                raw,
+                score: score_consideration(consideration, raw, is_current),
+            }
+        })
+        .collect();
+    BehaviorScoreExplanation {
+        skipped,
+        score: combine_consideration_scores(
+            behavior.weight,
+            considerations.iter().map(|explanation| explanation.score),
+        )
+        .map(|score| score * momentum),
+        momentum,
+        considerations,
+    }
 }

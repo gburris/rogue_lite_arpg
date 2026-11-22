@@ -1,26 +1,19 @@
 mod inventory;
 mod pause;
-mod player_stats;
 mod stats_shop;
 
 pub mod prelude {
     pub use super::Menu;
-    pub(crate) use super::pause_actions;
+    pub use super::pause::pause_actions;
 }
 
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-use self::pause::MenuBackground;
-pub(crate) use self::pause::{PauseControl, pause_actions};
+use self::pause::{MenuBackground, PauseControl};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((
-        inventory::plugin,
-        pause::plugin,
-        player_stats::plugin,
-        stats_shop::plugin,
-    ));
+    app.add_plugins((inventory::plugin, pause::plugin, stats_shop::plugin));
 
     app.init_state::<Menu>();
 

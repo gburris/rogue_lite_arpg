@@ -39,7 +39,7 @@ impl InteractionZone {
 
 #[derive(InputAction)]
 #[action_output(bool)]
-pub struct PlayerInteractionInput;
+pub(super) struct PlayerInteractionInput;
 
 #[derive(EntityEvent)]
 pub struct PlayerInteraction {

@@ -9,7 +9,7 @@ use super::tiles::{TileGrid, TileKind, TileRect};
 
 /// Tile data and placement markers for a reusable map structure.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Structure {
+pub(super) struct Structure {
     /// Tile values, with `None` marking cells left unchanged when applied.
     pub tiles: TileGrid<Option<TileKind>>,
     /// Placement markers stored in coordinates local to this structure.
@@ -18,7 +18,7 @@ pub struct Structure {
 
 /// Parses top-to-bottom glyph rows into a bottom-left-origin tile and placement grid.
 /// `:` leaves the destination tile untouched when the structure is applied.
-pub fn structure_from_glyphs(floor: TileKind, text: &str) -> Result<Structure, MapError> {
+pub(super) fn structure_from_glyphs(floor: TileKind, text: &str) -> Result<Structure, MapError> {
     let rows: Vec<_> = text.trim_matches(['\r', '\n']).lines().collect();
     let Some(first_row) = rows.first() else {
         return Err("structure glyphs are empty".into());
@@ -70,7 +70,7 @@ pub fn structure_from_glyphs(floor: TileKind, text: &str) -> Result<Structure, M
 }
 
 /// Applies non-empty cells and placement markers at the supplied bottom-left origin.
-pub fn apply_structure(
+pub(super) fn apply_structure(
     blueprint: &mut MapBlueprint,
     structure: &Structure,
     structure_origin: IVec2,
@@ -103,7 +103,7 @@ pub fn apply_structure(
 /// RON spells `size: Exact((14, 9))` or `size: Ranged((6, 4), (12, 8))`;
 /// omitting it keeps the feature's classic square size roll.
 #[derive(Clone, Copy, Debug, Deserialize)]
-pub enum FeatureSize {
+pub(super) enum FeatureSize {
     /// Fixed footprint.
     Exact(FootprintSize),
     /// Independently rolled width and height between the two corners.
@@ -113,7 +113,7 @@ pub enum FeatureSize {
 /// Width and height of a feature footprint in tiles. Recipes spell it as `(width, height)`.
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(from = "(u32, u32)")]
-pub struct FootprintSize {
+pub(super) struct FootprintSize {
     pub width: u32,
     pub height: u32,
 }
@@ -126,7 +126,7 @@ impl From<(u32, u32)> for FootprintSize {
 
 /// Fill shape for a builtin feature.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
-pub enum FeatureShape {
+pub(super) enum FeatureShape {
     /// Fill the entire claimed rectangle.
     #[default]
     Square,
@@ -166,7 +166,7 @@ fn claim_feature_footprint(
 
 /// Generates an enclosed dead-zone square of 3–10 tiles, including its wall.
 /// Returns the placed square's center tile, or `None` when placement failed.
-pub fn build_empty_square(
+pub(super) fn build_empty_square(
     blueprint: &mut MapBlueprint,
     context: &mut PlaceContext,
     rule: &PlaceRule,
@@ -217,7 +217,7 @@ pub fn build_empty_square(
 /// ground movement and spawns, and merges into colliders automatically. `Blob`
 /// shape paints an organic shoreline instead of a square.
 /// Returns the pond's center tile, or `None` when placement failed.
-pub fn build_pond(
+pub(super) fn build_pond(
     blueprint: &mut MapBlueprint,
     context: &mut PlaceContext,
     rule: &PlaceRule,
@@ -260,7 +260,7 @@ pub fn build_pond(
 /// Scatters wall rubble via the entry's rule: use the entry's `count` for scattered
 /// coverage, or set `size` for a solid rubble chunk.
 /// Returns the chunk's center tile, or `None` when placement failed.
-pub fn build_rubble(
+pub(super) fn build_rubble(
     blueprint: &mut MapBlueprint,
     context: &mut PlaceContext,
     rule: &PlaceRule,

@@ -1,20 +1,39 @@
-//! Small BSN scenes shared by every screen, menu and the HUD.
-//!
-//! Each function returns a scene fragment that callers include with `@` and then patch: a
-//! fragment sets a sensible base, and the call site layers its own `Node`, colors, observers or
-//! `Children` on top.
-
 use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
 use bevy::ui::Pressed;
 use bevy::ui_widgets::Button;
 
-use super::constants::{
-    BODY_FONT_SIZE, BRIGHT_GOLD_COLOR, DARK_GRAY_ALPHA_COLOR, DARK_GRAY_COLOR, FOOTER_HEIGHT,
-    GOLD_COLOR, GOLD_TEXT_COLOR, HEADER_FONT_SIZE, HEADER_HEIGHT, MUTED_TEXT_COLOR,
-    SPLASH_BACKGROUND_COLOR, TAGLINE_TEXT_COLOR, TITLE_FONT_SIZE, TITLE_TEXT_COLOR,
-};
 use crate::prelude::*;
+
+pub const BACKGROUND_COLOR: Color = Color::srgba(0.0, 0.0, 0.0, 0.7);
+const DARK_GRAY_COLOR: Color = Color::srgb(0.05, 0.05, 0.05);
+pub const DARK_GRAY_ALPHA_COLOR: Color = Color::srgba(0.05, 0.05, 0.05, 0.98);
+/// Translucent fill behind rows and small buttons inside a panel.
+pub const ROW_COLOR: Color = Color::srgba(0.2, 0.2, 0.2, 0.5);
+/// Secondary text, such as a stat's description.
+const MUTED_TEXT_COLOR: Color = Color::srgb(0.5, 0.5, 0.5);
+
+/// Near-black backdrop of the start and loading screens.
+const SPLASH_BACKGROUND_COLOR: Color = Color::srgb(0.02, 0.01, 0.04);
+/// Gold trim used for borders on the start and loading screens.
+const GOLD_COLOR: Color = Color::srgb(0.8, 0.6, 0.2);
+/// Brighter gold for a hovered or pressed gold button.
+const BRIGHT_GOLD_COLOR: Color = Color::srgb(1.0, 0.8, 0.3);
+pub(super) const GOLD_TEXT_COLOR: Color = Color::srgb(0.9, 0.8, 0.3);
+const TITLE_TEXT_COLOR: Color = Color::srgb(0.9, 0.7, 0.2);
+const TAGLINE_TEXT_COLOR: Color = Color::srgb(0.7, 0.6, 0.5);
+
+const HEADER_HEIGHT: Val = Val::Px(100.0);
+const FOOTER_HEIGHT: Val = Val::Px(80.0);
+
+pub(super) const TITLE_FONT_SIZE: f32 = 80.0;
+const HEADER_FONT_SIZE: f32 = 50.0;
+/// Size of footer text and most labels.
+pub const BODY_FONT_SIZE: f32 = 24.0;
+/// Size of column headings and inventory rows.
+pub const SMALL_FONT_SIZE: f32 = 18.0;
+/// Size of a stat's description under its name.
+pub const CAPTION_FONT_SIZE: f32 = 16.0;
 
 /// UI text at a fixed pixel size.
 pub fn text(message: impl Into<String>, font_size: f32) -> impl Scene {
@@ -77,7 +96,7 @@ pub fn menu_screen(menu: Menu, title: &str) -> impl Scene {
 }
 
 /// The dark bar across the top of a menu holding its title.
-pub fn menu_header(title: &str) -> impl Scene {
+fn menu_header(title: &str) -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
@@ -129,7 +148,7 @@ pub fn panel(width: f32) -> impl Scene {
 }
 
 /// A thin gold stripe across the screen.
-pub fn gold_border() -> impl Scene {
+fn gold_border() -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
@@ -140,7 +159,7 @@ pub fn gold_border() -> impl Scene {
 }
 
 /// A gold outline around its children.
-pub fn gold_frame() -> impl Scene {
+pub(super) fn gold_frame() -> impl Scene {
     bsn! {
         Node {
             border: px(2),
@@ -153,7 +172,7 @@ pub fn gold_frame() -> impl Scene {
 
 /// The layout the start and loading screens share: a pulsing title, a `centerpiece` in the
 /// middle, and a `tagline` along the bottom, between two gold stripes.
-pub fn splash_screen<S: States + Unpin>(
+pub(super) fn splash_screen<S: States + Unpin>(
     state: S,
     title: &str,
     centerpiece: impl Scene,
@@ -214,7 +233,7 @@ pub fn splash_screen<S: States + Unpin>(
 
 /// Text whose color pulses between dim and bright orange.
 #[derive(Component, Default, Clone)]
-pub struct PulsingText;
+pub(super) struct PulsingText;
 
 pub(super) fn pulse_text(
     // Real time, so the text keeps pulsing in menus while game time is paused.
@@ -237,20 +256,20 @@ pub struct ButtonColors {
 
 /// The border a button shows at rest, and while hovered or pressed.
 #[derive(Component, Default, Clone, Copy)]
-pub struct ButtonBorderColors {
+pub(super) struct ButtonBorderColors {
     pub idle: Color,
     pub active: Color,
 }
 
 /// Plain gray menu buttons.
-pub const MENU_BUTTON_COLORS: ButtonColors = ButtonColors {
+const MENU_BUTTON_COLORS: ButtonColors = ButtonColors {
     idle: DARK_GRAY_COLOR,
     hovered: Color::srgb(0.15, 0.15, 0.15),
     pressed: Color::srgb(0.25, 0.25, 0.25),
 };
 
 /// Warm buttons for the start and game over screens.
-pub const GOLD_BUTTON_COLORS: ButtonColors = ButtonColors {
+const GOLD_BUTTON_COLORS: ButtonColors = ButtonColors {
     idle: Color::srgba(0.1, 0.1, 0.1, 0.7),
     hovered: Color::srgba(0.2, 0.15, 0.1, 0.8),
     pressed: Color::srgba(0.3, 0.2, 0.1, 0.9),
@@ -289,7 +308,7 @@ pub fn menu_button(label: &str) -> impl Scene {
 }
 
 /// A gold-trimmed button for the start and game over screens.
-pub fn gold_button(label: &str, font_size: f32) -> impl Scene {
+pub(super) fn gold_button(label: &str, font_size: f32) -> impl Scene {
     bsn! {
         @button(label, font_size, GOLD_TEXT_COLOR, GOLD_BUTTON_COLORS)
         Node { border: px(2) }

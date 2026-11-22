@@ -1,12 +1,20 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-use super::aim::player_aim;
-use super::input::player_actions;
+use super::input::{player_actions, player_aim};
 use super::interact::PlayerInteractionRadius;
-use super::{Player, death, overlay};
+use super::{Player, action_bar};
 use crate::character::physical_collider;
 use crate::prelude::*;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(
+        Update,
+        finish_death_animation
+            .in_set(VfxSystems::Animate)
+            .run_if(in_state(PlayingState::Death)),
+    );
+}
 
 pub(super) fn spawn_player(
     mut commands: Commands,
@@ -37,8 +45,8 @@ pub(super) fn spawn_player(
             ~Mana::new(100.0, 10.0)
             attributes
             template(move |_| Ok(sprite.clone()))
-            on(death::on_player_defeated)
-            on(overlay::on_action_failed)
+            on(on_player_defeated)
+            on(action_bar::on_action_failed)
             Items [
                 @ice_staff(&sprites, &sprite_layouts)
                 --
@@ -86,4 +94,34 @@ pub(super) fn spawn_player(
 
 pub(super) fn transition_to_create_hub(mut next_map: NextMap) -> Result {
     next_map.set(MapRequest::Hub)
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct GameOverTimer(Timer);
+
+fn on_player_defeated(
+    _: On<Defeated>,
+    player: Single<Entity, With<Player>>,
+    mut commands: Commands,
+    mut next_playing_state: ResMut<NextState<PlayingState>>,
+) {
+    commands
+        .entity(*player)
+        .insert(GameOverTimer(Timer::from_seconds(2.0, TimerMode::Once)))
+        // The colliders go with the children, and a dynamic body without them has no inertia.
+        .remove::<(Health, RigidBody)>()
+        .despawn_related::<Children>();
+    next_playing_state.set(PlayingState::Death);
+}
+
+fn finish_death_animation(
+    time: Res<Time>,
+    player_death_timer_single: Single<&mut GameOverTimer, With<Player>>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+) {
+    let mut death_timer = player_death_timer_single.into_inner();
+    death_timer.tick(time.delta());
+    if death_timer.is_finished() {
+        next_app_state.set(AppState::GameOver);
+    }
 }

@@ -4,19 +4,19 @@ use super::display_case::UpdateDisplayCase;
 use crate::prelude::*;
 
 const HOVER_COLOR: Color = Color::srgba(1.0, 1.0, 1.0, 0.3);
-pub const VALUE_WIDTH: f32 = 60.0;
-pub const EQUIP_SLOT_WIDTH: f32 = 150.0;
+pub(super) const VALUE_WIDTH: f32 = 60.0;
+pub(super) const EQUIP_SLOT_WIDTH: f32 = 150.0;
 
 #[derive(Component, FromTemplate, Clone)]
 #[relationship(relationship_target = ItemDisplayed)]
-pub struct DisplaySlotOf(Entity);
+pub(super) struct DisplaySlotOf(Entity);
 
 #[derive(Component)]
 #[relationship_target(relationship = DisplaySlotOf, linked_spawn)]
-pub struct ItemDisplayed(Entity);
+pub(super) struct ItemDisplayed(Entity);
 
 /// Makes building display slots easier.
-pub struct DisplaySlotContext {
+pub(super) struct DisplaySlotContext {
     pub item: Entity,
     pub name: String,   // Owned string
     pub kind: ItemKind, // Just store what you need
@@ -26,7 +26,7 @@ pub struct DisplaySlotContext {
 }
 
 /// A single "slot" in a display case, representing one item in the inventory.
-pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scene {
+pub(super) fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scene {
     let equip_slot = context
         .equipment_slot
         .map_or("-".to_string(), |slot| slot.to_string());
@@ -90,7 +90,7 @@ pub fn display_slot(icons: &GameIcons, context: DisplaySlotContext) -> impl Scen
     }
 }
 
-pub fn on_slot_clicked(
+fn on_slot_clicked(
     pointer_click: On<PointerClick>,
     mut commands: Commands,
     slot_query: Query<&DisplaySlotOf>,
@@ -128,7 +128,7 @@ pub fn on_slot_clicked(
     Ok(())
 }
 
-pub fn on_slot_hover(
+fn on_slot_hover(
     pointer_over: On<PointerOver>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {
@@ -137,7 +137,7 @@ pub fn on_slot_hover(
     }
 }
 
-pub fn on_slot_done_hovering(
+fn on_slot_done_hovering(
     pointer_out: On<PointerOut>,
     mut item_slot: Query<&mut BackgroundColor, With<DisplaySlotOf>>,
 ) {

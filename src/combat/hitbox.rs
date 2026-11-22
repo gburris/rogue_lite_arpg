@@ -40,7 +40,7 @@ impl HitBox {
 
 #[derive(Component, Default, Clone)]
 #[require(Sensor)]
-pub struct HurtBox;
+pub(super) struct HurtBox;
 
 pub fn hurtbox(size: Vec2, membership: GameCollisionLayer) -> impl Scene {
     hurtbox_at(size, membership, HURTBOX_OFFSET)

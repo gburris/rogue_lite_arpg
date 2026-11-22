@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 use super::damage::{AttemptDamage, Damage, Knockback};
 use super::hitbox::HurtBox;
-use super::status_effects::prelude::Burning;
+use super::status_effects::Burning;
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -59,7 +59,7 @@ pub struct Projectiles(Vec<Entity>);
 /// Travel speed of a standard fireball, in world units per second.
 pub const FIREBALL_SPEED: f32 = 450.0;
 /// Distance a standard fireball covers during its one-second default lifespan.
-pub const FIREBALL_RANGE: f32 = 450.0;
+const FIREBALL_RANGE: f32 = 450.0;
 
 pub fn fireball(
     sprites: &SpriteAssets,
@@ -162,7 +162,7 @@ fn damage_on_projectile_hit(
 /// Character that fired a projectile, stamped when it is fired and transferred
 /// to the blocker on reflection.
 #[derive(Component, Clone, Copy)]
-pub struct ProjectileAttacker {
+struct ProjectileAttacker {
     pub attacker: Option<Entity>,
 }
 

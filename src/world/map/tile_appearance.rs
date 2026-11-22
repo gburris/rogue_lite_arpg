@@ -129,7 +129,7 @@ fn tiling_rule(tile_kind: TileKind) -> Option<TilingRule> {
 
 /// Atlas slot and tint for one rendered tile.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct TileAppearance {
+pub(super) struct TileAppearance {
     /// Flat atlas index for `TileTextureIndex`.
     pub texture_index: u32,
     /// Grayscale brightness multiplier, or `None` for no tint.
@@ -137,7 +137,7 @@ pub(crate) struct TileAppearance {
 }
 
 /// Maps a tile to its atlas appearance, or `None` when it should not render.
-pub(crate) fn tile_appearance(
+pub(super) fn tile_appearance(
     tiles: &TileGrid<TileKind>,
     seed: u64,
     tile: IVec2,

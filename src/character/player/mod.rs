@@ -1,31 +1,18 @@
-mod aim;
-mod attributes;
-mod death;
+mod action_bar;
 mod input;
 mod interact;
-mod level;
-mod movement;
-mod overlay;
 mod progression;
 mod spawn;
-
-pub mod prelude {
-    pub use super::aim::PlayerAim;
-    #[cfg(feature = "dev_native")]
-    pub(crate) use super::aim::place_player_aim;
-    #[cfg(feature = "dev_native")]
-    pub(crate) use super::input::{UseMainhand, UseOffhand};
-    pub use super::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
-    #[cfg(feature = "dev_native")]
-    pub(crate) use super::movement::PlayerMovement;
-    pub use super::progression::GameProgress;
-    pub use super::{Attribute, Player, PlayerAttributes};
-}
+mod status_bars;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub use self::attributes::{Attribute, PlayerAttributes};
+pub use self::input::PlayerAim;
+#[cfg(feature = "dev_native")]
+pub use self::input::{PlayerMovement, UseMainhand, UseOffhand, place_player_aim};
+pub use self::interact::{InteractionZone, PlayerInteraction, PlayerInteractionRadius};
+pub use self::progression::{Attribute, GameProgress, PlayerAttributes};
 use crate::character::Character;
 use crate::prelude::*;
 
@@ -34,14 +21,12 @@ const PLAYER_LEVEL_REQUIREMENT_MULTIPLIER: f32 = 2.0;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
-        aim::plugin,
-        death::plugin,
+        action_bar::plugin,
         input::plugin,
         interact::plugin,
-        level::plugin,
-        movement::plugin,
-        overlay::plugin,
         progression::plugin,
+        spawn::plugin,
+        status_bars::plugin,
     ));
 
     // Player spawn
@@ -49,7 +34,7 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(AppState::SpawnPlayer),
         (
             spawn::spawn_player,
-            overlay::spawn_player_overlay,
+            status_bars::spawn_player_overlay,
             spawn::transition_to_create_hub,
         )
             .chain(),

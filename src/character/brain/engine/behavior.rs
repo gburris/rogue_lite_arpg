@@ -72,7 +72,7 @@ impl<V: BrainVocabulary> Behavior<V> {
 
 /// The roll a behavior makes when it wins; see [`Behavior::with_start_chance`].
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct StartChance {
+pub(in crate::character::brain) struct StartChance {
     pub chance: f32,
     pub retry_seconds: f32,
 }

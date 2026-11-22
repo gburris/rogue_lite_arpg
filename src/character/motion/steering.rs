@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::RunningMotionOf;
-use crate::character::state::Kinematics;
+use crate::prelude::*;
 
 /// Caps how fast a character turns, in radians per second. Absent means instant turns.
 #[derive(Component, Clone, Copy, Debug, Default)]
@@ -46,7 +46,7 @@ pub(super) fn decay_speed_boosts(
 
 /// This frame's steering request, on a running motion, written by that motion's system.
 #[derive(Component, Clone, Copy, Debug)]
-pub(in crate::character) struct Steering {
+pub(super) struct Steering {
     direction: Option<Vec2>,
     effort: SteeringEffort,
 }

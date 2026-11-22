@@ -6,23 +6,23 @@ use bevy_enhanced_input::prelude::*;
 use crate::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Menu::Pause), spawn_main_menu);
+    app.add_systems(OnEnter(Menu::Pause), spawn_pause_menu);
 }
 
 #[derive(Component, Default, Clone)]
-struct MainMenu;
+struct PauseMenu;
 
-fn spawn_main_menu(
+fn spawn_pause_menu(
     mut commands: Commands,
     player: Single<(&Health, &Player, &Purse)>,
     game_progress: Res<GameProgress>,
 ) {
     let (health, player, purse) = player.into_inner();
-    let footer = main_menu_footer(player.level(), health, purse.amount, &game_progress);
+    let footer = pause_menu_footer(player.level(), health, purse.amount, &game_progress);
 
     commands.spawn_scene(bsn! {
         @menu_screen(Menu::Pause, "PAUSED")
-        MainMenu
+        PauseMenu
         Children [
             Node {
                 width: percent(100),
@@ -50,7 +50,7 @@ fn open_menu(menu: Menu) -> impl Fn(On<Activate>, ResMut<NextState<Menu>>) + Clo
     move |_, mut next_menu_state| next_menu_state.set(menu)
 }
 
-fn main_menu_footer(
+fn pause_menu_footer(
     player_level: u32,
     player_health: &Health,
     player_coins: u32,
@@ -163,11 +163,11 @@ pub(super) fn on_toggle_inventory(
 }
 
 #[derive(Component, Default, Clone)]
-pub(crate) struct PauseControl;
+pub(super) struct PauseControl;
 
 /// The pause and inventory toggles, added to the player. They stay active in menus, so the key
 /// that opened a menu also closes it.
-pub(crate) fn pause_actions() -> impl Scene {
+pub fn pause_actions() -> impl Scene {
     // Escape un-grabs the cursor on the web, so it can't pause there.
     let escape = (!cfg!(target_family = "wasm")).then_some(bsn_list! {
         Binding(KeyCode::Escape)

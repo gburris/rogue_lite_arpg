@@ -14,7 +14,7 @@ pub enum Stat {
 /// Changes one stat by `change` while it lasts: `0.3` raises it 30%, `-0.5` halves it. It has no
 /// visual of its own.
 #[derive(Component, Clone, Copy, Debug)]
-pub struct StatModifier {
+pub(super) struct StatModifier {
     pub stat: Stat,
     pub change: f32,
 }

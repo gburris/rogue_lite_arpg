@@ -7,35 +7,37 @@ pub(super) fn plugin(app: &mut App) {
     app.add_observer(on_change_stat)
         .add_observer(on_update_stats_ui)
         .add_systems(OnEnter(Menu::StatsShop), spawn_stats_shop_menu);
+
+    app.add_systems(OnEnter(Menu::Stats), spawn_stats_menu);
 }
 
 #[derive(Component, Default, Clone)]
-pub struct StatShopMenu;
+struct StatShopMenu;
 
 /// Which way a stats shop button moves its attribute.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum StatChange {
+enum StatChange {
     #[default]
     Increase,
     Decrease,
 }
 
 #[derive(Component, Clone, Default)]
-pub struct StatShopButton {
+struct StatShopButton {
     pub attribute: Attribute,
     pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct ChangeStat {
+struct ChangeStat {
     pub attribute: Attribute,
     pub change: StatChange,
 }
 
 #[derive(Event)]
-pub struct UpdateStatsUi;
+struct UpdateStatsUi;
 
-pub fn spawn_stats_shop_menu(
+fn spawn_stats_shop_menu(
     mut commands: Commands,
     player_attributes: Single<&PlayerAttributes>,
     game_progress: ResMut<GameProgress>,
@@ -44,7 +46,7 @@ pub fn spawn_stats_shop_menu(
     let points = game_progress.progress_points;
     let rows: Vec<_> = Attribute::ALL
         .into_iter()
-        .map(|attribute| attribute_row(attribute, attributes, points))
+        .map(|attribute| shop_attribute_row(attribute, attributes, points))
         .collect();
 
     commands.spawn_scene(bsn! {
@@ -61,7 +63,11 @@ pub fn spawn_stats_shop_menu(
     });
 }
 
-fn attribute_row(attribute: Attribute, attributes: &PlayerAttributes, points: u32) -> impl Scene {
+fn shop_attribute_row(
+    attribute: Attribute,
+    attributes: &PlayerAttributes,
+    points: u32,
+) -> impl Scene {
     bsn! {
         Node {
             width: percent(100),
@@ -135,7 +141,7 @@ fn on_stat_button_activated(
     }
 }
 
-pub fn on_change_stat(
+fn on_change_stat(
     trigger: On<ChangeStat>,
     mut player_attributes: Query<&mut PlayerAttributes>,
     mut game_progress: ResMut<GameProgress>,
@@ -175,7 +181,7 @@ pub fn on_change_stat(
     }
 }
 
-pub fn on_update_stats_ui(
+fn on_update_stats_ui(
     _: On<UpdateStatsUi>,
     mut commands: Commands,
     stats_menu_query: Query<Entity, With<StatShopMenu>>,
@@ -193,4 +199,53 @@ pub fn on_update_stats_ui(
 
     // Respawn with updated values
     spawn_stats_shop_menu(commands, player_attributes_query, game_progress);
+}
+
+#[derive(Component, Default, Clone)]
+struct StatsMenu;
+
+fn spawn_stats_menu(mut commands: Commands, player_attributes: Single<&PlayerAttributes>) {
+    let rows: Vec<_> = Attribute::ALL
+        .into_iter()
+        .map(|attribute| stats_attribute_row(attribute, *player_attributes))
+        .collect();
+
+    commands.spawn_scene(bsn! {
+        @menu_screen(Menu::Stats, "STATS")
+        StatsMenu
+        Children [
+            @panel(600.0)
+            Node { height: percent(80) }
+            Children [
+                {rows}
+            ]
+        ]
+    });
+}
+
+fn stats_attribute_row(attribute: Attribute, attributes: &PlayerAttributes) -> impl Scene {
+    bsn! {
+        Node {
+            width: percent(100),
+            height: px(60),
+            padding: px(10),
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+        }
+        BackgroundColor(ROW_COLOR)
+        Children [
+            Node {
+                flex_direction: FlexDirection::Column,
+                justify_content: JustifyContent::Center,
+                row_gap: px(4),
+            }
+            Children [
+                @text({format!("{attribute:?}")}, BODY_FONT_SIZE)
+                --
+                @muted_text(attribute.description(), CAPTION_FONT_SIZE)
+            ]
+            --
+            @text({format!("{}/99", attribute.value(attributes))}, BODY_FONT_SIZE)
+        ]
+    }
 }

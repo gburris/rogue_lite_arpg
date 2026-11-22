@@ -19,8 +19,6 @@ pub mod prelude {
         AppState, InGameSystems, MainSystems, PauseState, PlayingState, Restart, SimulationSystems,
         VfxSystems,
     };
-    #[cfg(feature = "dev")]
-    pub use super::view::draw_camera_debug_gizmos;
     pub use super::view::{CHARACTER_FEET_POS_OFFSET, YSort, ZLayer, point_light, shadow};
 }
 

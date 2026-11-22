@@ -35,7 +35,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Component)]
 #[component(immutable)]
 #[require(Vision, TargetInfo)]
-pub(crate) struct VisionCone {
+pub struct VisionCone {
     /// In radians; `PI / 4.0` is a 90° cone.
     half_angle: f32,
 }
@@ -51,7 +51,7 @@ impl Default for VisionCone {
 impl VisionCone {
     /// A zero-width cone, which never contains a direction.
     #[cfg(feature = "dev_tools")]
-    pub(crate) fn blind() -> Self {
+    pub fn blind() -> Self {
         Self { half_angle: 0.0 }
     }
 
@@ -63,7 +63,7 @@ impl VisionCone {
 /// Stores calculated perception data for a given potential or current target. A target out of
 /// sight is tracked at its last known position; see [`update_target_info`].
 #[derive(Component, Default, Clone)]
-pub(crate) struct TargetInfo {
+pub struct TargetInfo {
     /// Distance to the observed entity.
     pub distance: f32,
     /// Direction vector pointing to the observed entity.
@@ -108,7 +108,7 @@ impl TargetInfo {
 
     /// Whether the observed entity is inside the vision cone, ignoring walls.
     #[cfg(feature = "dev_native")]
-    pub(crate) fn in_vision_cone(&self) -> bool {
+    pub fn in_vision_cone(&self) -> bool {
         self.in_vision_cone
     }
 
@@ -122,12 +122,12 @@ impl TargetInfo {
 /// The entity this one fights, added on sight or when damaged.
 #[derive(Component)]
 #[relationship(relationship_target = TargetedBy)]
-pub(crate) struct Targeting(pub Entity);
+pub struct Targeting(pub Entity);
 
 /// Inverse of [`Targeting`].
 #[derive(Component)]
 #[relationship_target(relationship = Targeting)]
-pub(crate) struct TargetedBy(Vec<Entity>);
+pub struct TargetedBy(Vec<Entity>);
 
 /// The entity this one watches for, to target once sighted.
 #[derive(Component, FromTemplate, Clone)]
@@ -144,14 +144,14 @@ pub(in crate::character) struct WatchedBy(Vec<Entity>);
 /// the target.
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = TargetLocationHint)]
-pub(crate) struct LocationHint {
+pub(super) struct LocationHint {
     pub character: Entity,
 }
 
 /// The [`LocationHint`] for this character's target.
 #[derive(Component, Debug)]
 #[relationship_target(relationship = LocationHint, linked_spawn)]
-pub(crate) struct TargetLocationHint(Entity);
+pub(super) struct TargetLocationHint(Entity);
 
 impl TargetLocationHint {
     pub(super) fn location_hint(&self) -> Entity {
@@ -162,7 +162,7 @@ impl TargetLocationHint {
 /// Tracks the target's position without line of sight until removed. Damage aggro schedules its
 /// removal.
 #[derive(Component)]
-pub(crate) struct TargetLock;
+pub struct TargetLock;
 
 // ---------------------
 // VISION + PERCEPTION
@@ -307,7 +307,7 @@ fn on_damage_aggro(
 }
 
 /// Makes `entity` target `target` and keep it without sight for [`TARGET_LOCK_SECONDS`].
-pub(crate) fn lock_onto_target(commands: &mut Commands, entity: Entity, target: Entity) {
+pub fn lock_onto_target(commands: &mut Commands, entity: Entity, target: Entity) {
     commands
         .entity(entity)
         .insert((TargetLock, Targeting(target)));

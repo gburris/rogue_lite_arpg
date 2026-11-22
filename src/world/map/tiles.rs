@@ -207,17 +207,6 @@ impl TileRect {
     pub fn checked_max_exclusive(&self) -> Option<IVec2> {
         self.min.checked_add(self.size.as_ivec2())
     }
-
-    /// Returns whether the rectangle contains the tile coordinate.
-    pub fn contains(&self, tile_index: IVec2) -> bool {
-        let Some(max_exclusive) = self.checked_max_exclusive() else {
-            return false;
-        };
-        tile_index.x >= self.min.x
-            && tile_index.y >= self.min.y
-            && tile_index.x < max_exclusive.x
-            && tile_index.y < max_exclusive.y
-    }
 }
 
 /// A tile material or special map marker.

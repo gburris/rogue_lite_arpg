@@ -17,24 +17,17 @@ use crate::prelude::*;
 const COMMIT_TIMEOUT: f32 = 3.0;
 
 /// A behavior that won its slots, with its motion and action copied from the definition. It holds
-/// its motion while it runs, and issues its action, if committed, once. The finish rules for
-/// committed and continuously scored behaviors live here.
+/// both while it runs. The finish rules for committed and continuously scored behaviors live here.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<MotionKey>,
     pub(super) action: Option<Action>,
-    pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
-    /// Whether this behavior issued `action`.
-    pub(super) fn has_issued_action(self, action: Action) -> bool {
-        self.action_issued && self.action == Some(action)
-    }
-
     /// Whether a committed behavior lost an input it was chosen on or timed out. The game ends
     /// interrupted uses and finite motions itself.
     pub(super) fn should_drop_committed_behavior(
@@ -162,7 +155,7 @@ pub(super) fn on_action_finished(
     let _span = info_span!("decide::after_action").entered();
     finish_and_redecide(
         &mut brain,
-        |running| running.has_issued_action(action),
+        |running| running.action == Some(action),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -192,7 +185,7 @@ pub(super) fn on_action_failed(
     let _span = info_span!("decide::after_action_failed").entered();
     finish_and_redecide(
         &mut brain,
-        |running| running.has_issued_action(action),
+        |running| running.action == Some(action),
         &inputs,
         score_trace.as_deref_mut(),
         #[cfg(feature = "dev_tools")]
@@ -354,35 +347,20 @@ pub(super) fn issue_running_motion(
     }
 }
 
-/// Issues the actions of the brain's running behaviors and stops sustained actions none of them
-/// still chooses. Considerations already judged the target, so the game decides only whether a use
-/// can start. A committed action is issued once, or adopts a use of it already in progress so that
-/// use's finish ends the behavior; a continuously scored one starts again whenever it isn't in
-/// progress.
-pub(super) fn issue_running_actions(
-    mut actions: ActionCommands,
-    mut brains: Query<(Entity, &mut Brain)>,
-) {
-    for (entity, mut brain) in &mut brains {
+/// Keeps each character's uses on the action its brain holds, and stops the others; see
+/// [`ActionCommands::start`] and [`ActionCommands::stop`]. Considerations already judged the
+/// target, so the game decides only whether a use can start. A use of the held action already
+/// running is adopted, so its finish ends a committed behavior, and a finished one is not started
+/// again; see [`on_action_finished`].
+pub(super) fn issue_running_action(mut actions: ActionCommands, brains: Query<(Entity, &Brain)>) {
+    for (entity, brain) in &brains {
+        let held_key = brain.action().and_then(Action::key);
         for key in ActionKey::all() {
-            if brain.running_behavior_with(Action::Use(key)).is_none() {
+            if held_key != Some(key) {
                 actions.stop(entity, key);
             }
         }
-        for index in 0..brain.running_behaviors.len() {
-            let running = brain.running_behaviors[index];
-            let Some(key) = running.action.and_then(Action::key) else {
-                continue;
-            };
-            if running.committed {
-                if running.action_issued {
-                    continue;
-                }
-                brain.record_issued_action(running.behavior);
-            }
-            if actions.status().is_using(entity, key) {
-                continue;
-            }
+        if let Some(key) = held_key {
             actions.start(entity, key);
         }
     }

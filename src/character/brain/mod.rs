@@ -46,8 +46,8 @@ const DECISION_PERIOD: f32 = 0.1;
 
 /// A character's utility brain: its static definition, the behaviors running in its motion and
 /// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
-/// every [`DECISION_PERIOD`] with a random per-brain offset; issuing actions notes which actions
-/// it issued. Its requests start and stop the game's motions and actions, which report back with
+/// every [`DECISION_PERIOD`] with a random per-brain offset. Its requests start and stop the
+/// game's motions and actions, which report back with
 /// [`MotionFinished`], [`MotionFailed`], [`ActionFinished`] or [`ActionFailed`].
 #[derive(Component, Debug)]
 #[component(on_add = schedule_first_decision)]
@@ -95,13 +95,6 @@ impl Brain {
         self.running_behaviors
             .iter()
             .find_map(|&running| running.motion.map(|motion| (running, motion)))
-    }
-
-    fn running_behavior_with(&self, action: Action) -> Option<RunningBehavior> {
-        self.running_behaviors
-            .iter()
-            .copied()
-            .find(|running| running.action == Some(action))
     }
 
     /// Whether any behavior with `motion` is in a start roll retry delay.
@@ -224,14 +217,13 @@ impl Brain {
         }
     }
 
-    /// Creates a running behavior for behavior `index` with nothing issued yet.
+    /// Creates a running behavior for behavior `index`.
     fn start_running_behavior(&self, index: usize, now: f32) -> RunningBehavior {
         let behavior = self.definition.behaviors[index];
         RunningBehavior {
             behavior: index,
             motion: behavior.motion,
             action: behavior.action,
-            action_issued: false,
             committed: behavior.commit.is_committed(),
             started_at: now,
         }
@@ -254,18 +246,7 @@ impl Brain {
             .retain(|other| other.behavior != running.behavior);
     }
 
-    fn record_issued_action(&mut self, behavior: usize) {
-        self.running_behavior_mut(behavior).action_issued = true;
-    }
-
-    fn running_behavior_mut(&mut self, behavior: usize) -> &mut RunningBehavior {
-        self.running_behaviors
-            .iter_mut()
-            .find(|running| running.behavior == behavior)
-            .expect("issued behavior is not running")
-    }
-
-    /// Ends the committed behavior whose held motion or issued action finished. A stale finish
+    /// Ends the committed behavior whose held motion or action finished. A stale finish
     /// matches no behavior, so it clears nothing and returns `false`.
     fn finish_committed_behavior(
         &mut self,
@@ -334,10 +315,7 @@ pub(super) fn plugin(app: &mut App) {
                 (decide::check_new_brains, decide::decide_behavior)
                     .chain()
                     .in_set(BrainSystems::Decision),
-                // Issuing actions writes the `Brain` that issuing motions reads; they share one
-                // flush.
-                (decide::issue_running_motion, decide::issue_running_actions)
-                    .chain_ignore_deferred()
+                (decide::issue_running_motion, decide::issue_running_action)
                     .in_set(BrainSystems::Execute),
             ),
         );

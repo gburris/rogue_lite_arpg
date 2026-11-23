@@ -264,11 +264,14 @@ impl<'w, 's> ActionCommands<'w, 's> {
         &self.status
     }
 
-    /// Starts a use of `holder`'s action source named by `key` if [`ActionStatus::can_start`]
-    /// allows it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may
-    /// retry it every frame. Of two starts of one source queued before the
-    /// first applies, only the first starts a use.
+    /// Starts a use of `holder`'s action source named by `key`. While a use of it runs, this
+    /// changes nothing, so calling it every frame starts one use. Otherwise the start needs
+    /// [`ActionStatus::can_start`]; a refused use fires [`ActionFailed`] and changes nothing else.
+    /// Of two starts of one source queued before the first applies, only the first starts a use.
     pub fn start(&mut self, holder: Entity, key: ActionKey) {
+        if self.status.is_using(holder, key) {
+            return;
+        }
         match self.status.can_start(holder, key) {
             Ok(source) => {
                 self.commands.queue(move |world: &mut World| {

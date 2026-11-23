@@ -62,6 +62,10 @@ impl ActionUse {
     pub(super) fn new(key: ActionKey) -> Self {
         Self { key }
     }
+
+    pub(super) fn key(self) -> ActionKey {
+        self.key
+    }
 }
 
 /// Makes this use entity a use by the character `holder`.

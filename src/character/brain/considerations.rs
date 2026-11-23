@@ -82,9 +82,7 @@ pub(in crate::character) const CAST_DISTANCE_RANGE: Interval =
 
 pub(in crate::character) const CAST_HYSTERESIS: f32 = 5.0;
 
-pub(in crate::character) const MAINHAND_KEY: ActionKey =
-    ActionKey::Equipped(EquipmentSlot::Mainhand);
-pub(in crate::character) const MAINHAND: Action = Action::Use(MAINHAND_KEY);
+pub(in crate::character) const MAINHAND: Action = Action::Use(ActionKey::MAINHAND);
 
 /// Maps `input` over `range` through `curve`.
 pub const fn consideration(
@@ -249,7 +247,7 @@ pub(in crate::character) const ATTACK_FINISHED: Consideration =
     flag("attack finished", ConsiderationInput::AttackFinished);
 pub(in crate::character) const IN_MAINHAND_REACH: Consideration = within_reach(
     "in mainhand reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND_KEY),
+    ConsiderationInput::ActionReachFraction(ActionKey::MAINHAND),
 );
 
 // Both enter at one shared distance, so a character with no incumbent always

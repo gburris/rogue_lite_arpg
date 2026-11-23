@@ -120,19 +120,16 @@ pub struct UseMainhand;
 #[action_output(bool)]
 pub struct UseOffhand;
 
-const MAINHAND_KEY: ActionKey = ActionKey::Equipped(EquipmentSlot::Mainhand);
-const OFFHAND: ActionKey = ActionKey::Equipped(EquipmentSlot::Offhand);
-
 fn on_use_mainhand_input(use_mainhand: On<Start<UseMainhand>>, mut actions: ActionCommands) {
-    actions.start(use_mainhand.context, MAINHAND_KEY);
+    actions.start(use_mainhand.context, ActionKey::MAINHAND);
 }
 
 fn on_use_offhand_input(use_offhand: On<Start<UseOffhand>>, mut actions: ActionCommands) {
-    actions.start(use_offhand.context, OFFHAND);
+    actions.start(use_offhand.context, ActionKey::OFFHAND);
 }
 
 fn on_use_offhand_complete(use_offhand: On<Complete<UseOffhand>>, mut actions: ActionCommands) {
-    actions.stop(use_offhand.context, OFFHAND);
+    actions.stop(use_offhand.context, ActionKey::OFFHAND);
 }
 
 #[derive(Component, Default, Clone)]

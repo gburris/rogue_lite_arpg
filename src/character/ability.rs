@@ -19,16 +19,6 @@ pub enum Ability {
     Rally,
 }
 
-impl Ability {
-    /// Every ability.
-    pub const ALL: [Self; 4] = [Self::Heal, Self::Breath, Self::Bite, Self::Rally];
-}
-
-// A new variant fails to compile here: add it to this match and to `Ability::ALL`.
-const _: () = match Ability::Heal {
-    Ability::Heal | Ability::Breath | Ability::Bite | Ability::Rally => {}
-};
-
 /// Links an ability entity to the character that uses it.
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Abilities)]
@@ -41,6 +31,31 @@ pub struct AbilityOf {
 #[derive(Component, Clone)]
 #[relationship_target(relationship = AbilityOf, linked_spawn)]
 pub struct Abilities(Vec<Entity>);
+
+/// Checks in debug builds that no other ability of the new ability's holder is of its kind, since
+/// [`ActionKey::Ability`] names abilities by kind.
+pub(super) fn on_ability_added(
+    added: On<Add<AbilityOf>>,
+    abilities: Query<(&AbilityOf, &Ability)>,
+    holders: Query<&Abilities>,
+) {
+    let Ok((&AbilityOf { holder }, &ability)) = abilities.get(added.entity) else {
+        return;
+    };
+    let Ok(holder_abilities) = holders.get(holder) else {
+        return;
+    };
+    // The new ability may not be in `Abilities` yet, so only the others are counted.
+    let other_same_kind_count = holder_abilities
+        .iter()
+        .filter(|&other| other != added.entity)
+        .filter(|&other| abilities.get(other).is_ok_and(|(_, &kind)| kind == ability))
+        .count();
+    debug_assert!(
+        other_same_kind_count == 0,
+        "character {holder:?} has {other_same_kind_count} more {ability:?} abilities; only the          first would ever be used"
+    );
+}
 
 /// Seconds a bite's hitbox lasts, so a bite started just outside its reach can still hit a target
 /// that moves into range.

@@ -41,8 +41,6 @@ pub enum EquipmentSlot {
 }
 
 impl EquipmentSlot {
-    pub const ALL: [Self; 2] = [Self::Mainhand, Self::Offhand];
-
     /// Item currently equipped in this slot, if any.
     pub fn equipped(
         self,

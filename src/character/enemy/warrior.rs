@@ -7,7 +7,7 @@ use super::{
 use crate::character::ability::heal;
 use crate::character::brain::{
     ATTACK_FINISHED, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
-    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, MAINHAND_KEY, NO_TARGET,
+    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET,
     RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, flag, motion_held_for,
     reach_fraction_threshold, target_within_distance,
 };
@@ -54,13 +54,13 @@ const MELEE_ENTER_FRACTION: f32 = 0.97;
 
 const OUTSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
     "outside melee reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND_KEY),
+    ConsiderationInput::ActionReachFraction(ActionKey::MAINHAND),
     MELEE_ENTER_FRACTION,
     0.94,
 );
 const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
     "inside melee reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND_KEY),
+    ConsiderationInput::ActionReachFraction(ActionKey::MAINHAND),
     MELEE_ENTER_FRACTION,
     1.0,
 );

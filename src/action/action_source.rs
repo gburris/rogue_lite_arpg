@@ -23,11 +23,10 @@ pub enum ActionKey {
 }
 
 impl ActionKey {
-    /// Every key, equipment first.
-    pub fn all() -> impl Iterator<Item = Self> {
-        let equipment = EquipmentSlot::ALL.into_iter().map(Self::Equipped);
-        equipment.chain(Ability::ALL.into_iter().map(Self::Ability))
-    }
+    /// The item equipped in the mainhand.
+    pub const MAINHAND: Self = Self::Equipped(EquipmentSlot::Mainhand);
+    /// The item equipped in the offhand.
+    pub const OFFHAND: Self = Self::Equipped(EquipmentSlot::Offhand);
 }
 
 /// Marks an action source whose use is an attack, like a swing, a cast or a bite.
@@ -135,7 +134,7 @@ pub struct ActionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolderData, With<Character>>,
     sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
-    action_uses: Query<'w, 's, &'static ActionSourceInUseOf>,
+    action_uses: Query<'w, 's, (&'static ActionUse, &'static ActionSourceInUseOf)>,
     carried_items: CarriedItems<'w, 's>,
 }
 
@@ -242,7 +241,7 @@ impl ActionStatus<'_, '_> {
             .into_iter()
             .flat_map(ActionsInUse::iter)
             .filter_map(|action_use| self.action_uses.get(action_use).ok())
-            .any(|source_in_use_of| {
+            .any(|(_, source_in_use_of)| {
                 self.sources
                     .get(source_in_use_of.source)
                     .is_ok_and(|source| predicate(&source))
@@ -307,6 +306,33 @@ impl ActionCommands<'_, '_> {
             self.commands.trigger(StopAction {
                 source: source.entity,
             });
+        }
+    }
+
+    /// Stops each of `holder`'s sustained uses in progress whose key isn't `kept_key`; see
+    /// [`Self::stop`].
+    pub fn stop_uses_except(&mut self, holder: Entity, kept_key: Option<ActionKey>) {
+        let Ok(holder_data) = self.status.holders.get(holder) else {
+            return;
+        };
+        let action_uses = holder_data
+            .actions_in_use
+            .into_iter()
+            .flat_map(ActionsInUse::iter);
+        for action_use in action_uses {
+            let Ok((action_use, &ActionSourceInUseOf { source })) =
+                self.status.action_uses.get(action_use)
+            else {
+                continue;
+            };
+            let is_sustained = self
+                .status
+                .sources
+                .get(source)
+                .is_ok_and(|source_data| *source_data.style == ActionUseStyle::Sustained);
+            if is_sustained && Some(action_use.key()) != kept_key {
+                self.commands.trigger(StopAction { source });
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ use rand::RngExt;
 pub(super) use self::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, Behavior, CAST_DISTANCE_RANGE, CAST_HYSTERESIS,
     CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE, Consideration, HAS_TARGET, IN_MAINHAND_REACH,
-    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, MAINHAND_KEY, NO_TARGET, RETURN_TO_HOME,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, NO_TARGET, RETURN_TO_HOME,
     SEEK_LOST_TARGET, WANDER, consideration, distance_threshold, flag, flag_kept_while_current,
     mana_at_or_below, motion_held_for, reach_fraction_threshold, target_speed_at_most,
     target_within_distance, within_reach,

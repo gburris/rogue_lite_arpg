@@ -297,18 +297,14 @@ pub(super) fn issue_running_motion(
 }
 
 /// Keeps each character's uses on the action its brain holds, and stops the others; see
-/// [`ActionCommands::start`] and [`ActionCommands::stop`]. Considerations already judged the
-/// target, so the game decides only whether a use can start. A use of the held action already
-/// running is adopted, so its finish ends a committed behavior, and a finished one is not started
-/// again; see [`on_action_finished`].
+/// [`ActionCommands::start`] and [`ActionCommands::stop_uses_except`]. Considerations already
+/// judged the target, so the game decides only whether a use can start. A use of the held action
+/// already running is adopted, so its finish ends a committed behavior, and a finished one is not
+/// started again; see [`on_action_finished`].
 pub(super) fn issue_running_action(mut actions: ActionCommands, brains: Query<(Entity, &Brain)>) {
     for (entity, brain) in &brains {
         let held_key = brain.action().and_then(Action::key);
-        for key in ActionKey::all() {
-            if held_key != Some(key) {
-                actions.stop(entity, key);
-            }
-        }
+        actions.stop_uses_except(entity, held_key);
         if let Some(key) = held_key {
             actions.start(entity, key);
         }

@@ -83,7 +83,7 @@ impl ActionFailure {
     }
 }
 
-/// Fired at the holder when [`ActionCommands::try_use`] refuses a use.
+/// Fired at the holder when [`ActionCommands::start`] refuses a use.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFailed {
     #[event_target]
@@ -195,7 +195,7 @@ impl ActionStatus<'_, '_> {
     }
 
     /// The action source `holder` would use for `key` now, or why it can't.
-    pub fn can_use(&self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
+    pub fn can_start(&self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
         let source = self
             .source_data(holder, key)
             .ok_or(ActionFailure::NoSource)?;
@@ -264,13 +264,12 @@ impl<'w, 's> ActionCommands<'w, 's> {
         &self.status
     }
 
-    /// Starts a use of `holder`'s action source named by `key` if [`ActionStatus::can_use`] allows
-    /// it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may retry
-    /// it every frame. Of two starts of one source queued before the first applies, only the first
-    /// starts a use.
-    pub fn try_use(&mut self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
-        let result = self.status.can_use(holder, key);
-        match result {
+    /// Starts a use of `holder`'s action source named by `key` if [`ActionStatus::can_start`]
+    /// allows it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may
+    /// retry it every frame. Of two starts of one source queued before the
+    /// first applies, only the first starts a use.
+    pub fn start(&mut self, holder: Entity, key: ActionKey) {
+        match self.status.can_start(holder, key) {
             Ok(source) => {
                 self.commands.queue(move |world: &mut World| {
                     let source_is_free = world
@@ -294,12 +293,11 @@ impl<'w, 's> ActionCommands<'w, 's> {
                 });
             }
         }
-        result
     }
 
     /// Stops `holder`'s use of the action source named by `key` if it is a sustained use in
     /// progress; a use that ends on its own can't be stopped. See [`ActionUseStyle`].
-    pub fn stop_sustained_use(&mut self, holder: Entity, key: ActionKey) {
+    pub fn stop(&mut self, holder: Entity, key: ActionKey) {
         let Some(source) = self.status.source_data(holder, key) else {
             return;
         };

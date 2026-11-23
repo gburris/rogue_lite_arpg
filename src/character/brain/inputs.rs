@@ -29,7 +29,7 @@ pub enum ConsiderationInput {
     ManaFraction,
     /// Whether this motion is running.
     MotionRunning(MotionKey),
-    /// Whether the character can start the motion of this source (see [`MotionStatus::is_ready`])
+    /// Whether the character can start the motion of this source (see [`MotionStatus::can_start`])
     /// and no behavior with it is in a start roll retry delay.
     MotionReady(MotionKey),
     /// Seconds the running motion has held its slot when it is this motion, else zero.
@@ -94,9 +94,13 @@ impl DecisionInputs<'_, '_, '_> {
         self.queries.motions.has_source(self.components.entity, key)
     }
 
-    /// See [`MotionStatus::is_ready`].
-    pub fn is_motion_ready(&self, key: MotionKey) -> bool {
-        self.queries.motions.is_ready(self.components.entity, key)
+    /// Whether the character can start the motion of its `key` source now; see
+    /// [`MotionStatus::can_start`].
+    pub fn can_start_motion(&self, key: MotionKey) -> bool {
+        self.queries
+            .motions
+            .can_start(self.components.entity, key)
+            .is_ok()
     }
 
     /// See [`MotionStatus::ends_on_its_own`].
@@ -144,7 +148,7 @@ impl DecisionInputs<'_, '_, '_> {
         let Some(key) = action.key() else {
             return ActionReadiness::Ready;
         };
-        match self.queries.actions.can_use(self.components.entity, key) {
+        match self.queries.actions.can_start(self.components.entity, key) {
             Ok(_) => ActionReadiness::Ready,
             Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
             Err(_) => ActionReadiness::Missing,
@@ -192,7 +196,7 @@ impl DecisionInputs<'_, '_, '_> {
                 brain.motion().is_some_and(|running| running == motion),
             )),
             ConsiderationInput::MotionReady(key) => Some(f32::from(
-                self.is_motion_ready(key) && !brain.is_start_roll_waiting(key, self.now),
+                self.can_start_motion(key) && !brain.is_start_roll_waiting(key, self.now),
             )),
             ConsiderationInput::SecondsInMotion(motion) => Some(
                 brain

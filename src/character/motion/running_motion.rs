@@ -139,17 +139,34 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
     {
         cooldown.start(now);
     }
-    world.commands().trigger(MotionFinished {
-        entity: character,
-        key,
-    });
+    world.commands().trigger(MotionFinished { character, key });
 }
 
 /// A finite motion ended: it completed, lost its target, was interrupted (see
 /// [`InterruptionState`]), was replaced or was stopped.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub(in crate::character) struct MotionFinished {
-    pub entity: Entity,
+    #[event_target]
+    pub character: Entity,
+    pub key: MotionKey,
+}
+
+/// Why a character can't start the motion of a source now.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::character) enum MotionFailure {
+    /// The character has no motion source with the key.
+    NoSource,
+    /// The motion is finite and the character is interrupted; see [`InterruptionState`].
+    CharacterInterrupted,
+    /// The motion source's [`Cooldown`] hasn't run out.
+    OnCooldown,
+}
+
+/// Fired at the character when [`MotionCommands::start`] refuses a motion.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub(in crate::character) struct MotionFailed {
+    #[event_target]
+    pub character: Entity,
     pub key: MotionKey,
 }
 
@@ -201,24 +218,30 @@ impl MotionStatus<'_, '_> {
             .is_some_and(|source| source.is_finite)
     }
 
-    /// Whether `character` can start the motion of its `key` source now: it has the source, the
-    /// source's [`Cooldown`] is ready, and for a finite motion the character is not interrupted
-    /// (see [`InterruptionState`]).
-    pub(in crate::character) fn is_ready(&self, character: Entity, key: MotionKey) -> bool {
-        let Some(source) = self.source_data(character, key) else {
-            return false;
-        };
+    /// The motion source `character` would start for `key` now, or why it can't.
+    pub(in crate::character) fn can_start(
+        &self,
+        character: Entity,
+        key: MotionKey,
+    ) -> Result<Entity, MotionFailure> {
+        let source = self
+            .source_data(character, key)
+            .ok_or(MotionFailure::NoSource)?;
         let is_interrupted = self
             .interruptions
             .get(character)
             .is_ok_and(|interruption| interruption.is_interrupted());
         if source.is_finite && is_interrupted {
-            return false;
+            return Err(MotionFailure::CharacterInterrupted);
         }
         let now = self.time.elapsed_secs();
-        source
+        if source
             .cooldown
-            .is_none_or(|cooldown| cooldown.is_ready(now))
+            .is_some_and(|cooldown| !cooldown.is_ready(now))
+        {
+            return Err(MotionFailure::OnCooldown);
+        }
+        Ok(source.entity)
     }
 
     /// The farthest target distance at which the motion of `character`'s `key` source counts as
@@ -258,22 +281,17 @@ pub(in crate::character) struct MotionCommands<'w, 's> {
 }
 
 impl MotionCommands<'_, '_> {
-    /// Runs the motion of `character`'s `key` source, steering by `target`; without that source it
-    /// only stops the running motion. A motion of `key` that is already running keeps its progress
-    /// and takes the new target, so calling this every frame starts the motion once; any other
-    /// running motion is replaced with a fresh copy of the source.
+    /// Runs the motion of `character`'s `key` source, steering by `target`. A motion of `key` that
+    /// is already running keeps its progress and takes the new target, so calling this every frame
+    /// starts the motion once. Otherwise the start needs [`MotionStatus::can_start`]: if allowed,
+    /// a fresh copy of the source replaces any running motion; if refused, the running motion
+    /// stops and [`MotionFailed`] fires.
     pub(in crate::character) fn start(
         &mut self,
         character: Entity,
         key: MotionKey,
         target: Option<Entity>,
     ) {
-        let Some(source) = self.status.source_data(character, key) else {
-            self.stop(character);
-            return;
-        };
-        let source = source.entity;
-
         if let Some(running) = self.status.running_motion(character) {
             if *running.key == key {
                 let running_target = running
@@ -290,6 +308,11 @@ impl MotionCommands<'_, '_> {
             }
             self.commands.entity(running.entity).try_despawn();
         }
+
+        let Ok(source) = self.status.can_start(character, key) else {
+            self.commands.trigger(MotionFailed { character, key });
+            return;
+        };
 
         // Copies everything the source holds except what describes the source itself.
         let mut source_commands = self.commands.entity(source);

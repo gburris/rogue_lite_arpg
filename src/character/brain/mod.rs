@@ -35,7 +35,9 @@ pub use self::perception::VisionCone;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub use self::perception::lock_onto_target;
-use super::motion::{Home, HomeArea, MotionCommands, MotionFinished, MotionKey, MotionStatus};
+use super::motion::{
+    Home, HomeArea, MotionCommands, MotionFailed, MotionFinished, MotionKey, MotionStatus,
+};
 use crate::character::npc::VILLAGER;
 use crate::prelude::*;
 
@@ -46,7 +48,7 @@ const DECISION_PERIOD: f32 = 0.1;
 /// action slots, and its start roll retry delays. Only [`decide`] changes which behaviors it holds,
 /// every [`DECISION_PERIOD`] with a random per-brain offset; issuing actions notes which actions
 /// it issued. Its requests start and stop the game's motions and actions, which report back with
-/// [`MotionFinished`], [`ActionFinished`] or [`ActionFailed`].
+/// [`MotionFinished`], [`MotionFailed`], [`ActionFinished`] or [`ActionFailed`].
 #[derive(Component, Debug)]
 #[component(on_add = schedule_first_decision)]
 pub struct Brain {
@@ -114,7 +116,7 @@ impl Brain {
     }
 
     /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
-    /// is ready (see [`MotionStatus::is_ready`]), its action can run (see
+    /// can start (see [`MotionStatus::can_start`]), its action can run (see
     /// [`DecisionInputs::can_run`]), and it suits its commit policy (see
     /// [`Behavior::suits_commit_policy`]).
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
@@ -123,7 +125,7 @@ impl Brain {
             return false;
         }
 
-        let motion_available = |key: MotionKey| inputs.is_motion_ready(key);
+        let motion_available = |key: MotionKey| inputs.can_start_motion(key);
         let action_available = |action: Action| match action {
             Action::Idle => true,
             Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
@@ -323,6 +325,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins(perception::plugin)
         .add_observer(decide::on_motion_finished)
+        .add_observer(decide::on_motion_failed)
         .add_observer(decide::on_action_finished)
         .add_observer(decide::on_action_failed)
         .add_systems(

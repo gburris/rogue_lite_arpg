@@ -8,7 +8,9 @@ use super::considerations::{Behavior, BehaviorScoreExplanation};
 use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::{Action, Brain, MotionCommands, MotionFinished, MotionKey, TargetLocationHint};
+use super::{
+    Action, Brain, MotionCommands, MotionFailed, MotionFinished, MotionKey, TargetLocationHint,
+};
 use crate::prelude::*;
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
@@ -84,7 +86,7 @@ pub(super) fn on_motion_finished(
     mut brains: DecidingBrains,
     #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
 ) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.character) else {
         return;
     };
     let inputs = DecisionInputs {
@@ -95,6 +97,36 @@ pub(super) fn on_motion_finished(
     let motion = finished.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
+    finish_and_redecide(
+        &mut brain,
+        |running| running.motion == Some(motion),
+        &inputs,
+        score_trace.as_deref_mut(),
+        #[cfg(feature = "dev_tools")]
+        &mut decision_stats,
+    );
+}
+
+/// Applies a [`MotionFailed`], so a committed motion the game refused ends at once instead of at
+/// its timeout; see [`finish_and_redecide`]. A continuously scored motion is retried instead.
+pub(super) fn on_motion_failed(
+    failed: On<MotionFailed>,
+    time: Res<Time<Virtual>>,
+    queries: DecisionQueries,
+    mut brains: DecidingBrains,
+    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
+) {
+    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.character) else {
+        return;
+    };
+    let inputs = DecisionInputs {
+        components: &components,
+        queries: &queries,
+        now: time.elapsed_secs(),
+    };
+    let motion = failed.key;
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_motion_failed").entered();
     finish_and_redecide(
         &mut brain,
         |running| running.motion == Some(motion),
@@ -306,8 +338,8 @@ fn passes_start_roll(behavior: Behavior, index: usize, missed_start_ids: &mut Ve
 
 /// Keeps each character's running motion on the motion its brain holds, steering by the target's
 /// [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot is
-/// empty; see [`MotionCommands::start`]. A finished motion is not started again; see
-/// [`on_motion_finished`].
+/// empty; see [`MotionCommands::start`]. A finished motion is not started again, and a refused
+/// committed one ends; see [`on_motion_finished`] and [`on_motion_failed`].
 pub(super) fn issue_running_motion(
     mut motions: MotionCommands,
     brains: Query<(Entity, &Brain, Option<&TargetLocationHint>)>,
@@ -334,7 +366,7 @@ pub(super) fn issue_running_actions(
     for (entity, mut brain) in &mut brains {
         for key in ActionKey::all() {
             if brain.running_behavior_with(Action::Use(key)).is_none() {
-                actions.stop_sustained_use(entity, key);
+                actions.stop(entity, key);
             }
         }
         for index in 0..brain.running_behaviors.len() {
@@ -351,8 +383,7 @@ pub(super) fn issue_running_actions(
             if actions.status().is_using(entity, key) {
                 continue;
             }
-            // Discarded: a refusal reaches the brain as `ActionFailed`.
-            let _ = actions.try_use(entity, key);
+            actions.start(entity, key);
         }
     }
 }

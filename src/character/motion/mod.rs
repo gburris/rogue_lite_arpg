@@ -18,7 +18,7 @@ use self::motion_source::{FiniteMotion, MotionSourceOf};
 pub use self::motion_source::{MotionKey, MotionSources};
 pub use self::orbit::Orbit;
 pub use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
+pub(super) use self::running_motion::{MotionCommands, MotionFailed, MotionFinished, MotionStatus};
 use self::running_motion::{MotionProgress, MotionStep, RunningMotionOf, SteeringMotionOf};
 use self::steer_input::{
     BlockedTimer, CircleDirection, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,

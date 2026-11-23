@@ -47,7 +47,7 @@ pub struct Abilities(Vec<Entity>);
 const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim, whose front
-/// edge sits at the ability's [`ActionReach`].
+/// edge sits at the ability's [`Reach`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Ability::Bite)]
 pub(super) struct Bite {
@@ -90,7 +90,7 @@ impl Bite {
 pub(super) fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         ~{ActionUseStyle::Timed { seconds: BITE_HITBOX_SECONDS }}
         Attack
         on(on_bite_took_effect)
@@ -101,10 +101,10 @@ pub(super) fn bite(reach: f32, bite: Bite) -> impl Scene {
 fn on_bite_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    bites: Query<(&Bite, &ActionReach)>,
+    bites: Query<(&Bite, &Reach)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
 ) -> Result {
-    let (bite, &ActionReach(reach)) = bites.get(took_effect.source)?;
+    let (bite, &Reach(reach)) = bites.get(took_effect.source)?;
     let holder = took_effect.holder;
     let Ok((vision, stat_multipliers, side)) = biting_characters.get(holder) else {
         return Ok(());
@@ -141,7 +141,7 @@ struct Breath;
 pub(super) fn breath(reach: f32) -> impl Scene {
     bsn! {
         Breath
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         Attack
         on(on_breath_took_effect)
     }
@@ -198,7 +198,7 @@ fn on_heal_took_effect(
 /// Radius of the shockwave sheet's ring at its widest, in sheet pixels.
 const RALLY_SHOUT_RING_RADIUS: f32 = 87.0;
 
-/// A war cry that gives every other ally within the ability's [`ActionReach`] its ability entity's
+/// A war cry that gives every other ally within the ability's [`Reach`] its ability entity's
 /// [`Effects`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(Ability::Rally)]
@@ -209,7 +209,7 @@ pub struct Rally;
 pub(super) fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         Rally
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         on(on_rally_took_effect)
         Effects [
             Rallied
@@ -231,10 +231,10 @@ fn on_rally_took_effect(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-    rallies: Query<(&Effects, &ActionReach), With<Rally>>,
+    rallies: Query<(&Effects, &Reach), With<Rally>>,
     allies: Allies,
 ) -> Result {
-    let (effects, &ActionReach(reach)) = rallies.get(took_effect.source)?;
+    let (effects, &Reach(reach)) = rallies.get(took_effect.source)?;
     let holder = took_effect.holder;
     for ally in allies.within(holder, reach) {
         commands.trigger(ApplyEffects::new(effects, ally.entity));

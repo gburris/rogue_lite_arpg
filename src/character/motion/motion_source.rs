@@ -83,7 +83,3 @@ pub(super) fn on_motion_source_added(
 /// [`MotionFinished`](super::MotionFinished).
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub(super) struct FiniteMotion;
-
-/// The farthest target distance at which an AI character starts a motion of this source.
-#[derive(Component, Clone, Copy, Debug, Deref)]
-pub struct MotionReach(pub f32);

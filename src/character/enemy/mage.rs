@@ -12,7 +12,7 @@ use crate::character::brain::{
     mana_at_or_below, target_speed_at_most, target_within_distance, within_reach,
 };
 use crate::character::motion::{
-    Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, sidestep, slide, step_in,
+    Idle, KeepDistance, MotionKey, MotionSources, Orbit, sidestep, slide, step_in,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -334,7 +334,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
             @slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
-            ~{MotionReach(ICE_SLIDE_REACH)}
+            ~{Reach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
             ~Cooldown::new(1.2)
         ]

@@ -6,8 +6,8 @@ use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    FiniteMotion, MotionKey, MotionReach, MotionSourceOf, MotionSources, SteerInput,
-    SteeredCharacter, Steering, SteeringTargets,
+    FiniteMotion, MotionKey, MotionSourceOf, MotionSources, SteerInput, SteeredCharacter, Steering,
+    SteeringTargets,
 };
 use crate::prelude::*;
 
@@ -175,7 +175,7 @@ struct MotionSourceData {
     key: &'static MotionKey,
     is_finite: Has<FiniteMotion>,
     cooldown: Option<&'static Cooldown>,
-    reach: Option<&'static MotionReach>,
+    reach: Option<&'static Reach>,
 }
 
 /// Reads which motion a character runs and which motions it could start.
@@ -222,10 +222,10 @@ impl MotionStatus<'_, '_> {
     }
 
     /// The farthest target distance at which the motion of `character`'s `key` source counts as
-    /// in reach; `None` without the source or a [`MotionReach`].
+    /// in reach; `None` without the source or a [`Reach`].
     pub(in crate::character) fn reach(&self, character: Entity, key: MotionKey) -> Option<f32> {
         let source = self.source_data(character, key)?;
-        source.reach.map(|&MotionReach(reach)| reach)
+        source.reach.map(|&Reach(reach)| reach)
     }
 
     fn running_motion(&self, character: Entity) -> Option<RunningMotionDataItem<'_, '_>> {
@@ -294,7 +294,7 @@ impl MotionCommands<'_, '_> {
         // Copies everything the source holds except what describes the source itself.
         let mut source_commands = self.commands.entity(source);
         let mut motion = source_commands.clone_and_spawn_with_opt_out(|builder| {
-            builder.deny::<(MotionSourceOf, Cooldown, MotionReach)>();
+            builder.deny::<(MotionSourceOf, Cooldown, Reach)>();
         });
         motion.insert((Name::new("Running motion"), RunningMotionOf { character }));
         if let Some(target) = target {

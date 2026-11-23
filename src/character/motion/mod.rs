@@ -15,7 +15,7 @@ pub use self::dash::{kite, sidestep, slide, step_in};
 pub use self::direct::{Chase, Flee, Idle, KeepDistance};
 pub use self::home_area::{Home, HomeArea, ReturnToHome};
 use self::motion_source::{FiniteMotion, MotionSourceOf};
-pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
+pub use self::motion_source::{MotionKey, MotionSources};
 pub use self::orbit::Orbit;
 pub use self::running_motion::RunningMotion;
 pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};

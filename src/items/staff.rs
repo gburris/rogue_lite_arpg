@@ -125,7 +125,7 @@ fn staff(image: Handle<Image>, seconds_between_casts: f32, swing_seconds: f32) -
         ~Cooldown::new(cooldown)
         ActionWindup { seconds: swing_seconds }
         ~{ActionUseStyle::Timed { seconds: swing_seconds }}
-        ~{ActionReach(STAFF_REACH)}
+        ~{Reach(STAFF_REACH)}
         Attack
         Sprite { image }
         on(on_staff_cast_started)

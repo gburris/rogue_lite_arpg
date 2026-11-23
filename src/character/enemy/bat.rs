@@ -10,9 +10,7 @@ use crate::character::brain::{
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
     distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
 };
-use crate::character::motion::{
-    KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
-};
+use crate::character::motion::{KeepDistance, MotionKey, MotionSources, Orbit, Swoop, TurnRate};
 use crate::interval::Interval;
 use crate::prelude::*;
 
@@ -256,7 +254,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
             --
             Swoop
-            ~{MotionReach(CAST_MAX_RANGE)}
+            ~{Reach(CAST_MAX_RANGE)}
             ~Cooldown::new(SWOOP_COOLDOWN)
         ]
         template(move |_| Ok(sprite.clone()))

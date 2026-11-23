@@ -91,7 +91,7 @@ fn melee_weapon(image: Handle<Image>, value: u32, swing_seconds: f32) -> impl Sc
     bsn! {
         ~Equippable::new(EquipmentSlot::Mainhand, &MELEE_EQUIPMENT_POSES)
         ~Cooldown::new(MELEE_WEAPON_COOLDOWN)
-        ~{ActionReach(MELEE_WEAPON_REACH)}
+        ~{Reach(MELEE_WEAPON_REACH)}
         ~{ActionUseStyle::Timed { seconds: swing_seconds }}
         Attack
         ~Item::new(value, ItemKind::Melee)

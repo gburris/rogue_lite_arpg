@@ -24,10 +24,6 @@ impl ActionKey {
     }
 }
 
-/// The farthest target distance at which an AI holder uses this action source.
-#[derive(Component, Clone, Copy, Debug, Deref)]
-pub struct ActionReach(pub f32);
-
 /// Marks an action source whose use is an attack, like a swing, a cast or a bite.
 #[derive(Component, Clone, Copy, Debug, Default)]
 pub struct Attack;
@@ -103,7 +99,7 @@ struct ActionSourceData {
     ability: Option<&'static Ability>,
     cooldown: &'static Cooldown,
     style: &'static ActionUseStyle,
-    reach: Option<&'static ActionReach>,
+    reach: Option<&'static Reach>,
     is_attack: Has<Attack>,
     mana_cost: Option<&'static ManaCost>,
     required_item: Option<&'static RequiredItem>,
@@ -153,12 +149,12 @@ impl ActionStatus<'_, '_> {
         }
     }
 
-    /// How far `holder`'s action source named by `key` reaches; `None` without an [`ActionReach`]
+    /// How far `holder`'s action source named by `key` reaches; `None` without a [`Reach`]
     /// or an action source.
     pub fn reach(&self, holder: Entity, key: ActionKey) -> Option<f32> {
         self.source_data(holder, key)?
             .reach
-            .map(|&ActionReach(reach)| reach)
+            .map(|&Reach(reach)| reach)
     }
 
     /// Whether a use of `holder`'s action source named by `key` ends without being stopped; see

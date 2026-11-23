@@ -1,5 +1,5 @@
 mod action_status;
-mod in_progress;
+mod action_use;
 
 use bevy::prelude::*;
 
@@ -11,9 +11,9 @@ pub mod prelude {
         ActionCommands, ActionFailed, ActionFailure, ActionKey, ActionReach, ActionStatus,
         ActionUseStyle, Attack, RequiredItem,
     };
-    pub use super::in_progress::{
-        ActionFinished, ActionGlow, ActionInProgress, ActionTookEffect, ActionWindup,
-        PartOfActionUse, StopAction, TimedActionProgress,
+    pub use super::action_use::{
+        ActionFinished, ActionGlow, ActionInUseOf, ActionSourceInUse, ActionTookEffect,
+        ActionUsePartOf, ActionWindup, StopAction, TimedActionProgress,
     };
 }
 
@@ -27,9 +27,9 @@ pub struct ActionSource;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
-        in_progress::advance_actions.in_set(SimulationSystems::Upkeep),
+        action_use::advance_actions.in_set(SimulationSystems::Upkeep),
     )
-    .add_observer(in_progress::on_action_started)
-    .add_observer(in_progress::on_action_windup_started)
-    .add_observer(in_progress::on_stop_action);
+    .add_observer(action_use::on_action_started)
+    .add_observer(action_use::on_action_windup_started)
+    .add_observer(action_use::on_stop_action);
 }

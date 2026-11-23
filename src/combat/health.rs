@@ -203,11 +203,15 @@ pub(super) fn regenerate_mana(mut query: Query<&mut Mana>, time: Res<Time>) {
 pub(super) fn drain_mana_for_actions_in_progress(
     mut commands: Commands,
     time: Res<Time>,
-    draining_sources: Query<(Entity, &ManaDrainRate, &ActionInProgress)>,
+    draining_sources: Query<(Entity, &ManaDrainRate, &ActionSourceInUse)>,
+    action_uses: Query<&ActionInUseOf>,
     mut holder_query: Query<&mut Mana>,
 ) {
-    for (source, &drain_rate, in_progress) in &draining_sources {
-        let Ok(mut mana) = holder_query.get_mut(in_progress.holder()) else {
+    for (source, &drain_rate, source_in_use) in &draining_sources {
+        let Ok(&ActionInUseOf { holder }) = action_uses.get(source_in_use.get()) else {
+            continue;
+        };
+        let Ok(mut mana) = holder_query.get_mut(holder) else {
             continue;
         };
         let drain_amount = drain_rate.cost_over(time.delta_secs());

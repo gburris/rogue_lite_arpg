@@ -3,7 +3,9 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 use super::ActionSource;
-use super::in_progress::{ActionInProgress, StopAction};
+use super::action_use::{
+    ActionInUseOf, ActionSourceInUse, ActionSourceInUseOf, ActionUse, ActionsInUse, StopAction,
+};
 use crate::prelude::*;
 
 /// Names an [`ActionSource`] of a character: the item equipped in a slot, or one of its abilities
@@ -105,7 +107,7 @@ struct ActionSourceData {
     is_attack: Has<Attack>,
     mana_cost: Option<&'static ManaCost>,
     required_item: Option<&'static RequiredItem>,
-    in_progress: Option<&'static ActionInProgress>,
+    is_in_use: Has<ActionSourceInUse>,
 }
 
 /// What [`ActionStatus`] reads of a character holding action sources.
@@ -116,14 +118,10 @@ struct ActionHolder {
     abilities: Option<&'static Abilities>,
     mana: Option<&'static Mana>,
     interruption: InterruptionState,
+    actions_in_use: Option<&'static ActionsInUse>,
 }
 
 impl ActionHolderItem<'_, '_> {
-    fn equipped_sources(&self) -> impl Iterator<Item = Entity> {
-        let mainhand = self.mainhand.map(Mainhand::get);
-        mainhand.into_iter().chain(self.offhand.map(Offhand::get))
-    }
-
     fn ability_sources(&self) -> impl Iterator<Item = Entity> {
         self.abilities.into_iter().flat_map(Abilities::iter)
     }
@@ -135,6 +133,7 @@ pub struct ActionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolder, With<Character>>,
     sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
+    action_uses: Query<'w, 's, &'static ActionSourceInUseOf>,
     carried_items: CarriedItems<'w, 's>,
 }
 
@@ -178,7 +177,7 @@ impl ActionStatus<'_, '_> {
     /// Whether `holder` is using its action source named by `key` now.
     pub fn is_using(&self, holder: Entity, key: ActionKey) -> bool {
         self.source_data(holder, key)
-            .is_some_and(|source| source.in_progress.is_some())
+            .is_some_and(|source| source.is_in_use)
     }
 
     /// Whether `holder` is using an item whose use plays out and ends itself, such as a swing; see
@@ -216,7 +215,7 @@ impl ActionStatus<'_, '_> {
         if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }
-        if source.in_progress.is_some() {
+        if source.is_in_use {
             return Err(ActionFailure::InProgress);
         }
         if !source.cooldown.is_ready(self.time.elapsed_secs()) {
@@ -239,12 +238,14 @@ impl ActionStatus<'_, '_> {
             return false;
         };
         holder
-            .equipped_sources()
-            .chain(holder.ability_sources())
-            .any(|entity| {
+            .actions_in_use
+            .into_iter()
+            .flat_map(ActionsInUse::iter)
+            .filter_map(|action_use| self.action_uses.get(action_use).ok())
+            .any(|source_in_use_of| {
                 self.sources
-                    .get(entity)
-                    .is_ok_and(|source| source.in_progress.is_some() && predicate(&source))
+                    .get(source_in_use_of.source)
+                    .is_ok_and(|source| predicate(&source))
             })
     }
 
@@ -269,14 +270,25 @@ impl<'w, 's> ActionCommands<'w, 's> {
 
     /// Starts a use of `holder`'s action source named by `key` if [`ActionStatus::can_use`] allows
     /// it, or fires [`ActionFailed`]. A refused use changes nothing else, so callers may retry
-    /// it every frame.
+    /// it every frame. Of two starts of one source queued before the first applies, only the first
+    /// starts a use.
     pub fn try_use(&mut self, holder: Entity, key: ActionKey) -> Result<Entity, ActionFailure> {
         let result = self.status.can_use(holder, key);
         match result {
-            Ok(entity) => {
-                self.commands
-                    .entity(entity)
-                    .insert(ActionInProgress::new(holder, key));
+            Ok(source) => {
+                self.commands.queue(move |world: &mut World| {
+                    let source_is_free = world
+                        .get_entity(source)
+                        .is_ok_and(|source| !source.contains::<ActionSourceInUse>());
+                    if source_is_free {
+                        world.spawn((
+                            Name::new("Action use"),
+                            ActionUse::new(key),
+                            ActionInUseOf { holder },
+                            ActionSourceInUseOf { source },
+                        ));
+                    }
+                });
             }
             Err(reason) => {
                 self.commands.trigger(ActionFailed {
@@ -295,7 +307,7 @@ impl<'w, 's> ActionCommands<'w, 's> {
         let Some(source) = self.status.source_data(holder, key) else {
             return;
         };
-        if source.in_progress.is_some() && *source.style == ActionUseStyle::Sustained {
+        if source.is_in_use && *source.style == ActionUseStyle::Sustained {
             self.commands.trigger(StopAction {
                 source: source.entity,
             });

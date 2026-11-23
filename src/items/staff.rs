@@ -150,13 +150,16 @@ static STAFF_EQUIPMENT_POSES: DirectionalPoses = DirectionalPoses {
 
 /// Swings the staff toward its holder's facing and back, with a spark at its tip.
 fn on_staff_cast_started(
-    added: On<Add<ActionInProgress>>,
+    added: On<Add<ActionSourceInUse>>,
     mut commands: Commands,
-    staff_query: Query<(&Staff, &Transform, &ActionInProgress)>,
+    staff_query: Query<(&Staff, &Transform, &ActionSourceInUse)>,
+    action_uses: Query<&ActionInUseOf>,
     holder_query: Query<&FacingDirection>,
 ) -> Result {
-    let (staff, staff_transform, in_progress) = staff_query.get(added.entity)?;
-    let Ok(facing_direction) = holder_query.get(in_progress.holder()) else {
+    let (staff, staff_transform, source_in_use) = staff_query.get(added.entity)?;
+    let action_use = source_in_use.get();
+    let &ActionInUseOf { holder } = action_uses.get(action_use)?;
+    let Ok(facing_direction) = holder_query.get(holder) else {
         return Ok(());
     };
 
@@ -189,7 +192,7 @@ fn on_staff_cast_started(
         @point_light(Color::WHITE, 10.0, 3.0, 1.0)
         Transform::from_translation(tip)
         ChildOf(staff_entity)
-        ~{PartOfActionUse { source: staff_entity }}
+        ~{ActionUsePartOf { action_use }}
     });
     commands
         .entity(staff_entity)

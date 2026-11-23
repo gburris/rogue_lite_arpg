@@ -80,7 +80,7 @@ pub(super) fn update_equipment_transforms(
         ),
     >,
     // Update when an item stops swinging, casting, etc...
-    mut ended_actions: RemovedComponents<ActionInProgress>,
+    mut ended_actions: RemovedComponents<ActionSourceInUse>,
     item_holders: Query<&ItemOf>,
     holders: Query<(Option<&Mainhand>, Option<&Offhand>, &FacingDirection), With<Items>>,
     actions: ActionStatus,

@@ -159,7 +159,9 @@ fn on_melee_took_effect(
         side.hitbox_layers(),
         Transform::default(),
         ChildOf(weapon),
-        PartOfActionUse { source: weapon },
+        ActionUsePartOf {
+            action_use: took_effect.action_use,
+        },
     ));
     Ok(())
 }
@@ -180,12 +182,16 @@ fn process_melee_attacks(
             &MeleeWeapon,
             &mut Transform,
             &ActiveMeleeAttack,
-            &TimedActionProgress,
+            &ActionSourceInUse,
         ),
         (Without<Projectile>, Without<Shield>),
     >,
+    action_uses: Query<&TimedActionProgress>,
 ) {
-    for (melee_weapon, mut transform, active_attack, timed_progress) in &mut attack_query {
+    for (melee_weapon, mut transform, active_attack, source_in_use) in &mut attack_query {
+        let Ok(timed_progress) = action_uses.get(source_in_use.get()) else {
+            continue;
+        };
         let attack_progress = timed_progress.fraction();
         let hold_distance = melee_weapon.hold_distance;
 

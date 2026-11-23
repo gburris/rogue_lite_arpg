@@ -18,7 +18,7 @@ use crate::prelude::*;
 const COMMIT_TIMEOUT: f32 = 3.0;
 
 /// A behavior that won its slots, with its motion and action copied from the definition. It holds
-/// both while it runs. The finish rules for committed and continuously scored behaviors live here.
+/// both while it runs.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,

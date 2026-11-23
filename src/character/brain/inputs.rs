@@ -17,26 +17,28 @@ pub enum ConsiderationInput {
     TargetSpeed,
     MissingHealth,
     ManaFraction,
-    /// Whether this motion is running.
-    MotionRunning(MotionKey),
-    /// Whether the character can start the motion of this source (see [`MotionStatus::can_start`])
-    /// and no behavior with it is in a start roll retry delay.
+    /// Whether the brain holds this motion.
+    MotionHeld(MotionKey),
+    /// Whether the character can run the motion of this source (see
+    /// [`DecisionInputs::can_run_motion`]) and no behavior with it is in a start roll retry delay.
     MotionReady(MotionKey),
-    /// Seconds the running motion has held its slot when it is this motion, else zero.
-    SecondsInMotion(MotionKey),
+    /// Seconds since the behavior holding this motion started; zero while the brain holds another
+    /// motion or none.
+    SecondsMotionHeld(MotionKey),
     /// How far past its home area range the character is.
     HomeAreaPull,
     AttackFinished,
     /// Target distance over the reach of this motion source; at most `1.0` is in reach.
     MotionReachFraction(MotionKey),
-    /// Target distance over this action's reach; at most `1.0` is in reach.
-    ActionReachFraction(Action),
-    /// The closest ally's distance over this action's reach; absent with no ally alive.
-    AllyReachFraction(Action),
+    /// Target distance over the reach of this action source; at most `1.0` is in reach.
+    ActionReachFraction(ActionKey),
+    /// The closest ally's distance over the reach of this action source; absent with no living
+    /// ally.
+    AllyReachFraction(ActionKey),
     SecondsSinceTargeted,
     /// Whether the character owns this action and has what it needs, whatever only waiting would
     /// fix.
-    ActionUsable(Action),
+    ActionUsable(ActionKey),
     /// Whether the character is blocked; see [`BlockedState`].
     MovementBlocked,
 }
@@ -84,9 +86,9 @@ impl DecisionInputs<'_, '_, '_> {
         self.queries.motions.has_source(self.components.entity, key)
     }
 
-    /// Whether the character can start the motion of its `key` source now; see
+    /// Whether the character can run the motion of its `key` source now; see
     /// [`MotionStatus::can_start`].
-    pub fn can_start_motion(&self, key: MotionKey) -> bool {
+    pub fn can_run_motion(&self, key: MotionKey) -> bool {
         self.queries
             .motions
             .can_start(self.components.entity, key)
@@ -107,12 +109,6 @@ impl DecisionInputs<'_, '_, '_> {
             .is_some_and(|key| self.queries.actions.has_source(self.components.entity, key))
     }
 
-    /// How far the action source for `action` reaches; `None` without a source or a reach.
-    fn action_reach(&self, action: Action) -> Option<f32> {
-        let key = action.key()?;
-        self.queries.actions.reach(self.components.entity, key)
-    }
-
     /// Whether `action` ends on its own, so a committed behavior over it can finish; see
     /// [`ActionUseStyle`].
     pub fn action_ends_on_its_own(&self, action: Action) -> bool {
@@ -122,10 +118,7 @@ impl DecisionInputs<'_, '_, '_> {
             .is_some_and(|key| self.queries.actions.ends_on_its_own(entity, key))
     }
 
-    fn is_action_usable(&self, action: Action) -> bool {
-        let Some(key) = action.key() else {
-            return false;
-        };
+    fn is_action_usable(&self, key: ActionKey) -> bool {
         match self.queries.actions.can_start(self.components.entity, key) {
             Ok(_) => true,
             Err(failure) => failure.is_temporary(),
@@ -134,7 +127,7 @@ impl DecisionInputs<'_, '_, '_> {
 
     /// Whether `action` can run now: it is already in progress, or it is ready and no other action
     /// is in progress, so a drink the brain dropped still blocks a swing. `Idle` always can.
-    pub fn can_run(&self, action: Action) -> bool {
+    pub fn can_run_action(&self, action: Action) -> bool {
         let actions = &self.queries.actions;
         let entity = self.components.entity;
         let Some(key) = action.key() else {
@@ -169,16 +162,14 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::ManaFraction => {
                 Some(self.components.mana.and_then(Mana::fraction).unwrap_or(1.0))
             }
-            ConsiderationInput::MotionRunning(motion) => Some(f32::from(
-                brain.motion().is_some_and(|running| running == motion),
-            )),
+            ConsiderationInput::MotionHeld(key) => Some(f32::from(brain.motion() == Some(key))),
             ConsiderationInput::MotionReady(key) => Some(f32::from(
-                self.can_start_motion(key) && !brain.is_start_roll_waiting(key, self.now),
+                self.can_run_motion(key) && !brain.is_start_roll_waiting(key, self.now),
             )),
-            ConsiderationInput::SecondsInMotion(motion) => Some(
+            ConsiderationInput::SecondsMotionHeld(key) => Some(
                 brain
                     .current_motion_behavior()
-                    .filter(|(_, held)| *held == motion)
+                    .filter(|(_, held)| *held == key)
                     .map_or(0.0, |(running, _)| self.now - running.started_at),
             ),
             ConsiderationInput::HomeAreaPull => self.home_area_pull(brain.motion()),
@@ -187,19 +178,19 @@ impl DecisionInputs<'_, '_, '_> {
                 let reach = self.queries.motions.reach(self.components.entity, key);
                 self.target_reach_fraction(reach)
             }
-            ConsiderationInput::ActionReachFraction(action) => {
-                self.target_reach_fraction(self.action_reach(action))
+            ConsiderationInput::ActionReachFraction(key) => {
+                let reach = self.queries.actions.reach(self.components.entity, key);
+                self.target_reach_fraction(reach)
             }
-            ConsiderationInput::AllyReachFraction(action) => {
+            ConsiderationInput::AllyReachFraction(key) => {
                 let closest = self.queries.allies.closest(self.components.entity)?;
-                Some(reach_fraction(closest.distance, self.action_reach(action)))
+                let reach = self.queries.actions.reach(self.components.entity, key);
+                Some(reach_fraction(closest.distance, reach))
             }
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
             }
-            ConsiderationInput::ActionUsable(action) => {
-                Some(f32::from(self.is_action_usable(action)))
-            }
+            ConsiderationInput::ActionUsable(key) => Some(f32::from(self.is_action_usable(key))),
             ConsiderationInput::MovementBlocked => {
                 Some(f32::from(self.components.blocked.is_blocked()))
             }
@@ -209,7 +200,7 @@ impl DecisionInputs<'_, '_, '_> {
     /// How far past its home area range the character is. Once already heading
     /// home it reads full until arrival, so crossing back inside the range
     /// mid-return cannot hand the character straight back to wandering.
-    fn home_area_pull(&self, running_motion: Option<MotionKey>) -> Option<f32> {
+    fn home_area_pull(&self, held_motion: Option<MotionKey>) -> Option<f32> {
         let home = self.components.home?;
         let (home_transform, home_area) = self.queries.home_areas.get(home.get()).ok()?;
         let distance = self
@@ -219,7 +210,7 @@ impl DecisionInputs<'_, '_, '_> {
             .xy()
             .distance(home_transform.translation.xy());
         let overshoot_fraction = home_area.overshoot_fraction(distance)?;
-        if running_motion == Some(MotionKey::ReturnToHome) {
+        if held_motion == Some(MotionKey::ReturnToHome) {
             Some(f32::from(!home_area.has_arrived(distance)))
         } else {
             Some(overshoot_fraction)

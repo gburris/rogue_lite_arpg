@@ -7,15 +7,16 @@ use super::{
 use crate::character::ability::heal;
 use crate::character::brain::{
     ATTACK_FINISHED, Action, Behavior, BrainDefinition, CommitPolicy, Consideration,
-    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, NO_TARGET, RETURN_TO_HOME,
-    SEEK_LOST_TARGET, WANDER, consideration, flag, motion_running_for, reach_fraction_threshold,
-    target_within_distance,
+    ConsiderationInput, Curve, HAS_TARGET, IN_MAINHAND_REACH, MAINHAND, MAINHAND_KEY, NO_TARGET,
+    RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration, flag, motion_held_for,
+    reach_fraction_threshold, target_within_distance,
 };
 use crate::character::motion::{Flee, Idle, MotionKey, MotionSources, kite};
 use crate::interval::Interval;
 use crate::prelude::*;
 
-const HEAL: Action = Action::Use(ActionKey::Ability(Ability::Heal));
+const HEAL_KEY: ActionKey = ActionKey::Ability(Ability::Heal);
+const HEAL: Action = Action::Use(HEAL_KEY);
 
 /// Seconds a warrior must stand in melee reach before it swings, so a target that keeps moving can
 /// step back out of reach first.
@@ -39,14 +40,11 @@ const NEEDS_POTION: Consideration = consideration(
     Curve::Linear,
 );
 const STOOD_STILL_IN_REACH: Consideration =
-    motion_running_for("stood still in reach", MotionKey::Idle, WARRIOR_SWING_DELAY);
-const FLEEING: Consideration = flag(
-    "fleeing",
-    ConsiderationInput::MotionRunning(MotionKey::Flee),
-);
+    motion_held_for("stood still in reach", MotionKey::Idle, WARRIOR_SWING_DELAY);
+const FLEEING: Consideration = flag("fleeing", ConsiderationInput::MotionHeld(MotionKey::Flee));
 const FAR_FROM_TARGET: Consideration =
     target_within_distance("near target", HEAL_SAFE_DISTANCE).inverted("far from target");
-const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL));
+const HAS_POTION: Consideration = flag("has potion", ConsiderationInput::ActionUsable(HEAL_KEY));
 const CORNERED: Consideration = flag("cornered", ConsiderationInput::MovementBlocked);
 
 // Reach fractions, so a longer weapon stands the warrior farther back. Both
@@ -56,13 +54,13 @@ const MELEE_ENTER_FRACTION: f32 = 0.97;
 
 const OUTSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
     "outside melee reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND),
+    ConsiderationInput::ActionReachFraction(MAINHAND_KEY),
     MELEE_ENTER_FRACTION,
     0.94,
 );
 const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
     "inside melee reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND),
+    ConsiderationInput::ActionReachFraction(MAINHAND_KEY),
     MELEE_ENTER_FRACTION,
     1.0,
 );

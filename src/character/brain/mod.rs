@@ -12,10 +12,10 @@ use rand::RngExt;
 pub(super) use self::considerations::{
     ACTION_BASELINE_IDLE, ATTACK_FINISHED, Behavior, CAST_DISTANCE_RANGE, CAST_HYSTERESIS,
     CAST_MAX_RANGE, CAST_MIN_RANGE, CHASE_CAST_RANGE, Consideration, HAS_TARGET, IN_MAINHAND_REACH,
-    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, NO_TARGET, RETURN_TO_HOME, SEEK_LOST_TARGET,
-    WANDER, consideration, distance_threshold, flag, flag_kept_while_current, mana_at_or_below,
-    motion_running_for, reach_fraction_threshold, target_speed_at_most, target_within_distance,
-    within_reach,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, MAINHAND, MAINHAND_KEY, NO_TARGET, RETURN_TO_HOME,
+    SEEK_LOST_TARGET, WANDER, consideration, distance_threshold, flag, flag_kept_while_current,
+    mana_at_or_below, motion_held_for, reach_fraction_threshold, target_speed_at_most,
+    target_within_distance, within_reach,
 };
 pub use self::considerations::{Action, BrainDefinition};
 pub use self::decide::ScoreTrace;
@@ -103,14 +103,12 @@ impl Brain {
             .behaviors
             .iter()
             .zip(&self.start_roll_ready_at)
-            .any(|(behavior, &ready_at)| {
-                now < ready_at && behavior.motion.is_some_and(|held| held == motion)
-            })
+            .any(|(behavior, &ready_at)| now < ready_at && behavior.motion == Some(motion))
     }
 
     /// Whether behavior `index` may start now: it is not in a start roll retry delay, its motion
-    /// can start (see [`MotionStatus::can_start`]), its action can run (see
-    /// [`DecisionInputs::can_run`]), and it suits its commit policy (see
+    /// and action can run (see [`DecisionInputs::can_run_motion`] and
+    /// [`DecisionInputs::can_run_action`]), and it suits its commit policy (see
     /// [`Behavior::suits_commit_policy`]).
     fn is_available(&self, index: usize, inputs: &DecisionInputs) -> bool {
         let behavior = &self.definition.behaviors[index];
@@ -118,11 +116,11 @@ impl Brain {
             return false;
         }
 
-        let motion_can_start = behavior
-            .motion
-            .is_none_or(|key| inputs.can_start_motion(key));
-        motion_can_start
-            && behavior.action.is_none_or(|action| inputs.can_run(action))
+        let motion_can_run = behavior.motion.is_none_or(|key| inputs.can_run_motion(key));
+        motion_can_run
+            && behavior
+                .action
+                .is_none_or(|action| inputs.can_run_action(action))
             && behavior.suits_commit_policy(inputs)
     }
 

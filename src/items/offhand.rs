@@ -63,7 +63,7 @@ pub struct Shield {
 fn orient_raised_shields(
     mut raised_shield_query: Query<
         (&ItemOf, &mut Sprite, &mut Transform),
-        (With<Shield>, With<ActionInProgress>),
+        (With<Shield>, With<ActionSourceUse>),
     >,
     holder_query: Query<&Vision>,
 ) {
@@ -108,8 +108,8 @@ fn on_shield_took_effect(
         CollisionLayers::new(GameCollisionLayer::HighObstacle, GameCollisionLayer::InAir),
         Transform::default(),
         ChildOf(shield_entity),
-        PartOfActionUse {
-            source: shield_entity,
+        ActionUsePartOf {
+            action_use: took_effect.action_use,
         },
     ));
     if reflects_projectiles {

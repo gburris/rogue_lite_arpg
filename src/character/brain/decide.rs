@@ -1,4 +1,5 @@
 use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::system::SystemParam;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
@@ -69,143 +70,93 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Applies a [`MotionFinished`]; see [`finish_and_redecide`]. It runs in the flush that despawns
-/// the finished motion, so the behavior that held it is gone before the next
+/// Applies a [`MotionFinished`]; see [`DecisionCommands::finish_and_redecide`]. It runs in the
+/// flush that despawns the finished motion, so the behavior that held it is gone before the next
 /// [`issue_running_motion`] would start it again.
-pub(super) fn on_motion_finished(
-    finished: On<MotionFinished>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.character) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+pub(super) fn on_motion_finished(finished: On<MotionFinished>, mut decisions: DecisionCommands) {
     let motion = finished.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.motion == Some(motion),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(finished.character, |running| running.motion == Some(motion));
 }
 
 /// Applies a [`MotionFailed`], so a committed motion the game refused ends at once instead of at
-/// its timeout; see [`finish_and_redecide`]. A continuously scored motion is retried instead.
-pub(super) fn on_motion_failed(
-    failed: On<MotionFailed>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.character) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+/// its timeout; see [`DecisionCommands::finish_and_redecide`]. A continuously scored motion is
+/// retried instead.
+pub(super) fn on_motion_failed(failed: On<MotionFailed>, mut decisions: DecisionCommands) {
     let motion = failed.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion_failed").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.motion == Some(motion),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(failed.character, |running| running.motion == Some(motion));
 }
 
-/// Applies an [`ActionFinished`]; see [`finish_and_redecide`]. A finished attack is also noted for
-/// the next decision.
-pub(super) fn on_action_finished(
-    finished: On<ActionFinished>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.holder) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+/// Applies an [`ActionFinished`]; see [`DecisionCommands::finish_and_redecide`]. A finished attack
+/// is also noted for the next decision.
+pub(super) fn on_action_finished(finished: On<ActionFinished>, mut decisions: DecisionCommands) {
     let action = Action::Use(finished.key);
-    if inputs.action_is_attack(action) {
-        brain.record_attack_finished();
-    }
+    decisions.record_finished_attack(finished.holder, action);
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.action == Some(action),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(finished.holder, |running| running.action == Some(action));
 }
 
 /// Applies an [`ActionFailed`], so a committed use the game refused ends at once instead of at its
-/// timeout; see [`finish_and_redecide`]. A continuously scored use is retried instead.
-pub(super) fn on_action_failed(
-    failed: On<ActionFailed>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.holder) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+/// timeout; see [`DecisionCommands::finish_and_redecide`]. A continuously scored use is retried
+/// instead.
+pub(super) fn on_action_failed(failed: On<ActionFailed>, mut decisions: DecisionCommands) {
     let action = Action::Use(failed.key);
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action_failed").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.action == Some(action),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(failed.holder, |running| running.action == Some(action));
 }
 
-/// Ends the committed behavior that ran what finished (see
-/// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
-fn finish_and_redecide(
-    brain: &mut Brain,
-    ran_what_finished: impl Fn(RunningBehavior) -> bool,
-    inputs: &DecisionInputs,
-    score_trace: Option<&mut ScoreTrace>,
-    #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
-) {
-    if brain.finish_committed_behavior(ran_what_finished) {
-        redecide_now(brain, inputs, score_trace);
+/// Applies the game's reports of finished and refused motions and uses to brains.
+#[derive(SystemParam)]
+pub(super) struct DecisionCommands<'w, 's> {
+    time: Res<'w, Time<Virtual>>,
+    queries: DecisionQueries<'w, 's>,
+    brains: DecidingBrains<'w, 's>,
+    #[cfg(feature = "dev_tools")]
+    decision_stats: ResMut<'w, DecisionStats>,
+}
+
+impl DecisionCommands<'_, '_> {
+    /// Ends `character`'s committed behavior that ran what finished (see
+    /// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
+    pub(super) fn finish_and_redecide(
+        &mut self,
+        character: Entity,
+        ran_what_finished: impl Fn(RunningBehavior) -> bool,
+    ) {
+        let Ok((mut brain, components, mut score_trace)) = self.brains.get_mut(character) else {
+            return;
+        };
+        if !brain.finish_committed_behavior(ran_what_finished) {
+            return;
+        }
+        let inputs = DecisionInputs {
+            components: &components,
+            queries: &self.queries,
+            now: self.time.elapsed_secs(),
+        };
+        redecide_now(&mut brain, &inputs, score_trace.as_deref_mut());
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision();
+        self.decision_stats.record_redecision();
+    }
+
+    /// Notes for `character`'s next decision that `action` finished, if it is an attack.
+    pub(super) fn record_finished_attack(&mut self, character: Entity, action: Action) {
+        let Ok((mut brain, components, _)) = self.brains.get_mut(character) else {
+            return;
+        };
+        let inputs = DecisionInputs {
+            components: &components,
+            queries: &self.queries,
+            now: self.time.elapsed_secs(),
+        };
+        if inputs.action_is_attack(action) {
+            brain.record_attack_finished();
+        }
     }
 }
 

@@ -1,22 +1,20 @@
 use bevy::ecs::component::Mutable;
 use bevy::ecs::lifecycle::HookContext;
-use bevy::ecs::query::QueryData;
-use bevy::ecs::system::SystemParam;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 use super::{
-    FiniteMotion, MotionKey, MotionSourceOf, MotionSources, SteerInput, SteeredCharacter, Steering,
-    SteeringTargets,
+    FiniteMotion, MotionKey, MotionSources, SteerInput, SteeredCharacter, Steering, SteeringTargets,
 };
 use crate::prelude::*;
 
-/// Makes this entity the running motion of `character`. [`MotionCommands`] spawns it as a copy of
-/// a motion source, so it carries the source's [`MotionKey`], tuning and [`FiniteMotion`], and
-/// links it to the entity it steers by, if any ([`SteeringMotionOf`]). [`on_motion_started`] adds
-/// that motion's [`MotionProgress`], and [`apply_motion`] despawns it once a finite motion ends.
-/// Despawning it, however the motion ended, halts the character and, for a [`FiniteMotion`],
-/// starts the [`Cooldown`] of the character's source with its key and fires [`MotionFinished`].
+/// Makes this entity the running motion of `character`. [`MotionCommands`](super::MotionCommands)
+/// spawns it as a copy of a motion source, so it carries the source's [`MotionKey`], tuning and
+/// [`FiniteMotion`], and links it to the entity it steers by, if any ([`SteeringMotionOf`]).
+/// [`on_motion_started`] adds that motion's [`MotionProgress`], and [`apply_motion`] despawns it
+/// once a finite motion ends. Despawning it, however the motion ended, halts the character and, for
+/// a [`FiniteMotion`], starts the [`Cooldown`] of the character's source with its key and fires
+/// [`MotionFinished`].
 #[derive(Component, Clone, Copy, Debug)]
 #[relationship(relationship_target = RunningMotion)]
 #[require(Steering)]
@@ -47,6 +45,15 @@ pub(super) struct SteeringMotionOf {
 #[derive(Component, Debug)]
 #[relationship_target(relationship = SteeringMotionOf)]
 pub(super) struct SteeringMotions(Vec<Entity>);
+
+/// A finite motion ended: it completed, lost its target, was interrupted (see
+/// [`InterruptionState`]), was replaced or was stopped.
+#[derive(EntityEvent, Clone, Copy, Debug)]
+pub(in crate::character) struct MotionFinished {
+    #[event_target]
+    pub character: Entity,
+    pub key: MotionKey,
+}
 
 /// A motion's state while it runs, which [`on_motion_started`] adds to its running motion and
 /// [`apply_motion`] advances.
@@ -140,197 +147,6 @@ fn end_running_motion(mut world: DeferredWorld, context: HookContext) {
         cooldown.start(now);
     }
     world.commands().trigger(MotionFinished { character, key });
-}
-
-/// A finite motion ended: it completed, lost its target, was interrupted (see
-/// [`InterruptionState`]), was replaced or was stopped.
-#[derive(EntityEvent, Clone, Copy, Debug)]
-pub(in crate::character) struct MotionFinished {
-    #[event_target]
-    pub character: Entity,
-    pub key: MotionKey,
-}
-
-/// Why a character can't start the motion of a source now.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::character) enum MotionFailure {
-    /// The character has no motion source with the key.
-    NoSource,
-    /// The motion is finite and the character is interrupted; see [`InterruptionState`].
-    CharacterInterrupted,
-    /// The motion source's [`Cooldown`] hasn't run out.
-    OnCooldown,
-}
-
-/// Fired at the character when [`MotionCommands::start`] refuses a motion.
-#[derive(EntityEvent, Clone, Copy, Debug)]
-pub(in crate::character) struct MotionFailed {
-    #[event_target]
-    pub character: Entity,
-    pub key: MotionKey,
-}
-
-/// What [`MotionStatus`] reads of a character: its running motion and motion sources.
-#[derive(QueryData)]
-struct CharacterMotionData {
-    running_motion: Option<&'static RunningMotion>,
-    sources: Option<&'static MotionSources>,
-}
-
-/// What [`MotionStatus`] reads of a running motion.
-#[derive(QueryData)]
-struct RunningMotionData {
-    entity: Entity,
-    key: &'static MotionKey,
-    steering_motion_of: Option<&'static SteeringMotionOf>,
-}
-
-/// What [`MotionStatus`] reads of one motion source.
-#[derive(QueryData)]
-struct MotionSourceData {
-    entity: Entity,
-    key: &'static MotionKey,
-    is_finite: Has<FiniteMotion>,
-    cooldown: Option<&'static Cooldown>,
-    reach: Option<&'static Reach>,
-}
-
-/// Reads which motion a character runs and which motions it could start.
-#[derive(SystemParam)]
-pub(in crate::character) struct MotionStatus<'w, 's> {
-    time: Res<'w, Time<Virtual>>,
-    characters: Query<'w, 's, CharacterMotionData>,
-    interruptions: Query<'w, 's, InterruptionState>,
-    running_motions: Query<'w, 's, RunningMotionData>,
-    sources: Query<'w, 's, MotionSourceData>,
-}
-
-impl MotionStatus<'_, '_> {
-    /// Whether `character` has a motion source with `key`.
-    pub(in crate::character) fn has_source(&self, character: Entity, key: MotionKey) -> bool {
-        self.source_data(character, key).is_some()
-    }
-
-    /// Whether `character` has a `key` source whose motion ends on its own; see
-    /// [`FiniteMotion`].
-    pub(in crate::character) fn ends_on_its_own(&self, character: Entity, key: MotionKey) -> bool {
-        self.source_data(character, key)
-            .is_some_and(|source| source.is_finite)
-    }
-
-    /// The motion source `character` would start for `key` now, or why it can't.
-    pub(in crate::character) fn can_start(
-        &self,
-        character: Entity,
-        key: MotionKey,
-    ) -> Result<Entity, MotionFailure> {
-        let source = self
-            .source_data(character, key)
-            .ok_or(MotionFailure::NoSource)?;
-        let is_interrupted = self
-            .interruptions
-            .get(character)
-            .is_ok_and(|interruption| interruption.is_interrupted());
-        if source.is_finite && is_interrupted {
-            return Err(MotionFailure::CharacterInterrupted);
-        }
-        let now = self.time.elapsed_secs();
-        if source
-            .cooldown
-            .is_some_and(|cooldown| !cooldown.is_ready(now))
-        {
-            return Err(MotionFailure::OnCooldown);
-        }
-        Ok(source.entity)
-    }
-
-    /// The farthest target distance at which the motion of `character`'s `key` source counts as
-    /// in reach; `None` without the source or a [`Reach`].
-    pub(in crate::character) fn reach(&self, character: Entity, key: MotionKey) -> Option<f32> {
-        let source = self.source_data(character, key)?;
-        source.reach.map(|&Reach(reach)| reach)
-    }
-
-    fn running_motion(&self, character: Entity) -> Option<RunningMotionDataItem<'_, '_>> {
-        let character_data = self.characters.get(character).ok()?;
-        self.running_motions
-            .get(character_data.running_motion?.get())
-            .ok()
-    }
-
-    fn source_data(
-        &self,
-        character: Entity,
-        key: MotionKey,
-    ) -> Option<MotionSourceDataItem<'_, '_>> {
-        let character_data = self.characters.get(character).ok()?;
-        character_data.sources?.iter().find_map(|source| {
-            self.sources
-                .get(source)
-                .ok()
-                .filter(|source_data| *source_data.key == key)
-        })
-    }
-}
-
-/// Starts and stops motions.
-#[derive(SystemParam)]
-pub(in crate::character) struct MotionCommands<'w, 's> {
-    commands: Commands<'w, 's>,
-    status: MotionStatus<'w, 's>,
-}
-
-impl MotionCommands<'_, '_> {
-    /// Runs the motion of `character`'s `key` source, steering by `target`. A motion of `key` that
-    /// is already running keeps its progress and takes the new target, so calling this every frame
-    /// starts the motion once. Otherwise the start needs [`MotionStatus::can_start`]: if allowed,
-    /// a fresh copy of the source replaces any running motion; if refused, the running motion
-    /// stops and [`MotionFailed`] fires.
-    pub(in crate::character) fn start(
-        &mut self,
-        character: Entity,
-        key: MotionKey,
-        target: Option<Entity>,
-    ) {
-        if let Some(running) = self.status.running_motion(character) {
-            if *running.key == key {
-                let running_target = running
-                    .steering_motion_of
-                    .map(|steering_motion_of| steering_motion_of.target);
-                if running_target != target {
-                    let mut motion = self.commands.entity(running.entity);
-                    match target {
-                        Some(target) => motion.try_insert(SteeringMotionOf { target }),
-                        None => motion.try_remove::<SteeringMotionOf>(),
-                    };
-                }
-                return;
-            }
-            self.commands.entity(running.entity).try_despawn();
-        }
-
-        let Ok(source) = self.status.can_start(character, key) else {
-            self.commands.trigger(MotionFailed { character, key });
-            return;
-        };
-
-        // Copies everything the source holds except what describes the source itself.
-        let mut source_commands = self.commands.entity(source);
-        let mut motion = source_commands.clone_and_spawn_with_opt_out(|builder| {
-            builder.deny::<(MotionSourceOf, Cooldown, Reach)>();
-        });
-        motion.insert((Name::new("Running motion"), RunningMotionOf { character }));
-        if let Some(target) = target {
-            motion.insert(SteeringMotionOf { target });
-        }
-    }
-
-    /// Ends `character`'s running motion.
-    pub(in crate::character) fn stop(&mut self, character: Entity) {
-        if let Some(current) = self.status.running_motion(character) {
-            self.commands.entity(current.entity).try_despawn();
-        }
-    }
 }
 
 /// Ends each finite motion whose character is interrupted; see [`InterruptionState`].

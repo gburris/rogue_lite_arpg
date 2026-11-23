@@ -2,11 +2,17 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
-use super::ActionSource;
 use super::action_use::{
     ActionInUseOf, ActionSourceInUse, ActionSourceInUseOf, ActionUse, ActionsInUse, StopAction,
 };
 use crate::prelude::*;
+
+/// Something a character uses through [`ActionCommands`]: one of its abilities or an equipped item.
+/// Optional components beside it, such as [`ActionWindup`] or [`ManaCost`], shape each use. Its own
+/// [`ActionTookEffect`] observer carries out the effect.
+#[derive(Component, Clone, Copy, Debug, Default)]
+#[require(Cooldown, ActionUseStyle)]
+pub struct ActionSource;
 
 /// Names an [`ActionSource`] of a character: the item equipped in a slot, or one of its abilities
 /// by kind.
@@ -92,6 +98,23 @@ pub struct ActionFailed {
     pub reason: ActionFailure,
 }
 
+/// What [`ActionStatus`] reads of a character holding action sources.
+#[derive(QueryData)]
+struct ActionHolderData {
+    mainhand: Option<&'static Mainhand>,
+    offhand: Option<&'static Offhand>,
+    abilities: Option<&'static Abilities>,
+    mana: Option<&'static Mana>,
+    interruption: InterruptionState,
+    actions_in_use: Option<&'static ActionsInUse>,
+}
+
+impl ActionHolderDataItem<'_, '_> {
+    fn ability_sources(&self) -> impl Iterator<Item = Entity> {
+        self.abilities.into_iter().flat_map(Abilities::iter)
+    }
+}
+
 /// What [`ActionStatus`] reads of one action source.
 #[derive(QueryData)]
 struct ActionSourceData {
@@ -106,28 +129,11 @@ struct ActionSourceData {
     is_in_use: Has<ActionSourceInUse>,
 }
 
-/// What [`ActionStatus`] reads of a character holding action sources.
-#[derive(QueryData)]
-struct ActionHolder {
-    mainhand: Option<&'static Mainhand>,
-    offhand: Option<&'static Offhand>,
-    abilities: Option<&'static Abilities>,
-    mana: Option<&'static Mana>,
-    interruption: InterruptionState,
-    actions_in_use: Option<&'static ActionsInUse>,
-}
-
-impl ActionHolderItem<'_, '_> {
-    fn ability_sources(&self) -> impl Iterator<Item = Entity> {
-        self.abilities.into_iter().flat_map(Abilities::iter)
-    }
-}
-
 /// Reads which action sources a character has and whether it can use each now.
 #[derive(SystemParam)]
 pub struct ActionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
-    holders: Query<'w, 's, ActionHolder, With<Character>>,
+    holders: Query<'w, 's, ActionHolderData, With<Character>>,
     sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
     action_uses: Query<'w, 's, &'static ActionSourceInUseOf>,
     carried_items: CarriedItems<'w, 's>,

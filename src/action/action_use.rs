@@ -66,30 +66,30 @@ impl ActionUse {
 
 /// Makes this use entity a use by the character `holder`.
 #[derive(Component, Clone, Copy, Debug)]
-#[relationship(relationship_target = ActionUses)]
-pub struct ActionUseOf {
+#[relationship(relationship_target = ActionsInUse)]
+pub struct ActionInUseOf {
     pub holder: Entity,
 }
 
-/// The uses this character has under way; see [`ActionUseOf`].
+/// The uses this character has under way; see [`ActionInUseOf`].
 #[derive(Component, Debug)]
-#[relationship_target(relationship = ActionUseOf, linked_spawn)]
-pub struct ActionUses(Vec<Entity>);
+#[relationship_target(relationship = ActionInUseOf, linked_spawn)]
+pub struct ActionsInUse(Vec<Entity>);
 
 /// Makes this use entity the use of the action `source` under way.
 #[derive(Component, Clone, Copy, Debug)]
-#[relationship(relationship_target = ActionSourceUse)]
-pub struct ActionSourceUseOf {
+#[relationship(relationship_target = ActionSourceInUse)]
+pub struct ActionSourceInUseOf {
     pub source: Entity,
 }
 
 /// The use of this action source under way, present only while one is; see
-/// [`ActionSourceUseOf`]. Its arrival on the source starts the use.
+/// [`ActionSourceInUseOf`]. Its arrival on the source starts the use.
 #[derive(Component, Debug)]
-#[relationship_target(relationship = ActionSourceUseOf, linked_spawn)]
-pub struct ActionSourceUse(Entity);
+#[relationship_target(relationship = ActionSourceInUseOf, linked_spawn)]
+pub struct ActionSourceInUse(Entity);
 
-impl ActionSourceUse {
+impl ActionSourceInUse {
     /// The use entity.
     pub fn get(&self) -> Entity {
         self.0
@@ -142,8 +142,8 @@ pub struct ActionFinished {
 pub(super) struct ActionUseData {
     entity: Entity,
     action_use: &'static ActionUse,
-    use_of: &'static ActionUseOf,
-    source_use_of: &'static ActionSourceUseOf,
+    in_use_of: &'static ActionInUseOf,
+    source_in_use_of: &'static ActionSourceInUseOf,
     glow_light: Option<&'static ActionGlowLight>,
 }
 
@@ -159,9 +159,9 @@ impl ActionUseDataItem<'_, '_> {
     ) {
         cooldown.start(now);
         commands.trigger(ActionTookEffect {
-            source: self.source_use_of.source,
+            source: self.source_in_use_of.source,
             action_use: self.entity,
-            holder: self.use_of.holder,
+            holder: self.in_use_of.holder,
             key: self.action_use.key,
         });
         if style == ActionUseStyle::Instant {
@@ -183,12 +183,12 @@ impl ActionUseDataItem<'_, '_> {
 /// Spends a new use's mana cost up front, so a use interrupted during its wind-up still costs it,
 /// then starts its [`ActionWindup`] or has it take effect at once.
 pub(super) fn on_action_started(
-    added: On<Add<ActionSourceUse>>,
+    added: On<Add<ActionSourceInUse>>,
     mut commands: Commands,
     time: Res<Time<Virtual>>,
     action_uses: Query<ActionUseData>,
     mut sources: Query<(
-        &ActionSourceUse,
+        &ActionSourceInUse,
         &ActionUseStyle,
         &mut Cooldown,
         Option<&ActionWindup>,
@@ -196,15 +196,16 @@ pub(super) fn on_action_started(
     )>,
     mut holders: Query<&mut Mana>,
 ) {
-    let Ok((source_use, &style, mut cooldown, windup, mana_cost)) = sources.get_mut(added.entity)
+    let Ok((source_in_use, &style, mut cooldown, windup, mana_cost)) =
+        sources.get_mut(added.entity)
     else {
         return;
     };
-    let Ok(action_use) = action_uses.get(source_use.get()) else {
+    let Ok(action_use) = action_uses.get(source_in_use.get()) else {
         return;
     };
     if let Some(&mana_cost) = mana_cost
-        && let Ok(mut mana) = holders.get_mut(action_use.use_of.holder)
+        && let Ok(mut mana) = holders.get_mut(action_use.in_use_of.holder)
     {
         mana.spend(mana_cost);
     }
@@ -222,13 +223,13 @@ pub(super) fn on_action_started(
 pub(super) fn on_action_windup_started(
     added: On<Add<ActionWindupProgress>>,
     mut commands: Commands,
-    action_uses: Query<(&ActionUseOf, &ActionSourceUseOf)>,
+    action_uses: Query<(&ActionInUseOf, &ActionSourceInUseOf)>,
     glows: Query<&ActionGlow>,
 ) {
-    let Ok((&ActionUseOf { holder }, source_use_of)) = action_uses.get(added.entity) else {
+    let Ok((&ActionInUseOf { holder }, source_in_use_of)) = action_uses.get(added.entity) else {
         return;
     };
-    let Ok(&ActionGlow(color)) = glows.get(source_use_of.source) else {
+    let Ok(&ActionGlow(color)) = glows.get(source_in_use_of.source) else {
         return;
     };
     let action_use = added.entity;
@@ -242,10 +243,10 @@ pub(super) fn on_action_windup_started(
 pub(super) fn on_stop_action(
     stop: On<StopAction>,
     mut commands: Commands,
-    sources: Query<&ActionSourceUse>,
+    sources: Query<&ActionSourceInUse>,
 ) {
-    if let Ok(source_use) = sources.get(stop.source) {
-        commands.entity(source_use.get()).try_despawn();
+    if let Ok(source_in_use) = sources.get(stop.source) {
+        commands.entity(source_in_use.get()).try_despawn();
     }
 }
 
@@ -265,10 +266,10 @@ pub(super) fn advance_actions(
 ) {
     let now = time.elapsed_secs();
     for (action_use, windup_progress, timed_progress) in &mut action_uses {
-        let Ok((&style, mut cooldown)) = sources.get_mut(action_use.source_use_of.source) else {
+        let Ok((&style, mut cooldown)) = sources.get_mut(action_use.source_in_use_of.source) else {
             continue;
         };
-        if is_holder_gone_or_interrupted(&holders, action_use.use_of.holder) {
+        if is_holder_gone_or_interrupted(&holders, action_use.in_use_of.holder) {
             if windup_progress.is_some() {
                 cooldown.lock_out(now, INTERRUPTED_LOCKOUT_SECONDS);
             }
@@ -293,9 +294,10 @@ fn is_holder_gone_or_interrupted(holders: &Query<InterruptionState>, holder: Ent
 }
 
 fn report_action_finished(mut world: DeferredWorld, context: HookContext) {
-    let Ok((&ActionUse { key }, &ActionUseOf { holder }, &ActionSourceUseOf { source })) = world
-        .entity(context.entity)
-        .get_components::<(&ActionUse, &ActionUseOf, &ActionSourceUseOf)>()
+    let Ok((&ActionUse { key }, &ActionInUseOf { holder }, &ActionSourceInUseOf { source })) =
+        world
+            .entity(context.entity)
+            .get_components::<(&ActionUse, &ActionInUseOf, &ActionSourceInUseOf)>()
     else {
         return;
     };

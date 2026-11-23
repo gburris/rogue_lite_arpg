@@ -12,7 +12,7 @@ pub mod prelude {
         ActionUseStyle, Attack, RequiredItem,
     };
     pub use super::action_use::{
-        ActionFinished, ActionGlow, ActionSourceUse, ActionTookEffect, ActionUseOf,
+        ActionFinished, ActionGlow, ActionInUseOf, ActionSourceInUse, ActionTookEffect,
         ActionUsePartOf, ActionWindup, StopAction, TimedActionProgress,
     };
 }

@@ -157,7 +157,7 @@ pub struct Unequip {
 fn on_unequip(
     unequip: On<Unequip>,
     mut commands: Commands,
-    mut items: Query<(&mut Visibility, Has<ActionSourceUse>), With<Equipped>>,
+    mut items: Query<(&mut Visibility, Has<ActionSourceInUse>), With<Equipped>>,
 ) {
     let Ok((mut visibility, in_use)) = items.get_mut(unequip.item) else {
         // Expected race: equipment was despawned prior to unequip.

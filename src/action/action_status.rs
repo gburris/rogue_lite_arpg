@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::ActionSource;
 use super::action_use::{
-    ActionSourceUse, ActionSourceUseOf, ActionUse, ActionUseOf, ActionUses, StopAction,
+    ActionInUseOf, ActionSourceInUse, ActionSourceInUseOf, ActionUse, ActionsInUse, StopAction,
 };
 use crate::prelude::*;
 
@@ -107,7 +107,7 @@ struct ActionSourceData {
     is_attack: Has<Attack>,
     mana_cost: Option<&'static ManaCost>,
     required_item: Option<&'static RequiredItem>,
-    has_source_use: Has<ActionSourceUse>,
+    is_in_use: Has<ActionSourceInUse>,
 }
 
 /// What [`ActionStatus`] reads of a character holding action sources.
@@ -118,7 +118,7 @@ struct ActionHolder {
     abilities: Option<&'static Abilities>,
     mana: Option<&'static Mana>,
     interruption: InterruptionState,
-    action_uses: Option<&'static ActionUses>,
+    actions_in_use: Option<&'static ActionsInUse>,
 }
 
 impl ActionHolderItem<'_, '_> {
@@ -133,7 +133,7 @@ pub struct ActionStatus<'w, 's> {
     time: Res<'w, Time<Virtual>>,
     holders: Query<'w, 's, ActionHolder, With<Character>>,
     sources: Query<'w, 's, ActionSourceData, With<ActionSource>>,
-    action_uses: Query<'w, 's, &'static ActionSourceUseOf>,
+    action_uses: Query<'w, 's, &'static ActionSourceInUseOf>,
     carried_items: CarriedItems<'w, 's>,
 }
 
@@ -177,7 +177,7 @@ impl ActionStatus<'_, '_> {
     /// Whether `holder` is using its action source named by `key` now.
     pub fn is_using(&self, holder: Entity, key: ActionKey) -> bool {
         self.source_data(holder, key)
-            .is_some_and(|source| source.has_source_use)
+            .is_some_and(|source| source.is_in_use)
     }
 
     /// Whether `holder` is using an item whose use plays out and ends itself, such as a swing; see
@@ -215,7 +215,7 @@ impl ActionStatus<'_, '_> {
         if holder.interruption.is_interrupted() {
             return Err(ActionFailure::HolderInterrupted);
         }
-        if source.has_source_use {
+        if source.is_in_use {
             return Err(ActionFailure::InProgress);
         }
         if !source.cooldown.is_ready(self.time.elapsed_secs()) {
@@ -238,13 +238,13 @@ impl ActionStatus<'_, '_> {
             return false;
         };
         holder
-            .action_uses
+            .actions_in_use
             .into_iter()
-            .flat_map(ActionUses::iter)
+            .flat_map(ActionsInUse::iter)
             .filter_map(|action_use| self.action_uses.get(action_use).ok())
-            .any(|source_use_of| {
+            .any(|source_in_use_of| {
                 self.sources
-                    .get(source_use_of.source)
+                    .get(source_in_use_of.source)
                     .is_ok_and(|source| predicate(&source))
             })
     }
@@ -279,13 +279,13 @@ impl<'w, 's> ActionCommands<'w, 's> {
                 self.commands.queue(move |world: &mut World| {
                     let source_is_free = world
                         .get_entity(source)
-                        .is_ok_and(|source| !source.contains::<ActionSourceUse>());
+                        .is_ok_and(|source| !source.contains::<ActionSourceInUse>());
                     if source_is_free {
                         world.spawn((
                             Name::new("Action use"),
                             ActionUse::new(key),
-                            ActionUseOf { holder },
-                            ActionSourceUseOf { source },
+                            ActionInUseOf { holder },
+                            ActionSourceInUseOf { source },
                         ));
                     }
                 });
@@ -307,7 +307,7 @@ impl<'w, 's> ActionCommands<'w, 's> {
         let Some(source) = self.status.source_data(holder, key) else {
             return;
         };
-        if source.has_source_use && *source.style == ActionUseStyle::Sustained {
+        if source.is_in_use && *source.style == ActionUseStyle::Sustained {
             self.commands.trigger(StopAction {
                 source: source.entity,
             });

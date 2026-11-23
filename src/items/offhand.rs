@@ -63,7 +63,7 @@ pub struct Shield {
 fn orient_raised_shields(
     mut raised_shield_query: Query<
         (&ItemOf, &mut Sprite, &mut Transform),
-        (With<Shield>, With<ActionSourceUse>),
+        (With<Shield>, With<ActionSourceInUse>),
     >,
     holder_query: Query<&Vision>,
 ) {

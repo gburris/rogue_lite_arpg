@@ -269,7 +269,7 @@ pub(super) fn reflect_projectiles(
         &CollidingEntities,
         &ActionUsePartOf,
     )>,
-    action_uses: Query<&ActionUseOf>,
+    action_uses: Query<&ActionInUseOf>,
     mut projectile_query: Query<
         (&mut LinearVelocity, &mut Transform, Option<&mut Lifespan>),
         With<Projectile>,
@@ -277,7 +277,7 @@ pub(super) fn reflect_projectiles(
     holder_query: Query<&CombatSide>,
 ) {
     for (mut reflection, colliding_entities, action_use_part_of) in &mut reflector_query {
-        let Ok(&ActionUseOf { holder }) = action_uses.get(action_use_part_of.action_use) else {
+        let Ok(&ActionInUseOf { holder }) = action_uses.get(action_use_part_of.action_use) else {
             continue;
         };
 

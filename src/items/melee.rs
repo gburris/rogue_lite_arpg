@@ -182,14 +182,14 @@ fn process_melee_attacks(
             &MeleeWeapon,
             &mut Transform,
             &ActiveMeleeAttack,
-            &ActionSourceUse,
+            &ActionSourceInUse,
         ),
         (Without<Projectile>, Without<Shield>),
     >,
     action_uses: Query<&TimedActionProgress>,
 ) {
-    for (melee_weapon, mut transform, active_attack, source_use) in &mut attack_query {
-        let Ok(timed_progress) = action_uses.get(source_use.get()) else {
+    for (melee_weapon, mut transform, active_attack, source_in_use) in &mut attack_query {
+        let Ok(timed_progress) = action_uses.get(source_in_use.get()) else {
             continue;
         };
         let attack_progress = timed_progress.fraction();

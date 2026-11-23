@@ -44,6 +44,8 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins((animation::plugin, brain::plugin, motion::plugin));
 
+    app.add_observer(ability::on_ability_added);
+
     app.add_systems(
         FixedUpdate,
         kinematics::kinematics_to_velocity.in_set(MainSystems::InGame),

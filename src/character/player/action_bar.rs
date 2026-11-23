@@ -159,14 +159,7 @@ pub(super) fn on_action_failed(
     mut commands: Commands,
     action_box_query: Query<(Entity, &ActionBox)>,
 ) {
-    let is_flashed = match failed.reason {
-        ActionFailure::InProgress | ActionFailure::OnCooldown => false,
-        ActionFailure::NoSource
-        | ActionFailure::MissingRequiredItem
-        | ActionFailure::HolderInterrupted
-        | ActionFailure::OutOfMana => true,
-    };
-    if is_flashed && let Some(box_entity) = find_action_box(&action_box_query, failed.key) {
+    if let Some(box_entity) = find_action_box(&action_box_query, failed.key) {
         commands.spawn_scene(bsn! {
             @action_box_overlay(box_entity, ERROR_FLASH_COLOR)
             ErrorFlash

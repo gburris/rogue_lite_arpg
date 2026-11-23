@@ -14,11 +14,12 @@ use bevy::prelude::*;
 pub use self::dash::{kite, sidestep, slide, step_in};
 pub use self::direct::{Chase, Flee, Idle, KeepDistance};
 pub use self::home_area::{Home, HomeArea, ReturnToHome};
-use self::motion_source::{FiniteMotion, MotionSourceOf};
-pub use self::motion_source::{MotionKey, MotionReach, MotionSources};
+use self::motion_source::FiniteMotion;
+pub(super) use self::motion_source::{MotionCommands, MotionFailed, MotionStatus};
+pub use self::motion_source::{MotionKey, MotionSources};
 pub use self::orbit::Orbit;
+pub(super) use self::running_motion::MotionFinished;
 pub use self::running_motion::RunningMotion;
-pub(super) use self::running_motion::{MotionCommands, MotionFinished, MotionStatus};
 use self::running_motion::{MotionProgress, MotionStep, RunningMotionOf, SteeringMotionOf};
 use self::steer_input::{
     BlockedTimer, CircleDirection, SteerInput, SteeredCharacter, SteeringTarget, SteeringTargets,

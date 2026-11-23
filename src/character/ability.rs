@@ -19,16 +19,6 @@ pub enum Ability {
     Rally,
 }
 
-impl Ability {
-    /// Every ability.
-    pub const ALL: [Self; 4] = [Self::Heal, Self::Breath, Self::Bite, Self::Rally];
-}
-
-// A new variant fails to compile here: add it to this match and to `Ability::ALL`.
-const _: () = match Ability::Heal {
-    Ability::Heal | Ability::Breath | Ability::Bite | Ability::Rally => {}
-};
-
 /// Links an ability entity to the character that uses it.
 #[derive(Component, Clone)]
 #[relationship(relationship_target = Abilities)]
@@ -42,12 +32,37 @@ pub struct AbilityOf {
 #[relationship_target(relationship = AbilityOf, linked_spawn)]
 pub struct Abilities(Vec<Entity>);
 
+/// Checks in debug builds that no other ability of the new ability's holder is of its kind, since
+/// [`ActionKey::Ability`] names abilities by kind.
+pub(super) fn on_ability_added(
+    added: On<Add<AbilityOf>>,
+    abilities: Query<(&AbilityOf, &Ability)>,
+    holders: Query<&Abilities>,
+) {
+    let Ok((&AbilityOf { holder }, &ability)) = abilities.get(added.entity) else {
+        return;
+    };
+    let Ok(holder_abilities) = holders.get(holder) else {
+        return;
+    };
+    // The new ability may not be in `Abilities` yet, so only the others are counted.
+    let other_same_kind_count = holder_abilities
+        .iter()
+        .filter(|&other| other != added.entity)
+        .filter(|&other| abilities.get(other).is_ok_and(|(_, &kind)| kind == ability))
+        .count();
+    debug_assert!(
+        other_same_kind_count == 0,
+        "character {holder:?} has {other_same_kind_count} more {ability:?} abilities; only the          first would ever be used"
+    );
+}
+
 /// Seconds a bite's hitbox lasts, so a bite started just outside its reach can still hit a target
 /// that moves into range.
 const BITE_HITBOX_SECONDS: f32 = 0.3;
 
 /// A snap of the jaws: a brief round hitbox in front of the biter, along its aim, whose front
-/// edge sits at the ability's [`ActionReach`].
+/// edge sits at the ability's [`Reach`].
 #[derive(Component, Clone, Copy, Debug)]
 #[require(Ability::Bite)]
 pub(super) struct Bite {
@@ -90,7 +105,7 @@ impl Bite {
 pub(super) fn bite(reach: f32, bite: Bite) -> impl Scene {
     bsn! {
         ~{bite}
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         ~{ActionUseStyle::Timed { seconds: BITE_HITBOX_SECONDS }}
         Attack
         on(on_bite_took_effect)
@@ -101,10 +116,10 @@ pub(super) fn bite(reach: f32, bite: Bite) -> impl Scene {
 fn on_bite_took_effect(
     took_effect: On<ActionTookEffect>,
     mut commands: Commands,
-    bites: Query<(&Bite, &ActionReach)>,
+    bites: Query<(&Bite, &Reach)>,
     biting_characters: Query<(&Vision, &StatMultipliers, &CombatSide)>,
 ) -> Result {
-    let (bite, &ActionReach(reach)) = bites.get(took_effect.source)?;
+    let (bite, &Reach(reach)) = bites.get(took_effect.source)?;
     let holder = took_effect.holder;
     let Ok((vision, stat_multipliers, side)) = biting_characters.get(holder) else {
         return Ok(());
@@ -115,7 +130,8 @@ fn on_bite_took_effect(
     let mouth_offset = Vec2::Y * bite.mouth_height + direction * (reach - bite.hitbox_radius);
     let damage = Damage::Single(bite.damage * stat_multipliers.damage);
     let mut hitbox = commands.spawn((
-        HitBox::new(holder, damage, direction),
+        HitBox::new(damage, direction),
+        CreditedAttackOf { attacker: holder },
         Collider::circle(bite.hitbox_radius),
         side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),
@@ -141,7 +157,7 @@ struct Breath;
 pub(super) fn breath(reach: f32) -> impl Scene {
     bsn! {
         Breath
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         Attack
         on(on_breath_took_effect)
     }
@@ -198,7 +214,7 @@ fn on_heal_took_effect(
 /// Radius of the shockwave sheet's ring at its widest, in sheet pixels.
 const RALLY_SHOUT_RING_RADIUS: f32 = 87.0;
 
-/// A war cry that gives every other ally within the ability's [`ActionReach`] its ability entity's
+/// A war cry that gives every other ally within the ability's [`Reach`] its ability entity's
 /// [`Effects`].
 #[derive(Component, Clone, Copy, Debug, Default)]
 #[require(Ability::Rally)]
@@ -209,7 +225,7 @@ pub struct Rally;
 pub(super) fn speed_and_damage_rally(reach: f32, raise: f32, seconds: f32) -> impl Scene {
     bsn! {
         Rally
-        ~{ActionReach(reach)}
+        ~{Reach(reach)}
         on(on_rally_took_effect)
         Effects [
             Rallied
@@ -231,10 +247,10 @@ fn on_rally_took_effect(
     mut commands: Commands,
     sprites: Res<SpriteAssets>,
     sprite_layouts: Res<SpriteSheetLayouts>,
-    rallies: Query<(&Effects, &ActionReach), With<Rally>>,
+    rallies: Query<(&Effects, &Reach), With<Rally>>,
     allies: Allies,
 ) -> Result {
-    let (effects, &ActionReach(reach)) = rallies.get(took_effect.source)?;
+    let (effects, &Reach(reach)) = rallies.get(took_effect.source)?;
     let holder = took_effect.holder;
     for ally in allies.within(holder, reach) {
         commands.trigger(ApplyEffects::new(effects, ally.entity));

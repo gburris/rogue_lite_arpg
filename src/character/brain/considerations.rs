@@ -82,8 +82,7 @@ pub(in crate::character) const CAST_DISTANCE_RANGE: Interval =
 
 pub(in crate::character) const CAST_HYSTERESIS: f32 = 5.0;
 
-pub(in crate::character) const MAINHAND: Action =
-    Action::Use(ActionKey::Equipped(EquipmentSlot::Mainhand));
+pub(in crate::character) const MAINHAND: Action = Action::Use(ActionKey::MAINHAND);
 
 /// Maps `input` over `range` through `curve`.
 pub const fn consideration(
@@ -100,16 +99,15 @@ pub const fn consideration(
     }
 }
 
-/// Whether `motion` has been running for more than `seconds`; see
-/// [`ConsiderationInput::SecondsInMotion`].
-pub(in crate::character) const fn motion_running_for(
+/// Whether [`ConsiderationInput::SecondsMotionHeld`] for `motion` exceeds `seconds`.
+pub(in crate::character) const fn motion_held_for(
     name: &'static str,
     motion: MotionKey,
     seconds: f32,
 ) -> Consideration {
     Consideration {
         name,
-        input: ConsiderationInput::SecondsInMotion(motion),
+        input: ConsiderationInput::SecondsMotionHeld(motion),
         score_mapping: ScoreMapping::Threshold {
             enter: seconds,
             exit: seconds,
@@ -249,7 +247,7 @@ pub(in crate::character) const ATTACK_FINISHED: Consideration =
     flag("attack finished", ConsiderationInput::AttackFinished);
 pub(in crate::character) const IN_MAINHAND_REACH: Consideration = within_reach(
     "in mainhand reach",
-    ConsiderationInput::ActionReachFraction(MAINHAND),
+    ConsiderationInput::ActionReachFraction(ActionKey::MAINHAND),
 );
 
 // Both enter at one shared distance, so a character with no incumbent always

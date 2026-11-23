@@ -3,7 +3,7 @@ use bevy::ecs::query::QueryData;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
-use super::action_status::ActionUseStyle;
+use super::action_source::{ActionKey, ActionUseStyle};
 use crate::prelude::*;
 
 /// How long each use winds up before it takes effect, a window for a hit to interrupt it. Without
@@ -61,6 +61,10 @@ pub(super) struct ActionUse {
 impl ActionUse {
     pub(super) fn new(key: ActionKey) -> Self {
         Self { key }
+    }
+
+    pub(super) fn key(self) -> ActionKey {
+        self.key
     }
 }
 

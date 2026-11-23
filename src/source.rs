@@ -2,6 +2,11 @@ use bevy::prelude::*;
 
 use crate::interval::Spread;
 
+/// How far an action or motion source reaches: the farthest target distance at which an AI holder
+/// starts it, and the radius of effects that read it, such as a rally, a bite or a breath.
+#[derive(Component, Clone, Copy, Debug, Deref)]
+pub struct Reach(pub f32);
+
 /// A wait after each use of an action or motion source before the next use can start, measured in
 /// virtual time. The source's owner decides when a use starts the wait.
 #[derive(Component, Clone, Copy, Debug, Default)]

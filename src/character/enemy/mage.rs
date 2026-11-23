@@ -12,7 +12,7 @@ use crate::character::brain::{
     mana_at_or_below, target_speed_at_most, target_within_distance, within_reach,
 };
 use crate::character::motion::{
-    Idle, KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, sidestep, slide, step_in,
+    Idle, KeepDistance, MotionKey, MotionSources, Orbit, sidestep, slide, step_in,
 };
 use crate::interval::Interval;
 use crate::prelude::*;
@@ -64,7 +64,8 @@ const ICE_CAST_QUALITY: Consideration = consideration(
     Curve::Linear,
 );
 
-const RALLY: Action = Action::Use(ActionKey::Ability(Ability::Rally));
+const RALLY_KEY: ActionKey = ActionKey::Ability(Ability::Rally);
+const RALLY: Action = Action::Use(RALLY_KEY);
 /// How far the war cry carries; its shockwave is drawn to this radius.
 const RALLY_REACH: f32 = 174.0;
 const RALLY_COOLDOWN: f32 = 10.0;
@@ -77,7 +78,7 @@ const RALLY_SECONDS: f32 = 6.0;
 /// Full for an ally at the mage's side, empty at the edge of rally reach.
 const ALLY_CLOSE: Consideration = consideration(
     "ally far",
-    ConsiderationInput::AllyReachFraction(RALLY),
+    ConsiderationInput::AllyReachFraction(RALLY_KEY),
     Interval::new(0.0, 1.0),
     Curve::Linear,
 )
@@ -334,7 +335,7 @@ fn ice_mage(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl
             ~KeepDistance::new(RECOVERY_DISTANCE_RANGE)
             --
             @slide(Interval::new(3.0 * TILE_SIZE as f32, 4.0 * TILE_SIZE as f32), 2.2)
-            ~{MotionReach(ICE_SLIDE_REACH)}
+            ~{Reach(ICE_SLIDE_REACH)}
             // The cooldown is the player's window to close in again.
             ~Cooldown::new(1.2)
         ]

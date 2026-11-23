@@ -10,14 +10,14 @@ use crate::character::brain::{
     INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
     distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
 };
-use crate::character::motion::{
-    KeepDistance, MotionKey, MotionReach, MotionSources, Orbit, Swoop, TurnRate,
-};
+use crate::character::motion::{KeepDistance, MotionKey, MotionSources, Orbit, Swoop, TurnRate};
 use crate::interval::Interval;
 use crate::prelude::*;
 
-const BREATH: Action = Action::Use(ActionKey::Ability(Ability::Breath));
-const BITE: Action = Action::Use(ActionKey::Ability(Ability::Bite));
+const BREATH_KEY: ActionKey = ActionKey::Ability(Ability::Breath);
+const BREATH: Action = Action::Use(BREATH_KEY);
+const BITE_KEY: ActionKey = ActionKey::Ability(Ability::Bite);
+const BITE: Action = Action::Use(BITE_KEY);
 
 /// Core of the cast distance range, which a bat backs out to after a swoop.
 const CAST_CORE_DISTANCE_RANGE: Interval =
@@ -39,7 +39,7 @@ const IN_SWOOP_REACH: Consideration = within_reach(
 );
 const IN_BREATH_REACH: Consideration = within_reach(
     "in breath reach",
-    ConsiderationInput::ActionReachFraction(BREATH),
+    ConsiderationInput::ActionReachFraction(BREATH_KEY),
 );
 /// Distance out to which the decision arms a bite: 40 units past contact. Decisions are
 /// sampled, so a swoop crossing the reach could otherwise fall between two samples; the bite's
@@ -48,7 +48,7 @@ const BITE_ARMING_DISTANCE: f32 = BITE_REACH + 40.0;
 const BITE_ARMING_REACH_FRACTION: f32 = BITE_ARMING_DISTANCE / BITE_REACH;
 const NEAR_BITE_REACH: Consideration = reach_fraction_threshold(
     "near bite reach",
-    ConsiderationInput::ActionReachFraction(BITE),
+    ConsiderationInput::ActionReachFraction(BITE_KEY),
     BITE_ARMING_REACH_FRACTION,
     BITE_ARMING_REACH_FRACTION,
 );
@@ -140,10 +140,7 @@ const BAT_BREATH: Behavior = Behavior::new(
         SWOOP_COOLING_DOWN,
     ],
 );
-const SWOOPING: Consideration = flag(
-    "swooping",
-    ConsiderationInput::MotionRunning(MotionKey::Swoop),
-);
+const SWOOPING: Consideration = flag("swooping", ConsiderationInput::MotionHeld(MotionKey::Swoop));
 
 /// Arms a bite near contact reach, only while swooping.
 const BAT_BITE: Behavior = Behavior::new(
@@ -256,7 +253,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
             ~KeepDistance::new(CAST_CORE_DISTANCE_RANGE)
             --
             Swoop
-            ~{MotionReach(CAST_MAX_RANGE)}
+            ~{Reach(CAST_MAX_RANGE)}
             ~Cooldown::new(SWOOP_COOLDOWN)
         ]
         template(move |_| Ok(sprite.clone()))

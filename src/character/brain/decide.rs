@@ -1,4 +1,5 @@
 use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::system::SystemParam;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 use rand::RngExt;
@@ -8,31 +9,26 @@ use super::considerations::{Behavior, BehaviorScoreExplanation};
 use super::diagnostics::DecisionStats;
 use super::engine::{assign_behaviors_to_slots, explain_behavior, has_absent_input};
 use super::inputs::{ConsiderationInput, DecisionInputComponents, DecisionInputs, DecisionQueries};
-use super::{Action, Brain, MotionCommands, MotionFinished, MotionKey, TargetLocationHint};
+use super::{
+    Action, Brain, MotionCommands, MotionFailed, MotionFinished, MotionKey, TargetLocationHint,
+};
 use crate::prelude::*;
 
 /// Longest a committed behavior may run, in case its finish event never arrives.
 const COMMIT_TIMEOUT: f32 = 3.0;
 
 /// A behavior that won its slots, with its motion and action copied from the definition. It holds
-/// its motion while it runs, and issues its action, if committed, once. The finish rules for
-/// committed and continuously scored behaviors live here.
+/// both while it runs.
 #[derive(Clone, Copy, Debug)]
 pub(super) struct RunningBehavior {
     pub(super) behavior: usize,
     pub(super) motion: Option<MotionKey>,
     pub(super) action: Option<Action>,
-    pub(super) action_issued: bool,
     pub(super) committed: bool,
     pub(super) started_at: f32,
 }
 
 impl RunningBehavior {
-    /// Whether this behavior issued `action`.
-    pub(super) fn has_issued_action(self, action: Action) -> bool {
-        self.action_issued && self.action == Some(action)
-    }
-
     /// Whether a committed behavior lost an input it was chosen on or timed out. The game ends
     /// interrupted uses and finite motions itself.
     pub(super) fn should_drop_committed_behavior(
@@ -74,113 +70,91 @@ pub(super) fn schedule_first_decision(mut world: DeferredWorld, context: HookCon
     }
 }
 
-/// Applies a [`MotionFinished`]; see [`finish_and_redecide`]. It runs in the flush that despawns
-/// the finished motion, so the behavior that held it is gone before the next
+/// Applies a [`MotionFinished`]; see [`DecisionCommands::finish_and_redecide`]. It runs in the
+/// flush that despawns the finished motion, so the behavior that held it is gone before the next
 /// [`issue_running_motion`] would start it again.
-pub(super) fn on_motion_finished(
-    finished: On<MotionFinished>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.entity) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+pub(super) fn on_motion_finished(finished: On<MotionFinished>, mut decisions: DecisionCommands) {
     let motion = finished.key;
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_motion").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.motion == Some(motion),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(finished.character, |running| running.motion == Some(motion));
 }
 
-/// Applies an [`ActionFinished`]; see [`finish_and_redecide`]. A finished attack is also noted for
-/// the next decision.
+/// Applies a [`MotionFailed`], so a committed motion the game refused ends at once instead of at
+/// its timeout; see [`DecisionCommands::finish_and_redecide`]. A continuously scored motion is
+/// retried instead.
+pub(super) fn on_motion_failed(failed: On<MotionFailed>, mut decisions: DecisionCommands) {
+    let motion = failed.key;
+    #[cfg(feature = "tracy")]
+    let _span = info_span!("decide::after_motion_failed").entered();
+    decisions.finish_and_redecide(failed.character, |running| running.motion == Some(motion));
+}
+
+/// Applies an [`ActionFinished`]; see [`DecisionCommands::finish_and_redecide`]. A finished use of
+/// an [`Attack`] source is first noted, so the decision it may trigger already reads it.
 pub(super) fn on_action_finished(
     finished: On<ActionFinished>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
+    mut decisions: DecisionCommands,
+    attack_sources: Query<(), With<Attack>>,
 ) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(finished.holder) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
     let action = Action::Use(finished.key);
-    if inputs.action_is_attack(action) {
-        brain.record_attack_finished();
-    }
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.has_issued_action(action),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    if attack_sources.contains(finished.source) {
+        decisions.record_attack_finished(finished.holder);
+    }
+    decisions.finish_and_redecide(finished.holder, |running| running.action == Some(action));
 }
 
 /// Applies an [`ActionFailed`], so a committed use the game refused ends at once instead of at its
-/// timeout; see [`finish_and_redecide`]. A continuously scored use is retried instead.
-pub(super) fn on_action_failed(
-    failed: On<ActionFailed>,
-    time: Res<Time<Virtual>>,
-    queries: DecisionQueries,
-    mut brains: DecidingBrains,
-    #[cfg(feature = "dev_tools")] mut decision_stats: ResMut<DecisionStats>,
-) {
-    let Ok((mut brain, components, mut score_trace)) = brains.get_mut(failed.holder) else {
-        return;
-    };
-    let inputs = DecisionInputs {
-        components: &components,
-        queries: &queries,
-        now: time.elapsed_secs(),
-    };
+/// timeout; see [`DecisionCommands::finish_and_redecide`]. A continuously scored use is retried
+/// instead.
+pub(super) fn on_action_failed(failed: On<ActionFailed>, mut decisions: DecisionCommands) {
     let action = Action::Use(failed.key);
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action_failed").entered();
-    finish_and_redecide(
-        &mut brain,
-        |running| running.has_issued_action(action),
-        &inputs,
-        score_trace.as_deref_mut(),
-        #[cfg(feature = "dev_tools")]
-        &mut decision_stats,
-    );
+    decisions.finish_and_redecide(failed.holder, |running| running.action == Some(action));
 }
 
-/// Ends the committed behavior that ran what finished (see
-/// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
-fn finish_and_redecide(
-    brain: &mut Brain,
-    ran_what_finished: impl Fn(RunningBehavior) -> bool,
-    inputs: &DecisionInputs,
-    score_trace: Option<&mut ScoreTrace>,
-    #[cfg(feature = "dev_tools")] decision_stats: &mut DecisionStats,
-) {
-    if brain.finish_committed_behavior(ran_what_finished) {
-        redecide_now(brain, inputs, score_trace);
+/// Applies the game's reports of finished and refused motions and uses to brains.
+#[derive(SystemParam)]
+pub(super) struct DecisionCommands<'w, 's> {
+    time: Res<'w, Time<Virtual>>,
+    queries: DecisionQueries<'w, 's>,
+    brains: DecidingBrains<'w, 's>,
+    #[cfg(feature = "dev_tools")]
+    decision_stats: ResMut<'w, DecisionStats>,
+}
+
+impl DecisionCommands<'_, '_> {
+    /// Ends `character`'s committed behavior that ran what finished (see
+    /// [`Brain::finish_committed_behavior`]) and, if one ended, decides again at once.
+    pub(super) fn finish_and_redecide(
+        &mut self,
+        character: Entity,
+        ran_what_finished: impl Fn(RunningBehavior) -> bool,
+    ) {
+        let Ok((mut brain, components, mut score_trace)) = self.brains.get_mut(character) else {
+            return;
+        };
+        if !brain.finish_committed_behavior(ran_what_finished) {
+            return;
+        }
+        let inputs = DecisionInputs {
+            components: &components,
+            queries: &self.queries,
+            now: self.time.elapsed_secs(),
+        };
+        redecide_now(&mut brain, &inputs, score_trace.as_deref_mut());
         #[cfg(feature = "dev_tools")]
-        decision_stats.record_redecision();
+        self.decision_stats.record_redecision();
+    }
+
+    /// Notes for `character`'s next decision that one of its attacks finished.
+    pub(super) fn record_attack_finished(&mut self, character: Entity) {
+        if let Ok((mut brain, _, _)) = self.brains.get_mut(character) {
+            brain.record_attack_finished();
+        }
     }
 }
 
@@ -306,8 +280,8 @@ fn passes_start_roll(behavior: Behavior, index: usize, missed_start_ids: &mut Ve
 
 /// Keeps each character's running motion on the motion its brain holds, steering by the target's
 /// [`LocationHint`](super::perception::LocationHint), and stops it when the motion slot is
-/// empty; see [`MotionCommands::start`]. A finished motion is not started again; see
-/// [`on_motion_finished`].
+/// empty; see [`MotionCommands::start`]. A finished motion is not started again, and a refused
+/// committed one ends; see [`on_motion_finished`] and [`on_motion_failed`].
 pub(super) fn issue_running_motion(
     mut motions: MotionCommands,
     brains: Query<(Entity, &Brain, Option<&TargetLocationHint>)>,
@@ -322,37 +296,17 @@ pub(super) fn issue_running_motion(
     }
 }
 
-/// Issues the actions of the brain's running behaviors and stops sustained actions none of them
-/// still chooses. Considerations already judged the target, so the game decides only whether a use
-/// can start. A committed action is issued once, or adopts a use of it already in progress so that
-/// use's finish ends the behavior; a continuously scored one starts again whenever it isn't in
-/// progress.
-pub(super) fn issue_running_actions(
-    mut actions: ActionCommands,
-    mut brains: Query<(Entity, &mut Brain)>,
-) {
-    for (entity, mut brain) in &mut brains {
-        for key in ActionKey::all() {
-            if brain.running_behavior_with(Action::Use(key)).is_none() {
-                actions.stop_sustained_use(entity, key);
-            }
-        }
-        for index in 0..brain.running_behaviors.len() {
-            let running = brain.running_behaviors[index];
-            let Some(key) = running.action.and_then(Action::key) else {
-                continue;
-            };
-            if running.committed {
-                if running.action_issued {
-                    continue;
-                }
-                brain.record_issued_action(running.behavior);
-            }
-            if actions.status().is_using(entity, key) {
-                continue;
-            }
-            // Discarded: a refusal reaches the brain as `ActionFailed`.
-            let _ = actions.try_use(entity, key);
+/// Keeps each character's uses on the action its brain holds, and stops the others; see
+/// [`ActionCommands::start`] and [`ActionCommands::stop_uses_except`]. Considerations already
+/// judged the target, so the game decides only whether a use can start. A use of the held action
+/// already running is adopted, so its finish ends a committed behavior, and a finished one is not
+/// started again; see [`on_action_finished`].
+pub(super) fn issue_running_action(mut actions: ActionCommands, brains: Query<(Entity, &Brain)>) {
+    for (entity, brain) in &brains {
+        let held_key = brain.action().and_then(Action::key);
+        actions.stop_uses_except(entity, held_key);
+        if let Some(key) = held_key {
+            actions.start(entity, key);
         }
     }
 }

@@ -13,9 +13,11 @@ use crate::prelude::*;
 pub mod prelude {
     #[cfg(feature = "dev_tools")]
     pub use super::damage::Invincible;
-    pub use super::damage::{AttemptDamage, CombatSide, Damage, DamageDealt, Defeated, Knockback};
+    pub use super::damage::{
+        AttemptDamage, CombatSide, CreditedAttackOf, Damage, DamageDealt, Defeated, Knockback,
+    };
     pub use super::health::{AttemptHeal, Health, IFrames, Mana, ManaCost, ManaDrainRate};
-    pub use super::hitbox::{HitBox, LifeSteal, hurtbox, hurtbox_at};
+    pub use super::hitbox::{HitBox, HitBoxOf, LifeSteal, hurtbox, hurtbox_at};
     pub use super::projectile::{
         FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileReflection, Projectiles, fireball,
         fireball_with_speed, icebolt, pull_back_from_walls,

@@ -4,7 +4,7 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
 
-use super::damage::{AttemptDamage, Damage, Knockback};
+use super::damage::{AttemptDamage, CreditedAttackOf, Damage, Knockback};
 use super::hitbox::HurtBox;
 use super::status_effects::Burning;
 use crate::interval::Interval;
@@ -129,12 +129,19 @@ pub fn icebolt(
 
 fn damage_on_projectile_hit(
     mut commands: Commands,
-    projectile_query: Query<(&Projectile, &LinearVelocity, &CollidingEntities, Entity)>,
-    attacker_query: Query<&ProjectileAttacker>,
+    projectile_query: Query<(
+        &Projectile,
+        &LinearVelocity,
+        &CollidingEntities,
+        Entity,
+        Option<&CreditedAttackOf>,
+    )>,
     hurt_box_query: Query<&HurtBox>,
     reflector_query: Query<&ProjectileReflection>,
 ) {
-    for (projectile, velocity, colliding_entities, projectile_entity) in &projectile_query {
+    for (projectile, velocity, colliding_entities, projectile_entity, credited_attack_of) in
+        &projectile_query
+    {
         // ignore further collisions after ANY collision with the projectile
         if let Some(&colliding_entity) = colliding_entities.iter().next() {
             // Damage the touched entity if it has a hurtbox.
@@ -143,10 +150,8 @@ fn damage_on_projectile_hit(
                     entity: colliding_entity,
                     damage: projectile.damage,
                     source_item: Some(projectile_entity),
-                    attacker: attacker_query
-                        .get(projectile_entity)
-                        .ok()
-                        .and_then(|attacker| attacker.attacker),
+                    attacker: credited_attack_of
+                        .map(|credited_attack_of| credited_attack_of.attacker),
                     direction: velocity.try_normalize(),
                     ..default()
                 });
@@ -159,19 +164,12 @@ fn damage_on_projectile_hit(
     }
 }
 
-/// Character that fired a projectile, stamped when it is fired and transferred
-/// to the blocker on reflection.
-#[derive(Component, Clone, Copy)]
-struct ProjectileAttacker {
-    pub attacker: Option<Entity>,
-}
-
 /// Gap a launch point keeps from a wall, about a projectile's radius.
 const WALL_CLEARANCE: f32 = 12.0;
 
 /// Request to launch every projectile template of `source` from `position` along
 /// `aim_direction`, on behalf of `holder`. Each template is cloned; the clone becomes the live
-/// projectile carrying [`ProjectileAttacker`].
+/// projectile, credited to `holder` with [`CreditedAttackOf`].
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct FireProjectiles {
     #[event_target]
@@ -240,8 +238,8 @@ fn on_fire_projectiles(
                 ..projectile.clone()
             },
             side.projectile_layers(),
-            ProjectileAttacker {
-                attacker: Some(fire.holder),
+            CreditedAttackOf {
+                attacker: fire.holder,
             },
             DespawnOnExit(AppState::Playing),
         ));
@@ -308,9 +306,7 @@ pub(super) fn reflect_projectiles(
 
                 commands.entity(colliding_entity).insert((
                     side.projectile_layers(),
-                    ProjectileAttacker {
-                        attacker: Some(holder),
-                    },
+                    CreditedAttackOf { attacker: holder },
                 ));
 
                 reflection.reflected.insert(colliding_entity);

@@ -88,7 +88,8 @@ impl ActionFailure {
     }
 }
 
-/// Fired at the holder when [`ActionCommands::start`] refuses a use.
+/// Fired at the holder when [`ActionCommands::start`] refuses a use; see there for which refusals
+/// it reports.
 #[derive(EntityEvent, Clone, Copy, Debug)]
 pub struct ActionFailed {
     #[event_target]
@@ -264,8 +265,10 @@ pub struct ActionCommands<'w, 's> {
 impl ActionCommands<'_, '_> {
     /// Starts a use of `holder`'s action source named by `key`. While a use of it runs, this
     /// changes nothing, so calling it every frame starts one use. Otherwise the start needs
-    /// [`ActionStatus::can_start`]; a refused use fires [`ActionFailed`] and changes nothing else.
-    /// Of two starts of one source queued before the first applies, only the first starts a use.
+    /// [`ActionStatus::can_start`]. A refused use changes nothing; it fires [`ActionFailed`]
+    /// unless it only waits on a use in progress or a cooldown, as a held action does between
+    /// uses. Of two starts of one source queued before the first applies, only the first starts a
+    /// use.
     pub fn start(&mut self, holder: Entity, key: ActionKey) {
         if self.status.is_using(holder, key) {
             return;
@@ -286,7 +289,13 @@ impl ActionCommands<'_, '_> {
                     }
                 });
             }
-            Err(reason) => {
+            Err(ActionFailure::InProgress | ActionFailure::OnCooldown) => {}
+            Err(
+                reason @ (ActionFailure::NoSource
+                | ActionFailure::MissingRequiredItem
+                | ActionFailure::HolderInterrupted
+                | ActionFailure::OutOfMana),
+            ) => {
                 self.commands.trigger(ActionFailed {
                     holder,
                     key,

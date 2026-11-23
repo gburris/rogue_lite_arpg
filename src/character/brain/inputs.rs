@@ -7,16 +7,6 @@ use super::{Action, Brain, Home, HomeArea, MotionKey, MotionStatus};
 use crate::character::{Allies, BlockedState};
 use crate::prelude::*;
 
-/// Whether an action could start now; see [`DecisionInputs::action_readiness`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ActionReadiness {
-    Ready,
-    /// Only waiting prevents it, such as for a cooldown, mana or an interruption to end.
-    Waiting,
-    /// The character lacks what the action needs, such as the item, the ability or a potion.
-    Missing,
-}
-
 /// The raw fact a consideration reads; see [`DecisionInputs::read_consideration_input`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ConsiderationInput {
@@ -132,23 +122,13 @@ impl DecisionInputs<'_, '_, '_> {
             .is_some_and(|key| self.queries.actions.ends_on_its_own(entity, key))
     }
 
-    /// Whether a use of `action` is an attack; see [`Attack`].
-    pub fn action_is_attack(&self, action: Action) -> bool {
-        let entity = self.components.entity;
-        action
-            .key()
-            .is_some_and(|key| self.queries.actions.is_attack(entity, key))
-    }
-
-    /// Whether the character can start `action` now, or why not.
-    fn action_readiness(&self, action: Action) -> ActionReadiness {
+    fn is_action_usable(&self, action: Action) -> bool {
         let Some(key) = action.key() else {
-            return ActionReadiness::Ready;
+            return false;
         };
         match self.queries.actions.can_start(self.components.entity, key) {
-            Ok(_) => ActionReadiness::Ready,
-            Err(failure) if failure.is_temporary() => ActionReadiness::Waiting,
-            Err(_) => ActionReadiness::Missing,
+            Ok(_) => true,
+            Err(failure) => failure.is_temporary(),
         }
     }
 
@@ -163,7 +143,7 @@ impl DecisionInputs<'_, '_, '_> {
         if actions.is_using(entity, key) {
             return true;
         }
-        !actions.is_using_any(entity) && self.action_readiness(action) == ActionReadiness::Ready
+        !actions.is_using_any(entity) && actions.can_start(entity, key).is_ok()
     }
 
     /// Answers `input`; `None` when it is absent, which vetoes the behavior.
@@ -217,10 +197,9 @@ impl DecisionInputs<'_, '_, '_> {
             ConsiderationInput::SecondsSinceTargeted => {
                 self.target().map(|target| self.now - target.targeted_at)
             }
-            ConsiderationInput::ActionUsable(action) => Some(f32::from(
-                self.has_action_source(action)
-                    && self.action_readiness(action) != ActionReadiness::Missing,
-            )),
+            ConsiderationInput::ActionUsable(action) => {
+                Some(f32::from(self.is_action_usable(action)))
+            }
             ConsiderationInput::MovementBlocked => {
                 Some(f32::from(self.components.blocked.is_blocked()))
             }

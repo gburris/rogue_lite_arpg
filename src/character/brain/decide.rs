@@ -90,13 +90,19 @@ pub(super) fn on_motion_failed(failed: On<MotionFailed>, mut decisions: Decision
     decisions.finish_and_redecide(failed.character, |running| running.motion == Some(motion));
 }
 
-/// Applies an [`ActionFinished`]; see [`DecisionCommands::finish_and_redecide`]. A finished attack
-/// is also noted for the next decision.
-pub(super) fn on_action_finished(finished: On<ActionFinished>, mut decisions: DecisionCommands) {
+/// Applies an [`ActionFinished`]; see [`DecisionCommands::finish_and_redecide`]. A finished use of
+/// an [`Attack`] source is first noted, so the decision it may trigger already reads it.
+pub(super) fn on_action_finished(
+    finished: On<ActionFinished>,
+    mut decisions: DecisionCommands,
+    attack_sources: Query<(), With<Attack>>,
+) {
     let action = Action::Use(finished.key);
-    decisions.record_finished_attack(finished.holder, action);
     #[cfg(feature = "tracy")]
     let _span = info_span!("decide::after_action").entered();
+    if attack_sources.contains(finished.source) {
+        decisions.record_attack_finished(finished.holder);
+    }
     decisions.finish_and_redecide(finished.holder, |running| running.action == Some(action));
 }
 
@@ -144,17 +150,9 @@ impl DecisionCommands<'_, '_> {
         self.decision_stats.record_redecision();
     }
 
-    /// Notes for `character`'s next decision that `action` finished, if it is an attack.
-    pub(super) fn record_finished_attack(&mut self, character: Entity, action: Action) {
-        let Ok((mut brain, components, _)) = self.brains.get_mut(character) else {
-            return;
-        };
-        let inputs = DecisionInputs {
-            components: &components,
-            queries: &self.queries,
-            now: self.time.elapsed_secs(),
-        };
-        if inputs.action_is_attack(action) {
+    /// Notes for `character`'s next decision that one of its attacks finished.
+    pub(super) fn record_attack_finished(&mut self, character: Entity) {
+        if let Ok((mut brain, _, _)) = self.brains.get_mut(character) {
             brain.record_attack_finished();
         }
     }

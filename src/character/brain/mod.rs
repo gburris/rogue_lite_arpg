@@ -118,13 +118,11 @@ impl Brain {
             return false;
         }
 
-        let motion_available = |key: MotionKey| inputs.can_start_motion(key);
-        let action_available = |action: Action| match action {
-            Action::Idle => true,
-            Action::Use(_) => inputs.has_action_source(action) && inputs.can_run(action),
-        };
-        behavior.motion.is_none_or(motion_available)
-            && behavior.action.is_none_or(action_available)
+        let motion_can_start = behavior
+            .motion
+            .is_none_or(|key| inputs.can_start_motion(key));
+        motion_can_start
+            && behavior.action.is_none_or(|action| inputs.can_run(action))
             && behavior.suits_commit_policy(inputs)
     }
 

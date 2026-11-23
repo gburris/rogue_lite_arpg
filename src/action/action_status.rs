@@ -168,12 +168,6 @@ impl ActionStatus<'_, '_> {
             .is_some_and(|source| source.style.ends_on_its_own())
     }
 
-    /// Whether a use of `holder`'s action source named by `key` is an attack; see [`Attack`].
-    pub fn is_attack(&self, holder: Entity, key: ActionKey) -> bool {
-        self.source_data(holder, key)
-            .is_some_and(|source| source.is_attack)
-    }
-
     /// Whether `holder` is using its action source named by `key` now.
     pub fn is_using(&self, holder: Entity, key: ActionKey) -> bool {
         self.source_data(holder, key)

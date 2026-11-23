@@ -115,7 +115,8 @@ fn on_bite_took_effect(
     let mouth_offset = Vec2::Y * bite.mouth_height + direction * (reach - bite.hitbox_radius);
     let damage = Damage::Single(bite.damage * stat_multipliers.damage);
     let mut hitbox = commands.spawn((
-        HitBox::new(holder, damage, direction),
+        HitBox::new(damage, direction),
+        CreditedAttackOf { attacker: holder },
         Collider::circle(bite.hitbox_radius),
         side.hitbox_layers(),
         Transform::from_translation(mouth_offset.extend(0.0)),

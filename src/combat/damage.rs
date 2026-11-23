@@ -86,6 +86,20 @@ impl Default for Damage {
 /// so a hit flashes it white.
 const DAMAGE_FLASH_COLOR: Color = Color::linear_rgba(255., 255., 255., 0.9);
 
+/// Credits the hits of this hitbox or projectile to `attacker`, for aggro and life steal. Without
+/// it, as for environmental damage, hits name no attacker.
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = CreditedAttacks)]
+pub struct CreditedAttackOf {
+    pub attacker: Entity,
+}
+
+/// The hitboxes and projectiles whose hits are credited to this character; see
+/// [`CreditedAttackOf`].
+#[derive(Component, Debug)]
+#[relationship_target(relationship = CreditedAttackOf)]
+pub struct CreditedAttacks(Vec<Entity>);
+
 #[derive(EntityEvent)]
 pub struct AttemptDamage {
     pub entity: Entity,

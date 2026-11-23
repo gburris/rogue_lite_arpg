@@ -134,8 +134,12 @@ pub struct ActionStatus<'w, 's> {
 }
 
 impl ActionStatus<'_, '_> {
-    /// The action source `key` names on `holder`, if any.
-    pub fn source_for_key(&self, holder: Entity, key: ActionKey) -> Option<Entity> {
+    /// Whether `holder` has an action source named by `key`.
+    pub fn has_source(&self, holder: Entity, key: ActionKey) -> bool {
+        self.source_entity(holder, key).is_some()
+    }
+
+    fn source_entity(&self, holder: Entity, key: ActionKey) -> Option<Entity> {
         let holder = self.holders.get(holder).ok()?;
         match key {
             ActionKey::Equipped(equipment_slot) => {
@@ -246,7 +250,7 @@ impl ActionStatus<'_, '_> {
     }
 
     fn source_data(&self, holder: Entity, key: ActionKey) -> Option<ActionSourceDataItem<'_, '_>> {
-        let entity = self.source_for_key(holder, key)?;
+        let entity = self.source_entity(holder, key)?;
         self.sources.get(entity).ok()
     }
 }
@@ -258,12 +262,7 @@ pub struct ActionCommands<'w, 's> {
     status: ActionStatus<'w, 's>,
 }
 
-impl<'w, 's> ActionCommands<'w, 's> {
-    /// The status these commands check against.
-    pub fn status(&self) -> &ActionStatus<'w, 's> {
-        &self.status
-    }
-
+impl ActionCommands<'_, '_> {
     /// Starts a use of `holder`'s action source named by `key`. While a use of it runs, this
     /// changes nothing, so calling it every frame starts one use. Otherwise the start needs
     /// [`ActionStatus::can_start`]; a refused use fires [`ActionFailed`] and changes nothing else.

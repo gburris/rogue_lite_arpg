@@ -4,39 +4,40 @@ use bevy::prelude::*;
 
 use crate::prelude::*;
 
-/// A sensor that damages each opponent it touches once, on behalf of `attacker`. Its hits name the
-/// item set by [`HitBox::with_source_item`] as their source, or the hitbox itself without one, so
-/// the [`Knockback`], [`Effects`] and [`LifeSteal`] on that entity apply.
+/// A sensor that damages each opponent it touches once, credited to its [`CreditedAttackOf`]
+/// attacker. Its hits name its [`HitBoxOf`] item as their source, or the hitbox itself without
+/// one, so the [`Knockback`], [`Effects`] and [`LifeSteal`] on that entity apply.
 #[derive(Component, Clone, Debug)]
 #[require(Sensor, CollidingEntities)]
 pub struct HitBox {
-    attacker: Entity,
     damage: Damage,
     direction: Vec2,
-    source_item: Option<Entity>,
     already_hit: HashSet<Entity>,
 }
 
 impl HitBox {
-    /// Deals `damage` along `direction` to each opponent it touches, credited to `attacker`.
-    pub fn new(attacker: Entity, damage: Damage, direction: Vec2) -> Self {
+    /// Deals `damage` along `direction` to each opponent it touches.
+    pub fn new(damage: Damage, direction: Vec2) -> Self {
         Self {
-            attacker,
             damage,
             direction,
-            source_item: None,
             already_hit: HashSet::default(),
         }
     }
-
-    /// Names `source_item`, such as a weapon, as the source of its hits.
-    pub fn with_source_item(self, source_item: Entity) -> Self {
-        Self {
-            source_item: Some(source_item),
-            ..self
-        }
-    }
 }
+
+/// Names `item`, such as a weapon, as the source of this hitbox's hits. Despawning the item
+/// despawns its hitboxes.
+#[derive(Component, Clone, Copy, Debug)]
+#[relationship(relationship_target = HitBoxes)]
+pub struct HitBoxOf {
+    pub item: Entity,
+}
+
+/// The hitboxes whose hits name this item as their source; see [`HitBoxOf`].
+#[derive(Component, Debug)]
+#[relationship_target(relationship = HitBoxOf, linked_spawn)]
+pub struct HitBoxes(Vec<Entity>);
 
 #[derive(Component, Default, Clone)]
 #[require(Sensor)]
@@ -66,9 +67,19 @@ pub struct LifeSteal(pub f32);
 
 pub(super) fn damage_hitbox_contacts(
     mut commands: Commands,
-    mut hitboxes: Query<(Entity, &mut HitBox, &CollidingEntities)>,
+    mut hitboxes: Query<(
+        Entity,
+        &mut HitBox,
+        &CollidingEntities,
+        Option<&HitBoxOf>,
+        Option<&CreditedAttackOf>,
+    )>,
 ) {
-    for (hitbox_entity, mut hitbox, colliding_entities) in &mut hitboxes {
+    for (hitbox_entity, mut hitbox, colliding_entities, hitbox_of, credited_attack_of) in
+        &mut hitboxes
+    {
+        let source_item = hitbox_of.map_or(hitbox_entity, |hitbox_of| hitbox_of.item);
+        let attacker = credited_attack_of.map(|credited_attack_of| credited_attack_of.attacker);
         for &touched in colliding_entities.iter() {
             if !hitbox.already_hit.insert(touched) {
                 continue;
@@ -76,8 +87,8 @@ pub(super) fn damage_hitbox_contacts(
             commands.trigger(AttemptDamage {
                 entity: touched,
                 damage: hitbox.damage,
-                source_item: Some(hitbox.source_item.unwrap_or(hitbox_entity)),
-                attacker: Some(hitbox.attacker),
+                source_item: Some(source_item),
+                attacker,
                 direction: Some(hitbox.direction),
                 ..default()
             });

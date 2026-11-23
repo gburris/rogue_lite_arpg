@@ -112,12 +112,9 @@ impl DecisionInputs<'_, '_, '_> {
 
     /// Whether the character has an action source for `action`; never for `Idle`, which has none.
     pub fn has_action_source(&self, action: Action) -> bool {
-        action.key().is_some_and(|key| {
-            self.queries
-                .actions
-                .source_for_key(self.components.entity, key)
-                .is_some()
-        })
+        action
+            .key()
+            .is_some_and(|key| self.queries.actions.has_source(self.components.entity, key))
     }
 
     /// How far the action source for `action` reaches; `None` without a source or a reach.

@@ -154,7 +154,11 @@ fn on_melee_took_effect(
     let weapon = took_effect.source;
     commands.entity(weapon).insert(ActiveMeleeAttack { aim });
     commands.spawn((
-        HitBox::new(took_effect.holder, damage, aim * Vec2::X).with_source_item(weapon),
+        HitBox::new(damage, aim * Vec2::X),
+        CreditedAttackOf {
+            attacker: took_effect.holder,
+        },
+        HitBoxOf { item: weapon },
         melee_weapon.hitbox.clone(),
         side.hitbox_layers(),
         Transform::default(),

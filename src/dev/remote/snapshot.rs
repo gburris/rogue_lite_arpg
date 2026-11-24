@@ -154,9 +154,9 @@ pub(super) fn start_recording(
     recorded_hits: Res<RecordedHits>,
 ) -> BrpResult {
     let StartRecordingParams { interval } = parse_params(params)?;
-    if interval.is_nan() || interval <= 0.0 {
+    if !interval.is_finite() || interval <= 0.0 {
         return Err(invalid_params(format!(
-            "interval must be a positive number of seconds, not {interval}"
+            "interval must be a finite, positive number of seconds, not {interval}"
         )));
     }
 

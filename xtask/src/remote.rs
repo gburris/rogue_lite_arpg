@@ -28,7 +28,7 @@ const MAP_LOAD_TIMEOUT: Duration = Duration::from_secs(120);
 const MENU_TIMEOUT: Duration = Duration::from_secs(5);
 const SCREENSHOT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Share of a recording's snapshots that may be missed to long frames, such as a hitch, before
-/// the recording no longer samples the game evenly enough to measure.
+/// [`ScriptedGame::stop_recording`] says it sampled less often than asked.
 const MOST_MISSED_SNAPSHOTS_FRACTION: f64 = 0.02;
 /// Pause between snapshots while waiting on the game, and between steering updates.
 pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(50);
@@ -192,9 +192,9 @@ impl ScriptedGame {
         Ok(())
     }
 
-    /// Ends the recording and returns its snapshots in order, failing if more than
+    /// Ends the recording and returns its snapshots in order. Prints a note when more than
     /// [`MOST_MISSED_SNAPSHOTS_FRACTION`] of them were missed because frames ran longer than the
-    /// interval.
+    /// interval, as at a low `--max-fps`: the recording still holds, but samples less often.
     pub(super) fn stop_recording(&mut self) -> Result<Vec<Value>> {
         let mut recording = self.call("game/stop_recording", Value::Null)?;
         let missed = number(&recording["missed_snapshots"]);
@@ -202,11 +202,12 @@ impl ScriptedGame {
             bail!("game/stop_recording returned no `snapshots` list");
         };
         let missed_fraction = missed / (missed + snapshots.len() as f64).max(1.0);
-        ensure!(
-            missed_fraction <= MOST_MISSED_SNAPSHOTS_FRACTION,
-            "the recording missed {missed} of its snapshots to long frames; lower the speed or \
-             raise the frame rate"
-        );
+        if missed_fraction > MOST_MISSED_SNAPSHOTS_FRACTION {
+            println!(
+                "recording: missed {missed} of its snapshots to frames longer than its interval, \
+                 so it sampled less often than asked"
+            );
+        }
         Ok(snapshots)
     }
 

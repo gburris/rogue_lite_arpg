@@ -31,6 +31,9 @@ const BLOCK_MANA: f64 = 10.0;
 const OUT_OF_MANA: f64 = 3.0;
 /// Game seconds a warrior swings at a still player.
 const SWING_WATCH_SECONDS: f64 = 10.0;
+/// Game seconds between the swing check's snapshots, well under the gap between two attacks so
+/// a second attack in one swing can't fall between them.
+const SWING_SAMPLE_SECONDS: f64 = 0.02;
 /// Fraction of its health a warrior keeps so it drinks, yet survives one sword hit.
 const DRINKING_HEALTH_FRACTION: f64 = 0.5;
 /// Seconds an action source interrupted during its wind-up waits before it can be used again.
@@ -230,25 +233,25 @@ fn check_held_block_drains_mana(game: &mut ScriptedGame) -> Result<String> {
     ))
 }
 
-/// Stands a warrior beside a still player: each run of its swing behavior, told apart by its
-/// start time, must start at most one attack.
+/// Records a warrior beside a still player on game time: each run of its swing behavior, told
+/// apart by its start time, must start at most one attack.
 fn check_one_attack_per_swing(game: &mut ScriptedGame) -> Result<String> {
     let [x, y] = enter_test_room(game)?;
     game.set_player_health(DURABLE_HEALTH, DURABLE_HEALTH)?;
     let warrior = spawn_one(game, "Warrior", [x + 45.0, y])?;
+    game.start_recording(SWING_SAMPLE_SECONDS)?;
+    // Stopped even when the wait fails, so later checks don't run while it records.
+    let waited = wait_game_seconds(game, SWING_WATCH_SECONDS);
+    let recording = game.stop_recording()?;
+    waited?;
 
-    let started_at = number(&game.snapshot()?["time"]);
     let mut swing_started_at: Option<f64> = None;
     let mut swings = 0;
     let mut attacks_this_swing = 0;
     let mut most_attacks_in_a_swing = 0;
     let mut was_attacking = false;
-    loop {
-        let snapshot = game.snapshot()?;
-        if number(&snapshot["time"]) - started_at >= SWING_WATCH_SECONDS {
-            break;
-        }
-        let Some(warrior) = find_enemy(&snapshot, warrior) else {
+    for snapshot in &recording {
+        let Some(warrior) = find_enemy(snapshot, warrior) else {
             break;
         };
         let swing_start = warrior["behavior_start_times"]["swing"].as_f64();
@@ -263,7 +266,6 @@ fn check_one_attack_per_swing(game: &mut ScriptedGame) -> Result<String> {
             most_attacks_in_a_swing = most_attacks_in_a_swing.max(attacks_this_swing);
         }
         was_attacking = attacking;
-        thread::sleep(POLL_INTERVAL);
     }
 
     ensure!(

@@ -28,8 +28,8 @@ const SPAWN_RADIUS: f64 = 220.0;
 /// Player health during a scenario, topped up whenever it falls below half, so hits register
 /// without the player dying.
 const SCENARIO_HEALTH: f64 = 100_000.0;
-/// Game seconds between the snapshots of a scenario's recording. A frame takes at most one, so a
-/// frame at the run's speed must cover less game time than this.
+/// Game seconds between the snapshots of a scenario's recording. A frame takes at most one, so
+/// frames that cover more game time than this sample less often.
 const SAMPLE_SECONDS: f64 = 0.05;
 /// Real time between the player script's inputs at speed 1.
 const INPUT_INTERVAL: Duration = Duration::from_millis(33);

@@ -1,0 +1,180 @@
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
+use std::fs;
+use std::path::Path;
+
+use anyhow::{Context, Result};
+use serde_json::Value;
+
+use crate::remote::list;
+use crate::table::Table;
+
+/// Column names of the coverage table, saved and printed.
+const COVERAGE_COLUMNS: [&str; 4] = ["kind", "behavior", "share_%", "starts/min"];
+
+/// How long each behavior of one enemy kind ran and how often it started, summed over every
+/// enemy of that kind in a run's recordings. A behavior running at an enemy's first sample counts
+/// as a start; one that starts and ends between two samples goes uncounted.
+#[derive(Default)]
+pub(super) struct BehaviorCoverage {
+    alive_seconds: f64,
+    behaviors: BTreeMap<String, BehaviorTally>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct BehaviorTally {
+    seconds: f64,
+    starts: u32,
+}
+
+impl BehaviorCoverage {
+    /// Adds one enemy's `(game time, snapshot entry)` samples, in order, up to its death.
+    pub(super) fn add_enemy_timeline(&mut self, timeline: &[(f64, &Value)]) {
+        let mut previous: Option<(f64, &Value)> = None;
+        for &(time, enemy) in timeline {
+            if enemy["hp"].as_f64().unwrap_or_default() <= 0.0 {
+                break;
+            }
+            let seconds = previous.map_or(0.0, |(previous_time, _)| time - previous_time);
+            let previous_names: Vec<&str> =
+                previous.map_or_else(Vec::new, |(_, previous)| behavior_names(previous).collect());
+            self.alive_seconds += seconds;
+            for name in behavior_names(enemy) {
+                let tally = self.behaviors.entry(name.to_owned()).or_default();
+                tally.seconds += seconds;
+                if !previous_names.contains(&name) {
+                    tally.starts += 1;
+                }
+            }
+            previous = Some((time, enemy));
+        }
+    }
+}
+
+fn behavior_names(enemy: &Value) -> impl Iterator<Item = &str> {
+    list(&enemy["behaviors"]).filter_map(Value::as_str)
+}
+
+/// How much of an enemy's life one behavior ran, and how often it started.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct BehaviorRates {
+    share_percent: f64,
+    starts_per_minute: f64,
+}
+
+/// Each behavior's rates, keyed by `(kind, behavior)`.
+pub(super) type CoverageRates = BTreeMap<(String, String), BehaviorRates>;
+
+/// The rates of every behavior in `coverage`, a run's coverage by enemy kind.
+pub(super) fn to_coverage_rates(coverage: &BTreeMap<String, BehaviorCoverage>) -> CoverageRates {
+    let mut rates = CoverageRates::new();
+    for (kind, kind_coverage) in coverage {
+        let minutes = kind_coverage.alive_seconds / 60.0;
+        if minutes <= 0.0 {
+            continue;
+        }
+        for (behavior, tally) in &kind_coverage.behaviors {
+            rates.insert(
+                (kind.clone(), behavior.clone()),
+                BehaviorRates {
+                    share_percent: 100.0 * tally.seconds / kind_coverage.alive_seconds,
+                    starts_per_minute: f64::from(tally.starts) / minutes,
+                },
+            );
+        }
+    }
+    rates
+}
+
+/// The saved coverage table, one row per `(kind, behavior)`.
+pub(super) fn to_coverage_tsv(rates: &CoverageRates) -> String {
+    let mut text = format!("{}\n", COVERAGE_COLUMNS.join("\t"));
+    for ((kind, behavior), rate) in rates {
+        let _ = writeln!(
+            text,
+            "{kind}\t{behavior}\t{:.2}\t{:.2}",
+            rate.share_percent, rate.starts_per_minute
+        );
+    }
+    text
+}
+
+/// A saved coverage table, or an empty one for a run saved before coverage was recorded.
+pub(super) fn read_coverage_tsv(path: &Path) -> Result<CoverageRates> {
+    if !path.exists() {
+        return Ok(CoverageRates::new());
+    }
+    let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    let mut rates = CoverageRates::new();
+    for line in text.lines().skip(1) {
+        let cells: Vec<&str> = line.split('\t').collect();
+        let [kind, behavior, share_percent, starts_per_minute] = cells.as_slice() else {
+            continue;
+        };
+        let (Ok(share_percent), Ok(starts_per_minute)) =
+            (share_percent.parse(), starts_per_minute.parse())
+        else {
+            continue;
+        };
+        rates.insert(
+            ((*kind).to_owned(), (*behavior).to_owned()),
+            BehaviorRates {
+                share_percent,
+                starts_per_minute,
+            },
+        );
+    }
+    Ok(rates)
+}
+
+/// The behaviors of `kinds_played` that started in `baseline` but never start in `rates`.
+pub(super) fn find_behaviors_no_longer_started(
+    kinds_played: &[String],
+    rates: &CoverageRates,
+    baseline: &CoverageRates,
+) -> Vec<(String, String)> {
+    let mut no_longer_started = Vec::new();
+    for (key, before) in baseline {
+        let started_now = rates
+            .get(key)
+            .is_some_and(|now| now.starts_per_minute > 0.0);
+        if kinds_played.contains(&key.0) && before.starts_per_minute > 0.0 && !started_now {
+            no_longer_started.push(key.clone());
+        }
+    }
+    no_longer_started
+}
+
+/// One row per behavior of `kinds_played` that ran in `rates` or in `baseline`, each cell with
+/// its change from the baseline.
+pub(super) fn coverage_table(
+    kinds_played: &[String],
+    rates: &CoverageRates,
+    baseline: &CoverageRates,
+) -> Table {
+    let mut table = Table::new(COVERAGE_COLUMNS);
+    let baseline_keys = baseline
+        .keys()
+        .filter(|(kind, _)| kinds_played.contains(kind));
+    let mut keys: Vec<&(String, String)> = rates.keys().chain(baseline_keys).collect();
+    keys.sort();
+    keys.dedup();
+    for key in keys {
+        let now = rates.get(key);
+        let before = baseline.get(key);
+        let cell = |rate: fn(&BehaviorRates) -> f64| {
+            let value = now.map_or(0.0, rate);
+            match before {
+                Some(before) => format!("{value:.1} ({:+.1})", value - rate(before)),
+                None => format!("{value:.1}"),
+            }
+        };
+        table.add_row(vec![
+            key.0.clone(),
+            key.1.clone(),
+            cell(|rate| rate.share_percent),
+            cell(|rate| rate.starts_per_minute),
+        ]);
+    }
+    table
+}

@@ -82,6 +82,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
+    "orbit",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -90,6 +91,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
+    "keep distance",
     Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -103,6 +105,7 @@ const CORNERED: Consideration =
 /// Slides along whatever pins a bat backing away, circling the target until the bat is back
 /// past the inner cast edge.
 const BAT_SLIP_AWAY: Behavior = Behavior::new(
+    "slip away",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -111,6 +114,7 @@ const BAT_SLIP_AWAY: Behavior = Behavior::new(
 );
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
+    "swoop",
     Some(MotionKey::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -121,6 +125,7 @@ const BAT_SWOOP: Behavior = Behavior::new(
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
 const BAT_BASELINE_IDLE: Behavior = Behavior::new(
+    "idle action",
     None,
     Some(Action::Idle),
     CommitPolicy::ContinuouslyScored,
@@ -129,6 +134,7 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
 );
 /// Fireball from range, only between swoops.
 const BAT_BREATH: Behavior = Behavior::new(
+    "breath",
     None,
     Some(BREATH),
     CommitPolicy::ContinuouslyScored,
@@ -145,6 +151,7 @@ const SWOOPING: Consideration = flag("swooping", ConsiderationInput::MotionHeld(
 
 /// Arms a bite near contact reach, only while swooping.
 const BAT_BITE: Behavior = Behavior::new(
+    "bite",
     None,
     Some(BITE),
     CommitPolicy::ContinuouslyScored,

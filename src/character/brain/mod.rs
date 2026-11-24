@@ -87,6 +87,14 @@ impl Brain {
             .find_map(|running| running.action)
     }
 
+    /// The names of the behaviors running in its slots.
+    #[cfg(feature = "dev_native")]
+    pub fn running_behavior_names(&self) -> impl Iterator<Item = &'static str> {
+        self.running_behaviors
+            .iter()
+            .map(|&running| self.definition_of_running_behavior(running).name)
+    }
+
     fn definition_of_running_behavior(&self, running: RunningBehavior) -> Behavior {
         self.definition.behaviors[running.behavior]
     }

@@ -252,6 +252,10 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
 fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
     let motion_name = enemy.brain.and_then(Brain::motion).map(MotionKey::name);
     let action = enemy.brain.and_then(Brain::action);
+    let behavior_names: Vec<&str> = enemy
+        .brain
+        .map(|brain| brain.running_behavior_names().collect())
+        .unwrap_or_default();
     let intended_velocity = enemy.kinematics.velocity(enemy.stat_multipliers.speed);
 
     json!({
@@ -269,6 +273,7 @@ fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
         "mana": enemy.mana.map(|mana| mana.current),
         "motion": motion_name,
         "action": action.map(debug_name),
+        "behaviors": behavior_names,
         "has_target": enemy.has_target,
         "target_lock": enemy.has_target_lock,
         "line_of_sight": enemy.target_info.line_of_sight,

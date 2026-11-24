@@ -11,6 +11,10 @@ use anyhow::{Context, Result, ensure};
 use clap::{Args, ValueEnum};
 use serde_json::{Value, json};
 
+use crate::behavior_coverage::{
+    BehaviorCoverage, coverage_table, find_behaviors_no_longer_started, read_coverage_tsv,
+    to_coverage_rates, to_coverage_tsv,
+};
 use crate::remote::{
     Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, point,
     report_log_problems,
@@ -34,6 +38,8 @@ const STRAFE_PERIOD: f64 = 1.5;
 /// Distance at which the fighting player stops closing in and just swings.
 const FIGHT_RANGE: f64 = 70.0;
 
+/// Where in a run's recordings folder each behavior's share and starts go.
+const COVERAGE_FILE_NAME: &str = "behaviors.tsv";
 /// Column names of the saved table, after `kind` and `script`. Rates are per enemy-minute alive;
 /// `actions` counts each start of an equipment use or ability.
 /// `notice_s` is the median time from spawn to first targeting the player, counting an enemy that
@@ -113,14 +119,16 @@ pub(super) struct AiMetricsArgs {
 
     #[arg(
         long,
-        help = "Metrics file to compare against; defaults to the newest other one in the folder"
+        help = "Metrics file to compare against, with the `behaviors.tsv` in the folder of its \
+                name; defaults to the newest other one in the folder"
     )]
     baseline: Option<PathBuf>,
 
     #[arg(
         long,
         default_value = "runs/ai_metrics",
-        help = "Where `<commit>.tsv`, `<commit>/repeats.tsv` and the per-scenario recordings go"
+        help = "Where `<commit>.tsv`, `<commit>/repeats.tsv`, `<commit>/behaviors.tsv` and the \
+                per-scenario recordings go"
     )]
     output_directory: PathBuf,
 }
@@ -141,8 +149,9 @@ struct ScenarioMetrics {
 }
 
 /// Plays each enemy kind against each player script in the AI arena, measures how the enemies
-/// moved and fought, saves the table as `<commit>.tsv` and each repeat's values as
-/// `<commit>/repeats.tsv`, and compares the table with a baseline.
+/// moved and fought, saves the table as `<commit>.tsv`, each repeat's values as
+/// `<commit>/repeats.tsv` and each behavior's share and starts as `<commit>/behaviors.tsv`, and
+/// compares both tables with a baseline.
 pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     enter_repository_root()?;
     let commit = commit_name()?;
@@ -181,6 +190,7 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     });
 
     let mut results = Vec::new();
+    let mut coverage = BTreeMap::new();
     let mut repeats_text = format!("kind\tscript\trepeat\t{}\n", METRICS.join("\t"));
     for game_outcome in game_outcomes {
         // A game that stopped early stopped for another's error, which this loop returns.
@@ -189,7 +199,9 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
         };
         results.extend(game_results.scenarios);
         repeats_text.push_str(&game_results.repeats_lines);
+        coverage.extend(game_results.coverage);
     }
+    let coverage_rates = to_coverage_rates(&coverage);
 
     let metrics_file = args.output_directory.join(format!("{commit}.tsv"));
     fs::write(&metrics_file, to_tsv(&results))
@@ -198,27 +210,44 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     let repeats_file = recordings.join("repeats.tsv");
     fs::write(&repeats_file, repeats_text)
         .with_context(|| format!("writing {}", repeats_file.display()))?;
+    let coverage_file = recordings.join(COVERAGE_FILE_NAME);
+    fs::write(&coverage_file, to_coverage_tsv(&coverage_rates))
+        .with_context(|| format!("writing {}", coverage_file.display()))?;
     let baseline_file = match &args.baseline {
         Some(file) => Some(file.clone()),
         None => newest_other_metrics_file(&args.output_directory, &metrics_file)?,
     };
-    let baseline = match &baseline_file {
-        Some(file) => read_tsv(file)?,
-        None => BTreeMap::new(),
+    let (baseline, baseline_coverage) = match &baseline_file {
+        Some(file) => (
+            read_tsv(file)?,
+            read_coverage_tsv(&file.with_extension("").join(COVERAGE_FILE_NAME))?,
+        ),
+        None => (BTreeMap::new(), BTreeMap::new()),
     };
+    let no_longer_started =
+        find_behaviors_no_longer_started(&args.kinds, &coverage_rates, &baseline_coverage);
 
     println!("\n{}", comparison_table(&results, &baseline));
+    println!(
+        "{}",
+        coverage_table(&args.kinds, &coverage_rates, &baseline_coverage)
+    );
     println!("saved {}", metrics_file.display());
     if let Some(file) = baseline_file {
         println!("(changes) are against {}", file.display());
     }
+    for (kind, behavior) in &no_longer_started {
+        println!("coverage: {kind} {behavior} started in the baseline but never starts now");
+    }
     report_log_problems(&log_files)
 }
 
-/// One game's share of a run: its scenarios' metrics and their `repeats.tsv` lines.
+/// One game's share of a run: its scenarios' metrics, their `repeats.tsv` lines, and its kinds'
+/// behavior coverage.
 struct GameResults {
     scenarios: Vec<ScenarioMetrics>,
     repeats_lines: String,
+    coverage: BTreeMap<String, BehaviorCoverage>,
 }
 
 /// Launches a game on `remote`'s port and plays every scenario of `kinds` in it, saving each
@@ -240,7 +269,9 @@ fn play_kinds(
 
     let mut results = Vec::new();
     let mut repeats_lines = String::new();
+    let mut coverage = BTreeMap::new();
     for kind in kinds {
+        let mut kind_coverage = BehaviorCoverage::default();
         for &script in &args.scripts {
             let name = format!("{kind}_{}", script.name());
             println!("== {name}");
@@ -252,6 +283,9 @@ fn play_kinds(
                 let frames = record_scenario(&mut game, kind, script, args)?;
                 let file = recordings.join(format!("{name}_r{repeat}.jsonl"));
                 save_recording(&frames, &file)?;
+                for timeline in enemy_timelines(&frames).values() {
+                    kind_coverage.add_enemy_timeline(timeline);
+                }
                 let values = measure(&frames, args.seconds);
                 let _ = writeln!(
                     repeats_lines,
@@ -267,11 +301,13 @@ fn play_kinds(
                 values: medians(&repeats),
             });
         }
+        coverage.insert(kind.clone(), kind_coverage);
     }
     game.exit()?;
     Ok(Some(GameResults {
         scenarios: results,
         repeats_lines,
+        coverage,
     }))
 }
 
@@ -375,15 +411,7 @@ struct Totals {
 /// The [`METRICS`] of one recording of a `seconds`-long scenario.
 fn measure(frames: &[Value], seconds: f64) -> Vec<f64> {
     let mut totals = Totals::default();
-    let mut timelines: BTreeMap<u64, Vec<(f64, &Value)>> = BTreeMap::new();
-    for frame in frames {
-        let time = frame["time"].as_f64().unwrap_or_default();
-        for enemy in list(&frame["enemies"]) {
-            if let Some(entity) = enemy["entity"].as_u64() {
-                timelines.entry(entity).or_default().push((time, enemy));
-            }
-        }
-    }
+    let timelines = enemy_timelines(frames);
     for timeline in timelines.values() {
         add_enemy_totals(timeline, &mut totals);
     }
@@ -445,6 +473,20 @@ fn measure(frames: &[Value], seconds: f64) -> Vec<f64> {
         },
         killed as f64,
     ]
+}
+
+/// Each enemy's `(game time, snapshot entry)` samples in order, by entity.
+fn enemy_timelines(frames: &[Value]) -> BTreeMap<u64, Vec<(f64, &Value)>> {
+    let mut timelines: BTreeMap<u64, Vec<(f64, &Value)>> = BTreeMap::new();
+    for frame in frames {
+        let time = frame["time"].as_f64().unwrap_or_default();
+        for enemy in list(&frame["enemies"]) {
+            if let Some(entity) = enemy["entity"].as_u64() {
+                timelines.entry(entity).or_default().push((time, enemy));
+            }
+        }
+    }
+    timelines
 }
 
 fn add_enemy_totals(timeline: &[(f64, &Value)], totals: &mut Totals) {

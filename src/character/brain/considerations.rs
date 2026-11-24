@@ -264,6 +264,7 @@ pub(in crate::character) const INSIDE_OUTER_CAST_EDGE: Consideration = distance_
 );
 
 pub(in crate::character) const WANDER: Behavior = Behavior::new(
+    "wander",
     Some(MotionKey::Wander),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -271,6 +272,7 @@ pub(in crate::character) const WANDER: Behavior = Behavior::new(
     &[NO_TARGET],
 );
 pub(in crate::character) const RETURN_TO_HOME: Behavior = Behavior::new(
+    "return to home",
     Some(MotionKey::ReturnToHome),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -278,6 +280,7 @@ pub(in crate::character) const RETURN_TO_HOME: Behavior = Behavior::new(
     &[NO_TARGET, HOME_AREA_PULL],
 );
 pub(in crate::character) const CHASE_CAST_RANGE: Behavior = Behavior::new(
+    "chase to cast range",
     Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -287,6 +290,7 @@ pub(in crate::character) const CHASE_CAST_RANGE: Behavior = Behavior::new(
 
 /// Walks to where a target that slipped out of sight was last seen.
 pub(in crate::character) const SEEK_LOST_TARGET: Behavior = Behavior::new(
+    "seek lost target",
     Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -298,6 +302,7 @@ pub(in crate::character) const SEEK_LOST_TARGET: Behavior = Behavior::new(
 /// actions all ride in two-slot behaviors that outweigh it anyway. A brain with
 /// action-only behaviors sets its own baseline as the bar they must beat.
 pub(in crate::character) const ACTION_BASELINE_IDLE: Behavior = Behavior::new(
+    "idle action",
     None,
     Some(Action::Idle),
     CommitPolicy::ContinuouslyScored,

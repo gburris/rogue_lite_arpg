@@ -381,7 +381,7 @@ the enemies moved and fought, and compares the result with an earlier run.
 | `--repeats <n>` | `3` | Runs for each scenario. The table shows the median |
 | `--speed <n>` | `2` | Game speed. Compare only runs at the same speed |
 | `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
-| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against |
+| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. Behaviors compare with the `behaviors.tsv` in the folder of the same name |
 | `--output-directory <path>` | `runs/ai_metrics` | Output folder |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
 | `--max-fps <n>` | No cap | Caps the frame rate, to check that the metrics don't depend on it |
@@ -389,9 +389,17 @@ the enemies moved and fought, and compares the result with an earlier run.
 **Output:** a table with one row for each kind and script. The columns are the time to notice the
 player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
 player, the mean distance to the player, and kills. After it, `log:` lines list any error, panic or
-unexpected warning a game logged, and fail the run if there is one. In the output folder,
-`<commit>.tsv` with the table, and a `<commit>` folder with a `.jsonl` recording of each run,
-`repeats.tsv` with every run's values, and each game's log.
+unexpected warning a game logged, and fail the run if there is one.
+
+A second table has one row for each kind and behavior: its share of the kind's time alive and its
+starts per enemy-minute, each with its change from the baseline. Shares are per slot, so a kind's
+shares add up to more than 100%, and a behavior that starts and ends between two snapshots isn't
+counted. `coverage:` lines list each behavior that started in the baseline but never starts now,
+without failing the run; a renamed behavior shows up there too.
+
+In the output folder, `<commit>.tsv` with the first table, and a `<commit>` folder with a `.jsonl`
+recording of each run, `repeats.tsv` with every run's values, `behaviors.tsv` with the second
+table, and each game's log.
 
 ```sh
 cargo xtask ai-metrics

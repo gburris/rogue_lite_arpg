@@ -24,6 +24,7 @@ pub trait BrainVocabulary: Clone + Copy + Debug + 'static {
 /// firmly it holds them.
 #[derive(Clone, Copy, Debug)]
 pub struct Behavior<V: BrainVocabulary> {
+    pub name: &'static str,
     pub motion: Option<V::Motion>,
     pub action: Option<V::Action>,
     pub(in crate::character::brain) commit: CommitPolicy,
@@ -33,8 +34,10 @@ pub struct Behavior<V: BrainVocabulary> {
 }
 
 impl<V: BrainVocabulary> Behavior<V> {
-    /// Builds a behavior; [`validate_brain`] checks its shape and weight.
+    /// Builds a behavior; [`validate_brain`] checks its shape and weight, and that no other
+    /// behavior of its brain has its `name`.
     pub const fn new(
+        name: &'static str,
         motion: Option<V::Motion>,
         action: Option<V::Action>,
         commit: CommitPolicy,
@@ -42,6 +45,7 @@ impl<V: BrainVocabulary> Behavior<V> {
         considerations: &'static [Consideration<V>],
     ) -> Self {
         Self {
+            name,
             motion,
             action,
             commit,
@@ -121,6 +125,12 @@ pub(in crate::character::brain) fn validate_brain<V: BrainVocabulary>(
         return Err(format!("more than {MAX_BEHAVIORS} behaviors"));
     }
     for (index, behavior) in brain.behaviors.iter().enumerate() {
+        if brain.behaviors[..index]
+            .iter()
+            .any(|earlier| earlier.name == behavior.name)
+        {
+            return Err(format!("two behaviors are named {:?}", behavior.name));
+        }
         if behavior.motion.is_none() && behavior.action.is_none() {
             return Err(format!("behavior {index} claims no slot"));
         }

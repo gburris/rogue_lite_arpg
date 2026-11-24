@@ -2,6 +2,7 @@
 //! `--help` to any command for its options.
 
 mod ai_metrics;
+mod behavior_coverage;
 mod compare;
 mod map_sweep;
 mod perf_report;

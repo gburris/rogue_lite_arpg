@@ -72,6 +72,15 @@ impl RemoteArgs {
             ..self
         })
     }
+
+    /// These options as command-line arguments, for another command to run with.
+    pub(super) fn to_arguments(self) -> Vec<String> {
+        let mut arguments = vec!["--remote-port".to_owned(), self.remote_port.to_string()];
+        if let Some(max_fps) = self.max_fps {
+            arguments.extend(["--max-fps".to_owned(), max_fps.to_string()]);
+        }
+        arguments
+    }
 }
 
 /// A dev build of the game started for a script and driven over the Bevy Remote Protocol with

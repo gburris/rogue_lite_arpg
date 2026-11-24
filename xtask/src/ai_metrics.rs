@@ -637,7 +637,7 @@ fn save_recording(frames: &[Value], path: &Path) -> Result<()> {
 }
 
 /// The short hash of `HEAD`, with `-dirty` when tracked files have uncommitted changes.
-fn commit_name() -> Result<String> {
+pub(super) fn commit_name() -> Result<String> {
     let git = |args: &[&str]| -> Result<String> {
         let output = Command::new("git")
             .args(args)

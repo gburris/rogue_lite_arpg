@@ -10,6 +10,7 @@ mod metrics_comparison;
 mod perf_report;
 mod playthrough;
 mod process;
+mod regression;
 mod remote;
 mod sweep;
 mod table;
@@ -43,6 +44,8 @@ enum Command {
     MapSweep(map_sweep::MapSweepArgs),
     /// Runs scripted pass or fail checks of the game's rules.
     Checks(checks::ChecksArgs),
+    /// Runs the regression gate's rows one after another and summarizes which passed.
+    Regression(regression::RegressionArgs),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -54,5 +57,6 @@ fn main() -> anyhow::Result<()> {
         Command::AiMetrics(args) => ai_metrics::run(&args),
         Command::MapSweep(args) => map_sweep::run(&args),
         Command::Checks(args) => checks::run(&args),
+        Command::Regression(args) => regression::run(&args),
     }
 }

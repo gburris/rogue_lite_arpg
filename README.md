@@ -167,11 +167,11 @@ The profiling build has no console. To read a panic, redirect stderr:
 ## xtask
 
 ```
-cargo xtask <sweep|compare|perf-report|playthrough|ai-metrics|map-sweep> [options]
+cargo xtask <sweep|compare|perf-report|playthrough|ai-metrics|map-sweep|checks|regression> [options]
 ```
 
 Development commands written in Rust. Run them from any folder in the repository. Add `--help`
-to see all options. The last three play the game through its remote protocol; see
+to see all options. The last five play the game through its remote protocol; see
 [Scripted play tools](#scripted-play-tools).
 
 ### sweep
@@ -278,6 +278,7 @@ AI agent can test the game without a person at the keyboard.
 | --- | --- |
 | Does the game still work from the start screen to a restart? | [`cargo xtask playthrough`](#playthrough) |
 | Do pausing, blocking, swings, interrupts, cleanup, map recipes and death still follow their rules? | [`cargo xtask checks`](#checks) |
+| Does everything above still pass, in one command? | [`cargo xtask regression`](#regression) |
 | Did a change make the enemies fight differently? | [`cargo xtask ai-metrics`](#ai-metrics) on the old and new code |
 | Do the map recipes build without stuck enemies? | [`cargo xtask map-sweep`](#map-sweep) |
 | Why did an enemy choose that behavior? | `game/explain` in the [remote protocol](#remote-protocol) |
@@ -315,6 +316,15 @@ All output goes to `runs/`.
    ```sh
    cargo xtask map-sweep --seeds 20
    ```
+
+5. Before a merge, run every check above in one command:
+
+   ```sh
+   cargo xtask regression
+   ```
+
+   Every row must show `ok`. A failed row's notes give its error, and its full output is in
+   `runs/regression/<commit>/<row>.txt`.
 
 For a fair `ai-metrics` comparison:
 
@@ -488,6 +498,37 @@ Runs scripted checks of the game's rules in one game, each with a pass or fail a
 
 **Output:** a table with one row for each check and its notes, then `log:` lines with any error,
 panic or unexpected warning the game logged. A failed check or a log problem fails the run.
+
+## regression
+
+```
+cargo xtask regression [options]
+```
+
+Runs the gate one row after another, each as its own `xtask` command with its default options:
+`playthrough`, `checks`, `ai-metrics` in `AiTestRoom`, `ai-metrics` in `AiTestRoomWall` (saved to
+`runs/ai_metrics_wall`), and `map-sweep`. A row that fails, panics or can't start doesn't stop the
+rows after it. Pass a baseline recorded with `--repeats 9` to each `ai-metrics` row, so its noise
+band can fail the row.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--rows <row,...>` | `playthrough,checks,ai-metrics,ai-metrics-wall,map-sweep` | Rows to run, in this order |
+| `--ai-metrics-baseline <path>` | Newest other `.tsv` in `runs/ai_metrics` | `--baseline` for the open-room row |
+| `--wall-baseline <path>` | Newest other `.tsv` in `runs/ai_metrics_wall` | `--baseline` for the walled-room row |
+| `--output-directory <path>` | `runs/regression` | Output folder. A rerun at the same commit overwrites its files |
+| `--remote-port <n>` | `15702` | Port of the game's remote protocol server, passed to every row |
+| `--max-fps <n>` | No cap | Caps the game's frame rate, passed to every row |
+
+**Output:** a table with one row for each gate row: `ok` or `FAILED`, the minutes it took, and
+the error a failed row ended with. A failed row fails the gate. In `<commit>/` in the output
+folder, one `<row>.txt` with everything that row printed, and `summary.txt` with the table. Each
+tool also writes its usual output folder.
+
+```sh
+cargo xtask regression
+cargo xtask regression --rows ai-metrics --ai-metrics-baseline runs/baselines/ai_metrics/765c134.tsv
+```
 
 # Dev keys and logs
 

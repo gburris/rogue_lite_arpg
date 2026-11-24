@@ -16,8 +16,10 @@ const COVERAGE_COLUMNS: [&str; 4] = ["kind", "behavior", "share_%", "starts/min"
 const EXPECTED_STARTS_TO_FLAG: f64 = 5.0;
 
 /// How long each behavior of one enemy kind ran and how often it started, summed over every
-/// enemy of that kind in a run's recordings. A behavior running at an enemy's first sample counts
-/// as a start; one that starts and ends between two samples goes uncounted.
+/// enemy of that kind in a run's recordings. A behavior counts as started whenever its start time
+/// differs from the sample before, including at an enemy's first sample, so one that ends and is
+/// chosen again between two samples still counts. One that starts and ends between two samples
+/// goes uncounted.
 #[derive(Default)]
 pub(super) struct BehaviorCoverage {
     alive_seconds: f64,
@@ -43,13 +45,14 @@ impl BehaviorCoverage {
                 break;
             }
             let seconds = previous.map_or(0.0, |(previous_time, _)| time - previous_time);
-            let previous_names: Vec<&str> =
-                previous.map_or_else(Vec::new, |(_, previous)| behavior_names(previous).collect());
             self.alive_seconds += seconds;
             for name in behavior_names(enemy) {
                 let tally = self.behaviors.entry(name.to_owned()).or_default();
                 tally.seconds += seconds;
-                if !previous_names.contains(&name) {
+                let started_at = &enemy["behavior_start_times"][name];
+                let previous_started_at =
+                    previous.map(|(_, previous)| &previous["behavior_start_times"][name]);
+                if previous_started_at != Some(started_at) {
                     tally.starts += 1;
                 }
             }

@@ -388,9 +388,10 @@ the enemies moved and fought, and compares the result with an earlier run.
 
 **Output:** a table with one row for each kind and script. The columns are the time to notice the
 player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
-player, the mean distance to the player, and kills. In the output folder, `<commit>.tsv` with the
-table, and a `<commit>` folder with a `.jsonl` recording of each run, `repeats.tsv` with every
-run's values, and each game's log.
+player, the mean distance to the player, and kills. After it, `log:` lines list any error, panic or
+unexpected warning a game logged, and fail the run if there is one. In the output folder,
+`<commit>.tsv` with the table, and a `<commit>` folder with a `.jsonl` recording of each run,
+`repeats.tsv` with every run's values, and each game's log.
 
 ```sh
 cargo xtask ai-metrics
@@ -418,8 +419,9 @@ usually means that they spawned inside or against a wall.
 | `--max-fps <n>` | No cap | Caps the game's frame rate |
 
 **Output:** a table with one row for each recipe: maps built, enemy and chest counts, the closest
-enemy to the start, and flagged maps. In the output folder, `sweep.tsv` with one row for each map
-and a screenshot of each flagged map.
+enemy to the start, and flagged maps. After it, `log:` lines list any error, panic or unexpected
+warning the game logged, and fail the run if there is one. In the output folder, `sweep.tsv` with
+one row for each map, a screenshot of each flagged map, and the game log.
 
 ```sh
 cargo xtask map-sweep

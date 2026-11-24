@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 use std::{env, thread};
@@ -387,6 +387,24 @@ pub(super) fn log_problems(log_file: &Path) -> Result<Vec<String>> {
         .map(without_terminal_colors)
         .filter(is_problem)
         .collect())
+}
+
+/// Prints whether `log_files` hold any [`log_problems`], listing each one, and fails if they do.
+pub(super) fn report_log_problems(log_files: &[PathBuf]) -> Result<()> {
+    let mut problems = Vec::new();
+    for log_file in log_files {
+        for problem in log_problems(log_file)? {
+            problems.push(format!("{}: {problem}", log_file.display()));
+        }
+    }
+    if problems.is_empty() {
+        println!("log: ok, no errors or unexpected warnings");
+        return Ok(());
+    }
+    for problem in &problems {
+        println!("log: {problem}");
+    }
+    bail!("the game logs hold problems, listed above")
 }
 
 /// A log line without the escape sequences that color it in a terminal.

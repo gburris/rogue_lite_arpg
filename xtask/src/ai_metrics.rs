@@ -13,6 +13,7 @@ use serde_json::{Value, json};
 
 use crate::remote::{
     Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, point,
+    report_log_problems,
 };
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
@@ -155,16 +156,18 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     let remotes = (0..kind_groups.len())
         .map(|index| args.remote.with_port_offset(index as u16))
         .collect::<Result<Vec<_>>>()?;
+    let log_files: Vec<PathBuf> = (1..=kind_groups.len())
+        .map(|game| recordings.join(format!("game_{game}.log")))
+        .collect();
     // Set when a game fails, so the others stop instead of finishing results nobody keeps.
     let game_failed = AtomicBool::new(false);
     let game_outcomes: Vec<Result<Option<GameResults>>> = thread::scope(|scope| {
         let mut handles = Vec::new();
-        for (index, (kinds, remote)) in kind_groups.iter().zip(remotes).enumerate() {
-            let log_file = recordings.join(format!("game_{}.log", index + 1));
+        for ((kinds, remote), log_file) in kind_groups.iter().zip(remotes).zip(&log_files) {
             let recordings = &recordings;
             let game_failed = &game_failed;
             handles.push(scope.spawn(move || {
-                let outcome = play_kinds(args, kinds, remote, &log_file, recordings, game_failed);
+                let outcome = play_kinds(args, kinds, remote, log_file, recordings, game_failed);
                 if outcome.is_err() {
                     game_failed.store(true, Ordering::Relaxed);
                 }
@@ -209,7 +212,7 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     if let Some(file) = baseline_file {
         println!("(changes) are against {}", file.display());
     }
-    Ok(())
+    report_log_problems(&log_files)
 }
 
 /// One game's share of a run: its scenarios' metrics and their `repeats.tsv` lines.

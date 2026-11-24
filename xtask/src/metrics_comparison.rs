@@ -259,11 +259,8 @@ fn read_metrics_tsv(path: &Path) -> Result<SavedMetrics> {
     Ok(saved)
 }
 
-/// The noise bands of a saved `repeats.tsv`, or none for a run saved before repeats were.
+/// The noise bands of a saved `repeats.tsv`.
 fn read_noise_bands(repeats_file: &Path) -> Result<NoiseBands> {
-    if !repeats_file.exists() {
-        return Ok(NoiseBands::new());
-    }
     let text = fs::read_to_string(repeats_file)
         .with_context(|| format!("reading {}", repeats_file.display()))?;
     let mut lines = text.lines();

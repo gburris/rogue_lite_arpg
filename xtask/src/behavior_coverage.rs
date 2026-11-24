@@ -31,12 +31,6 @@ struct BehaviorTally {
 }
 
 impl BehaviorCoverage {
-    /// Whether any sample named a running behavior, which recordings made before snapshots
-    /// listed them never do.
-    pub(super) fn recorded_any_behavior(&self) -> bool {
-        !self.behaviors.is_empty()
-    }
-
     fn alive_minutes(&self) -> f64 {
         self.alive_seconds / 60.0
     }
@@ -112,11 +106,8 @@ pub(super) fn to_coverage_tsv(rates: &CoverageRates) -> String {
     text
 }
 
-/// A saved coverage table, or an empty one for a run saved before coverage was recorded.
+/// A saved coverage table.
 pub(super) fn read_coverage_tsv(path: &Path) -> Result<CoverageRates> {
-    if !path.exists() {
-        return Ok(CoverageRates::new());
-    }
     let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
     let mut rates = CoverageRates::new();
     for line in text.lines().skip(1) {

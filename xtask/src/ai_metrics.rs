@@ -285,7 +285,7 @@ fn play_scenarios(args: &AiMetricsArgs, recordings: &Path) -> Result<()> {
 }
 
 /// Measures every saved repeat of `args.kinds` and `args.scripts` in `recordings`, returning each
-/// scenario's metrics and the behavior coverage of each kind whose recordings name behaviors.
+/// scenario's metrics and each kind's behavior coverage.
 fn measure_recordings(
     args: &AiMetricsArgs,
     recordings: &Path,
@@ -315,9 +315,7 @@ fn measure_recordings(
                 });
             }
         }
-        if kind_coverage.recorded_any_behavior() {
-            coverage.insert(kind.clone(), kind_coverage);
-        }
+        coverage.insert(kind.clone(), kind_coverage);
     }
     ensure!(
         !scenarios.is_empty(),

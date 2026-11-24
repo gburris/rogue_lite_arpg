@@ -406,7 +406,7 @@ run. A scenario whose baseline has fewer repeats only marks changes.
 | `--speed <n>` | `2` | Game speed. Compare only runs at the same speed |
 | `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
 | `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. The noise band and behaviors come from the `repeats.tsv` and `behaviors.tsv` in the folder of the same name |
-| `--rebuild-from <path>` | Off | Measures a saved `<commit>` recordings folder instead of playing, and saves its tables again from what `--kinds` and `--scripts` select. Use it to apply a new metric or the noise band to an old run. `--seconds` must match the run. The rebuilt `.tsv` becomes the newest, so pass `--baseline` on the next run |
+| `--rebuild-from <path>` | Off | Measures a saved `<commit>` recordings folder instead of playing, and saves its tables again from what `--kinds` and `--scripts` select. Use it to apply a changed metric to a saved run without playing it again. `--seconds` must match the run. The rebuilt `.tsv` becomes the newest, so pass `--baseline` on the next run |
 | `--output-directory <path>` | `runs/ai_metrics` | Output folder |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
 | `--max-fps <n>` | No cap | Caps the frame rate, to check that the metrics don't depend on it |

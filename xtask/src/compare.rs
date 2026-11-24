@@ -19,9 +19,6 @@ const SUMMARY_PREFIX: &str = "stress summary:";
 /// File a sweep or milestone folder keeps its summary lines in.
 pub(super) const FOLDER_SUMMARY_FILE: &str = "summary.txt";
 
-/// Player script of a summary line without a `player` field.
-const DEFAULT_PLAYER: &str = "still";
-
 /// Default for [`CompareArgs::outlier_fraction`].
 pub(super) const DEFAULT_OUTLIER_FRACTION: f64 = 0.25;
 
@@ -161,11 +158,7 @@ fn parse_run(fields_text: &str, source: &str, run_number: usize) -> Result<Stres
         run_number,
         enemies: required("arena")?.parse().context("arena is not a count")?,
         engagement: required("engagement")?.to_owned(),
-        player: fields
-            .get("player")
-            .copied()
-            .unwrap_or(DEFAULT_PLAYER)
-            .to_owned(),
+        player: required("player")?.to_owned(),
         median_ms: number("median_frame_ms")?,
         p99_ms: number("p99_frame_ms")?,
         max_ms: number("max_frame_ms")?,

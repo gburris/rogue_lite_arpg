@@ -265,6 +265,7 @@ pub(super) fn on_motion_source_added(
         .count();
     debug_assert!(
         other_same_key_count == 0,
-        "character {character:?} has {other_same_key_count} more motion sources keyed {key:?};          only the first would ever run"
+        "character {character:?} has {other_same_key_count} more motion sources keyed {key:?}; \
+         only the first would ever run"
     );
 }

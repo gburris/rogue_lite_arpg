@@ -1,10 +1,12 @@
-use avian2d::prelude::{RayCaster, RigidBody, SpatialQueryFilter};
+use avian2d::prelude::{RigidBody, SpatialQueryFilter};
 use bevy::prelude::*;
 use rand::{RngExt, rng};
 use serde::Deserialize;
 
 use super::{Enemy, bat, mage, warrior};
-use crate::character::brain::{Brain, BrainDefinition, CAST_HYSTERESIS, CAST_MAX_RANGE, Watching};
+use crate::character::brain::{
+    Brain, BrainDefinition, CAST_HYSTERESIS, CAST_MAX_RANGE, SightRay, Watching,
+};
 use crate::character::motion::{Chase, Home, HomeArea, MotionCommands, ReturnToHome, Wander};
 use crate::character::physical_collider;
 use crate::interval::Interval;
@@ -153,19 +155,9 @@ fn base_enemy(kind: EnemyKind, position: Vec2, player: Entity) -> impl Scene {
     }
 }
 
-/// A sight ray cast from `origin_height` above the character's transform. Cast it from the
-/// height of the body collider, which walls keep clear of: a ray from the sprite's center
-/// starts inside the wall the character stands under.
-pub(super) fn sight_ray(range: f32, origin_height: f32, mask: SpatialQueryFilter) -> RayCaster {
-    RayCaster::new(Vec2::new(0.0, origin_height), Dir2::X)
-        .with_max_distance(range)
-        .with_query_filter(mask)
-        .with_max_hits(1)
-}
-
 /// Sight for enemies on the ground, where high obstacles block the ray.
-pub(super) fn ground_sight_ray() -> RayCaster {
-    sight_ray(
+pub(super) fn ground_sight_ray() -> SightRay {
+    SightRay::new(
         ENEMY_SIGHT_RANGE,
         CHARACTER_FEET_POS_OFFSET,
         SpatialQueryFilter::from_mask([

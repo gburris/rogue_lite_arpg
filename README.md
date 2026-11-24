@@ -331,7 +331,11 @@ curl -d '{"jsonrpc":"2.0","id":1,"method":"game/help"}' 127.0.0.1:15702
 | `game/explain` | See how a brain scored each behavior at its last decision |
 | `game/time`, `game/screenshot`, `game/exit` | Control the session |
 
-Use a different `--remote-port` for each game to run several at the same time.
+Use a different `--remote-port` for each game to run several at the same time. The render
+sub-app's server listens a fixed step higher (`RENDER_PORT_OFFSET` in `src/dev/remote/mod.rs`).
+`--update-while-unfocused` keeps a game at full speed while its window is in the background, and
+`--max-fps <n>` caps its frame rate. The commands below always pass the first, and the second when
+given `--max-fps`.
 
 ## playthrough
 
@@ -347,6 +351,7 @@ failed step.
 | --- | --- | --- |
 | `--output-directory <path>` | `runs/playthrough` | Output folder. The next run overwrites it |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+| `--max-fps <n>` | No cap | Caps the game's frame rate |
 
 **Output:** a table with one row for each step, and a `log` row that fails if the game logged an
 error, a panic or an unexpected warning. In the output folder, a screenshot for each step, the
@@ -374,21 +379,24 @@ the enemies moved and fought, and compares the result with an earlier run.
 | `--enemies <n>` | `3` | Enemies for each scenario |
 | `--seconds <n>` | `20` | Game seconds for each scenario |
 | `--repeats <n>` | `3` | Runs for each scenario. The table shows the median |
-| `--speed <n>` | `1` | Game speed. `2` halves the run time, but `reversals/min` is then not comparable with a run at `1` |
+| `--speed <n>` | `2` | Game speed. Compare only runs at the same speed |
+| `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
 | `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against |
 | `--output-directory <path>` | `runs/ai_metrics` | Output folder |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+| `--max-fps <n>` | No cap | Caps the frame rate, to check that the metrics don't depend on it |
 
 **Output:** a table with one row for each kind and script. The columns are the time to notice the
 player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
 player, the mean distance to the player, and kills. In the output folder, `<commit>.tsv` with the
-table and a `<commit>` folder with a `.jsonl` recording of each run.
+table, and a `<commit>` folder with a `.jsonl` recording of each run, `repeats.tsv` with every
+run's values, and each game's log.
 
 ```sh
 cargo xtask ai-metrics
 cargo xtask ai-metrics --kinds FireMage --scripts still --repeats 5
 cargo xtask ai-metrics --room AiTestRoomWall --output-directory runs/ai_metrics_wall
-cargo xtask ai-metrics --speed 2 --baseline runs/ai_metrics/765c134.tsv
+cargo xtask ai-metrics --games 1 --baseline runs/ai_metrics/765c134.tsv
 ```
 
 ## map-sweep
@@ -407,6 +415,7 @@ usually means that they spawned inside or against a wall.
 | `--screenshots` | Off | Takes a screenshot of every map, not only flagged maps |
 | `--output-directory <path>` | `runs/map_sweep` | Output folder |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+| `--max-fps <n>` | No cap | Caps the game's frame rate |
 
 **Output:** a table with one row for each recipe: maps built, enemy and chest counts, the closest
 enemy to the start, and flagged maps. In the output folder, `sweep.tsv` with one row for each map

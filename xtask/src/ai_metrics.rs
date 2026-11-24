@@ -3,6 +3,7 @@ use std::f64::consts::TAU;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{fs, thread};
 
@@ -60,7 +61,7 @@ pub(super) struct AiMetricsArgs {
 
     #[arg(
         long,
-        default_value_t = 1.0,
+        default_value_t = 2.0,
         help = "Game speed during scenarios; above 1 the run is shorter but less like real play"
     )]
     speed: f64,
@@ -93,6 +94,15 @@ pub(super) struct AiMetricsArgs {
 
     #[arg(
         long,
+        default_value_t = 4,
+        value_parser = clap::value_parser!(u32).range(1..=8),
+        help = "Most games played at once, on ports counting up from --remote-port; the kinds are \
+                split evenly between them, which can take fewer games"
+    )]
+    games: u32,
+
+    #[arg(
+        long,
         value_enum,
         value_delimiter = ',',
         default_values_t = [PlayerScript::Still, PlayerScript::Strafe, PlayerScript::Fight],
@@ -109,7 +119,7 @@ pub(super) struct AiMetricsArgs {
     #[arg(
         long,
         default_value = "runs/ai_metrics",
-        help = "Where `<commit>.tsv` and the per-scenario recordings go"
+        help = "Where `<commit>.tsv`, `<commit>/repeats.tsv` and the per-scenario recordings go"
     )]
     output_directory: PathBuf,
 }
@@ -130,7 +140,8 @@ struct ScenarioMetrics {
 }
 
 /// Plays each enemy kind against each player script in the AI arena, measures how the enemies
-/// moved and fought, saves the table as `<commit>.tsv` and compares it with a baseline.
+/// moved and fought, saves the table as `<commit>.tsv` and each repeat's values as
+/// `<commit>/repeats.tsv`, and compares the table with a baseline.
 pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     enter_repository_root()?;
     let commit = commit_name()?;
@@ -138,37 +149,52 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
     fs::create_dir_all(&recordings)
         .with_context(|| format!("creating {}", recordings.display()))?;
 
-    let mut game = ScriptedGame::launch(&recordings.join("game.log"), args.remote)?;
-    game.call("game/start", Value::Null)?;
-    game.wait_until_playing(Duration::from_secs(120))?;
-    thread::sleep(Duration::from_secs(1));
-    game.equip_from_inventory(&["Sword"])?;
-    game.call("game/time", json!({ "speed": args.speed }))?;
+    // Contiguous groups, so concatenating each game's results keeps the kinds in order.
+    let kinds_per_game = args.kinds.len().div_ceil(args.games as usize);
+    let kind_groups: Vec<&[String]> = args.kinds.chunks(kinds_per_game).collect();
+    let remotes = (0..kind_groups.len())
+        .map(|index| args.remote.with_port_offset(index as u16))
+        .collect::<Result<Vec<_>>>()?;
+    // Set when a game fails, so the others stop instead of finishing results nobody keeps.
+    let game_failed = AtomicBool::new(false);
+    let game_outcomes: Vec<Result<Option<GameResults>>> = thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for (index, (kinds, remote)) in kind_groups.iter().zip(remotes).enumerate() {
+            let log_file = recordings.join(format!("game_{}.log", index + 1));
+            let recordings = &recordings;
+            let game_failed = &game_failed;
+            handles.push(scope.spawn(move || {
+                let outcome = play_kinds(args, kinds, remote, &log_file, recordings, game_failed);
+                if outcome.is_err() {
+                    game_failed.store(true, Ordering::Relaxed);
+                }
+                outcome
+            }));
+        }
+        handles
+            .into_iter()
+            .map(|handle| handle.join().expect("an ai-metrics game thread panicked"))
+            .collect()
+    });
 
     let mut results = Vec::new();
-    for kind in &args.kinds {
-        for &script in &args.scripts {
-            let name = format!("{kind}_{}", script.name());
-            println!("== {name}");
-            let mut repeats = Vec::new();
-            for repeat in 1..=args.repeats {
-                let frames = record_scenario(&mut game, kind, script, args)?;
-                let file = recordings.join(format!("{name}_r{repeat}.jsonl"));
-                save_recording(&frames, &file)?;
-                repeats.push(measure(&frames, args.seconds));
-            }
-            results.push(ScenarioMetrics {
-                kind: kind.clone(),
-                script,
-                values: medians(&repeats),
-            });
-        }
+    let mut repeats_text = format!("kind\tscript\trepeat\t{}\n", METRICS.join("\t"));
+    for game_outcome in game_outcomes {
+        // A game that stopped early stopped for another's error, which this loop returns.
+        let Some(game_results) = game_outcome? else {
+            continue;
+        };
+        results.extend(game_results.scenarios);
+        repeats_text.push_str(&game_results.repeats_lines);
     }
-    game.exit()?;
 
     let metrics_file = args.output_directory.join(format!("{commit}.tsv"));
     fs::write(&metrics_file, to_tsv(&results))
         .with_context(|| format!("writing {}", metrics_file.display()))?;
+    // Inside the recordings folder, so the baseline search doesn't take it for a metrics file.
+    let repeats_file = recordings.join("repeats.tsv");
+    fs::write(&repeats_file, repeats_text)
+        .with_context(|| format!("writing {}", repeats_file.display()))?;
     let baseline_file = match &args.baseline {
         Some(file) => Some(file.clone()),
         None => newest_other_metrics_file(&args.output_directory, &metrics_file)?,
@@ -184,6 +210,66 @@ pub(super) fn run(args: &AiMetricsArgs) -> Result<()> {
         println!("(changes) are against {}", file.display());
     }
     Ok(())
+}
+
+/// One game's share of a run: its scenarios' metrics and their `repeats.tsv` lines.
+struct GameResults {
+    scenarios: Vec<ScenarioMetrics>,
+    repeats_lines: String,
+}
+
+/// Launches a game on `remote`'s port and plays every scenario of `kinds` in it, saving each
+/// recording to `recordings`. Returns `None` if it stopped early because `game_failed` was set.
+fn play_kinds(
+    args: &AiMetricsArgs,
+    kinds: &[String],
+    remote: RemoteArgs,
+    log_file: &Path,
+    recordings: &Path,
+    game_failed: &AtomicBool,
+) -> Result<Option<GameResults>> {
+    let mut game = ScriptedGame::launch(log_file, remote)?;
+    game.call("game/start", Value::Null)?;
+    game.wait_until_playing(Duration::from_secs(120))?;
+    thread::sleep(Duration::from_secs(1));
+    game.equip_from_inventory(&["Sword"])?;
+    game.call("game/time", json!({ "speed": args.speed }))?;
+
+    let mut results = Vec::new();
+    let mut repeats_lines = String::new();
+    for kind in kinds {
+        for &script in &args.scripts {
+            let name = format!("{kind}_{}", script.name());
+            println!("== {name}");
+            let mut repeats = Vec::new();
+            for repeat in 1..=args.repeats {
+                if game_failed.load(Ordering::Relaxed) {
+                    return Ok(None);
+                }
+                let frames = record_scenario(&mut game, kind, script, args)?;
+                let file = recordings.join(format!("{name}_r{repeat}.jsonl"));
+                save_recording(&frames, &file)?;
+                let values = measure(&frames, args.seconds);
+                let _ = writeln!(
+                    repeats_lines,
+                    "{kind}\t{}\t{repeat}\t{}",
+                    script.name(),
+                    to_tsv_cells(&values)
+                );
+                repeats.push(values);
+            }
+            results.push(ScenarioMetrics {
+                kind: kind.clone(),
+                script,
+                values: medians(&repeats),
+            });
+        }
+    }
+    game.exit()?;
+    Ok(Some(GameResults {
+        scenarios: results,
+        repeats_lines,
+    }))
 }
 
 /// Loads `args.room`, spawns a ring of `kind` around the player and samples snapshots for
@@ -473,20 +559,20 @@ fn newest_other_metrics_file(directory: &Path, current: &Path) -> Result<Option<
 fn to_tsv(results: &[ScenarioMetrics]) -> String {
     let mut text = format!("kind\tscript\t{}\n", METRICS.join("\t"));
     for result in results {
-        let values: Vec<String> = result
-            .values
-            .iter()
-            .map(|value| format!("{value:.2}"))
-            .collect();
         let _ = writeln!(
             text,
             "{}\t{}\t{}",
             result.kind,
             result.script.name(),
-            values.join("\t")
+            to_tsv_cells(&result.values)
         );
     }
     text
+}
+
+fn to_tsv_cells(values: &[f64]) -> String {
+    let cells: Vec<String> = values.iter().map(|value| format!("{value:.2}")).collect();
+    cells.join("\t")
 }
 
 /// A saved table, keyed by `(kind, script)`, each row's values by metric name.

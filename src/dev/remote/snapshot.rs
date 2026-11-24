@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use avian2d::prelude::{LinearVelocity, RayCaster};
+use avian2d::prelude::LinearVelocity;
 use bevy::diagnostic::FrameCount;
 use bevy::ecs::query::QueryData;
 use bevy::prelude::*;
@@ -85,7 +85,7 @@ pub(super) struct EnemyData {
     mana: Option<&'static Mana>,
     brain: Option<&'static Brain>,
     vision: &'static Vision,
-    ray_caster: Option<&'static RayCaster>,
+    sight_ray: Option<&'static SightRay>,
     target_info: &'static TargetInfo,
     has_target: Has<Targeting>,
     has_target_lock: Has<TargetLock>,
@@ -273,7 +273,7 @@ fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
         "target_lock": enemy.has_target_lock,
         "line_of_sight": enemy.target_info.line_of_sight,
         "in_vision_cone": enemy.target_info.in_vision_cone(),
-        "sight_range": enemy.ray_caster.map(|ray_caster| ray_caster.max_distance),
+        "sight_range": enemy.sight_ray.map(SightRay::range),
         "target_distance": enemy.target_info.distance,
         "attacking": attacking,
     })

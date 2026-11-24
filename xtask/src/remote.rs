@@ -51,6 +51,27 @@ pub(super) struct RemoteArgs {
         help = "Port the game's remote protocol server listens on; give each parallel run its own"
     )]
     remote_port: u16,
+
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u32).range(1..),
+        help = "Cap the game's frame rate, to check that gameplay doesn't depend on it"
+    )]
+    max_fps: Option<u32>,
+}
+
+impl RemoteArgs {
+    /// The same options on the port `offset` above this one, for a game run alongside.
+    pub(super) fn with_port_offset(self, offset: u16) -> Result<Self> {
+        let remote_port = self
+            .remote_port
+            .checked_add(offset)
+            .with_context(|| format!("port {} + {offset} is past 65535", self.remote_port))?;
+        Ok(Self {
+            remote_port,
+            ..self
+        })
+    }
 }
 
 /// A dev build of the game started for a script and driven over the Bevy Remote Protocol with
@@ -78,14 +99,22 @@ impl ScriptedGame {
 
         let log =
             File::create(log_file).with_context(|| format!("creating {}", log_file.display()))?;
-        let process = ChildProcess::spawn(
-            "the game",
-            Command::new(&cargo)
-                .args(["run", "--quiet", "--", "--remote-port"])
-                .arg(port.to_string())
-                .stdout(log.try_clone()?)
-                .stderr(log),
-        )?;
+        let mut command = Command::new(&cargo);
+        command
+            .args([
+                "run",
+                "--quiet",
+                "--",
+                "--update-while-unfocused",
+                "--remote-port",
+            ])
+            .arg(port.to_string())
+            .stdout(log.try_clone()?)
+            .stderr(log);
+        if let Some(max_fps) = remote_args.max_fps {
+            command.arg("--max-fps").arg(max_fps.to_string());
+        }
+        let process = ChildProcess::spawn("the game", &mut command)?;
         let mut game = Self {
             process,
             address,

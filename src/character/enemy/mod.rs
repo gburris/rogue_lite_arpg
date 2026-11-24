@@ -7,8 +7,7 @@ mod warrior;
 
 pub use self::spawn::{EnemyKind, EnemySpawn, SpawnEnemies};
 use self::spawn::{
-    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, sight_ray,
-    spawn_enemy_with_equipment,
+    Experience, enemy_children, enemy_motion_sources, ground_sight_ray, spawn_enemy_with_equipment,
 };
 use crate::character::Character;
 use crate::character::brain::VisionCone;

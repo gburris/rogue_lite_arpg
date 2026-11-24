@@ -31,10 +31,10 @@ use self::perception::TargetLocationHint;
 pub use self::perception::TargetLock;
 #[cfg(feature = "dev_tools")]
 pub use self::perception::Targeting;
-pub use self::perception::VisionCone;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub use self::perception::lock_onto_target;
+pub use self::perception::{SightRay, VisionCone};
 use super::motion::{
     Home, HomeArea, MotionCommands, MotionFailed, MotionFinished, MotionKey, MotionStatus,
 };

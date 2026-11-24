@@ -364,10 +364,16 @@ fn take_portal(playthrough: &mut Playthrough) -> Result<String> {
     let game = &mut playthrough.game;
     let before = game.snapshot()?;
     let portal = point(&before["portals"][0]).context("no portal on this map")?;
+    let starting_map = &before["map"]["entity"];
 
-    game.walk_to(|_| Some(portal), 4.0, Duration::from_secs(15))?;
+    // The portal is gone once the map changes, so the walk ends there.
+    game.walk_to(
+        |snapshot| (snapshot["map"]["entity"] == *starting_map).then_some(portal),
+        4.0,
+        Duration::from_secs(15),
+    )?;
     let after = game.wait_until("a new map", STATE_TIMEOUT, |snapshot| {
-        is_playing(snapshot) && snapshot["map"]["entity"] != before["map"]["entity"]
+        is_playing(snapshot) && snapshot["map"]["entity"] != *starting_map
     })?;
     thread::sleep(SCENE_SETTLE);
 

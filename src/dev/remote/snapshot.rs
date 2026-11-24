@@ -88,7 +88,7 @@ pub(super) struct EnemyData {
     mana: Option<&'static Mana>,
     brain: Option<&'static Brain>,
     vision: &'static Vision,
-    sight_ray: Option<&'static SightRay>,
+    sight_ray: &'static SightRay,
     target_info: &'static TargetInfo,
     has_target: Has<Targeting>,
     has_target_lock: Has<TargetLock>,
@@ -403,7 +403,7 @@ fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
         "target_lock": enemy.has_target_lock,
         "line_of_sight": enemy.target_info.line_of_sight,
         "in_vision_cone": enemy.target_info.in_vision_cone(),
-        "sight_range": enemy.sight_ray.map(SightRay::range),
+        "sight_range": enemy.sight_ray.range(),
         "target_distance": enemy.target_info.distance,
         "attacking": attacking,
     })

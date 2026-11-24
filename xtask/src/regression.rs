@@ -51,7 +51,7 @@ pub(super) struct RegressionArgs {
 }
 
 /// One row of the regression gate: a tool run with the options the gate gives it.
-#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum GateRow {
     Playthrough,
     Checks,

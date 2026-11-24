@@ -67,6 +67,7 @@ pub(super) struct ChecksArgs {
 }
 
 /// One check: it sets up a situation, then returns a note on what it saw or why it failed.
+#[derive(Clone, Copy, Debug)]
 struct Check {
     name: &'static str,
     run: fn(&mut ScriptedGame) -> Result<String>,

@@ -5,6 +5,7 @@ mod ai_metrics;
 mod behavior_coverage;
 mod compare;
 mod map_sweep;
+mod metrics_comparison;
 mod perf_report;
 mod playthrough;
 mod process;

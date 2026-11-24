@@ -11,6 +11,9 @@ use crate::table::Table;
 
 /// Column names of the coverage table, saved and printed.
 const COVERAGE_COLUMNS: [&str; 4] = ["kind", "behavior", "share_%", "starts/min"];
+/// Starts a behavior would make in a run at its baseline rate before never starting counts as a
+/// change. An unchanged behavior expected to start 5 times misses them all about 1 time in 150.
+const EXPECTED_STARTS_TO_FLAG: f64 = 5.0;
 
 /// How long each behavior of one enemy kind ran and how often it started, summed over every
 /// enemy of that kind in a run's recordings. A behavior running at an enemy's first sample counts
@@ -28,6 +31,16 @@ struct BehaviorTally {
 }
 
 impl BehaviorCoverage {
+    /// Whether any sample named a running behavior, which recordings made before snapshots
+    /// listed them never do.
+    pub(super) fn recorded_any_behavior(&self) -> bool {
+        !self.behaviors.is_empty()
+    }
+
+    fn alive_minutes(&self) -> f64 {
+        self.alive_seconds / 60.0
+    }
+
     /// Adds one enemy's `(game time, snapshot entry)` samples, in order, up to its death.
     pub(super) fn add_enemy_timeline(&mut self, timeline: &[(f64, &Value)]) {
         let mut previous: Option<(f64, &Value)> = None;
@@ -69,7 +82,7 @@ pub(super) type CoverageRates = BTreeMap<(String, String), BehaviorRates>;
 pub(super) fn to_coverage_rates(coverage: &BTreeMap<String, BehaviorCoverage>) -> CoverageRates {
     let mut rates = CoverageRates::new();
     for (kind, kind_coverage) in coverage {
-        let minutes = kind_coverage.alive_seconds / 60.0;
+        let minutes = kind_coverage.alive_minutes();
         if minutes <= 0.0 {
             continue;
         }
@@ -127,35 +140,45 @@ pub(super) fn read_coverage_tsv(path: &Path) -> Result<CoverageRates> {
     Ok(rates)
 }
 
-/// The behaviors of `kinds_played` that started in `baseline` but never start in `rates`.
+/// The behaviors of the kinds in `coverage` that `is_comparable` accepts that never start in
+/// `rates`, though at their `baseline` rate they would have started [`EXPECTED_STARTS_TO_FLAG`]
+/// times in this run.
 pub(super) fn find_behaviors_no_longer_started(
-    kinds_played: &[String],
+    coverage: &BTreeMap<String, BehaviorCoverage>,
+    is_comparable: impl Fn(&str) -> bool,
     rates: &CoverageRates,
     baseline: &CoverageRates,
 ) -> Vec<(String, String)> {
     let mut no_longer_started = Vec::new();
     for (key, before) in baseline {
+        let Some(kind_coverage) = coverage.get(&key.0) else {
+            continue;
+        };
+        if !is_comparable(&key.0) {
+            continue;
+        }
+        let expected_starts = before.starts_per_minute * kind_coverage.alive_minutes();
         let started_now = rates
             .get(key)
             .is_some_and(|now| now.starts_per_minute > 0.0);
-        if kinds_played.contains(&key.0) && before.starts_per_minute > 0.0 && !started_now {
+        if expected_starts >= EXPECTED_STARTS_TO_FLAG && !started_now {
             no_longer_started.push(key.clone());
         }
     }
     no_longer_started
 }
 
-/// One row per behavior of `kinds_played` that ran in `rates` or in `baseline`, each cell with
-/// its change from the baseline.
+/// One row per behavior of the kinds in `coverage` that ran in `rates` or in `baseline`, each
+/// cell with its change from the baseline.
 pub(super) fn coverage_table(
-    kinds_played: &[String],
+    coverage: &BTreeMap<String, BehaviorCoverage>,
     rates: &CoverageRates,
     baseline: &CoverageRates,
 ) -> Table {
     let mut table = Table::new(COVERAGE_COLUMNS);
     let baseline_keys = baseline
         .keys()
-        .filter(|(kind, _)| kinds_played.contains(kind));
+        .filter(|(kind, _)| coverage.contains_key(kind));
     let mut keys: Vec<&(String, String)> = rates.keys().chain(baseline_keys).collect();
     keys.sort();
     keys.dedup();

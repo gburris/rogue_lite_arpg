@@ -369,7 +369,11 @@ cargo xtask ai-metrics [options]
 ```
 
 Fights each enemy kind against each player script in a test room, empty by default. Measures how
-the enemies moved and fought, and compares the result with an earlier run.
+the enemies moved and fought, and compares the result with an earlier run. It fails when the
+change is larger than the noise between runs of the same code, or when a behavior stops starting.
+
+Record a baseline with `--repeats 9`, so its noise band is wide enough to rarely fail an unchanged
+run. A scenario whose baseline has fewer repeats only marks changes.
 
 | Option | Default | Description |
 | --- | --- | --- |
@@ -378,24 +382,34 @@ the enemies moved and fought, and compares the result with an earlier run.
 | `--scripts <script,...>` | `still,strafe,fight` | What the player does: stands, strafes, or attacks the nearest enemy |
 | `--enemies <n>` | `3` | Enemies for each scenario |
 | `--seconds <n>` | `20` | Game seconds for each scenario |
-| `--repeats <n>` | `3` | Runs for each scenario. The table shows the median |
+| `--repeats <n>` | `3` | Runs for each scenario. The table shows the median. Use `9` for a baseline |
 | `--speed <n>` | `2` | Game speed. Compare only runs at the same speed |
 | `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
-| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. Behaviors compare with the `behaviors.tsv` in the folder of the same name |
+| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. The noise band and behaviors come from the `repeats.tsv` and `behaviors.tsv` in the folder of the same name |
+| `--rebuild-from <path>` | Off | Measures a saved `<commit>` recordings folder instead of playing, and saves its tables again from what `--kinds` and `--scripts` select. Use it to apply a new metric or the noise band to an old run. `--seconds` must match the run. The rebuilt `.tsv` becomes the newest, so pass `--baseline` on the next run |
 | `--output-directory <path>` | `runs/ai_metrics` | Output folder |
 | `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
 | `--max-fps <n>` | No cap | Caps the frame rate, to check that the metrics don't depend on it |
 
 **Output:** a table with one row for each kind and script. The columns are the time to notice the
 player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
-player, the mean distance to the player, and kills. After it, `log:` lines list any error, panic or
-unexpected warning a game logged, and fail the run if there is one.
+player, the mean distance to the player, and kills. Each cell shows its change from the baseline,
+and `!` when the median falls outside the baseline's noise band: the range of its repeats, widened
+on each side by half that range, and at least by a tenth of its middle value.
 
 A second table has one row for each kind and behavior: its share of the kind's time alive and its
 starts per enemy-minute, each with its change from the baseline. Shares are per slot, so a kind's
 shares add up to more than 100%, and a behavior that starts and ends between two snapshots isn't
-counted. `coverage:` lines list each behavior that started in the baseline but never starts now,
-without failing the run; a renamed behavior shows up there too.
+counted.
+
+After the tables:
+
+- `band:` lines list each median outside the noise band. Three or more whose baseline has 9
+  repeats of that scenario fail the run. An unchanged run has about one by chance.
+- `coverage:` lines list each behavior that never starts now, though at its baseline rate it would
+  have started at least 5 times. They fail the run. A renamed behavior shows up here too. A kind
+  played with other scripts than in the baseline isn't checked, since its rates would differ.
+- `log:` lines list any error, panic or unexpected warning a game logged. They fail the run.
 
 In the output folder, `<commit>.tsv` with the first table, and a `<commit>` folder with a `.jsonl`
 recording of each run, `repeats.tsv` with every run's values, `behaviors.tsv` with the second
@@ -406,6 +420,8 @@ cargo xtask ai-metrics
 cargo xtask ai-metrics --kinds FireMage --scripts still --repeats 5
 cargo xtask ai-metrics --room AiTestRoomWall --output-directory runs/ai_metrics_wall
 cargo xtask ai-metrics --games 1 --baseline runs/ai_metrics/765c134.tsv
+cargo xtask ai-metrics --repeats 9 --output-directory runs/baselines/ai_metrics
+cargo xtask ai-metrics --rebuild-from runs/ai_metrics/765c134
 ```
 
 ## map-sweep

@@ -3,9 +3,11 @@
 use bevy::prelude::*;
 use clap::Parser;
 
-#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
-use super::remote::RENDER_PORT_OFFSET;
 use super::stress::StressArgs;
+
+/// How far above `--remote-port` the render sub-app's remote server listens.
+#[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]
+pub(super) const RENDER_PORT_OFFSET: u16 = 1000;
 
 /// The highest `--remote-port` that leaves room for the render server's port above it.
 #[cfg(all(feature = "dev_native", not(target_arch = "wasm32")))]

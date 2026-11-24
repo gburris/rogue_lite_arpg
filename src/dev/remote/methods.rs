@@ -133,7 +133,8 @@ fn add_observation_methods(methods: GameMethods) -> GameMethods {
         .method(
             "game/stop_recording",
             "",
-            "Ends the recording and returns its `snapshots`, and as `missed_snapshots` how many              intervals passed without one because a frame lasted longer than the interval.",
+            "Ends the recording and returns its `snapshots`, and as `missed_snapshots` how many \
+             intervals passed without one because a frame lasted longer than the interval.",
             snapshot::stop_recording,
         )
         .method(

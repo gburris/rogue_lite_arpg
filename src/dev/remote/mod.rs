@@ -10,10 +10,7 @@ use bevy::remote::http::{HostPort, RemoteHttpPlugin};
 use bevy::render::RenderApp;
 use bevy::winit::WinitSettings;
 
-use super::game_args::GameArgs;
-
-/// How far above `--remote-port` the render sub-app's remote server listens.
-pub(super) const RENDER_PORT_OFFSET: u16 = 1000;
+use super::game_args::{GameArgs, RENDER_PORT_OFFSET};
 
 /// Serves the Bevy Remote Protocol on `127.0.0.1`, at `--remote-port` (15702 unless given),
 /// adding the `game/…` methods below to the built-in `world.…` ones so a script can play the game

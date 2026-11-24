@@ -353,7 +353,7 @@ curl -d '{"jsonrpc":"2.0","id":1,"method":"game/help"}' 127.0.0.1:15702
 | `game/time`, `game/screenshot`, `game/exit` | Control the session |
 
 Use a different `--remote-port` for each game to run several at the same time. The render
-sub-app's server listens a fixed step higher (`RENDER_PORT_OFFSET` in `src/dev/remote/mod.rs`).
+sub-app's server listens a fixed step higher (`RENDER_PORT_OFFSET` in `src/dev/game_args.rs`).
 `--update-while-unfocused` keeps a game at full speed while its window is in the background, and
 `--max-fps <n>` caps its frame rate. The commands below always pass the first, and the second when
 given `--max-fps`.

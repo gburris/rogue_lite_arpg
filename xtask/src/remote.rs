@@ -27,10 +27,10 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const MAP_LOAD_TIMEOUT: Duration = Duration::from_secs(120);
 const MENU_TIMEOUT: Duration = Duration::from_secs(5);
 const SCREENSHOT_TIMEOUT: Duration = Duration::from_secs(10);
-/// Pause between snapshots while waiting on the game, and between steering updates.
 /// Share of a recording's snapshots that may be missed to long frames, such as a hitch, before
 /// the recording no longer samples the game evenly enough to measure.
 const MOST_MISSED_SNAPSHOTS_FRACTION: f64 = 0.02;
+/// Pause between snapshots while waiting on the game, and between steering updates.
 pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Frames the UI gets to lay out a menu or react to a click before the next key or click.
 const UI_SETTLE_FRAMES: u64 = 10;
@@ -204,7 +204,8 @@ impl ScriptedGame {
         let missed_fraction = missed / (missed + snapshots.len() as f64).max(1.0);
         ensure!(
             missed_fraction <= MOST_MISSED_SNAPSHOTS_FRACTION,
-            "the recording missed {missed} of its snapshots to long frames; lower the speed or              raise the frame rate"
+            "the recording missed {missed} of its snapshots to long frames; lower the speed or \
+             raise the frame rate"
         );
         Ok(snapshots)
     }

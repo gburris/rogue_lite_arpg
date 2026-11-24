@@ -12,7 +12,8 @@ use crate::table::Table;
 /// Column names of the coverage table, saved and printed.
 const COVERAGE_COLUMNS: [&str; 4] = ["kind", "behavior", "share_%", "starts/min"];
 /// Starts a behavior would make in a run at its baseline rate before never starting counts as a
-/// change. An unchanged behavior expected to start 5 times misses them all about 1 time in 150.
+/// change. An unchanged behavior expected to start this many times misses them all with a chance
+/// of e to the minus this.
 const EXPECTED_STARTS_TO_FLAG: f64 = 5.0;
 
 /// How long each behavior of one enemy kind ran and how often it started, summed over every

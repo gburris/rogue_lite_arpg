@@ -5,7 +5,7 @@ use bevy::diagnostic::FrameCount;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use bevy::remote::{BrpError, BrpResult};
+use bevy::remote::BrpResult;
 use bevy_firefly::prelude::PointLight2d;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -178,8 +178,7 @@ pub(super) fn stop_recording(
     mut commands: Commands,
     recording: Option<ResMut<SnapshotRecording>>,
 ) -> BrpResult {
-    let mut recording =
-        recording.ok_or_else(|| BrpError::internal("no recording is running"))?;
+    let mut recording = recording.ok_or_else(|| invalid_params("no recording is running"))?;
     commands.remove_resource::<SnapshotRecording>();
     Ok(json!({
         "snapshots": std::mem::take(&mut recording.snapshots),

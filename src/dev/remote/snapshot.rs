@@ -5,12 +5,12 @@ use bevy::diagnostic::FrameCount;
 use bevy::ecs::query::QueryData;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use bevy::remote::BrpResult;
+use bevy::remote::{BrpError, BrpResult};
 use bevy_firefly::prelude::PointLight2d;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use super::methods::{debug_name, entity_id, parse_params, position};
+use super::methods::{debug_name, entity_id, invalid_params, parse_params, position};
 use crate::prelude::*;
 
 /// Most hits kept for snapshots to read; older ones are dropped first.
@@ -18,7 +18,8 @@ const MAX_RECORDED_HITS: usize = 512;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<RecordedHits>()
-        .add_observer(on_damage_dealt_record_hit);
+        .add_observer(on_damage_dealt_record_hit)
+        .add_systems(Update, record_snapshot.in_set(InGameSystems::Measure));
 }
 
 /// The latest hits, numbered from 1 in the order they landed.
@@ -125,75 +126,176 @@ struct SnapshotParams {
     hits_after: u64,
 }
 
-pub(super) fn take_snapshot(
-    In(params): In<Option<Value>>,
-    frame_count: Res<FrameCount>,
-    time: Res<Time<Virtual>>,
-    app_state: Res<State<AppState>>,
-    playing_state: Option<Res<State<PlayingState>>>,
-    menu: Res<State<Menu>>,
-    recorded_hits: Res<RecordedHits>,
-    map: Option<Single<(Entity, &MapBlueprint)>>,
-    player: Option<Single<PlayerData, With<Player>>>,
-    inventory_items: Query<InventoryItemData>,
-    names: Query<&Name>,
-    (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionStatus),
-    npcs: Query<NpcData, With<Npc>>,
-    (projectiles, entity_counts): (Query<&Transform, With<Projectile>>, EntityCounts),
-    ground_items: Query<GroundItemData, (With<Item>, Without<ItemOf>)>,
-    interaction_zones: Query<(&ChildOf, &GlobalTransform), With<InteractionZone>>,
-    portals: Query<&Transform, With<Portal>>,
-) -> BrpResult {
+pub(super) fn take_snapshot(In(params): In<Option<Value>>, game: GameSnapshot) -> BrpResult {
     let SnapshotParams { hits_after } = parse_params(params)?;
+    Ok(game.describe_game(hits_after))
+}
 
-    let map = map.map(|map| describe_map(map.into_inner()));
-    let player = player.map(|player| describe_player(&player, &inventory_items, &names));
-    let enemies: Vec<Value> = enemies
-        .iter()
-        .map(|enemy| describe_enemy(&enemy, actions.is_attacking(enemy.entity)))
-        .collect();
-    let npcs: Vec<Value> = npcs.iter().map(|npc| describe_npc(&npc)).collect();
-    let projectiles: Vec<[f32; 2]> = projectiles.iter().map(position).collect();
-    let ground_items: Vec<Value> = ground_items
-        .iter()
-        .map(|item| describe_ground_item(&item))
-        .collect();
-    let interactables: Vec<Value> = interaction_zones
-        .iter()
-        .map(|(child_of, transform)| describe_interactable(child_of.parent(), transform, &names))
-        .collect();
-    let portals: Vec<[f32; 2]> = portals.iter().map(position).collect();
-    let hits: Vec<Value> = recorded_hits
-        .hits
-        .iter()
-        .filter(|hit| hit.sequence > hits_after)
-        .map(describe_hit)
-        .collect();
+/// Snapshots taken every `interval` of game time while a script records, each with the hits
+/// landed since the one before. See [`record_snapshot`].
+#[derive(Resource, Debug)]
+pub(super) struct SnapshotRecording {
+    interval: Timer,
+    last_hit: u64,
+    snapshots: Vec<Value>,
+    missed_snapshots: u32,
+}
 
+#[derive(Deserialize)]
+struct StartRecordingParams {
+    interval: f32,
+}
+
+/// Starts a new [`SnapshotRecording`], replacing any running one. Its first snapshot is taken
+/// next frame, and only hits landed from now on count.
+pub(super) fn start_recording(
+    In(params): In<Option<Value>>,
+    mut commands: Commands,
+    recorded_hits: Res<RecordedHits>,
+) -> BrpResult {
+    let StartRecordingParams { interval } = parse_params(params)?;
+    if interval.is_nan() || interval <= 0.0 {
+        return Err(invalid_params(format!(
+            "interval must be a positive number of seconds, not {interval}"
+        )));
+    }
+
+    let mut interval = Timer::from_seconds(interval, TimerMode::Repeating);
+    interval.almost_finish();
+    commands.insert_resource(SnapshotRecording {
+        interval,
+        last_hit: recorded_hits.last_sequence,
+        snapshots: Vec::new(),
+        missed_snapshots: 0,
+    });
+    Ok(Value::Null)
+}
+
+/// Ends the [`SnapshotRecording`] and returns its snapshots, with how many intervals passed
+/// without one.
+pub(super) fn stop_recording(
+    In(_): In<Option<Value>>,
+    mut commands: Commands,
+    recording: Option<ResMut<SnapshotRecording>>,
+) -> BrpResult {
+    let mut recording =
+        recording.ok_or_else(|| BrpError::internal("no recording is running"))?;
+    commands.remove_resource::<SnapshotRecording>();
     Ok(json!({
-        "frame": frame_count.0,
-        "time": time.elapsed_secs(),
-        "paused": time.is_paused(),
-        "state": debug_name(app_state.get()),
-        "playing_state": playing_state.map(|state| debug_name(state.get())),
-        "menu": debug_name(menu.get()),
-        "map": map,
-        "player": player,
-        "enemies": enemies,
-        "npcs": npcs,
-        "projectiles": projectiles,
-        "items_on_ground": ground_items,
-        "interactables": interactables,
-        "portals": portals,
-        "hits": hits,
-        "last_hit": recorded_hits.last_sequence,
-        "entity_counts": {
-            "lights": entity_counts.lights.count(),
-            "status_effects": entity_counts.status_effects.count(),
-            "hitboxes": entity_counts.hitboxes.count(),
-            "action_uses": entity_counts.action_uses.count(),
-        },
+        "snapshots": std::mem::take(&mut recording.snapshots),
+        "missed_snapshots": recording.missed_snapshots,
     }))
+}
+
+/// Adds a snapshot to the [`SnapshotRecording`] each time its interval of game time passes, so
+/// a recording samples the game alike at every game speed. It takes at most one a frame, and
+/// counts the intervals a long frame skips past as missed.
+pub(super) fn record_snapshot(
+    time: Res<Time<Virtual>>,
+    recording: Option<ResMut<SnapshotRecording>>,
+    game: GameSnapshot,
+) {
+    let Some(mut recording) = recording else {
+        return;
+    };
+    recording.interval.tick(time.delta());
+    let intervals_passed = recording.interval.times_finished_this_tick();
+    if intervals_passed == 0 {
+        return;
+    }
+    recording.missed_snapshots += intervals_passed - 1;
+
+    let snapshot = game.describe_game(recording.last_hit);
+    recording.last_hit = game.recorded_hits.last_sequence;
+    recording.snapshots.push(snapshot);
+}
+
+/// Everything a snapshot reports: the session, the player, enemies, villagers, the map's contents
+/// and the latest hits.
+#[derive(SystemParam)]
+pub(super) struct GameSnapshot<'w, 's> {
+    frame_count: Res<'w, FrameCount>,
+    time: Res<'w, Time<Virtual>>,
+    app_state: Res<'w, State<AppState>>,
+    playing_state: Option<Res<'w, State<PlayingState>>>,
+    menu: Res<'w, State<Menu>>,
+    recorded_hits: Res<'w, RecordedHits>,
+    map: Option<Single<'w, 's, (Entity, &'static MapBlueprint)>>,
+    player: Option<Single<'w, 's, PlayerData, With<Player>>>,
+    inventory_items: Query<'w, 's, InventoryItemData>,
+    names: Query<'w, 's, &'static Name>,
+    enemies: Query<'w, 's, EnemyData, With<Enemy>>,
+    actions: ActionStatus<'w, 's>,
+    npcs: Query<'w, 's, NpcData, With<Npc>>,
+    projectiles: Query<'w, 's, &'static Transform, With<Projectile>>,
+    entity_counts: EntityCounts<'w, 's>,
+    ground_items: Query<'w, 's, GroundItemData, (With<Item>, Without<ItemOf>)>,
+    interaction_zones:
+        Query<'w, 's, (&'static ChildOf, &'static GlobalTransform), With<InteractionZone>>,
+    portals: Query<'w, 's, &'static Transform, With<Portal>>,
+}
+
+impl GameSnapshot<'_, '_> {
+    /// The snapshot as JSON, with the hits numbered after `hits_after`.
+    fn describe_game(&self, hits_after: u64) -> Value {
+        let map = self.map.as_deref().map(|&map| describe_map(map));
+        let player = self
+            .player
+            .as_deref()
+            .map(|player| describe_player(player, &self.inventory_items, &self.names));
+        let enemies: Vec<Value> = self
+            .enemies
+            .iter()
+            .map(|enemy| describe_enemy(&enemy, self.actions.is_attacking(enemy.entity)))
+            .collect();
+        let npcs: Vec<Value> = self.npcs.iter().map(|npc| describe_npc(&npc)).collect();
+        let projectiles: Vec<[f32; 2]> = self.projectiles.iter().map(position).collect();
+        let ground_items: Vec<Value> = self
+            .ground_items
+            .iter()
+            .map(|item| describe_ground_item(&item))
+            .collect();
+        let interactables: Vec<Value> = self
+            .interaction_zones
+            .iter()
+            .map(|(child_of, transform)| {
+                describe_interactable(child_of.parent(), transform, &self.names)
+            })
+            .collect();
+        let portals: Vec<[f32; 2]> = self.portals.iter().map(position).collect();
+        let hits: Vec<Value> = self
+            .recorded_hits
+            .hits
+            .iter()
+            .filter(|hit| hit.sequence > hits_after)
+            .map(describe_hit)
+            .collect();
+
+        json!({
+            "frame": self.frame_count.0,
+            "time": self.time.elapsed_secs(),
+            "paused": self.time.is_paused(),
+            "state": debug_name(self.app_state.get()),
+            "playing_state": self.playing_state.as_ref().map(|state| debug_name(state.get())),
+            "menu": debug_name(self.menu.get()),
+            "map": map,
+            "player": player,
+            "enemies": enemies,
+            "npcs": npcs,
+            "projectiles": projectiles,
+            "items_on_ground": ground_items,
+            "interactables": interactables,
+            "portals": portals,
+            "hits": hits,
+            "last_hit": self.recorded_hits.last_sequence,
+            "entity_counts": {
+                "lights": self.entity_counts.lights.count(),
+                "status_effects": self.entity_counts.status_effects.count(),
+                "hitboxes": self.entity_counts.hitboxes.count(),
+                "action_uses": self.entity_counts.action_uses.count(),
+            },
+        })
+    }
 }
 
 /// How many of the entities a fight spawns and should clean up exist now. Lights on items don't

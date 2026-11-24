@@ -346,6 +346,7 @@ curl -d '{"jsonrpc":"2.0","id":1,"method":"game/help"}' 127.0.0.1:15702
 | --- | --- |
 | `game/help` | List every `game/...` method with its params |
 | `game/snapshot` | Read the state: player, enemies, items, menus, map and recent hits |
+| `game/start_recording`, `game/stop_recording` | Take a snapshot at a fixed interval of game time, then read them all |
 | `game/player_input`, `game/key`, `game/click`, `game/ui` | Play: move, aim, attack, press keys and click UI text |
 | `game/load_map`, `game/spawn_enemies`, `game/set_player_health`, `game/give_item` and others | Set up a test |
 | `game/explain` | See how a brain scored each behavior at its last decision |
@@ -389,7 +390,8 @@ cargo xtask ai-metrics [options]
 ```
 
 Fights each enemy kind against each player script in a test room, empty by default. Measures how
-the enemies moved and fought, and compares the result with an earlier run. It fails when the
+the enemies moved and fought from snapshots the game records on game time, so the game speed
+doesn't change the results. Compares the result with an earlier run. It fails when the
 change is larger than the noise between runs of the same code, or when a behavior stops starting.
 
 Record a baseline with `--repeats 9`, so its noise band is wide enough to rarely fail an unchanged

@@ -28,6 +28,9 @@ const MAP_LOAD_TIMEOUT: Duration = Duration::from_secs(120);
 const MENU_TIMEOUT: Duration = Duration::from_secs(5);
 const SCREENSHOT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Pause between snapshots while waiting on the game, and between steering updates.
+/// Share of a recording's snapshots that may be missed to long frames, such as a hitch, before
+/// the recording no longer samples the game evenly enough to measure.
+const MOST_MISSED_SNAPSHOTS_FRACTION: f64 = 0.02;
 pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Frames the UI gets to lay out a menu or react to a click before the next key or click.
 const UI_SETTLE_FRAMES: u64 = 10;
@@ -176,6 +179,34 @@ impl ScriptedGame {
             .as_u64()
             .context("the snapshot has no `last_hit`")?;
         Ok(snapshot)
+    }
+
+    /// Starts the game recording a snapshot every `interval_seconds` of game time, so what a
+    /// script measures doesn't depend on how often it polls. Each recorded snapshot's `hits` are
+    /// the ones landed since the one before.
+    pub(super) fn start_recording(&mut self, interval_seconds: f64) -> Result<()> {
+        self.call(
+            "game/start_recording",
+            json!({ "interval": interval_seconds }),
+        )?;
+        Ok(())
+    }
+
+    /// Ends the recording and returns its snapshots in order, failing if more than
+    /// [`MOST_MISSED_SNAPSHOTS_FRACTION`] of them were missed because frames ran longer than the
+    /// interval.
+    pub(super) fn stop_recording(&mut self) -> Result<Vec<Value>> {
+        let mut recording = self.call("game/stop_recording", Value::Null)?;
+        let missed = number(&recording["missed_snapshots"]);
+        let Value::Array(snapshots) = recording["snapshots"].take() else {
+            bail!("game/stop_recording returned no `snapshots` list");
+        };
+        let missed_fraction = missed / (missed + snapshots.len() as f64).max(1.0);
+        ensure!(
+            missed_fraction <= MOST_MISSED_SNAPSHOTS_FRACTION,
+            "the recording missed {missed} of its snapshots to long frames; lower the speed or              raise the frame rate"
+        );
+        Ok(snapshots)
     }
 
     /// Polls snapshots until `is_done` accepts one, failing after `timeout` of real time.

@@ -19,7 +19,7 @@ use crate::metrics_comparison::{
     find_cells_outside_band, newest_other_metrics_file, read_baseline, save_tables,
 };
 use crate::remote::{
-    Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, point,
+    Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, number, point,
     report_log_problems,
 };
 use crate::sweep::enter_repository_root;
@@ -28,7 +28,11 @@ const SPAWN_RADIUS: f64 = 220.0;
 /// Player health during a scenario, topped up whenever it falls below half, so hits register
 /// without the player dying.
 const SCENARIO_HEALTH: f64 = 100_000.0;
-const SAMPLE_INTERVAL: Duration = Duration::from_millis(33);
+/// Game seconds between the snapshots of a scenario's recording. A frame takes at most one, so
+/// at speed 2 the game must run at 40 frames a second or more.
+const SAMPLE_SECONDS: f64 = 0.05;
+/// Real time between the player script's inputs at speed 1.
+const INPUT_INTERVAL: Duration = Duration::from_millis(33);
 /// Intended speed below which an enemy counts as standing still.
 const MOVING_SPEED: f64 = 20.0;
 /// Fraction of its intended travel an enemy must cover to not count as stuck.
@@ -374,9 +378,9 @@ fn play_kinds(
     game.exit()
 }
 
-/// Loads `args.room`, spawns a ring of `kind` around the player and samples snapshots for
-/// `args.seconds` of game time while the player follows `script`. Each frame keeps only the
-/// spawned enemies.
+/// Loads `args.room`, spawns a ring of `kind` around the player and records `args.seconds` of
+/// game time while the player follows `script`. The game takes the recording's snapshots on game
+/// time, so they don't depend on the speed or frame rate; each keeps only the spawned enemies.
 fn record_scenario(
     game: &mut ScriptedGame,
     kind: &str,
@@ -388,8 +392,7 @@ fn record_scenario(
     thread::sleep(Duration::from_millis(500));
     game.set_player_health(SCENARIO_HEALTH, SCENARIO_HEALTH)?;
 
-    // Hits from before the scenario don't count.
-    let snapshot = game.snapshot_with_new_hits()?;
+    let snapshot = game.snapshot()?;
     let center = point(&snapshot["player"]["position"]).context("player has no position")?;
     let positions: Vec<Point> = (0..args.enemies)
         .map(|index| {
@@ -401,35 +404,44 @@ fn record_scenario(
         })
         .collect();
     let spawned: HashSet<u64> = game.spawn_enemies(kind, &positions)?.into_iter().collect();
+    game.start_recording(SAMPLE_SECONDS)?;
 
-    let started_at = snapshot["time"].as_f64().unwrap_or_default();
-    let mut frames = Vec::new();
+    let started_at = number(&snapshot["time"]);
     loop {
         let mut snapshot = game.snapshot_with_new_hits()?;
-        let elapsed = snapshot["time"].as_f64().unwrap_or_default() - started_at;
+        let elapsed = number(&snapshot["time"]) - started_at;
         if elapsed >= args.seconds {
             break;
         }
         if snapshot["player"]["hp"].as_f64().unwrap_or(SCENARIO_HEALTH) < SCENARIO_HEALTH / 2.0 {
             game.set_player_health(SCENARIO_HEALTH, SCENARIO_HEALTH)?;
         }
-        if let Some(enemies) = snapshot["enemies"].as_array_mut() {
-            enemies.retain(|enemy| {
-                enemy["entity"]
-                    .as_u64()
-                    .is_some_and(|entity| spawned.contains(&entity))
-            });
-        }
+        keep_spawned_enemies(&mut snapshot, &spawned);
         game.call(
             "game/player_input",
             player_input(script, &snapshot, elapsed),
         )?;
-        frames.push(snapshot);
-        // Sampled at the same game-time interval whatever the speed.
-        thread::sleep(SAMPLE_INTERVAL.div_f64(args.speed));
+        // About the same game time between inputs whatever the speed.
+        thread::sleep(INPUT_INTERVAL.div_f64(args.speed));
     }
     game.release_player_input()?;
+
+    let mut frames = game.stop_recording()?;
+    frames.retain(|frame| number(&frame["time"]) - started_at < args.seconds);
+    for frame in &mut frames {
+        keep_spawned_enemies(frame, &spawned);
+    }
     Ok(frames)
+}
+
+fn keep_spawned_enemies(snapshot: &mut Value, spawned: &HashSet<u64>) {
+    if let Some(enemies) = snapshot["enemies"].as_array_mut() {
+        enemies.retain(|enemy| {
+            enemy["entity"]
+                .as_u64()
+                .is_some_and(|entity| spawned.contains(&entity))
+        });
+    }
 }
 
 fn player_input(script: PlayerScript, snapshot: &Value, elapsed: f64) -> Value {

@@ -123,6 +123,20 @@ fn add_observation_methods(methods: GameMethods) -> GameMethods {
             snapshot::take_snapshot,
         )
         .method(
+            "game/start_recording",
+            "{interval}",
+            "Starts taking a game/snapshot every `interval` seconds of game time, the first one \
+             next frame, each with the hits landed since the one before. Replaces a running \
+             recording. Nothing is taken while the game is paused.",
+            snapshot::start_recording,
+        )
+        .method(
+            "game/stop_recording",
+            "",
+            "Ends the recording and returns its `snapshots`, and as `missed_snapshots` how many              intervals passed without one because a frame lasted longer than the interval.",
+            snapshot::stop_recording,
+        )
+        .method(
             "game/explain",
             "{entity?}",
             "How each of a brain's behaviors scored at its last decision, with every \

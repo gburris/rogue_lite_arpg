@@ -22,6 +22,8 @@ pub mod prelude {
         FIREBALL_SPEED, FireProjectiles, Projectile, ProjectileReflection, Projectiles, fireball,
         fireball_with_speed, icebolt, pull_back_from_walls,
     };
+    #[cfg(feature = "dev_tools")]
+    pub use super::status_effects::StatusOf;
     pub use super::status_effects::{
         ApplyEffects, Effects, Frozen, Rallied, Stat, StatMultipliers, stat_modifier,
     };

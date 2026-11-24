@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::remote::{
     MouseButton, POLL_INTERVAL, RemoteArgs, ScriptedGame, attack_input, distance, is_playing, list,
-    log_problems, nearest, point,
+    log_problems, nearest, number, point,
 };
 use crate::sweep::enter_repository_root;
 use crate::table::{Table, optional_cell};
@@ -387,7 +387,7 @@ fn fight(playthrough: &mut Playthrough) -> Result<String> {
     let before = game.snapshot_with_new_hits()?;
     let player = &before["player"]["entity"];
     let start = point(&before["player"]["position"]).context("player has no position")?;
-    let started_at = seconds(&before["time"]);
+    let started_at = number(&before["time"]);
 
     let warriors = game.spawn_enemies(
         "Warrior",
@@ -408,7 +408,7 @@ fn fight(playthrough: &mut Playthrough) -> Result<String> {
 
     let warriors_left = loop {
         let snapshot = playthrough.game.snapshot_with_new_hits()?;
-        let elapsed = seconds(&snapshot["time"]) - started_at;
+        let elapsed = number(&snapshot["time"]) - started_at;
         if elapsed >= FIGHT_SECONDS {
             break list(&snapshot["enemies"]).filter(is_warrior).count();
         }
@@ -473,8 +473,4 @@ fn restart(playthrough: &mut Playthrough) -> Result<String> {
         "back in {} with {} hp",
         snapshot["state"], snapshot["player"]["hp"]
     ))
-}
-
-fn seconds(value: &Value) -> f64 {
-    value.as_f64().unwrap_or_default()
 }

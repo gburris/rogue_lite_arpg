@@ -3,6 +3,7 @@
 
 mod ai_metrics;
 mod behavior_coverage;
+mod checks;
 mod compare;
 mod map_sweep;
 mod metrics_comparison;
@@ -40,6 +41,8 @@ enum Command {
     AiMetrics(ai_metrics::AiMetricsArgs),
     /// Builds map recipes over many seeds and flags enemies that spawn stuck.
     MapSweep(map_sweep::MapSweepArgs),
+    /// Runs scripted pass or fail checks of the game's rules.
+    Checks(checks::ChecksArgs),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -50,5 +53,6 @@ fn main() -> anyhow::Result<()> {
         Command::Playthrough(args) => playthrough::run(&args),
         Command::AiMetrics(args) => ai_metrics::run(&args),
         Command::MapSweep(args) => map_sweep::run(&args),
+        Command::Checks(args) => checks::run(&args),
     }
 }

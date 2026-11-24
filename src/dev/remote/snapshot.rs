@@ -3,8 +3,10 @@ use std::collections::VecDeque;
 use avian2d::prelude::LinearVelocity;
 use bevy::diagnostic::FrameCount;
 use bevy::ecs::query::QueryData;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::remote::BrpResult;
+use bevy_firefly::prelude::PointLight2d;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -137,7 +139,7 @@ pub(super) fn take_snapshot(
     names: Query<&Name>,
     (enemies, actions): (Query<EnemyData, With<Enemy>>, ActionStatus),
     npcs: Query<NpcData, With<Npc>>,
-    projectiles: Query<&Transform, With<Projectile>>,
+    (projectiles, entity_counts): (Query<&Transform, With<Projectile>>, EntityCounts),
     ground_items: Query<GroundItemData, (With<Item>, Without<ItemOf>)>,
     interaction_zones: Query<(&ChildOf, &GlobalTransform), With<InteractionZone>>,
     portals: Query<&Transform, With<Portal>>,
@@ -185,7 +187,23 @@ pub(super) fn take_snapshot(
         "portals": portals,
         "hits": hits,
         "last_hit": recorded_hits.last_sequence,
+        "entity_counts": {
+            "lights": entity_counts.lights.count(),
+            "status_effects": entity_counts.status_effects.count(),
+            "hitboxes": entity_counts.hitboxes.count(),
+            "action_uses": entity_counts.action_uses.count(),
+        },
     }))
+}
+
+/// How many of the entities a fight spawns and should clean up exist now. Lights on items don't
+/// count, since dropped loot glows until it despawns.
+#[derive(SystemParam)]
+pub(super) struct EntityCounts<'w, 's> {
+    lights: Query<'w, 's, (), (With<PointLight2d>, Without<Item>)>,
+    status_effects: Query<'w, 's, (), With<StatusOf>>,
+    hitboxes: Query<'w, 's, (), With<HitBox>>,
+    action_uses: Query<'w, 's, (), With<ActionInUseOf>>,
 }
 
 fn describe_map((entity, blueprint): (Entity, &MapBlueprint)) -> Value {
@@ -252,10 +270,15 @@ fn describe_inventory_item(entity: Entity, item: &InventoryItemDataItem) -> Valu
 fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
     let motion_name = enemy.brain.and_then(Brain::motion).map(MotionKey::name);
     let action = enemy.brain.and_then(Brain::action);
-    let behavior_names: Vec<&str> = enemy
+    let behavior_starts: Vec<(&str, f32)> = enemy
         .brain
-        .map(|brain| brain.running_behavior_names().collect())
+        .map(|brain| brain.running_behavior_starts().collect())
         .unwrap_or_default();
+    let behavior_names: Vec<&str> = behavior_starts.iter().map(|&(name, _)| name).collect();
+    let behavior_start_times: serde_json::Map<String, Value> = behavior_starts
+        .iter()
+        .map(|&(name, started_at)| (name.to_owned(), json!(started_at)))
+        .collect();
     let intended_velocity = enemy.kinematics.velocity(enemy.stat_multipliers.speed);
 
     json!({
@@ -274,6 +297,7 @@ fn describe_enemy(enemy: &EnemyDataItem, attacking: bool) -> Value {
         "motion": motion_name,
         "action": action.map(debug_name),
         "behaviors": behavior_names,
+        "behavior_start_times": behavior_start_times,
         "has_target": enemy.has_target,
         "target_lock": enemy.has_target_lock,
         "line_of_sight": enemy.target_info.line_of_sight,

@@ -449,6 +449,11 @@ pub(super) fn attack_input(position: Point, enemy: Point, reach: f64) -> Value {
     }
 }
 
+/// A JSON number, or 0 when the value isn't one.
+pub(super) fn number(value: &Value) -> f64 {
+    value.as_f64().unwrap_or_default()
+}
+
 /// A JSON `[x, y]` as a point.
 pub(super) fn point(value: &Value) -> Option<Point> {
     Some([value.get(0)?.as_f64()?, value.get(1)?.as_f64()?])

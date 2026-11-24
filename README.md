@@ -25,7 +25,8 @@ Web builds need the [Bevy CLI](https://github.com/TheBevyFlock/bevy_cli) and the
 
 ## Map seed
 
-The `MAP_SEED` environment variable fixes the map layout and enemy placement:
+The `MAP_SEED` environment variable fixes the map layout and enemy placement. Two recipes given
+one seed still build different layouts.
 
 ```sh
 MAP_SEED=7 cargo run                                       # bash
@@ -276,6 +277,7 @@ AI agent can test the game without a person at the keyboard.
 | Question | Tool |
 | --- | --- |
 | Does the game still work from the start screen to a restart? | [`cargo xtask playthrough`](#playthrough) |
+| Do pausing, blocking, swings, interrupts, cleanup, map recipes and death still follow their rules? | [`cargo xtask checks`](#checks) |
 | Did a change make the enemies fight differently? | [`cargo xtask ai-metrics`](#ai-metrics) on the old and new code |
 | Do the map recipes build without stuck enemies? | [`cargo xtask map-sweep`](#map-sweep) |
 | Why did an enemy choose that behavior? | `game/explain` in the [remote protocol](#remote-protocol) |
@@ -293,14 +295,22 @@ All output goes to `runs/`.
 
    Every step must show `ok`, including the `log` row.
 
-2. For an AI change, record the old code first, then the new code:
+2. After any gameplay change, run the scripted checks:
+
+   ```sh
+   cargo xtask checks
+   ```
+
+   Every check must show `ok`.
+
+3. For an AI change, record the old code first, then the new code:
 
    ```sh
    cargo xtask ai-metrics    # on the old code
    cargo xtask ai-metrics    # on the new code; prints changes against the first run
    ```
 
-3. For a map recipe or placement change, build many seeds:
+4. For a map recipe or placement change, build many seeds:
 
    ```sh
    cargo xtask map-sweep --seeds 20
@@ -451,6 +461,33 @@ one row for each map, a screenshot of each flagged map, and the game log.
 cargo xtask map-sweep
 cargo xtask map-sweep --recipes Swamp,FireShrine --seeds 50 --screenshots
 ```
+
+## checks
+
+```
+cargo xtask checks [options]
+```
+
+Runs scripted checks of the game's rules in one game, each with a pass or fail answer:
+
+| Check | Passes when |
+| --- | --- |
+| `pause` | Pausing mid-fight freezes game time, every warrior and every hit |
+| `held block` | A Knight Shield held on little mana drains it and drops once it runs out |
+| `committed swing` | Each run of a warrior's swing behavior starts at most one attack |
+| `wind-up lockout` | A warrior knocked back while drinking waits out the lockout before drinking again |
+| `leaks` | After mages and a warrior die, the lights, status effects, hitboxes and action uses are back to their counts before the fight. Dropped loot's glow doesn't count |
+| `swamp layouts` | The two Swamp recipes place their enemies differently for one seed |
+| `corpse` | No hit lands on the player after the one that kills it |
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--output-directory <path>` | `runs/checks` | Where the game log goes. The next run overwrites it |
+| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
+| `--max-fps <n>` | No cap | Caps the game's frame rate |
+
+**Output:** a table with one row for each check and its notes, then `log:` lines with any error,
+panic or unexpected warning the game logged. A failed check or a log problem fails the run.
 
 # Dev keys and logs
 

@@ -115,9 +115,11 @@ fn add_observation_methods(methods: GameMethods) -> GameMethods {
             "{hits_after?}",
             "The frame number, app and menu states, game time, the current map (its entity \
              changes with every build), the player and their inventory, every enemy's brain, \
-             movement and perception, villagers, projectiles, items on the ground, interactables, \
-             portals and the latest hits. Each hit has a `sequence`; pass a snapshot's `last_hit` \
-             back as `hits_after` to get only the hits landed since that snapshot.",
+             movement, perception and running behaviors with their start times, villagers, \
+             projectiles, items on the ground, interactables, portals, the latest hits, and how \
+             many lights (besides items'), status effects, hitboxes and action uses exist. Each \
+             hit has a `sequence`; pass a snapshot's `last_hit` back as `hits_after` to get only \
+             the hits landed since that snapshot.",
             snapshot::take_snapshot,
         )
         .method(
@@ -197,6 +199,13 @@ fn add_setup_methods(methods: GameMethods) -> GameMethods {
             "{hp, max_hp}",
             "Sets the player's health.",
             setup::set_player_health,
+        )
+        .method(
+            "game/set_enemy_health",
+            "{entity, hp}",
+            "Sets an enemy's health, up to its maximum, such as to make it drink a potion or die \
+             to one hit.",
+            setup::set_enemy_health,
         )
         .method(
             "game/set_player_mana",

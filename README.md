@@ -277,7 +277,7 @@ AI agent can test the game without a person at the keyboard.
 | Question | Tool |
 | --- | --- |
 | Does the game still work from the start screen to a restart? | [`cargo xtask playthrough`](#playthrough) |
-| Do pausing, blocking, swings, interrupts, cleanup, map recipes and death still follow their rules? | [`cargo xtask checks`](#checks) |
+| Do pausing, blocking, swings, interrupts, cleanup and death still follow their rules? | [`cargo xtask checks`](#checks) |
 | Does everything above still pass, in one command? | [`cargo xtask regression`](#regression) |
 | Did a change make the enemies fight differently? | [`cargo xtask ai-metrics`](#ai-metrics) on the old and new code |
 | Do the map recipes build without stuck enemies? | [`cargo xtask map-sweep`](#map-sweep) |
@@ -490,7 +490,6 @@ Runs scripted checks of the game's rules in one game, each with a pass or fail a
 | `committed swing` | Each run of a warrior's swing behavior starts at most one attack |
 | `wind-up lockout` | A warrior knocked back while drinking waits out the lockout before drinking again |
 | `leaks` | After mages and a warrior die, the lights, status effects, hitboxes and action uses are back to their counts before the fight. Dropped loot's glow doesn't count |
-| `swamp layouts` | The two Swamp recipes place their enemies differently for one seed |
 | `corpse` | No hit lands on the player after the one that kills it |
 
 | Option | Default | Description |

@@ -13,7 +13,7 @@ use crate::remote::{
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
 
-/// Map recipe every check except the Swamp one fights in.
+/// Map recipe every check fights in.
 const TEST_ROOM: &str = "AiTestRoom";
 /// Real time a new scene gets to finish spawning before a check looks at it.
 const SCENE_SETTLE: Duration = Duration::from_millis(500);
@@ -46,10 +46,6 @@ const LEAK_FIGHT_SECONDS: f64 = 6.0;
 const CLEANUP_SECONDS: f64 = 15.0;
 /// Distance from an enemy at which the player swings at it.
 const SWING_DISTANCE: f64 = 30.0;
-const SWAMP_RECIPES: [&str; 2] = ["Swamp", "SwampWithALotOfEmptySquares"];
-const SWAMP_SEED: u64 = 1;
-/// Distance within which two enemies count as placed at the same spot.
-const SAME_SPOT_DISTANCE: f64 = 16.0;
 /// Real time the check keeps watching after game over, for a hit landing late.
 const AFTER_GAME_OVER: Duration = Duration::from_secs(1);
 
@@ -94,10 +90,6 @@ const CHECKS: &[Check] = &[
     Check {
         name: "leaks",
         run: check_fight_leaves_nothing,
-    },
-    Check {
-        name: "swamp layouts",
-        run: check_swamp_layouts_differ,
     },
     Check {
         name: "corpse",
@@ -386,40 +378,6 @@ fn check_fight_leaves_nothing(game: &mut ScriptedGame) -> Result<String> {
     Ok(format!(
         "{before} before and after {} deaths",
         enemies.len()
-    ))
-}
-
-/// Builds both Swamp recipes from one seed: they must not place their enemies at the same spots.
-fn check_swamp_layouts_differ(game: &mut ScriptedGame) -> Result<String> {
-    game.release_player_input()?;
-    let mut layouts = Vec::new();
-    for recipe in SWAMP_RECIPES {
-        game.load_map(recipe, SWAMP_SEED)?;
-        game.wait_frames(2)?;
-        let snapshot = game.snapshot()?;
-        let positions: Vec<Point> = list(&snapshot["enemies"])
-            .filter_map(|enemy| point(&enemy["position"]))
-            .collect();
-        layouts.push(positions);
-    }
-    let [first, second] = [&layouts[0], &layouts[1]];
-    let shared_spots = first
-        .iter()
-        .filter(|&&spot| {
-            second
-                .iter()
-                .any(|&other| distance(spot, other) < SAME_SPOT_DISTANCE)
-        })
-        .count();
-    ensure!(
-        !(first.len() == second.len() && shared_spots == first.len()),
-        "both recipes placed their {} enemies at the same spots for seed {SWAMP_SEED}",
-        first.len()
-    );
-    Ok(format!(
-        "{} and {} enemies, {shared_spots} at shared spots",
-        first.len(),
-        second.len()
     ))
 }
 

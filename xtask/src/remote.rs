@@ -490,6 +490,11 @@ pub(super) fn attack_input(position: Point, enemy: Point, reach: f64) -> Value {
     }
 }
 
+/// Whether a snapshot's enemy has died, by the game's own measure.
+pub(super) fn is_enemy_dead(enemy: &Value) -> bool {
+    enemy["dead"] == true
+}
+
 /// A JSON number, or 0 when the value isn't one.
 pub(super) fn number(value: &Value) -> f64 {
     value.as_f64().unwrap_or_default()

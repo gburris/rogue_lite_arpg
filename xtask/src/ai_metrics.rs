@@ -19,8 +19,8 @@ use crate::metrics_comparison::{
     find_cells_outside_band, newest_other_metrics_file, read_baseline, save_tables,
 };
 use crate::remote::{
-    Point, RemoteArgs, ScriptedGame, attack_input, distance, length, list, nearest, number, point,
-    report_log_problems,
+    Point, RemoteArgs, ScriptedGame, attack_input, distance, is_enemy_dead, length, list, nearest,
+    number, point, report_log_problems,
 };
 use crate::sweep::enter_repository_root;
 
@@ -490,9 +490,7 @@ fn measure(frames: &[Value], seconds: f64) -> Vec<f64> {
     for timeline in timelines.values() {
         add_enemy_totals(timeline, &mut totals);
     }
-    let first_time = frames
-        .first()
-        .map_or(0.0, |frame| frame["time"].as_f64().unwrap_or_default());
+    let first_time = frames.first().map_or(0.0, |frame| number(&frame["time"]));
     let notice_times: Vec<f64> = timelines
         .values()
         .map(|timeline| {
@@ -512,17 +510,15 @@ fn measure(frames: &[Value], seconds: f64) -> Vec<f64> {
             && attacker.is_some_and(|attacker| timelines.contains_key(&attacker))
         {
             hits += 1;
-            damage += hit["damage"].as_f64().unwrap_or_default();
+            damage += number(&hit["damage"]);
         }
     }
-    let last_time = frames
-        .last()
-        .map(|frame| frame["time"].as_f64().unwrap_or_default());
+    let last_time = frames.last().map(|frame| number(&frame["time"]));
     let killed = timelines
         .values()
         .filter(|timeline| {
             let (time, enemy) = timeline[timeline.len() - 1];
-            Some(time) != last_time || enemy["hp"].as_f64().unwrap_or_default() <= 0.0
+            Some(time) != last_time || is_enemy_dead(enemy)
         })
         .count();
 
@@ -554,7 +550,7 @@ fn measure(frames: &[Value], seconds: f64) -> Vec<f64> {
 fn enemy_timelines(frames: &[Value]) -> BTreeMap<u64, Vec<(f64, &Value)>> {
     let mut timelines: BTreeMap<u64, Vec<(f64, &Value)>> = BTreeMap::new();
     for frame in frames {
-        let time = frame["time"].as_f64().unwrap_or_default();
+        let time = number(&frame["time"]);
         for enemy in list(&frame["enemies"]) {
             if let Some(entity) = enemy["entity"].as_u64() {
                 timelines.entry(entity).or_default().push((time, enemy));
@@ -571,7 +567,7 @@ fn add_enemy_totals(timeline: &[(f64, &Value)], totals: &mut Totals) {
             continue;
         };
         // A dead enemy stays in the snapshot with its last intended velocity.
-        if enemy["hp"].as_f64().unwrap_or_default() <= 0.0 {
+        if is_enemy_dead(enemy) {
             break;
         }
         let seconds = time - previous_time;

@@ -286,7 +286,7 @@ fn use_items(playthrough: &mut Playthrough) -> Result<String> {
     let after_clicks = game.snapshot()?;
     game.close_menu()?;
 
-    let hp = after_clicks["player"]["hp"].as_f64().unwrap_or_default();
+    let hp = number(&after_clicks["player"]["hp"]);
     ensure!(hp > 20.0, "the potion left the player at {hp} hp");
 
     let has_item = |snapshot: &Value, name: &str| {

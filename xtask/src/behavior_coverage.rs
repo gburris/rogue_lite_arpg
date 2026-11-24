@@ -6,7 +6,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use crate::remote::list;
+use crate::remote::{is_enemy_dead, list};
 use crate::table::Table;
 
 /// Column names of the coverage table, saved and printed.
@@ -42,7 +42,7 @@ impl BehaviorCoverage {
     pub(super) fn add_enemy_timeline(&mut self, timeline: &[(f64, &Value)]) {
         let mut previous: Option<(f64, &Value)> = None;
         for &(time, enemy) in timeline {
-            if enemy["hp"].as_f64().unwrap_or_default() <= 0.0 {
+            if is_enemy_dead(enemy) {
                 break;
             }
             let seconds = previous.map_or(0.0, |(previous_time, _)| time - previous_time);

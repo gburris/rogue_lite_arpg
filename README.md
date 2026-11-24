@@ -390,9 +390,10 @@ cargo xtask ai-metrics [options]
 ```
 
 Fights each enemy kind against each player script in a test room, empty by default. Measures how
-the enemies moved and fought from snapshots the game records on game time, so the game speed
-doesn't change the results. Compares the result with an earlier run. It fails when the
-change is larger than the noise between runs of the same code, or when a behavior stops starting.
+the enemies moved and fought from snapshots the game records on game time, so how often it
+samples doesn't depend on the game speed. Compares the result with an earlier run. It fails when
+the change is larger than the noise between runs of the same code, or when a behavior stops
+starting.
 
 Record a baseline with `--repeats 9`, so its noise band is wide enough to rarely fail an unchanged
 run. A scenario whose baseline has fewer repeats only marks changes.
@@ -405,7 +406,7 @@ run. A scenario whose baseline has fewer repeats only marks changes.
 | `--enemies <n>` | `3` | Enemies for each scenario |
 | `--seconds <n>` | `20` | Game seconds for each scenario |
 | `--repeats <n>` | `3` | Runs for each scenario. The table shows the median. Use `9` for a baseline |
-| `--speed <n>` | `2` | Game speed. Compare only runs at the same speed |
+| `--speed <n>` | `2` | Game speed. Speeds 1 and 2 give the same results within the noise band. Higher speeds give each frame more game time, which changes them |
 | `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
 | `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. The noise band and behaviors come from the `repeats.tsv` and `behaviors.tsv` in the folder of the same name |
 | `--rebuild-from <path>` | Off | Measures a saved `<commit>` recordings folder instead of playing, and saves its tables again from what `--kinds` and `--scripts` select. Use it to apply a changed metric to a saved run without playing it again. `--seconds` must match the run. The rebuilt `.tsv` becomes the newest, so pass `--baseline` on the next run |

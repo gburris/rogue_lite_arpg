@@ -7,8 +7,8 @@ use clap::Args;
 use serde_json::{Value, json};
 
 use crate::remote::{
-    POLL_INTERVAL, Point, RemoteArgs, ScriptedGame, attack_input, distance, list, number, point,
-    report_log_problems,
+    POLL_INTERVAL, Point, RemoteArgs, ScriptedGame, attack_input, distance, is_enemy_dead, list,
+    number, point, report_log_problems,
 };
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
@@ -502,7 +502,7 @@ fn kill_enemy(game: &mut ScriptedGame, enemy: u64) -> Result<()> {
         let Some(found) = find_enemy(&snapshot, enemy) else {
             return Ok(());
         };
-        if found["dead"] == true {
+        if is_enemy_dead(found) {
             return Ok(());
         }
         ensure!(

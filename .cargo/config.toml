@@ -2,7 +2,7 @@
 include = [{ path = "config.local.toml", optional = true }]
 
 [alias]
-# `cargo xtask <command>` runs the sweep, compare and perf-report tools (see `xtask/`).
+# `cargo xtask <command>` runs the development tools in `xtask/`.
 xtask = "run --package xtask --"
 # `cargo tracy [-- <game flags>]` runs the optimized build that streams spans to Tracy.
 tracy = "run --profile profiling --no-default-features --features tracy"

@@ -4,7 +4,12 @@
 
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use bevy::platform::time::Instant;
 use bevy::prelude::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+use super::game_args::GameArgs;
 
 const SLOWEST_SPEED: f32 = 1.0 / 8.0;
 const FASTEST_SPEED: f32 = 8.0;
@@ -15,6 +20,26 @@ pub(super) fn plugin(app: &mut App) {
         PostUpdate,
         (toggle_pause, run_one_fixed_step, change_speed).chain(),
     );
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let max_fps = app
+            .world()
+            .get_resource::<GameArgs>()
+            .expect("main inserts GameArgs before adding plugins")
+            .max_fps;
+        if let Some(max_fps) = max_fps {
+            let frame_duration = Duration::from_secs_f64(1.0 / f64::from(max_fps));
+            // Frames end on a fixed schedule, so sleep overshoot doesn't add up; a frame that
+            // runs late moves the schedule rather than rushing the frames after it.
+            app.add_systems(Last, move |mut next_frame_end: Local<Option<Instant>>| {
+                let now = Instant::now();
+                let frame_end = next_frame_end.unwrap_or(now);
+                std::thread::sleep(frame_end.saturating_duration_since(now));
+                *next_frame_end = Some(frame_end.max(now) + frame_duration);
+            });
+        }
+    }
 }
 
 fn toggle_pause(

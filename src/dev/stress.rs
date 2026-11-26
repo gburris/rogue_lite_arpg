@@ -50,31 +50,28 @@ pub struct StressArena {
     player_script: PlayerScript,
 }
 
-/// How enemies find the player, from `--engagement`:
-///
-/// - `all` (default): every enemy targets the player from spawn and keeps the target, since the
-///   idle player never hits back. Every run has the same fight.
-/// - `sight`: enemies engage on sight, as in normal play. Runs get a heavy or a calm fight by
-///   chance.
-/// - `none`: enemies are blind and only wander, to measure the crowd without combat.
+/// How enemies find the player, from `--engagement`. Each variant's doc is its `--help` text.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 enum Engagement {
+    /// Every enemy targets the player from spawn and keeps the target, since the idle player
+    /// never hits back. Every run has the same fight, for repeatable A/B runs.
     #[default]
     All,
+    /// Enemies engage on sight, as in normal play. Runs get a heavy or a calm fight by chance.
     Sight,
+    /// Enemies are blind and only wander, to measure the crowd without combat.
     None,
 }
 
-/// How the player moves, from `--player`:
-///
-/// - `still` (default): stands in place.
-/// - `circle`: walks a slow circle, so the camera follows and enemies keep turning.
-/// - `strafe`: walks left and right.
+/// How the player moves, from `--player`. Each variant's doc is its `--help` text.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 enum PlayerScript {
+    /// Stands in place.
     #[default]
     Still,
+    /// Walks a slow circle, so the camera follows and enemies keep turning.
     Circle,
+    /// Walks left and right.
     Strafe,
 }
 

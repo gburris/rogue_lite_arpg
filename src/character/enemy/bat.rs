@@ -1,14 +1,15 @@
 use avian2d::prelude::{Collider, CollisionLayers, Mass, SpatialQueryFilter};
 use bevy::prelude::*;
 
-use super::{Experience, enemy_motion_sources, sight_ray};
+use super::{Experience, enemy_motion_sources};
 use crate::character::ability::{Bite, bite, breath};
 use crate::character::animation::AnimationSheet;
 use crate::character::brain::{
     Action, Behavior, BrainDefinition, CAST_DISTANCE_RANGE, CAST_HYSTERESIS, CAST_MAX_RANGE,
     CAST_MIN_RANGE, CHASE_CAST_RANGE, CommitPolicy, Consideration, ConsiderationInput, Curve,
-    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, WANDER, consideration,
-    distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold, within_reach,
+    INSIDE_OUTER_CAST_EDGE, LINE_OF_SIGHT, RETURN_TO_HOME, SEEK_LOST_TARGET, SightRay, WANDER,
+    consideration, distance_threshold, flag, flag_kept_while_current, reach_fraction_threshold,
+    within_reach,
 };
 use crate::character::motion::{KeepDistance, MotionKey, MotionSources, Orbit, Swoop, TurnRate};
 use crate::interval::Interval;
@@ -81,6 +82,7 @@ const INSIDE_INNER_CAST_EDGE: Consideration = distance_threshold(
 
 /// Orbits the cast distance range.
 const BAT_ORBIT: Behavior = Behavior::new(
+    "orbit",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -89,6 +91,7 @@ const BAT_ORBIT: Behavior = Behavior::new(
 );
 /// Backs out of the target's face toward the core, then hands back to the orbit.
 const BAT_KEEP: Behavior = Behavior::new(
+    "keep distance",
     Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -102,6 +105,7 @@ const CORNERED: Consideration =
 /// Slides along whatever pins a bat backing away, circling the target until the bat is back
 /// past the inner cast edge.
 const BAT_SLIP_AWAY: Behavior = Behavior::new(
+    "slip away",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -110,6 +114,7 @@ const BAT_SLIP_AWAY: Behavior = Behavior::new(
 );
 /// Swoops in to bite.
 const BAT_SWOOP: Behavior = Behavior::new(
+    "swoop",
     Some(MotionKey::Swoop),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -120,6 +125,7 @@ const BAT_SWOOP: Behavior = Behavior::new(
 
 /// Doing nothing on the action slot: the bar a breath must clear to fire.
 const BAT_BASELINE_IDLE: Behavior = Behavior::new(
+    "idle action",
     None,
     Some(Action::Idle),
     CommitPolicy::ContinuouslyScored,
@@ -128,6 +134,7 @@ const BAT_BASELINE_IDLE: Behavior = Behavior::new(
 );
 /// Fireball from range, only between swoops.
 const BAT_BREATH: Behavior = Behavior::new(
+    "breath",
     None,
     Some(BREATH),
     CommitPolicy::ContinuouslyScored,
@@ -144,6 +151,7 @@ const SWOOPING: Consideration = flag("swooping", ConsiderationInput::MotionHeld(
 
 /// Arms a bite near contact reach, only while swooping.
 const BAT_BITE: Behavior = Behavior::new(
+    "bite",
     None,
     Some(BITE),
     CommitPolicy::ContinuouslyScored,
@@ -235,7 +243,7 @@ fn bat(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts) -> impl Scen
         Experience(6.0)
         // Bats fly high: longer reach, and only the high obstacles that also stop
         // their flight block the ray.
-        sight_ray(
+        ~SightRay::new(
             BAT_SIGHT_RANGE,
             BAT_BODY_OFFSET,
             SpatialQueryFilter::from_mask([

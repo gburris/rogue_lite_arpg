@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use crate::remote::{
     MouseButton, POLL_INTERVAL, RemoteArgs, ScriptedGame, attack_input, distance, is_playing, list,
-    log_problems, nearest, point,
+    log_problems, nearest, number, point,
 };
 use crate::sweep::enter_repository_root;
 use crate::table::{Table, optional_cell};
@@ -286,7 +286,7 @@ fn use_items(playthrough: &mut Playthrough) -> Result<String> {
     let after_clicks = game.snapshot()?;
     game.close_menu()?;
 
-    let hp = after_clicks["player"]["hp"].as_f64().unwrap_or_default();
+    let hp = number(&after_clicks["player"]["hp"]);
     ensure!(hp > 20.0, "the potion left the player at {hp} hp");
 
     let has_item = |snapshot: &Value, name: &str| {
@@ -364,10 +364,16 @@ fn take_portal(playthrough: &mut Playthrough) -> Result<String> {
     let game = &mut playthrough.game;
     let before = game.snapshot()?;
     let portal = point(&before["portals"][0]).context("no portal on this map")?;
+    let starting_map = &before["map"]["entity"];
 
-    game.walk_to(|_| Some(portal), 4.0, Duration::from_secs(15))?;
+    // The portal is gone once the map changes, so the walk ends there.
+    game.walk_to(
+        |snapshot| (snapshot["map"]["entity"] == *starting_map).then_some(portal),
+        4.0,
+        Duration::from_secs(15),
+    )?;
     let after = game.wait_until("a new map", STATE_TIMEOUT, |snapshot| {
-        is_playing(snapshot) && snapshot["map"]["entity"] != before["map"]["entity"]
+        is_playing(snapshot) && snapshot["map"]["entity"] != *starting_map
     })?;
     thread::sleep(SCENE_SETTLE);
 
@@ -387,7 +393,7 @@ fn fight(playthrough: &mut Playthrough) -> Result<String> {
     let before = game.snapshot_with_new_hits()?;
     let player = &before["player"]["entity"];
     let start = point(&before["player"]["position"]).context("player has no position")?;
-    let started_at = seconds(&before["time"]);
+    let started_at = number(&before["time"]);
 
     let warriors = game.spawn_enemies(
         "Warrior",
@@ -408,7 +414,7 @@ fn fight(playthrough: &mut Playthrough) -> Result<String> {
 
     let warriors_left = loop {
         let snapshot = playthrough.game.snapshot_with_new_hits()?;
-        let elapsed = seconds(&snapshot["time"]) - started_at;
+        let elapsed = number(&snapshot["time"]) - started_at;
         if elapsed >= FIGHT_SECONDS {
             break list(&snapshot["enemies"]).filter(is_warrior).count();
         }
@@ -473,8 +479,4 @@ fn restart(playthrough: &mut Playthrough) -> Result<String> {
         "back in {} with {} hp",
         snapshot["state"], snapshot["player"]["hp"]
     ))
-}
-
-fn seconds(value: &Value) -> f64 {
-    value.as_f64().unwrap_or_default()
 }

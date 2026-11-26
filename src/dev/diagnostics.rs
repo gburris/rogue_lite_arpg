@@ -1,6 +1,6 @@
 //! Publishes physics, lighting and asset counts as `game/…` diagnostics.
 
-use avian2d::prelude::{ContactGraph, RayCaster, RigidBody};
+use avian2d::prelude::{ContactGraph, RigidBody};
 use bevy::diagnostic::{Diagnostic, DiagnosticPath, Diagnostics, RegisterDiagnostic};
 use bevy::prelude::*;
 use bevy_firefly::prelude::PointLight2d;
@@ -9,7 +9,8 @@ use crate::prelude::*;
 
 const PHYSICS_BODIES: DiagnosticPath = DiagnosticPath::const_new("game/physics/bodies");
 const CONTACT_PAIRS: DiagnosticPath = DiagnosticPath::const_new("game/physics/contact_pairs");
-const ENABLED_RAYS: DiagnosticPath = DiagnosticPath::const_new("game/physics/enabled_rays");
+/// Sight rays cast each frame, one per character with a [`SightRay`].
+const SIGHT_RAYS: DiagnosticPath = DiagnosticPath::const_new("game/sight_rays");
 /// Fixed steps run since the last frame.
 const FIXED_STEPS: DiagnosticPath = DiagnosticPath::const_new("game/physics/fixed_steps");
 const LIGHTS: DiagnosticPath = DiagnosticPath::const_new("game/lights");
@@ -26,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
     for path in [
         PHYSICS_BODIES,
         CONTACT_PAIRS,
-        ENABLED_RAYS,
+        SIGHT_RAYS,
         FIXED_STEPS,
         LIGHTS,
         LOADED_IMAGES,
@@ -39,7 +40,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             measure_physics_bodies,
             measure_contact_pairs,
-            measure_enabled_rays,
+            measure_sight_rays,
             publish_fixed_steps,
             measure_lights,
             measure_loaded_images,
@@ -60,13 +61,8 @@ fn measure_contact_pairs(mut diagnostics: Diagnostics, contact_graph: Res<Contac
     diagnostics.add_measurement(&CONTACT_PAIRS, || contact_graph.active_pairs().len() as f64);
 }
 
-fn measure_enabled_rays(mut diagnostics: Diagnostics, ray_casters: Query<&RayCaster>) {
-    diagnostics.add_measurement(&ENABLED_RAYS, || {
-        ray_casters
-            .iter()
-            .filter(|ray_caster| ray_caster.enabled)
-            .count() as f64
-    });
+fn measure_sight_rays(mut diagnostics: Diagnostics, sight_rays: Query<(), With<SightRay>>) {
+    diagnostics.add_measurement(&SIGHT_RAYS, || sight_rays.count() as f64);
 }
 
 /// Publishes the fixed steps run since the previous frame, then resets the count.

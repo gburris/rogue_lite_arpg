@@ -67,6 +67,7 @@ const INSIDE_MELEE_REACH: Consideration = reach_fraction_threshold(
 
 /// Breaks away to drink. A warrior with no potion left stays and fights.
 const FLEE: Behavior = Behavior::new(
+    "flee",
     Some(MotionKey::Flee),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -74,6 +75,7 @@ const FLEE: Behavior = Behavior::new(
     &[HAS_TARGET, BADLY_HURT, HAS_POTION],
 );
 const CHASE_MELEE: Behavior = Behavior::new(
+    "chase to melee reach",
     Some(MotionKey::Chase),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -83,6 +85,7 @@ const CHASE_MELEE: Behavior = Behavior::new(
 
 /// Stands still in melee reach instead of orbiting.
 const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
+    "stand still in melee reach",
     Some(MotionKey::Idle),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -93,6 +96,7 @@ const STAND_STILL_IN_MELEE_REACH: Behavior = Behavior::new(
 /// Swings once it has stood still in reach for [`WARRIOR_SWING_DELAY`], standing still
 /// throughout.
 const WARRIOR_SWING: Behavior = Behavior::new(
+    "swing",
     Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -102,6 +106,7 @@ const WARRIOR_SWING: Behavior = Behavior::new(
 
 /// Runs out the break rolled after a swing.
 const WARRIOR_KITE: Behavior = Behavior::new(
+    "kite",
     Some(MotionKey::Kite),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -112,6 +117,7 @@ const WARRIOR_KITE: Behavior = Behavior::new(
 
 /// Doing nothing on the action slot: the bar a heal must clear to fire.
 const WARRIOR_BASELINE_IDLE: Behavior = Behavior::new(
+    "idle action",
     None,
     Some(Action::Idle),
     CommitPolicy::ContinuouslyScored,
@@ -148,6 +154,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
     WARRIOR_SWING,
     // The three heals: drink at a safe distance, with no target, or when a flee hits a wall.
     Behavior::new(
+        "heal far from target",
         None,
         Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -155,6 +162,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
         &[NEEDS_POTION, FAR_FROM_TARGET],
     ),
     Behavior::new(
+        "heal with no target",
         None,
         Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -162,6 +170,7 @@ static WARRIOR_BEHAVIORS: &[Behavior] = &[
         &[NEEDS_POTION, NO_TARGET],
     ),
     Behavior::new(
+        "heal while cornered",
         None,
         Some(HEAL),
         CommitPolicy::UntilFinished { interrupt_tier: 1 },

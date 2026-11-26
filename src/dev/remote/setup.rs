@@ -153,6 +153,26 @@ pub(super) fn set_player_health(
 }
 
 #[derive(Deserialize)]
+struct EnemyHealthParams {
+    entity: u64,
+    hp: f32,
+}
+
+pub(super) fn set_enemy_health(
+    In(params): In<Option<Value>>,
+    mut enemy_healths: Query<&mut Health, With<Enemy>>,
+) -> BrpResult {
+    let EnemyHealthParams { entity, hp } = parse_params(params)?;
+
+    let mut health = enemy_healths
+        .get_mut(parse_entity(entity)?)
+        .map_err(|_| invalid_params(format!("entity {entity} is not an enemy with health")))?;
+    health.hp = hp.clamp(0.0, health.max_hp);
+
+    Ok(Value::Null)
+}
+
+#[derive(Deserialize)]
 struct PlayerManaParams {
     mana: f32,
     max_mana: Option<f32>,

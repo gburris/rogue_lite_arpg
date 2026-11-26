@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, Instant};
 use std::{env, thread};
@@ -27,6 +27,9 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const MAP_LOAD_TIMEOUT: Duration = Duration::from_secs(120);
 const MENU_TIMEOUT: Duration = Duration::from_secs(5);
 const SCREENSHOT_TIMEOUT: Duration = Duration::from_secs(10);
+/// Share of a recording's snapshots that may be missed to long frames, such as a hitch, before
+/// [`ScriptedGame::stop_recording`] says it sampled less often than asked.
+const MOST_MISSED_SNAPSHOTS_FRACTION: f64 = 0.02;
 /// Pause between snapshots while waiting on the game, and between steering updates.
 pub(super) const POLL_INTERVAL: Duration = Duration::from_millis(50);
 /// Frames the UI gets to lay out a menu or react to a click before the next key or click.
@@ -51,6 +54,36 @@ pub(super) struct RemoteArgs {
         help = "Port the game's remote protocol server listens on; give each parallel run its own"
     )]
     remote_port: u16,
+
+    #[arg(
+        long,
+        value_parser = clap::value_parser!(u32).range(1..),
+        help = "Cap the game's frame rate, to check that gameplay doesn't depend on it"
+    )]
+    max_fps: Option<u32>,
+}
+
+impl RemoteArgs {
+    /// The same options on the port `offset` above this one, for a game run alongside.
+    pub(super) fn with_port_offset(self, offset: u16) -> Result<Self> {
+        let remote_port = self
+            .remote_port
+            .checked_add(offset)
+            .with_context(|| format!("port {} + {offset} is past 65535", self.remote_port))?;
+        Ok(Self {
+            remote_port,
+            ..self
+        })
+    }
+
+    /// These options as command-line arguments, for another command to run with.
+    pub(super) fn to_arguments(self) -> Vec<String> {
+        let mut arguments = vec!["--remote-port".to_owned(), self.remote_port.to_string()];
+        if let Some(max_fps) = self.max_fps {
+            arguments.extend(["--max-fps".to_owned(), max_fps.to_string()]);
+        }
+        arguments
+    }
 }
 
 /// A dev build of the game started for a script and driven over the Bevy Remote Protocol with
@@ -78,14 +111,22 @@ impl ScriptedGame {
 
         let log =
             File::create(log_file).with_context(|| format!("creating {}", log_file.display()))?;
-        let process = ChildProcess::spawn(
-            "the game",
-            Command::new(&cargo)
-                .args(["run", "--quiet", "--", "--remote-port"])
-                .arg(port.to_string())
-                .stdout(log.try_clone()?)
-                .stderr(log),
-        )?;
+        let mut command = Command::new(&cargo);
+        command
+            .args([
+                "run",
+                "--quiet",
+                "--",
+                "--update-while-unfocused",
+                "--remote-port",
+            ])
+            .arg(port.to_string())
+            .stdout(log.try_clone()?)
+            .stderr(log);
+        if let Some(max_fps) = remote_args.max_fps {
+            command.arg("--max-fps").arg(max_fps.to_string());
+        }
+        let process = ChildProcess::spawn("the game", &mut command)?;
         let mut game = Self {
             process,
             address,
@@ -138,6 +179,36 @@ impl ScriptedGame {
             .as_u64()
             .context("the snapshot has no `last_hit`")?;
         Ok(snapshot)
+    }
+
+    /// Starts the game recording a snapshot every `interval_seconds` of game time, so what a
+    /// script measures doesn't depend on how often it polls. Each recorded snapshot's `hits` are
+    /// the ones landed since the one before.
+    pub(super) fn start_recording(&mut self, interval_seconds: f64) -> Result<()> {
+        self.call(
+            "game/start_recording",
+            json!({ "interval": interval_seconds }),
+        )?;
+        Ok(())
+    }
+
+    /// Ends the recording and returns its snapshots in order. Prints a note when more than
+    /// [`MOST_MISSED_SNAPSHOTS_FRACTION`] of them were missed because frames ran longer than the
+    /// interval, as at a low `--max-fps`: the recording still holds, but samples less often.
+    pub(super) fn stop_recording(&mut self) -> Result<Vec<Value>> {
+        let mut recording = self.call("game/stop_recording", Value::Null)?;
+        let missed = number(&recording["missed_snapshots"]);
+        let Value::Array(snapshots) = recording["snapshots"].take() else {
+            bail!("game/stop_recording returned no `snapshots` list");
+        };
+        let missed_fraction = missed / (missed + snapshots.len() as f64).max(1.0);
+        if missed_fraction > MOST_MISSED_SNAPSHOTS_FRACTION {
+            println!(
+                "recording: missed {missed} of its snapshots to frames longer than its interval, \
+                 so it sampled less often than asked"
+            );
+        }
+        Ok(snapshots)
     }
 
     /// Polls snapshots until `is_done` accepts one, failing after `timeout` of real time.
@@ -360,6 +431,24 @@ pub(super) fn log_problems(log_file: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
+/// Prints whether `log_files` hold any [`log_problems`], listing each one, and fails if they do.
+pub(super) fn report_log_problems(log_files: &[PathBuf]) -> Result<()> {
+    let mut problems = Vec::new();
+    for log_file in log_files {
+        for problem in log_problems(log_file)? {
+            problems.push(format!("{}: {problem}", log_file.display()));
+        }
+    }
+    if problems.is_empty() {
+        println!("log: ok, no errors or unexpected warnings");
+        return Ok(());
+    }
+    for problem in &problems {
+        println!("log: {problem}");
+    }
+    bail!("the game logs hold problems, listed above")
+}
+
 /// A log line without the escape sequences that color it in a terminal.
 fn without_terminal_colors(line: &str) -> String {
     let mut plain = String::new();
@@ -400,6 +489,16 @@ pub(super) fn attack_input(position: Point, enemy: Point, reach: f64) -> Value {
     } else {
         json!({ "aim": aim, "mainhand": true })
     }
+}
+
+/// Whether a snapshot's enemy has died, by the game's own measure.
+pub(super) fn is_enemy_dead(enemy: &Value) -> bool {
+    enemy["dead"] == true
+}
+
+/// A JSON number, or 0 when the value isn't one.
+pub(super) fn number(value: &Value) -> f64 {
+    value.as_f64().unwrap_or_default()
 }
 
 /// A JSON `[x, y]` as a point.

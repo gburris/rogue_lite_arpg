@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 use serde_json::{Value, json};
 
-use crate::remote::{RemoteArgs, ScriptedGame, distance, length, list, point};
+use crate::remote::{RemoteArgs, ScriptedGame, distance, length, list, point, report_log_problems};
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
 
@@ -73,7 +73,8 @@ pub(super) fn run(args: &MapSweepArgs) -> Result<()> {
     fs::create_dir_all(&args.output_directory)
         .with_context(|| format!("creating {}", args.output_directory.display()))?;
 
-    let mut game = ScriptedGame::launch(&args.output_directory.join("game.log"), args.remote)?;
+    let log_file = args.output_directory.join("game.log");
+    let mut game = ScriptedGame::launch(&log_file, args.remote)?;
     game.call("game/start", Value::Null)?;
     game.wait_until_playing(Duration::from_secs(120))?;
 
@@ -109,7 +110,7 @@ pub(super) fn run(args: &MapSweepArgs) -> Result<()> {
         );
     }
     println!("saved {}", tsv_file.display());
-    Ok(())
+    report_log_problems(&[log_file])
 }
 
 fn inspect_map(game: &mut ScriptedGame, recipe: &str, seed: u64) -> Result<MapReport> {

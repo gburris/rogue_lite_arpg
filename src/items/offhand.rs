@@ -32,8 +32,8 @@ pub fn knight_shield(sprites: &SpriteAssets, sprite_layouts: &SpriteSheetLayouts
     bsn! {
         @shield(sprites.knight_shield.clone(), sprite_layouts)
         Name::new("Knight Shield")
-        ManaCost(25.0)
-        ManaDrainRate(25.0)
+        ManaCost(5.0)
+        ManaDrainRate(12.0)
     }
 }
 

@@ -55,7 +55,7 @@ pub(super) struct SweepArgs {
         value_enum,
         value_delimiter = ',',
         default_values_t = [Engagement::All],
-        help = "How enemies find the player (see the stress arena in the README)"
+        help = "How enemies find the player; `cargo run -- --help` describes each mode"
     )]
     engagement: Vec<Engagement>,
 
@@ -68,7 +68,8 @@ pub(super) struct SweepArgs {
 
     #[arg(
         long,
-        help = "Stops each capture after this many seconds; use 15-20 before exporting events"
+        help = "Stops each capture after this many seconds; use 15-20 before exporting events, \
+                since a 30 s capture exports about 2.5 GB"
     )]
     capture_seconds: Option<u64>,
 

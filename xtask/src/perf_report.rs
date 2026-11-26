@@ -86,13 +86,13 @@ fn zones() -> Vec<Zone> {
         Zone::per_frame("FixedMain (per frame)", schedule("FixedMain")),
         Zone::per_frame("physics", schedule("PhysicsSchedule")),
         Zone::per_frame("substeps", schedule("SubstepSchedule")),
-        Zone::per_frame("sight raycasts", system("avian2d::spatial_query::raycast")),
+        Zone::per_frame(
+            "sight raycasts",
+            system("baba_yaga::character::brain::perception::is_target_in_sight"),
+        ),
         Zone::per_frame(
             "light buffers",
-            system(concat!(
-                "bevy_lit::light::render::prepare_light2d_buffers",
-                "<bevy_lit::light::point_light::PointLight2d>"
-            )),
+            system("bevy_firefly::buffers::prepare_lights"),
         ),
         Zone::per_frame(
             "transform propagation",

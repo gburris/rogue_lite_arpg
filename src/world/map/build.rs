@@ -199,12 +199,24 @@ impl Stage {
         Self::Npcs,
     ];
 
-    /// This stage's generator: the map seed on the stage's own `ChaCha8` stream.
-    fn random_generator(self, seed: u64) -> ChaCha8Rng {
-        let mut random_generator = ChaCha8Rng::seed_from_u64(seed);
+    /// This stage's generator for `recipe`: the map seed mixed with the recipe's name on the
+    /// stage's own `ChaCha8` stream, so two recipes built from one seed don't share a layout.
+    /// Renaming a recipe changes every layout it builds.
+    fn random_generator(self, recipe: &MapRecipe, seed: u64) -> ChaCha8Rng {
+        let mut random_generator = ChaCha8Rng::seed_from_u64(seed ^ hash_recipe_name(&recipe.name));
         random_generator.set_stream(self as u64);
         random_generator
     }
+}
+
+/// An FNV-1a hash of `name`, which unlike `std`'s hashers stays the same across Rust versions, so
+/// a recipe and seed always build the same map.
+fn hash_recipe_name(name: &str) -> u64 {
+    const FNV_OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0100_0000_01b3;
+    name.bytes().fold(FNV_OFFSET_BASIS, |hash, byte| {
+        (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME)
+    })
 }
 
 /// Generates a map blueprint from a recipe and deterministic seed.
@@ -214,7 +226,7 @@ pub(super) fn build_from_recipe(
     structures: &BTreeMap<String, Structure>,
 ) -> std::result::Result<MapBlueprint, MapError> {
     let _span = info_span!("map::build_from_recipe").entered();
-    let mut size_generator = Stage::Size.random_generator(seed);
+    let mut size_generator = Stage::Size.random_generator(recipe, seed);
     let size_x = recipe.size_x_range.roll_size(&mut size_generator);
     let size_y = recipe.size_y_range.roll_size(&mut size_generator);
     let mut blueprint = MapBlueprint::new(
@@ -230,7 +242,7 @@ pub(super) fn build_from_recipe(
         structures,
         &mut blueprint,
         &mut placement_context,
-        &mut Stage::Structures.random_generator(seed),
+        &mut Stage::Structures.random_generator(recipe, seed),
     )?;
     for stage in Stage::SPAWNS {
         // Fixed spawns come first so a sampled player start can keep clear of fixed
@@ -277,7 +289,7 @@ fn place_spawns(
     blueprint: &mut MapBlueprint,
     placement_context: &mut PlaceContext,
 ) -> MapResult<()> {
-    let mut random_generator = stage.random_generator(seed);
+    let mut random_generator = stage.random_generator(recipe, seed);
     let entries = recipe.spawns.iter().filter(|spawn| {
         if spawn.at.is_fixed() {
             stage == Stage::Fixed

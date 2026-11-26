@@ -2,7 +2,7 @@
 
 use std::f32::consts::FRAC_PI_4;
 
-use avian2d::prelude::{RayCaster, RayHits};
+use avian2d::prelude::{Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 
 use super::BrainSystems;
@@ -57,6 +57,36 @@ impl VisionCone {
 
     fn contains_direction(&self, aim_direction: Vec2, direction: Vec2) -> bool {
         direction.dot(aim_direction) > self.half_angle.cos()
+    }
+}
+
+/// The ray a character sees its target along, cast toward the target's feet each frame.
+#[derive(Component, Clone, Debug, Default)]
+pub struct SightRay {
+    origin: Vec2,
+    range: f32,
+    filter: SpatialQueryFilter,
+}
+
+impl SightRay {
+    /// Sees out to `range`, from `origin_height` above the character, through everything `filter`
+    /// leaves out. Cast it from the height of the body collider, which walls keep clear of: a ray
+    /// from the sprite's center starts inside the wall the character stands under.
+    pub(in crate::character) fn new(
+        range: f32,
+        origin_height: f32,
+        filter: SpatialQueryFilter,
+    ) -> Self {
+        Self {
+            origin: Vec2::new(0.0, origin_height),
+            range,
+            filter,
+        }
+    }
+
+    #[cfg(feature = "dev_tools")]
+    pub fn range(&self) -> f32 {
+        self.range
     }
 }
 
@@ -188,15 +218,14 @@ fn update_aim_position(
     );
 }
 
-/// Points the sight ray at the target (or the watched entity without one) and tracks its
-/// direction and distance. A target that is neither in sight nor held by a [`TargetLock`] stays
-/// at its last known position, as if standing still there.
+/// Tracks the direction and distance of the target (or the watched entity without one). A target
+/// that is neither in sight nor held by a [`TargetLock`] stays at its last known position, as if
+/// standing still there.
 fn update_target_info(
     time: Res<Time<Virtual>>,
     mut npc_query: Query<
         (
             &mut TargetInfo,
-            &mut RayCaster,
             &Transform,
             &Watching,
             Option<&Targeting>,
@@ -208,18 +237,13 @@ fn update_target_info(
 ) {
     let now = time.elapsed_secs();
     npc_query.par_iter_mut().for_each(
-        |(mut target_info, mut ray_caster, transform, watching, targeting, has_lock)| {
+        |(mut target_info, transform, watching, targeting, has_lock)| {
             let target_entity = targeting.map_or(watching.0, |t| t.0);
             let Ok((target_transform, target_movement)) = target_query.get(target_entity) else {
                 return;
             };
             let position = transform.translation.xy();
             let target_position = target_transform.translation.xy();
-            // Aimed at the feet, which a wall never covers, unlike the head of a character
-            // standing under one.
-            let target_feet = target_position + Vec2::Y * CHARACTER_FEET_POS_OFFSET;
-            let ray_origin = position + ray_caster.origin;
-            ray_caster.direction = Dir2::new(target_feet - ray_origin).unwrap_or(Dir2::X);
 
             let tracked_live = targeting.is_none() || target_info.line_of_sight || has_lock;
             if tracked_live {
@@ -237,28 +261,50 @@ fn update_target_info(
     );
 }
 
-/// Updates line of sight (the ray hit the target or one of its children) and
+/// Updates line of sight (the [`SightRay`] hit the target or one of its children) and
 /// whether the target is inside the vision cone.
+///
+/// The ray runs between the physics positions the collision pipeline holds, so aim and colliders
+/// agree and a small hurtbox is hit at any frame rate.
 fn is_target_in_sight(
+    spatial_query: SpatialQuery,
     mut npc_query: Query<(
         &mut TargetInfo,
-        &RayHits,
+        &SightRay,
+        &Position,
         &Vision,
         &VisionCone,
         &Watching,
         Option<&Targeting>,
     )>,
-    target_query: Query<Option<&Children>, Or<(With<WatchedBy>, With<TargetedBy>)>>,
+    target_query: Query<(&Position, Option<&Children>), Or<(With<WatchedBy>, With<TargetedBy>)>>,
 ) {
     npc_query.par_iter_mut().for_each(
-        |(mut target_info, ray_hits, vision, vision_cone, watching, targeting)| {
+        |(mut target_info, sight_ray, position, vision, vision_cone, watching, targeting)| {
             target_info.in_vision_cone =
                 vision_cone.contains_direction(vision.aim_direction, target_info.direction);
 
             let target_entity = targeting.map_or(watching.0, |t| t.0);
-
-            let target_children = target_query.get(target_entity).ok().flatten();
-            target_info.line_of_sight = ray_hits.iter().any(|hit| {
+            let Ok((target_position, target_children)) = target_query.get(target_entity) else {
+                target_info.line_of_sight = false;
+                return;
+            };
+            let ray_origin = position.0 + sight_ray.origin;
+            // Aimed at the feet, which a wall never covers, unlike the head of a character
+            // standing under one.
+            let target_feet = target_position.0 + Vec2::Y * CHARACTER_FEET_POS_OFFSET;
+            let hit = Dir2::new(target_feet - ray_origin)
+                .ok()
+                .and_then(|direction| {
+                    spatial_query.cast_ray(
+                        ray_origin,
+                        direction,
+                        sight_ray.range,
+                        true,
+                        &sight_ray.filter,
+                    )
+                });
+            target_info.line_of_sight = hit.is_some_and(|hit| {
                 hit.entity == target_entity
                     || target_children.is_some_and(|children| children.contains(&hit.entity))
             });

@@ -2,11 +2,15 @@
 //! `--help` to any command for its options.
 
 mod ai_metrics;
+mod behavior_coverage;
+mod checks;
 mod compare;
 mod map_sweep;
+mod metrics_comparison;
 mod perf_report;
 mod playthrough;
 mod process;
+mod regression;
 mod remote;
 mod sweep;
 mod table;
@@ -15,7 +19,7 @@ use clap::{Parser, Subcommand};
 
 /// The command line: one subcommand per tool.
 #[derive(Parser)]
-#[command(about = "Stress sweeps and Tracy reports for the game")]
+#[command(about = "Development tools for the game: stress sweeps, Tracy reports and scripted play")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -26,7 +30,8 @@ struct Cli {
 enum Command {
     /// Records Tracy captures of the profiling build in the stress arena, then compares them.
     Sweep(sweep::SweepArgs),
-    /// Compares stress summary lines, one row per source, enemy count, engagement and player.
+    /// Compares stress summary lines, one row per source, enemy count, engagement and player
+    /// script.
     Compare(compare::CompareArgs),
     /// Prints ms per frame for the zones that matter, one column per Tracy capture.
     PerfReport(perf_report::PerfReportArgs),
@@ -38,6 +43,10 @@ enum Command {
     AiMetrics(ai_metrics::AiMetricsArgs),
     /// Builds map recipes over many seeds and flags enemies that spawn stuck.
     MapSweep(map_sweep::MapSweepArgs),
+    /// Runs scripted pass or fail checks of the game's rules.
+    Checks(checks::ChecksArgs),
+    /// Runs the regression gate's rows one after another and summarizes which passed.
+    Regression(regression::RegressionArgs),
 }
 
 fn main() -> anyhow::Result<()> {
@@ -48,5 +57,7 @@ fn main() -> anyhow::Result<()> {
         Command::Playthrough(args) => playthrough::run(&args),
         Command::AiMetrics(args) => ai_metrics::run(&args),
         Command::MapSweep(args) => map_sweep::run(&args),
+        Command::Checks(args) => checks::run(&args),
+        Command::Regression(args) => regression::run(&args),
     }
 }

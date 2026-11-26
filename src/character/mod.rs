@@ -24,7 +24,7 @@ pub mod prelude {
     pub use super::brain::lock_onto_target;
     pub use super::brain::{Brain, ScoreTrace};
     #[cfg(feature = "dev_tools")]
-    pub use super::brain::{TargetLock, Targeting, VisionCone};
+    pub use super::brain::{SightRay, TargetLock, Targeting, VisionCone};
     pub use super::enemy::{Enemy, EnemyKind, EnemySpawn, SpawnEnemies};
     pub use super::kinematics::{
         FacingDirection, InterruptionState, Kinematics, KnockedBack, Vision,

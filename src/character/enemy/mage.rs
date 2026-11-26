@@ -90,6 +90,7 @@ const CAST_WEIGHT: f32 = 8.0;
 
 /// Sidesteps for a firing lane; each post-volley sidestep flips the orbit direction.
 const FIRE_ORBIT: Behavior = Behavior::new(
+    "orbit",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -98,6 +99,7 @@ const FIRE_ORBIT: Behavior = Behavior::new(
 );
 /// War cry once a fight is on, scored on the closest ally it would reach.
 const FIRE_RALLY: Behavior = Behavior::new(
+    "rally",
     None,
     Some(RALLY),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -106,6 +108,7 @@ const FIRE_RALLY: Behavior = Behavior::new(
 );
 /// Circles on its firing lane between casts, so it never stands around waiting on the staff.
 const ICE_ORBIT: Behavior = Behavior::new(
+    "orbit",
     Some(MotionKey::Orbit),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -115,6 +118,7 @@ const ICE_ORBIT: Behavior = Behavior::new(
 /// Breaks contact while mana is low; the threshold's exit holds it until the
 /// pool refills.
 const FIRE_RECOVER: Behavior = Behavior::new(
+    "recover",
     Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -123,6 +127,7 @@ const FIRE_RECOVER: Behavior = Behavior::new(
 );
 /// Ice bolts are expensive, so the break enters earlier and lasts longer.
 const ICE_RECOVER: Behavior = Behavior::new(
+    "recover",
     Some(MotionKey::KeepDistance),
     None,
     CommitPolicy::ContinuouslyScored,
@@ -132,6 +137,7 @@ const ICE_RECOVER: Behavior = Behavior::new(
 
 /// A sidestep across the target's bearing after each volley.
 const FIRE_SIDESTEP: Behavior = Behavior::new(
+    "sidestep",
     Some(MotionKey::Sidestep),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -140,6 +146,7 @@ const FIRE_SIDESTEP: Behavior = Behavior::new(
 );
 /// A step toward a close target that stands still.
 const FIRE_STEP_IN: Behavior = Behavior::new(
+    "step in",
     Some(MotionKey::StepIn),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -154,6 +161,7 @@ const FIRE_STEP_IN: Behavior = Behavior::new(
 /// A straight escape when the player crosses the danger ring. Its higher tier
 /// pre-empts a cast, though a bolt already in flight still fires.
 const ICE_SLIDE: Behavior = Behavior::new(
+    "slide",
     Some(MotionKey::Slide),
     None,
     CommitPolicy::UntilFinished { interrupt_tier: 2 },
@@ -163,6 +171,7 @@ const ICE_SLIDE: Behavior = Behavior::new(
 
 /// Stands still through the wind-up to cast.
 const FIRE_CAST: Behavior = Behavior::new(
+    "cast",
     Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },
@@ -171,6 +180,7 @@ const FIRE_CAST: Behavior = Behavior::new(
 );
 /// Stops on the orbit to cast.
 const ICE_CAST: Behavior = Behavior::new(
+    "cast",
     Some(MotionKey::Idle),
     Some(MAINHAND),
     CommitPolicy::UntilFinished { interrupt_tier: 1 },

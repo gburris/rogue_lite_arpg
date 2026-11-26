@@ -115,10 +115,27 @@ fn add_observation_methods(methods: GameMethods) -> GameMethods {
             "{hits_after?}",
             "The frame number, app and menu states, game time, the current map (its entity \
              changes with every build), the player and their inventory, every enemy's brain, \
-             movement and perception, villagers, projectiles, items on the ground, interactables, \
-             portals and the latest hits. Each hit has a `sequence`; pass a snapshot's `last_hit` \
-             back as `hits_after` to get only the hits landed since that snapshot.",
+             movement, perception and running behaviors with their start times, villagers, \
+             projectiles, items on the ground, interactables, portals, the latest hits, and how \
+             many lights (besides items'), status effects, hitboxes and action uses exist. Each \
+             hit has a `sequence`; pass a snapshot's `last_hit` back as `hits_after` to get only \
+             the hits landed since that snapshot.",
             snapshot::take_snapshot,
+        )
+        .method(
+            "game/start_recording",
+            "{interval}",
+            "Starts taking a game/snapshot every `interval` seconds of game time, the first one \
+             next frame, each with the hits landed since the one before. Replaces a running \
+             recording. Nothing is taken while the game is paused.",
+            snapshot::start_recording,
+        )
+        .method(
+            "game/stop_recording",
+            "",
+            "Ends the recording and returns its `snapshots`, and as `missed_snapshots` how many \
+             intervals passed without one because a frame lasted longer than the interval.",
+            snapshot::stop_recording,
         )
         .method(
             "game/explain",
@@ -197,6 +214,13 @@ fn add_setup_methods(methods: GameMethods) -> GameMethods {
             "{hp, max_hp}",
             "Sets the player's health.",
             setup::set_player_health,
+        )
+        .method(
+            "game/set_enemy_health",
+            "{entity, hp}",
+            "Sets an enemy's health, up to its maximum, such as to make it drink a potion or die \
+             to one hit.",
+            setup::set_enemy_health,
         )
         .method(
             "game/set_player_mana",

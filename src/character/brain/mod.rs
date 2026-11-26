@@ -31,10 +31,10 @@ use self::perception::TargetLocationHint;
 pub use self::perception::TargetLock;
 #[cfg(feature = "dev_tools")]
 pub use self::perception::Targeting;
-pub use self::perception::VisionCone;
 pub(super) use self::perception::Watching;
 #[cfg(feature = "dev_native")]
 pub use self::perception::lock_onto_target;
+pub use self::perception::{SightRay, VisionCone};
 use super::motion::{
     Home, HomeArea, MotionCommands, MotionFailed, MotionFinished, MotionKey, MotionStatus,
 };
@@ -85,6 +85,17 @@ impl Brain {
         self.running_behaviors
             .iter()
             .find_map(|running| running.action)
+    }
+
+    /// The name of each behavior running in its slots, with the game time it started.
+    #[cfg(feature = "dev_native")]
+    pub fn running_behavior_starts(&self) -> impl Iterator<Item = (&'static str, f32)> {
+        self.running_behaviors.iter().map(|&running| {
+            (
+                self.definition_of_running_behavior(running).name,
+                running.started_at,
+            )
+        })
     }
 
     fn definition_of_running_behavior(&self, running: RunningBehavior) -> Behavior {

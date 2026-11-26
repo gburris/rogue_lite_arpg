@@ -53,7 +53,8 @@ pub(super) fn on_ability_added(
         .count();
     debug_assert!(
         other_same_kind_count == 0,
-        "character {holder:?} has {other_same_kind_count} more {ability:?} abilities; only the          first would ever be used"
+        "character {holder:?} has {other_same_kind_count} more {ability:?} abilities; only the \
+         first would ever be used"
     );
 }
 

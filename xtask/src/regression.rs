@@ -8,6 +8,7 @@ use anyhow::{Context, Result, ensure};
 use clap::{Args, ValueEnum};
 
 use crate::ai_metrics::commit_name;
+use crate::metrics_comparison::BASELINE_REPEATS_FOR_BAND;
 use crate::remote::RemoteArgs;
 use crate::sweep::enter_repository_root;
 use crate::table::Table;
@@ -32,13 +33,20 @@ pub(super) struct RegressionArgs {
 
     #[arg(
         long,
-        help = "Open-room `ai-metrics` baseline; defaults to the newest other run in its folder"
+        help = format!(
+            "Open-room `ai-metrics` baseline; defaults to the newest other run in its folder. \
+             Record it with --repeats {BASELINE_REPEATS_FOR_BAND}, so its noise band can fail \
+             the row"
+        )
     )]
     ai_metrics_baseline: Option<PathBuf>,
 
     #[arg(
         long,
-        help = "Walled-room `ai-metrics` baseline; defaults to the newest other run in its folder"
+        help = format!(
+            "Walled-room `ai-metrics` baseline; defaults to the newest other run in \
+             {WALL_ROOM_OUTPUT}. Record it with --repeats {BASELINE_REPEATS_FOR_BAND}"
+        )
     )]
     wall_baseline: Option<PathBuf>,
 

@@ -19,7 +19,7 @@ use clap::{Parser, Subcommand};
 
 /// The command line: one subcommand per tool.
 #[derive(Parser)]
-#[command(about = "Stress sweeps and Tracy reports for the game")]
+#[command(about = "Development tools for the game: stress sweeps, Tracy reports and scripted play")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -30,7 +30,8 @@ struct Cli {
 enum Command {
     /// Records Tracy captures of the profiling build in the stress arena, then compares them.
     Sweep(sweep::SweepArgs),
-    /// Compares stress summary lines, one row per source, enemy count, engagement and player.
+    /// Compares stress summary lines, one row per source, enemy count, engagement and player
+    /// script.
     Compare(compare::CompareArgs),
     /// Prints ms per frame for the zones that matter, one column per Tracy capture.
     PerfReport(perf_report::PerfReportArgs),

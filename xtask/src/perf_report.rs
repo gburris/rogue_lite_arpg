@@ -92,10 +92,7 @@ fn zones() -> Vec<Zone> {
         ),
         Zone::per_frame(
             "light buffers",
-            system(concat!(
-                "bevy_lit::light::render::prepare_light2d_buffers",
-                "<bevy_lit::light::point_light::PointLight2d>"
-            )),
+            system("bevy_firefly::buffers::prepare_lights"),
         ),
         Zone::per_frame(
             "transform propagation",

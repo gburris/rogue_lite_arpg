@@ -105,20 +105,8 @@ cargo tracy -- --stress <enemies> [options]   # profiling build
 
 Starts the game in a small arena. The player is invincible, and the enemies surround the player.
 The game divides the enemies equally between the enemy kinds and drops the remainder. The start
-screen is skipped, and vsync is off.
-
-| Option | Default | Description |
-| --- | --- | --- |
-| `--stress <n>` | Normal game | Total enemies |
-| `--seconds <n>` | Run until closed | After a 5 s warm-up, measure for this many seconds, write a summary line, then quit |
-| `--engagement <mode>` | `all` | How enemies find the player. See below |
-| `--player <script>` | `still` | How the player moves: `still`, `circle` or `strafe` |
-
-| `--engagement` | Enemies | Use it for |
-| --- | --- | --- |
-| `all` | Target the player from spawn | Repeatable A/B runs. Every run has the same fight |
-| `sight` | Attack when they see the player, as in normal play | Realistic fights. The load changes between runs |
-| `none` | Cannot see and only wander | The cost of the crowd without combat |
+screen is skipped, and vsync is off. `cargo run -- --help` describes every flag, including the
+`--engagement` modes and `--player` scripts.
 
 With `--seconds`, the game writes one summary line to the log and appends it to
 `runs/stress_summary.txt`. The line contains:
@@ -153,7 +141,8 @@ tracy-profiler runs/baseline.tracy          # open the capture
 
 Run `tracy-profiler` with no file and click Connect to see a live view.
 
-**Requires:** Tracy v0.14.0 tools on `PATH`. This version matches `tracy-client` 0.18.5.
+**Requires:** Tracy v0.14 tools on `PATH`. This version matches `tracy-client` 0.19.0, which
+bundles Tracy 0.14.1.
 
 A capture contains:
 
@@ -164,15 +153,34 @@ A capture contains:
 The profiling build has no console. To read a panic, redirect stderr:
 `target/profiling/baba_yaga 2> panic.log`.
 
+### Reading a capture
+
+- **Find the thread that sets the frame first.** With pipelined rendering, a frame takes as long
+  as the slower of the main thread (`update`) and the render thread (`sub app{name=RenderApp}`). A
+  render-side gain doesn't change the frame time while the main thread is slower.
+- **Fixed-step frames are the p99** when the main thread sets the frame. `FixedMain` runs at
+  64 Hz, so at high frame rates only some frames run physics. Compare its time per call with the
+  time per frame of everything else.
+- **`Time<Real>` trails by two frames.** With pipelined rendering its delta measures the main frame
+  two before the current one.
+- **A mean above 1 for `game/physics/fixed_steps`** means the simulation can't keep up: each slow
+  frame runs more fixed steps, which makes the next one slower still.
+- **The `decide::...` spans** open several times per decision, which inflates the AI's share of a
+  capture with many enemies.
+- **A schedule's time doesn't add up to its children** when the missing systems run on worker
+  threads. Export with `tracy-csvexport -u` and add up zones by thread.
+- **Tracy can't see inside a system without child zones.** Add an `info_span!` with a static name,
+  or record the same scenario with `samply record` on the profiling build.
+
 ## xtask
 
 ```
 cargo xtask <sweep|compare|perf-report|playthrough|ai-metrics|map-sweep|checks|regression> [options]
 ```
 
-Development commands written in Rust. Run them from any folder in the repository. Add `--help`
-to see all options. The last five play the game through its remote protocol; see
-[Scripted play tools](#scripted-play-tools).
+Development commands written in Rust. Run them from any folder in the repository.
+`cargo xtask <tool> --help` lists every option with its default. The last five play the game
+through its remote protocol; see [Scripted play tools](#scripted-play-tools).
 
 ### sweep
 
@@ -185,24 +193,11 @@ and repeat in the stress arena. Each run quits automatically.
 
 **Requires:** `tracy-capture` on `PATH`.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--counts <n,n,...>` | `100,200,500,1000` | Total enemies for each run |
-| `--repeats <n>` | `1` | Runs for each count and engagement. Use 2 or 3; `compare` shows the median |
-| `--engagement <mode,...>` | `all` | One or more of `all`, `sight` and `none` |
-| `--seconds <n>` | `30` | Measured seconds for each run, after the 5 s warm-up |
-| `--capture-seconds <n>` | Whole run | Stops each capture early. Use 15 to 20 if you export events: a 30 s capture exports approximately 2.5 GB |
-| `--map-seed <n>` | `1` | Map layout and enemy placement |
-| `--milestone <name>` | None | Writes to `runs/milestones/<date>_<name>`. Later sweeps do not overwrite it |
-| `--output-directory <path>` | `runs/stress` | Output folder without `--milestone`. The next sweep overwrites it |
-
 **Output:** in the output folder, one `<engagement>_<count>_r<repeat>.tracy` capture and one
 `.log` for each run, and a `summary.txt` with the summary lines. At the end, the sweep prints the
 `compare` table.
 
 ```sh
-cargo xtask sweep
-cargo xtask sweep --counts 500,1000 --repeats 3 --capture-seconds 20
 cargo xtask sweep --counts 1000 --engagement all,none --milestone substeps
 ```
 
@@ -215,19 +210,9 @@ cargo xtask compare <path>... [--outlier-fraction <fraction>]
 Shows a table of summary lines. Each row is one source, enemy count, engagement and player
 script.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `<path>...` | Required | Summary files, or folders that contain a `summary.txt` (a sweep or a milestone) |
-| `--outlier-fraction <f>` | `0.25` | How far a run's projectile count can be from its row's median before the run is an outlier |
-
 **Output:** for each row, the median of the median and p99 frame times, the slowest frame, and
 the engaged brains, projectiles and lights. Then a list of outlier runs. An outlier measured a
 different fight, so do not use it in an A/B comparison.
-
-```sh
-cargo xtask compare runs/stress
-cargo xtask compare runs/milestones/2026-11-01_before runs/milestones/2026-11-03_after
-```
 
 ### perf-report
 
@@ -242,20 +227,11 @@ frame.
 
 **Requires:** `tracy-csvexport` on `PATH`.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `<path>...` | Required | `.tracy` files, or folders that contain them |
-
 **Output:** one row for each zone and one column for each capture.
 
 - The frame count includes warm-up and loading. Only compare captures that you made the same
   way.
 - Each capture adds a column. Use few captures, for example one count with 2 or 3 repeats.
-
-```sh
-cargo xtask perf-report runs/stress
-cargo xtask perf-report runs/baseline.tracy runs/stress/all_1000_r1.tracy
-```
 
 ## Schedule graphs
 
@@ -310,6 +286,10 @@ All output goes to `runs/`.
    cargo xtask ai-metrics    # on the old code
    cargo xtask ai-metrics    # on the new code; prints changes against the first run
    ```
+
+   Each run is named after the commit, with `-dirty` for uncommitted changes, and replaces an
+   earlier run of the same name. Record the old code from a clean checkout, for example with the
+   change stashed, so the new code's run doesn't replace it.
 
 4. For a map recipe or placement change, build many seeds:
 
@@ -368,20 +348,9 @@ Plays a fixed route: start screen, equip a sword and shield, pause, use and drop
 every villager, take the portal, fight two warriors, die and restart. The run stops at the first
 failed step.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--output-directory <path>` | `runs/playthrough` | Output folder. The next run overwrites it |
-| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
-| `--max-fps <n>` | No cap | Caps the game's frame rate |
-
 **Output:** a table with one row for each step, and a `log` row that fails if the game logged an
 error, a panic or an unexpected warning. In the output folder, a screenshot for each step, the
 `game.log`, and a `<step>_failure.json` snapshot of the game state if a step failed.
-
-```sh
-cargo xtask playthrough
-cargo xtask playthrough --remote-port 15710
-```
 
 ## ai-metrics
 
@@ -397,22 +366,6 @@ starting.
 
 Record a baseline with `--repeats 9`, so its noise band is wide enough to rarely fail an unchanged
 run. A scenario whose baseline has fewer repeats only marks changes.
-
-| Option | Default | Description |
-| --- | --- | --- |
-| `--kinds <kind,...>` | `Warrior,IceMage,FireMage,Bat` | Enemy kinds |
-| `--room <recipe>` | `AiTestRoom` | Map for each scenario. `AiTestRoomWall` adds a wall beside the player, so enemies lose and regain sight. Save its runs to their own `--output-directory`, so they aren't compared with open-room runs |
-| `--scripts <script,...>` | `still,strafe,fight` | What the player does: stands, strafes, or attacks the nearest enemy |
-| `--enemies <n>` | `3` | Enemies for each scenario |
-| `--seconds <n>` | `20` | Game seconds for each scenario |
-| `--repeats <n>` | `3` | Runs for each scenario. The table shows the median. Use `9` for a baseline |
-| `--speed <n>` | `2` | Game speed. Speeds 1 and 2 give the same results within the noise band. Higher speeds give each frame more game time, which changes them |
-| `--games <n>` | `4` | Games played at the same time, on ports from `--remote-port` up. The kinds are split between them. Each game takes about 1.1 GB of memory |
-| `--baseline <path>` | Newest other `.tsv` in the output folder | Metrics file to compare against. The noise band and behaviors come from the `repeats.tsv` and `behaviors.tsv` in the folder of the same name |
-| `--rebuild-from <path>` | Off | Measures a saved `<commit>` recordings folder instead of playing, and saves its tables again from what `--kinds` and `--scripts` select. Use it to apply a changed metric to a saved run without playing it again. `--seconds` must match the run. The rebuilt `.tsv` becomes the newest, so pass `--baseline` on the next run |
-| `--output-directory <path>` | `runs/ai_metrics` | Output folder |
-| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
-| `--max-fps <n>` | No cap | Caps the frame rate, to check that the metrics don't depend on it |
 
 **Output:** a table with one row for each kind and script. The columns are the time to notice the
 player, the engaged time, stuck time, reversals, motion switches, actions, hits and damage on the
@@ -439,12 +392,9 @@ recording of each run, `repeats.tsv` with every run's values, `behaviors.tsv` wi
 table, and each game's log.
 
 ```sh
-cargo xtask ai-metrics
-cargo xtask ai-metrics --kinds FireMage --scripts still --repeats 5
-cargo xtask ai-metrics --room AiTestRoomWall --output-directory runs/ai_metrics_wall
-cargo xtask ai-metrics --games 1 --baseline runs/ai_metrics/765c134.tsv
 cargo xtask ai-metrics --repeats 9 --output-directory runs/baselines/ai_metrics
-cargo xtask ai-metrics --rebuild-from runs/ai_metrics/765c134
+cargo xtask ai-metrics --room AiTestRoomWall --output-directory runs/ai_metrics_wall
+cargo xtask ai-metrics --kinds FireMage --scripts still --baseline runs/ai_metrics/765c134.tsv
 ```
 
 ## map-sweep
@@ -456,22 +406,12 @@ cargo xtask map-sweep [options]
 Builds each map recipe with each seed. Flags enemies that try to move but stay in place, which
 usually means that they spawned inside or against a wall.
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--recipes <name,...>` | `Swamp,SwampWithALotOfEmptySquares,LongHallway,TreasureRoom,FireShrine,SkyTempleAscent` | Map recipes to build |
-| `--seeds <n>` | `10` | Seeds for each recipe, from 1 |
-| `--screenshots` | Off | Takes a screenshot of every map, not only flagged maps |
-| `--output-directory <path>` | `runs/map_sweep` | Output folder |
-| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
-| `--max-fps <n>` | No cap | Caps the game's frame rate |
-
 **Output:** a table with one row for each recipe: maps built, enemy and chest counts, the closest
 enemy to the start, and flagged maps. After it, `log:` lines list any error, panic or unexpected
 warning the game logged, and fail the run if there is one. In the output folder, `sweep.tsv` with
 one row for each map, a screenshot of each flagged map, and the game log.
 
 ```sh
-cargo xtask map-sweep
 cargo xtask map-sweep --recipes Swamp,FireShrine --seeds 50 --screenshots
 ```
 
@@ -492,12 +432,6 @@ Runs scripted checks of the game's rules in one game, each with a pass or fail a
 | `leaks` | After mages and a warrior die, the lights, status effects, hitboxes and action uses are back to their counts before the fight. Dropped loot's glow doesn't count |
 | `corpse` | No hit lands on the player after the one that kills it |
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--output-directory <path>` | `runs/checks` | Where the game log goes. The next run overwrites it |
-| `--remote-port <n>` | `15702` | Port of the game's remote protocol server |
-| `--max-fps <n>` | No cap | Caps the game's frame rate |
-
 **Output:** a table with one row for each check and its notes, then `log:` lines with any error,
 panic or unexpected warning the game logged. A failed check or a log problem fails the run.
 
@@ -511,25 +445,16 @@ Runs the gate one row after another, each as its own `xtask` command with its de
 `playthrough`, `checks`, `ai-metrics` in `AiTestRoom`, `ai-metrics` in `AiTestRoomWall` (saved to
 `runs/ai_metrics_wall`), and `map-sweep`. A row that fails, panics or can't start doesn't stop the
 rows after it. Pass a baseline recorded with `--repeats 9` to each `ai-metrics` row, so its noise
-band can fail the row.
-
-| Option | Default | Description |
-| --- | --- | --- |
-| `--rows <row,...>` | `playthrough,checks,ai-metrics,ai-metrics-wall,map-sweep` | Rows to run, in this order |
-| `--ai-metrics-baseline <path>` | Newest other `.tsv` in `runs/ai_metrics` | `--baseline` for the open-room row |
-| `--wall-baseline <path>` | Newest other `.tsv` in `runs/ai_metrics_wall` | `--baseline` for the walled-room row |
-| `--output-directory <path>` | `runs/regression` | Output folder. A rerun at the same commit overwrites its files |
-| `--remote-port <n>` | `15702` | Port of the game's remote protocol server, passed to every row |
-| `--max-fps <n>` | No cap | Caps the game's frame rate, passed to every row |
+band can fail the row. An `ai-metrics` row with no earlier run in its folder has nothing to compare
+against, so it only records and shows `ok`.
 
 **Output:** a table with one row for each gate row: `ok` or `FAILED`, the minutes it took, and
-the error a failed row ended with. A failed row fails the gate. In `<commit>/` in the output
+for a failed row the error it ended with. A failed row fails the gate. In `<commit>/` in the output
 folder, one `<row>.txt` with everything that row printed, and `summary.txt` with the table. Each
 tool also writes its usual output folder.
 
 ```sh
-cargo xtask regression
-cargo xtask regression --rows ai-metrics --ai-metrics-baseline runs/baselines/ai_metrics/765c134.tsv
+cargo xtask regression --ai-metrics-baseline runs/baselines/ai_metrics/765c134.tsv
 ```
 
 # Dev keys and logs

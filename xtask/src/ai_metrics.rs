@@ -73,14 +73,17 @@ pub(super) struct AiMetricsArgs {
     #[arg(
         long,
         default_value_t = 2.0,
-        help = "Game speed during scenarios; above 1 the run is shorter but less like real play"
+        help = "Game speed during scenarios; 1 and 2 agree within the noise band, but higher \
+                speeds give each frame more game time, which changes the results"
     )]
     speed: f64,
 
     #[arg(
         long,
         default_value = "AiTestRoom",
-        help = "Map recipe each scenario loads: `AiTestRoom`, or `AiTestRoomWall` with a wall"
+        help = "Map recipe each scenario loads: `AiTestRoom`, or `AiTestRoomWall` with a wall \
+                beside the player so enemies lose and regain sight; give walled runs their own \
+                --output-directory so they aren't compared with open-room runs"
     )]
     room: String,
 
@@ -91,7 +94,10 @@ pub(super) struct AiMetricsArgs {
         long,
         default_value_t = 3,
         value_parser = clap::value_parser!(u32).range(1..=20),
-        help = "Runs per scenario; the table shows each metric's median"
+        help = format!(
+            "Runs per scenario; the table shows each metric's median. Record a baseline with \
+             --repeats {BASELINE_REPEATS_FOR_BAND}, so its noise band can fail a later run"
+        )
     )]
     repeats: u32,
 
@@ -108,7 +114,8 @@ pub(super) struct AiMetricsArgs {
         default_value_t = 4,
         value_parser = clap::value_parser!(u32).range(1..=8),
         help = "Most games played at once, on ports counting up from --remote-port; the kinds are \
-                split evenly between them, which can take fewer games"
+                split evenly between them, which can take fewer games. Each game takes about \
+                1.1 GB of memory"
     )]
     games: u32,
 
@@ -131,8 +138,9 @@ pub(super) struct AiMetricsArgs {
     #[arg(
         long,
         help = "Measure a saved recordings folder, such as `runs/ai_metrics/<commit>`, instead of \
-                playing, saving its tables beside and inside it; --seconds must match the run \
-                that recorded it"
+                playing, saving its tables beside and inside it. Use it to apply a changed metric \
+                to a saved run. --seconds must match the run that recorded it, and the rebuilt \
+                `.tsv` becomes the newest, so pass --baseline on the next run"
     )]
     rebuild_from: Option<PathBuf>,
 
@@ -145,11 +153,14 @@ pub(super) struct AiMetricsArgs {
     output_directory: PathBuf,
 }
 
-/// What the player does while enemies engage.
+/// What the player does while enemies engage. Each variant's doc is its `--help` text.
 #[derive(ValueEnum, Clone, Copy, Debug)]
 pub(super) enum PlayerScript {
+    /// Stands in place.
     Still,
+    /// Walks left and right.
     Strafe,
+    /// Attacks the nearest enemy.
     Fight,
 }
 
